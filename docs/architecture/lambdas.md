@@ -411,6 +411,9 @@ their primary responsibilities.
 - Purpose: validate hashed `x-api-token` values against the `api_keys` table; pass `apiKeyId`, `scope` (`admin` / `user`), and `userSub=api-key:<id>` to handlers
 - VPC: **Yes** (RDS Proxy + IAM as `evolvesprouts_admin`)
 - Cache: 5 minutes (revoked tokens may remain usable until cache expiry)
+- Concurrency: no per-function reserved concurrency in CDK (shared unreserved
+  pool) so deploys remain valid when the account already reserves capacity on
+  other Lambdas
 
 ## Deployment and maintenance Lambdas
 

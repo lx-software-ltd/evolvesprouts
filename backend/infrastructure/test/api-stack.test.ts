@@ -200,6 +200,26 @@ function assertCognitoClientAllowlistWiring(template: Template): void {
   }
 }
 
+function assertApiTokenAuthorizerHasNoReservedConcurrency(template: Template): void {
+  const functions = template.findResources("AWS::Lambda::Function");
+  const match = Object.entries(functions).find(([, resource]) => {
+    const name = (resource.Properties ?? {}).FunctionName;
+    return name === "evolvesprouts-ApiTokenAuthorizerFunction";
+  });
+  if (!match) {
+    throw new Error(
+      "Expected Lambda FunctionName evolvesprouts-ApiTokenAuthorizerFunction",
+    );
+  }
+  const [logicalId, resource] = match;
+  const reserved = (resource.Properties ?? {}).ReservedConcurrentExecutions;
+  if (reserved !== undefined) {
+    throw new Error(
+      `ApiTokenAuthorizerFunction ${logicalId} must omit ReservedConcurrentExecutions so the account unreserved pool stays above 100; found ${JSON.stringify(reserved)}`,
+    );
+  }
+}
+
 function main(): void {
   const template = synthApiTemplate();
   assertStageHasNoApiGatewayCacheCluster(template);
@@ -208,6 +228,7 @@ function main(): void {
   assertPollResponsesTableUsesCustomerManagedKms(template);
   assertPollResponsesTableHasExpiresAtTtl(template);
   assertCognitoClientAllowlistWiring(template);
+  assertApiTokenAuthorizerHasNoReservedConcurrency(template);
 
   console.log("api-stack API Gateway stage cache assertions passed.");
 }
