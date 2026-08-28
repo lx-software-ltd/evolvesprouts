@@ -1,5 +1,6 @@
 """SQLAlchemy models."""
 
+from app.db.models.api_key import ApiKey
 from app.db.models.asset import Asset, AssetAccessGrant, AssetShareLink
 from app.db.models.calendar_manual_block import CalendarManualBlock
 from app.db.models.audit_log import AuditLog
@@ -81,6 +82,7 @@ from app.db.models.whatsapp import WhatsAppConversation, WhatsAppMessage
 
 __all__ = [
     "AccessGrantType",
+    "ApiKey",
     "Asset",
     "AssetAccessGrant",
     "AssetShareLink",
