@@ -32,7 +32,9 @@ from app.api.admin_families import handle_admin_families_request
 from app.api.admin_families_picker import handle_admin_families_picker_request
 from app.api.admin_organizations import handle_admin_organizations_request
 from app.api.admin_organizations_picker import handle_admin_organizations_picker_request
+from app.api.admin_api_keys import handle_admin_api_keys_request
 from app.api.admin_whatsapp import handle_admin_whatsapp_request
+from app.api.public.whatsapp_conversations import handle_public_whatsapp_request
 from app.api.assets.public_media_assets import handle_media_request
 from app.api.public_mailchimp_webhook import handle_mailchimp_webhook
 from app.api.public_whatsapp_webhook import handle_whatsapp_webhook
@@ -177,6 +179,16 @@ _ROUTES: tuple[
         "/v1/whatsapp/webhook",
         True,
         lambda event, method, _path: handle_whatsapp_webhook(event, method),
+    ),
+    (
+        "/v1/public/whatsapp",
+        False,
+        handle_public_whatsapp_request,
+    ),
+    (
+        "/v1/admin/api-keys",
+        False,
+        handle_admin_api_keys_request,
     ),
     (
         "/v1/admin/whatsapp",

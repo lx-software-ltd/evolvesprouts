@@ -58,12 +58,13 @@ class WhatsAppRepository(BaseRepository[WhatsAppConversation]):
         cursor_last_message_at: datetime | None = None,
         cursor_id: UUID | None = None,
         search: str | None = None,
+        search_wa_id: bool = True,
     ) -> list[WhatsAppConversation]:
         """List conversations, most recent activity first."""
         statement = select(WhatsAppConversation).options(
             selectinload(WhatsAppConversation.contact)
         )
-        statement = self._apply_search(statement, search)
+        statement = self._apply_search(statement, search, search_wa_id=search_wa_id)
         if cursor_last_message_at is not None and cursor_id is not None:
             statement = statement.where(
                 or_(
@@ -78,10 +79,12 @@ class WhatsAppRepository(BaseRepository[WhatsAppConversation]):
         ).limit(limit)
         return list(self._session.execute(statement).scalars().all())
 
-    def count_conversations(self, *, search: str | None = None) -> int:
+    def count_conversations(
+        self, *, search: str | None = None, search_wa_id: bool = True
+    ) -> int:
         """Count conversations matching the optional search filter."""
         statement = select(func.count(WhatsAppConversation.id))
-        statement = self._apply_search(statement, search)
+        statement = self._apply_search(statement, search, search_wa_id=search_wa_id)
         return int(self._session.execute(statement).scalar_one())
 
     def list_messages(
@@ -111,13 +114,13 @@ class WhatsAppRepository(BaseRepository[WhatsAppConversation]):
         return list(self._session.execute(statement).scalars().all())
 
     @staticmethod
-    def _apply_search(statement: Any, search: str | None) -> Any:
+    def _apply_search(
+        statement: Any, search: str | None, *, search_wa_id: bool = True
+    ) -> Any:
         if not search:
             return statement
         pattern = f"%{_escape_like_pattern(search.strip())}%"
-        return statement.where(
-            or_(
-                WhatsAppConversation.profile_name.ilike(pattern, escape="\\"),
-                WhatsAppConversation.wa_id.ilike(pattern, escape="\\"),
-            )
-        )
+        clauses = [WhatsAppConversation.profile_name.ilike(pattern, escape="\\")]
+        if search_wa_id:
+            clauses.append(WhatsAppConversation.wa_id.ilike(pattern, escape="\\"))
+        return statement.where(or_(*clauses))
