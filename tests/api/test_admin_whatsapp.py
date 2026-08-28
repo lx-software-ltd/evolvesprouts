@@ -15,7 +15,9 @@ from app.db.models.enums import WhatsAppMessageDirection
 from app.exceptions import ValidationError
 
 
-def _identity_event(api_gateway_event: Any, path: str, **kwargs: object) -> dict[str, Any]:
+def _identity_event(
+    api_gateway_event: Any, path: str, **kwargs: object
+) -> dict[str, Any]:
     return api_gateway_event(
         method="GET",
         path=path,
@@ -27,7 +29,9 @@ def _identity_event(api_gateway_event: Any, path: str, **kwargs: object) -> dict
 def test_admin_whatsapp_requires_auth(api_gateway_event: Any) -> None:
     event = api_gateway_event(method="GET", path="/v1/admin/whatsapp/conversations")
     with pytest.raises(ValidationError):
-        aw.handle_admin_whatsapp_request(event, "GET", "/v1/admin/whatsapp/conversations")
+        aw.handle_admin_whatsapp_request(
+            event, "GET", "/v1/admin/whatsapp/conversations"
+        )
 
 
 def test_admin_whatsapp_unknown_route(api_gateway_event: Any) -> None:

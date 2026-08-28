@@ -306,6 +306,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/whatsapp/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * WhatsApp Cloud API webhook verification
+         * @description Meta subscription handshake. Returns the raw `hub.challenge` when
+         *     `hub.mode=subscribe` and `hub.verify_token` matches
+         *     `WHATSAPP_WEBHOOK_VERIFY_TOKEN`.
+         */
+        get: {
+            parameters: {
+                query: {
+                    "hub.mode": string;
+                    "hub.verify_token": string;
+                    "hub.challenge": string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Verification challenge echoed as plain text. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": string;
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        put?: never;
+        /**
+         * Receive WhatsApp Cloud API webhook events
+         * @description Public webhook for inbound WhatsApp messages and coexistence
+         *     `smb_message_echoes`. Requests must include a valid
+         *     `X-Hub-Signature-256` HMAC of the raw body using `META_APP_SECRET`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            responses: {
+                /** @description Webhook processed. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WhatsAppWebhookAccepted"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Missing or invalid webhook signature. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Method not allowed. */
+                405: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/assets/free": {
         parameters: {
             query?: never;
@@ -2513,6 +2609,13 @@ export interface components {
             /** @description Option label for `select`, or `true` / `false` for `truefalse` (client maps to localized True/False labels). */
             label: string;
             count: number;
+        };
+        WhatsAppWebhookAccepted: {
+            message: string;
+            stored?: number;
+            duplicates?: number;
+            skipped?: number;
+            leads_created?: number;
         };
         ReservationSubmissionAccepted: {
             message: string;

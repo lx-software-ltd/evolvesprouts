@@ -34,7 +34,9 @@ def test_extract_body_text_and_interactive() -> None:
     assert ingest._extract_body({"type": "image", "image": {}}) is None
 
 
-def test_ingest_stores_inbound_and_creates_lead(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_ingest_stores_inbound_and_creates_lead(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     conversation_id = uuid4()
     lead_id = uuid4()
     added: list[object] = []

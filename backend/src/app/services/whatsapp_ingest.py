@@ -144,7 +144,10 @@ def _store_message(
     now = datetime.now(timezone.utc)
     if direction is WhatsAppMessageDirection.INBOUND:
         conversation.inbound_count = (conversation.inbound_count or 0) + 1
-        if conversation.first_inbound_at is None or sent_at < conversation.first_inbound_at:
+        if (
+            conversation.first_inbound_at is None
+            or sent_at < conversation.first_inbound_at
+        ):
             conversation.first_inbound_at = sent_at
     else:
         conversation.outbound_count = (conversation.outbound_count or 0) + 1
