@@ -32,6 +32,11 @@ info:
       `backend/infrastructure/lib/public-www-stack.ts`.
     - WhatsApp Cloud API webhook (`GET`/`POST /v1/whatsapp/webhook`) for Meta
       handshake plus inbound and coexistence echo messages.
+    - Token-authenticated WhatsApp conversation reads (`GET
+      /v1/public/whatsapp/conversations` and
+      `GET /v1/public/whatsapp/conversations/{id}/messages`) using `x-api-token`.
+      These routes return display name, dates, and message text only — never
+      WhatsApp numbers or `wa_id`.
 
 servers:
   - url: https://api.evolvesprouts.com
@@ -271,6 +276,99 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
+  /v1/public/whatsapp/conversations:
+    get:
+      summary: List WhatsApp conversations (token API)
+      description: |
+        Returns captured WhatsApp threads for a hashed API token
+        (`x-api-token`). Payloads include display name and dates only.
+        WhatsApp numbers and `wa_id` are never returned. Search (`q`) matches
+        profile names only, not phone numbers.
+      security:
+        - ApiTokenAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: q
+          in: query
+          required: false
+          description: Case-insensitive search on profile name (not phone).
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated conversation list without phone numbers.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicWhatsAppConversationListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/public/whatsapp/conversations/{id}/messages:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: List WhatsApp messages for a conversation (token API)
+      description: |
+        Returns the conversation header (name and dates) plus newest-first
+        messages. Message payloads include direction, body, and sent time
+        only — no WhatsApp ids or phone numbers.
+      security:
+        - ApiTokenAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        "200":
+          description: Conversation plus messages without phone numbers.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicWhatsAppMessageListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /v1/assets/free:
     get:
@@ -1655,6 +1753,14 @@ components:
       type: apiKey
       in: header
       name: x-api-key
+    ApiTokenAuth:
+      type: apiKey
+      in: header
+      name: x-api-token
+      description: |
+        Hashed API token issued by `POST /v1/admin/api-keys`. Scopes:
+        `admin` (full access on token-protected routes) and `user` (GET only).
+        Distinct from the website `x-api-key`.
     DeviceAttestation:
       type: apiKey
       in: header
@@ -2920,6 +3026,73 @@ components:
           type: integer
         leads_created:
           type: integer
+    PublicWhatsAppConversationSummary:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Display name. Never a WhatsApp number or last-four fallback.
+        first_inbound_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_message_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+    PublicWhatsAppMessageSummary:
+      type: object
+      required:
+        - id
+        - direction
+        - sent_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        direction:
+          type: string
+          enum: [inbound, outbound]
+        body:
+          type: string
+          nullable: true
+        sent_at:
+          type: string
+          format: date-time
+    PublicWhatsAppConversationListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicWhatsAppConversationSummary"
+        next_cursor:
+          type: string
+          nullable: true
+    PublicWhatsAppMessageListResponse:
+      type: object
+      required:
+        - conversation
+        - items
+      properties:
+        conversation:
+          $ref: "#/components/schemas/PublicWhatsAppConversationSummary"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicWhatsAppMessageSummary"
     ReservationSubmissionAccepted:
       type: object
       required:

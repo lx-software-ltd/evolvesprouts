@@ -529,6 +529,16 @@ maps legacy `note.id` to the **first** inserted row’s UUID.
 - Individual inbound or outbound (`smb_message_echoes`) messages.
 - Unique `wa_message_id` for webhook idempotency; cascade delete with parent conversation.
 
+## Table: api_keys
+
+- Hashed API tokens for `/v1/public/*` routes (header `x-api-token`).
+- Stores `name`, `key_prefix` (display only), `key_hash` (PBKDF2-HMAC-SHA256 of plaintext),
+  `scope` (`admin` full access or `user` GET-only), optional `expires_at`,
+  `revoked_at`, and `last_used_at`.
+- Plaintext is returned once at create and is never persisted.
+- Unique index on `key_hash`. Audited via `api_keys_audit_trigger`
+  (`key_hash` is redacted in admin audit API responses).
+
 ## Services tables
 
 ### `services` + type-detail tables

@@ -11,4 +11,9 @@ regexes = [
   '''\bmay-2026-the-missing-piece\b''',
   '''\bthe-missing-piece-2026-05-16\b''',
   '''ApiCustomDomainName"?\s*:\s*"[^"]*"''',
+  # Test-only API token display prefixes (not live credentials).
+  '''esk_abc12xyz''',
+  '''esk_abc123xyz''',
+  '''esk_testdisp''',
+  '''esk_shown_once''',
 ]

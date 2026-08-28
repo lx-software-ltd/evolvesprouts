@@ -16,6 +16,8 @@ info:
     - `GET /v1/admin/instructors`
     - `GET /v1/admin/audit-logs` (optional `table`, `record_id`, `user_id`, `email`, `action`, `since`, `cursor`, `limit`)
     - `GET /v1/admin/audit-logs/{id}`
+    - `GET|POST /v1/admin/api-keys` (create returns plaintext `api_token` once)
+    - `GET|DELETE /v1/admin/api-keys/{id}` (`DELETE` revokes the token)
     - `GET|POST /v1/admin/services`
     - `GET /v1/admin/services/instances`
     - `GET|PUT|PATCH|DELETE /v1/admin/services/{id}`
@@ -858,6 +860,7 @@ paths:
           schema:
             type: string
             enum:
+              - api_keys
               - assets
               - asset_access_grants
               - calendar_manual_blocks
@@ -931,6 +934,110 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuditLog"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/admin/api-keys:
+    get:
+      summary: List API tokens
+      description: |
+        Lists hashed API tokens used by the `x-api-token` authorizer.
+        The plaintext token is never stored and is not returned here.
+      security:
+        - AdminBearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          required: false
+          description: Opaque continuation token from `next_cursor`.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated API token list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      summary: Create an API token
+      description: |
+        Creates a hashed API token. The plaintext `api_token` is returned
+        once in this response and cannot be retrieved again.
+      security:
+        - AdminBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateApiKeyRequest"
+      responses:
+        "201":
+          description: Token created; plaintext included once.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyCreatedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/admin/api-keys/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get an API token
+      description: Returns token metadata without the plaintext or hash.
+      security:
+        - AdminBearerAuth: []
+      responses:
+        "200":
+          description: API token metadata.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeySummary"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Revoke an API token
+      description: Soft-revokes the token. Idempotent if already revoked.
+      security:
+        - AdminBearerAuth: []
+      responses:
+        "200":
+          description: Revoked token metadata.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeySummary"
         "400":
           $ref: "#/components/responses/BadRequest"
         "403":
@@ -5276,6 +5383,90 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WhatsAppMessageSummary"
+    ApiKeyScope:
+      type: string
+      enum: [admin, user]
+      description: >
+        admin is full access on token-protected routes; user is GET only.
+    ApiKeyStatus:
+      type: string
+      enum: [active, expired, revoked]
+    ApiKeySummary:
+      type: object
+      required:
+        - id
+        - name
+        - key_prefix
+        - scope
+        - status
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        key_prefix:
+          type: string
+        scope:
+          $ref: "#/components/schemas/ApiKeyScope"
+        status:
+          $ref: "#/components/schemas/ApiKeyStatus"
+        created_by:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        revoked_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_used_at:
+          type: string
+          format: date-time
+          nullable: true
+    ApiKeyListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiKeySummary"
+        next_cursor:
+          type: string
+          nullable: true
+    CreateApiKeyRequest:
+      type: object
+      required:
+        - name
+        - scope
+      properties:
+        name:
+          type: string
+          maxLength: 200
+        scope:
+          $ref: "#/components/schemas/ApiKeyScope"
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+    ApiKeyCreatedResponse:
+      allOf:
+        - $ref: "#/components/schemas/ApiKeySummary"
+        - type: object
+          required:
+            - api_token
+          properties:
+            api_token:
+              type: string
+              description: Plaintext token, returned only on create.
     LeadListResponse:
       type: object
       required:

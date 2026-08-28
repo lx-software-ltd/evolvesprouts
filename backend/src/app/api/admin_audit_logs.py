@@ -32,7 +32,7 @@ logger = get_logger(__name__)
 
 # Exact-match secret field names (case-insensitive key lookup).
 AUDIT_SECRET_FIELDS: frozenset[str] = frozenset(
-    ("password", "secret", "token", "api_key")
+    ("password", "secret", "token", "api_key", "key_hash")
 )
 
 # Explicit PII column names from AUDITABLE_TABLES models (customer_invoices, etc.).
@@ -54,6 +54,7 @@ _REDACTED_MARKER = "***REDACTED***"
 
 AUDITABLE_TABLES: frozenset[str] = frozenset(
     (
+        "api_keys",
         "assets",
         "asset_access_grants",
         "calendar_manual_blocks",

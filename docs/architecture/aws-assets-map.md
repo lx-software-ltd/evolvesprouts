@@ -391,6 +391,7 @@ Each Lambda function created by `PythonLambda` construct includes:
 | `DeviceAttestationAuthorizer` | `lambda/authorizers/device_attestation/handler.lambda_handler` | 256 MB | 5s | No | Device attestation authorizer |
 | `AdminGroupAuthorizerFunction` | `lambda/authorizers/cognito_group/handler.lambda_handler` | 256 MB | 5s | No | Admin group authorizer |
 | `UserAuthorizerFunction` | `lambda/authorizers/cognito_user/handler.lambda_handler` | 256 MB | 5s | No | Any-user authorizer |
+| `ApiTokenAuthorizerFunction` | `lambda/authorizers/api_token/handler.lambda_handler` | 512 MB | 10s | Yes | Hashed `x-api-token` authorizer (RDS Proxy) |
 
 ### Other Functions
 
@@ -434,6 +435,7 @@ For each function above, the following resources are created:
 | `EvolvesproutsMigrationFunction` | Read DB secret, direct connect to Aurora as `postgres`, Cognito user management, CloudFormation invoke permission |
 | `ImportLegacyVenuesFunction` | Read admin DB secret, connect to RDS Proxy as `evolvesprouts_admin`, S3 read on `ImportDumpBucket` only |
 | `HealthCheckFunction` | Read DB secret, connect to RDS Proxy as `evolvesprouts_app` |
+| `ApiTokenAuthorizerFunction` | Read admin DB secret, connect to RDS Proxy as `evolvesprouts_admin` |
 | `AuthCreateChallengeFunction` | SES `SendEmail`, `SendRawEmail` for the configured email address |
 | `AuthPostAuthFunction` | Cognito `AdminUpdateUserAttributes` scoped to the user pool ARN (attached as a standalone policy to avoid a CloudFormation cycle with the trigger registration) |
 | `AdminBootstrapFunction` | Cognito `AdminCreateUser`, `AdminUpdateUserAttributes`, `AdminSetUserPassword`, `AdminAddUserToGroup`, CloudFormation invoke permission |
@@ -565,6 +567,7 @@ not per-request `Origin` echoing.
 | Request Authorizer | `DeviceAttestationRequestAuthorizer` | Lambda | `DeviceAttestationAuthorizer` | Validates `x-device-attestation` header, no caching |
 | Request Authorizer | `AdminGroupAuthorizer` | Lambda | `AdminGroupAuthorizerFunction` | JWT + staff group check (`admin` / `manager` / `instructor`), 5-min cache |
 | Request Authorizer | `UserAuthorizer` | Lambda | `UserAuthorizerFunction` | JWT validation (any user), 5-min cache |
+| Request Authorizer | `ApiTokenAuthorizer` | Lambda | `ApiTokenAuthorizerFunction` | Validates `x-api-token` against hashed `api_keys`, 5-min cache |
 
 ### API Gateway API Key and Usage Plan
 

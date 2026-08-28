@@ -1082,7 +1082,7 @@ export interface paths {
                     limit?: number;
                     /** @description Opaque continuation token from `next_cursor` for the default recent listing. */
                     cursor?: string;
-                    table?: "assets" | "asset_access_grants" | "calendar_manual_blocks" | "customer_invoice_lines" | "customer_invoices" | "customer_payments" | "customer_receipts" | "payment_allocations";
+                    table?: "api_keys" | "assets" | "asset_access_grants" | "calendar_manual_blocks" | "customer_invoice_lines" | "customer_invoices" | "customer_payments" | "customer_receipts" | "payment_allocations";
                     record_id?: string;
                     user_id?: string;
                     /** @description Filter by the user's Cognito email address. The server resolves this to a Cognito `sub` via `list_users`. Mutually exclusive with `user_id`. When no user matches, the response is an empty list. */
@@ -1155,6 +1155,156 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/api-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List API tokens
+         * @description Lists hashed API tokens used by the `x-api-token` authorizer.
+         *     The plaintext token is never stored and is not returned here.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    /** @description Opaque continuation token from `next_cursor`. */
+                    cursor?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated API token list. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiKeyListResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        put?: never;
+        /**
+         * Create an API token
+         * @description Creates a hashed API token. The plaintext `api_token` is returned
+         *     once in this response and cannot be retrieved again.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateApiKeyRequest"];
+                };
+            };
+            responses: {
+                /** @description Token created; plaintext included once. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiKeyCreatedResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/api-keys/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Get an API token
+         * @description Returns token metadata without the plaintext or hash.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description API token metadata. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiKeySummary"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        put?: never;
+        post?: never;
+        /**
+         * Revoke an API token
+         * @description Soft-revokes the token. Idempotent if already revoked.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Revoked token metadata. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ApiKeySummary"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -6573,6 +6723,44 @@ export interface components {
         WhatsAppMessageListResponse: {
             conversation: components["schemas"]["WhatsAppConversationSummary"];
             items: components["schemas"]["WhatsAppMessageSummary"][];
+        };
+        /**
+         * @description admin is full access on token-protected routes; user is GET only.
+         * @enum {string}
+         */
+        ApiKeyScope: "admin" | "user";
+        /** @enum {string} */
+        ApiKeyStatus: "active" | "expired" | "revoked";
+        ApiKeySummary: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            key_prefix: string;
+            scope: components["schemas"]["ApiKeyScope"];
+            status: components["schemas"]["ApiKeyStatus"];
+            created_by?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            expires_at?: string | null;
+            /** Format: date-time */
+            revoked_at?: string | null;
+            /** Format: date-time */
+            last_used_at?: string | null;
+        };
+        ApiKeyListResponse: {
+            items: components["schemas"]["ApiKeySummary"][];
+            next_cursor?: string | null;
+        };
+        CreateApiKeyRequest: {
+            name: string;
+            scope: components["schemas"]["ApiKeyScope"];
+            /** Format: date-time */
+            expires_at?: string | null;
+        };
+        ApiKeyCreatedResponse: components["schemas"]["ApiKeySummary"] & {
+            /** @description Plaintext token, returned only on create. */
+            api_token: string;
         };
         LeadListResponse: {
             items: components["schemas"]["LeadSummary"][];

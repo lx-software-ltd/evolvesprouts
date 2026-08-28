@@ -5,6 +5,7 @@ making business logic independent of the persistence layer.
 """
 
 from app.db.repositories.base import BaseRepository
+from app.db.repositories.api_key import ApiKeyRepository
 from app.db.repositories.asset import AssetRepository
 from app.db.repositories.bulk_expense_import_job import BulkExpenseImportJobRepository
 from app.db.repositories.contact import ContactRepository
@@ -24,6 +25,7 @@ from app.db.repositories.whatsapp import WhatsAppRepository
 
 __all__ = [
     "BaseRepository",
+    "ApiKeyRepository",
     "AssetRepository",
     "BulkExpenseImportJobRepository",
     "ContactRepository",

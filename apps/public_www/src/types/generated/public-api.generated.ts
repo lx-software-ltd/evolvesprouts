@@ -402,6 +402,123 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/whatsapp/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List WhatsApp conversations (token API)
+         * @description Returns captured WhatsApp threads for a hashed API token
+         *     (`x-api-token`). Payloads include display name and dates only.
+         *     WhatsApp numbers and `wa_id` are never returned. Search (`q`) matches
+         *     profile names only, not phone numbers.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    cursor?: string;
+                    /** @description Case-insensitive search on profile name (not phone). */
+                    q?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated conversation list without phone numbers. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicWhatsAppConversationListResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Missing or invalid API token. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/whatsapp/conversations/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * List WhatsApp messages for a conversation (token API)
+         * @description Returns the conversation header (name and dates) plus newest-first
+         *     messages. Message payloads include direction, body, and sent time
+         *     only — no WhatsApp ids or phone numbers.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Conversation plus messages without phone numbers. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicWhatsAppMessageListResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Missing or invalid API token. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/assets/free": {
         parameters: {
             query?: never;
@@ -2616,6 +2733,35 @@ export interface components {
             duplicates?: number;
             skipped?: number;
             leads_created?: number;
+        };
+        PublicWhatsAppConversationSummary: {
+            /** Format: uuid */
+            id: string;
+            /** @description Display name. Never a WhatsApp number or last-four fallback. */
+            name: string;
+            /** Format: date-time */
+            first_inbound_at?: string | null;
+            /** Format: date-time */
+            last_message_at?: string | null;
+            /** Format: date-time */
+            created_at?: string | null;
+        };
+        PublicWhatsAppMessageSummary: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            direction: "inbound" | "outbound";
+            body?: string | null;
+            /** Format: date-time */
+            sent_at: string;
+        };
+        PublicWhatsAppConversationListResponse: {
+            items: components["schemas"]["PublicWhatsAppConversationSummary"][];
+            next_cursor?: string | null;
+        };
+        PublicWhatsAppMessageListResponse: {
+            conversation: components["schemas"]["PublicWhatsAppConversationSummary"];
+            items: components["schemas"]["PublicWhatsAppMessageSummary"][];
         };
         ReservationSubmissionAccepted: {
             message: string;

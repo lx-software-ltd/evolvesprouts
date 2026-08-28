@@ -155,6 +155,7 @@ with Session(get_engine()) as session:
 
 The following tables have audit triggers:
 
+- `api_keys` (`key_hash` is redacted in admin audit API responses)
 - `assets`
 - `asset_access_grants`
 - `customer_payments`
