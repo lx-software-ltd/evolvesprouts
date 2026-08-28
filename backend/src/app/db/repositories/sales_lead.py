@@ -45,6 +45,26 @@ class SalesLeadRepository(BaseRepository[SalesLead]):
         )
         return self._session.execute(statement).scalar_one_or_none()
 
+    def find_open_by_contact(self, contact_id: UUID) -> SalesLead | None:
+        """Return the most recent open-funnel lead for a contact, if any."""
+        statement = (
+            select(SalesLead)
+            .where(
+                SalesLead.contact_id == contact_id,
+                SalesLead.funnel_stage.in_(
+                    (
+                        FunnelStage.NEW,
+                        FunnelStage.CONTACTED,
+                        FunnelStage.ENGAGED,
+                        FunnelStage.QUALIFIED,
+                    )
+                ),
+            )
+            .order_by(SalesLead.created_at.desc())
+            .limit(1)
+        )
+        return self._session.execute(statement).scalar_one_or_none()
+
     def create_with_event(
         self,
         lead: SalesLead,

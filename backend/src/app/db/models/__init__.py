@@ -50,6 +50,7 @@ from app.db.models.enums import (
     ServiceType,
     TrainingFormat,
     TrainingPricingUnit,
+    WhatsAppMessageDirection,
 )
 from app.db.models.family import Family, FamilyMember
 from app.db.models.geographic_area import GeographicArea
@@ -76,6 +77,7 @@ from app.db.models.service_instance import (
     TrainingInstanceDetails,
 )
 from app.db.models.tag import AssetTag, ContactTag, FamilyTag, OrganizationTag, Tag
+from app.db.models.whatsapp import WhatsAppConversation, WhatsAppMessage
 
 __all__ = [
     "AccessGrantType",
@@ -158,4 +160,7 @@ __all__ = [
     "TrainingFormat",
     "TrainingInstanceDetails",
     "TrainingPricingUnit",
+    "WhatsAppConversation",
+    "WhatsAppMessage",
+    "WhatsAppMessageDirection",
 ]

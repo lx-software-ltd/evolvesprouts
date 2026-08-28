@@ -144,6 +144,13 @@ class LeadEventType(str, enum.Enum):
     LOST = "lost"
 
 
+class WhatsAppMessageDirection(str, enum.Enum):
+    """Direction of a stored WhatsApp message."""
+
+    INBOUND = "inbound"
+    OUTBOUND = "outbound"
+
+
 class ServiceType(str, enum.Enum):
     """Discriminator for service categories."""
 
