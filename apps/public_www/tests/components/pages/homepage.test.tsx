@@ -90,6 +90,18 @@ vi.mock('@/components/sections/services', () => ({
     return <section data-testid='services'>{content.title}</section>;
   },
 }));
+vi.mock('@/components/sections/testimonials-featured', () => ({
+  TestimonialsFeatured: ({
+    content,
+  }: {
+    content: { quote: string; author: string };
+  }) => (
+    <section data-testid='testimonials-featured'>
+      {content.quote}
+      {content.author}
+    </section>
+  ),
+}));
 vi.mock('@/components/sections/deferred-testimonials', () => ({
   DeferredTestimonials: ({ content }: { content: { title: string } }) => (
     <section data-testid='deferred-testimonials'>{content.title}</section>
@@ -117,6 +129,7 @@ describe('HomePage', () => {
     expect(screen.getByTestId('real-talk')).toBeInTheDocument();
     expect(screen.getByTestId('about-us-intro')).toBeInTheDocument();
     expect(screen.getByTestId('services')).toBeInTheDocument();
+    expect(screen.getByTestId('testimonials-featured')).toBeInTheDocument();
     expect(screen.getByTestId('deferred-testimonials')).toBeInTheDocument();
     expect(screen.getByTestId('free-intro-session')).toBeInTheDocument();
     expect(screen.getByText(enContent.hero.title)).toBeInTheDocument();
@@ -150,12 +163,23 @@ describe('HomePage', () => {
     const heroElement = screen.getByTestId('hero-banner');
     const realTalkElement = screen.getByTestId('real-talk');
     const idaIntroElement = screen.getByTestId('about-us-intro');
+    const servicesElement = screen.getByTestId('services');
+    const featuredQuoteElement = screen.getByTestId('testimonials-featured');
+    const testimonialsElement = screen.getByTestId('deferred-testimonials');
     expect(heroElement.compareDocumentPosition(realTalkElement)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
     expect(realTalkElement.compareDocumentPosition(idaIntroElement)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
+    expect(servicesElement.compareDocumentPosition(featuredQuoteElement)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(featuredQuoteElement.compareDocumentPosition(testimonialsElement)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(featuredQuoteElement).toHaveTextContent(enContent.testimonials.featured.quote);
+    expect(featuredQuoteElement).toHaveTextContent(enContent.testimonials.featured.author);
   });
 
   it('uses locale navbar prefill message when business phone is configured', () => {

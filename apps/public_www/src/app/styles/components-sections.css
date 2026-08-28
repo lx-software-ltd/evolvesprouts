@@ -24,6 +24,7 @@
   .es-contact-faq-section,
   .es-my-journey-section,
   .es-testimonials-section,
+  .es-testimonials-featured-section,
   .es-book-a-free-call-good-to-know-section,
   .es-faq-section,
   .es-free-guides-and-resources-hero-section,
@@ -47,6 +48,7 @@
   .es-contact-faq-section,
   .es-my-journey-section,
   .es-testimonials-section,
+  .es-testimonials-featured-section,
   .es-book-a-free-call-good-to-know-section,
   .es-faq-section,
   .es-free-guides-and-resources-hero-section {
@@ -1063,6 +1065,19 @@
     background-color: var(--es-color-surface-peach, #F5DFCF);
   }
 
+  .es-testimonials-featured-card {
+    border: 1px solid rgba(31, 31, 31, 0.08);
+    background-color: var(--es-color-surface-white, #FFFFFF);
+    border-radius: 16px;
+    padding: 28px 24px;
+  }
+
+  @media (min-width: 640px) {
+    .es-testimonials-featured-card {
+      padding: 36px 40px;
+    }
+  }
+
   @keyframes es-author-slide-out-left {
     from { transform: translateX(0); opacity: 1; }
     to { transform: translateX(-100%); opacity: 0; }
@@ -1799,6 +1814,7 @@
     .es-real-talk-section,
     .es-free-resources-section,
     .es-testimonials-section,
+    .es-testimonials-featured-section,
     .es-sprouts-community-section,
     .es-event-notification-section,
     .es-free-intro-session-section {

@@ -86,7 +86,7 @@
     "cta": "See how the programme works",
     "ctaHref": "/services/my-best-auntie-training-course",
     "ctaPrefillMessage": "Hi, I'd like to book a free intro call!",
-    "description": "Trusted by families across Hong Kong. AMI Montessori-certified. Designed for real life.",
+    "description": "Trusted by 40+ Hong Kong families. AMI Montessori-certified for 0-3 & 3-6. Designed for real life.",
     "imageAlt": "Montessori child development support for Hong Kong families"
   },
   "seo": {
@@ -312,6 +312,12 @@
         "mainImageSrc": "/images/testimonials/happy-parent-1.webp"
       }
     ],
+    "featured": {
+      "quote": "Thank you so much for taking Jenelyn's caregiving skills to the next level! I've already noticed a real improvement in how she engages with our child, and the changes have been wonderful to witness. It's not always an easy journey, but the results speak for themselves - we are truly grateful, and our home feels calmer.",
+      "author": "Sarah",
+      "service": "My Best Auntie Training Course",
+      "sectionLabel": "A parent story from Sarah"
+    },
     "a11y": {
       "imageAltFallbackAuthor": "Parent",
       "imageAltTemplate": "{author} testimonial image",
@@ -1671,8 +1677,8 @@
       "imageAlt": "Ida De Gregorio from Evolve Sprouts"
     },
     "intro": {
-      "title": "Hello! I'm Ida - AMI Montessori educator, mum of two, and founder of Evolve Sprouts.",
-      "highlightPhrase": "Evolve Sprouts",
+      "title": "Hello! I'm Ida - AMI Montessori certified for 0-3 and 3-6, MEd from the University of Hong Kong, Stanford Child Nutrition.",
+      "highlightPhrase": "AMI Montessori",
       "description": "I left a teaching career because I saw how much children's growth depends on what happens at home - and how little support the people raising them actually get. This work is personal to me - because I'm navigating the same journey you are.",
       "ctaLabel": "Read my story",
       "ctaHref": "/about-us",
