@@ -739,6 +739,23 @@ open SalesLead on first inbound when none exists. Admin reads live at
 - Coexistence means outbound replies are echoes, not Cloud API sends.
 - HMAC + verify token keep the public route fail-closed without API keys.
 
+## Hashed API tokens for public WhatsApp reads
+
+**Decision:** Issue hashed API tokens (`esk_…`) stored in `api_keys` and
+validated by a VPC request authorizer on `x-api-token`. Scopes are `admin`
+(full access on token-protected routes) and `user` (GET only). WhatsApp
+conversation reads live at `GET /v1/public/whatsapp/conversations` and
+`GET /v1/public/whatsapp/conversations/{id}/messages` and omit phone numbers
+and `wa_id`. Admins create and revoke tokens from Audit → API keys.
+
+**Why:**
+- Matches the Siutindei hashed-key pattern without colliding with the
+  website `x-api-key`.
+- Authorizer cache (5 minutes) plus handler-level GET-only enforcement for
+  `user` tokens keeps revocation bounded and writes fail-closed.
+- Public conversation payloads stay useful for integrations without exposing
+  WhatsApp numbers.
+
 ## Keeping Documentation Up to Date
 
 **Decision:** Architecture documentation in `docs/architecture/` describes

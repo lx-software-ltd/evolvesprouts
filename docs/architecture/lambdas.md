@@ -404,6 +404,14 @@ their primary responsibilities.
 - Purpose: verify JWT for any authenticated Cognito user (no group requirement)
 - VPC: **No** (runs outside VPC to fetch JWKS from Cognito)
 
+### API token authorizer
+- Function: ApiTokenAuthorizerFunction
+- Handler: backend/lambda/authorizers/api_token/handler.py
+- Trigger: API Gateway request authorizer
+- Purpose: validate hashed `x-api-token` values against the `api_keys` table; pass `apiKeyId`, `scope` (`admin` / `user`), and `userSub=api-key:<id>` to handlers
+- VPC: **Yes** (RDS Proxy + IAM as `evolvesprouts_admin`)
+- Cache: 5 minutes (revoked tokens may remain usable until cache expiry)
+
 ## Deployment and maintenance Lambdas
 
 ### Migrations
