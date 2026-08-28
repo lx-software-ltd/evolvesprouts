@@ -391,7 +391,7 @@ Each Lambda function created by `PythonLambda` construct includes:
 | `DeviceAttestationAuthorizer` | `lambda/authorizers/device_attestation/handler.lambda_handler` | 256 MB | 5s | No | Device attestation authorizer |
 | `AdminGroupAuthorizerFunction` | `lambda/authorizers/cognito_group/handler.lambda_handler` | 256 MB | 5s | No | Admin group authorizer |
 | `UserAuthorizerFunction` | `lambda/authorizers/cognito_user/handler.lambda_handler` | 256 MB | 5s | No | Any-user authorizer |
-| `ApiTokenAuthorizerFunction` | `lambda/authorizers/api_token/handler.lambda_handler` | 512 MB | 10s | Yes | Hashed `x-api-token` authorizer (RDS Proxy) |
+| `ApiTokenAuthorizerFunction` | `lambda/authorizers/api_token/handler.lambda_handler` | 512 MB | 10s | Yes | Hashed `x-api-token` authorizer (RDS Proxy); no reserved concurrency |
 
 ### Other Functions
 

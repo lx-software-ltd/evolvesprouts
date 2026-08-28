@@ -2603,6 +2603,10 @@ export class ApiStack extends cdk.Stack {
         handler: "lambda/authorizers/api_token/handler.lambda_handler",
         memorySize: 512,
         timeout: cdk.Duration.seconds(10),
+        // Do not carve out reserved concurrency (PythonLambda default is 25).
+        // Accounts with many reserved functions can dip below AWS's minimum
+        // 100 unreserved executions and fail CREATE.
+        reservedConcurrentExecutions: -1,
         environment: {
           DATABASE_SECRET_ARN: database.adminUserSecret.secretArn,
           DATABASE_NAME: "evolvesprouts",
