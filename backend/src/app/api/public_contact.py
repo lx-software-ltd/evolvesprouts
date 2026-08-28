@@ -101,10 +101,11 @@ def handle_public_contact_us(
                     validate_phone_fields(region, normalized["phone_number"])
                 )
             contact_repo.update(contact)
-            if normalized["signup_intent"] == "contact_inquiry":
+            lead_type = _lead_type_for_intent(normalized["signup_intent"])
+            if lead_repo.find_open_by_contact(contact.id) is None:
                 lead = SalesLead(
                     contact_id=contact.id,
-                    lead_type=LeadType.OTHER,
+                    lead_type=lead_type,
                     funnel_stage=FunnelStage.NEW,
                 )
                 lead_repo.create_with_event(
@@ -210,6 +211,13 @@ def _validate_contact_body(body: Mapping[str, Any]) -> dict[str, Any]:
         "signup_intent": signup_intent,
         "locale": locale,
     }
+
+
+def _lead_type_for_intent(signup_intent: str) -> LeadType:
+    """Map a public form intent to a sales lead type."""
+    if signup_intent == "event_notification":
+        return LeadType.EVENT_INQUIRY
+    return LeadType.OTHER
 
 
 def _normalize_locale(value: Any) -> str:
