@@ -698,6 +698,24 @@ export class ApiStack extends cdk.Stack {
           "Shared secret token required by the public Mailchimp webhook endpoint",
       }
     );
+    const metaAppSecret = new cdk.CfnParameter(this, "MetaAppSecret", {
+      type: "String",
+      noEcho: true,
+      default: "",
+      description:
+        "Meta app secret used to verify X-Hub-Signature-256 on the WhatsApp webhook",
+    });
+    const whatsappWebhookVerifyToken = new cdk.CfnParameter(
+      this,
+      "WhatsappWebhookVerifyToken",
+      {
+        type: "String",
+        noEcho: true,
+        default: "",
+        description:
+          "Shared verify token for the Meta WhatsApp Cloud API webhook handshake",
+      }
+    );
     const evolveSproutsStripeSecretKey = new cdk.CfnParameter(
       this,
       "EvolveSproutsStripeSecretKey",
@@ -1756,6 +1774,8 @@ export class ApiStack extends cdk.Stack {
         ASSET_DOWNLOAD_CLOUDFRONT_PRIVATE_KEY_SECRET_ARN:
           assetDownloadCloudFrontPrivateKeySecretArn.valueAsString,
         MAILCHIMP_WEBHOOK_SECRET: mailchimpWebhookSecret.valueAsString,
+        META_APP_SECRET: metaAppSecret.valueAsString,
+        WHATSAPP_WEBHOOK_VERIFY_TOKEN: whatsappWebhookVerifyToken.valueAsString,
         EVOLVESPROUTS_STRIPE_SECRET_KEY: evolveSproutsStripeSecretKey.valueAsString,
         EVOLVESPROUTS_STRIPE_STAGING_SECRET_KEY:
           evolveSproutsStripeStagingSecretKey.valueAsString,
@@ -3054,6 +3074,19 @@ export class ApiStack extends cdk.Stack {
       "Public Mailchimp webhook endpoint; access is validated via MAILCHIMP_WEBHOOK_SECRET in Lambda handler.");
     addCheckovMethodSuppression(mailchimpWebhookGetMethod, "CKV_AWS_59",
       "Public Mailchimp webhook verification endpoint; access is validated via MAILCHIMP_WEBHOOK_SECRET in Lambda handler.");
+    const whatsappWebhook = v1.addResource("whatsapp").addResource("webhook");
+    const whatsappWebhookPostMethod = whatsappWebhook.addMethod("POST", adminIntegration, {
+      authorizationType: apigateway.AuthorizationType.NONE,
+    });
+    const whatsappWebhookGetMethod = whatsappWebhook.addMethod("GET", adminIntegration, {
+      authorizationType: apigateway.AuthorizationType.NONE,
+    });
+    // This endpoint is intentionally public for Meta callbacks and is
+    // protected in-app with HMAC signature verification plus a verify token.
+    addCheckovMethodSuppression(whatsappWebhookPostMethod, "CKV_AWS_59",
+      "Public WhatsApp webhook endpoint; access is validated via META_APP_SECRET HMAC in Lambda handler.");
+    addCheckovMethodSuppression(whatsappWebhookGetMethod, "CKV_AWS_59",
+      "Public WhatsApp webhook verification endpoint; access is validated via WHATSAPP_WEBHOOK_VERIFY_TOKEN in Lambda handler.");
 
     // Admin asset routes
     const admin = v1.addResource("admin");
