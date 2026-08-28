@@ -23,10 +23,7 @@ import type {
 } from '@/content';
 import enContent from '@/content/en.json';
 import { formatContentTemplate } from '@/content/content-field-utils';
-import {
-  CALENDAR_PUBLIC_CLIENT_FETCH_TIMEOUT_MS,
-  fetchConsultationCalendarBlockersSlots,
-} from '@/lib/public-calendar-availability-api';
+import { fetchConsultationCalendarBlockersSlots } from '@/lib/public-calendar-availability-api';
 import {
   buildConsultationsBookingModalPayload,
   type ConsultationsBookingModalTierId,
@@ -183,10 +180,9 @@ export function ConsultationsBooking({
     if (!isBookingModalOpen) {
       return;
     }
+    // Per-attempt timeout and retry live inside the fetcher; this controller only
+    // signals unmount / modal close.
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => {
-      controller.abort();
-    }, CALENDAR_PUBLIC_CLIENT_FETCH_TIMEOUT_MS);
 
     let cancelled = false;
     void fetchConsultationCalendarBlockersSlots(controller.signal).then((result) => {
@@ -199,7 +195,6 @@ export function ConsultationsBooking({
 
     return () => {
       cancelled = true;
-      window.clearTimeout(timeoutId);
       controller.abort();
     };
   }, [isBookingModalOpen]);

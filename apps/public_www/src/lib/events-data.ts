@@ -44,8 +44,13 @@ export const MY_BEST_AUNTIE_TRAINING_COURSE_CALENDAR_SERVICE_KEY =
 /** Timeout for server-side / static-export calendar fetches (events, MBA, landing pages). */
 export const CALENDAR_PUBLIC_BUILD_FETCH_TIMEOUT_MS = 15_000;
 
-/** Timeout for client-side landing page calendar refresh (see `useLandingPageCalendar`). */
-export const CALENDAR_PUBLIC_CLIENT_FETCH_TIMEOUT_MS = 5_000;
+/**
+ * Timeout for client-side calendar fetches (`useLandingPageCalendar`, availability slot
+ * pickers). Must outlast an admin Lambda cold start (~6.5s observed: ~3.8s init + ~2.7s
+ * first request); 5s aborted mid cold start and made low-traffic slot pickers fail on
+ * first visit. Aligned with {@link CALENDAR_PUBLIC_BUILD_FETCH_TIMEOUT_MS}.
+ */
+export const CALENDAR_PUBLIC_CLIENT_FETCH_TIMEOUT_MS = 15_000;
 
 /**
  * @deprecated Use {@link CALENDAR_PUBLIC_BUILD_FETCH_TIMEOUT_MS} for server/export fetches

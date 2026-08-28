@@ -205,34 +205,92 @@ export async function fetchPublicCalendarAvailability(params: {
   return { ...parsed, fetchFailed: false };
 }
 
+/** Attempts per availability fetch (matches the deploy-guard convention in CI). */
+export const CALENDAR_AVAILABILITY_FETCH_ATTEMPTS = 2;
+
+export interface AvailabilityFetchRetryOptions {
+  attempts?: number;
+  timeoutMs?: number;
+}
+
+/**
+ * Availability fetch with a per-attempt timeout and retry, so one Lambda cold start or
+ * transient network failure does not surface as a terminal picker error. The caller's
+ * `unmountSignal` only signals component unmount; each attempt gets its own controller.
+ */
+async function fetchPublicCalendarAvailabilityWithRetry(
+  params: {
+    purpose: PublicCalendarAvailabilityPurpose;
+    fromYmd: string;
+    toYmd: string;
+    unmountSignal: AbortSignal;
+  },
+  options: AvailabilityFetchRetryOptions = {},
+): Promise<{
+  slots: PublicCalendarSlot[];
+  meta: PublicCalendarAvailabilityMeta | null;
+  fetchFailed: boolean;
+}> {
+  const attempts = Math.max(1, options.attempts ?? CALENDAR_AVAILABILITY_FETCH_ATTEMPTS);
+  const timeoutMs = options.timeoutMs ?? CALENDAR_PUBLIC_CLIENT_FETCH_TIMEOUT_MS;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    if (params.unmountSignal.aborted) {
+      break;
+    }
+    const attemptController = new AbortController();
+    const abortAttempt = () => {
+      attemptController.abort();
+    };
+    params.unmountSignal.addEventListener('abort', abortAttempt);
+    const timeoutId = setTimeout(abortAttempt, timeoutMs);
+    try {
+      const result = await fetchPublicCalendarAvailability({
+        purpose: params.purpose,
+        fromYmd: params.fromYmd,
+        toYmd: params.toYmd,
+        signal: attemptController.signal,
+      });
+      // fetchFailed here only means the CRM client is unconfigured; retrying cannot help.
+      return result;
+    } catch {
+      // Timeout or transport error: fall through to the next attempt unless unmounted.
+    } finally {
+      clearTimeout(timeoutId);
+      params.unmountSignal.removeEventListener('abort', abortAttempt);
+    }
+  }
+  return { slots: [], meta: null, fetchFailed: true };
+}
+
 /**
  * Consultation half-day unavailable slots derived from discrete availability slots (same modal shape
  * as the legacy blockers API).
  */
 export async function fetchConsultationCalendarAvailability(
   signal: AbortSignal,
+  options: AvailabilityFetchRetryOptions = {},
 ): Promise<ConsultationCalendarAvailabilityFetchResult> {
   const { fromYmd, toYmd } = buildConsultationBlockersQueryRange(new Date());
 
-  try {
-    const { slots, meta, fetchFailed } = await fetchPublicCalendarAvailability({
+  const { slots, meta, fetchFailed } = await fetchPublicCalendarAvailabilityWithRetry(
+    {
       purpose: 'consultation_booking',
       fromYmd,
       toYmd,
-      signal,
-    });
-    if (fetchFailed) {
-      return { slots: [], fetchFailed: true };
-    }
-    const wall = meta?.wallTimeZone?.trim();
-    if (!wall) {
-      return { slots: [], fetchFailed: true };
-    }
-    const derived = deriveHalfDayBlockersFromSlots(slots, wall, { fromYmd, toYmd });
-    return { slots: derived, fetchFailed: false };
-  } catch {
+      unmountSignal: signal,
+    },
+    options,
+  );
+  if (fetchFailed) {
     return { slots: [], fetchFailed: true };
   }
+  const wall = meta?.wallTimeZone?.trim();
+  if (!wall) {
+    return { slots: [], fetchFailed: true };
+  }
+  const derived = deriveHalfDayBlockersFromSlots(slots, wall, { fromYmd, toYmd });
+  return { slots: derived, fetchFailed: false };
 }
 
 /** Backward-compatible name for {@link fetchConsultationCalendarAvailability}. */
@@ -242,26 +300,28 @@ export function ymdFromSiteTimeZoneForIntro(instant: Date): string {
   return ymdFromSiteTimeZone(instant);
 }
 
-export async function fetchIntroCallSlots(signal: AbortSignal): Promise<IntroCallSlotsFetchResult> {
+export async function fetchIntroCallSlots(
+  signal: AbortSignal,
+  options: AvailabilityFetchRetryOptions = {},
+): Promise<IntroCallSlotsFetchResult> {
   const now = new Date();
   const fromYmd = ymdFromSiteTimeZoneForIntro(now);
   const end = new Date(now.getTime() + INTRO_CALL_HORIZON_DAYS * 86400000);
   const toYmd = ymdFromSiteTimeZoneForIntro(end);
 
-  try {
-    const { slots, fetchFailed } = await fetchPublicCalendarAvailability({
+  const { slots, fetchFailed } = await fetchPublicCalendarAvailabilityWithRetry(
+    {
       purpose: 'intro_call_booking',
       fromYmd,
       toYmd,
-      signal,
-    });
-    if (fetchFailed) {
-      return { slots: [], fetchFailed: true };
-    }
-    return { slots, fetchFailed: false };
-  } catch {
+      unmountSignal: signal,
+    },
+    options,
+  );
+  if (fetchFailed) {
     return { slots: [], fetchFailed: true };
   }
+  return { slots, fetchFailed: false };
 }
 
 export const INTRO_CALL_SLOTS_API_PATH = PUBLIC_CALENDAR_AVAILABILITY_API_PATH;

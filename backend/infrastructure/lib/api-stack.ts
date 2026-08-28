@@ -1735,6 +1735,10 @@ export class ApiStack extends cdk.Stack {
       handler: "lambda/admin/handler.lambda_handler",
       extraCopyPaths: ["src/app/assets/invoice"],
       timeout: cdk.Duration.seconds(29),
+      // 1024 MB buys proportionally more CPU, cutting the ~3.8s cold-start init
+      // (SQLAlchemy + app imports) that made public availability fetches exceed
+      // short client timeouts on low-traffic paths.
+      memorySize: 1024,
       environment: {
         TURNSTILE_SECRET_KEY: turnstileSecretKey.valueAsString,
         DATABASE_SECRET_ARN: database.adminUserSecret.secretArn,

@@ -369,7 +369,7 @@ Each Lambda function created by `PythonLambda` construct includes:
 
 | Function Logical ID | Handler | Memory | Timeout | VPC | Extra Paths |
 |---------------------|---------|--------|---------|-----|-------------|
-| `EvolvesproutsAdminFunction` | `lambda/admin/handler.lambda_handler` | 512 MB | 30s | Yes | - |
+| `EvolvesproutsAdminFunction` | `lambda/admin/handler.lambda_handler` | 1024 MB | 30s | Yes | - |
 | `EvolvesproutsMigrationFunction` | `lambda/migrations/handler.lambda_handler` | 512 MB | 5 min | Yes | `db` |
 | `ImportLegacyVenuesFunction` | `lambda/imports/legacy_crm/handler.lambda_handler` | 512 MB | 10 min | Yes | - |
 | `HealthCheckFunction` | `lambda/health/handler.lambda_handler` | 256 MB | 10s | Yes | - |

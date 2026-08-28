@@ -141,14 +141,20 @@ class Expense(Base):
         back_populates="expense",
         cascade="all, delete-orphan",
     )
+    # Self-referential pair over amends_expense_id; back_populates links them so
+    # SQLAlchemy does not emit an overlapping-relationship SAWarning at mapper
+    # configuration (which fired on every Lambda cold start).
     amended_from: Mapped[Expense | None] = relationship(
         "Expense",
         remote_side=[id],
+        foreign_keys=[amends_expense_id],
+        back_populates="amendments",
         uselist=False,
     )
     amendments: Mapped[list[Expense]] = relationship(
         "Expense",
         foreign_keys=[amends_expense_id],
+        back_populates="amended_from",
     )
     vendor: Mapped[Organization | None] = relationship("Organization")
 
