@@ -402,6 +402,105 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/meta/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Messenger and Instagram webhook verification
+         * @description Meta subscription handshake for Page and Instagram messaging.
+         *     Returns the raw `hub.challenge` when `hub.mode=subscribe` and
+         *     `hub.verify_token` matches `WHATSAPP_WEBHOOK_VERIFY_TOKEN` (same
+         *     Meta app verify token as WhatsApp).
+         */
+        get: {
+            parameters: {
+                query: {
+                    "hub.mode": string;
+                    "hub.verify_token": string;
+                    "hub.challenge": string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Verification challenge echoed as plain text. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": string;
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        put?: never;
+        /**
+         * Receive Messenger and Instagram webhook events
+         * @description Public webhook for inbound Messenger and Instagram Direct messages
+         *     plus `is_echo` outbound copies. Requests must include a valid
+         *     `X-Hub-Signature-256` HMAC of the raw body using `META_APP_SECRET`.
+         *     WhatsApp payloads (`object: whatsapp_business_account`) are ignored
+         *     here and stay on `/v1/whatsapp/webhook`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            responses: {
+                /** @description Webhook processed. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MetaWebhookAccepted"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Missing or invalid webhook signature. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Method not allowed. */
+                405: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/whatsapp/conversations": {
         parameters: {
             query?: never;
@@ -495,6 +594,125 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["PublicWhatsAppMessageListResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Missing or invalid API token. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/meta/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Messenger and Instagram conversations (token API)
+         * @description Returns captured Messenger and Instagram threads for a hashed API token
+         *     (`x-api-token`). Payloads include channel, display name, and dates only.
+         *     Page-scoped user ids and page ids are never returned. Search (`q`) matches
+         *     profile names only, not scoped ids.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    cursor?: string;
+                    /** @description Case-insensitive search on profile name (not scoped id). */
+                    q?: string;
+                    /** @description Restrict results to `facebook` (Messenger) or `instagram`. */
+                    channel?: "facebook" | "instagram";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated conversation list without Page-scoped ids. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicMetaConversationListResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Missing or invalid API token. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/meta/conversations/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * List Messenger or Instagram messages for a conversation (token API)
+         * @description Returns the conversation header (channel, name, and dates) plus newest-first
+         *     messages. Message payloads include direction, body, and sent time only —
+         *     no Page-scoped user ids, page ids, or platform message ids.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Conversation plus messages without scoped ids. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicMetaMessageListResponse"];
                     };
                 };
                 400: components["responses"]["BadRequest"];
@@ -2762,6 +2980,44 @@ export interface components {
         PublicWhatsAppMessageListResponse: {
             conversation: components["schemas"]["PublicWhatsAppConversationSummary"];
             items: components["schemas"]["PublicWhatsAppMessageSummary"][];
+        };
+        MetaWebhookAccepted: {
+            message: string;
+            stored?: number;
+            duplicates?: number;
+            skipped?: number;
+            leads_created?: number;
+        };
+        PublicMetaConversationSummary: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            channel: "facebook" | "instagram";
+            /** @description Display name. Never a Page-scoped user id or last-four fallback. */
+            name: string;
+            /** Format: date-time */
+            first_inbound_at?: string | null;
+            /** Format: date-time */
+            last_message_at?: string | null;
+            /** Format: date-time */
+            created_at?: string | null;
+        };
+        PublicMetaMessageSummary: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            direction: "inbound" | "outbound";
+            body?: string | null;
+            /** Format: date-time */
+            sent_at: string;
+        };
+        PublicMetaConversationListResponse: {
+            items: components["schemas"]["PublicMetaConversationSummary"][];
+            next_cursor?: string | null;
+        };
+        PublicMetaMessageListResponse: {
+            conversation: components["schemas"]["PublicMetaConversationSummary"];
+            items: components["schemas"]["PublicMetaMessageSummary"][];
         };
         ReservationSubmissionAccepted: {
             message: string;

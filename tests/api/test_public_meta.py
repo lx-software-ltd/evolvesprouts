@@ -44,9 +44,7 @@ class _FakeSessionCM:
 def test_public_meta_requires_token(api_gateway_event: Any) -> None:
     event = api_gateway_event(method="GET", path="/v1/public/meta/conversations")
     with pytest.raises(AuthenticationError):
-        pmeta.handle_public_meta_request(
-            event, "GET", "/v1/public/meta/conversations"
-        )
+        pmeta.handle_public_meta_request(event, "GET", "/v1/public/meta/conversations")
 
 
 def test_public_meta_user_cannot_write(api_gateway_event: Any) -> None:
@@ -57,9 +55,7 @@ def test_public_meta_user_cannot_write(api_gateway_event: Any) -> None:
         method="POST",
     )
     with pytest.raises(AuthorizationError):
-        pmeta.handle_public_meta_request(
-            event, "POST", "/v1/public/meta/conversations"
-        )
+        pmeta.handle_public_meta_request(event, "POST", "/v1/public/meta/conversations")
 
 
 def test_public_conversation_name_never_uses_scoped_id() -> None:

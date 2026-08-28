@@ -23,11 +23,7 @@ def test_extract_body_text_and_attachment_caption() -> None:
     assert ingest._extract_body({"text": "How much?"}) == "How much?"
     assert (
         ingest._extract_body(
-            {
-                "attachments": [
-                    {"type": "image", "payload": {"title": "Look at this"}}
-                ]
-            }
+            {"attachments": [{"type": "image", "payload": {"title": "Look at this"}}]}
         )
         == "Look at this"
     )
@@ -117,7 +113,9 @@ def test_ingest_stores_inbound_instagram_and_creates_lead(
     assert counters["stored"] == 1
     assert counters["leads_created"] == 1
     conversation = next(
-        item for item in added if getattr(item, "platform_user_id", None) == "igsid-user-1"
+        item
+        for item in added
+        if getattr(item, "platform_user_id", None) == "igsid-user-1"
     )
     assert conversation.channel is MetaChannel.INSTAGRAM
     assert conversation.profile_name == "kitie.w"
@@ -192,7 +190,9 @@ def test_ingest_stores_messenger_echo_as_outbound(
     assert counters["stored"] == 1
     assert counters["leads_created"] == 0
     conversation = next(
-        item for item in added if getattr(item, "platform_user_id", None) == "psid-user-1"
+        item
+        for item in added
+        if getattr(item, "platform_user_id", None) == "psid-user-1"
     )
     assert conversation.channel is MetaChannel.FACEBOOK
     assert any(

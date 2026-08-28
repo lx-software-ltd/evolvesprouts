@@ -112,7 +112,9 @@ class MetaMessage(Base):
 
     __tablename__ = "meta_messages"
     __table_args__ = (
-        Index("meta_messages_platform_message_id_idx", "platform_message_id", unique=True),
+        Index(
+            "meta_messages_platform_message_id_idx", "platform_message_id", unique=True
+        ),
         Index("meta_messages_conversation_idx", "conversation_id", "sent_at"),
     )
 

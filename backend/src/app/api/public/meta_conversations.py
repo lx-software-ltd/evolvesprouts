@@ -75,9 +75,7 @@ def public_conversation_name(conversation: MetaConversation) -> str:
 
 def _exposes_scoped_id(value: str, platform_user_id: str) -> bool:
     """True when a label is the Page-scoped user id or a last-four fallback."""
-    if platform_user_id and (
-        value == platform_user_id or platform_user_id in value
-    ):
+    if platform_user_id and (value == platform_user_id or platform_user_id in value):
         return True
     last_four = platform_user_id[-4:] if len(platform_user_id) >= 4 else ""
     if last_four and value.endswith(last_four) and value.split()[-1] == last_four:

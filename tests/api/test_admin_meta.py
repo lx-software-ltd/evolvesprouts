@@ -86,7 +86,9 @@ def test_admin_meta_lists_conversations(
         "/v1/admin/meta/conversations",
         query_params={"channel": "instagram"},
     )
-    response = am.handle_admin_meta_request(event, "GET", "/v1/admin/meta/conversations")
+    response = am.handle_admin_meta_request(
+        event, "GET", "/v1/admin/meta/conversations"
+    )
     assert response["statusCode"] == 200
     body = json.loads(response["body"])
     assert body["total_count"] == 1
