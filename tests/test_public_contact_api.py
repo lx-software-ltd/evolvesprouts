@@ -112,6 +112,9 @@ def test_handle_public_contact_us_persists_and_runs_hooks(
         def __init__(self, _session: object) -> None:
             pass
 
+        def find_open_by_contact(self, *_a: object, **_k: object) -> None:
+            return None
+
         def create_with_event(self, *_a: object, **_k: object) -> None:
             return None
 
@@ -152,7 +155,7 @@ def test_handle_public_contact_us_persists_and_runs_hooks(
     assert payload["message"] == "Hello"
 
 
-def test_handle_public_contact_us_newsletter_skips_sales_lead_repo(
+def test_handle_public_contact_us_newsletter_creates_sales_lead(
     api_gateway_event: Any,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -160,6 +163,12 @@ def test_handle_public_contact_us_newsletter_skips_sales_lead_repo(
     monkeypatch.setattr(pc, "run_contact_us_post_success", MagicMock())
 
     lead_create = MagicMock()
+
+    class _FakeSalesLead:
+        def __init__(self, **kwargs: object) -> None:
+            self.lead_type = kwargs.get("lead_type")
+
+    monkeypatch.setattr(pc, "SalesLead", _FakeSalesLead)
 
     class _FakeContactRepo:
         def __init__(self, _session: object) -> None:
@@ -176,6 +185,9 @@ def test_handle_public_contact_us_newsletter_skips_sales_lead_repo(
     class _FakeLeadRepo:
         def __init__(self, _session: object) -> None:
             pass
+
+        def find_open_by_contact(self, *_a: object, **_k: object) -> None:
+            return None
 
         def create_with_event(self, *a: object, **k: object) -> None:
             lead_create(*a, **k)
@@ -206,7 +218,9 @@ def test_handle_public_contact_us_newsletter_skips_sales_lead_repo(
     )
     resp = pc.handle_public_contact_us(event, "POST")
     assert resp["statusCode"] == 202
-    lead_create.assert_not_called()
+    lead_create.assert_called_once()
+    created_lead = lead_create.call_args.args[0]
+    assert created_lead.lead_type == pc.LeadType.OTHER
 
 
 def test_handle_public_contact_us_hook_failure_still_returns_202(
@@ -241,6 +255,9 @@ def test_handle_public_contact_us_hook_failure_still_returns_202(
     class _FakeLeadRepo:
         def __init__(self, _session: object) -> None:
             pass
+
+        def find_open_by_contact(self, *_a: object, **_k: object) -> None:
+            return None
 
         def create_with_event(self, *_a: object, **_k: object) -> None:
             return None

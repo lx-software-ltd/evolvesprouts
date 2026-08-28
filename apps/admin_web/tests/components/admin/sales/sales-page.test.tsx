@@ -85,6 +85,7 @@ describe('SalesPage', () => {
     render(<SalesPage />);
 
     expect(screen.getByRole('button', { name: 'Pipeline' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'WhatsApp' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Analytics' }));
     expect(state.setActiveView).toHaveBeenCalledWith('analytics');
   });

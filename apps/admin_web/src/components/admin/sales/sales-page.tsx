@@ -7,6 +7,7 @@ import { FunnelOverview } from './funnel-overview';
 import { LeadDetailPanel } from './lead-detail-panel';
 import { LeadsTable } from './leads-table';
 import { SalesHeader } from './sales-header';
+import { WhatsAppConversationsView } from './whatsapp-conversations-view';
 
 import { AdminPageErrorBanner } from '@/components/admin/admin-page-error-banner';
 import { StatusBanner } from '@/components/status-banner';
@@ -30,6 +31,7 @@ const AnalyticsView = dynamic(
 const SALES_TAB_ITEMS: { key: SalesView; label: string }[] = [
   { key: 'pipeline', label: 'Pipeline' },
   { key: 'analytics', label: 'Analytics' },
+  { key: 'whatsapp', label: 'WhatsApp' },
 ];
 
 export function SalesPage() {
@@ -64,6 +66,7 @@ export function SalesPage() {
         onChange={state.setActiveView}
       />
 
+      {state.activeView === 'whatsapp' ? null : (
       <SalesHeader
         activeView={state.activeView}
         dateRange={state.leadAnalytics.dateRange}
@@ -81,8 +84,11 @@ export function SalesPage() {
         }}
         onNewLead={state.startCreateLead}
       />
+      )}
 
-      {state.activeView === 'pipeline' ? (
+      {state.activeView === 'whatsapp' ? (
+        <WhatsAppConversationsView />
+      ) : state.activeView === 'pipeline' ? (
         <>
           <FunnelOverview
             analytics={state.leadAnalytics.analytics}

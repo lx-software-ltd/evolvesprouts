@@ -1321,6 +1321,95 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/whatsapp/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List captured WhatsApp conversations */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    /** @description Opaque continuation token from `next_cursor`. */
+                    cursor?: string;
+                    /** @description Case-insensitive search on profile name or WhatsApp id. */
+                    q?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated WhatsApp conversation list. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WhatsAppConversationListResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/whatsapp/conversations/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** List messages for a WhatsApp conversation */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Conversation header plus newest-first messages. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WhatsAppMessageListResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/leads/{id}": {
         parameters: {
             query?: never;
@@ -6445,6 +6534,45 @@ export interface components {
             organization?: Record<string, never> | null;
             events?: components["schemas"]["LeadEvent"][];
             notes?: components["schemas"]["Note"][];
+        };
+        WhatsAppConversationSummary: {
+            /** Format: uuid */
+            id: string;
+            wa_id: string;
+            profile_name?: string | null;
+            /** Format: uuid */
+            contact_id?: string | null;
+            contact_name?: string | null;
+            /** Format: uuid */
+            lead_id?: string | null;
+            /** Format: date-time */
+            first_inbound_at?: string | null;
+            /** Format: date-time */
+            last_message_at?: string | null;
+            inbound_count: number;
+            outbound_count: number;
+            /** Format: date-time */
+            created_at?: string | null;
+        };
+        WhatsAppMessageSummary: {
+            /** Format: uuid */
+            id: string;
+            wa_message_id: string;
+            /** @enum {string} */
+            direction: "inbound" | "outbound";
+            message_type: string;
+            body?: string | null;
+            /** Format: date-time */
+            sent_at: string;
+        };
+        WhatsAppConversationListResponse: {
+            items: components["schemas"]["WhatsAppConversationSummary"][];
+            next_cursor?: string | null;
+            total_count: number;
+        };
+        WhatsAppMessageListResponse: {
+            conversation: components["schemas"]["WhatsAppConversationSummary"];
+            items: components["schemas"]["WhatsAppMessageSummary"][];
         };
         LeadListResponse: {
             items: components["schemas"]["LeadSummary"][];

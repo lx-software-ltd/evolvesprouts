@@ -321,7 +321,7 @@ Lead sources:
   Event notification ▶ /www/v1/contact-us (signup_intent) ──▶ Aurora CRM ──▶ SES hook ──▶ Mailchimp
   Booking ───────────▶ API ──▶ DB (contact + reservation) ─▶ SES sales recap (`ADMIN_GROUP`) ──▶ Mailchimp (opt-in)
 
-  WhatsApp DMs ──────▶ Manual entry (or future WhatsApp Business API)
+  WhatsApp DMs ──────▶ Cloud API webhook `/v1/whatsapp/webhook` ──▶ DB (conversation + contact + sales lead)
   LinkedIn DMs ──────▶ Manual entry (redirect to trackable channel)
   Direct email ──────▶ Manual (rare, handle case-by-case)
 ```
@@ -730,7 +730,7 @@ Meta Commerce Manager, or potentially via the Catalog API
 | Instagram → LinkedIn | Automated via Zapier | Works but could be improved (see below) |
 | LinkedIn DMs → CRM | No programmatic path | Use redirect-to-trackable-channel workaround |
 | Mailchimp | Fully integrated (backend subscriber sync with tags, webhook reconciliation) | Build nurture sequences per tag |
-| WhatsApp → CRM | Manual | Consider Zapier WhatsApp Business integration when volume grows |
+| WhatsApp → CRM | Cloud API webhook on Admin Lambda (`/v1/whatsapp/webhook`); Sales → WhatsApp inbox | Subscribe Meta `messages` + `smb_message_echoes`; set `CDK_PARAM_META_APP_SECRET` and `CDK_PARAM_WHATSAPP_WEBHOOK_VERIFY_TOKEN` |
 
 ### Potential improvements
 
@@ -749,9 +749,11 @@ Meta Commerce Manager, or potentially via the Catalog API
 
 3. ~~**WhatsApp Business API reconnection**~~: **Done.** Cloud API connected
    in coexistence mode on 2026-03-17. Three message templates created
-   (`welcome_greeting`, `free_intro_invite`, `course_info_followup`) —
-   pending Meta review. Next step: build webhook infrastructure for
-   automated lead capture from inbound WhatsApp messages.
+   (`welcome_greeting`, `free_intro_invite`, `course_info_followup`).
+   ~~Webhook lead capture~~: **Done** via Admin Lambda `GET`/`POST
+   /v1/whatsapp/webhook` (inbound + coexistence echoes) and Sales →
+   WhatsApp. Operators still need to subscribe the Meta app to `messages`
+   and `smb_message_echoes` and set the CDK webhook secrets.
 
 4. **Retargeting audiences in Google Ads**: Once GA4 has enough traffic
    data (1-2 months), create remarketing audiences for:
