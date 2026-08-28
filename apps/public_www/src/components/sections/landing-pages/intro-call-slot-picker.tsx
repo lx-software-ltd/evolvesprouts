@@ -21,10 +21,7 @@ import type {
 } from '@/content';
 import { formatContentTemplate } from '@/content/content-field-utils';
 import type { IntroCallSlot } from '@/lib/public-calendar-availability-api';
-import {
-  CALENDAR_PUBLIC_CLIENT_FETCH_TIMEOUT_MS,
-  fetchIntroCallSlots,
-} from '@/lib/public-calendar-availability-api';
+import { fetchIntroCallSlots } from '@/lib/public-calendar-availability-api';
 import {
   formatPartDateTimeLabel,
   PUBLIC_SITE_IANA_TIMEZONE,
@@ -170,10 +167,9 @@ export function IntroCallSlotPicker({
   }, [status]);
 
   useEffect(() => {
+    // Per-attempt timeout and retry live inside fetchIntroCallSlots; this controller
+    // only signals unmount.
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => {
-      controller.abort();
-    }, CALENDAR_PUBLIC_CLIENT_FETCH_TIMEOUT_MS);
 
     const loadingFrame = window.requestAnimationFrame(() => {
       setStatusBoth('loading');
@@ -181,6 +177,9 @@ export function IntroCallSlotPicker({
 
     fetchIntroCallSlots(controller.signal)
       .then((res) => {
+        if (controller.signal.aborted) {
+          return;
+        }
         if (res.fetchFailed) {
           setStatusBoth('error');
           setSlots([]);
@@ -191,16 +190,15 @@ export function IntroCallSlotPicker({
         setStatusBoth('ready');
       })
       .catch(() => {
+        if (controller.signal.aborted) {
+          return;
+        }
         setStatusBoth('error');
         setSlots([]);
-      })
-      .finally(() => {
-        window.clearTimeout(timeoutId);
       });
 
     return () => {
       window.cancelAnimationFrame(loadingFrame);
-      window.clearTimeout(timeoutId);
       controller.abort();
     };
   }, [refreshToken, setStatusBoth]);

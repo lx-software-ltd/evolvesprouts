@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  CALENDAR_AVAILABILITY_FETCH_ATTEMPTS,
   INTRO_CALL_SLOTS_API_PATH,
   PUBLIC_CALENDAR_AVAILABILITY_API_PATH,
   buildConsultationBlockersQueryRange,
   buildIntroCallSlotsApiPath,
   fetchConsultationCalendarAvailability,
+  fetchIntroCallSlots,
   fetchPublicCalendarAvailability,
   ymdFromSiteTimeZone,
   ymdFromSiteTimeZoneForIntro,
@@ -122,5 +124,72 @@ describe('fetchConsultationCalendarAvailability', () => {
     const out = await fetchConsultationCalendarAvailability(new AbortController().signal);
     expect(out.fetchFailed).toBe(true);
     expect(out.slots).toEqual([]);
+  });
+});
+
+describe('availability fetch retry', () => {
+  it('exposes the two-attempt convention shared with the CI deploy guard', () => {
+    expect(CALENDAR_AVAILABILITY_FETCH_ATTEMPTS).toBe(2);
+  });
+
+  it('retries fetchIntroCallSlots once after a transient request failure', async () => {
+    const { createPublicCrmApiClient } = await import('@/lib/crm-api-client');
+    const request = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('socket hang up'))
+      .mockResolvedValueOnce({
+        slots: [{ start_iso: '2026-05-04T01:00:00Z', end_iso: '2026-05-04T01:15:00Z' }],
+        meta: { wall_time_zone: 'Asia/Hong_Kong' },
+      });
+    vi.mocked(createPublicCrmApiClient).mockReturnValue({ request });
+
+    const out = await fetchIntroCallSlots(new AbortController().signal);
+
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(out.fetchFailed).toBe(false);
+    expect(out.slots).toEqual([
+      { startIso: '2026-05-04T01:00:00Z', endIso: '2026-05-04T01:15:00Z' },
+    ]);
+  });
+
+  it('returns fetchFailed after all attempts fail', async () => {
+    const { createPublicCrmApiClient } = await import('@/lib/crm-api-client');
+    const request = vi.fn().mockRejectedValue(new Error('timeout'));
+    vi.mocked(createPublicCrmApiClient).mockReturnValue({ request });
+
+    const out = await fetchIntroCallSlots(new AbortController().signal);
+
+    expect(request).toHaveBeenCalledTimes(CALENDAR_AVAILABILITY_FETCH_ATTEMPTS);
+    expect(out).toEqual({ slots: [], fetchFailed: true });
+  });
+
+  it('does not fetch or retry once the unmount signal is aborted', async () => {
+    const { createPublicCrmApiClient } = await import('@/lib/crm-api-client');
+    const request = vi.fn();
+    vi.mocked(createPublicCrmApiClient).mockReturnValue({ request });
+
+    const controller = new AbortController();
+    controller.abort();
+    const out = await fetchIntroCallSlots(controller.signal);
+
+    expect(request).not.toHaveBeenCalled();
+    expect(out).toEqual({ slots: [], fetchFailed: true });
+  });
+
+  it('retries fetchConsultationCalendarAvailability after a transient failure', async () => {
+    const { createPublicCrmApiClient } = await import('@/lib/crm-api-client');
+    const request = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('timeout'))
+      .mockResolvedValueOnce({
+        slots: [],
+        meta: { wall_time_zone: 'Asia/Hong_Kong' },
+      });
+    vi.mocked(createPublicCrmApiClient).mockReturnValue({ request });
+
+    const out = await fetchConsultationCalendarAvailability(new AbortController().signal);
+
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(out.fetchFailed).toBe(false);
   });
 });
