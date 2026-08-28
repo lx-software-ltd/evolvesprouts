@@ -54,6 +54,10 @@ their primary responsibilities.
   sort key `CONTROL`; default is all off; same contract as `/www/v1/polls/{poll_slug}/control`),
   `/v1/admin/geographic-areas`,
   `/v1/mailchimp/webhook` (GET/POST),
+  `/v1/whatsapp/webhook` (GET handshake + POST inbound/echo messages;
+  HMAC `X-Hub-Signature-256` via `META_APP_SECRET`; verify token
+  `WHATSAPP_WEBHOOK_VERIFY_TOKEN`; persists conversations and creates
+  WhatsApp CRM contacts/leads),
   `/v1/admin/locations/*` (including `GET /v1/admin/locations?exclude_addresses=true`
   to list service venues without family/organisation home addresses, and
   `POST /v1/admin/locations/geocode` for
@@ -288,9 +292,11 @@ their primary responsibilities.
   verification (via `AwsApiProxyFunction`) and SNS event publishing on
   `/v1/assets/free/request`, Mailchimp webhook ingestion and contact sync-status
   reconciliation on `/v1/mailchimp/webhook`, native public contact-us on
-  `/v1/contact-us` (Turnstile + Aurora contact upsert; optional sales lead for
-  `contact_inquiry`; post-success SES + Mailchimp + recaps via
+  `/v1/contact-us` (Turnstile + Aurora contact upsert; sales lead for
+  `contact_inquiry`, `community_newsletter`, and `event_notification` when no
+  open lead exists; post-success SES + Mailchimp + recaps via
   `run_contact_us_post_success`),
+  WhatsApp Cloud API webhook ingestion on `/v1/whatsapp/webhook`,
   Stripe PaymentIntent creation for
   inline public booking modal payments on `/v1/reservations/payment-intent`
   (card-only `payment_method_types[]=card`; wallet buttons are disabled in the

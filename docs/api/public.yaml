@@ -30,6 +30,8 @@ info:
     - Public website endpoints consumed by `apps/public_www`, exposed via the
       CloudFront `/www/*` proxy allowlist in
       `backend/infrastructure/lib/public-www-stack.ts`.
+    - WhatsApp Cloud API webhook (`GET`/`POST /v1/whatsapp/webhook`) for Meta
+      handshake plus inbound and coexistence echo messages.
 
 servers:
   - url: https://api.evolvesprouts.com
@@ -192,6 +194,73 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           description: Missing or invalid webhook token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "405":
+          description: Method not allowed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /v1/whatsapp/webhook:
+    get:
+      summary: WhatsApp Cloud API webhook verification
+      description: |
+        Meta subscription handshake. Returns the raw `hub.challenge` when
+        `hub.mode=subscribe` and `hub.verify_token` matches
+        `WHATSAPP_WEBHOOK_VERIFY_TOKEN`.
+      parameters:
+        - name: hub.mode
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: hub.verify_token
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: hub.challenge
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Verification challenge echoed as plain text.
+          content:
+            text/plain:
+              schema:
+                type: string
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      summary: Receive WhatsApp Cloud API webhook events
+      description: |
+        Public webhook for inbound WhatsApp messages and coexistence
+        `smb_message_echoes`. Requests must include a valid
+        `X-Hub-Signature-256` HMAC of the raw body using `META_APP_SECRET`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Webhook processed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsAppWebhookAccepted"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid webhook signature.
           content:
             application/json:
               schema:
@@ -2836,6 +2905,21 @@ components:
         count:
           type: integer
           minimum: 0
+    WhatsAppWebhookAccepted:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+        stored:
+          type: integer
+        duplicates:
+          type: integer
+        skipped:
+          type: integer
+        leads_created:
+          type: integer
     ReservationSubmissionAccepted:
       type: object
       required:

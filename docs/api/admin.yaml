@@ -97,6 +97,8 @@ info:
     - `POST /v1/admin/leads/{id}/notes`
     - `GET /v1/admin/leads/analytics`
     - `GET /v1/admin/leads/export`
+    - `GET /v1/admin/whatsapp/conversations`
+    - `GET /v1/admin/whatsapp/conversations/{id}/messages`
     - `GET|POST /v1/admin/assets`
     - `GET|PUT|PATCH|DELETE /v1/admin/assets/{id}`
     - `POST /v1/admin/assets/{id}/content/init`
@@ -1094,6 +1096,79 @@ paths:
             text/csv:
               schema:
                 type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/admin/whatsapp/conversations:
+    get:
+      summary: List captured WhatsApp conversations
+      security:
+        - AdminBearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          required: false
+          description: Opaque continuation token from `next_cursor`.
+          schema:
+            type: string
+        - name: q
+          in: query
+          required: false
+          description: Case-insensitive search on profile name or WhatsApp id.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated WhatsApp conversation list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsAppConversationListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/admin/whatsapp/conversations/{id}/messages:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: List messages for a WhatsApp conversation
+      security:
+        - AdminBearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        "200":
+          description: Conversation header plus newest-first messages.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsAppMessageListResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "403":
@@ -5106,6 +5181,101 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/Note"
+    WhatsAppConversationSummary:
+      type: object
+      required:
+        - id
+        - wa_id
+        - inbound_count
+        - outbound_count
+      properties:
+        id:
+          type: string
+          format: uuid
+        wa_id:
+          type: string
+        profile_name:
+          type: string
+          nullable: true
+        contact_id:
+          type: string
+          format: uuid
+          nullable: true
+        contact_name:
+          type: string
+          nullable: true
+        lead_id:
+          type: string
+          format: uuid
+          nullable: true
+        first_inbound_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_message_at:
+          type: string
+          format: date-time
+          nullable: true
+        inbound_count:
+          type: integer
+        outbound_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+    WhatsAppMessageSummary:
+      type: object
+      required:
+        - id
+        - wa_message_id
+        - direction
+        - message_type
+        - sent_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        wa_message_id:
+          type: string
+        direction:
+          type: string
+          enum: [inbound, outbound]
+        message_type:
+          type: string
+        body:
+          type: string
+          nullable: true
+        sent_at:
+          type: string
+          format: date-time
+    WhatsAppConversationListResponse:
+      type: object
+      required:
+        - items
+        - total_count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/WhatsAppConversationSummary"
+        next_cursor:
+          type: string
+          nullable: true
+        total_count:
+          type: integer
+    WhatsAppMessageListResponse:
+      type: object
+      required:
+        - conversation
+        - items
+      properties:
+        conversation:
+          $ref: "#/components/schemas/WhatsAppConversationSummary"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/WhatsAppMessageSummary"
     LeadListResponse:
       type: object
       required:

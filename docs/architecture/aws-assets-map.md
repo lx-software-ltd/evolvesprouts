@@ -508,6 +508,9 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | `/v1/admin/leads/export` | GET | Admin Group | `EvolvesproutsAdminFunction` | CSV lead export |
 | `/v1/admin/leads/{id}` | GET, PATCH | Admin Group | `EvolvesproutsAdminFunction` | Lead detail/stage+assignee updates |
 | `/v1/admin/leads/{id}/notes` | POST | Admin Group | `EvolvesproutsAdminFunction` | Immutable note append |
+| `/v1/whatsapp/webhook` | GET, POST | None (HMAC + verify token) | `EvolvesproutsAdminFunction` | Meta WhatsApp Cloud API webhook; inbound + coexistence echoes |
+| `/v1/admin/whatsapp/conversations` | GET | Admin Group | `EvolvesproutsAdminFunction` | Paginated captured WhatsApp threads |
+| `/v1/admin/whatsapp/conversations/{id}/messages` | GET | Admin Group | `EvolvesproutsAdminFunction` | Messages for one thread |
 | `/v1/admin/assets` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | |
 | `/v1/admin/assets/{id}` | GET, PUT, PATCH, DELETE | Admin Group | `EvolvesproutsAdminFunction` | |
 | `/v1/admin/assets/{id}/grants` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | |

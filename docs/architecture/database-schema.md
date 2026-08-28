@@ -518,6 +518,17 @@ maps legacy `note.id` to the **first** inserted row’s UUID.
 - Immutable event log for lead lifecycle transitions and actions.
 - Rows cascade delete with parent lead (`lead_id` FK with `ON DELETE CASCADE`).
 
+### `whatsapp_conversations`
+
+- Purpose: one WhatsApp Cloud API thread per counterparty `wa_id`.
+- Optional `contact_id` / `lead_id` FKs (`ON DELETE SET NULL`) created on first inbound message.
+- Unique index on `wa_id`; activity counters and `last_message_at` for admin listing.
+
+### `whatsapp_messages`
+
+- Individual inbound or outbound (`smb_message_echoes`) messages.
+- Unique `wa_message_id` for webhook idempotency; cascade delete with parent conversation.
+
 ## Services tables
 
 ### `services` + type-detail tables

@@ -722,6 +722,23 @@ any future allocation delete endpoint must call `recompute_invoice_settlement` i
 
 When `paid_at` transitions (``None`` ↔ timestamp) on an issued invoice that already has a canonical PDF in S3, the issued PDF is re-rendered with a diagonal **PAID** watermark on every page; `issued_pdf_sha256` and `pdf_template_version` are updated in the same database transaction as settlement recompute. Consumers of `issued_pdf_sha256` as an integrity digest should expect the hash to change when settlement flips the paid watermark on or off (the bytes legitimately changed).
 
+## WhatsApp Cloud API webhooks on Admin Lambda
+
+**Decision:** Ingest Meta WhatsApp Cloud API webhooks on the existing
+`EvolvesproutsAdminFunction` at public `GET`/`POST /v1/whatsapp/webhook`,
+the same pattern as Mailchimp. Do **not** add a dedicated WhatsApp Lambda.
+Verify `GET` with `WHATSAPP_WEBHOOK_VERIFY_TOKEN` and `POST` with HMAC
+`X-Hub-Signature-256` using `META_APP_SECRET`. Persist inbound `messages`
+and coexistence `smb_message_echoes` (phone-app replies) into
+`whatsapp_conversations` / `whatsapp_messages`, and create a Contact plus
+open SalesLead on first inbound when none exists. Admin reads live at
+`GET /v1/admin/whatsapp/conversations` (Sales → WhatsApp tab).
+
+**Why:**
+- Same in-VPC Aurora access and operational surface as other CRM writes.
+- Coexistence means outbound replies are echoes, not Cloud API sends.
+- HMAC + verify token keep the public route fail-closed without API keys.
+
 ## Keeping Documentation Up to Date
 
 **Decision:** Architecture documentation in `docs/architecture/` describes

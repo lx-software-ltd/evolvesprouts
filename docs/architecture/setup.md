@@ -124,6 +124,8 @@ For the OIDC provider itself, add the same tags:
 - `CDK_PARAM_TURNSTILE_SECRET_KEY`
 - `CDK_PARAM_MAILCHIMP_API_SECRET_ARN`
 - `CDK_PARAM_MAILCHIMP_WEBHOOK_SECRET`
+- `CDK_PARAM_META_APP_SECRET` (Meta app secret; HMAC for `POST /v1/whatsapp/webhook`)
+- `CDK_PARAM_WHATSAPP_WEBHOOK_VERIFY_TOKEN` (Meta webhook handshake token)
 - `CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD` (optional)
 - `NEXT_PUBLIC_WWW_CRM_API_KEY` (Public WWW browser API key)
 - `AMPLIFY_API_KEY`
