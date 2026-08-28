@@ -31,7 +31,23 @@ const { listState, mockListMessages } = vi.hoisted(() => {
   };
   return {
     listState,
-    mockListMessages: vi.fn().mockResolvedValue({
+    mockListMessages: vi.fn(),
+  };
+});
+
+vi.mock('@/hooks/use-whatsapp-conversations', () => ({
+  useWhatsAppConversations: () => listState,
+}));
+
+vi.mock('@/lib/whatsapp-api', () => ({
+  listWhatsAppMessages: (...args: unknown[]) => mockListMessages(...args),
+}));
+
+import { WhatsAppConversationsView } from '@/components/admin/sales/whatsapp-conversations-view';
+
+describe('WhatsAppConversationsView', () => {
+  it('lists conversations and loads messages on row click', async () => {
+    mockListMessages.mockResolvedValue({
       conversation: listState.conversations[0],
       items: [
         {
@@ -43,22 +59,7 @@ const { listState, mockListMessages } = vi.hoisted(() => {
           sentAt: '2026-08-02T00:00:00+00:00',
         },
       ],
-    }),
-  };
-});
-
-vi.mock('@/hooks/use-whatsapp-conversations', () => ({
-  useWhatsAppConversations: () => listState,
-}));
-
-vi.mock('@/lib/whatsapp-api', () => ({
-  listWhatsAppMessages: mockListMessages,
-}));
-
-import { WhatsAppConversationsView } from '@/components/admin/sales/whatsapp-conversations-view';
-
-describe('WhatsAppConversationsView', () => {
-  it('lists conversations and loads messages on row click', async () => {
+    });
     const user = userEvent.setup();
     render(<WhatsAppConversationsView />);
 
@@ -66,7 +67,7 @@ describe('WhatsAppConversationsView', () => {
     expect(screen.getByText('85294479843')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'View conversation Kitie Wong' }));
-    expect(mockListMessages).toHaveBeenCalledWith('conv-1', expect.any(AbortSignal));
+    expect(mockListMessages).toHaveBeenCalledWith('conv-1');
     expect(await screen.findByText('How much?')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Close' }));

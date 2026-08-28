@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { useWhatsAppConversations } from '@/hooks/use-whatsapp-conversations';
-import { listWhatsAppMessages, type WhatsAppMessageSummary } from '@/lib/whatsapp-api';
+import { useWhatsAppMessages } from '@/hooks/use-whatsapp-messages';
 import { formatDate } from '@/lib/format';
 
 import { ViewIcon } from '@/components/icons/action-icons';
@@ -31,33 +31,9 @@ function formatWhen(value: string | null): string {
 export function WhatsAppConversationsView() {
   const list = useWhatsAppConversations();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<WhatsAppMessageSummary[]>([]);
-  const [messagesError, setMessagesError] = useState('');
-  const [messagesLoading, setMessagesLoading] = useState(false);
+  const detail = useWhatsAppMessages(selectedId);
 
   const selected = list.conversations.find((row) => row.id === selectedId) ?? null;
-
-  useEffect(() => {
-    if (!selectedId) {
-      setMessages([]);
-      setMessagesError('');
-      return;
-    }
-    const controller = new AbortController();
-    setMessagesLoading(true);
-    setMessagesError('');
-    void listWhatsAppMessages(selectedId, controller.signal)
-      .then((result) => {
-        setMessages([...result.items].reverse());
-      })
-      .catch((error: unknown) => {
-        setMessagesError(error instanceof Error ? error.message : 'Failed to load messages');
-      })
-      .finally(() => {
-        setMessagesLoading(false);
-      });
-    return () => controller.abort();
-  }, [selectedId]);
 
   return (
     <div className='space-y-4'>
@@ -71,17 +47,17 @@ export function WhatsAppConversationsView() {
             </Button>
           }
         >
-          {messagesError ? (
+          {detail.error ? (
             <StatusBanner variant='error' title='Messages'>
-              {messagesError}
+              {detail.error}
             </StatusBanner>
           ) : null}
-          {messagesLoading ? <p className='text-sm text-slate-600'>Loading messages…</p> : null}
-          {!messagesLoading && messages.length === 0 && !messagesError ? (
+          {detail.isLoading ? <p className='text-sm text-slate-600'>Loading messages…</p> : null}
+          {!detail.isLoading && detail.messages.length === 0 && !detail.error ? (
             <p className='text-sm text-slate-600'>No messages captured yet.</p>
           ) : null}
           <ol className='space-y-2'>
-            {messages.map((message) => (
+            {detail.messages.map((message) => (
               <li
                 key={message.id}
                 className={
