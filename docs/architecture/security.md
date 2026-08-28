@@ -265,7 +265,7 @@ Operator-issued tokens authenticate `/v1/public/*` routes (currently WhatsApp
 conversation reads). They are distinct from the browser-visible website
 `x-api-key`.
 
-- Tokens use prefix `esk_` and are stored as SHA-256 hashes in `api_keys`.
+- Tokens use prefix `esk_` and are stored as PBKDF2-HMAC-SHA256 digests in `api_keys`.
 - Scopes: `admin` (full access on token-protected routes) and `user` (GET only).
 - A VPC Lambda authorizer (`ApiTokenAuthorizerFunction`) validates
   `x-api-token`. Results are cached for 5 minutes.

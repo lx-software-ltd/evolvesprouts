@@ -4,7 +4,7 @@ Validates the ``x-api-token`` header against hashed keys in the
 ``api_keys`` table and produces an IAM policy plus authorizer context.
 
 SECURITY NOTES:
-- Only SHA-256 hashes are compared; plaintext tokens are never stored/logged.
+- Only PBKDF2-HMAC-SHA256 digests are compared; plaintext is never stored/logged.
 - Revoked and expired tokens are rejected at lookup time. The API Gateway
   authorizer cache (5 minutes) bounds how long a revoked token keeps working.
 - Scope enforcement happens in the handlers (admin vs user), because a
@@ -47,7 +47,9 @@ def authorize_api_token(event: dict[str, Any]) -> dict[str, Any]:
 
     if not looks_like_api_key(plaintext):
         logger.warning("Malformed API token")
-        return build_iam_policy("Deny", method_arn, "invalid", {"reason": "invalid_key"})
+        return build_iam_policy(
+            "Deny", method_arn, "invalid", {"reason": "invalid_key"}
+        )
 
     key_hash = hash_api_key(plaintext)
 
@@ -63,9 +65,7 @@ def authorize_api_token(event: dict[str, Any]) -> dict[str, Any]:
         _touch_last_used(session, repo, api_key)
 
         key_id = str(api_key.id)
-        logger.info(
-            f"API token authorized: {key_id[:8]}*** (scope={api_key.scope})"
-        )
+        logger.info(f"API token authorized: {key_id[:8]}*** (scope={api_key.scope})")
         return build_iam_policy(
             "Allow",
             method_arn,

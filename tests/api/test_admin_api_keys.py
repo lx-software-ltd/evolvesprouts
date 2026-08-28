@@ -46,7 +46,7 @@ def test_admin_api_keys_lists_metadata_without_hash(
     row = SimpleNamespace(
         id=key_id,
         name="Integration",
-        key_prefix="esk_abc123xyz",
+        key_prefix="esk_testdisp",
         scope="user",
         created_by="admin-user",
         created_at=datetime(2026, 8, 1, tzinfo=UTC),
@@ -129,9 +129,7 @@ def test_admin_api_keys_create_returns_plaintext_once(
         method="POST",
         body=json.dumps({"name": "Partner", "scope": "admin"}),
     )
-    response = aak.handle_admin_api_keys_request(
-        event, "POST", "/v1/admin/api-keys"
-    )
+    response = aak.handle_admin_api_keys_request(event, "POST", "/v1/admin/api-keys")
     assert response["statusCode"] == 201
     body = json.loads(response["body"])
     assert body["api_token"] == generated.plaintext

@@ -105,7 +105,9 @@ def _create_api_key(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, An
     """Create a new API token; the plaintext value is returned once."""
     body = parse_body(event)
 
-    name = validate_string_length(body.get("name"), "name", MAX_NAME_LENGTH, required=True)
+    name = validate_string_length(
+        body.get("name"), "name", MAX_NAME_LENGTH, required=True
+    )
     if name is None:
         raise ValidationError("name is required", field="name")
 

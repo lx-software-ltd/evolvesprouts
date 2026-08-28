@@ -2596,7 +2596,7 @@ export class ApiStack extends cdk.Stack {
     );
 
     // Hashed API-token authorizer for /v1/public/* routes.
-    // NOTE: Runs inside the VPC because it validates SHA-256 hashes via RDS Proxy.
+    // NOTE: Runs inside the VPC because it validates hashed tokens via RDS Proxy.
     const apiTokenAuthorizerFunction = createPythonFunction(
       "ApiTokenAuthorizerFunction",
       {

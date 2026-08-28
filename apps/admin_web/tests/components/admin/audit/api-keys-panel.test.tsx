@@ -19,7 +19,7 @@ import { ApiKeysPanel } from '@/components/admin/audit/api-keys-panel';
 const sampleKey = {
   id: '11111111-1111-4111-8111-111111111111',
   name: 'Partner read',
-  key_prefix: 'esk_abc12xyz',
+  key_prefix: 'esk_testdisp',
   scope: 'user' as const,
   status: 'active' as const,
   created_by: 'admin-user',
@@ -43,13 +43,13 @@ describe('ApiKeysPanel', () => {
       id: '22222222-2222-4222-8222-222222222222',
       name: 'New key',
       scope: 'admin',
-      api_token: 'esk_plaintext_once',
+      api_token: 'esk_shown_once',
     });
     const user = userEvent.setup();
     render(<ApiKeysPanel />);
 
     expect(await screen.findByText('Partner read')).toBeInTheDocument();
-    expect(screen.getByText('esk_abc12xyz')).toBeInTheDocument();
+    expect(screen.getByText('esk_testdisp')).toBeInTheDocument();
 
     await user.clear(screen.getByLabelText('Name'));
     await user.type(screen.getByLabelText('Name'), 'New key');
@@ -63,7 +63,7 @@ describe('ApiKeysPanel', () => {
         expires_at: null,
       });
     });
-    expect(await screen.findByText(/esk_plaintext_once/)).toBeInTheDocument();
+    expect(await screen.findByText(/esk_shown_once/)).toBeInTheDocument();
   });
 
   it('revokes a key from Operations after confirm', async () => {

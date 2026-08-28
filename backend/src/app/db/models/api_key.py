@@ -16,8 +16,8 @@ from app.db.base import Base
 class ApiKey(Base):
     """API token used to authenticate ``/v1/public/*`` requests.
 
-    Only a SHA-256 hash of the token is stored; the plaintext value is
-    returned exactly once when the token is created.
+    Only a PBKDF2-HMAC-SHA256 digest of the token is stored; the plaintext
+    value is returned exactly once when the token is created.
     """
 
     __tablename__ = "api_keys"
@@ -47,7 +47,7 @@ class ApiKey(Base):
         Text(),
         nullable=False,
         unique=True,
-        comment="SHA-256 hex digest of the plaintext token",
+        comment="PBKDF2-HMAC-SHA256 hex digest of the plaintext token",
     )
     scope: Mapped[str] = mapped_column(
         Text(),

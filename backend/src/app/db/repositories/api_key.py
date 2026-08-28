@@ -44,9 +44,9 @@ class ApiKeyRepository(BaseRepository[ApiKey]):
                     (ApiKey.created_at == cursor_created_at) & (ApiKey.id < cursor_id),
                 )
             )
-        statement = statement.order_by(ApiKey.created_at.desc(), ApiKey.id.desc()).limit(
-            limit
-        )
+        statement = statement.order_by(
+            ApiKey.created_at.desc(), ApiKey.id.desc()
+        ).limit(limit)
         return list(self._session.execute(statement).scalars().all())
 
     def touch_last_used(self, api_key: ApiKey) -> ApiKey:

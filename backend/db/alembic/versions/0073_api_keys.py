@@ -53,7 +53,7 @@ def upgrade() -> None:
             "key_hash",
             sa.Text(),
             nullable=False,
-            comment="SHA-256 hex digest of the plaintext token",
+            comment="PBKDF2-HMAC-SHA256 hex digest of the plaintext token",
         ),
         sa.Column(
             "scope",
