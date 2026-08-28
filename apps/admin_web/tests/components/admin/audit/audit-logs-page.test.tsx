@@ -2,12 +2,19 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockListAuditLogs } = vi.hoisted(() => ({
+const { mockListAuditLogs, mockListApiKeys } = vi.hoisted(() => ({
   mockListAuditLogs: vi.fn(),
+  mockListApiKeys: vi.fn(),
 }));
 
 vi.mock('@/lib/audit-logs-api', () => ({
   listAuditLogs: mockListAuditLogs,
+}));
+
+vi.mock('@/lib/api-keys-api', () => ({
+  listAdminApiKeys: (...args: unknown[]) => mockListApiKeys(...args),
+  createAdminApiKey: vi.fn(),
+  revokeAdminApiKey: vi.fn(),
 }));
 
 import { AuditLogsPage } from '@/components/admin/audit/audit-logs-page';
@@ -15,6 +22,15 @@ import { AuditLogsPage } from '@/components/admin/audit/audit-logs-page';
 describe('AuditLogsPage', () => {
   beforeEach(() => {
     mockListAuditLogs.mockResolvedValue({ items: [], next_cursor: null });
+    mockListApiKeys.mockResolvedValue([]);
+  });
+
+  it('switches to the API keys tab', async () => {
+    const user = userEvent.setup();
+    render(<AuditLogsPage />);
+    await user.click(screen.getByRole('button', { name: 'API keys' }));
+    expect(await screen.findByRole('heading', { name: 'New API key' })).toBeInTheDocument();
+    expect(mockListApiKeys).toHaveBeenCalled();
   });
 
   it('renders audit logs heading', async () => {

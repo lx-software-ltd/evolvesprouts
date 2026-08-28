@@ -2595,6 +2595,36 @@ export class ApiStack extends cdk.Stack {
       }
     );
 
+    // Hashed API-token authorizer for /v1/public/* routes.
+    // NOTE: Runs inside the VPC because it validates SHA-256 hashes via RDS Proxy.
+    const apiTokenAuthorizerFunction = createPythonFunction(
+      "ApiTokenAuthorizerFunction",
+      {
+        handler: "lambda/authorizers/api_token/handler.lambda_handler",
+        memorySize: 512,
+        timeout: cdk.Duration.seconds(10),
+        environment: {
+          DATABASE_SECRET_ARN: database.adminUserSecret.secretArn,
+          DATABASE_NAME: "evolvesprouts",
+          DATABASE_USERNAME: "evolvesprouts_admin",
+          DATABASE_PROXY_ENDPOINT: database.proxy.endpoint,
+          DATABASE_IAM_AUTH: "true",
+        },
+      }
+    );
+    database.grantAdminUserSecretRead(apiTokenAuthorizerFunction);
+    database.grantConnect(apiTokenAuthorizerFunction, "evolvesprouts_admin");
+
+    const apiTokenAuthorizer = new apigateway.RequestAuthorizer(
+      this,
+      "ApiTokenAuthorizer",
+      {
+        handler: apiTokenAuthorizerFunction,
+        identitySources: [apigateway.IdentitySource.header("x-api-token")],
+        resultsCacheTtl: cdk.Duration.minutes(5),
+      }
+    );
+
     // Health check function
     const healthFunction = createPythonFunction("HealthCheckFunction", {
       handler: "lambda/health/handler.lambda_handler",
@@ -2797,6 +2827,7 @@ export class ApiStack extends cdk.Stack {
           "Authorization",
           "X-Amz-Date",
           "X-Api-Key",
+          "X-Api-Token",
           "X-Amz-Security-Token",
           "X-Turnstile-Token",
         ],
@@ -2864,7 +2895,7 @@ export class ApiStack extends cdk.Stack {
     const gatewayResponseHeaders: Record<string, string> = {
       "Access-Control-Allow-Origin": `'${corsAllowedOrigins[0]}'`,
       "Access-Control-Allow-Headers":
-        "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,X-Turnstile-Token'",
+        "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Api-Token,X-Amz-Security-Token,X-Turnstile-Token'",
       "Access-Control-Allow-Methods": "'GET,POST,PUT,PATCH,DELETE,OPTIONS'",
       Vary: "'Origin'",
     };
@@ -3091,6 +3122,21 @@ export class ApiStack extends cdk.Stack {
       "Public WhatsApp webhook endpoint; access is validated via META_APP_SECRET HMAC in Lambda handler.");
     addCheckovMethodSuppression(whatsappWebhookGetMethod, "CKV_AWS_59",
       "Public WhatsApp webhook verification endpoint; access is validated via WHATSAPP_WEBHOOK_VERIFY_TOKEN in Lambda handler.");
+
+    const addPublicTokenMethod = (resource: apigateway.IResource, method: string) =>
+      resource.addMethod(method, adminIntegration, {
+        authorizationType: apigateway.AuthorizationType.CUSTOM,
+        authorizer: apiTokenAuthorizer,
+      });
+    const publicRoot = v1.addResource("public");
+    const publicWhatsappConversations = publicRoot
+      .addResource("whatsapp")
+      .addResource("conversations");
+    addPublicTokenMethod(publicWhatsappConversations, "GET");
+    addPublicTokenMethod(
+      publicWhatsappConversations.addResource("{id}").addResource("messages"),
+      "GET"
+    );
 
     // Admin asset routes
     const admin = v1.addResource("admin");
