@@ -5,6 +5,7 @@ import { RealTalk } from '@/components/sections/real-talk';
 import { HeroBanner } from '@/components/sections/hero-banner';
 import { AboutUsIntro } from '@/components/sections/about-us-intro';
 import { Services } from '@/components/sections/services';
+import { TestimonialsFeatured } from '@/components/sections/testimonials-featured';
 import { DeferredTestimonials } from '@/components/sections/deferred-testimonials';
 import { localizeHref } from '@/lib/locale-routing';
 import { ROUTES } from '@/lib/routes';
@@ -56,6 +57,7 @@ export function HomePage({ locale, content }: HomePageProps) {
       <Services
         content={content.services}
       />
+      <TestimonialsFeatured content={content.testimonials.featured} />
       <DeferredTestimonials
         content={content.testimonials}
         commonAccessibility={content.common.accessibility}

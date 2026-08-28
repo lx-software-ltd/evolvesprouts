@@ -86,7 +86,7 @@
     "cta": "了解課程如何運作",
     "ctaHref": "/services/my-best-auntie-training-course",
     "ctaPrefillMessage": "你好，我想預約一節免費簡介通話！",
-    "description": "深受全港家庭信賴。AMI 蒙特梭利認證。為真實生活而設。",
+    "description": "深受 40+ 香港家庭信賴。AMI 蒙特梭利認證（0-3 及 3-6）。為真實生活而設。",
     "imageAlt": "面向香港家庭的蒙特梭利兒童發展支持"
   },
   "seo": {
@@ -312,6 +312,12 @@
         "mainImageSrc": "/images/testimonials/happy-parent-1.webp"
       }
     ],
+    "featured": {
+      "quote": "非常感謝你把 Jenelyn 的照顧技巧提升到另一個層次！我已經明顯見到她和我們小朋友互動方式有很大進步，這些改變真的很令人欣喜。過程未必永遠容易，但成果已經說明一切-我們由衷感激，而且我哋屋企都平靜咗好多。",
+      "author": "Sarah",
+      "service": "My Best Auntie 培訓課程",
+      "sectionLabel": "來自 Sarah 的家長故事"
+    },
     "a11y": {
       "imageAltFallbackAuthor": "家長",
       "imageAltTemplate": "{author}的見證圖片",
@@ -1671,8 +1677,8 @@
       "imageAlt": "Evolve Sprouts 的 Ida De Gregorio"
     },
     "intro": {
-      "title": "你好！我是 Ida-AMI 蒙特梭利教育者、兩個孩子的媽媽，也是 Evolve Sprouts 的創辦人。",
-      "highlightPhrase": "Evolve Sprouts",
+      "title": "你好！我是 Ida — AMI 蒙特梭利認證（0-3 及 3-6），香港大學教育學碩士，斯坦福大學兒童營養。",
+      "highlightPhrase": "AMI 蒙特梭利",
       "description": "我離開教師職涯，是因為我看到孩子的成長有多依賴家中發生的一切-而照顧他們的人得到的支持卻太少。這份工作對我很個人-因為我也正在走着和你一樣的育兒旅程。",
       "ctaLabel": "閱讀我的故事",
       "ctaHref": "/about-us",

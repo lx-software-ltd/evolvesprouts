@@ -56,6 +56,7 @@ export type ResourcesContent = SiteContent['resources'];
 export type ServicesContent = SiteContent['services'];
 export type RealTalkContent = SiteContent['realTalk'];
 export type TestimonialsContent = SiteContent['testimonials'];
+export type TestimonialsFeaturedContent = SiteContent['testimonials']['featured'];
 export type ContactUsContent = SiteContent['contactUs'];
 export type EventsContent = SiteContent['events'];
 export type AboutUsHeroContent = SiteContent['aboutUs']['hero'];

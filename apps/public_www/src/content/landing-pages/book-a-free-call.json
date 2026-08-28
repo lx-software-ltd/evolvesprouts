@@ -17,8 +17,8 @@
       "ctaAnchorHref": "#intro-call-booking",
       "ctaAnchorLabel": "Book my free 15-min call",
       "quickFactChips": [
-        { "type": "category", "label": "AMI Montessori-certified" },
-        { "type": "category", "label": "Trusted by families across Hong Kong" }
+        { "type": "category", "label": "AMI Montessori-certified for 0-3 & 3-6" },
+        { "type": "category", "label": "Trusted by 40+ Hong Kong families" }
       ]
     },
     "description": {
@@ -63,7 +63,7 @@
         {
           "icon": "👤",
           "title": "Who you'll speak with",
-          "description": "You'll be on the call with me — Ida, AMI Montessori educator, mum of two and founder of Evolve Sprouts. I've been where you are, so this won't feel like a sales pitch."
+          "description": "You'll be on the call with me — Ida, AMI Montessori certified for 0-3 and 3-6, MEd from the University of Hong Kong, Stanford Child Nutrition. I've been where you are, so this won't feel like a sales pitch."
         }
       ]
     },
@@ -140,8 +140,8 @@
       "ctaAnchorHref": "#intro-call-booking",
       "ctaAnchorLabel": "预约我的免费 15 分钟通话",
       "quickFactChips": [
-        { "type": "category", "label": "AMI 蒙特梭利认证" },
-        { "type": "category", "label": "深受香港家庭信赖" }
+        { "type": "category", "label": "AMI 蒙特梭利认证（0-3 及 3-6）" },
+        { "type": "category", "label": "深受 40+ 香港家庭信赖" }
       ]
     },
     "description": {
@@ -186,7 +186,7 @@
         {
           "icon": "👤",
           "title": "通话对象",
-          "description": "与您通话的是我——Ida，AMI 蒙特梭利教育工作者、两个孩子的妈妈，也是 Evolve Sprouts 的创始人。我也经历过您现在的阶段，所以这不会像硬性推销。"
+          "description": "与您通话的是我——Ida，AMI 蒙特梭利认证（0-3 及 3-6），香港大学教育学硕士，斯坦福大学儿童营养。我也经历过您现在的阶段，所以这不会像硬性推销。"
         }
       ]
     },
@@ -263,8 +263,8 @@
       "ctaAnchorHref": "#intro-call-booking",
       "ctaAnchorLabel": "預約我嘅免費 15 分鐘通話",
       "quickFactChips": [
-        { "type": "category", "label": "AMI 蒙特梭利認證" },
-        { "type": "category", "label": "深受香港家庭信賴" }
+        { "type": "category", "label": "AMI 蒙特梭利認證（0-3 及 3-6）" },
+        { "type": "category", "label": "深受 40+ 香港家庭信賴" }
       ]
     },
     "description": {
@@ -309,7 +309,7 @@
         {
           "icon": "👤",
           "title": "你會同邊個傾",
-          "description": "同你傾嘅係我——Ida，AMI 蒙特梭利教育工作者、兩個小朋友嘅媽媽，亦係 Evolve Sprouts 創辦人。我都經歷過你而家嘅階段，所以呢通電話唔會似硬銷。"
+          "description": "同你傾嘅係我——Ida，AMI 蒙特梭利認證（0-3 及 3-6），香港大學教育學碩士，斯坦福大學兒童營養。我都經歷過你而家嘅階段，所以呢通電話唔會似硬銷。"
         }
       ]
     },

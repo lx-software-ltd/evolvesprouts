@@ -48,4 +48,18 @@ describe('book-a-free-call landing page locale JSON', () => {
       expect(chips?.[1]?.label?.trim()).toBeTruthy();
     }
   });
+
+  it('uses specific AMI age bands and a numbered family trust claim', () => {
+    expect(bookAFreeCall.en.hero.quickFactChips?.[0]?.label).toBe(
+      'AMI Montessori-certified for 0-3 & 3-6',
+    );
+    expect(bookAFreeCall.en.hero.quickFactChips?.[1]?.label).toBe(
+      'Trusted by 40+ Hong Kong families',
+    );
+    expect(bookAFreeCall.en.details.items[3]?.description).toContain(
+      'AMI Montessori certified for 0-3 and 3-6, MEd from the University of Hong Kong, Stanford Child Nutrition',
+    );
+    expect(bookAFreeCall['zh-CN'].hero.quickFactChips?.[0]?.label).toContain('0-3');
+    expect(bookAFreeCall['zh-HK'].hero.quickFactChips?.[0]?.label).toContain('0-3');
+  });
 });
