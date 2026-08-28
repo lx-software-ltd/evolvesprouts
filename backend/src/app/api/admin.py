@@ -33,10 +33,13 @@ from app.api.admin_families_picker import handle_admin_families_picker_request
 from app.api.admin_organizations import handle_admin_organizations_request
 from app.api.admin_organizations_picker import handle_admin_organizations_picker_request
 from app.api.admin_api_keys import handle_admin_api_keys_request
+from app.api.admin_meta import handle_admin_meta_request
 from app.api.admin_whatsapp import handle_admin_whatsapp_request
+from app.api.public.meta_conversations import handle_public_meta_request
 from app.api.public.whatsapp_conversations import handle_public_whatsapp_request
 from app.api.assets.public_media_assets import handle_media_request
 from app.api.public_mailchimp_webhook import handle_mailchimp_webhook
+from app.api.public_meta_webhook import handle_meta_webhook
 from app.api.public_whatsapp_webhook import handle_whatsapp_webhook
 from app.api.assets.public_free_assets import handle_public_free_assets_list_request
 from app.api.public_discount_validate import handle_public_discount_validate
@@ -181,9 +184,19 @@ _ROUTES: tuple[
         lambda event, method, _path: handle_whatsapp_webhook(event, method),
     ),
     (
+        "/v1/meta/webhook",
+        True,
+        lambda event, method, _path: handle_meta_webhook(event, method),
+    ),
+    (
         "/v1/public/whatsapp",
         False,
         handle_public_whatsapp_request,
+    ),
+    (
+        "/v1/public/meta",
+        False,
+        handle_public_meta_request,
     ),
     (
         "/v1/admin/api-keys",
@@ -194,6 +207,11 @@ _ROUTES: tuple[
         "/v1/admin/whatsapp",
         False,
         handle_admin_whatsapp_request,
+    ),
+    (
+        "/v1/admin/meta",
+        False,
+        handle_admin_meta_request,
     ),
     (
         "/v1/admin/geographic-areas",
@@ -407,5 +425,9 @@ def _requires_json_content_type(path: str, method: str) -> bool:
         return False
 
     normalized_path = path.rstrip("/")
-    non_json_routes = {"/v1/mailchimp/webhook", "/v1/whatsapp/webhook"}
+    non_json_routes = {
+        "/v1/mailchimp/webhook",
+        "/v1/whatsapp/webhook",
+        "/v1/meta/webhook",
+    }
     return normalized_path not in non_json_routes

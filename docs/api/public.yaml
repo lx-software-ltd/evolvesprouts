@@ -32,11 +32,18 @@ info:
       `backend/infrastructure/lib/public-www-stack.ts`.
     - WhatsApp Cloud API webhook (`GET`/`POST /v1/whatsapp/webhook`) for Meta
       handshake plus inbound and coexistence echo messages.
+    - Messenger and Instagram webhook (`GET`/`POST /v1/meta/webhook`) for the
+      same Meta app handshake plus Page/IG Direct messages and echoes.
     - Token-authenticated WhatsApp conversation reads (`GET
       /v1/public/whatsapp/conversations` and
       `GET /v1/public/whatsapp/conversations/{id}/messages`) using `x-api-token`.
       These routes return display name, dates, and message text only — never
       WhatsApp numbers or `wa_id`.
+    - Token-authenticated Messenger and Instagram conversation reads (`GET
+      /v1/public/meta/conversations` and
+      `GET /v1/public/meta/conversations/{id}/messages`) using `x-api-token`.
+      These routes return channel, display name, dates, and message text only —
+      never Page-scoped user ids or page ids.
 
 servers:
   - url: https://api.evolvesprouts.com
@@ -277,6 +284,76 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /v1/meta/webhook:
+    get:
+      summary: Messenger and Instagram webhook verification
+      description: |
+        Meta subscription handshake for Page and Instagram messaging.
+        Returns the raw `hub.challenge` when `hub.mode=subscribe` and
+        `hub.verify_token` matches `WHATSAPP_WEBHOOK_VERIFY_TOKEN` (same
+        Meta app verify token as WhatsApp).
+      parameters:
+        - name: hub.mode
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: hub.verify_token
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: hub.challenge
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Verification challenge echoed as plain text.
+          content:
+            text/plain:
+              schema:
+                type: string
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      summary: Receive Messenger and Instagram webhook events
+      description: |
+        Public webhook for inbound Messenger and Instagram Direct messages
+        plus `is_echo` outbound copies. Requests must include a valid
+        `X-Hub-Signature-256` HMAC of the raw body using `META_APP_SECRET`.
+        WhatsApp payloads (`object: whatsapp_business_account`) are ignored
+        here and stay on `/v1/whatsapp/webhook`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Webhook processed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaWebhookAccepted"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid webhook signature.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "405":
+          description: Method not allowed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /v1/public/whatsapp/conversations:
     get:
       summary: List WhatsApp conversations (token API)
@@ -357,6 +434,106 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PublicWhatsAppMessageListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/public/meta/conversations:
+    get:
+      summary: List Messenger and Instagram conversations (token API)
+      description: |
+        Returns captured Messenger and Instagram threads for a hashed API token
+        (`x-api-token`). Payloads include channel, display name, and dates only.
+        Page-scoped user ids and page ids are never returned. Search (`q`) matches
+        profile names only, not scoped ids.
+      security:
+        - ApiTokenAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: q
+          in: query
+          required: false
+          description: Case-insensitive search on profile name (not scoped id).
+          schema:
+            type: string
+        - name: channel
+          in: query
+          required: false
+          description: Restrict results to `facebook` (Messenger) or `instagram`.
+          schema:
+            type: string
+            enum: [facebook, instagram]
+      responses:
+        "200":
+          description: Paginated conversation list without Page-scoped ids.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicMetaConversationListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/public/meta/conversations/{id}/messages:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: List Messenger or Instagram messages for a conversation (token API)
+      description: |
+        Returns the conversation header (channel, name, and dates) plus newest-first
+        messages. Message payloads include direction, body, and sent time only —
+        no Page-scoped user ids, page ids, or platform message ids.
+      security:
+        - ApiTokenAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        "200":
+          description: Conversation plus messages without scoped ids.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicMetaMessageListResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -3093,6 +3270,92 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PublicWhatsAppMessageSummary"
+    MetaWebhookAccepted:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+        stored:
+          type: integer
+        duplicates:
+          type: integer
+        skipped:
+          type: integer
+        leads_created:
+          type: integer
+    PublicMetaConversationSummary:
+      type: object
+      required:
+        - id
+        - channel
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        channel:
+          type: string
+          enum: [facebook, instagram]
+        name:
+          type: string
+          description: Display name. Never a Page-scoped user id or last-four fallback.
+        first_inbound_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_message_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+    PublicMetaMessageSummary:
+      type: object
+      required:
+        - id
+        - direction
+        - sent_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        direction:
+          type: string
+          enum: [inbound, outbound]
+        body:
+          type: string
+          nullable: true
+        sent_at:
+          type: string
+          format: date-time
+    PublicMetaConversationListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicMetaConversationSummary"
+        next_cursor:
+          type: string
+          nullable: true
+    PublicMetaMessageListResponse:
+      type: object
+      required:
+        - conversation
+        - items
+      properties:
+        conversation:
+          $ref: "#/components/schemas/PublicMetaConversationSummary"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicMetaMessageSummary"
     ReservationSubmissionAccepted:
       type: object
       required:

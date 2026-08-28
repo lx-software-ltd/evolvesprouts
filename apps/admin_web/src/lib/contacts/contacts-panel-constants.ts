@@ -17,6 +17,7 @@ export const CONTACT_SOURCES: ApiSchemas['EntityContactSource'][] = [
   'reservation',
   'referral',
   'instagram',
+  'facebook',
   'whatsapp',
   'linkedin',
   'event',

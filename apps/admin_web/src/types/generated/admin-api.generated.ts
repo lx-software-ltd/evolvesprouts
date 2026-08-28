@@ -1560,6 +1560,97 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/meta/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List captured Messenger and Instagram conversations */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    /** @description Opaque continuation token from `next_cursor`. */
+                    cursor?: string;
+                    /** @description Case-insensitive search on profile name or Page-scoped user id. */
+                    q?: string;
+                    /** @description Restrict results to `facebook` (Messenger) or `instagram`. */
+                    channel?: components["schemas"]["MetaChannel"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated Meta conversation list. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MetaConversationListResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/meta/conversations/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** List messages for a Messenger or Instagram conversation */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Conversation header plus newest-first messages. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MetaMessageListResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/leads/{id}": {
         parameters: {
             query?: never;
@@ -6601,7 +6692,7 @@ export interface components {
         /** @enum {string} */
         LeadEventType: "created" | "stage_changed" | "note_added" | "email_sent" | "email_opened" | "guide_downloaded" | "assigned" | "converted" | "lost";
         /** @enum {string} */
-        ContactSource: "free_guide" | "newsletter" | "contact_form" | "reservation" | "referral" | "instagram" | "manual" | "whatsapp" | "linkedin" | "event" | "phone_call" | "public_website";
+        ContactSource: "free_guide" | "newsletter" | "contact_form" | "reservation" | "referral" | "instagram" | "facebook" | "manual" | "whatsapp" | "linkedin" | "event" | "phone_call" | "public_website";
         LeadContact: {
             /** Format: uuid */
             id?: string | null;
@@ -6723,6 +6814,49 @@ export interface components {
         WhatsAppMessageListResponse: {
             conversation: components["schemas"]["WhatsAppConversationSummary"];
             items: components["schemas"]["WhatsAppMessageSummary"][];
+        };
+        /** @enum {string} */
+        MetaChannel: "facebook" | "instagram";
+        MetaConversationSummary: {
+            /** Format: uuid */
+            id: string;
+            channel: components["schemas"]["MetaChannel"];
+            platform_user_id: string;
+            page_id?: string | null;
+            profile_name?: string | null;
+            /** Format: uuid */
+            contact_id?: string | null;
+            contact_name?: string | null;
+            /** Format: uuid */
+            lead_id?: string | null;
+            /** Format: date-time */
+            first_inbound_at?: string | null;
+            /** Format: date-time */
+            last_message_at?: string | null;
+            inbound_count: number;
+            outbound_count: number;
+            /** Format: date-time */
+            created_at?: string | null;
+        };
+        MetaMessageSummary: {
+            /** Format: uuid */
+            id: string;
+            platform_message_id: string;
+            /** @enum {string} */
+            direction: "inbound" | "outbound";
+            message_type: string;
+            body?: string | null;
+            /** Format: date-time */
+            sent_at: string;
+        };
+        MetaConversationListResponse: {
+            items: components["schemas"]["MetaConversationSummary"][];
+            next_cursor?: string | null;
+            total_count: number;
+        };
+        MetaMessageListResponse: {
+            conversation: components["schemas"]["MetaConversationSummary"];
+            items: components["schemas"]["MetaMessageSummary"][];
         };
         /**
          * @description admin is full access on token-protected routes; user is GET only.
@@ -8025,7 +8159,7 @@ export interface components {
          */
         EntityOrganizationRelationshipType: "prospect" | "client" | "partner" | "vendor" | "other";
         /** @enum {string} */
-        EntityContactSource: "free_guide" | "newsletter" | "contact_form" | "reservation" | "referral" | "instagram" | "whatsapp" | "linkedin" | "event" | "phone_call" | "public_website" | "manual";
+        EntityContactSource: "free_guide" | "newsletter" | "contact_form" | "reservation" | "referral" | "instagram" | "facebook" | "whatsapp" | "linkedin" | "event" | "phone_call" | "public_website" | "manual";
         /** @enum {string} */
         EntityMailchimpSyncStatus: "pending" | "synced" | "failed" | "unsubscribed";
         /** @enum {string} */

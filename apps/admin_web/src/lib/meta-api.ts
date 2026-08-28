@@ -1,0 +1,134 @@
+import { adminApiRequest } from './api-admin-client';
+import { asNumber, asNullableString, unwrapPayload } from './api-payload';
+import { isRecord } from './type-guards';
+
+import type { components } from '@/types/generated/admin-api.generated';
+
+type ApiSchemas = components['schemas'];
+type ApiConversationList = ApiSchemas['MetaConversationListResponse'];
+type ApiMessageList = ApiSchemas['MetaMessageListResponse'];
+
+export type MetaChannel = 'facebook' | 'instagram';
+
+export type MetaConversationSummary = {
+  id: string;
+  channel: MetaChannel;
+  platformUserId: string;
+  pageId: string | null;
+  profileName: string | null;
+  contactId: string | null;
+  contactName: string | null;
+  leadId: string | null;
+  firstInboundAt: string | null;
+  lastMessageAt: string | null;
+  inboundCount: number;
+  outboundCount: number;
+  createdAt: string | null;
+};
+
+export type MetaMessageSummary = {
+  id: string;
+  platformMessageId: string;
+  direction: 'inbound' | 'outbound';
+  messageType: string;
+  body: string | null;
+  sentAt: string;
+};
+
+export interface MetaConversationListParams {
+  cursor?: string | null;
+  limit?: number;
+  q?: string;
+  channel?: MetaChannel;
+}
+
+function parseChannel(value: unknown): MetaChannel {
+  return asNullableString(value) === 'instagram' ? 'instagram' : 'facebook';
+}
+
+function parseConversation(value: unknown): MetaConversationSummary {
+  const row = isRecord(value) ? value : {};
+  return {
+    id: asNullableString(row.id) ?? '',
+    channel: parseChannel(row.channel),
+    platformUserId: asNullableString(row.platform_user_id) ?? '',
+    pageId: asNullableString(row.page_id),
+    profileName: asNullableString(row.profile_name),
+    contactId: asNullableString(row.contact_id),
+    contactName: asNullableString(row.contact_name),
+    leadId: asNullableString(row.lead_id),
+    firstInboundAt: asNullableString(row.first_inbound_at),
+    lastMessageAt: asNullableString(row.last_message_at),
+    inboundCount: asNumber(row.inbound_count, 0),
+    outboundCount: asNumber(row.outbound_count, 0),
+    createdAt: asNullableString(row.created_at),
+  };
+}
+
+function parseMessage(value: unknown): MetaMessageSummary {
+  const row = isRecord(value) ? value : {};
+  const direction = asNullableString(row.direction) === 'outbound' ? 'outbound' : 'inbound';
+  return {
+    id: asNullableString(row.id) ?? '',
+    platformMessageId: asNullableString(row.platform_message_id) ?? '',
+    direction,
+    messageType: asNullableString(row.message_type) ?? 'text',
+    body: asNullableString(row.body),
+    sentAt: asNullableString(row.sent_at) ?? '',
+  };
+}
+
+export async function listMetaConversations(
+  params: MetaConversationListParams,
+  signal?: AbortSignal
+): Promise<{
+  items: MetaConversationSummary[];
+  nextCursor: string | null;
+  totalCount: number;
+}> {
+  const query = new URLSearchParams();
+  if (params.cursor) {
+    query.set('cursor', params.cursor);
+  }
+  if (typeof params.limit === 'number' && Number.isFinite(params.limit) && params.limit > 0) {
+    query.set('limit', String(params.limit));
+  }
+  if (params.q?.trim()) {
+    query.set('q', params.q.trim());
+  }
+  if (params.channel) {
+    query.set('channel', params.channel);
+  }
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  const payload = unwrapPayload(
+    await adminApiRequest<ApiConversationList>({
+      endpointPath: `/v1/admin/meta/conversations${suffix}`,
+      signal,
+    })
+  );
+  const items = Array.isArray(payload.items) ? payload.items.map(parseConversation) : [];
+  return {
+    items,
+    nextCursor: asNullableString(payload.next_cursor),
+    totalCount: asNumber(payload.total_count, items.length),
+  };
+}
+
+export async function listMetaMessages(
+  conversationId: string,
+  signal?: AbortSignal
+): Promise<{
+  conversation: MetaConversationSummary;
+  items: MetaMessageSummary[];
+}> {
+  const payload = unwrapPayload(
+    await adminApiRequest<ApiMessageList>({
+      endpointPath: `/v1/admin/meta/conversations/${conversationId}/messages`,
+      signal,
+    })
+  );
+  return {
+    conversation: parseConversation(payload.conversation),
+    items: Array.isArray(payload.items) ? payload.items.map(parseMessage) : [],
+  };
+}

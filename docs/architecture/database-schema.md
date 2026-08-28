@@ -19,8 +19,10 @@ Seed data lives in `backend/db/seed/seed_data.sql`.
 - Enum `access_grant_type`: `all_authenticated`, `organization`, `user`.
 - Enum `contact_type`: `parent`, `child`, `helper`, `professional`, `other`.
 - Enum `contact_source`: `free_guide`, `newsletter`, `contact_form`,
-  `reservation`, `referral`, `instagram`, `manual`, `whatsapp`,
+  `reservation`, `referral`, `instagram`, `facebook`, `manual`, `whatsapp`,
   `linkedin`, `event`, `phone_call`, `public_website`.
+- Enum `meta_channel`: `facebook`, `instagram`.
+- Enum `meta_message_direction`: `inbound`, `outbound`.
 - Enum `relationship_type`: `prospect`, `client`, `past_client`, `partner`,
   `vendor`, `other` (stored on contacts, families, and organizations). Admin API
   write rules narrow allowed values: families may only use `prospect`, `client`,
@@ -528,6 +530,21 @@ maps legacy `note.id` to the **first** inserted row’s UUID.
 
 - Individual inbound or outbound (`smb_message_echoes`) messages.
 - Unique `wa_message_id` for webhook idempotency; cascade delete with parent conversation.
+
+### `meta_conversations`
+
+- Purpose: one Messenger or Instagram thread per `(channel, platform_user_id)`.
+- `channel` is `facebook` (Messenger) or `instagram`. `platform_user_id` is the
+  Page-scoped PSID or IGSID. Optional `page_id` is the Page or IG professional id.
+- Optional `contact_id` / `lead_id` FKs (`ON DELETE SET NULL`) created on first inbound message.
+- Do not store PSID/IGSID on `contacts.instagram_handle`.
+- Unique index on `(channel, platform_user_id)`; activity counters and `last_message_at`
+  for admin listing.
+
+### `meta_messages`
+
+- Individual inbound or outbound (`message.is_echo`) Messenger/Instagram messages.
+- Unique `platform_message_id` for webhook idempotency; cascade delete with parent conversation.
 
 ## Table: api_keys
 

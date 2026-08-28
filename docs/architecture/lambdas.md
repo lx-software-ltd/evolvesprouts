@@ -58,6 +58,9 @@ their primary responsibilities.
   HMAC `X-Hub-Signature-256` via `META_APP_SECRET`; verify token
   `WHATSAPP_WEBHOOK_VERIFY_TOKEN`; persists conversations and creates
   WhatsApp CRM contacts/leads),
+  `/v1/meta/webhook` (GET handshake + POST Messenger/Instagram inbound and
+  `is_echo` messages; same HMAC and verify token; persists
+  `meta_conversations` / `meta_messages` and creates CRM contacts/leads),
   `/v1/admin/locations/*` (including `GET /v1/admin/locations?exclude_addresses=true`
   to list service venues without family/organisation home addresses, and
   `POST /v1/admin/locations/geocode` for
@@ -297,6 +300,7 @@ their primary responsibilities.
   open lead exists; post-success SES + Mailchimp + recaps via
   `run_contact_us_post_success`),
   WhatsApp Cloud API webhook ingestion on `/v1/whatsapp/webhook`,
+  Messenger and Instagram webhook ingestion on `/v1/meta/webhook`,
   Stripe PaymentIntent creation for
   inline public booking modal payments on `/v1/reservations/payment-intent`
   (card-only `payment_method_types[]=card`; wallet buttons are disabled in the

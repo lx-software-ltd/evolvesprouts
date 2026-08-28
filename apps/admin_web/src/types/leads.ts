@@ -25,6 +25,7 @@ export const CONTACT_SOURCES = defineEnumValues<ContactSource>()(
     'reservation',
     'referral',
     'instagram',
+    'facebook',
     'manual',
     'whatsapp',
     'linkedin',
