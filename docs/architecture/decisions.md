@@ -756,6 +756,27 @@ and `wa_id`. Admins create and revoke tokens from Audit → API keys.
 - Public conversation payloads stay useful for integrations without exposing
   WhatsApp numbers.
 
+## Messenger and Instagram webhooks on Admin Lambda
+
+**Decision:** Ingest Meta Messenger and Instagram Direct webhooks on the
+existing `EvolvesproutsAdminFunction` at public `GET`/`POST /v1/meta/webhook`.
+Reuse `META_APP_SECRET` and `WHATSAPP_WEBHOOK_VERIFY_TOKEN` from the same
+Meta app. Dispatch on `object`: `page` is Messenger (`facebook`),
+`instagram` is Instagram Direct. Skip `whatsapp_business_account` (that
+traffic stays on `/v1/whatsapp/webhook`). Persist threads in unified
+`meta_conversations` / `meta_messages` keyed by `(channel, platform_user_id)`.
+Create a Contact plus open SalesLead on first inbound when none exists.
+Do not store IGSID/PSID on `contacts.instagram_handle`. Admin reads live at
+`GET /v1/admin/meta/conversations` (Sales → Instagram / Messenger tabs).
+Token reads live at `GET /v1/public/meta/conversations` and omit Page-scoped
+user ids and page ids.
+
+**Why:**
+- Same HMAC family and Admin Lambda surface as WhatsApp.
+- One table pair keeps listing, search, and redaction shared.
+- Public payloads stay useful without exposing Meta scoped ids.
+- LinkedIn Pages messaging is partner-only and remains out of scope.
+
 ## Keeping Documentation Up to Date
 
 **Decision:** Architecture documentation in `docs/architecture/` describes

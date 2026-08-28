@@ -3126,6 +3126,19 @@ export class ApiStack extends cdk.Stack {
       "Public WhatsApp webhook endpoint; access is validated via META_APP_SECRET HMAC in Lambda handler.");
     addCheckovMethodSuppression(whatsappWebhookGetMethod, "CKV_AWS_59",
       "Public WhatsApp webhook verification endpoint; access is validated via WHATSAPP_WEBHOOK_VERIFY_TOKEN in Lambda handler.");
+    const metaWebhook = v1.addResource("meta").addResource("webhook");
+    const metaWebhookPostMethod = metaWebhook.addMethod("POST", adminIntegration, {
+      authorizationType: apigateway.AuthorizationType.NONE,
+    });
+    const metaWebhookGetMethod = metaWebhook.addMethod("GET", adminIntegration, {
+      authorizationType: apigateway.AuthorizationType.NONE,
+    });
+    // This endpoint is intentionally public for Meta callbacks and is
+    // protected in-app with HMAC signature verification plus a verify token.
+    addCheckovMethodSuppression(metaWebhookPostMethod, "CKV_AWS_59",
+      "Public Messenger/Instagram webhook endpoint; access is validated via META_APP_SECRET HMAC in Lambda handler.");
+    addCheckovMethodSuppression(metaWebhookGetMethod, "CKV_AWS_59",
+      "Public Messenger/Instagram webhook verification endpoint; access is validated via WHATSAPP_WEBHOOK_VERIFY_TOKEN in Lambda handler.");
 
     const addPublicTokenMethod = (resource: apigateway.IResource, method: string) =>
       resource.addMethod(method, adminIntegration, {
@@ -3139,6 +3152,14 @@ export class ApiStack extends cdk.Stack {
     addPublicTokenMethod(publicWhatsappConversations, "GET");
     addPublicTokenMethod(
       publicWhatsappConversations.addResource("{id}").addResource("messages"),
+      "GET"
+    );
+    const publicMetaConversations = publicRoot
+      .addResource("meta")
+      .addResource("conversations");
+    addPublicTokenMethod(publicMetaConversations, "GET");
+    addPublicTokenMethod(
+      publicMetaConversations.addResource("{id}").addResource("messages"),
       "GET"
     );
 

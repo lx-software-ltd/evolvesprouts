@@ -43,6 +43,8 @@ from app.db.models.enums import (
     LeadEventType,
     LeadType,
     MailchimpSyncStatus,
+    MetaChannel,
+    MetaMessageDirection,
     OrganizationRole,
     OrganizationType,
     RelationshipType,
@@ -78,6 +80,7 @@ from app.db.models.service_instance import (
     TrainingInstanceDetails,
 )
 from app.db.models.tag import AssetTag, ContactTag, FamilyTag, OrganizationTag, Tag
+from app.db.models.meta import MetaConversation, MetaMessage
 from app.db.models.whatsapp import WhatsAppConversation, WhatsAppMessage
 
 __all__ = [
@@ -138,6 +141,10 @@ __all__ = [
     "LegacyImportRef",
     "Location",
     "MailchimpSyncStatus",
+    "MetaChannel",
+    "MetaConversation",
+    "MetaMessage",
+    "MetaMessageDirection",
     "Note",
     "Organization",
     "OrganizationMember",

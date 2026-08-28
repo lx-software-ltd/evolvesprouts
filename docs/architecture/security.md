@@ -261,9 +261,9 @@ return {"error": "Internal server error"}  # Generic response to client
 
 ### Hashed API tokens (`x-api-token`)
 
-Operator-issued tokens authenticate `/v1/public/*` routes (currently WhatsApp
-conversation reads). They are distinct from the browser-visible website
-`x-api-key`.
+Operator-issued tokens authenticate `/v1/public/*` routes (currently WhatsApp,
+Messenger, and Instagram conversation reads). They are distinct from the
+browser-visible website `x-api-key`.
 
 - Tokens use prefix `esk_` and are stored as PBKDF2-HMAC-SHA256 digests in `api_keys`.
 - Scopes: `admin` (full access on token-protected routes) and `user` (GET only).
@@ -272,6 +272,8 @@ conversation reads). They are distinct from the browser-visible website
 - Plaintext is shown once at create (`POST /v1/admin/api-keys`) and is never
   logged. Revoke via `DELETE /v1/admin/api-keys/{id}`.
 - Public WhatsApp payloads omit WhatsApp numbers and `wa_id`.
+- Public Meta payloads omit Page-scoped user ids (`platform_user_id`) and
+  page ids.
 
 ### Public WWW API key model
 

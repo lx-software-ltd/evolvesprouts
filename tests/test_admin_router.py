@@ -59,12 +59,17 @@ def test_match_handler_routes_asset_prefix_paths() -> None:
         "/www/v1/contact-us",
         "/v1/mailchimp/webhook",
         "/v1/whatsapp/webhook",
+        "/v1/meta/webhook",
         "/v1/admin/whatsapp/conversations",
         "/v1/admin/whatsapp/conversations/abc/messages",
+        "/v1/admin/meta/conversations",
+        "/v1/admin/meta/conversations/abc/messages",
         "/v1/admin/api-keys",
         "/v1/admin/api-keys/abc",
         "/v1/public/whatsapp/conversations",
         "/v1/public/whatsapp/conversations/abc/messages",
+        "/v1/public/meta/conversations",
+        "/v1/public/meta/conversations/abc/messages",
         "/v1/calendar/public",
         "/www/v1/calendar/public",
         "/v1/calendar/availability",
@@ -102,6 +107,9 @@ def test_match_handler_treats_exact_public_post_routes_as_exact_path_only() -> N
     assert (
         _match_handler(event=event, method="POST", path="/v1/whatsapp/webhook")
         is not None
+    )
+    assert (
+        _match_handler(event=event, method="POST", path="/v1/meta/webhook") is not None
     )
     assert (
         _match_handler(
@@ -153,6 +161,10 @@ def test_match_handler_treats_exact_public_post_routes_as_exact_path_only() -> N
         is None
     )
     assert (
+        _match_handler(event=event, method="POST", path="/v1/meta/webhook/extra")
+        is None
+    )
+    assert (
         _match_handler(
             event=event, method="POST", path="/www/v1/assets/free/request/extra"
         )
@@ -186,4 +198,5 @@ def test_match_handler_treats_exact_public_post_routes_as_exact_path_only() -> N
 def test_requires_json_content_type_skips_mailchimp_webhook() -> None:
     assert _requires_json_content_type("/v1/mailchimp/webhook", "POST") is False
     assert _requires_json_content_type("/v1/whatsapp/webhook", "POST") is False
+    assert _requires_json_content_type("/v1/meta/webhook", "POST") is False
     assert _requires_json_content_type("/v1/assets/free/request", "POST") is True

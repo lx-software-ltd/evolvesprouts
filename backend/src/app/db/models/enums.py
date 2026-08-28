@@ -48,6 +48,7 @@ class ContactSource(str, enum.Enum):
     RESERVATION = "reservation"
     REFERRAL = "referral"
     INSTAGRAM = "instagram"
+    FACEBOOK = "facebook"
     WHATSAPP = "whatsapp"
     LINKEDIN = "linkedin"
     EVENT = "event"
@@ -146,6 +147,20 @@ class LeadEventType(str, enum.Enum):
 
 class WhatsAppMessageDirection(str, enum.Enum):
     """Direction of a stored WhatsApp message."""
+
+    INBOUND = "inbound"
+    OUTBOUND = "outbound"
+
+
+class MetaChannel(str, enum.Enum):
+    """Messaging channel captured from Meta Messenger or Instagram."""
+
+    FACEBOOK = "facebook"
+    INSTAGRAM = "instagram"
+
+
+class MetaMessageDirection(str, enum.Enum):
+    """Direction of a stored Messenger or Instagram message."""
 
     INBOUND = "inbound"
     OUTBOUND = "outbound"

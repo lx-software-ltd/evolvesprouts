@@ -511,8 +511,13 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | `/v1/admin/leads/{id}` | GET, PATCH | Admin Group | `EvolvesproutsAdminFunction` | Lead detail/stage+assignee updates |
 | `/v1/admin/leads/{id}/notes` | POST | Admin Group | `EvolvesproutsAdminFunction` | Immutable note append |
 | `/v1/whatsapp/webhook` | GET, POST | None (HMAC + verify token) | `EvolvesproutsAdminFunction` | Meta WhatsApp Cloud API webhook; inbound + coexistence echoes |
+| `/v1/meta/webhook` | GET, POST | None (HMAC + verify token) | `EvolvesproutsAdminFunction` | Messenger and Instagram webhook; inbound + `is_echo` |
 | `/v1/admin/whatsapp/conversations` | GET | Admin Group | `EvolvesproutsAdminFunction` | Paginated captured WhatsApp threads |
 | `/v1/admin/whatsapp/conversations/{id}/messages` | GET | Admin Group | `EvolvesproutsAdminFunction` | Messages for one thread |
+| `/v1/admin/meta/conversations` | GET | Admin Group | `EvolvesproutsAdminFunction` | Paginated captured Messenger/Instagram threads |
+| `/v1/admin/meta/conversations/{id}/messages` | GET | Admin Group | `EvolvesproutsAdminFunction` | Messages for one Meta thread |
+| `/v1/public/meta/conversations` | GET | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token reads; name/dates only |
+| `/v1/public/meta/conversations/{id}/messages` | GET | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token message reads without scoped ids |
 | `/v1/admin/assets` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | |
 | `/v1/admin/assets/{id}` | GET, PUT, PATCH, DELETE | Admin Group | `EvolvesproutsAdminFunction` | |
 | `/v1/admin/assets/{id}/grants` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | |

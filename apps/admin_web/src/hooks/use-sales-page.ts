@@ -9,9 +9,15 @@ import { useLeadList } from './use-lead-list';
 import { useLeadMutations } from './use-lead-mutations';
 import { useQueryTabState } from './use-query-tab-state';
 
-export type SalesView = 'pipeline' | 'analytics' | 'whatsapp';
+export type SalesView = 'pipeline' | 'analytics' | 'instagram' | 'messenger' | 'whatsapp';
 
-export const SALES_VIEW_KEYS: readonly SalesView[] = ['pipeline', 'analytics', 'whatsapp'];
+export const SALES_VIEW_KEYS: readonly SalesView[] = [
+  'pipeline',
+  'analytics',
+  'instagram',
+  'messenger',
+  'whatsapp',
+];
 export const DEFAULT_SALES_VIEW: SalesView = 'pipeline';
 
 export function useSalesPage() {

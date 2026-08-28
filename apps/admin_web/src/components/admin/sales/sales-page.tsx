@@ -7,6 +7,7 @@ import { FunnelOverview } from './funnel-overview';
 import { LeadDetailPanel } from './lead-detail-panel';
 import { LeadsTable } from './leads-table';
 import { SalesHeader } from './sales-header';
+import { MetaConversationsView } from './meta-conversations-view';
 import { WhatsAppConversationsView } from './whatsapp-conversations-view';
 
 import { AdminPageErrorBanner } from '@/components/admin/admin-page-error-banner';
@@ -31,8 +32,12 @@ const AnalyticsView = dynamic(
 const SALES_TAB_ITEMS: { key: SalesView; label: string }[] = [
   { key: 'pipeline', label: 'Pipeline' },
   { key: 'analytics', label: 'Analytics' },
+  { key: 'instagram', label: 'Instagram' },
+  { key: 'messenger', label: 'Messenger' },
   { key: 'whatsapp', label: 'WhatsApp' },
 ];
+
+const INBOX_VIEWS = new Set<SalesView>(['instagram', 'messenger', 'whatsapp']);
 
 export function SalesPage() {
   const state = useSalesPage();
@@ -66,7 +71,7 @@ export function SalesPage() {
         onChange={state.setActiveView}
       />
 
-      {state.activeView === 'whatsapp' ? null : (
+      {INBOX_VIEWS.has(state.activeView) ? null : (
       <SalesHeader
         activeView={state.activeView}
         dateRange={state.leadAnalytics.dateRange}
@@ -88,6 +93,10 @@ export function SalesPage() {
 
       {state.activeView === 'whatsapp' ? (
         <WhatsAppConversationsView />
+      ) : state.activeView === 'instagram' ? (
+        <MetaConversationsView channel='instagram' />
+      ) : state.activeView === 'messenger' ? (
+        <MetaConversationsView channel='facebook' />
       ) : state.activeView === 'pipeline' ? (
         <>
           <FunnelOverview
