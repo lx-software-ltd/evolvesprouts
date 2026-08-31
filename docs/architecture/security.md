@@ -29,6 +29,15 @@ This document outlines security best practices and requirements for the Evolve S
 - Use CDK parameters with `noEcho: true` for secrets
 - Use environment variables at runtime
 
+### Gitleaks Secret Scanning
+
+Secret Scanning in `.github/workflows/security.yml` runs the MIT-licensed
+`gitleaks` CLI (pinned version + SHA-256). It does not use
+`gitleaks/gitleaks-action`, which requires a `GITLEAKS_LICENSE` on
+organization repositories. Dependabot `pull_request` runs cannot read
+Actions secrets, so the licensed action failed every Dependabot PR with
+"missing gitleaks license".
+
 ### Example - CDK Parameter for Secrets
 
 ```typescript
