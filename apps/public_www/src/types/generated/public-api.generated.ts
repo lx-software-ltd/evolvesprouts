@@ -737,6 +737,246 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List CRM contacts (token API)
+         * @description Returns CRM contacts for a hashed API token (`x-api-token`).
+         *     Payloads match the admin contact contract, including email, phone,
+         *     and date of birth. Search (`query`) matches first name, last name,
+         *     email, Instagram, and phone.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /**
+                     * @description Search first name, last name, email, Instagram, and phone (stored as ISO region +
+                     *     national digits; server normalises ``+`` / digit queries before matching).
+                     */
+                    query?: string;
+                    active?: boolean;
+                    /** @description When set, only contacts with this contact type are returned. */
+                    contact_type?: components["schemas"]["PublicContactType"];
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Contact list. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicContactListResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Missing or invalid API token. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        put?: never;
+        /**
+         * Create CRM contact (token API)
+         * @description Creates a CRM contact. Requires an `admin` scoped API token.
+         *     `user` tokens receive `403`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreatePublicContactRequest"];
+                };
+            };
+            responses: {
+                /** @description Contact created. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicContactResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Missing or invalid API token. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/contacts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Get CRM contact (token API)
+         * @description Returns one CRM contact for a hashed API token (`x-api-token`).
+         *     Payload matches the admin contact contract.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Contact response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicContactResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Missing or invalid API token. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        put?: never;
+        post?: never;
+        /**
+         * Delete CRM contact (token API)
+         * @description Permanently removes the contact row. Requires an `admin` scoped API
+         *     token. `user` tokens receive `403`. Dependent CRM notes on linked
+         *     sales leads are removed first; enrollments and other references that
+         *     use `ON DELETE SET NULL` clear their `contact_id`. Returns `400` if
+         *     the database still blocks deletion.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Contact deleted. */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Missing or invalid API token. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Update CRM contact (token API)
+         * @description Updates a CRM contact. Requires an `admin` scoped API token.
+         *     `user` tokens receive `403`.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdatePublicContactRequest"];
+                };
+            };
+            responses: {
+                /** @description Contact response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicContactResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Missing or invalid API token. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        trace?: never;
+    };
     "/v1/assets/free": {
         parameters: {
             query?: never;
@@ -3018,6 +3258,132 @@ export interface components {
         PublicMetaMessageListResponse: {
             conversation: components["schemas"]["PublicMetaConversationSummary"];
             items: components["schemas"]["PublicMetaMessageSummary"][];
+        };
+        /** @enum {string} */
+        PublicContactType: "parent" | "child" | "helper" | "professional" | "other";
+        /**
+         * @description Stored relationship for contacts and read responses.
+         * @enum {string}
+         */
+        PublicRelationshipType: "prospect" | "client" | "past_client" | "partner" | "vendor" | "other";
+        /** @enum {string} */
+        PublicContactSource: "free_guide" | "newsletter" | "contact_form" | "reservation" | "referral" | "instagram" | "facebook" | "whatsapp" | "linkedin" | "event" | "phone_call" | "public_website" | "manual";
+        /** @enum {string} */
+        PublicMailchimpSyncStatus: "pending" | "synced" | "failed" | "unsubscribed";
+        PublicTagRef: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            color?: string | null;
+        };
+        PublicLocationVenueSummary: {
+            /** Format: uuid */
+            id: string;
+            name?: string | null;
+            /** Format: uuid */
+            area_id: string;
+            area_name: string;
+            address?: string | null;
+            /** Format: double */
+            lat?: number | null;
+            /** Format: double */
+            lng?: number | null;
+        };
+        PublicContact: {
+            /** Format: uuid */
+            id: string;
+            email?: string | null;
+            instagram_handle?: string | null;
+            first_name: string;
+            last_name?: string | null;
+            phone_region?: string | null;
+            phone_national_number?: string | null;
+            readonly phone_e164?: string | null;
+            contact_type: components["schemas"]["PublicContactType"];
+            relationship_type: components["schemas"]["PublicRelationshipType"];
+            /** Format: date */
+            date_of_birth?: string | null;
+            /** Format: uuid */
+            location_id?: string | null;
+            location_summary?: components["schemas"]["PublicLocationVenueSummary"] | null;
+            family_location_summary?: components["schemas"]["PublicLocationVenueSummary"] | null;
+            organization_location_summary?: components["schemas"]["PublicLocationVenueSummary"] | null;
+            source: components["schemas"]["PublicContactSource"];
+            source_detail?: string | null;
+            /** Format: uuid */
+            referral_contact_id?: string | null;
+            mailchimp_status: components["schemas"]["PublicMailchimpSyncStatus"];
+            active: boolean;
+            /** Format: date-time */
+            archived_at?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+            tag_ids: string[];
+            tags: components["schemas"]["PublicTagRef"][];
+            family_ids: string[];
+            organization_ids: string[];
+            standalone_note_count: number;
+            has_completion_certificate: boolean;
+        };
+        PublicContactListResponse: {
+            items: components["schemas"]["PublicContact"][];
+            next_cursor?: string | null;
+            total_count: number;
+        };
+        PublicContactResponse: {
+            contact: components["schemas"]["PublicContact"];
+        };
+        CreatePublicContactRequest: {
+            first_name: string;
+            last_name?: string | null;
+            email?: string | null;
+            instagram_handle?: string | null;
+            phone_region?: string | null;
+            /**
+             * @description National significant digits. Omit both `phone_region` and `phone_number` to leave
+             *     phone unset; send both keys with JSON `null` to clear phone on create.
+             */
+            phone_number?: string | null;
+            contact_type: components["schemas"]["PublicContactType"];
+            relationship_type?: components["schemas"]["PublicRelationshipType"];
+            source?: components["schemas"]["PublicContactSource"];
+            source_detail?: string | null;
+            /** Format: date */
+            date_of_birth?: string | null;
+            /** Format: uuid */
+            location_id?: string | null;
+            tag_ids?: string[];
+            family_ids?: string[];
+            organization_ids?: string[];
+            /**
+             * Format: uuid
+             * @description Required when `source` is `referral` on create.
+             */
+            referral_contact_id?: string | null;
+        };
+        UpdatePublicContactRequest: {
+            first_name?: string;
+            last_name?: string | null;
+            email?: string | null;
+            instagram_handle?: string | null;
+            phone_region?: string | null;
+            phone_number?: string | null;
+            contact_type?: components["schemas"]["PublicContactType"];
+            relationship_type?: components["schemas"]["PublicRelationshipType"];
+            source?: components["schemas"]["PublicContactSource"];
+            source_detail?: string | null;
+            /** Format: date */
+            date_of_birth?: string | null;
+            /** Format: uuid */
+            location_id?: string | null;
+            active?: boolean;
+            tag_ids?: string[];
+            family_ids?: string[];
+            organization_ids?: string[];
+            /** Format: uuid */
+            referral_contact_id?: string | null;
         };
         ReservationSubmissionAccepted: {
             message: string;

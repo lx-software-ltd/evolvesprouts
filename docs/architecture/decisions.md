@@ -746,7 +746,10 @@ validated by a VPC request authorizer on `x-api-token`. Scopes are `admin`
 (full access on token-protected routes) and `user` (GET only). WhatsApp
 conversation reads live at `GET /v1/public/whatsapp/conversations` and
 `GET /v1/public/whatsapp/conversations/{id}/messages` and omit phone numbers
-and `wa_id`. Admins create and revoke tokens from Audit → API keys.
+and `wa_id`. CRM contacts live at `GET|POST /v1/public/contacts` and
+`GET|PATCH|DELETE /v1/public/contacts/{id}` with the admin contact payload
+(including PII). Notes, services, and Mailchimp jobs stay on Cognito admin
+routes. Admins create and revoke tokens from Audit → API keys.
 
 **Why:**
 - Matches the Siutindei hashed-key pattern without colliding with the

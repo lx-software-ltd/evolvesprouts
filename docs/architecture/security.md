@@ -29,6 +29,15 @@ This document outlines security best practices and requirements for the Evolve S
 - Use CDK parameters with `noEcho: true` for secrets
 - Use environment variables at runtime
 
+### Gitleaks Secret Scanning
+
+Secret Scanning in `.github/workflows/security.yml` runs the MIT-licensed
+`gitleaks` CLI (pinned version + SHA-256). It does not use
+`gitleaks/gitleaks-action`, which requires a `GITLEAKS_LICENSE` on
+organization repositories. Dependabot `pull_request` runs cannot read
+Actions secrets, so the licensed action failed every Dependabot PR with
+"missing gitleaks license".
+
 ### Example - CDK Parameter for Secrets
 
 ```typescript
@@ -261,9 +270,9 @@ return {"error": "Internal server error"}  # Generic response to client
 
 ### Hashed API tokens (`x-api-token`)
 
-Operator-issued tokens authenticate `/v1/public/*` routes (currently WhatsApp,
-Messenger, and Instagram conversation reads). They are distinct from the
-browser-visible website `x-api-key`.
+Operator-issued tokens authenticate `/v1/public/*` routes (WhatsApp,
+Messenger, and Instagram conversation reads, plus CRM contacts). They are
+distinct from the browser-visible website `x-api-key`.
 
 - Tokens use prefix `esk_` and are stored as PBKDF2-HMAC-SHA256 digests in `api_keys`.
 - Scopes: `admin` (full access on token-protected routes) and `user` (GET only).
@@ -274,6 +283,9 @@ browser-visible website `x-api-key`.
 - Public WhatsApp payloads omit WhatsApp numbers and `wa_id`.
 - Public Meta payloads omit Page-scoped user ids (`platform_user_id`) and
   page ids.
+- Public contact payloads match the admin contact contract (including email,
+  phone, and date of birth). Notes, services, and Mailchimp sync jobs stay on
+  Cognito admin routes.
 
 ### Public WWW API key model
 

@@ -3162,6 +3162,13 @@ export class ApiStack extends cdk.Stack {
       publicMetaConversations.addResource("{id}").addResource("messages"),
       "GET"
     );
+    const publicContacts = publicRoot.addResource("contacts");
+    addPublicTokenMethod(publicContacts, "GET");
+    addPublicTokenMethod(publicContacts, "POST");
+    const publicContactById = publicContacts.addResource("{id}");
+    addPublicTokenMethod(publicContactById, "GET");
+    addPublicTokenMethod(publicContactById, "PATCH");
+    addPublicTokenMethod(publicContactById, "DELETE");
 
     // Admin asset routes
     const admin = v1.addResource("admin");
