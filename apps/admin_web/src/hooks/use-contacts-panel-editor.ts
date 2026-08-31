@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 
 import type { useAdminEntityContacts } from '@/hooks/use-admin-entity-contacts';
 import { useFamilyOrgPickers } from '@/hooks/use-family-org-pickers';
@@ -302,7 +302,7 @@ export function useContactsPanelEditor({
     }
   }
 
-  function selectRow(row: ApiSchemas['AdminContact']) {
+  const selectRow = useCallback((row: ApiSchemas['AdminContact']) => {
     setSelectedId(row.id);
     setEditorMode('edit');
     setFirstName(row.first_name);
@@ -327,7 +327,7 @@ export function useContactsPanelEditor({
     setOrganizationSelectId(row.organization_ids[0] ?? '');
     setTagIds([...row.tag_ids]);
     setActive(row.active);
-  }
+  }, [clearLocationSaveError]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -337,14 +337,12 @@ export function useContactsPanelEditor({
     if (!requestedId || appliedContactQueryIdRef.current === requestedId) {
       return;
     }
-    const row = rows.find((contact) => contact.id === requestedId);
-    if (row) {
-      appliedContactQueryIdRef.current = requestedId;
-      selectRow(row);
-      return;
-    }
+    const row = rows.find((contact) => contact.id === requestedId) ?? null;
     let cancelled = false;
-    void getAdminContact(requestedId)
+    const source = row
+      ? Promise.resolve(row)
+      : getAdminContact(requestedId);
+    void source
       .then((contact) => {
         if (cancelled) {
           return;
@@ -362,7 +360,7 @@ export function useContactsPanelEditor({
     return () => {
       cancelled = true;
     };
-  }, [rows]);
+  }, [rows, selectRow]);
 
   function handleSourceChange(v: ApiSchemas['EntityContactSource']) {
     setSource(v);
