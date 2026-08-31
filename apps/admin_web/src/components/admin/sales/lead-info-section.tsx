@@ -2,6 +2,7 @@ import type { LeadDetail } from '@/types/leads';
 
 import { Card } from '@/components/ui/card';
 import { formatEnumLabel } from '@/lib/format';
+import { formatPhoneInternationalDisplay } from '@/lib/phone-display';
 
 export interface LeadInfoSectionProps {
   lead: LeadDetail;
@@ -19,7 +20,8 @@ export function LeadInfoSection({ lead }: LeadInfoSectionProps) {
           <span className='font-medium text-slate-900'>Email:</span> {lead.contact.email ?? '—'}
         </p>
         <p>
-          <span className='font-medium text-slate-900'>Phone:</span> {lead.contact.phoneE164 ?? '—'}
+          <span className='font-medium text-slate-900'>Phone:</span>{' '}
+          {formatPhoneInternationalDisplay(lead.contact) ?? '—'}
         </p>
         <p>
           <span className='font-medium text-slate-900'>Instagram:</span>{' '}
