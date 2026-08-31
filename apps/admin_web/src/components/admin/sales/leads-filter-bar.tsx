@@ -45,7 +45,7 @@ export function LeadsFilterBar({
             <button
               key={stage}
               type='button'
-              className={`inline-flex h-8 items-center justify-center rounded-full px-3 text-xs font-semibold leading-none ${getStageBadgeClass(stage)} ${
+              className={`inline-flex h-8 items-center justify-center rounded-full px-3 py-0 text-xs font-semibold leading-none ${getStageBadgeClass(stage)} ${
                 isActive ? 'ring-2 ring-slate-400' : ''
               }`}
               onClick={() => onFilterChange('stage', toggleArrayValue(filters.stage, stage))}

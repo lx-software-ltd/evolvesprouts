@@ -18,6 +18,7 @@ describe('LeadsFilterBar', () => {
       expect(chip.className).toContain('justify-center');
       expect(chip.className).toContain('leading-none');
       expect(chip.className).toContain('h-8');
+      expect(chip.className).toContain('py-0');
     }
   });
 
