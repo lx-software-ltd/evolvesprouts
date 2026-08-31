@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 
+import { ConversationNameCell } from './conversation-name-cell';
+
 import { useWhatsAppConversations } from '@/hooks/use-whatsapp-conversations';
 import { useWhatsAppMessages } from '@/hooks/use-whatsapp-messages';
 import { formatDate } from '@/lib/format';
-
+import { formatInboxConversationName } from '@/lib/inbox-conversation-name';
 import { ViewIcon } from '@/components/icons/action-icons';
 import { AdminEditorCard } from '@/components/ui/admin-editor-card';
 import {
@@ -39,7 +41,12 @@ export function WhatsAppConversationsView() {
     <div className='space-y-4'>
       {selected ? (
         <AdminEditorCard
-          title={selected.profileName || selected.contactName || selected.waId}
+          title={
+            formatInboxConversationName({
+              contactName: selected.contactName,
+              profileName: selected.profileName,
+            }) || selected.waId
+          }
           description={`Inbound ${selected.inboundCount} · outbound ${selected.outboundCount}`}
           actions={
             <Button type='button' variant='secondary' onClick={() => setSelectedId(null)}>
@@ -124,7 +131,13 @@ export function WhatsAppConversationsView() {
                 }
                 onClick={() => setSelectedId(row.id)}
               >
-                <AdminDataTableCell>{row.profileName || row.contactName || '—'}</AdminDataTableCell>
+                <AdminDataTableCell>
+                  <ConversationNameCell
+                    contactId={row.contactId}
+                    contactName={row.contactName}
+                    profileName={row.profileName}
+                  />
+                </AdminDataTableCell>
                 <AdminDataTableCell>{row.waId}</AdminDataTableCell>
                 <AdminDataTableCell>{formatWhen(row.lastMessageAt)}</AdminDataTableCell>
                 <AdminDataTableCell>{row.inboundCount}</AdminDataTableCell>
@@ -135,7 +148,12 @@ export function WhatsAppConversationsView() {
                     type='button'
                     size='sm'
                     variant='ghost'
-                    aria-label={`View conversation ${row.profileName || row.contactName || row.waId}`}
+                    aria-label={`View conversation ${
+                      formatInboxConversationName({
+                        contactName: row.contactName,
+                        profileName: row.profileName,
+                      }) || row.waId
+                    }`}
                     onClick={(event) => {
                       event.stopPropagation();
                       setSelectedId(row.id);
