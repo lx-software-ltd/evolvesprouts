@@ -1074,7 +1074,7 @@ export interface paths {
         };
         /**
          * List audit log entries
-         * @description Returns database audit history (trigger- and application-sourced rows in `audit_log`). Optional filters combine as in the admin Lambda handler: when `record_id` is set, `table` is required; `user_id` is a Cognito subject (sub), not an email address. Use `email` to filter by Cognito email (server resolves to sub); do not pass `user_id` together with `email`.
+         * @description Returns database audit history (trigger- and application-sourced rows in `audit_log`). Optional filters combine as in the admin Lambda handler: when `record_id` is set, `table` is required; `user_id` is a Cognito subject (sub) or `api-key:<id>`. Use `email` to filter by Cognito email or API key name (server resolves to sub or `api-key:<id>`); do not pass `user_id` together with `email`.
          */
         get: {
             parameters: {
@@ -1082,10 +1082,10 @@ export interface paths {
                     limit?: number;
                     /** @description Opaque continuation token from `next_cursor` for the default recent listing. */
                     cursor?: string;
-                    table?: "api_keys" | "assets" | "asset_access_grants" | "calendar_manual_blocks" | "customer_invoice_lines" | "customer_invoices" | "customer_payments" | "customer_receipts" | "payment_allocations";
+                    table?: "api_keys" | "asset_access_grants" | "asset_share_links" | "asset_tags" | "assets" | "bulk_expense_import_jobs" | "calendar_manual_blocks" | "completion_certificates" | "consultation_details" | "contact_tags" | "contacts" | "customer_invoice_lines" | "customer_invoices" | "customer_payments" | "customer_receipts" | "discount_codes" | "document_counters" | "enrollments" | "event_details" | "event_ticket_tiers" | "expense_attachments" | "expenses" | "families" | "family_members" | "family_tags" | "geographic_areas" | "inbound_emails" | "instance_session_slots" | "legacy_import_refs" | "locations" | "meta_conversations" | "meta_messages" | "notes" | "organization_members" | "organization_tags" | "organizations" | "payment_allocations" | "sales_lead_events" | "sales_leads" | "service_assets" | "service_instance_organizations" | "service_instance_tags" | "service_instances" | "service_tags" | "services" | "tags" | "training_course_details" | "training_instance_details" | "whatsapp_conversations" | "whatsapp_messages";
                     record_id?: string;
                     user_id?: string;
-                    /** @description Filter by the user's Cognito email address. The server resolves this to a Cognito `sub` via `list_users`. Mutually exclusive with `user_id`. When no user matches, the response is an empty list. */
+                    /** @description Filter by Cognito email or API key name. Values containing `@` resolve to a Cognito `sub` via `list_users`. Other values match `api_keys.name` (case-insensitive) and become `api-key:<id>`. Mutually exclusive with `user_id`. When no actor matches, the response is an empty list. */
                     email?: string;
                     action?: "INSERT" | "UPDATE" | "DELETE";
                     /** @description ISO 8601 timestamp; only entries at or after this time are returned where applicable. */
@@ -7485,7 +7485,7 @@ export interface components {
             /** @enum {string} */
             action: "INSERT" | "UPDATE" | "DELETE";
             user_id?: string | null;
-            /** @description Cognito email when resolved for this response (optional). */
+            /** @description Cognito email when the actor is a Cognito user, or the API key `name` when `user_id` is `api-key:<id>` (optional). */
             user_email?: string | null;
             request_id?: string | null;
             old_values?: {

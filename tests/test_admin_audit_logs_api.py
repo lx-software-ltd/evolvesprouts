@@ -7,8 +7,9 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from app.api import admin_audit_logs
+from app.api import admin_audit_actors, admin_audit_logs
 from app.api.admin_request import encode_created_cursor, parse_created_cursor
+from app.db.auditable_tables import AUDITABLE_TABLES
 from app.exceptions import NotFoundError, ValidationError
 from app.db.models import AuditLog
 
@@ -90,7 +91,7 @@ def test_audit_logs_get_by_id_not_found(
     monkeypatch.setattr(admin_audit_logs, "get_engine", lambda: object())
     monkeypatch.setattr(admin_audit_logs, "AuditLogRepository", _Repo)
     monkeypatch.setattr(
-        admin_audit_logs, "_cognito_emails_for_subs", lambda _s, **_: {}
+        admin_audit_logs, "_actor_labels_for_user_ids", lambda *_a, **_: {}
     )
 
     missing = str(uuid4())
@@ -146,7 +147,7 @@ def test_recent_list_cursor_second_page(
     monkeypatch.setattr(admin_audit_logs, "get_engine", lambda: object())
     monkeypatch.setattr(admin_audit_logs, "AuditLogRepository", _Repo)
     monkeypatch.setattr(
-        admin_audit_logs, "_cognito_emails_for_subs", lambda _s, **_: {}
+        admin_audit_logs, "_actor_labels_for_user_ids", lambda *_a, **_: {}
     )
 
     r1 = admin_audit_logs.handle_admin_audit_logs_request(
@@ -227,7 +228,7 @@ def test_user_id_filter_cursor_second_page(
     monkeypatch.setattr(admin_audit_logs, "get_engine", lambda: object())
     monkeypatch.setattr(admin_audit_logs, "AuditLogRepository", _Repo)
     monkeypatch.setattr(
-        admin_audit_logs, "_cognito_emails_for_subs", lambda _s, **_: {}
+        admin_audit_logs, "_actor_labels_for_user_ids", lambda *_a, **_: {}
     )
 
     uid = "user-sub-abc"
@@ -302,7 +303,7 @@ def test_table_filter_cursor_second_page(
     monkeypatch.setattr(admin_audit_logs, "get_engine", lambda: object())
     monkeypatch.setattr(admin_audit_logs, "AuditLogRepository", _Repo)
     monkeypatch.setattr(
-        admin_audit_logs, "_cognito_emails_for_subs", lambda _s, **_: {}
+        admin_audit_logs, "_actor_labels_for_user_ids", lambda *_a, **_: {}
     )
 
     r1 = admin_audit_logs.handle_admin_audit_logs_request(
@@ -380,7 +381,7 @@ def test_record_id_table_cursor_second_page(
     monkeypatch.setattr(admin_audit_logs, "get_engine", lambda: object())
     monkeypatch.setattr(admin_audit_logs, "AuditLogRepository", _Repo)
     monkeypatch.setattr(
-        admin_audit_logs, "_cognito_emails_for_subs", lambda _s, **_: {}
+        admin_audit_logs, "_actor_labels_for_user_ids", lambda *_a, **_: {}
     )
 
     rid = "rec-xyz"
@@ -453,7 +454,7 @@ def test_table_filter_cursor_passed(
     monkeypatch.setattr(admin_audit_logs, "get_engine", lambda: object())
     monkeypatch.setattr(admin_audit_logs, "AuditLogRepository", _Repo)
     monkeypatch.setattr(
-        admin_audit_logs, "_cognito_emails_for_subs", lambda _s, **_: {}
+        admin_audit_logs, "_actor_labels_for_user_ids", lambda *_a, **_: {}
     )
 
     cur = encode_created_cursor(row.timestamp, row.id)
@@ -503,7 +504,7 @@ def test_next_cursor_null_when_not_full_page(
     monkeypatch.setattr(admin_audit_logs, "get_engine", lambda: object())
     monkeypatch.setattr(admin_audit_logs, "AuditLogRepository", _Repo)
     monkeypatch.setattr(
-        admin_audit_logs, "_cognito_emails_for_subs", lambda _s, **_: {}
+        admin_audit_logs, "_actor_labels_for_user_ids", lambda *_a, **_: {}
     )
 
     r = admin_audit_logs.handle_admin_audit_logs_request(
@@ -551,7 +552,7 @@ def test_recent_list_empty_returns_200(
     monkeypatch.setattr(admin_audit_logs, "get_engine", lambda: object())
     monkeypatch.setattr(admin_audit_logs, "AuditLogRepository", _Repo)
     monkeypatch.setattr(
-        admin_audit_logs, "_cognito_emails_for_subs", lambda _s, **_: {}
+        admin_audit_logs, "_actor_labels_for_user_ids", lambda *_a, **_: {}
     )
 
     r = admin_audit_logs.handle_admin_audit_logs_request(
@@ -616,11 +617,11 @@ def test_email_filter_resolves_sub(
     monkeypatch.setattr(admin_audit_logs, "Session", _Session)
     monkeypatch.setattr(admin_audit_logs, "get_engine", lambda: object())
     monkeypatch.setattr(admin_audit_logs, "AuditLogRepository", _Repo)
-    monkeypatch.setattr(admin_audit_logs.aws_proxy, "invoke", fake_invoke)
+    monkeypatch.setattr(admin_audit_actors.aws_proxy, "invoke", fake_invoke)
     monkeypatch.setattr(
         admin_audit_logs,
-        "_cognito_emails_for_subs",
-        lambda _s, **_: {"cognito-sub-xyz": "a@b.com"},
+        "_actor_labels_for_user_ids",
+        lambda *_a, **_: {"cognito-sub-xyz": "a@b.com"},
     )
     monkeypatch.setenv("COGNITO_USER_POOL_ID", "pool-1")
 
@@ -673,7 +674,7 @@ def test_email_filter_no_users_returns_empty(
     monkeypatch.setattr(admin_audit_logs, "Session", _Session)
     monkeypatch.setattr(admin_audit_logs, "get_engine", lambda: object())
     monkeypatch.setattr(admin_audit_logs, "AuditLogRepository", _Repo)
-    monkeypatch.setattr(admin_audit_logs.aws_proxy, "invoke", fake_invoke)
+    monkeypatch.setattr(admin_audit_actors.aws_proxy, "invoke", fake_invoke)
     monkeypatch.setenv("COGNITO_USER_POOL_ID", "pool-1")
 
     r = admin_audit_logs.handle_admin_audit_logs_request(
@@ -714,7 +715,7 @@ def test_invalid_email_rejected(
             api_gateway_event(
                 method="GET",
                 path="/v1/admin/audit-logs",
-                query_params={"email": "not-an-email"},
+                query_params={"email": 'bad"email@example.com'},
                 authorizer_context=admin_identity,
             ),
             "GET",
@@ -756,7 +757,7 @@ def test_record_history_cursor(
     monkeypatch.setattr(admin_audit_logs, "get_engine", lambda: object())
     monkeypatch.setattr(admin_audit_logs, "AuditLogRepository", _Repo)
     monkeypatch.setattr(
-        admin_audit_logs, "_cognito_emails_for_subs", lambda _s, **_: {}
+        admin_audit_logs, "_actor_labels_for_user_ids", lambda *_a, **_: {}
     )
 
     cur = encode_created_cursor(row.timestamp, row.id)
@@ -923,7 +924,7 @@ def test_cognito_emails_for_subs_uses_request_cache(
             ],
         }
 
-    monkeypatch.setattr(admin_audit_logs.aws_proxy, "invoke", fake_invoke)
+    monkeypatch.setattr(admin_audit_actors.aws_proxy, "invoke", fake_invoke)
     monkeypatch.setenv("COGNITO_USER_POOL_ID", "pool-1")
     cache: dict[str, str] = {}
     subs = ["sub-a", "sub-b", "sub-a"]
@@ -933,3 +934,222 @@ def test_cognito_emails_for_subs_uses_request_cache(
         "sub-b": "sub-b@example.com",
     }
     assert calls == ["sub-a", "sub-b"]
+
+
+def test_auditable_tables_include_contacts_and_crm() -> None:
+    assert "contacts" in AUDITABLE_TABLES
+    assert "families" in AUDITABLE_TABLES
+    assert "enrollments" in AUDITABLE_TABLES
+    assert "audit_log" not in AUDITABLE_TABLES
+
+
+def test_contacts_table_filter_accepted(
+    api_gateway_event: Any,
+    admin_identity: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    row = _row()
+    row.table_name = "contacts"
+
+    class _Session:
+        def __init__(self, *_a: object, **_k: object) -> None:
+            pass
+
+        def __enter__(self) -> "_Session":
+            return self
+
+        def __exit__(self, *_a: object) -> None:
+            return None
+
+        def execute(self, *_a: object, **_k: object) -> None:
+            return None
+
+    class _Repo:
+        def __init__(self, _session: Any) -> None:
+            pass
+
+        def get_table_activity(self, **kwargs: Any) -> list[AuditLog]:
+            assert kwargs["table_name"] == "contacts"
+            return [row]
+
+    monkeypatch.setattr(admin_audit_logs, "Session", _Session)
+    monkeypatch.setattr(admin_audit_logs, "get_engine", lambda: object())
+    monkeypatch.setattr(admin_audit_logs, "AuditLogRepository", _Repo)
+    monkeypatch.setattr(
+        admin_audit_logs, "_actor_labels_for_user_ids", lambda *_a, **_: {}
+    )
+    r = admin_audit_logs.handle_admin_audit_logs_request(
+        api_gateway_event(
+            method="GET",
+            path="/v1/admin/audit-logs",
+            query_params={"table": "contacts"},
+            authorizer_context=admin_identity,
+        ),
+        "GET",
+        "/v1/admin/audit-logs",
+    )
+    assert r["statusCode"] == 200
+    body = json.loads(r["body"])
+    assert body["items"][0]["table_name"] == "contacts"
+
+
+def test_serialize_api_key_actor_uses_raw_name() -> None:
+    key_id = uuid4()
+    entry = _row(user=f"api-key:{key_id}")
+    payload = admin_audit_logs._serialize_audit_log(
+        entry, email_map={f"api-key:{key_id}": "Prod CRM full access"}
+    )
+    assert payload["user_email"] == "Prod CRM full access"
+
+
+def test_actor_labels_skip_cognito_for_api_key_ids(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    key_id = uuid4()
+    user_id = f"api-key:{key_id}"
+    cognito_calls: list[str] = []
+
+    def fake_invoke(_svc: str, _action: str, params: dict[str, Any]) -> dict[str, Any]:
+        cognito_calls.append(params["Filter"])
+        return {"Users": []}
+
+    class _Result:
+        def all(self) -> list[Any]:
+            return [type("Row", (), {"id": key_id, "name": "Prod CRM"})()]
+
+    class _Session:
+        def execute(self, *_a: object, **_k: object) -> _Result:
+            return _Result()
+
+    monkeypatch.setattr(admin_audit_actors.aws_proxy, "invoke", fake_invoke)
+    labels = admin_audit_actors.actor_labels_for_user_ids(
+        _Session(),  # type: ignore[arg-type]
+        [user_id],
+        user_pool_id="pool-1",
+    )
+    assert labels[user_id] == "Prod CRM"
+    assert cognito_calls == []
+
+
+def test_api_key_name_filter_resolves(
+    api_gateway_event: Any,
+    admin_identity: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    key_id = uuid4()
+    row = _row(user=f"api-key:{key_id}")
+    repo_calls: list[dict[str, Any]] = []
+
+    class _Session:
+        def __init__(self, *_a: object, **_k: object) -> None:
+            pass
+
+        def __enter__(self) -> "_Session":
+            return self
+
+        def __exit__(self, *_a: object) -> None:
+            return None
+
+        def execute(self, *_a: object, **_k: object) -> None:
+            return None
+
+    class _Repo:
+        def __init__(self, _session: Any) -> None:
+            pass
+
+        def get_user_activity(self, **kwargs: Any) -> list[AuditLog]:
+            repo_calls.append(kwargs)
+            return [row]
+
+    monkeypatch.setattr(admin_audit_logs, "Session", _Session)
+    monkeypatch.setattr(admin_audit_logs, "get_engine", lambda: object())
+    monkeypatch.setattr(admin_audit_logs, "AuditLogRepository", _Repo)
+    monkeypatch.setattr(
+        admin_audit_logs,
+        "api_key_user_id_for_name",
+        lambda _session, name: f"api-key:{key_id}" if name == "Prod CRM" else None,
+    )
+    monkeypatch.setattr(
+        admin_audit_logs,
+        "_actor_labels_for_user_ids",
+        lambda *_a, **_: {f"api-key:{key_id}": "Prod CRM"},
+    )
+
+    r = admin_audit_logs.handle_admin_audit_logs_request(
+        api_gateway_event(
+            method="GET",
+            path="/v1/admin/audit-logs",
+            query_params={"email": "Prod CRM"},
+            authorizer_context=admin_identity,
+        ),
+        "GET",
+        "/v1/admin/audit-logs",
+    )
+    assert r["statusCode"] == 200
+    body = json.loads(r["body"])
+    assert body["items"][0]["user_email"] == "Prod CRM"
+    assert repo_calls[0]["user_id"] == f"api-key:{key_id}"
+
+
+def test_api_key_name_filter_no_match_returns_empty(
+    api_gateway_event: Any,
+    admin_identity: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class _Session:
+        def __init__(self, *_a: object, **_k: object) -> None:
+            pass
+
+        def __enter__(self) -> "_Session":
+            return self
+
+        def __exit__(self, *_a: object) -> None:
+            return None
+
+        def execute(self, *_a: object, **_k: object) -> None:
+            return None
+
+    class _Repo:
+        def __init__(self, _session: Any) -> None:
+            pass
+
+        def get_user_activity(self, **_kwargs: Any) -> list[AuditLog]:
+            raise AssertionError("repo should not run when API key name has no match")
+
+    monkeypatch.setattr(admin_audit_logs, "Session", _Session)
+    monkeypatch.setattr(admin_audit_logs, "get_engine", lambda: object())
+    monkeypatch.setattr(admin_audit_logs, "AuditLogRepository", _Repo)
+    monkeypatch.setattr(
+        admin_audit_logs, "api_key_user_id_for_name", lambda *_a, **_: None
+    )
+
+    r = admin_audit_logs.handle_admin_audit_logs_request(
+        api_gateway_event(
+            method="GET",
+            path="/v1/admin/audit-logs",
+            query_params={"email": "Unknown Key"},
+            authorizer_context=admin_identity,
+        ),
+        "GET",
+        "/v1/admin/audit-logs",
+    )
+    assert json.loads(r["body"]) == {"items": [], "next_cursor": None}
+
+
+def test_missing_api_key_falls_back_to_user_id() -> None:
+    user_id = f"api-key:{uuid4()}"
+
+    class _Result:
+        def all(self) -> list[Any]:
+            return []
+
+    class _Session:
+        def execute(self, *_a: object, **_k: object) -> _Result:
+            return _Result()
+
+    labels = admin_audit_actors.actor_labels_for_user_ids(
+        _Session(),  # type: ignore[arg-type]
+        [user_id],
+        user_pool_id=None,
+    )
+    assert labels[user_id] == user_id

@@ -58,7 +58,7 @@ This ensures:
 | `table_name` | TEXT | Name of the modified table |
 | `record_id` | TEXT | Primary key of the modified record |
 | `action` | TEXT | INSERT, UPDATE, or DELETE |
-| `user_id` | TEXT | Cognito user sub who made the change |
+| `user_id` | TEXT | Cognito user sub, or `api-key:<id>` for token writes |
 | `request_id` | TEXT | Lambda request ID for log correlation |
 | `old_values` | JSONB | Previous values (UPDATE/DELETE) |
 | `new_values` | JSONB | New values (INSERT/UPDATE) |
@@ -153,17 +153,15 @@ with Session(get_engine()) as session:
 
 ## Audited Tables
 
-The following tables have audit triggers:
+All SQLAlchemy application tables have `audit_trigger_func()` triggers except
+`audit_log` (to avoid recursion) and `calendar_manual_blocks` (already written
+via `AuditService`; a trigger would duplicate those rows with a null actor).
+The admin list filter allow-list is `AUDITABLE_TABLES` in
+`backend/src/app/db/auditable_tables.py`.
 
-- `api_keys` (`key_hash` is redacted in admin audit API responses)
-- `assets`
-- `asset_access_grants`
-- `customer_payments`
-- `customer_invoices`
-- `customer_invoice_lines`
-- `payment_allocations`
-- `customer_receipts`
-- `completion_certificates`
+Composite-PK tables (no `id` column) store `record_id` as colon-joined primary-key
+values (revision `0075_cover_audit_tables`). Sensitive fields such as `key_hash`
+and `share_token` are redacted in admin audit API responses.
 
 Application-level `AuditService` entries supplement invoice draft/issue flows where noted in code
 (for example `DRAFT_CREATED` and `DRAFT_CREATED_CUSTOMIZED` on `customer_invoices` when creating enrollment-based or customized drafts,
@@ -210,10 +208,13 @@ This implementation supports:
 Audit logs can be queried via the admin API at `/v1/admin/audit-logs`. The admin web
 viewer lives under **Audit** at `/audit` (top-level navigation).
 
-The admin UI can filter by Cognito email using the `email` query parameter; the server
-resolves it to a Cognito `sub` via `aws_proxy.invoke('cognito-idp', 'list_users', ...)`
-and returns an empty list when no user matches. List responses may include optional
-`user_email` on each row when the server resolves the actor's email for display.
+The admin UI can filter by Cognito email or API key name using the `email` query
+parameter. Values containing `@` resolve to a Cognito `sub` via
+`aws_proxy.invoke('cognito-idp', 'list_users', ...)`. Other values match
+`api_keys.name` (case-insensitive) and become `user_id = api-key:<id>`.
+The response is an empty list when no actor matches. List and detail responses
+may include optional `user_email`: Cognito email for human actors, or the API
+key `name` (raw) for `api-key:<id>` writes.
 
 For full endpoint details (parameters, request/response schemas), see the
 OpenAPI spec: [`docs/api/admin.yaml`](../api/admin.yaml) — search for
@@ -244,7 +245,10 @@ and `asset_access_grants`.
 
 Customer billing (AR) tables receive the same `audit_trigger_func()` triggers from revision
 `0055_customer_billing_ar` (`down_revision`: `0054_add_audit_log`); that migration does not
-recreate `audit_log`.
+recreate `audit_log`. Later revisions attach the same function to `completion_certificates`
+(`0070`) and `api_keys` (`0073`). Revision `0075_cover_audit_tables` replaces
+`audit_trigger_func()` so composite primary keys work, then attaches triggers to the
+remaining application tables.
 
 To apply:
 ```bash

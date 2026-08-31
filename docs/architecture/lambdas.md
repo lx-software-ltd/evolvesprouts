@@ -129,7 +129,7 @@ their primary responsibilities.
   (`GET` lists all stored answer rows; `DELETE` clears all rows for the poll),
   `/v1/admin/polls/{poll_slug}/answers/export` (`GET`; CSV export),
   `/v1/admin/leads/*`, `/v1/admin/users`, `/v1/admin/instructors`,
-  `GET /v1/admin/audit-logs` and `GET /v1/admin/audit-logs/{id}` (read-only `audit_log` history; list supports filters `table`, `record_id`, `user_id`, `email`, `action`, `since`, `cursor`, `limit`; `email` resolves via Cognito `list_users`; optional `user_email` per row),
+  `GET /v1/admin/audit-logs` and `GET /v1/admin/audit-logs/{id}` (read-only `audit_log` history; list supports filters `table`, `record_id`, `user_id`, `email`, `action`, `since`, `cursor`, `limit`; `email` resolves via Cognito `list_users` or `api_keys.name`; optional `user_email` is a Cognito email or API key name),
   `/v1/admin/services/*` (including `GET /v1/admin/services/instances` for
   cross-service instance listing with optional `service_id` / `service_type`
   filters; instance create/update accepts optional `cohort`, and

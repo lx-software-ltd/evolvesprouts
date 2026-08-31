@@ -155,9 +155,12 @@ Indexes:
 ## Table: audit_log
 
 Purpose: Append-only change history. Rows are written by PostgreSQL triggers on
-`assets` and `asset_access_grants` (when `set_audit_context` supplies session
-variables) and by application code via `AuditService` (`source` = `trigger` or
-`application`). Created by migration `0054_add_audit_log`.
+application tables (when `set_audit_context` supplies session variables) and by
+application code via `AuditService` (`source` = `trigger` or `application`).
+Created by migration `0054_add_audit_log`; remaining tables received triggers in
+`0075_cover_audit_tables` except `audit_log` and `calendar_manual_blocks` (the
+latter stays application-sourced). Token-authenticated writes store `user_id` as
+`api-key:<id>`.
 
 Columns (summary): `id` (UUID), `timestamp` (timestamptz), `table_name`, `record_id`,
 `action`, optional `user_id` / `request_id`, JSONB `old_values` / `new_values`,

@@ -174,7 +174,7 @@ export function AuditLogsPanel({ auditableTables }: AuditLogsPanelProps) {
     <div className='space-y-6'>
       <PaginatedTableCard
         title='Audit logs'
-        description='Database change history for audited tables (assets, grants, manual blocks).'
+        description='Database change history for application tables. API-key writes show the key name as the actor.'
         isLoading={isLoading && items.length === 0}
         isLoadingMore={isLoadingMore}
         hasMore={Boolean(nextCursor)}
@@ -232,12 +232,12 @@ export function AuditLogsPanel({ auditableTables }: AuditLogsPanelProps) {
                 </Select>
               </div>
               <div>
-                <Label htmlFor='audit-user-email-filter'>User email</Label>
+                <Label htmlFor='audit-user-email-filter'>User / API key</Label>
                 <Input
                   id='audit-user-email-filter'
                   type='text'
                   autoComplete='off'
-                  placeholder='Filter by Cognito email…'
+                  placeholder='Cognito email or API key name…'
                   value={userEmailFilter}
                   onChange={(e) => setUserEmailFilter(e.target.value)}
                 />
@@ -290,6 +290,7 @@ export function AuditLogsPanel({ auditableTables }: AuditLogsPanelProps) {
                 <AdminDataTableHeadCell scope='col' className='hidden md:table-cell'>
                   Changed fields
                 </AdminDataTableHeadCell>
+                <AdminDataTableHeadCell scope='col'>User / API key</AdminDataTableHeadCell>
                 <AdminDataTableOperationsHeadCell scope='col' />
               </tr>
             </AdminDataTableHead>
@@ -303,6 +304,9 @@ export function AuditLogsPanel({ auditableTables }: AuditLogsPanelProps) {
                   </AdminDataTableCell>
                   <AdminDataTableCell className='hidden text-slate-500 md:table-cell'>
                     {item.changed_fields?.length ? item.changed_fields.join(', ') : '—'}
+                  </AdminDataTableCell>
+                  <AdminDataTableCell className='font-mono text-xs text-slate-700'>
+                    {item.user_email || '—'}
                   </AdminDataTableCell>
                   <AdminDataTableCell className='text-right'>
                     <Button

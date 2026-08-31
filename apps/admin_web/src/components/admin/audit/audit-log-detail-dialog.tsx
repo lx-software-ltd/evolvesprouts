@@ -65,7 +65,7 @@ export function AuditLogDetailDialog({ log, onClose }: AuditLogDetailDialogProps
             </p>
           </div>
           <div>
-            <span className='font-medium text-slate-500'>User email</span>
+            <span className='font-medium text-slate-500'>User / API key</span>
             <p className='mt-1 break-all font-mono text-xs'>{userEmail || '—'}</p>
           </div>
           <div>
