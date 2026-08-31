@@ -30,7 +30,7 @@ export function LeadQuickActions({
   const [lostReason, setLostReason] = useState('');
 
   return (
-    <Card title='Quick Actions' className='space-y-3'>
+    <Card title='Quick Actions' className='h-full space-y-3'>
       <div className='flex flex-wrap gap-2'>
         {lead.contact.email ? (
           <a

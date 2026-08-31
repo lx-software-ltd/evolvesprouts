@@ -27,7 +27,7 @@ export function StageControl({ currentStage, isLoading, onUpdateStage }: StageCo
   const needsLostReason = nextStage === 'lost';
 
   return (
-    <Card title='Stage Control' className='space-y-3'>
+    <Card title='Stage Control' className='h-full space-y-3'>
       <p className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getStageBadgeClass(currentStage)}`}>
         Current: {formatEnumLabel(currentStage)}
       </p>
