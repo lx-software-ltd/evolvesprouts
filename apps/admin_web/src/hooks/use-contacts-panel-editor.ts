@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type MouseEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 
 import type { useAdminEntityContacts } from '@/hooks/use-admin-entity-contacts';
 import { useFamilyOrgPickers } from '@/hooks/use-family-org-pickers';
@@ -8,9 +8,8 @@ import { useGeocodeVenueAddress } from '@/hooks/use-geocode-venue-address';
 import { useInlineLocationSave } from '@/hooks/use-inline-location-save';
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import type { InlineLocationEmbeddedSummary } from '@/components/admin/locations/inline-location-editor';
-import {
-  type EntityPickerListItem,
-} from '@/lib/entity-api';
+import { getAdminContact, type EntityPickerListItem } from '@/lib/entity-api';
+import { readAdminContactQueryId } from '@/lib/inbox-conversation-name';
 import { contactPhoneRequestFields } from '@/lib/phone-request';
 import { contactRowLabel, linkedVenueReadOnlyLines } from '@/lib/contacts/contacts-panel-helpers';
 import { useContactReferralSearch } from '@/hooks/use-contact-referral-search';
@@ -46,6 +45,7 @@ export function useContactsPanelEditor({
 
   const [editorMode, setEditorMode] = useState<'create' | 'edit'>('create');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const appliedContactQueryIdRef = useRef<string | null>(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -328,6 +328,41 @@ export function useContactsPanelEditor({
     setTagIds([...row.tag_ids]);
     setActive(row.active);
   }
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const requestedId = readAdminContactQueryId(window.location.search);
+    if (!requestedId || appliedContactQueryIdRef.current === requestedId) {
+      return;
+    }
+    const row = rows.find((contact) => contact.id === requestedId);
+    if (row) {
+      appliedContactQueryIdRef.current = requestedId;
+      selectRow(row);
+      return;
+    }
+    let cancelled = false;
+    void getAdminContact(requestedId)
+      .then((contact) => {
+        if (cancelled) {
+          return;
+        }
+        appliedContactQueryIdRef.current = requestedId;
+        if (contact) {
+          selectRow(contact);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          appliedContactQueryIdRef.current = requestedId;
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [rows]);
 
   function handleSourceChange(v: ApiSchemas['EntityContactSource']) {
     setSource(v);

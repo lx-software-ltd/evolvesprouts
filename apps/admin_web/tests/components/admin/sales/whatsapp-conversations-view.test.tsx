@@ -2,6 +2,22 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+vi.mock('next/link', () => ({
+  default: ({
+    children,
+    href,
+    ...rest
+  }: {
+    children: React.ReactNode;
+    href: string;
+    [key: string]: unknown;
+  }) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
+}));
+
 const { listState, mockListMessages } = vi.hoisted(() => {
   const listState = {
     conversations: [
@@ -9,8 +25,8 @@ const { listState, mockListMessages } = vi.hoisted(() => {
         id: 'conv-1',
         waId: '85294479843',
         profileName: 'Kitie Wong',
-        contactId: null,
-        contactName: null,
+        contactId: 'contact-1',
+        contactName: 'Jane Doe',
         leadId: 'lead-1',
         firstInboundAt: '2026-08-01T00:00:00+00:00',
         lastMessageAt: '2026-08-02T00:00:00+00:00',
@@ -63,10 +79,14 @@ describe('WhatsAppConversationsView', () => {
     const user = userEvent.setup();
     render(<WhatsAppConversationsView />);
 
-    expect(screen.getByText('Kitie Wong')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Jane Doe' })).toHaveAttribute(
+      'href',
+      '/contacts?contact=contact-1'
+    );
+    expect(screen.queryByText('Kitie Wong')).not.toBeInTheDocument();
     expect(screen.getByText('85294479843')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'View conversation Kitie Wong' }));
+    await user.click(screen.getByRole('button', { name: 'View conversation Jane Doe' }));
     expect(mockListMessages).toHaveBeenCalledWith('conv-1');
     expect(await screen.findByText('How much?')).toBeInTheDocument();
 

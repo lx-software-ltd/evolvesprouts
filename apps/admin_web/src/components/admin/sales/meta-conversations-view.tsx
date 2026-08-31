@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 
+import { ConversationNameCell } from './conversation-name-cell';
+
 import { useMetaConversations } from '@/hooks/use-meta-conversations';
 import { useMetaMessages } from '@/hooks/use-meta-messages';
 import { formatDate } from '@/lib/format';
+import { formatInboxConversationName } from '@/lib/inbox-conversation-name';
 import type { MetaChannel } from '@/lib/meta-api';
-
 import { ViewIcon } from '@/components/icons/action-icons';
 import { AdminEditorCard } from '@/components/ui/admin-editor-card';
 import {
@@ -59,7 +61,12 @@ export function MetaConversationsView({ channel }: { channel: MetaChannel }) {
     <div className='space-y-4'>
       {selected ? (
         <AdminEditorCard
-          title={selected.profileName || selected.contactName || selected.platformUserId}
+          title={
+            formatInboxConversationName({
+              contactName: selected.contactName,
+              profileName: selected.profileName,
+            }) || selected.platformUserId
+          }
           description={`Inbound ${selected.inboundCount} · outbound ${selected.outboundCount}`}
           actions={
             <Button type='button' variant='secondary' onClick={() => setSelectedId(null)}>
@@ -144,7 +151,13 @@ export function MetaConversationsView({ channel }: { channel: MetaChannel }) {
                 }
                 onClick={() => setSelectedId(row.id)}
               >
-                <AdminDataTableCell>{row.profileName || row.contactName || '—'}</AdminDataTableCell>
+                <AdminDataTableCell>
+                  <ConversationNameCell
+                    contactId={row.contactId}
+                    contactName={row.contactName}
+                    profileName={row.profileName}
+                  />
+                </AdminDataTableCell>
                 <AdminDataTableCell>{row.platformUserId}</AdminDataTableCell>
                 <AdminDataTableCell>{formatWhen(row.lastMessageAt)}</AdminDataTableCell>
                 <AdminDataTableCell>{row.inboundCount}</AdminDataTableCell>
@@ -155,7 +168,12 @@ export function MetaConversationsView({ channel }: { channel: MetaChannel }) {
                     type='button'
                     size='sm'
                     variant='ghost'
-                    aria-label={`View conversation ${row.profileName || row.contactName || row.platformUserId}`}
+                    aria-label={`View conversation ${
+                      formatInboxConversationName({
+                        contactName: row.contactName,
+                        profileName: row.profileName,
+                      }) || row.platformUserId
+                    }`}
                     onClick={(event) => {
                       event.stopPropagation();
                       setSelectedId(row.id);

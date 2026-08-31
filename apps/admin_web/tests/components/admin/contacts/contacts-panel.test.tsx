@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const { createLocation, geocodeVenueAddress, updateLocationPartial } = vi.hoisted(() => ({
   createLocation: vi.fn(),
@@ -92,6 +92,10 @@ const hkArea = {
 };
 
 describe('ContactsPanel', () => {
+  afterEach(() => {
+    window.history.replaceState(null, '', '/contacts');
+  });
+
   it('submits create with relationship types that exclude vendor', async () => {
     const user = userEvent.setup();
     const createContact = vi.fn().mockResolvedValue(null);
@@ -692,5 +696,54 @@ describe('ContactsPanel', () => {
     );
     const headings = screen.getAllByRole('heading').map((el) => el.textContent ?? '');
     expect(headings.indexOf('Mailchimp sync')).toBeLessThan(headings.indexOf('Contact'));
+  });
+
+  it('opens the matching contact in the editor from the contact query param', async () => {
+    window.history.replaceState(null, '', '/contacts?contact=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
+    const row: components['schemas']['AdminContact'] = {
+      id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      first_name: 'Ann',
+      last_name: 'Family',
+      email: null,
+      instagram_handle: null,
+      phone_region: null,
+      phone_national_number: null,
+      phone_e164: null,
+      contact_type: 'parent',
+      relationship_type: 'prospect',
+      source: 'manual',
+      mailchimp_status: 'pending',
+      active: true,
+      created_at: '2020-01-01T00:00:00.000Z',
+      updated_at: '2020-01-01T00:00:00.000Z',
+      tag_ids: [],
+      tags: [],
+      standalone_note_count: 0,
+      has_completion_certificate: false,
+      family_ids: [],
+      organization_ids: [],
+      family_location_summary: null,
+      organization_location_summary: null,
+    };
+    const contacts = buildContactsHook({ contacts: [row] });
+
+    render(
+      <ContactsPanel
+        contacts={contacts}
+        adminUsers={[]}
+        onPatchStandaloneNoteCount={vi.fn()}
+        tags={[]}
+        locations={[]}
+        geographicAreas={[]}
+        areasLoading={false}
+        refreshLocations={noopRefresh}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('First name')).toHaveValue('Ann');
+    });
+    expect(screen.getByLabelText('Last name')).toHaveValue('Family');
+    expect(screen.getByRole('button', { name: 'Update contact' })).toBeInTheDocument();
   });
 });
