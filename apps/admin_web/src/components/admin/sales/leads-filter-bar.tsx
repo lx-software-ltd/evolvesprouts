@@ -30,7 +30,7 @@ export function LeadsFilterBar({
 }: LeadsFilterBarProps) {
   return (
     <div className='space-y-3 rounded-md border border-slate-200 bg-white p-3'>
-      <div className='flex flex-wrap gap-2'>
+      <div className='flex flex-wrap items-center gap-2'>
         <Button
           type='button'
           variant={filters.stage.length === 0 ? 'secondary' : 'outline'}
@@ -45,7 +45,7 @@ export function LeadsFilterBar({
             <button
               key={stage}
               type='button'
-              className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getStageBadgeClass(stage)} ${
+              className={`inline-flex h-8 items-center justify-center rounded-full px-3 py-0 text-xs font-semibold leading-none ${getStageBadgeClass(stage)} ${
                 isActive ? 'ring-2 ring-slate-400' : ''
               }`}
               onClick={() => onFilterChange('stage', toggleArrayValue(filters.stage, stage))}
