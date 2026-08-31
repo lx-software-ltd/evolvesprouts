@@ -48,9 +48,7 @@ def test_public_contacts_requires_token(api_gateway_event: Any) -> None:
 
 
 @pytest.mark.parametrize("method", ["POST", "PATCH", "DELETE"])
-def test_public_contacts_user_cannot_write(
-    api_gateway_event: Any, method: str
-) -> None:
+def test_public_contacts_user_cannot_write(api_gateway_event: Any, method: str) -> None:
     contact_id = uuid4()
     path = (
         "/v1/public/contacts"
