@@ -518,6 +518,8 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | `/v1/admin/meta/conversations/{id}/messages` | GET | Admin Group | `EvolvesproutsAdminFunction` | Messages for one Meta thread |
 | `/v1/public/meta/conversations` | GET | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token reads; name/dates only |
 | `/v1/public/meta/conversations/{id}/messages` | GET | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token message reads without scoped ids |
+| `/v1/public/contacts` | GET, POST | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token contact list/create; `user` GET only |
+| `/v1/public/contacts/{id}` | GET, PATCH, DELETE | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token contact get/update/delete; `user` GET only |
 | `/v1/admin/assets` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | |
 | `/v1/admin/assets/{id}` | GET, PUT, PATCH, DELETE | Admin Group | `EvolvesproutsAdminFunction` | |
 | `/v1/admin/assets/{id}/grants` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | |

@@ -61,6 +61,12 @@ their primary responsibilities.
   `/v1/meta/webhook` (GET handshake + POST Messenger/Instagram inbound and
   `is_echo` messages; same HMAC and verify token; persists
   `meta_conversations` / `meta_messages` and creates CRM contacts/leads),
+  `/v1/public/whatsapp/*` and `/v1/public/meta/*` (hashed `x-api-token` conversation
+  reads; name/dates/text only),
+  `/v1/public/contacts` and `/v1/public/contacts/{id}` (hashed `x-api-token` CRM
+  contact list/get for `user` and `admin` scopes; create/update/delete for `admin`
+  only; payloads match `/v1/admin/contacts`; notes, services, and Mailchimp sync
+  jobs are not exposed),
   `/v1/admin/locations/*` (including `GET /v1/admin/locations?exclude_addresses=true`
   to list service venues without family/organisation home addresses, and
   `POST /v1/admin/locations/geocode` for

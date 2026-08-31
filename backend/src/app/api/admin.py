@@ -35,6 +35,7 @@ from app.api.admin_organizations_picker import handle_admin_organizations_picker
 from app.api.admin_api_keys import handle_admin_api_keys_request
 from app.api.admin_meta import handle_admin_meta_request
 from app.api.admin_whatsapp import handle_admin_whatsapp_request
+from app.api.public.contacts import handle_public_contacts_request
 from app.api.public.meta_conversations import handle_public_meta_request
 from app.api.public.whatsapp_conversations import handle_public_whatsapp_request
 from app.api.assets.public_media_assets import handle_media_request
@@ -197,6 +198,11 @@ _ROUTES: tuple[
         "/v1/public/meta",
         False,
         handle_public_meta_request,
+    ),
+    (
+        "/v1/public/contacts",
+        False,
+        handle_public_contacts_request,
     ),
     (
         "/v1/admin/api-keys",
