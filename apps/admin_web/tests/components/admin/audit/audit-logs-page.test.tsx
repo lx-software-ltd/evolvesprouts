@@ -40,6 +40,30 @@ describe('AuditLogsPage', () => {
     });
   });
 
+  it('shows API key name in the User / API key column', async () => {
+    mockListAuditLogs.mockResolvedValue({
+      items: [
+        {
+          id: '00000000-0000-4000-8000-000000000003',
+          table_name: 'contacts',
+          record_id: 'c1',
+          action: 'UPDATE' as const,
+          timestamp: '2024-01-03T00:00:00.000Z',
+          source: 'trigger',
+          user_id: 'api-key:00000000-0000-4000-8000-000000000099',
+          user_email: 'Prod CRM full access',
+        },
+      ],
+      next_cursor: null,
+    });
+    render(<AuditLogsPage />);
+    await waitFor(() => {
+      const table = screen.getByRole('table');
+      expect(within(table).getByText('Prod CRM full access')).toBeInTheDocument();
+      expect(within(table).getByText('contacts')).toBeInTheDocument();
+    });
+  });
+
   it('passes email filter to listAuditLogs when user types email and applies', async () => {
     const user = userEvent.setup();
     render(<AuditLogsPage />);
@@ -47,7 +71,7 @@ describe('AuditLogsPage', () => {
       expect(mockListAuditLogs).toHaveBeenCalled();
     });
 
-    await user.type(screen.getByLabelText('User email'), 'ops@example.com');
+    await user.type(screen.getByLabelText('User / API key'), 'ops@example.com');
     await user.click(screen.getByRole('button', { name: 'Apply filters' }));
 
     await waitFor(() => {

@@ -1,0 +1,61 @@
+"""Application tables whose writes are stored in ``audit_log``.
+
+``audit_log`` itself is excluded so trigger inserts cannot recurse.
+"""
+
+from __future__ import annotations
+
+AUDITABLE_TABLES: frozenset[str] = frozenset(
+    (
+        "api_keys",
+        "asset_access_grants",
+        "asset_share_links",
+        "asset_tags",
+        "assets",
+        "bulk_expense_import_jobs",
+        "calendar_manual_blocks",
+        "completion_certificates",
+        "consultation_details",
+        "contact_tags",
+        "contacts",
+        "customer_invoice_lines",
+        "customer_invoices",
+        "customer_payments",
+        "customer_receipts",
+        "discount_codes",
+        "document_counters",
+        "enrollments",
+        "event_details",
+        "event_ticket_tiers",
+        "expense_attachments",
+        "expenses",
+        "families",
+        "family_members",
+        "family_tags",
+        "geographic_areas",
+        "inbound_emails",
+        "instance_session_slots",
+        "legacy_import_refs",
+        "locations",
+        "meta_conversations",
+        "meta_messages",
+        "notes",
+        "organization_members",
+        "organization_tags",
+        "organizations",
+        "payment_allocations",
+        "sales_lead_events",
+        "sales_leads",
+        "service_assets",
+        "service_instance_organizations",
+        "service_instance_tags",
+        "service_instances",
+        "service_tags",
+        "services",
+        "tags",
+        "training_course_details",
+        "training_instance_details",
+        "whatsapp_conversations",
+        "whatsapp_messages",
+    )
+)

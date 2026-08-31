@@ -10,6 +10,13 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.api.admin_audit_actors import (
+    actor_labels_for_user_ids,
+    api_key_user_id_for_name,
+    cognito_emails_for_subs,
+    cognito_sub_for_email,
+    validate_actor_filter,
+)
 from app.api.admin_request import (
     encode_created_cursor,
     parse_created_cursor,
@@ -20,11 +27,10 @@ from app.api.admin_request import (
 )
 from app.api.assets.assets_common import extract_identity, split_route_parts
 from app.db.audit import AuditLogRepository, set_audit_context
+from app.db.auditable_tables import AUDITABLE_TABLES
 from app.db.engine import get_engine
 from app.db.models import AuditLog
 from app.exceptions import NotFoundError, ValidationError
-from app.services import aws_proxy
-from app.services.aws_proxy import AwsProxyError
 from app.utils import json_response, parse_datetime
 from app.utils.logging import get_logger
 
@@ -32,7 +38,7 @@ logger = get_logger(__name__)
 
 # Exact-match secret field names (case-insensitive key lookup).
 AUDIT_SECRET_FIELDS: frozenset[str] = frozenset(
-    ("password", "secret", "token", "api_key", "key_hash")
+    ("password", "secret", "token", "api_key", "key_hash", "share_token", "key_prefix")
 )
 
 # Explicit PII column names from AUDITABLE_TABLES models (customer_invoices, etc.).
@@ -52,22 +58,35 @@ _AUDIT_PII_SUBSTRINGS: tuple[str, ...] = ("email", "phone", "address", "name")
 
 _REDACTED_MARKER = "***REDACTED***"
 
-AUDITABLE_TABLES: frozenset[str] = frozenset(
-    (
-        "api_keys",
-        "assets",
-        "asset_access_grants",
-        "calendar_manual_blocks",
-        "customer_invoice_lines",
-        "customer_invoices",
-        "customer_payments",
-        "customer_receipts",
-        "payment_allocations",
-    )
-)
-
 _DEFAULT_LIMIT = 50
 _MAX_LIMIT = 100
+
+
+def _actor_labels_for_user_ids(
+    session: Session,
+    user_ids: list[str],
+    *,
+    cache: dict[str, str] | None = None,
+) -> dict[str, str]:
+    """Resolve Cognito emails and API key names for audit rows."""
+    return actor_labels_for_user_ids(
+        session,
+        user_ids,
+        user_pool_id=os.getenv("COGNITO_USER_POOL_ID"),
+        cache=cache,
+    )
+
+
+def _cognito_emails_for_subs(
+    subs: list[str],
+    *,
+    cache: dict[str, str] | None = None,
+) -> dict[str, str]:
+    """Test-facing wrapper around Cognito email lookup."""
+    user_pool_id = os.getenv("COGNITO_USER_POOL_ID")
+    if not user_pool_id:
+        return {}
+    return cognito_emails_for_subs(subs, user_pool_id=user_pool_id, cache=cache)
 
 
 def handle_admin_audit_logs_request(
@@ -112,110 +131,13 @@ def _get_audit_log_by_id(
         entry = repo.get_by_id(parsed_id)
         if entry is None:
             raise NotFoundError("audit_log", audit_id)
-        email_cache: dict[str, str] = {}
-        email_map = _cognito_emails_for_subs(
+        actor_map = _actor_labels_for_user_ids(
+            session,
             [entry.user_id] if entry.user_id else [],
-            cache=email_cache,
         )
         return json_response(
-            200, _serialize_audit_log(entry, email_map=email_map), event=event
+            200, _serialize_audit_log(entry, email_map=actor_map), event=event
         )
-
-
-def _validate_email_filter(email_raw: str) -> str:
-    email = email_raw.strip()
-    if not email:
-        raise ValidationError("email is required when provided", field="email")
-    if '"' in email or "\\" in email:
-        raise ValidationError("email contains invalid characters", field="email")
-    if "@" not in email or len(email) > 254:
-        raise ValidationError("invalid email", field="email")
-    return email
-
-
-def _cognito_sub_for_email(email: str) -> str | None:
-    user_pool_id = os.getenv("COGNITO_USER_POOL_ID")
-    if not user_pool_id:
-        raise ValidationError(
-            "COGNITO_USER_POOL_ID is not configured",
-            field="COGNITO_USER_POOL_ID",
-        )
-    try:
-        response = aws_proxy.invoke(
-            "cognito-idp",
-            "list_users",
-            {
-                "UserPoolId": user_pool_id,
-                "Filter": f'email = "{email}"',
-                "Limit": 1,
-            },
-        )
-    except AwsProxyError:
-        raise ValidationError("user lookup failed", field="email") from None
-
-    users = response.get("Users") or []
-    if len(users) == 0:
-        return None
-    if len(users) > 1:
-        raise ValidationError("multiple users matched email", field="email")
-    attrs = users[0].get("Attributes", [])
-    sub = _cognito_attr(attrs, "sub")
-    if not sub:
-        raise ValidationError("user lookup failed", field="email")
-    return sub
-
-
-def _cognito_attr(attributes: Any, key: str) -> str | None:
-    if not isinstance(attributes, list):
-        return None
-    for item in attributes:
-        if not isinstance(item, Mapping):
-            continue
-        if item.get("Name") != key:
-            continue
-        value = item.get("Value")
-        if isinstance(value, str):
-            return value
-    return None
-
-
-def _cognito_emails_for_subs(
-    subs: list[str],
-    *,
-    cache: dict[str, str] | None = None,
-) -> dict[str, str]:
-    """Best-effort map Cognito sub -> email for display (empty on failure)."""
-    user_pool_id = os.getenv("COGNITO_USER_POOL_ID")
-    if not user_pool_id or not subs:
-        return {}
-    out: dict[str, str] = {}
-    email_cache = cache if cache is not None else {}
-    for sub in subs:
-        if not sub or '"' in sub:
-            continue
-        if sub in email_cache:
-            out[sub] = email_cache[sub]
-            continue
-        try:
-            response = aws_proxy.invoke(
-                "cognito-idp",
-                "list_users",
-                {
-                    "UserPoolId": user_pool_id,
-                    "Filter": f'sub = "{sub}"',
-                    "Limit": 1,
-                },
-            )
-        except AwsProxyError:
-            continue
-        users = response.get("Users") or []
-        if len(users) != 1:
-            continue
-        email = _cognito_attr(users[0].get("Attributes", []), "email")
-        if email:
-            email_cache[sub] = email
-            out[sub] = email
-    return out
 
 
 def _should_redact_audit_field(key: str) -> bool:
@@ -284,21 +206,14 @@ def _list_audit_logs(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, A
                 field="since",
             )
 
+    actor_filter: str | None = None
     if email_raw is not None and email_raw.strip():
         if user_id:
             raise ValidationError(
                 "cannot combine email and user_id",
                 field="email",
             )
-        email = _validate_email_filter(email_raw)
-        resolved = _cognito_sub_for_email(email)
-        if resolved is None:
-            return json_response(
-                200,
-                {"items": [], "next_cursor": None},
-                event=event,
-            )
-        user_id = resolved
+        actor_filter = validate_actor_filter(email_raw)
 
     cursor_ts, cursor_id = parse_created_cursor(query_param(event, "cursor"))
     cursor: tuple[datetime, UUID] | None = None
@@ -307,6 +222,26 @@ def _list_audit_logs(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, A
 
     with Session(get_engine()) as session:
         set_audit_context(session, user_id=actor_sub, request_id=request_id(event))
+        if actor_filter is not None:
+            if "@" in actor_filter:
+                user_pool_id = os.getenv("COGNITO_USER_POOL_ID")
+                if not user_pool_id:
+                    raise ValidationError(
+                        "COGNITO_USER_POOL_ID is not configured",
+                        field="COGNITO_USER_POOL_ID",
+                    )
+                resolved = cognito_sub_for_email(
+                    actor_filter, user_pool_id=user_pool_id
+                )
+            else:
+                resolved = api_key_user_id_for_name(session, actor_filter)
+            if resolved is None:
+                return json_response(
+                    200,
+                    {"items": [], "next_cursor": None},
+                    event=event,
+                )
+            user_id = resolved
         repo = AuditLogRepository(session)
 
         if record_id and table_name:
@@ -338,8 +273,10 @@ def _list_audit_logs(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, A
                 cursor=cursor,
             )
 
-    has_more = len(rows) > limit
-    trimmed = list(rows)[:limit]
+        has_more = len(rows) > limit
+        trimmed = list(rows)[:limit]
+        distinct_subs = sorted({r.user_id for r in trimmed if r.user_id})
+        email_map = _actor_labels_for_user_ids(session, distinct_subs)
 
     logger.info(
         "Audit logs query returned %s entries (has_more=%s)",
@@ -352,10 +289,6 @@ def _list_audit_logs(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, A
             "result_count": len(trimmed),
         },
     )
-
-    distinct_subs = sorted({r.user_id for r in trimmed if r.user_id})
-    email_cache: dict[str, str] = {}
-    email_map = _cognito_emails_for_subs(distinct_subs, cache=email_cache)
 
     next_cursor: str | None = None
     if has_more and trimmed:
