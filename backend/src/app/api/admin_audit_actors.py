@@ -123,9 +123,13 @@ def cognito_emails_for_subs(
 
 def api_key_user_id_for_name(session: Session, name: str) -> str | None:
     """Resolve an API key display name to ``api-key:<id>``."""
-    rows = session.execute(
-        select(ApiKey.id).where(func.lower(ApiKey.name) == name.lower())
-    ).scalars().all()
+    rows = (
+        session.execute(
+            select(ApiKey.id).where(func.lower(ApiKey.name) == name.lower())
+        )
+        .scalars()
+        .all()
+    )
     if len(rows) == 0:
         return None
     if len(rows) > 1:
@@ -167,9 +171,7 @@ def actor_labels_for_user_ids(
     labels: dict[str, str] = {}
     if user_pool_id:
         labels.update(
-            cognito_emails_for_subs(
-                distinct, user_pool_id=user_pool_id, cache=cache
-            )
+            cognito_emails_for_subs(distinct, user_pool_id=user_pool_id, cache=cache)
         )
     labels.update(api_key_names_for_user_ids(session, distinct))
     for user_id in distinct:

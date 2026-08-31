@@ -32,7 +32,6 @@ _NEW_AUDIT_TRIGGER_TABLES: tuple[str, ...] = (
     "asset_share_links",
     "asset_tags",
     "bulk_expense_import_jobs",
-    "calendar_manual_blocks",
     "consultation_details",
     "contact_tags",
     "contacts",

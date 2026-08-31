@@ -154,8 +154,10 @@ with Session(get_engine()) as session:
 ## Audited Tables
 
 All SQLAlchemy application tables have `audit_trigger_func()` triggers except
-`audit_log` itself (to avoid recursion). The admin list filter allow-list is
-`AUDITABLE_TABLES` in `backend/src/app/db/auditable_tables.py`.
+`audit_log` (to avoid recursion) and `calendar_manual_blocks` (already written
+via `AuditService`; a trigger would duplicate those rows with a null actor).
+The admin list filter allow-list is `AUDITABLE_TABLES` in
+`backend/src/app/db/auditable_tables.py`.
 
 Composite-PK tables (no `id` column) store `record_id` as colon-joined primary-key
 values (revision `0075_cover_audit_tables`). Sensitive fields such as `key_hash`
