@@ -175,7 +175,7 @@ export function SalesPage() {
           />
         </>
       ) : (
-        <AnalyticsView analytics={state.leadAnalytics.analytics} users={state.adminUsers.users} />
+        <AnalyticsView analytics={state.leadAnalytics.analytics} />
       )}
     </div>
   );
