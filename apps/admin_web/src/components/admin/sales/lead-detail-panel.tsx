@@ -267,17 +267,21 @@ export function LeadDetailPanel({
       ) : (
         <div className='space-y-4'>
           <LeadInfoSection lead={lead} />
-          <StageControl currentStage={lead.funnelStage} isLoading={isLoading} onUpdateStage={onUpdateStage} />
-          <LeadQuickActions
-            lead={lead}
-            users={users}
-            isLoading={isLoading}
-            onMarkConverted={() => onUpdateStage('converted')}
-            onMarkLost={(lostReason) => onUpdateStage('lost', lostReason)}
-            onAssign={onAssign}
-          />
-          <NotesSection notes={lead.notes} users={users} isLoading={isLoading} onAddNote={onAddNote} />
-          <ActivityTimeline events={lead.events} users={users} />
+          <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+            <StageControl currentStage={lead.funnelStage} isLoading={isLoading} onUpdateStage={onUpdateStage} />
+            <LeadQuickActions
+              lead={lead}
+              users={users}
+              isLoading={isLoading}
+              onMarkConverted={() => onUpdateStage('converted')}
+              onMarkLost={(lostReason) => onUpdateStage('lost', lostReason)}
+              onAssign={onAssign}
+            />
+          </div>
+          <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+            <NotesSection notes={lead.notes} users={users} isLoading={isLoading} onAddNote={onAddNote} />
+            <ActivityTimeline events={lead.events} users={users} />
+          </div>
         </div>
       )}
     </Card>

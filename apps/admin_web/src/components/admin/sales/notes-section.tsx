@@ -25,7 +25,7 @@ export function NotesSection({ notes, users, isLoading, onAddNote }: NotesSectio
   const [noteContent, setNoteContent] = useState('');
 
   return (
-    <Card title='Notes' className='space-y-3'>
+    <Card title='Notes' className='h-full space-y-3'>
       <div className='space-y-2'>
         <Textarea
           value={noteContent}
