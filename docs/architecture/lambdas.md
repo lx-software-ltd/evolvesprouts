@@ -693,7 +693,9 @@ their primary responsibilities.
   - `ASSETS_BUCKET_NAME`
   - `META_PAGE_ACCESS_TOKEN` (CDK parameter `MetaPageAccessToken` /
     GitHub secret `CDK_PARAM_META_PAGE_ACCESS_TOKEN`; Graph Page or
-    system-user token, not the webhook verify string)
+    system-user token, not the webhook verify string). Conversations
+    use a Page token; a system-user token is exchanged via
+    `GET /{page-id}?fields=access_token`.
   - `META_PAGE_ID`, `META_INSTAGRAM_USER_ID`
   - `META_GRAPH_API_BASE_URL`, `META_GRAPH_API_VERSION`
   - `WHATSAPP_EXPORT_BUSINESS_NAMES`

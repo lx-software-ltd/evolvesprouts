@@ -70,6 +70,51 @@ def load_page_access_token() -> str:
     )
 
 
+_resolved_page_token: str | None = None
+
+
+def reset_page_access_token_cache() -> None:
+    """Clear the in-process Page token cache (tests and Lambda reuse)."""
+    global _resolved_page_token
+    _resolved_page_token = None
+
+
+def resolve_page_access_token() -> str:
+    """Return a Page token, exchanging a system-user token when needed.
+
+    ``/{page-id}/conversations`` requires a Page access token. A system-user
+    token is exchanged via ``GET /{page-id}?fields=access_token``. If Graph
+    already accepts the configured value as a Page token and omits
+    ``access_token``, the configured value is used as-is.
+    """
+    global _resolved_page_token
+    if _resolved_page_token:
+        return _resolved_page_token
+    raw = load_page_access_token()
+    page_id = os.getenv("META_PAGE_ID", "").strip()
+    if not page_id:
+        raise MetaGraphApiError(
+            status_code=500,
+            message="META_PAGE_ID is not configured",
+        )
+    payload = graph_get(page_id, params={"fields": "id,access_token"}, token=raw)
+    page_token = str(payload.get("access_token") or "").strip()
+    if page_token:
+        _resolved_page_token = page_token
+        return page_token
+    returned_id = str(payload.get("id") or "").strip()
+    if returned_id == page_id:
+        _resolved_page_token = raw
+        return raw
+    raise MetaGraphApiError(
+        status_code=500,
+        message=(
+            "Meta did not return a Page access token. Assign the Facebook "
+            "Page to the system user, then GET /{page-id}?fields=access_token."
+        ),
+    )
+
+
 def graph_get(
     path: str,
     *,
@@ -114,6 +159,11 @@ def graph_get(
                 detail = (
                     f"{detail}. META_PAGE_ACCESS_TOKEN must be a Graph Page "
                     "or system-user access token, not the webhook verify string."
+                )
+            if status_code == 400 and "Page Access Token" in detail:
+                detail = (
+                    f"{detail}. Conversations require a Page token; exchange "
+                    "the system-user token with GET /{page-id}?fields=access_token."
                 )
             raise MetaGraphApiError(
                 status_code=status_code,
