@@ -172,12 +172,13 @@ describe('TaxFiscalYearPanel', () => {
 
     await user.selectOptions(screen.getByLabelText('Status'), 'voided');
 
-    expect(screen.getByText('Void Vendor')).toBeInTheDocument();
-    expect(screen.getByText('Family B (INV-VOID)')).toBeInTheDocument();
-    expect(screen.getByText('Voided')).toBeInTheDocument();
-    expect(screen.getByText('Void')).toBeInTheDocument();
-    expect(screen.queryByText('Paper Co')).not.toBeInTheDocument();
-    expect(screen.queryByText('Family A (INV-OPEN)')).not.toBeInTheDocument();
+    const table = screen.getByRole('table');
+    expect(within(table).getByText('Void Vendor')).toBeInTheDocument();
+    expect(within(table).getByText('Family B (INV-VOID)')).toBeInTheDocument();
+    expect(within(table).getByText('Voided')).toBeInTheDocument();
+    expect(within(table).getByText('Void')).toBeInTheDocument();
+    expect(within(table).queryByText('Paper Co')).not.toBeInTheDocument();
+    expect(within(table).queryByText('Family A (INV-OPEN)')).not.toBeInTheDocument();
   });
 
   it('keeps the Status filter labelled independently from table type cells', async () => {
