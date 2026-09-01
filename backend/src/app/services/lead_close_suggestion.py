@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -31,7 +32,16 @@ _MAX_LEAD_MESSAGES = 30
 _MAX_SIMILAR_LEADS = 6
 _MAX_NOTES_PER_LEAD = 8
 _MAX_EVENTS = 12
-_OPENROUTER_TIMEOUT_SECONDS = 20
+
+
+def _openrouter_timeout_seconds() -> int:
+    raw = os.getenv("LEAD_AI_OPENROUTER_TIMEOUT_SECONDS", "90").strip()
+    try:
+        return max(5, min(int(raw), 240))
+    except ValueError:
+        return 90
+
+
 _JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL | re.IGNORECASE)
 
 _SYSTEM_PROMPT = """
@@ -167,7 +177,7 @@ def generate_and_store_suggestion(
     raw_body = openrouter_chat_completion(
         system_prompt=_SYSTEM_PROMPT,
         user_content=user_prompt,
-        timeout=_OPENROUTER_TIMEOUT_SECONDS,
+        timeout=_openrouter_timeout_seconds(),
         temperature=0.2,
     )
     text = extract_message_text(raw_body)

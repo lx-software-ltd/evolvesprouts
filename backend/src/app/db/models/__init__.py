@@ -69,6 +69,10 @@ from app.db.models.organization import Organization, OrganizationMember
 from app.db.models.payment_allocation import DocumentCounter, PaymentAllocation
 from app.db.models.sales_lead import SalesLead, SalesLeadEvent
 from app.db.models.sales_lead_ai_suggestion import SalesLeadAiSuggestion
+from app.db.models.sales_lead_ai_suggestion_job import (
+    SalesLeadAiSuggestionJob,
+    SalesLeadAiSuggestionJobStatus,
+)
 from app.db.models.sales_settings import SalesSettings
 from app.db.models.service import (
     ConsultationDetails,
@@ -165,6 +169,8 @@ __all__ = [
     "RelationshipType",
     "SalesLead",
     "SalesLeadAiSuggestion",
+    "SalesLeadAiSuggestionJob",
+    "SalesLeadAiSuggestionJobStatus",
     "SalesLeadEvent",
     "SalesSettings",
     "Service",

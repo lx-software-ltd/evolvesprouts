@@ -8,6 +8,9 @@ from app.db.repositories.base import BaseRepository
 from app.db.repositories.api_key import ApiKeyRepository
 from app.db.repositories.asset import AssetRepository
 from app.db.repositories.bulk_expense_import_job import BulkExpenseImportJobRepository
+from app.db.repositories.sales_lead_ai_suggestion_job import (
+    SalesLeadAiSuggestionJobRepository,
+)
 from app.db.repositories.contact import ContactRepository
 from app.db.repositories.note import NoteRepository
 from app.db.repositories.discount_code import DiscountCodeRepository
@@ -29,6 +32,7 @@ __all__ = [
     "ApiKeyRepository",
     "AssetRepository",
     "BulkExpenseImportJobRepository",
+    "SalesLeadAiSuggestionJobRepository",
     "ContactRepository",
     "NoteRepository",
     "DiscountCodeRepository",

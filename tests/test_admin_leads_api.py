@@ -184,7 +184,7 @@ def test_handle_admin_leads_dispatches_ai_suggestion_post(
     api_gateway_event: Any,
     admin_identity: dict[str, str],
 ) -> None:
-    marker = {"statusCode": 201, "body": "{}"}
+    marker = {"statusCode": 202, "body": "{}"}
     captured: dict[str, Any] = {}
     monkeypatch.setattr(
         admin_leads,
@@ -212,6 +212,35 @@ def test_handle_admin_leads_dispatches_ai_suggestion_post(
     assert response is marker
     assert captured["lead_id"] == lead_id
     assert captured["actor_sub"] == admin_identity["userSub"]
+
+
+def test_handle_admin_leads_dispatches_ai_suggestion_job_get(
+    monkeypatch: Any,
+    api_gateway_event: Any,
+    admin_identity: dict[str, str],
+) -> None:
+    marker = {"statusCode": 200, "body": "{}"}
+    monkeypatch.setattr(
+        admin_leads,
+        "extract_identity",
+        lambda _: _build_admin_identity(admin_identity),
+    )
+    monkeypatch.setattr(
+        admin_leads, "_get_lead_ai_suggestion_job", lambda *_args, **_kwargs: marker
+    )
+    lead_id = str(uuid4())
+    job_id = str(uuid4())
+
+    response = admin_leads.handle_admin_leads_request(
+        api_gateway_event(
+            method="GET",
+            path=f"/v1/admin/leads/{lead_id}/ai-suggestion/jobs/{job_id}",
+        ),
+        "GET",
+        f"/v1/admin/leads/{lead_id}/ai-suggestion/jobs/{job_id}",
+    )
+
+    assert response is marker
 
 
 def test_parse_lead_filters_defaults_to_standard_admin_limit(

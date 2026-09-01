@@ -97,7 +97,7 @@ info:
     - `GET|POST /v1/admin/leads`
     - `GET|PATCH /v1/admin/leads/{id}`
     - `POST /v1/admin/leads/{id}/notes`
-    - `GET|POST /v1/admin/leads/{id}/ai-suggestion`
+    - `GET|POST /v1/admin/leads/{id}/ai-suggestion` (POST queues async job; poll `.../ai-suggestion/jobs/{job_id}`)
     - `GET /v1/admin/leads/analytics`
     - `GET /v1/admin/leads/export`
     - `GET|PATCH /v1/admin/leads/settings`
@@ -1782,23 +1782,54 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     post:
-      summary: Generate AI close suggestion for a lead
+      summary: Queue AI close suggestion generation for a lead
       description: >
-        Generates a new closing/follow-up suggestion via the shared OpenRouter
-        pipeline (same Secrets Manager key, allow-listed chat-completions URL,
-        and AWS HTTP proxy as expense invoice parsing). Persists the result with
-        a conversation watermark for staleness checks. Does not send messages.
+        Enqueues an asynchronous job that generates a closing/follow-up suggestion
+        via the shared OpenRouter pipeline (same Secrets Manager key, allow-listed
+        chat-completions URL, and AWS HTTP proxy as expense invoice parsing).
+        Poll `GET /v1/admin/leads/{id}/ai-suggestion/jobs/{job_id}` for status,
+        timing (`queue_wait_ms`, `duration_ms`), and the resulting suggestion.
+        Does not send messages.
       security:
         - AdminBearerAuth: []
       responses:
-        "201":
-          description: Suggestion generated and stored.
+        "202":
+          description: Generation job accepted.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LeadAiSuggestionResponse"
+                $ref: "#/components/schemas/LeadAiSuggestionJobResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/admin/leads/{id}/ai-suggestion/jobs/{job_id}:
+    parameters:
+      - $ref: "#/components/parameters/LeadId"
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get lead AI suggestion job status
+      description: >
+        Returns job status and timing. When `status` is `succeeded`, includes the
+        serialized suggestion. Use `queue_wait_ms` (created→started) and
+        `duration_ms` (started→finished) to time OpenRouter runs.
+      security:
+        - AdminBearerAuth: []
+      responses:
+        "200":
+          description: Job status payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeadAiSuggestionJobResponse"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -5903,6 +5934,63 @@ components:
           allOf:
             - $ref: "#/components/schemas/LeadAiSuggestion"
           nullable: true
+
+    LeadAiSuggestionJob:
+      type: object
+      required: [id, lead_id, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        lead_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, processing, succeeded, failed]
+        error_message:
+          type: string
+          nullable: true
+        suggestion_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        queue_wait_ms:
+          type: integer
+          nullable: true
+          description: Milliseconds from created_at to started_at.
+        duration_ms:
+          type: integer
+          nullable: true
+          description: Milliseconds from started_at to finished_at (OpenRouter run).
+        suggestion:
+          allOf:
+            - $ref: "#/components/schemas/LeadAiSuggestion"
+          nullable: true
+
+    LeadAiSuggestionJobResponse:
+      type: object
+      required: [job]
+      properties:
+        job:
+          $ref: "#/components/schemas/LeadAiSuggestionJob"
+
     WhatsAppConversationSummary:
       type: object
       required:

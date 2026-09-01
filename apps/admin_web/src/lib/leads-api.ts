@@ -7,6 +7,8 @@ import type {
   ContactSource,
   FunnelStage,
   LeadAiSuggestion,
+  LeadAiSuggestionJob,
+  LeadAiSuggestionJobStatus,
   LeadAnalytics,
   LeadDetail,
   LeadEvent,
@@ -271,6 +273,30 @@ function parseLeadAiSuggestion(value: unknown): LeadAiSuggestion | null {
   };
 }
 
+
+function parseLeadAiSuggestionJob(value: unknown): LeadAiSuggestionJob | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const statusRaw = asNullableString(value.status);
+  const status = (statusRaw ?? 'pending') as LeadAiSuggestionJobStatus;
+  return {
+    id: asNullableString(value.id) ?? '',
+    leadId: asNullableString(value.lead_id) ?? '',
+    status,
+    errorMessage: asNullableString(value.error_message),
+    suggestionId: asNullableString(value.suggestion_id),
+    createdAt: asNullableString(value.created_at),
+    startedAt: asNullableString(value.started_at),
+    finishedAt: asNullableString(value.finished_at),
+    updatedAt: asNullableString(value.updated_at),
+    queueWaitMs:
+      typeof value.queue_wait_ms === 'number' ? value.queue_wait_ms : null,
+    durationMs: typeof value.duration_ms === 'number' ? value.duration_ms : null,
+    suggestion: parseLeadAiSuggestion(value.suggestion),
+  };
+}
+
 export async function fetchLeadAiSuggestion(leadId: string): Promise<LeadAiSuggestion | null> {
   const payload = await adminApiRequest<{ suggestion?: unknown }>({
     endpointPath: `/v1/admin/leads/${leadId}/ai-suggestion`,
@@ -280,18 +306,78 @@ export async function fetchLeadAiSuggestion(leadId: string): Promise<LeadAiSugge
   return parseLeadAiSuggestion(root.suggestion);
 }
 
-export async function generateLeadAiSuggestion(leadId: string): Promise<LeadAiSuggestion> {
-  const payload = await adminApiRequest<{ suggestion?: unknown }>({
+export async function enqueueLeadAiSuggestionJob(
+  leadId: string,
+): Promise<LeadAiSuggestionJob> {
+  const payload = await adminApiRequest<{ job?: unknown }>({
     endpointPath: `/v1/admin/leads/${leadId}/ai-suggestion`,
     method: 'POST',
-    expectedSuccessStatuses: [200, 201],
+    expectedSuccessStatuses: [202],
   });
   const root = unwrapPayload(payload);
-  const suggestion = parseLeadAiSuggestion(root.suggestion);
-  if (!suggestion) {
-    throw new Error('AI suggestion response was empty.');
+  const job = parseLeadAiSuggestionJob(root.job);
+  if (!job) {
+    throw new Error('AI suggestion job response was empty.');
   }
-  return suggestion;
+  return job;
+}
+
+export async function fetchLeadAiSuggestionJob(
+  leadId: string,
+  jobId: string,
+  signal?: AbortSignal,
+): Promise<LeadAiSuggestionJob> {
+  const payload = await adminApiRequest<{ job?: unknown }>({
+    endpointPath: `/v1/admin/leads/${leadId}/ai-suggestion/jobs/${jobId}`,
+    method: 'GET',
+    expectedSuccessStatuses: [200],
+    signal,
+  });
+  const root = unwrapPayload(payload);
+  const job = parseLeadAiSuggestionJob(root.job);
+  if (!job) {
+    throw new Error('AI suggestion job response was empty.');
+  }
+  return job;
+}
+
+export async function pollLeadAiSuggestionJob(
+  leadId: string,
+  jobId: string,
+  signal?: AbortSignal,
+): Promise<LeadAiSuggestionJob> {
+  const maxMs = 5 * 60 * 1000;
+  const started = Date.now();
+  let delayMs = 1000;
+  while (Date.now() - started < maxMs) {
+    if (signal?.aborted) {
+      throw new DOMException('Aborted', 'AbortError');
+    }
+    const job = await fetchLeadAiSuggestionJob(leadId, jobId, signal);
+    if (job.status === 'succeeded') {
+      return job;
+    }
+    if (job.status === 'failed') {
+      throw new Error(job.errorMessage?.trim() || 'AI suggestion generation failed.');
+    }
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, delayMs);
+    });
+    delayMs = Math.min(Math.floor(delayMs * 1.25), 5000);
+  }
+  throw new Error(
+    'AI suggestion is taking longer than expected; refresh the lead to check again.',
+  );
+}
+
+/** @deprecated Prefer enqueue + poll; kept for callers that want the final suggestion. */
+export async function generateLeadAiSuggestion(leadId: string): Promise<LeadAiSuggestion> {
+  const queued = await enqueueLeadAiSuggestionJob(leadId);
+  const finished = await pollLeadAiSuggestionJob(leadId, queued.id);
+  if (!finished.suggestion) {
+    throw new Error('AI suggestion job completed without a suggestion.');
+  }
+  return finished.suggestion;
 }
 
 export async function getLeadAnalytics(params: AnalyticsParams): Promise<LeadAnalytics> {
