@@ -311,7 +311,8 @@ their primary responsibilities.
   (including coexistence `history` chunks when Meta sends them),
   Messenger and Instagram webhook ingestion on `/v1/meta/webhook`,
   admin inbox import enqueue on `/v1/admin/meta/import-jobs` and
-  `/v1/admin/whatsapp/import-jobs` (SQS `evolvesprouts-inbox-import-queue`),
+  `/v1/admin/whatsapp/import-jobs` (SQS `evolvesprouts-inbox-import-queue`;
+  resolved by queue name so the admin Lambda env dict stays under 4 KB),
   Stripe PaymentIntent creation for
   inline public booking modal payments on `/v1/reservations/payment-intent`
   (card-only `payment_method_types[]=card`; wallet buttons are disabled in the

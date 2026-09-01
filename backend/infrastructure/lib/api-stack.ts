@@ -2290,10 +2290,6 @@ export class ApiStack extends cdk.Stack {
     database.grantConnect(inboxImport.processorFunction, "evolvesprouts_admin");
     awsProxyFunction.grantInvoke(inboxImport.processorFunction);
     inboxImport.queue.grantSendMessages(adminFunction);
-    adminFunction.addEnvironment(
-      "INBOX_IMPORT_QUEUE_URL",
-      inboxImport.queue.queueUrl
-    );
 
     // -------------------------------------------------------------------------
     // Inbound invoice email processing (SES + S3 + SNS + SQS)
