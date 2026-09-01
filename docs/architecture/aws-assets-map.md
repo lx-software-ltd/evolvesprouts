@@ -625,7 +625,7 @@ configured by stack custom resources (including retention and KMS association).
 | Resource Type | Logical ID | Handler | Notes |
 |--------------|------------|---------|-------|
 | Custom Resource | `AdminBootstrapResource` | `AdminBootstrapFunction` | Creates admin user in Cognito |
-| `SesEmailTemplates` | `SesTemplateManagerFunction` | Upserts SES stored templates for public transactional email (nested stack `evolvesprouts-Messaging`) |
+| `SesEmailTemplates` | `SesTemplateManagerFunction` | Upserts SES stored templates for public transactional email and issued-invoice mail (nested stack `evolvesprouts-Messaging`) |
 
 **Properties:**
 - `UserPoolId`: Cognito User Pool ID

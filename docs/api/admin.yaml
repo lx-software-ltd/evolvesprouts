@@ -4316,6 +4316,11 @@ paths:
   /v1/admin/billing/invoices/{id}/email:
     post:
       summary: Email issued invoice PDF
+      description: >
+        Sends a branded transactional email (shared Evolve Sprouts HTML shell)
+        with the issued invoice PDF attached. Recipients are operator-supplied.
+        Draft invoices without an issued PDF are a no-op (response still
+        reports `sent: true`). Locale for the current send path is `en`.
       security:
         - AdminBearerAuth: []
       parameters:
