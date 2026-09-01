@@ -180,7 +180,7 @@ export function ContactsListTable({
                         row.sales_conversation_channel
                       )}
                       instancesHref={adminServiceInstancesDeepLink(row.id)}
-                      invoicesHref={adminContactInvoicesDeepLink(row.id)}
+                      invoicesHref={adminContactInvoicesDeepLink(name === '—' ? '' : name)}
                       hasSalesConversation={row.has_sales_conversation}
                       hasServiceInstance={row.has_service_instance}
                       hasInvoice={row.has_invoice}

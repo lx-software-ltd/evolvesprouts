@@ -393,7 +393,7 @@ describe('ContactsPanel', () => {
     );
     expect(screen.getByRole('link', { name: 'Invoices' })).toHaveAttribute(
       'href',
-      '/finance?contact=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+      '/assets?tag=customer_invoice&query=Linked+Person'
     );
     expect(screen.getAllByRole('link', { name: 'Sales conversations' })).toHaveLength(1);
     expect(screen.getAllByRole('link', { name: 'Service instances' })).toHaveLength(1);
