@@ -45,7 +45,9 @@ def customer_invoice_asset_file_name(invoice: CustomerInvoice) -> str:
 
 def customer_invoice_tag_id(session: Session) -> UUID | None:
     """Resolve the customer_invoice tag id, if present."""
-    stmt = select(Tag.id).where(func.lower(Tag.name) == CUSTOMER_INVOICE_TAG_NAME.lower())
+    stmt = select(Tag.id).where(
+        func.lower(Tag.name) == CUSTOMER_INVOICE_TAG_NAME.lower()
+    )
     return session.execute(stmt).scalar_one_or_none()
 
 
@@ -69,7 +71,9 @@ def _link_customer_invoice_tag(session: Session, asset_id: UUID) -> None:
     )
 
 
-def ensure_customer_invoice_asset(session: Session, invoice: CustomerInvoice) -> Asset | None:
+def ensure_customer_invoice_asset(
+    session: Session, invoice: CustomerInvoice
+) -> Asset | None:
     """Create or update the restricted asset that surfaces an issued invoice PDF."""
     s3_key = (invoice.issued_pdf_s3_key or "").strip()
     if not s3_key:
