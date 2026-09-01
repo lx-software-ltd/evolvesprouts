@@ -65,7 +65,7 @@ export function FamilyEditorCard({ editor, tags, geographicAreas, areasLoading }
           ) : null}
           <Button
             type='button'
-            disabled={isSaving || !familyName.trim()}
+            disabled={isSaving || !familyName.trim() || location.locationDraftInvalid}
             onClick={() => void handleSubmit()}
           >
             {editorMode === 'create' ? 'Create family' : 'Update family'}
@@ -125,10 +125,7 @@ export function FamilyEditorCard({ editor, tags, geographicAreas, areasLoading }
             isSaving={isSaving || location.locationSaveStatus.isSaving}
             isGeocoding={location.locationGeocoding}
             saveError={location.locationSaveStatus.error}
-            onSaveCreate={location.saveNewLocation}
-            onSaveUpdate={async (id, payload) => {
-              await location.updateSharedLocation(id, payload);
-            }}
+            onDraftChange={location.onLocationDraftChange}
             onClear={location.clearPendingLocation}
             onGeocode={location.geocodeLocation}
           />

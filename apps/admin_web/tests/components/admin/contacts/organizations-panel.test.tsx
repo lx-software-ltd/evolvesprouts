@@ -265,7 +265,7 @@ describe('OrganizationsPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Change' }));
     await user.clear(screen.getByLabelText('Address'));
     await user.type(screen.getByLabelText('Address'), 'New Addr');
-    await user.click(screen.getByRole('button', { name: 'Update location' }));
+    await user.click(screen.getByRole('button', { name: 'Update organisation' }));
 
     await waitFor(() => {
       expect(updateLocationPartial).toHaveBeenCalledWith('loc-2', {
@@ -276,6 +276,12 @@ describe('OrganizationsPanel', () => {
       });
     });
     expect(updateLocationPartial.mock.calls[0][1]).not.toHaveProperty('name');
+    expect(updateOrganization).toHaveBeenCalledWith(
+      'org-2',
+      expect.objectContaining({
+        location_id: 'loc-2',
+      })
+    );
   });
 
   it('deletes an organisation after confirmation', async () => {

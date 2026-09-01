@@ -4,8 +4,7 @@ import { useMemo, useState, type MouseEvent } from 'react';
 
 import type { usePartners } from '@/hooks/use-partners';
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
-import { useGeocodeVenueAddress } from '@/hooks/use-geocode-venue-address';
-import { useInlineLocationSave } from '@/hooks/use-inline-location-save';
+import { useEntityInlineLocation } from '@/hooks/use-entity-inline-location';
 import { InlineLocationEditor } from '@/components/admin/locations/inline-location-editor';
 import type { InlineLocationEmbeddedSummary } from '@/components/admin/locations/inline-location-editor';
 import { EntityTagPicker } from '@/components/admin/contacts/entity-tag-picker';
@@ -80,7 +79,6 @@ export function PartnersPanel({
   } = partners;
 
   const [confirmDialogProps, requestConfirm] = useConfirmDialog();
-  const [pendingLocationLeaveDialogProps, requestPendingLocationLeaveConfirm] = useConfirmDialog();
   const [deleteActionError, setDeleteActionError] = useState('');
 
   const [editorMode, setEditorMode] = useState<'create' | 'edit'>('create');
@@ -113,76 +111,23 @@ export function PartnersPanel({
   const partnerKeyPatternInvalid =
     Boolean(partnerKeyTrimmed) && !INSTANCE_SLUG_PATTERN.test(partnerKeyTrimmed);
 
-  const inlineLocationStateKey = editorMode === 'create' ? 'partner-new' : `partner:${selectedId ?? 'none'}`;
   const ownerPartnerOrganizationId = editorMode === 'edit' ? selectedId : null;
 
-  const resolvedLocation = useMemo(() => {
-    if (!pendingLocationId) {
-      return null;
-    }
-    return locations.find((l) => l.id === pendingLocationId) ?? null;
-  }, [locations, pendingLocationId]);
-
-  const embeddedLocationSummary = useMemo((): InlineLocationEmbeddedSummary | null => {
-    if (resolvedLocation) {
-      return null;
-    }
-    if (!pendingLocationId) {
-      return null;
-    }
-    if (optimisticLocationSummary && optimisticLocationSummary.id === pendingLocationId) {
-      return optimisticLocationSummary;
-    }
-    const s = selected?.location_summary;
-    if (s && s.id === pendingLocationId) {
-      return {
-        id: s.id,
-        name: s.name ?? null,
-        address: s.address ?? null,
-        areaName: s.area_name,
-        areaId: s.area_id,
-        lat: s.lat ?? null,
-        lng: s.lng ?? null,
-      };
-    }
-    return null;
-  }, [resolvedLocation, pendingLocationId, optimisticLocationSummary, selected?.location_summary]);
-
-  function summaryFromLocationRow(loc: LocationSummary): InlineLocationEmbeddedSummary {
-    const areaName = geographicAreas.find((a) => a.id === loc.areaId)?.name ?? 'Unknown area';
-    return {
-      id: loc.id,
-      name: loc.name,
-      address: loc.address,
-      areaName,
-      areaId: loc.areaId,
-      lat: loc.lat,
-      lng: loc.lng,
-    };
-  }
-
-  const {
-    status: locationSaveStatus,
-    createSharedLocation,
-    updateSharedLocation,
-    clearError: clearLocationSaveError,
-  } = useInlineLocationSave(refreshLocations);
-  const { geocode: geocodeLocation, isGeocoding: locationGeocoding } = useGeocodeVenueAddress();
+  const location = useEntityInlineLocation({
+    editorMode,
+    selectedId,
+    stateKeyPrefix: 'partner',
+    pendingLocationId,
+    setPendingLocationId,
+    optimisticLocationSummary,
+    setOptimisticLocationSummary,
+    selectedLocationSummary: selected?.location_summary,
+    locations,
+    geographicAreas,
+    refreshLocations,
+  });
 
   async function resetCreateForm() {
-    if (editorMode === 'create' && pendingLocationId) {
-      const ok = await requestPendingLocationLeaveConfirm({
-        title: 'Leave without finishing?',
-        description:
-          'You saved an address to a new location but have not finished creating this partner yet. Leave anyway? The location row stays in the directory.',
-        confirmLabel: 'Leave',
-        cancelLabel: 'Stay',
-        variant: 'default',
-      });
-      if (!ok) {
-        return;
-      }
-    }
     setEditorMode('create');
     setSelectedId(null);
     setName('');
@@ -192,14 +137,18 @@ export function PartnersPanel({
     setWebsite('');
     setPendingLocationId(null);
     setOptimisticLocationSummary(null);
-    clearLocationSaveError();
+    location.resetLocationDraft();
     setTagIds([]);
     setActive(true);
   }
 
   async function handleSubmit(): Promise<void> {
     try {
-      const loc = pendingLocationId;
+      const resolved = await location.commitLocationForSubmit();
+      if (resolved.status === 'abort') {
+        return;
+      }
+      const loc = resolved.locationId;
       if (editorMode === 'create') {
         await createPartner({
           name: name.trim(),
@@ -273,7 +222,7 @@ export function PartnersPanel({
     setWebsite(row.website ?? '');
     setPendingLocationId(row.location_id ?? null);
     setOptimisticLocationSummary(null);
-    clearLocationSaveError();
+    location.resetLocationDraft();
     setTagIds([...row.tag_ids]);
     setActive(row.active);
   }
@@ -290,7 +239,6 @@ export function PartnersPanel({
       ) : null}
 
       <ConfirmDialog {...confirmDialogProps} />
-      <ConfirmDialog {...pendingLocationLeaveDialogProps} />
       <AdminEditorCard
         title='Partner'
         description='Partner organisations for Services. Not shown under Contacts → Organisations or Finance → Vendors.'
@@ -306,7 +254,11 @@ export function PartnersPanel({
                 Cancel
               </Button>
             ) : null}
-            <Button type='button' disabled={isSaving || !name.trim()} onClick={() => void handleSubmit()}>
+            <Button
+              type='button'
+              disabled={isSaving || !name.trim() || location.locationDraftInvalid}
+              onClick={() => void handleSubmit()}
+            >
               {editorMode === 'create' ? 'Create partner' : 'Update partner'}
             </Button>
           </>
@@ -391,36 +343,19 @@ export function PartnersPanel({
           <div className='lg:col-span-4'>
             <AdminCollapsibleSection id='svc-partner-location' title='Location'>
               <InlineLocationEditor
-                stateKey={inlineLocationStateKey}
-                location={resolvedLocation}
-                embeddedSummary={embeddedLocationSummary}
+                stateKey={location.inlineLocationStateKey}
+                location={location.resolvedLocation}
+                embeddedSummary={location.embeddedLocationSummary}
                 areas={geographicAreas}
                 areasLoading={areasLoading}
                 canModify
                 allowEditWhenOwnerPartnerOrganizationId={ownerPartnerOrganizationId}
-                isSaving={isSaving || locationSaveStatus.isSaving}
-                isGeocoding={locationGeocoding}
-                saveError={locationSaveStatus.error}
-                onRequestEdit={() => {}}
-                onCancelEdit={() => {}}
-                onSaveCreate={async (payload) => {
-                  const created = await createSharedLocation(payload);
-                  if (created) {
-                    setPendingLocationId(created.id);
-                    setOptimisticLocationSummary(summaryFromLocationRow(created));
-                    return created.id;
-                  }
-                  return null;
-                }}
-                onSaveUpdate={async (id, payload) => {
-                  await updateSharedLocation(id, payload);
-                }}
-                onClear={() => {
-                  setPendingLocationId(null);
-                  setOptimisticLocationSummary(null);
-                  clearLocationSaveError();
-                }}
-                onGeocode={geocodeLocation}
+                isSaving={isSaving || location.locationSaveStatus.isSaving}
+                isGeocoding={location.locationGeocoding}
+                saveError={location.locationSaveStatus.error}
+                onDraftChange={location.onLocationDraftChange}
+                onClear={location.clearPendingLocation}
+                onGeocode={location.geocodeLocation}
               />
             </AdminCollapsibleSection>
           </div>

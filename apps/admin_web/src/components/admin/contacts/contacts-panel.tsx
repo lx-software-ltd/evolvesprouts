@@ -56,7 +56,6 @@ export function ContactsPanel({
   return (
     <div className='space-y-6'>
       <ConfirmDialog {...editor.confirmDialogProps} />
-      <ConfirmDialog {...editor.pendingLocationLeaveDialogProps} />
       <MailchimpSyncCard />
       <ContactEditorCard
         editor={editor}

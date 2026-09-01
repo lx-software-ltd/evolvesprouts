@@ -52,7 +52,6 @@ export function useFamilyPanelEditor({
   } = families;
 
   const [confirmDialogProps, requestConfirm] = useConfirmDialog();
-  const [pendingLocationLeaveDialogProps, requestPendingLocationLeaveConfirm] = useConfirmDialog();
   const [deleteActionError, setDeleteActionError] = useState('');
 
   const [editorMode, setEditorMode] = useState<'create' | 'edit'>('create');
@@ -117,26 +116,13 @@ export function useFamilyPanelEditor({
   }
 
   async function resetCreateForm() {
-    if (editorMode === 'create' && pendingLocationId) {
-      const ok = await requestPendingLocationLeaveConfirm({
-        title: 'Leave without finishing?',
-        description:
-          'You saved an address to a new location but have not finished creating this family yet. Leave anyway? The location row stays in the directory.',
-        confirmLabel: 'Leave',
-        cancelLabel: 'Stay',
-        variant: 'default',
-      });
-      if (!ok) {
-        return;
-      }
-    }
     setEditorMode('create');
     setSelectedId(null);
     setFamilyName('');
     setRelationshipType('prospect');
     setPendingLocationId(null);
     setOptimisticLocationSummary(null);
-    location.clearLocationSaveError();
+    location.resetLocationDraft();
     setTagIds([]);
     setActive(true);
     setMemberContactId('');
@@ -144,7 +130,11 @@ export function useFamilyPanelEditor({
 
   async function handleSubmit(): Promise<void> {
     try {
-      const loc = pendingLocationId;
+      const resolved = await location.commitLocationForSubmit();
+      if (resolved.status === 'abort') {
+        return;
+      }
+      const loc = resolved.locationId;
       if (editorMode === 'create') {
         await createFamily({
           family_name: familyName.trim(),
@@ -224,7 +214,7 @@ export function useFamilyPanelEditor({
     );
     setPendingLocationId(row.location_id ?? null);
     setOptimisticLocationSummary(null);
-    location.clearLocationSaveError();
+    location.resetLocationDraft();
     setTagIds([...row.tag_ids]);
     setActive(row.active);
   }
@@ -243,7 +233,6 @@ export function useFamilyPanelEditor({
 
   return {
     confirmDialogProps,
-    pendingLocationLeaveDialogProps,
     deleteActionError,
     setDeleteActionError,
     editorMode,

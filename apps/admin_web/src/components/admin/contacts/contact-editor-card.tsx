@@ -72,19 +72,10 @@ export function ContactEditorCard({
     isSaving,
     serviceLabels,
     linkedToFamilyOrOrg,
-    inlineLocationStateKey,
-    resolvedLocation,
-    embeddedLocationSummary,
+    location,
     readOnlyLockedLinesForEditor,
-    locationSaveStatus,
-    locationGeocoding,
-    geocodeLocation,
-    createSharedLocation,
-    updateSharedLocation,
-    clearLocationSaveError,
     setPendingLocationId,
     setOptimisticLocationSummary,
-    summaryFromLocationRow,
     saveDisabled,
     resetCreateForm,
     handleSubmit,
@@ -213,9 +204,9 @@ export function ContactEditorCard({
 
         <AdminCollapsibleSection id='crm-contact-location' title='Location' disabled={isSaving}>
           <InlineLocationEditor
-            stateKey={inlineLocationStateKey}
-            location={resolvedLocation}
-            embeddedSummary={embeddedLocationSummary}
+            stateKey={location.inlineLocationStateKey}
+            location={location.resolvedLocation}
+            embeddedSummary={location.embeddedLocationSummary}
             areas={geographicAreas}
             areasLoading={areasLoading}
             canModify={!linkedToFamilyOrOrg}
@@ -223,29 +214,16 @@ export function ContactEditorCard({
             readOnlyNote={
               linkedToFamilyOrOrg ? 'Location is managed on the linked family or organisation.' : null
             }
-            isSaving={isSaving || locationSaveStatus.isSaving}
-            isGeocoding={locationGeocoding}
-            saveError={locationSaveStatus.error}
-            onRequestEdit={() => {}}
-            onCancelEdit={() => {}}
-            onSaveCreate={async (payload) => {
-              const created = await createSharedLocation(payload);
-              if (created) {
-                setPendingLocationId(created.id);
-                setOptimisticLocationSummary(summaryFromLocationRow(created));
-                return created.id;
-              }
-              return null;
-            }}
-            onSaveUpdate={async (id, payload) => {
-              await updateSharedLocation(id, payload);
-            }}
+            isSaving={isSaving || location.locationSaveStatus.isSaving}
+            isGeocoding={location.locationGeocoding}
+            saveError={location.locationSaveStatus.error}
+            onDraftChange={location.onLocationDraftChange}
             onClear={() => {
               setPendingLocationId(null);
               setOptimisticLocationSummary(null);
-              clearLocationSaveError();
+              location.clearLocationSaveError();
             }}
-            onGeocode={geocodeLocation}
+            onGeocode={location.geocodeLocation}
           />
         </AdminCollapsibleSection>
 

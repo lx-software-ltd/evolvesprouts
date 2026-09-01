@@ -537,7 +537,7 @@ describe('ContactsPanel', () => {
     expect(screen.queryByRole('button', { name: 'Clear' })).not.toBeInTheDocument();
   });
 
-  it('includes location_id on create after inline Save location', async () => {
+  it('includes location_id on create after filling location and creating the contact', async () => {
     const user = userEvent.setup();
     const createContact = vi.fn().mockResolvedValue(null);
     const contacts = buildContactsHook({ createContact });
@@ -584,20 +584,53 @@ describe('ContactsPanel', () => {
       expect(screen.getByLabelText('Latitude')).toHaveValue('22.3193');
     });
 
-    await user.click(screen.getByRole('button', { name: 'Save location' }));
-
-    await waitFor(() => {
-      expect(createLocation).toHaveBeenCalled();
-    });
-
     await user.click(screen.getByRole('button', { name: 'Create contact' }));
 
+    await waitFor(() => {
+      expect(createLocation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          area_id: 'area-hk',
+          address: '1 Test Road',
+          lat: 22.3193,
+          lng: 114.1694,
+          name: null,
+        })
+      );
+    });
     expect(createContact).toHaveBeenCalledWith(
       expect.objectContaining({
         first_name: 'Jane',
         location_id: 'loc-new',
       })
     );
+    expect(screen.queryByRole('button', { name: 'Save location' })).not.toBeInTheDocument();
+  });
+
+  it('disables Create contact when the location draft is invalid', async () => {
+    const user = userEvent.setup();
+    const createContact = vi.fn().mockResolvedValue(null);
+    const contacts = buildContactsHook({ createContact });
+
+    render(
+      <ContactsPanel
+        contacts={contacts}
+        adminUsers={[]}
+        onPatchStandaloneNoteCount={vi.fn()}
+        tags={[]}
+        locations={[]}
+        geographicAreas={[hkArea]}
+        areasLoading={false}
+        refreshLocations={noopRefresh}
+      />
+    );
+
+    await user.click(screen.getByText('Location', { selector: 'summary' }));
+    await user.type(screen.getByLabelText('First name'), 'Jane');
+    await user.selectOptions(screen.getByLabelText('Geographic area'), 'area-hk');
+    await user.type(screen.getByLabelText('Latitude'), '22.3');
+
+    expect(screen.getByRole('button', { name: 'Create contact' })).toBeDisabled();
+    expect(createContact).not.toHaveBeenCalled();
   });
 
   it('sends location_id null on update after Clear', async () => {

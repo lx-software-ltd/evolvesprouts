@@ -61,7 +61,6 @@ export function OrganizationsPanel({
   return (
     <div className='space-y-6'>
       <ConfirmDialog {...editor.confirmDialogProps} />
-      <ConfirmDialog {...editor.pendingLocationLeaveDialogProps} />
       <OrganizationEditorCard
         editor={editor}
         tags={tags}
