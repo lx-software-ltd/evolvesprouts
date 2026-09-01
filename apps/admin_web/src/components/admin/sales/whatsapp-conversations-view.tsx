@@ -255,9 +255,6 @@ export function WhatsAppConversationsView() {
                 placeholder='Name or WhatsApp id'
               />
             </label>
-            <p className='text-sm text-slate-500'>
-              {list.totalCount == null ? '' : `${list.totalCount} conversations`}
-            </p>
           </div>
         }
       >

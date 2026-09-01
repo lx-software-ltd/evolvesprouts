@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from app.api.admin_validators import (
+    parse_optional_instagram_handle,
     parse_optional_service_instance_slug,
     parse_optional_service_instance_slug_like_text,
     validate_email,
@@ -58,3 +59,15 @@ def test_parse_optional_service_instance_slug_like_text_sets_field_on_error() ->
     with pytest.raises(ValidationError, match="lowercase letters") as excinfo2:
         parse_optional_service_instance_slug_like_text("a--b", field="cohort")
     assert excinfo2.value.field == "cohort"
+
+
+def test_parse_optional_instagram_handle_strips_at_and_lowercases() -> None:
+    assert parse_optional_instagram_handle(" @Kitie.W ") == "kitie.w"
+    assert parse_optional_instagram_handle("kitie.w") == "kitie.w"
+    assert parse_optional_instagram_handle(" @ ") is None
+    assert parse_optional_instagram_handle(None) is None
+
+
+def test_parse_optional_instagram_handle_rejects_over_thirty() -> None:
+    with pytest.raises(ValidationError, match="at most 30"):
+        parse_optional_instagram_handle("@" + ("a" * 31))

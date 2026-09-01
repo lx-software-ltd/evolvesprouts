@@ -276,8 +276,12 @@ def _ingest_graph_message(
         return
     sender = message_row.get("from")
     sender_id = ""
+    sender_username: str | None = None
     if isinstance(sender, Mapping):
         sender_id = str(sender.get("id") or "").strip()
+        raw_username = sender.get("username")
+        if isinstance(raw_username, str) and raw_username.strip():
+            sender_username = raw_username.strip()
     is_echo = sender_id in self_ids if sender_id else False
     webhook_message = {
         "mid": message_id.strip(),
@@ -285,6 +289,8 @@ def _ingest_graph_message(
         "is_echo": is_echo,
         "attachments": _graph_attachments(message_row.get("attachments")),
     }
+    if sender_username:
+        webhook_message["username"] = sender_username
     before_stored = counters["stored"]
     store_meta_message(
         session,

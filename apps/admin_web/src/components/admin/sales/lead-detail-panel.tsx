@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { PhoneField } from '@/components/ui/phone-field';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { instagramHandleForStorage } from '@/lib/contacts/contacts-panel-helpers';
 import { formatEnumLabel } from '@/lib/format';
 import { contactPhoneRequestFields } from '@/lib/phone-request';
 
@@ -101,7 +102,7 @@ export function LeadDetailPanel({
         last_name: createForm.lastName.trim() || null,
         email: createForm.email.trim() || null,
         ...contactPhoneRequestFields(createForm.phoneRegion, createForm.phoneNational),
-        instagram_handle: createForm.instagramHandle.trim() || null,
+        instagram_handle: instagramHandleForStorage(createForm.instagramHandle),
         source: createForm.source,
         source_detail: createForm.sourceDetail.trim() || null,
         lead_type: createForm.leadType,
@@ -173,13 +174,26 @@ export function LeadDetailPanel({
                 nationalLabel='Phone number (national digits)'
               />
             </div>
-            <Input
-              value={createForm.instagramHandle}
-              onChange={(event) =>
-                setCreateForm((previous) => ({ ...previous, instagramHandle: event.target.value }))
-              }
-              placeholder='Instagram handle'
-            />
+            <div className='relative'>
+              <span
+                className='pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-slate-500 sm:text-sm'
+                aria-hidden
+              >
+                @
+              </span>
+              <Input
+                className='pl-7'
+                value={createForm.instagramHandle}
+                onChange={(event) =>
+                  setCreateForm((previous) => ({
+                    ...previous,
+                    instagramHandle: instagramHandleForStorage(event.target.value) ?? '',
+                  }))
+                }
+                placeholder='username'
+                aria-label='Instagram handle'
+              />
+            </div>
             <Select
               value={createForm.source}
               onChange={(event) =>

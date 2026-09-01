@@ -32,6 +32,7 @@ from app.imports.entities._legacy_family_common import parse_legacy_person_rows
 from app.imports.registry import register
 from app.imports import refs
 from app.utils.logging import get_logger
+from app.utils.validators import instagram_handle_for_storage
 
 logger = get_logger(__name__)
 
@@ -327,7 +328,11 @@ class ContactsImporter:
                 continue
 
             email_key = str(p.email).strip().lower() if p.email else None
-            insta_key = str(p.instagram_id).strip().lower() if p.instagram_id else None
+            insta_key = (
+                instagram_handle_for_storage(str(p.instagram_id))
+                if p.instagram_id
+                else None
+            )
 
             reuse_id: UUID | None = None
             if email_key:
@@ -444,7 +449,9 @@ class ContactsImporter:
             email_norm = str(p.email).strip().lower() if p.email else None
             email_store = email_norm if email_norm else None
             insta_store = (
-                str(p.instagram_id).strip().lower() if p.instagram_id else None
+                instagram_handle_for_storage(str(p.instagram_id))
+                if p.instagram_id
+                else None
             )
 
             kind_l = (p.kind or "").strip().lower()

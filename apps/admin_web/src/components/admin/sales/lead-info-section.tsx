@@ -1,6 +1,7 @@
 import type { LeadDetail } from '@/types/leads';
 
 import { Card } from '@/components/ui/card';
+import { formatInstagramHandleDisplay } from '@/lib/contacts/contacts-panel-helpers';
 import { formatEnumLabel } from '@/lib/format';
 import { formatPhoneInternationalDisplay } from '@/lib/phone-display';
 
@@ -25,7 +26,7 @@ export function LeadInfoSection({ lead }: LeadInfoSectionProps) {
         </p>
         <p>
           <span className='font-medium text-slate-900'>Instagram:</span>{' '}
-          {lead.contact.instagramHandle ?? '—'}
+          {formatInstagramHandleDisplay(lead.contact.instagramHandle) || '—'}
         </p>
         <p>
           <span className='font-medium text-slate-900'>Source:</span>{' '}
