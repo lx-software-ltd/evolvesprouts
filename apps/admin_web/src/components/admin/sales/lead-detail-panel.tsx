@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { ActivityTimeline } from './activity-timeline';
 
@@ -109,16 +109,17 @@ export function LeadDetailPanel({
   const [form, setForm] = useState<LeadEditorFormState>(() =>
     mode === 'edit' && lead ? formFromLead(lead) : EMPTY_EDITOR_FORM
   );
+  const [hydratedLeadId, setHydratedLeadId] = useState<string | null>(
+    mode === 'edit' && lead ? lead.id : null
+  );
 
-  useEffect(() => {
-    if (mode === 'edit' && lead) {
-      setForm(formFromLead(lead));
-      return;
-    }
-    if (mode === 'create') {
-      setForm(EMPTY_EDITOR_FORM);
-    }
-  }, [mode, lead]);
+  if (mode === 'edit' && lead && hydratedLeadId !== lead.id) {
+    setHydratedLeadId(lead.id);
+    setForm(formFromLead(lead));
+  } else if (mode === 'create' && hydratedLeadId !== null) {
+    setHydratedLeadId(null);
+    setForm(EMPTY_EDITOR_FORM);
+  }
 
   const needsLostReason = mode === 'edit' && form.funnelStage === 'lost';
   const saveDisabled =

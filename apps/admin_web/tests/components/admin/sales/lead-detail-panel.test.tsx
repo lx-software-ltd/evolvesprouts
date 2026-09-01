@@ -116,6 +116,39 @@ describe('LeadDetailPanel', () => {
     expect(screen.queryByText('Called the parent.')).not.toBeInTheDocument();
   });
 
+  it('hydrates the editor when lead detail arrives after selection', () => {
+    const { rerender } = render(
+      <LeadDetailPanel
+        mode='edit'
+        lead={null}
+        users={USERS}
+        isLoading={true}
+        error=''
+        onStartCreate={vi.fn()}
+        onCreate={vi.fn()}
+        onUpdate={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Loading lead…')).toBeInTheDocument();
+
+    rerender(
+      <LeadDetailPanel
+        mode='edit'
+        lead={LEAD_FIXTURE}
+        users={USERS}
+        isLoading={false}
+        error=''
+        onStartCreate={vi.fn()}
+        onCreate={vi.fn()}
+        onUpdate={vi.fn()}
+      />
+    );
+
+    expect(screen.getByLabelText('First name')).toHaveValue('Jane');
+    expect(screen.getByLabelText('Stage')).toHaveValue('contacted');
+  });
+
   it('submits create from the lead card', async () => {
     const user = userEvent.setup();
     const onCreate = vi.fn().mockResolvedValue(undefined);
