@@ -7,7 +7,6 @@ parser. Fail-open: OpenRouter errors never block lead creation.
 from __future__ import annotations
 
 import json
-from typing import Any
 
 from sqlalchemy.orm import Session
 
