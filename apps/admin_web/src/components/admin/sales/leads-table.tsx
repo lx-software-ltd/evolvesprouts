@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 
-import type { AdminUser, FunnelStage, LeadListFilters, LeadSummary } from '@/types/leads';
+import type { AdminUser, FunnelStage, LeadListFilters, LeadSummary, LostReason } from '@/types/leads';
 
 import {
   AdminDataTable,
@@ -37,7 +37,7 @@ export interface LeadsTableProps {
   onBulkStageChange: (
     leadIds: string[],
     stage: FunnelStage,
-    lostReason?: string
+    lostReason?: LostReason
   ) => Promise<void> | void;
 }
 

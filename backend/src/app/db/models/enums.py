@@ -132,6 +132,16 @@ class FunnelStage(str, enum.Enum):
     LOST = "lost"
 
 
+class LeadLostReason(str, enum.Enum):
+    """Controlled vocabulary for why a sales lead was marked lost."""
+
+    PRICE_TOO_HIGH = "price_too_high"
+    VALUE_NOT_UNDERSTOOD = "value_not_understood"
+    GHOSTED = "ghosted"
+    LANGUAGE_MISMATCH = "language_mismatch"
+    OTHER = "other"
+
+
 class LeadEventType(str, enum.Enum):
     """Lead lifecycle event type."""
 

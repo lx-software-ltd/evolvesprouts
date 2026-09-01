@@ -312,6 +312,17 @@ def _update_lead(
                     metadata=None,
                     created_by=actor_sub,
                 )
+            elif (
+                next_stage == FunnelStage.LOST
+                and payload["lost_reason"] is not None
+                and lead.lost_reason != payload["lost_reason"]
+            ):
+                lead.lost_reason = payload["lost_reason"]
+                lead.updated_at = datetime.now(UTC)
+                if lead.lost_at is None:
+                    lead.lost_at = datetime.now(UTC)
+                lead.converted_at = None
+                repository.update(lead)
 
         previous_assignee = lead.assigned_to
         assignment_changed = False

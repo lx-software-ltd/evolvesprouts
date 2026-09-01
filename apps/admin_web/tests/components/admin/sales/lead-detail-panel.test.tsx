@@ -383,4 +383,36 @@ describe('LeadDetailPanel', () => {
       }),
     });
   });
+
+  it('requires a lost reason select when marking a lead lost', async () => {
+    const user = userEvent.setup();
+    const onUpdate = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <LeadDetailPanel
+        mode='edit'
+        lead={LEAD_FIXTURE}
+        users={USERS}
+        isLoading={false}
+        error=''
+        onStartCreate={vi.fn()}
+        onCreate={vi.fn()}
+        onUpdate={onUpdate}
+      />
+    );
+
+    await user.selectOptions(screen.getByLabelText('Stage'), 'lost');
+    expect(screen.getByLabelText('Lost reason')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Update lead' })).toBeDisabled();
+
+    await user.selectOptions(screen.getByLabelText('Lost reason'), 'ghosted');
+    await user.click(screen.getByRole('button', { name: 'Update lead' }));
+
+    expect(onUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        funnel_stage: 'lost',
+        lost_reason: 'ghosted',
+      })
+    );
+  });
 });

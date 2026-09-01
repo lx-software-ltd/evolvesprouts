@@ -11,8 +11,8 @@ import { CONTACT_TYPES } from '@/lib/contacts/contacts-panel-constants';
 import { instagramHandleForStorage } from '@/lib/contacts/contacts-panel-helpers';
 import { formatEnumLabel } from '@/lib/format';
 import { contactPhoneRequestFields } from '@/lib/phone-request';
-import { CONTACT_SOURCES, FUNNEL_STAGES, LEAD_TYPES } from '@/types/leads';
-import type { AdminUser, ContactSource, FunnelStage, LeadDetail, LeadType } from '@/types/leads';
+import { CONTACT_SOURCES, FUNNEL_STAGES, LEAD_TYPES, LOST_REASON_LABELS, LOST_REASONS } from '@/types/leads';
+import type { AdminUser, ContactSource, FunnelStage, LeadDetail, LeadType, LostReason } from '@/types/leads';
 import type { components } from '@/types/generated/admin-api.generated';
 import type { CreateLeadEntryInput, UpdateLeadEntryInput } from '@/hooks/use-lead-mutations';
 
@@ -23,7 +23,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PhoneField } from '@/components/ui/phone-field';
 import { Select } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 
 type EntityContactType = components['schemas']['EntityContactType'];
 
@@ -42,7 +41,7 @@ interface LeadEditorFormState {
   contactType: EntityContactType;
   assignedTo: string;
   funnelStage: FunnelStage;
-  lostReason: string;
+  lostReason: LostReason | '';
 }
 
 const EMPTY_EDITOR_FORM: LeadEditorFormState = {
@@ -145,7 +144,7 @@ export function LeadDetailPanel({
   const saveDisabled =
     isLoading ||
     form.firstName.trim().length === 0 ||
-    (needsLostReason && form.lostReason.trim().length === 0);
+    (needsLostReason && form.lostReason === '');
 
   const handleSubmit = async () => {
     const phone = contactPhoneRequestFields(form.phoneRegion, form.phoneNational);
@@ -174,7 +173,7 @@ export function LeadDetailPanel({
       await onUpdate({
         funnel_stage: form.funnelStage,
         assigned_to: form.assignedTo || null,
-        lost_reason: form.funnelStage === 'lost' ? form.lostReason.trim() : null,
+        lost_reason: form.funnelStage === 'lost' ? form.lostReason || null : null,
         contact: lead?.contact.id
           ? {
               id: lead.contact.id,
@@ -428,14 +427,23 @@ export function LeadDetailPanel({
             {needsLostReason ? (
               <div>
                 <Label htmlFor='lead-editor-lost-reason'>Lost reason</Label>
-                <Textarea
+                <Select
                   id='lead-editor-lost-reason'
                   value={form.lostReason}
                   onChange={(event) =>
-                    setForm((previous) => ({ ...previous, lostReason: event.target.value }))
+                    setForm((previous) => ({
+                      ...previous,
+                      lostReason: event.target.value as LostReason | '',
+                    }))
                   }
-                  rows={3}
-                />
+                >
+                  <option value=''>Select a lost reason</option>
+                  {LOST_REASONS.map((reason) => (
+                    <option key={reason} value={reason}>
+                      {LOST_REASON_LABELS[reason]}
+                    </option>
+                  ))}
+                </Select>
               </div>
             ) : null}
 
