@@ -35,7 +35,10 @@ def test_ingest_skips_whatsapp_object() -> None:
         SimpleNamespace(),
         {"object": "whatsapp_business_account", "entry": [{}]},
     )
-    assert counters == {"stored": 0, "duplicates": 0, "skipped": 0, "leads_created": 0}
+    assert counters["stored"] == 0
+    assert counters["duplicates"] == 0
+    assert counters["skipped"] == 0
+    assert counters["leads_created"] == 0
 
 
 def test_ingest_stores_inbound_instagram_and_creates_lead(

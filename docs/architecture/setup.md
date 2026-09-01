@@ -79,6 +79,11 @@ For the OIDC provider itself, add the same tags:
 - `NEXT_PUBLIC_API_BASE_URL` (execute-api base URL for Public WWW and Admin Web API routing)
 - `NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS` (comma-separated hostname allowlist for `/www` proxy rewrites)
 - `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (for Public WWW booking form)
+- `CDK_PARAM_META_PAGE_ID` (Facebook Page id for Graph inbox import)
+- `CDK_PARAM_META_INSTAGRAM_USER_ID` (optional Instagram professional id)
+- `CDK_PARAM_META_GRAPH_API_BASE_URL` (optional; defaults to Graph origin)
+- `CDK_PARAM_META_GRAPH_API_VERSION` (optional Graph version token)
+- `CDK_PARAM_WHATSAPP_EXPORT_BUSINESS_NAMES` (optional comma-separated outbound names in WhatsApp exports)
 - `CDK_PARAM_MAILCHIMP_LIST_ID`
 - `CDK_PARAM_MAILCHIMP_SERVER_PREFIX`
 - `CDK_PARAM_MEDIA_DEFAULT_RESOURCE_KEY`
@@ -125,7 +130,7 @@ For the OIDC provider itself, add the same tags:
 - `CDK_PARAM_MAILCHIMP_API_SECRET_ARN`
 - `CDK_PARAM_MAILCHIMP_WEBHOOK_SECRET`
 - `CDK_PARAM_META_APP_SECRET` (Meta app secret; HMAC for `POST /v1/whatsapp/webhook` and `POST /v1/meta/webhook`)
-- `CDK_PARAM_WHATSAPP_WEBHOOK_VERIFY_TOKEN` (Meta webhook handshake token for WhatsApp and Messenger/Instagram)
+- `CDK_PARAM_WHATSAPP_WEBHOOK_VERIFY_TOKEN` (Meta webhook handshake token for WhatsApp and Messenger/Instagram; also used as the Graph inbox import Page token)
 - `CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD` (optional)
 - `NEXT_PUBLIC_WWW_CRM_API_KEY` (Public WWW browser API key)
 - `AMPLIFY_API_KEY`

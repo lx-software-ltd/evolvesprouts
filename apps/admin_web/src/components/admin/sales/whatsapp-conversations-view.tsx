@@ -1,15 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ConversationNameCell } from './conversation-name-cell';
+import { InboxImportStatus } from './inbox-import-status';
 
 import { useWhatsAppConversations } from '@/hooks/use-whatsapp-conversations';
 import { useWhatsAppMessages } from '@/hooks/use-whatsapp-messages';
+import { toErrorMessage } from '@/hooks/hook-errors';
+import { createAdminAsset, deleteAdminAsset, uploadFileToPresignedUrl } from '@/lib/assets-api';
 import { formatDate } from '@/lib/format';
 import { formatInboxConversationName } from '@/lib/inbox-conversation-name';
+import {
+  createWhatsAppExportImportJob,
+  listInboxImportJobs,
+  type InboxImportJobSummary,
+} from '@/lib/inbox-import-api';
 import { ViewIcon } from '@/components/icons/action-icons';
 import { AdminEditorCard } from '@/components/ui/admin-editor-card';
+import { FileUploadButton } from '@/components/ui/file-upload-button';
+import { Label } from '@/components/ui/label';
 import {
   AdminDataTable,
   AdminDataTableBody,
@@ -30,15 +40,158 @@ function formatWhen(value: string | null): string {
   return formatDate(value);
 }
 
+const MAX_EXPORT_BYTES = 15 * 1024 * 1024;
+
 export function WhatsAppConversationsView() {
   const list = useWhatsAppConversations();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const detail = useWhatsAppMessages(selectedId);
+  const [exportFile, setExportFile] = useState<File | null>(null);
+  const [counterpartyWaId, setCounterpartyWaId] = useState('');
+  const [businessNames, setBusinessNames] = useState('');
+  const [importJob, setImportJob] = useState<InboxImportJobSummary | null>(null);
+  const [importError, setImportError] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void listInboxImportJobs('/v1/admin/whatsapp/import-jobs')
+      .then((jobs) => {
+        if (!cancelled) {
+          setImportJob(jobs[0] ?? null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setImportJob(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function handleImportExport() {
+    if (!exportFile) {
+      return;
+    }
+    if (exportFile.size > MAX_EXPORT_BYTES) {
+      setImportError('Export file exceeds 15MB.');
+      return;
+    }
+    setIsImporting(true);
+    setImportError('');
+    let uploadedAssetId: string | null = null;
+    try {
+      const createdAsset = await createAdminAsset({
+        title: exportFile.name,
+        description: 'WhatsApp chat export',
+        assetType: 'document',
+        fileName: exportFile.name,
+        contentType: exportFile.type || 'application/octet-stream',
+        visibility: 'restricted',
+      });
+      if (!createdAsset.asset?.id || !createdAsset.upload.uploadUrl) {
+        throw new Error('Could not prepare the WhatsApp export upload.');
+      }
+      uploadedAssetId = createdAsset.asset.id;
+      await uploadFileToPresignedUrl({
+        uploadUrl: createdAsset.upload.uploadUrl,
+        uploadMethod: createdAsset.upload.uploadMethod,
+        uploadHeaders: createdAsset.upload.uploadHeaders,
+        file: exportFile,
+      });
+      const names = businessNames
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+      const job = await createWhatsAppExportImportJob({
+        attachmentAssetId: uploadedAssetId,
+        counterpartyWaId: counterpartyWaId.trim() || undefined,
+        businessDisplayNames: names,
+      });
+      setImportJob(job);
+      setExportFile(null);
+      await list.refetch();
+    } catch (error) {
+      if (uploadedAssetId) {
+        try {
+          await deleteAdminAsset(uploadedAssetId);
+        } catch {
+          // Keep the original import error.
+        }
+      }
+      setImportError(toErrorMessage(error, 'Could not import the WhatsApp export.'));
+    } finally {
+      setIsImporting(false);
+    }
+  }
 
   const selected = list.conversations.find((row) => row.id === selectedId) ?? null;
 
   return (
     <div className='space-y-4'>
+      <AdminEditorCard
+        title='Import WhatsApp export'
+        description='Cloud API cannot pull old WhatsApp chats. Upload a Business App .txt or .zip export. Contacts are created when missing; no new sales leads are opened.'
+        actions={
+          <Button
+            type='submit'
+            form='whatsapp-export-import'
+            disabled={isImporting || !exportFile}
+          >
+            {isImporting ? 'Importing…' : 'Import export'}
+          </Button>
+        }
+      >
+        {importError ? (
+          <StatusBanner variant='error' title='WhatsApp export'>
+            {importError}
+          </StatusBanner>
+        ) : null}
+        <InboxImportStatus job={importJob} />
+        <form
+          id='whatsapp-export-import'
+          className='space-y-3'
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleImportExport();
+          }}
+        >
+          <div>
+            <Label htmlFor='whatsapp-export-file'>Chat export (.txt or .zip, max 15MB)</Label>
+            <FileUploadButton
+              id='whatsapp-export-file'
+              accept='.txt,.zip,text/plain,application/zip'
+              disabled={isImporting}
+              selectedFileName={exportFile?.name ?? null}
+              emptyLabel='No file selected'
+              buttonLabel='Choose export'
+              onChange={(event) => {
+                setExportFile(event.target.files?.[0] ?? null);
+              }}
+            />
+          </div>
+          <label className='flex flex-col gap-1 text-sm text-slate-700'>
+            Counterparty WhatsApp number (optional)
+            <Input
+              value={counterpartyWaId}
+              onChange={(event) => setCounterpartyWaId(event.target.value)}
+              placeholder='85291234567'
+              disabled={isImporting}
+            />
+          </label>
+          <label className='flex flex-col gap-1 text-sm text-slate-700'>
+            Business display names (optional, comma-separated)
+            <Input
+              value={businessNames}
+              onChange={(event) => setBusinessNames(event.target.value)}
+              placeholder='Names that are outbound in the export'
+              disabled={isImporting}
+            />
+          </label>
+        </form>
+      </AdminEditorCard>
       {selected ? (
         <AdminEditorCard
           title={

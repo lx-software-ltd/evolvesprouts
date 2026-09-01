@@ -18,7 +18,7 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-const { listState, mockListMessages } = vi.hoisted(() => {
+const { listState, mockListMessages, inboxImportApi } = vi.hoisted(() => {
   const listState = {
     conversations: [
       {
@@ -50,6 +50,11 @@ const { listState, mockListMessages } = vi.hoisted(() => {
   return {
     listState,
     mockListMessages: vi.fn(),
+    inboxImportApi: {
+      listInboxImportJobs: vi.fn(async () => []),
+      createMetaImportJob: vi.fn(),
+      formatInboxImportCounters: vi.fn(() => ''),
+    },
   };
 });
 
@@ -64,6 +69,8 @@ vi.mock('@/lib/meta-api', async () => {
     listMetaMessages: (...args: unknown[]) => mockListMessages(...args),
   };
 });
+
+vi.mock('@/lib/inbox-import-api', () => inboxImportApi);
 
 import { MetaConversationsView } from '@/components/admin/sales/meta-conversations-view';
 
@@ -86,6 +93,7 @@ describe('MetaConversationsView', () => {
     render(<MetaConversationsView channel='instagram' />);
 
     expect(screen.getByText('Instagram conversations')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Import recent history' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Jane Doe' })).toHaveAttribute(
       'href',
       '/contacts?contact=contact-1'

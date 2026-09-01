@@ -44,7 +44,13 @@ def ingest_webhook_payload(
     payload: Mapping[str, Any],
 ) -> dict[str, int]:
     """Persist messages from one webhook delivery; returns ingest counters."""
-    counters = {"stored": 0, "duplicates": 0, "skipped": 0, "leads_created": 0}
+    counters = {
+        "stored": 0,
+        "duplicates": 0,
+        "skipped": 0,
+        "leads_created": 0,
+        "contacts_created": 0,
+    }
     for entry in _as_list(payload.get("entry")):
         for change in _as_list(entry.get("changes")):
             field = change.get("field")
@@ -55,6 +61,8 @@ def ingest_webhook_payload(
                 _ingest_message_change(session, value, counters)
             elif field in _ECHO_CHANGE_FIELDS:
                 _ingest_echo_change(session, value, counters)
+            elif field == "history":
+                _ingest_history_change(session, value, counters)
     return counters
 
 
@@ -69,7 +77,7 @@ def _ingest_message_change(
         if wa_id is None:
             counters["skipped"] += 1
             continue
-        _store_message(
+        store_whatsapp_message(
             session,
             wa_id=wa_id,
             profile_name=profile_names.get(wa_id),
@@ -90,7 +98,7 @@ def _ingest_echo_change(
         if wa_id is None:
             counters["skipped"] += 1
             continue
-        _store_message(
+        store_whatsapp_message(
             session,
             wa_id=wa_id,
             profile_name=None,
@@ -100,7 +108,40 @@ def _ingest_echo_change(
         )
 
 
-def _store_message(
+def _ingest_history_change(
+    session: Session,
+    value: Mapping[str, Any],
+    counters: dict[str, int],
+) -> None:
+    """Persist one-time Cloud API coexistence history chunks (no new leads)."""
+    for chunk in _as_list(value.get("history")):
+        for thread in _as_list(chunk.get("threads")):
+            wa_id = _normalized_id(thread.get("id"), max_length=_MAX_WA_ID_LENGTH)
+            if wa_id is None:
+                counters["skipped"] += 1
+                continue
+            for message in _as_list(thread.get("messages")):
+                sender = _normalized_id(
+                    message.get("from"), max_length=_MAX_WA_ID_LENGTH
+                )
+                direction = (
+                    WhatsAppMessageDirection.INBOUND
+                    if sender == wa_id
+                    else WhatsAppMessageDirection.OUTBOUND
+                )
+                store_whatsapp_message(
+                    session,
+                    wa_id=wa_id,
+                    profile_name=None,
+                    message=message,
+                    direction=direction,
+                    counters=counters,
+                    create_leads=False,
+                    source_detail="whatsapp_history",
+                )
+
+
+def store_whatsapp_message(
     session: Session,
     *,
     wa_id: str,
@@ -108,6 +149,10 @@ def _store_message(
     message: Mapping[str, Any],
     direction: WhatsAppMessageDirection,
     counters: dict[str, int],
+    create_leads: bool = True,
+    create_contacts: bool = True,
+    source_detail: str = _SOURCE_DETAIL,
+    match_existing_content: bool = False,
 ) -> None:
     wa_message_id = _normalized_id(
         message.get("id"), max_length=_MAX_WA_MESSAGE_ID_LENGTH
@@ -130,13 +175,23 @@ def _store_message(
     elif profile_name and conversation.profile_name != profile_name:
         conversation.profile_name = profile_name
 
+    body = _extract_body(message)
+    if match_existing_content and repository.find_message_by_content(
+        conversation_id=conversation.id,
+        sent_at=sent_at,
+        direction=direction,
+        body=body,
+    ):
+        counters["duplicates"] += 1
+        return
+
     session.add(
         WhatsAppMessage(
             conversation_id=conversation.id,
             wa_message_id=wa_message_id,
             direction=direction,
             message_type=_message_type(message),
-            body=_extract_body(message),
+            body=body,
             sent_at=sent_at,
         )
     )
@@ -155,8 +210,14 @@ def _store_message(
         conversation.last_message_at = sent_at
     conversation.updated_at = now
 
-    if direction is WhatsAppMessageDirection.INBOUND:
-        _ensure_contact_and_lead(session, conversation=conversation, counters=counters)
+    if direction is WhatsAppMessageDirection.INBOUND and create_contacts:
+        _ensure_contact_and_lead(
+            session,
+            conversation=conversation,
+            counters=counters,
+            create_leads=create_leads,
+            source_detail=source_detail,
+        )
 
     session.flush()
     counters["stored"] += 1
@@ -167,16 +228,22 @@ def _ensure_contact_and_lead(
     *,
     conversation: WhatsAppConversation,
     counters: dict[str, int],
+    create_leads: bool = True,
+    source_detail: str = _SOURCE_DETAIL,
 ) -> None:
     if conversation.contact_id is None:
-        contact = _find_or_create_contact(session, conversation=conversation)
+        contact, created = _find_or_create_contact(
+            session, conversation=conversation, source_detail=source_detail
+        )
         conversation.contact_id = contact.id
+        if created:
+            counters["contacts_created"] = counters.get("contacts_created", 0) + 1
 
     contact_id = conversation.contact_id
     if contact_id is None:
         return
 
-    if conversation.lead_id is not None:
+    if conversation.lead_id is not None or not create_leads:
         return
 
     lead_repository = SalesLeadRepository(session)
@@ -212,7 +279,8 @@ def _find_or_create_contact(
     session: Session,
     *,
     conversation: WhatsAppConversation,
-) -> Contact:
+    source_detail: str = _SOURCE_DETAIL,
+) -> tuple[Contact, bool]:
     phone_region, phone_national = _parse_wa_phone(conversation.wa_id)
     existing: Contact | None = None
     if phone_region and phone_national:
@@ -227,19 +295,19 @@ def _find_or_create_contact(
             .limit(1)
         ).scalar_one_or_none()
     if existing is not None:
-        return existing
+        return existing, False
 
     contact = Contact(
         first_name=_contact_first_name(conversation),
         contact_type=ContactType.OTHER,
         source=ContactSource.WHATSAPP,
-        source_detail=_SOURCE_DETAIL,
+        source_detail=source_detail,
         phone_region=phone_region,
         phone_national_number=phone_national,
     )
     session.add(contact)
     session.flush()
-    return contact
+    return contact, True
 
 
 def _contact_first_name(conversation: WhatsAppConversation) -> str:

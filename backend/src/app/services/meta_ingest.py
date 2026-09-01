@@ -54,7 +54,13 @@ def ingest_webhook_payload(
     payload: Mapping[str, Any],
 ) -> dict[str, int]:
     """Persist Messenger/Instagram messages from one delivery; returns counters."""
-    counters = {"stored": 0, "duplicates": 0, "skipped": 0, "leads_created": 0}
+    counters = {
+        "stored": 0,
+        "duplicates": 0,
+        "skipped": 0,
+        "leads_created": 0,
+        "contacts_created": 0,
+    }
     object_name = payload.get("object")
     if object_name == "whatsapp_business_account":
         return counters
@@ -110,7 +116,7 @@ def _ingest_messaging_event(
     if resolved_page_id is None:
         resolved_page_id = sender_id if is_echo else recipient_id
 
-    _store_message(
+    store_meta_message(
         session,
         channel=channel,
         platform_user_id=platform_user_id,
@@ -125,7 +131,7 @@ def _ingest_messaging_event(
     )
 
 
-def _store_message(
+def store_meta_message(
     session: Session,
     *,
     channel: MetaChannel,
@@ -136,6 +142,9 @@ def _store_message(
     timestamp: Any,
     direction: MetaMessageDirection,
     counters: dict[str, int],
+    create_leads: bool = True,
+    create_contacts: bool = True,
+    source_detail: str = _SOURCE_DETAIL,
 ) -> None:
     platform_message_id = _normalized_id(
         message.get("mid"), max_length=_MAX_PLATFORM_MESSAGE_ID_LENGTH
@@ -194,8 +203,14 @@ def _store_message(
         conversation.last_message_at = sent_at
     conversation.updated_at = now
 
-    if direction is MetaMessageDirection.INBOUND:
-        _ensure_contact_and_lead(session, conversation=conversation, counters=counters)
+    if direction is MetaMessageDirection.INBOUND and create_contacts:
+        _ensure_contact_and_lead(
+            session,
+            conversation=conversation,
+            counters=counters,
+            create_leads=create_leads,
+            source_detail=source_detail,
+        )
 
     session.flush()
     counters["stored"] += 1
@@ -206,16 +221,21 @@ def _ensure_contact_and_lead(
     *,
     conversation: MetaConversation,
     counters: dict[str, int],
+    create_leads: bool = True,
+    source_detail: str = _SOURCE_DETAIL,
 ) -> None:
     if conversation.contact_id is None:
-        contact = _create_contact(session, conversation=conversation)
+        contact = _create_contact(
+            session, conversation=conversation, source_detail=source_detail
+        )
         conversation.contact_id = contact.id
+        counters["contacts_created"] = counters.get("contacts_created", 0) + 1
 
     contact_id = conversation.contact_id
     if contact_id is None:
         return
 
-    if conversation.lead_id is not None:
+    if conversation.lead_id is not None or not create_leads:
         return
 
     lead_repository = SalesLeadRepository(session)
@@ -255,12 +275,13 @@ def _create_contact(
     session: Session,
     *,
     conversation: MetaConversation,
+    source_detail: str = _SOURCE_DETAIL,
 ) -> Contact:
     contact = Contact(
         first_name=_contact_first_name(conversation),
         contact_type=ContactType.OTHER,
         source=_CONTACT_SOURCES[conversation.channel],
-        source_detail=_SOURCE_DETAIL,
+        source_detail=source_detail,
     )
     session.add(contact)
     session.flush()
@@ -331,6 +352,31 @@ def _extract_body(message: Mapping[str, Any]) -> str | None:
 
 
 def _parse_timestamp(raw_value: Any) -> datetime | None:
+    if isinstance(raw_value, datetime):
+        if raw_value.tzinfo is None:
+            return raw_value.replace(tzinfo=timezone.utc)
+        return raw_value.astimezone(timezone.utc)
+    if isinstance(raw_value, str):
+        stripped = raw_value.strip()
+        if not stripped:
+            return None
+        if stripped.isdigit():
+            raw_value = stripped
+        else:
+            normalized = stripped.replace("Z", "+00:00")
+            if (
+                len(normalized) >= 5
+                and normalized[-5] in "+-"
+                and normalized[-3] != ":"
+            ):
+                normalized = f"{normalized[:-2]}:{normalized[-2:]}"
+            try:
+                parsed = datetime.fromisoformat(normalized)
+            except ValueError:
+                return None
+            if parsed.tzinfo is None:
+                return parsed.replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc)
     try:
         value = int(str(raw_value).strip())
     except (TypeError, ValueError):
