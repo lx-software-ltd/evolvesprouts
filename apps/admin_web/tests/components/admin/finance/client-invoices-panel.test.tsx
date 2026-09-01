@@ -570,6 +570,8 @@ describe('ClientInvoicesPanel', () => {
 
     await waitFor(() => {
       expect(billingMocks.issueInvoice).toHaveBeenCalledWith(invId);
+      expect(billingMocks.listCustomerPayments.mock.calls.length).toBeGreaterThan(1);
+      expect(billingMocks.listCustomerInvoices.mock.calls.length).toBeGreaterThan(1);
     });
   });
 

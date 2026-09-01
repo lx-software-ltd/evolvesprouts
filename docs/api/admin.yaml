@@ -87,7 +87,7 @@ info:
     - `GET|POST /v1/admin/billing/invoices` (GET optional `status`, `currency`, `contact_id`, `cursor`, `limit`; POST is either enrollment-based draft (`draftKind: enrollment_merge`, `enrollmentIds`, `currency` optional when derivable) or customized draft (`draftKind: customized_manual`, `billTo`, `currency`, `lines`); see request schemas)
     - `GET|DELETE /v1/admin/billing/invoices/{id}` (`DELETE` removes **draft** invoices only)
     - `GET /v1/admin/billing/invoices/{id}/pdf`
-    - `POST /v1/admin/billing/invoices/{id}/issue`
+    - `POST /v1/admin/billing/invoices/{id}/issue` (creates a pending inbound customer payment for positive totals; `enrollmentId` is set only when the invoice has exactly one enrollment line)
     - `POST /v1/admin/billing/invoices/{id}/void`
     - `POST /v1/admin/billing/invoices/{id}/email`
     - `POST /v1/admin/billing/dashboard/resolve-bill-to-primary-contacts` (bulk lookup of
@@ -4274,6 +4274,14 @@ paths:
   /v1/admin/billing/invoices/{id}/issue:
     post:
       summary: Issue invoice (assign number, PDF hash)
+      description: >
+        Issues a draft invoice (number, snapshot dates, PDF). For positive-total
+        invoices, also creates one pending inbound `customer_payments` row with
+        amount and currency copied from the invoice and method `fps`.
+        `enrollment_id` is set only when the invoice has exactly one enrollment
+        line; customized and multi-enrollment invoices leave it unset.
+        Zero-total invoices skip payment creation (`paymentId` is null).
+        The payment is not allocated at issue time.
       security:
         - AdminBearerAuth: []
       parameters:
@@ -4299,6 +4307,13 @@ paths:
                   issuedPdfSha256:
                     type: string
                     nullable: true
+                  paymentId:
+                    type: string
+                    format: uuid
+                    nullable: true
+                    description: >
+                      Pending inbound customer payment created at issue.
+                      Null for zero-total invoices.
         "400":
           $ref: "#/components/responses/BadRequest"
         "403":

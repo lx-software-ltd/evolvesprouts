@@ -772,6 +772,14 @@ Migration `0055_customer_billing_ar` introduces:
 `amountAllocated`, `balanceDue`, `paidAt`, and `isPaid` (derived; lifecycle `status` stays draft/issued/void).
 `GET /v1/admin/billing/invoices/{id}` returns the invoice with line items (for example allocation line UUIDs).
 
+Issuing a **positive-total** invoice (`POST /v1/admin/billing/invoices/{id}/issue`) also
+inserts one pending inbound `customer_payments` row with the invoice `total` and `currency`,
+method `fps`, and `enrollment_id` only when the invoice has exactly one enrollment line
+(customized and multi-enrollment invoices leave it unset). That stub is **not** allocated
+at issue time, so settlement (`amount_allocated` / `paid_at`) stays unchanged until staff
+allocate later. Zero-total issues do not create a payment. Voiding the invoice leaves the
+pending stub in place (eligible for orphan delete while still pending and unallocated).
+
 For offline inbound payments, the `customer_payments` row may be **pending** until staff
 confirm the payment via `POST /v1/admin/billing/payments/{id}/confirm` or an equivalent succeeded path;
 the receipt row (and PDF that lists applied invoice numbers) follows server rules after confirmation.

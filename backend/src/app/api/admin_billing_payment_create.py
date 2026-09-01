@@ -19,6 +19,7 @@ from app.api.admin_billing_payments import _serialize_payment_for_response
 from app.db.audit import AuditService
 from app.db.engine import get_engine
 from app.db.models.contact import Contact
+from app.db.models.customer_invoice import CustomerInvoice
 from app.db.models.customer_payment import CustomerPayment
 from app.db.models.customer_receipt import CustomerReceipt
 from app.db.models.enrollment import Enrollment
@@ -29,6 +30,9 @@ from app.db.models.enums import (
     EnrollmentStatus,
 )
 from app.exceptions import ConflictError, NotFoundError, ValidationError
+from app.services.billing_enrollment_confirmation import (
+    distinct_enrollment_ids_on_invoice,
+)
 from app.services.customer_billing import (
     create_receipt_for_succeeded_inbound_payment,
     finalize_receipt_pdf_upload,
@@ -36,7 +40,66 @@ from app.services.customer_billing import (
 from app.utils import json_response
 from app.utils.logging import get_logger
 
+ISSUE_PENDING_PAYMENT_METHOD = "fps"
+
 logger = get_logger(__name__)
+
+
+def create_pending_payment_for_issued_invoice(
+    session: Session,
+    inv: CustomerInvoice,
+    *,
+    user_sub: str,
+    request_id: str | None,
+) -> CustomerPayment | None:
+    """Create a pending inbound payment stub after invoice issue.
+
+    Skips zero-total invoices. Does not allocate to the invoice. Sets
+    ``enrollment_id`` only when the invoice has exactly one enrollment line;
+    customized and multi-enrollment invoices leave it unset.
+    """
+    if Decimal(str(inv.total)) <= Decimal("0"):
+        return None
+
+    enrollment_ids = distinct_enrollment_ids_on_invoice(session, inv.id)
+    enrollment_id = enrollment_ids[0] if len(enrollment_ids) == 1 else None
+
+    contact_id: UUID | None = None
+    if inv.bill_to_kind == BillingBillToKind.CONTACT:
+        contact_id = inv.bill_to_contact_id
+
+    currency = str(inv.currency or "").strip().upper()[:3]
+    if len(currency) != 3:
+        raise ValidationError("Invoice currency is required", field="currency")
+
+    pay = CustomerPayment(
+        direction=BillingPaymentDirection.INBOUND,
+        status=BillingPaymentStatus.PENDING,
+        method=ISSUE_PENDING_PAYMENT_METHOD,
+        amount=Decimal(str(inv.total)),
+        currency=currency,
+        enrollment_id=enrollment_id,
+        contact_id=contact_id,
+    )
+    session.add(pay)
+    session.flush()
+
+    audit = AuditService(session, user_id=user_sub, request_id=request_id)
+    audit.log_custom(
+        table_name="customer_payments",
+        record_id=pay.id,
+        action="INVOICE_ISSUE_PAYMENT_CREATED",
+        new_values={
+            "invoice_id": str(inv.id),
+            "enrollment_id": str(enrollment_id) if enrollment_id else None,
+            "amount": str(pay.amount),
+            "currency": currency,
+            "status": BillingPaymentStatus.PENDING.value,
+            "method": ISSUE_PENDING_PAYMENT_METHOD,
+            "contact_id": str(contact_id) if contact_id else None,
+        },
+    )
+    return pay
 
 
 def normalize_manual_payment_method(raw: str) -> str:
