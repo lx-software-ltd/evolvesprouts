@@ -9,8 +9,6 @@ import { useEffect, useRef } from 'react';
  */
 export function useAutoSelectOnce(key: string, isReady: boolean, select: () => void): void {
   const appliedKeyRef = useRef('');
-  const selectRef = useRef(select);
-  selectRef.current = select;
 
   useEffect(() => {
     if (!key) {
@@ -21,6 +19,6 @@ export function useAutoSelectOnce(key: string, isReady: boolean, select: () => v
       return;
     }
     appliedKeyRef.current = key;
-    selectRef.current();
-  }, [key, isReady]);
+    select();
+  }, [key, isReady, select]);
 }
