@@ -7,9 +7,7 @@ import {
   InvoiceIcon,
   ServiceInstanceIcon,
 } from '@/components/icons/action-icons';
-
-const RELATED_LINK_CLASS =
-  'inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400';
+import { ADMIN_OPS_ICON_LINK_CLASS } from '@/components/ui/admin-data-table';
 
 export interface RelatedRecordOpsLinksProps {
   salesHref: string;
@@ -33,7 +31,7 @@ export function RelatedRecordOpsLinks({
       {hasSalesConversation ? (
         <Link
           href={salesHref}
-          className={RELATED_LINK_CLASS}
+          className={ADMIN_OPS_ICON_LINK_CLASS}
           onClick={(event) => event.stopPropagation()}
           aria-label='Sales conversations'
           title='Sales conversations'
@@ -44,7 +42,7 @@ export function RelatedRecordOpsLinks({
       {hasServiceInstance ? (
         <Link
           href={instancesHref}
-          className={RELATED_LINK_CLASS}
+          className={ADMIN_OPS_ICON_LINK_CLASS}
           onClick={(event) => event.stopPropagation()}
           aria-label='Service instances'
           title='Service instances'
@@ -55,7 +53,7 @@ export function RelatedRecordOpsLinks({
       {hasInvoice ? (
         <Link
           href={invoicesHref}
-          className={RELATED_LINK_CLASS}
+          className={ADMIN_OPS_ICON_LINK_CLASS}
           onClick={(event) => event.stopPropagation()}
           aria-label='Invoices'
           title='Invoices'

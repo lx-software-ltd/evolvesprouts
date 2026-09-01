@@ -6,7 +6,7 @@ import { memo } from 'react';
 import type { LeadSummary } from '@/types/leads';
 
 import { ContactIcon } from '@/components/icons/action-icons';
-import { AdminDataTableCell } from '@/components/ui/admin-data-table';
+import { ADMIN_OPS_ICON_LINK_CLASS, AdminDataTableCell } from '@/components/ui/admin-data-table';
 import { formatDate, formatEnumLabel } from '@/lib/format';
 import { adminContactDeepLink } from '@/lib/inbox-conversation-name';
 
@@ -65,11 +65,11 @@ export const LeadsTableRow = memo(function LeadsTableRow({
         {contactId ? (
           <Link
             href={adminContactDeepLink(contactId)}
-            className='inline-flex h-8 min-w-8 items-center justify-center rounded-md text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400'
+            className={ADMIN_OPS_ICON_LINK_CLASS}
             aria-label='Open contact'
             title='Open contact'
           >
-            <ContactIcon className='h-4 w-4' aria-hidden />
+            <ContactIcon className='h-4 w-4 shrink-0' aria-hidden />
           </Link>
         ) : null}
       </AdminDataTableCell>
