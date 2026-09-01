@@ -3,27 +3,28 @@
 import { useState } from 'react';
 
 /**
- * When a Contacts Operations deep link includes `?contact=`, open the first
- * (most recently active) conversation once the filtered list loads.
- * Closing the chat does not re-open it for the same contact.
+ * When an Operations deep link includes `?contact=`, `?family=`, or
+ * `?organization=`, open the first (most recently active) conversation once
+ * the filtered list loads. Closing the chat does not re-open it for the same
+ * party filter.
  */
 export function useAutoSelectContactConversation(
-  contactId: string,
+  partyFilterId: string,
   firstConversationId: string | null,
   isLoading: boolean
 ): [string | null, (next: string | null) => void] {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [openedForContactId, setOpenedForContactId] = useState('');
 
-  if (!contactId && openedForContactId !== '') {
+  if (!partyFilterId && openedForContactId !== '') {
     setOpenedForContactId('');
   } else if (
-    contactId &&
+    partyFilterId &&
     !isLoading &&
     firstConversationId &&
-    openedForContactId !== contactId
+    openedForContactId !== partyFilterId
   ) {
-    setOpenedForContactId(contactId);
+    setOpenedForContactId(partyFilterId);
     setSelectedId(firstConversationId);
   }
 

@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import false, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.db.models.enums import MetaChannel
@@ -17,6 +18,22 @@ from app.db.repositories.base import BaseRepository
 def _escape_like_pattern(pattern: str) -> str:
     """Escape LIKE wildcards so user input is matched literally."""
     return pattern.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def _apply_conversation_contact_scope(
+    statement: Any,
+    contact_column: Any,
+    *,
+    contact_id: UUID | None,
+    contact_ids: Collection[UUID] | None,
+) -> Any:
+    if contact_ids is not None:
+        if not contact_ids:
+            return statement.where(false())
+        return statement.where(contact_column.in_(contact_ids))
+    if contact_id is not None:
+        return statement.where(contact_column == contact_id)
+    return statement
 
 
 class MetaRepository(BaseRepository[MetaConversation]):
@@ -66,13 +83,18 @@ class MetaRepository(BaseRepository[MetaConversation]):
         channel: MetaChannel | None = None,
         search_platform_user_id: bool = True,
         contact_id: UUID | None = None,
+        contact_ids: Collection[UUID] | None = None,
     ) -> list[MetaConversation]:
         """List conversations, most recent activity first."""
         statement = select(MetaConversation).options(
             selectinload(MetaConversation.contact)
         )
-        if contact_id is not None:
-            statement = statement.where(MetaConversation.contact_id == contact_id)
+        statement = _apply_conversation_contact_scope(
+            statement,
+            MetaConversation.contact_id,
+            contact_id=contact_id,
+            contact_ids=contact_ids,
+        )
         if channel is not None:
             statement = statement.where(MetaConversation.channel == channel)
         statement = self._apply_search(
@@ -99,11 +121,16 @@ class MetaRepository(BaseRepository[MetaConversation]):
         channel: MetaChannel | None = None,
         search_platform_user_id: bool = True,
         contact_id: UUID | None = None,
+        contact_ids: Collection[UUID] | None = None,
     ) -> int:
         """Count conversations matching the optional filters."""
         statement = select(func.count(MetaConversation.id))
-        if contact_id is not None:
-            statement = statement.where(MetaConversation.contact_id == contact_id)
+        statement = _apply_conversation_contact_scope(
+            statement,
+            MetaConversation.contact_id,
+            contact_id=contact_id,
+            contact_ids=contact_ids,
+        )
         if channel is not None:
             statement = statement.where(MetaConversation.channel == channel)
         statement = self._apply_search(

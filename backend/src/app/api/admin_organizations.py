@@ -24,6 +24,10 @@ from app.api.admin_entities_helpers import (
     replace_organization_tags,
 )
 from app.api.admin_entities_serializers import serialize_organization_summary
+from app.api.admin_party_related import (
+    organization_related_serializer_kwargs,
+    related_flags_for_organizations,
+)
 from app.api.admin_request import (
     encode_cursor,
     parse_body,
@@ -280,10 +284,18 @@ def _list_organizations(event: Mapping[str, Any]) -> dict[str, Any]:
             active=active,
             relationship_types=relationship_types,
         )
+        flags_by_id = related_flags_for_organizations(
+            session, [r.id for r in page_rows]
+        )
         return json_response(
             200,
             {
-                "items": [serialize_organization_summary(r) for r in page_rows],
+                "items": [
+                    serialize_organization_summary(
+                        r, **flags_by_id[r.id].as_serializer_kwargs()
+                    )
+                    for r in page_rows
+                ],
                 "next_cursor": next_cursor,
                 "total_count": total_count,
             },
@@ -301,7 +313,11 @@ def _get_organization(
             raise NotFoundError("Organization", str(organization_id))
         return json_response(
             200,
-            {"organization": serialize_organization_summary(org)},
+            {
+                "organization": serialize_organization_summary(
+                    org, **organization_related_serializer_kwargs(session, org.id)
+                )
+            },
             event=event,
         )
 
@@ -380,7 +396,11 @@ def _create_organization(event: Mapping[str, Any], *, actor_sub: str) -> dict[st
             raise DatabaseError("Failed to load organization after create")
         return json_response(
             201,
-            {"organization": serialize_organization_summary(loaded)},
+            {
+                "organization": serialize_organization_summary(
+                    loaded, **organization_related_serializer_kwargs(session, loaded.id)
+                )
+            },
             event=event,
         )
 
@@ -468,7 +488,11 @@ def _update_organization(
             raise DatabaseError("Failed to load organization after update")
         return json_response(
             200,
-            {"organization": serialize_organization_summary(loaded)},
+            {
+                "organization": serialize_organization_summary(
+                    loaded, **organization_related_serializer_kwargs(session, loaded.id)
+                )
+            },
             event=event,
         )
 
@@ -524,7 +548,11 @@ def _add_organization_member(
             raise DatabaseError("Failed to load organization after adding member")
         return json_response(
             201,
-            {"organization": serialize_organization_summary(loaded)},
+            {
+                "organization": serialize_organization_summary(
+                    loaded, **organization_related_serializer_kwargs(session, loaded.id)
+                )
+            },
             event=event,
         )
 
@@ -577,7 +605,11 @@ def _update_organization_member(
             raise DatabaseError("Failed to load organization after updating member")
         return json_response(
             200,
-            {"organization": serialize_organization_summary(loaded)},
+            {
+                "organization": serialize_organization_summary(
+                    loaded, **organization_related_serializer_kwargs(session, loaded.id)
+                )
+            },
             event=event,
         )
 
@@ -605,6 +637,10 @@ def _remove_organization_member(
             raise DatabaseError("Failed to load organization after removing member")
         return json_response(
             200,
-            {"organization": serialize_organization_summary(loaded)},
+            {
+                "organization": serialize_organization_summary(
+                    loaded, **organization_related_serializer_kwargs(session, loaded.id)
+                )
+            },
             event=event,
         )

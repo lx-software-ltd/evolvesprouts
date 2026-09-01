@@ -243,4 +243,18 @@ describe('listCustomerInvoices', () => {
       }),
     );
   });
+
+  it('passes family_id query param through to the admin API', async () => {
+    mockAdminApiRequest.mockResolvedValueOnce({ items: [], next_cursor: null });
+
+    await listCustomerInvoices({ familyId: '22222222-2222-2222-2222-222222222222' });
+
+    expect(mockAdminApiRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        endpointPath:
+          '/v1/admin/billing/invoices?family_id=22222222-2222-2222-2222-222222222222',
+        method: 'GET',
+      }),
+    );
+  });
 });

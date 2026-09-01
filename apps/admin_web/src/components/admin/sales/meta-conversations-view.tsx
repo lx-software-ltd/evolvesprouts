@@ -6,14 +6,11 @@ import { ConversationNameCell } from './conversation-name-cell';
 import { InboxImportStatus } from './inbox-import-status';
 
 import { useAutoSelectContactConversation } from '@/hooks/use-auto-select-contact-conversation';
-import { useLocationSearchParam } from '@/hooks/use-query-tab-state';
 import { useMetaConversations } from '@/hooks/use-meta-conversations';
+import { useRelatedPartySearchParams } from '@/hooks/use-related-party-search-params';
 import { useMetaMessages } from '@/hooks/use-meta-messages';
 import { formatDate } from '@/lib/format';
-import {
-  ADMIN_CONTACT_QUERY_PARAM,
-  formatInboxConversationName,
-} from '@/lib/inbox-conversation-name';
+import { formatInboxConversationName } from '@/lib/inbox-conversation-name';
 import {
   createMetaImportJob,
   listInboxImportJobs,
@@ -65,10 +62,10 @@ const CHANNEL_COPY: Record<
 
 export function MetaConversationsView({ channel }: { channel: MetaChannel }) {
   const copy = CHANNEL_COPY[channel];
-  const contactId = useLocationSearchParam(ADMIN_CONTACT_QUERY_PARAM);
-  const list = useMetaConversations(channel, contactId);
+  const party = useRelatedPartySearchParams();
+  const list = useMetaConversations(channel, party);
   const [selectedId, setSelectedId] = useAutoSelectContactConversation(
-    contactId,
+    party.partyFilterKey,
     list.conversations[0]?.id ?? null,
     list.isLoading
   );

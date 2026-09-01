@@ -1,3 +1,5 @@
+import { appendRelatedPartyQuery, type RelatedPartyQuery } from '@/lib/contact-related-links';
+
 import { adminApiRequest } from './api-admin-client';
 import { asNumber, asNullableString, unwrapPayload } from './api-payload';
 import { isRecord } from './type-guards';
@@ -35,12 +37,11 @@ export type MetaMessageSummary = {
   sentAt: string;
 };
 
-export interface MetaConversationListParams {
+export interface MetaConversationListParams extends RelatedPartyQuery {
   cursor?: string | null;
   limit?: number;
   q?: string;
   channel?: MetaChannel;
-  contactId?: string;
 }
 
 function parseChannel(value: unknown): MetaChannel {
@@ -100,9 +101,7 @@ export async function listMetaConversations(
   if (params.channel) {
     query.set('channel', params.channel);
   }
-  if (params.contactId?.trim()) {
-    query.set('contact_id', params.contactId.trim());
-  }
+  appendRelatedPartyQuery(query, params);
   const suffix = query.toString() ? `?${query.toString()}` : '';
   const payload = unwrapPayload(
     await adminApiRequest<ApiConversationList>({

@@ -1,3 +1,5 @@
+import { appendRelatedPartyQuery, type RelatedPartyQuery } from '@/lib/contact-related-links';
+
 import { adminApiRequest } from './api-admin-client';
 import { asNumber, asNullableString, unwrapPayload } from './api-payload';
 import { isRecord } from './type-guards';
@@ -31,11 +33,10 @@ export type WhatsAppMessageSummary = {
   sentAt: string;
 };
 
-export interface WhatsAppConversationListParams {
+export interface WhatsAppConversationListParams extends RelatedPartyQuery {
   cursor?: string | null;
   limit?: number;
   q?: string;
-  contactId?: string;
 }
 
 function parseConversation(value: unknown): WhatsAppConversationSummary {
@@ -86,9 +87,7 @@ export async function listWhatsAppConversations(
   if (params.q?.trim()) {
     query.set('q', params.q.trim());
   }
-  if (params.contactId?.trim()) {
-    query.set('contact_id', params.contactId.trim());
-  }
+  appendRelatedPartyQuery(query, params);
   const suffix = query.toString() ? `?${query.toString()}` : '';
   const payload = unwrapPayload(
     await adminApiRequest<ApiConversationList>({

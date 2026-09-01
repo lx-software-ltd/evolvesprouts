@@ -124,9 +124,9 @@ def _is_newer(
     return candidate_at > incumbent_at
 
 
-def _latest_sales_inbox_channel(
+def _latest_sales_inbox_state(
     session: Session, contact_ids: list[UUID]
-) -> dict[UUID, str]:
+) -> dict[UUID, tuple[str, datetime | None]]:
     latest_at: dict[UUID, datetime | None] = {}
     latest_channel: dict[UUID, str] = {}
 
@@ -161,7 +161,47 @@ def _latest_sales_inbox_channel(
             latest_at[contact_id] = last_message_at
             latest_channel[contact_id] = inbox
 
-    return latest_channel
+    return {
+        contact_id: (latest_channel[contact_id], latest_at.get(contact_id))
+        for contact_id in latest_channel
+    }
+
+
+def _latest_sales_inbox_channel(
+    session: Session, contact_ids: list[UUID]
+) -> dict[UUID, str]:
+    return {
+        contact_id: channel
+        for contact_id, (channel, _at) in _latest_sales_inbox_state(
+            session, contact_ids
+        ).items()
+    }
+
+
+def sales_inbox_state_for_contacts(
+    session: Session, contact_ids: list[UUID]
+) -> dict[UUID, tuple[str, datetime | None]]:
+    """Return the newest inbox channel and timestamp per contact."""
+    if not contact_ids:
+        return {}
+    return _latest_sales_inbox_state(session, contact_ids)
+
+
+def newest_sales_inbox_channel(
+    state: dict[UUID, tuple[str, datetime | None]], contact_ids: set[UUID]
+) -> str | None:
+    """Pick the newest inbox channel among the given contacts from a preloaded state."""
+    winner: str | None = None
+    winner_at: datetime | None = None
+    for contact_id in contact_ids:
+        row = state.get(contact_id)
+        if row is None:
+            continue
+        channel, last_at = row
+        if winner is None or _is_newer(last_at, winner_at):
+            winner = channel
+            winner_at = last_at
+    return winner
 
 
 def _membership_maps(

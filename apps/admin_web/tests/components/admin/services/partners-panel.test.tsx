@@ -129,6 +129,10 @@ describe('PartnersPanel', () => {
       active: true,
       created_at: '2020-01-01T00:00:00.000Z',
       updated_at: '2020-01-01T00:00:00.000Z',
+      has_sales_conversation: false,
+      sales_conversation_channel: null,
+      has_service_instance: false,
+      has_invoice: false,
     };
     const rows: components['schemas']['AdminOrganization'][] = [
       { id: 'b', name: 'Beta Co', ...baseRow },
@@ -168,6 +172,10 @@ describe('PartnersPanel', () => {
       active: true,
       created_at: '2020-01-01T00:00:00.000Z',
       updated_at: '2020-01-01T00:00:00.000Z',
+      has_sales_conversation: false,
+      sales_conversation_channel: null,
+      has_service_instance: false,
+      has_invoice: false,
     };
     const partners = buildPartnersHook({
       partners: [row],
@@ -217,6 +225,10 @@ describe('PartnersPanel', () => {
       active: true,
       created_at: '2020-01-01T00:00:00.000Z',
       updated_at: '2020-01-01T00:00:00.000Z',
+      has_sales_conversation: false,
+      sales_conversation_channel: null,
+      has_service_instance: false,
+      has_invoice: false,
     };
     const partners = buildPartnersHook({ partners: [row], updatePartner });
     const locations = [
@@ -295,6 +307,10 @@ describe('PartnersPanel', () => {
       active: true,
       created_at: '2020-01-01T00:00:00.000Z',
       updated_at: '2020-01-01T00:00:00.000Z',
+      has_sales_conversation: false,
+      sales_conversation_channel: null,
+      has_service_instance: false,
+      has_invoice: false,
     };
     const partners = buildPartnersHook({
       deletePartner,

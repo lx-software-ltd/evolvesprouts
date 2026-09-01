@@ -8,6 +8,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
+from app.api.admin_party_related import parse_related_party_ids
 from app.api.admin_request import parse_limit, query_param
 from app.api.admin_validators import (
     MAX_DESCRIPTION_LENGTH,
@@ -166,6 +167,7 @@ def parse_global_instance_list_filters(event: Mapping[str, Any]) -> dict[str, An
     logger.debug("Parsing global service instance list filters")
     limit = parse_limit(event)
     cursor_created_at, cursor_id = parse_created_cursor(query_param(event, "cursor"))
+    contact_id, family_id, organization_id = parse_related_party_ids(event)
     return {
         "limit": limit,
         "cursor_created_at": cursor_created_at,
@@ -183,9 +185,9 @@ def parse_global_instance_list_filters(event: Mapping[str, Any]) -> dict[str, An
             ServiceType,
             "service_type",
         ),
-        "contact_id": parse_optional_uuid(
-            query_param(event, "contact_id"), "contact_id"
-        ),
+        "contact_id": contact_id,
+        "family_id": family_id,
+        "organization_id": organization_id,
     }
 
 

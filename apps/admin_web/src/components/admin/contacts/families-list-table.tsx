@@ -2,8 +2,14 @@
 
 import { useCallback } from 'react';
 
+import { RelatedRecordOpsLinks } from '@/components/admin/contacts/related-record-ops-links';
 import { DeleteIcon } from '@/components/icons/action-icons';
 import { Button } from '@/components/ui/button';
+import {
+  adminPartyInvoicesDeepLink,
+  adminPartySalesConversationsDeepLink,
+  adminPartyServiceInstancesDeepLink,
+} from '@/lib/contact-related-links';
 import {
   AdminDataTable,
   AdminDataTableBody,
@@ -130,6 +136,18 @@ export function FamiliesListTable({
                 <AdminDataTableCell>{row.active ? 'Active' : 'Archived'}</AdminDataTableCell>
                 <AdminDataTableCell className='text-right'>
                   <div className='flex flex-wrap justify-end gap-2'>
+                    <RelatedRecordOpsLinks
+                      salesHref={adminPartySalesConversationsDeepLink(
+                        'family',
+                        row.id,
+                        row.sales_conversation_channel
+                      )}
+                      instancesHref={adminPartyServiceInstancesDeepLink('family', row.id)}
+                      invoicesHref={adminPartyInvoicesDeepLink('family', row.id)}
+                      hasSalesConversation={row.has_sales_conversation}
+                      hasServiceInstance={row.has_service_instance}
+                      hasInvoice={row.has_invoice}
+                    />
                     <Button
                       type='button'
                       size='sm'

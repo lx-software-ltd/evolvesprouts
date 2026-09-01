@@ -761,6 +761,8 @@ function buildGlobalInstanceListQuery(params: {
   serviceId?: string | null;
   serviceType?: string | null;
   contactId?: string | null;
+  familyId?: string | null;
+  organizationId?: string | null;
 }) {
   const query = new URLSearchParams();
   if (params.cursor) query.set('cursor', params.cursor);
@@ -769,6 +771,8 @@ function buildGlobalInstanceListQuery(params: {
   if (params.serviceId?.trim()) query.set('service_id', params.serviceId.trim());
   if (params.serviceType?.trim()) query.set('service_type', params.serviceType.trim());
   if (params.contactId?.trim()) query.set('contact_id', params.contactId.trim());
+  if (params.familyId?.trim()) query.set('family_id', params.familyId.trim());
+  if (params.organizationId?.trim()) query.set('organization_id', params.organizationId.trim());
   const queryString = query.toString();
   return queryString ? `?${queryString}` : '';
 }
@@ -799,6 +803,8 @@ export async function listAllInstances(
     serviceId?: string | null;
     serviceType?: string | null;
     contactId?: string | null;
+    familyId?: string | null;
+    organizationId?: string | null;
   },
   signal?: AbortSignal
 ): Promise<{ items: ServiceInstance[]; nextCursor: string | null; totalCount: number }> {

@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   adminContactInvoicesDeepLink,
+  adminPartyInvoicesDeepLink,
+  adminPartySalesConversationsDeepLink,
+  adminPartyServiceInstancesDeepLink,
   adminSalesConversationsDeepLink,
   adminServiceInstancesDeepLink,
   isSalesInboxTab,
@@ -28,5 +31,20 @@ describe('contact related deep links', () => {
   it('accepts only known sales inbox tabs', () => {
     expect(isSalesInboxTab('whatsapp')).toBe(true);
     expect(isSalesInboxTab('pipeline')).toBe(false);
+  });
+
+  it('builds family and organisation destination URLs', () => {
+    expect(adminPartySalesConversationsDeepLink('family', 'fam-1', 'messenger')).toBe(
+      '/sales?tab=messenger&family=fam-1'
+    );
+    expect(adminPartyServiceInstancesDeepLink('family', 'fam-1')).toBe('/services?family=fam-1');
+    expect(adminPartyInvoicesDeepLink('family', 'fam-1')).toBe('/finance?family=fam-1');
+    expect(adminPartySalesConversationsDeepLink('organization', 'org-1', null)).toBe(
+      '/sales?tab=whatsapp&organization=org-1'
+    );
+    expect(adminPartyServiceInstancesDeepLink('organization', 'org-1')).toBe(
+      '/services?organization=org-1'
+    );
+    expect(adminPartyInvoicesDeepLink('organization', 'org-1')).toBe('/finance?organization=org-1');
   });
 });

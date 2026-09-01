@@ -6,7 +6,9 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, or_, select
+from collections.abc import Collection
+
+from sqlalchemy import false, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.db.models.enums import WhatsAppMessageDirection
@@ -17,6 +19,22 @@ from app.db.repositories.base import BaseRepository
 def _escape_like_pattern(pattern: str) -> str:
     """Escape LIKE wildcards so user input is matched literally."""
     return pattern.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def _apply_conversation_contact_scope(
+    statement: Any,
+    contact_column: Any,
+    *,
+    contact_id: UUID | None,
+    contact_ids: Collection[UUID] | None,
+) -> Any:
+    if contact_ids is not None:
+        if not contact_ids:
+            return statement.where(false())
+        return statement.where(contact_column.in_(contact_ids))
+    if contact_id is not None:
+        return statement.where(contact_column == contact_id)
+    return statement
 
 
 class WhatsAppRepository(BaseRepository[WhatsAppConversation]):
@@ -84,13 +102,18 @@ class WhatsAppRepository(BaseRepository[WhatsAppConversation]):
         search: str | None = None,
         search_wa_id: bool = True,
         contact_id: UUID | None = None,
+        contact_ids: Collection[UUID] | None = None,
     ) -> list[WhatsAppConversation]:
         """List conversations, most recent activity first."""
         statement = select(WhatsAppConversation).options(
             selectinload(WhatsAppConversation.contact)
         )
-        if contact_id is not None:
-            statement = statement.where(WhatsAppConversation.contact_id == contact_id)
+        statement = _apply_conversation_contact_scope(
+            statement,
+            WhatsAppConversation.contact_id,
+            contact_id=contact_id,
+            contact_ids=contact_ids,
+        )
         statement = self._apply_search(statement, search, search_wa_id=search_wa_id)
         if cursor_last_message_at is not None and cursor_id is not None:
             statement = statement.where(
@@ -112,11 +135,16 @@ class WhatsAppRepository(BaseRepository[WhatsAppConversation]):
         search: str | None = None,
         search_wa_id: bool = True,
         contact_id: UUID | None = None,
+        contact_ids: Collection[UUID] | None = None,
     ) -> int:
         """Count conversations matching the optional search filter."""
         statement = select(func.count(WhatsAppConversation.id))
-        if contact_id is not None:
-            statement = statement.where(WhatsAppConversation.contact_id == contact_id)
+        statement = _apply_conversation_contact_scope(
+            statement,
+            WhatsAppConversation.contact_id,
+            contact_id=contact_id,
+            contact_ids=contact_ids,
+        )
         statement = self._apply_search(statement, search, search_wa_id=search_wa_id)
         return int(self._session.execute(statement).scalar_one())
 

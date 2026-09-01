@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react';
 
+import type { RelatedPartyQuery } from '@/lib/contact-related-links';
 import { listWhatsAppConversations, type WhatsAppConversationSummary } from '@/lib/whatsapp-api';
 
 import { usePaginatedList } from './use-paginated-list';
@@ -12,7 +13,10 @@ export type WhatsAppConversationFilters = {
 
 const DEFAULT_FILTERS: WhatsAppConversationFilters = { q: '' };
 
-export function useWhatsAppConversations(contactId = '') {
+export function useWhatsAppConversations(party: RelatedPartyQuery = {}) {
+  const contactId = party.contactId ?? '';
+  const familyId = party.familyId ?? '';
+  const organizationId = party.organizationId ?? '';
   const fetcher = useCallback(
     (params: WhatsAppConversationFilters & {
       cursor: string | null;
@@ -25,10 +29,12 @@ export function useWhatsAppConversations(contactId = '') {
           limit: params.limit,
           q: params.q,
           contactId,
+          familyId,
+          organizationId,
         },
         params.signal
       ),
-    [contactId]
+    [contactId, familyId, organizationId]
   );
 
   const list = usePaginatedList<WhatsAppConversationSummary, WhatsAppConversationFilters>({
