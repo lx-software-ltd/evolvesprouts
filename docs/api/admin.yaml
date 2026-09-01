@@ -5510,7 +5510,7 @@ components:
             `www.example.com`.
     FunnelStage:
       type: string
-      enum: [new, contacted, engaged, qualified, converted, lost]
+      enum: [new, contacted, engaged, qualified, unqualified, converted, lost]
     LeadType:
       type: string
       enum: [free_guide, event_inquiry, program_enrollment, consultation, partnership, other]
@@ -5621,11 +5621,11 @@ components:
           $ref: "#/components/schemas/LeadEventType"
         from_stage:
           type: string
-          enum: [new, contacted, engaged, qualified, converted, lost]
+          enum: [new, contacted, engaged, qualified, unqualified, converted, lost]
           nullable: true
         to_stage:
           type: string
-          enum: [new, contacted, engaged, qualified, converted, lost]
+          enum: [new, contacted, engaged, qualified, unqualified, converted, lost]
           nullable: true
         metadata:
           type: object
@@ -6245,6 +6245,7 @@ components:
       required:
         - default_assigned_to
         - notify_assignee_on_assignment
+        - helper_detector_enabled
       properties:
         default_assigned_to:
           type: string
@@ -6256,6 +6257,12 @@ components:
           description: >
             When true, email the new assignee on first assignment and reassignment.
             Unassign does not send mail.
+        helper_detector_enabled:
+          type: boolean
+          description: >
+            When true, new automated leads are classified with OpenRouter; Filipino or
+            Bahasa (Indonesian/Malay) name/username signals set funnel stage to
+            `unqualified` and contact type to `helper` when the contact type is `other`.
         updated_at:
           type: string
           format: date-time
@@ -6279,6 +6286,8 @@ components:
           nullable: true
           maxLength: 128
         notify_assignee_on_assignment:
+          type: boolean
+        helper_detector_enabled:
           type: boolean
     LeadAnalyticsResponse:
       type: object

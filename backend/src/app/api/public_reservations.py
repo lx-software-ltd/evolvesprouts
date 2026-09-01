@@ -62,6 +62,7 @@ from app.db.repositories.service_instance import ServiceInstanceRepository
 from app.exceptions import ConflictError, ValidationError
 from app.services.customer_billing import record_reservation_customer_payment
 from app.services import sales_assignment
+from app.services.helper_detector import maybe_apply_helper_detector
 from app.services.intro_call_slots import is_intro_call_slot_available  # noqa: F401
 from app.services.public_form_internal_notifications import (
     build_reservation_recap_lines,  # noqa: F401
@@ -422,6 +423,7 @@ def _handle_public_reservation(
                         assigned_to=assigned_to,
                         actor_sub=None,
                     )
+                    maybe_apply_helper_detector(session, contact, lead)
                     sales_assignment.notify_lead_assignee(session, lead, previous=None)
                     if created_enrollment_id is not None:
                         audit = AuditService(

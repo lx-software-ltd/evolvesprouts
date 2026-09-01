@@ -21,6 +21,7 @@ class SalesSettingsRepository:
                 id=SALES_SETTINGS_SINGLETON_ID,
                 default_assigned_to=None,
                 notify_assignee_on_assignment=False,
+                helper_detector_enabled=False,
             )
             self._session.add(row)
             self._session.flush()

@@ -19,6 +19,7 @@ import { getSalesSettings, updateSalesSettings } from '@/lib/sales-settings-api'
 const settingsRow = {
   default_assigned_to: 'user-1',
   notify_assignee_on_assignment: true,
+  helper_detector_enabled: false,
   updated_at: '2026-09-01T12:00:00Z',
   updated_by: 'admin-1',
 };
@@ -35,6 +36,7 @@ describe('sales-settings-api', () => {
 
     expect(settings.default_assigned_to).toBe('user-1');
     expect(settings.notify_assignee_on_assignment).toBe(true);
+    expect(settings.helper_detector_enabled).toBe(false);
     expect(mockAdminApiRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         endpointPath: '/v1/admin/leads/settings',

@@ -32,6 +32,11 @@ class SalesSettings(Base):
         nullable=False,
         server_default=text("false"),
     )
+    helper_detector_enabled: Mapped[bool] = mapped_column(
+        Boolean(),
+        nullable=False,
+        server_default=text("false"),
+    )
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         nullable=False,

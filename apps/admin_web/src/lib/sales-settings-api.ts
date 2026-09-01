@@ -14,6 +14,7 @@ function parseSalesSettings(value: unknown): SalesSettings {
   return {
     default_assigned_to: asNullableString(row.default_assigned_to),
     notify_assignee_on_assignment: asBoolean(row.notify_assignee_on_assignment, false),
+    helper_detector_enabled: asBoolean(row.helper_detector_enabled, false),
     updated_at: asNullableString(row.updated_at) ?? undefined,
     updated_by: asNullableString(row.updated_by) ?? undefined,
   };

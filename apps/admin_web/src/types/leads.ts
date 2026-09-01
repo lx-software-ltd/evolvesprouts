@@ -8,7 +8,7 @@ function defineEnumValues<T extends string>() {
 
 export type FunnelStage = ApiSchemas['FunnelStage'];
 export const FUNNEL_STAGES = defineEnumValues<FunnelStage>()(
-  ['new', 'contacted', 'engaged', 'qualified', 'converted', 'lost'] as const satisfies readonly FunnelStage[]
+  ['new', 'contacted', 'engaged', 'qualified', 'unqualified', 'converted', 'lost'] as const satisfies readonly FunnelStage[]
 );
 
 export type LeadType = ApiSchemas['LeadType'];

@@ -127,6 +127,7 @@ class FunnelStage(str, enum.Enum):
     CONTACTED = "contacted"
     ENGAGED = "engaged"
     QUALIFIED = "qualified"
+    UNQUALIFIED = "unqualified"
     CONVERTED = "converted"
     LOST = "lost"
 

@@ -17,6 +17,7 @@ describe('SalesConfigurationView', () => {
         settings={{
           default_assigned_to: null,
           notify_assignee_on_assignment: false,
+          helper_detector_enabled: false,
         }}
         isLoading={false}
         isSaving={false}
@@ -29,11 +30,13 @@ describe('SalesConfigurationView', () => {
     await user.click(
       screen.getByLabelText('Email the assignee when a lead is assigned to them')
     );
+    await user.click(screen.getByLabelText('Helper Detector'));
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(onSave).toHaveBeenCalledWith({
       default_assigned_to: 'user-1',
       notify_assignee_on_assignment: true,
+      helper_detector_enabled: true,
     });
   });
 
@@ -44,6 +47,7 @@ describe('SalesConfigurationView', () => {
         settings={{
           default_assigned_to: 'stale-sub',
           notify_assignee_on_assignment: true,
+          helper_detector_enabled: false,
         }}
         isLoading={false}
         isSaving={false}

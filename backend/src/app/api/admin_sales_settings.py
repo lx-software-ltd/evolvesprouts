@@ -40,6 +40,7 @@ def serialize_sales_settings(row: Any) -> dict[str, Any]:
     return {
         "default_assigned_to": row.default_assigned_to,
         "notify_assignee_on_assignment": bool(row.notify_assignee_on_assignment),
+        "helper_detector_enabled": bool(row.helper_detector_enabled),
         "updated_at": updated_at.isoformat() if updated_at is not None else None,
         "updated_by": row.updated_by,
     }
@@ -49,7 +50,11 @@ def parse_sales_settings_payload(body: Mapping[str, Any]) -> dict[str, Any]:
     """Validate a partial settings update."""
     if not body:
         raise ValidationError("At least one field is required", field="body")
-    unknown = set(body) - {"default_assigned_to", "notify_assignee_on_assignment"}
+    unknown = set(body) - {
+        "default_assigned_to",
+        "notify_assignee_on_assignment",
+        "helper_detector_enabled",
+    }
     if unknown:
         raise ValidationError(
             "Unsupported field: " + ", ".join(sorted(unknown)),
@@ -76,6 +81,14 @@ def parse_sales_settings_payload(body: Mapping[str, Any]) -> dict[str, Any]:
                 field="notify_assignee_on_assignment",
             )
         payload["notify_assignee_on_assignment"] = raw_flag
+    if "helper_detector_enabled" in body:
+        raw_helper = body.get("helper_detector_enabled")
+        if not isinstance(raw_helper, bool):
+            raise ValidationError(
+                "helper_detector_enabled must be a boolean",
+                field="helper_detector_enabled",
+            )
+        payload["helper_detector_enabled"] = raw_helper
     if not payload:
         raise ValidationError("At least one field is required", field="body")
     return payload
@@ -114,6 +127,8 @@ def _patch_sales_settings(
             row.default_assigned_to = payload["default_assigned_to"]
         if "notify_assignee_on_assignment" in payload:
             row.notify_assignee_on_assignment = payload["notify_assignee_on_assignment"]
+        if "helper_detector_enabled" in payload:
+            row.helper_detector_enabled = payload["helper_detector_enabled"]
         row.updated_by = actor_sub
         row.updated_at = datetime.now(UTC)
         repo.update(row)

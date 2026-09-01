@@ -57,6 +57,7 @@ class SalesLeadRepository(BaseRepository[SalesLead]):
                         FunnelStage.CONTACTED,
                         FunnelStage.ENGAGED,
                         FunnelStage.QUALIFIED,
+                        FunnelStage.UNQUALIFIED,
                     )
                 ),
             )
@@ -308,6 +309,7 @@ class SalesLeadRepository(BaseRepository[SalesLead]):
             FunnelStage.CONTACTED.value: 0,
             FunnelStage.ENGAGED.value: 0,
             FunnelStage.QUALIFIED.value: 0,
+            FunnelStage.UNQUALIFIED.value: 0,
             FunnelStage.CONVERTED.value: 0,
             FunnelStage.LOST.value: 0,
         }
