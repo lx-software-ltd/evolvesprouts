@@ -2233,11 +2233,7 @@ export class ApiStack extends cdk.Stack {
     database.grantAdminUserSecretRead(messaging.leadAiSuggestionFunction);
     database.grantConnect(messaging.leadAiSuggestionFunction, "evolvesprouts_admin");
 
-    messaging.leadAiSuggestionQueue.grantSendMessages(adminFunction);
-    adminFunction.addEnvironment(
-      "LEAD_AI_SUGGESTION_QUEUE_URL",
-      messaging.leadAiSuggestionQueue.queueUrl
-    );
+    messaging.leadAiSuggestionQueue.grantSendMessages(adminFunction)
 
     adminFunction.addToRolePolicy(
       new iam.PolicyStatement({
