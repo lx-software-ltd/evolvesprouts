@@ -22,6 +22,18 @@ describe('LeadsFilterBar', () => {
     }
   });
 
+  it('does not wrap filters in a bordered box', () => {
+    const { container } = render(
+      <LeadsFilterBar filters={DEFAULT_LEAD_LIST_FILTERS} users={[]} onFilterChange={vi.fn()} />
+    );
+
+    const wrapper = container.firstElementChild;
+    expect(wrapper).toHaveClass('space-y-3');
+    expect(wrapper).not.toHaveClass('border');
+    expect(wrapper).not.toHaveClass('rounded-md');
+    expect(wrapper).not.toHaveClass('p-3');
+  });
+
   it('toggles a stage filter when a chip is clicked', async () => {
     const user = userEvent.setup();
     const onFilterChange = vi.fn();

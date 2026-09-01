@@ -59,7 +59,6 @@ function renderComponent(overrides: Partial<ComponentProps<typeof LeadsTable>> =
       }}
       users={[]}
       selectedLeadId={null}
-      totalCount={1}
       isLoading={false}
       isLoadingMore={false}
       error=''
@@ -82,6 +81,8 @@ describe('LeadsTable', () => {
     const { onSelectLead } = renderComponent();
     const table = screen.getByRole('table');
 
+    expect(screen.getByRole('heading', { name: 'Leads' })).toBeInTheDocument();
+    expect(screen.queryByText(/^\d+ total$/)).not.toBeInTheDocument();
     expect(screen.getByText('Jane Doe')).toBeInTheDocument();
     expect(table).toHaveTextContent('Manual');
     expect(table).toHaveTextContent('New');

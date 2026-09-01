@@ -25,7 +25,6 @@ export interface LeadsTableProps {
   filters: LeadListFilters;
   users: AdminUser[];
   selectedLeadId: string | null;
-  totalCount: number | null;
   isLoading: boolean;
   isLoadingMore: boolean;
   error: string;
@@ -50,7 +49,6 @@ export function LeadsTable({
   filters,
   users,
   selectedLeadId,
-  totalCount,
   isLoading,
   isLoadingMore,
   error,
@@ -88,7 +86,6 @@ export function LeadsTable({
   return (
     <PaginatedTableCard
       title='Leads'
-      description={`${totalCount == null ? '—' : totalCount.toLocaleString()} total`}
       isLoading={isLoading}
       isLoadingMore={isLoadingMore}
       hasMore={hasMore}

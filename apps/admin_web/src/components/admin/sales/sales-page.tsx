@@ -127,7 +127,6 @@ export function SalesPage() {
             filters={state.leadList.filters}
             users={state.adminUsers.users}
             selectedLeadId={state.selectedLeadId}
-            totalCount={state.leadList.totalCount}
             isLoading={state.leadList.isLoading}
             isLoadingMore={state.leadList.isLoadingMore}
             error={state.leadList.error}
