@@ -475,7 +475,8 @@ def _create_lead_ai_suggestion(
     with Session(get_engine()) as session:
         job_repo = SalesLeadAiSuggestionJobRepository(session)
         job = job_repo.get_by_id(job_id)
-        assert job is not None
+        if job is None:
+            raise NotFoundError("SalesLeadAiSuggestionJob", str(job_id))
         return json_response(
             202,
             {"job": serialize_lead_ai_suggestion_job(job)},
