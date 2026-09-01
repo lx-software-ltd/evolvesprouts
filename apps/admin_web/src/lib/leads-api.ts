@@ -1,7 +1,5 @@
-import { ensureFreshTokens } from './auth';
 import { adminApiRequest } from './api-admin-client';
 import { asNullableString, asNumber, unwrapPayload } from './api-payload';
-import { getApiBaseUrl } from './config';
 import { isRecord } from './type-guards';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -278,23 +276,4 @@ export async function getLeadAnalytics(params: AnalyticsParams): Promise<LeadAna
     leadsOverTime,
     assigneeStats,
   };
-}
-
-export async function exportLeadsCsv(params: LeadListParams): Promise<Blob> {
-  const tokens = await ensureFreshTokens();
-  if (!tokens) {
-    throw new Error('Your session has expired. Please sign in again.');
-  }
-
-  const response = await fetch(`${getApiBaseUrl()}/v1/admin/leads/export${buildLeadListQuery(params)}`, {
-    method: 'GET',
-    headers: {
-      Accept: 'text/csv',
-      Authorization: `Bearer ${tokens.idToken}`,
-    },
-  });
-  if (!response.ok) {
-    throw new Error(`CSV export failed with status ${response.status}.`);
-  }
-  return response.blob();
 }
