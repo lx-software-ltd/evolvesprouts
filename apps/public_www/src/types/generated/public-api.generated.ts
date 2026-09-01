@@ -448,7 +448,11 @@ export interface paths {
          *     plus `is_echo` outbound copies. Requests must include a valid
          *     `X-Hub-Signature-256` HMAC of the raw body using `META_APP_SECRET`.
          *     WhatsApp payloads (`object: whatsapp_business_account`) are ignored
-         *     here and stay on `/v1/whatsapp/webhook`.
+         *     here and stay on `/v1/whatsapp/webhook`. Instagram events whose
+         *     counterparty username matches the last path segment of the
+         *     configured public Instagram profile URL
+         *     (`PUBLIC_WWW_INSTAGRAM_URL` / `NEXT_PUBLIC_INSTAGRAM_URL`) are
+         *     skipped so the business account is not imported.
          */
         post: {
             parameters: {
