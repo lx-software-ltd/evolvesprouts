@@ -8,14 +8,14 @@ from uuid import UUID
 
 from collections.abc import Iterable
 
-from sqlalchemy import CheckConstraint, Enum, ForeignKey, Index, String, Text, text
+from sqlalchemy import CheckConstraint, Enum, ForeignKey, Index, String, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import TIMESTAMP
 
 from app.db.base import Base
-from app.db.models.enums import FunnelStage, LeadEventType, LeadType
+from app.db.models.enums import FunnelStage, LeadEventType, LeadLostReason, LeadType
 
 if TYPE_CHECKING:
     from app.db.models.contact import Contact
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 
 def _enum_values(
-    enum_cls: Iterable[LeadType | FunnelStage | LeadEventType],
+    enum_cls: Iterable[LeadType | FunnelStage | LeadEventType | LeadLostReason],
 ) -> list[str]:
     """Return enum labels stored in PostgreSQL."""
     return [member.value for member in enum_cls]
@@ -117,7 +117,15 @@ class SalesLead(Base):
         TIMESTAMP(timezone=True),
         nullable=True,
     )
-    lost_reason: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    lost_reason: Mapped[LeadLostReason | None] = mapped_column(
+        Enum(
+            LeadLostReason,
+            name="lead_lost_reason",
+            values_callable=_enum_values,
+            create_type=False,
+        ),
+        nullable=True,
+    )
 
     contact: Mapped[Contact | None] = relationship(
         "Contact",

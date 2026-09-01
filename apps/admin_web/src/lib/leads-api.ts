@@ -16,7 +16,9 @@ import type {
   LeadNote,
   LeadSummary,
   LeadType,
+  LostReason,
 } from '@/types/leads';
+import { LOST_REASONS } from '@/types/leads';
 
 type ApiSchemas = components['schemas'];
 type ApiLeadListResponse = ApiSchemas['LeadListResponse'];
@@ -94,6 +96,14 @@ function parseLeadNote(value: unknown): LeadNote {
   };
 }
 
+function parseLostReason(value: unknown): LostReason | null {
+  const raw = asNullableString(value);
+  if (!raw) {
+    return null;
+  }
+  return LOST_REASONS.includes(raw as LostReason) ? (raw as LostReason) : null;
+}
+
 function parseLeadSummary(value: unknown): LeadSummary {
   const lead = isRecord(value) ? value : {};
   const stage = asNullableString(lead.funnel_stage) ?? 'new';
@@ -111,7 +121,7 @@ function parseLeadSummary(value: unknown): LeadSummary {
     updatedAt: asNullableString(lead.updated_at),
     convertedAt: asNullableString(lead.converted_at),
     lostAt: asNullableString(lead.lost_at),
-    lostReason: asNullableString(lead.lost_reason),
+    lostReason: parseLostReason(lead.lost_reason),
     daysInStage: asNumber(lead.days_in_stage, 0),
     lastActivityAt: asNullableString(lead.last_activity_at),
     tags,

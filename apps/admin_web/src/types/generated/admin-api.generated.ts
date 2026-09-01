@@ -7152,6 +7152,11 @@ export interface components {
         };
         /** @enum {string} */
         FunnelStage: "new" | "contacted" | "engaged" | "qualified" | "unqualified" | "converted" | "lost";
+        /**
+         * @description Controlled vocabulary for why a sales lead was marked lost.
+         * @enum {string}
+         */
+        LeadLostReason: "price_too_high" | "value_not_understood" | "ghosted" | "language_mismatch" | "other";
         /** @enum {string} */
         LeadType: "free_guide" | "event_inquiry" | "program_enrollment" | "consultation" | "partnership" | "other";
         /** @enum {string} */
@@ -7229,7 +7234,7 @@ export interface components {
             converted_at?: string | null;
             /** Format: date-time */
             lost_at?: string | null;
-            lost_reason?: string | null;
+            lost_reason?: components["schemas"]["LeadLostReason"] | null;
             days_in_stage?: number;
             /** Format: date-time */
             last_activity_at?: string | null;
@@ -7509,7 +7514,7 @@ export interface components {
         UpdateLeadRequest: {
             funnel_stage?: components["schemas"]["FunnelStage"];
             assigned_to?: string | null;
-            lost_reason?: string | null;
+            lost_reason?: components["schemas"]["LeadLostReason"] | null;
         };
         SalesSettings: {
             /** @description Cognito `sub` applied to new leads when create omits `assigned_to`. */

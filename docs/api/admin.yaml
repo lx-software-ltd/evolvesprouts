@@ -5590,6 +5590,15 @@ components:
     FunnelStage:
       type: string
       enum: [new, contacted, engaged, qualified, unqualified, converted, lost]
+    LeadLostReason:
+      type: string
+      description: Controlled vocabulary for why a sales lead was marked lost.
+      enum:
+        - price_too_high
+        - value_not_understood
+        - ghosted
+        - language_mismatch
+        - other
     LeadType:
       type: string
       enum: [free_guide, event_inquiry, program_enrollment, consultation, partnership, other]
@@ -5816,7 +5825,8 @@ components:
           format: date-time
           nullable: true
         lost_reason:
-          type: string
+          allOf:
+            - $ref: "#/components/schemas/LeadLostReason"
           nullable: true
         days_in_stage:
           type: integer
@@ -6461,7 +6471,8 @@ components:
           type: string
           nullable: true
         lost_reason:
-          type: string
+          allOf:
+            - $ref: "#/components/schemas/LeadLostReason"
           nullable: true
     SalesSettings:
       type: object

@@ -532,6 +532,9 @@ maps legacy `note.id` to the **first** inserted row’s UUID.
 
 - Purpose: lead lifecycle tracking for contacts/families/organizations.
 - Includes `lead_type`, `funnel_stage`, optional `asset_id`.
+- `lost_reason` is a nullable controlled enum (`lead_lost_reason`):
+  `price_too_high`, `value_not_understood`, `ghosted`, `language_mismatch`,
+  `other`. Required by the admin API when setting `funnel_stage` to `lost`.
 - `sales_leads_guide_dedup_idx` enforces idempotency for media processing
   by unique (`contact_id`, `lead_type`, `asset_id`) when `asset_id` is present.
 

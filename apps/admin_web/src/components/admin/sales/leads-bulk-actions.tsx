@@ -2,18 +2,17 @@
 
 import { useState } from 'react';
 
-import type { AdminUser, FunnelStage } from '@/types/leads';
-import { FUNNEL_STAGES } from '@/types/leads';
+import type { AdminUser, FunnelStage, LostReason } from '@/types/leads';
+import { FUNNEL_STAGES, LOST_REASON_LABELS, LOST_REASONS } from '@/types/leads';
 
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 
 export interface LeadsBulkActionsProps {
   selectedCount: number;
   users: AdminUser[];
   onBulkAssign: (assignedTo: string | null) => void;
-  onBulkStageChange: (stage: FunnelStage, lostReason?: string) => void;
+  onBulkStageChange: (stage: FunnelStage, lostReason?: LostReason) => void;
 }
 
 export function LeadsBulkActions({
@@ -24,7 +23,7 @@ export function LeadsBulkActions({
 }: LeadsBulkActionsProps) {
   const [pendingAssignee, setPendingAssignee] = useState<string | null | undefined>(undefined);
   const [pendingStage, setPendingStage] = useState<FunnelStage | ''>('');
-  const [lostReason, setLostReason] = useState('');
+  const [lostReason, setLostReason] = useState<LostReason | ''>('');
 
   if (selectedCount <= 0) {
     return null;
@@ -115,17 +114,27 @@ export function LeadsBulkActions({
       ) : null}
       {pendingStage === 'lost' ? (
         <div className='mt-2 space-y-2'>
-          <Textarea
+          <Select
+            aria-label='Bulk lost reason'
             value={lostReason}
-            onChange={(event) => setLostReason(event.target.value)}
-            placeholder='Lost reason (required for bulk lost)'
-          />
+            onChange={(event) => setLostReason(event.target.value as LostReason | '')}
+          >
+            <option value=''>Select a lost reason</option>
+            {LOST_REASONS.map((reason) => (
+              <option key={reason} value={reason}>
+                {LOST_REASON_LABELS[reason]}
+              </option>
+            ))}
+          </Select>
           <div className='flex gap-2'>
             <Button
               type='button'
-              disabled={lostReason.trim().length === 0}
+              disabled={lostReason === ''}
               onClick={() => {
-                onBulkStageChange('lost', lostReason.trim());
+                if (!lostReason) {
+                  return;
+                }
+                onBulkStageChange('lost', lostReason);
                 setLostReason('');
                 setPendingStage('');
               }}

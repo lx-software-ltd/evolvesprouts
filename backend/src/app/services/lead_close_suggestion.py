@@ -207,7 +207,7 @@ def _build_user_prompt(
         "lead_type": lead.lead_type.value if lead.lead_type else None,
         "funnel_stage": lead.funnel_stage.value if lead.funnel_stage else None,
         "assigned_to": lead.assigned_to,
-        "lost_reason": lead.lost_reason,
+        "lost_reason": lead.lost_reason.value if lead.lost_reason else None,
         "created_at": lead.created_at.isoformat() if lead.created_at else None,
         "updated_at": lead.updated_at.isoformat() if lead.updated_at else None,
     }
@@ -383,7 +383,7 @@ def _load_similar_leads(session: Session, *, lead: SalesLead) -> list[dict[str, 
                 "funnel_stage": other.funnel_stage.value
                 if other.funnel_stage
                 else None,
-                "lost_reason": other.lost_reason,
+                "lost_reason": other.lost_reason.value if other.lost_reason else None,
                 "converted_at": (
                     other.converted_at.isoformat() if other.converted_at else None
                 ),
