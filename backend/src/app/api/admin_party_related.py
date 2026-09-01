@@ -8,6 +8,7 @@ from uuid import UUID
 
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.sql.elements import ColumnElement
 
 from app.api.admin_contacts_related import (
@@ -241,7 +242,7 @@ def _party_ids_with_direct_or_member_enrollments(
     session: Session,
     party_ids: list[UUID],
     members: dict[UUID, set[UUID]],
-    party_column: object,
+    party_column: InstrumentedAttribute[UUID | None],
 ) -> set[UUID]:
     matches: set[UUID] = set()
     direct_ids = set(
@@ -278,13 +279,11 @@ def _party_ids_with_direct_or_member_invoices(
     session: Session,
     party_ids: list[UUID],
     members: dict[UUID, set[UUID]],
-    party_column: object,
+    party_column: InstrumentedAttribute[UUID | None],
 ) -> set[UUID]:
     matches: set[UUID] = set()
     direct_ids = set(
-        session.execute(
-            select(party_column).where(party_column.in_(party_ids))
-        )
+        session.execute(select(party_column).where(party_column.in_(party_ids)))
         .scalars()
         .all()
     )
