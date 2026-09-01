@@ -37,8 +37,6 @@ def test_parse_update_lead_rejects_free_text_lost_reason() -> None:
 def test_parse_update_lead_accepts_lost_reason_enum(
     raw: str, expected: LeadLostReason
 ) -> None:
-    payload = parse_update_lead_payload(
-        {"funnel_stage": "lost", "lost_reason": raw}
-    )
+    payload = parse_update_lead_payload({"funnel_stage": "lost", "lost_reason": raw})
     assert payload["funnel_stage"] == FunnelStage.LOST
     assert payload["lost_reason"] == expected
