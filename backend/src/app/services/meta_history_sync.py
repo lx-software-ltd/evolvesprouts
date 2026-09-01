@@ -9,7 +9,11 @@ from collections.abc import Mapping
 from sqlalchemy.orm import Session
 
 from app.db.models.enums import MetaChannel, MetaMessageDirection
-from app.services.meta_graph_client import MetaGraphApiError, graph_get
+from app.services.meta_graph_client import (
+    MetaGraphApiError,
+    graph_get,
+    resolve_page_access_token,
+)
 from app.services.meta_ingest import store_meta_message
 from app.utils.logging import get_logger, mask_pii
 
@@ -51,6 +55,7 @@ def sync_meta_channel_history(
         self_ids.add(instagram_user_id)
 
     platform = "instagram" if channel is MetaChannel.INSTAGRAM else "messenger"
+    page_token = resolve_page_access_token()
     after: str | None = None
     pages = 0
     while pages < _MAX_PAGES:
@@ -62,7 +67,11 @@ def sync_meta_channel_history(
         }
         if after:
             params["after"] = after
-        payload = graph_get(f"{page_id}/conversations", params=params)
+        payload = graph_get(
+            f"{page_id}/conversations",
+            params=params,
+            token=page_token,
+        )
         rows = payload.get("data")
         if not isinstance(rows, list):
             break

@@ -800,8 +800,11 @@ pulling history inline on the admin Lambda. Jobs live in `inbox_import_jobs`.
   (`MetaPageAccessToken` / GitHub secret `CDK_PARAM_META_PAGE_ACCESS_TOKEN`)
   as `META_PAGE_ACCESS_TOKEN` on `InboxImportFunction`. The WhatsApp
   webhook verify string is only for `hub.verify_token` and is not a Graph
-  Bearer token. Page / IG ids and Graph origin come from CDK parameters
-  (GitHub vars), not hardcoded values. The token is a `noEcho` CfnParameter
+  Bearer token. `/{page-id}/conversations` requires a Page token; the
+  worker exchanges a system-user token with
+  `GET /{page-id}?fields=access_token` when Graph does not already return
+  one. Page / IG ids and Graph origin come from CDK parameters (GitHub
+  vars), not hardcoded values. The token is a `noEcho` CfnParameter
   passed as Lambda env (same pattern as `WhatsappWebhookVerifyToken`); do
   not create a separate Secrets Manager secret for it (that caused a
   CloudFormation cycle on the shared secrets KMS key).

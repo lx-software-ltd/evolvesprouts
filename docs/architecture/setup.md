@@ -156,15 +156,26 @@ For the OIDC provider itself, add the same tags:
 in Meta Developer Console → Webhooks → Verify token. Graph rejects it as
 `Invalid OAuth access token - Cannot parse access token`.
 
-Set `CDK_PARAM_META_PAGE_ACCESS_TOKEN` to a **Page** or **system-user**
-Graph token that can read conversations on the Evolve Sprouts Page:
+Set `CDK_PARAM_META_PAGE_ACCESS_TOKEN` to a **system-user** Graph token
+(or a Page token). `/{page-id}/conversations` requires a Page access token;
+the inbox worker exchanges a system-user token via
+`GET /{page-id}?fields=access_token` when needed.
 
 1. Meta Business Suite → **Business settings** → **Users** → **System users**.
 2. Assign the Facebook Page (and Instagram professional account) as assets.
 3. Generate a token for the Evolve Sprouts Meta app with at least
    `pages_show_list`, `pages_messaging`, `pages_read_engagement`,
-   `instagram_basic`, and `instagram_manage_messages`.
-4. Paste the token into the GitHub secret and redeploy the backend.
+   `instagram_basic`, and `instagram_manage_messages`. Extra locked scopes
+   are fine.
+4. Paste the system-user token into the GitHub secret and redeploy the backend.
+
+To mint a Page token yourself (optional, works before the worker exchange
+is deployed):
+
+`GET /{META_PAGE_ID}?fields=access_token` on the configured Graph origin
+with `Authorization: Bearer {system-user-token}`. Put the returned
+`access_token` in `CDK_PARAM_META_PAGE_ACCESS_TOKEN` if you want to skip
+the exchange.
 
 A WhatsApp Cloud API send token is a Graph token, but it usually lacks Page
 messaging permissions. Do not reuse the webhook verify string.

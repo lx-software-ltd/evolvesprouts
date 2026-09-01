@@ -23,6 +23,7 @@ def test_sync_maps_graph_conversation_without_leads(
 
     monkeypatch.setenv("META_PAGE_ID", "page-1")
     monkeypatch.setenv("META_INSTAGRAM_USER_ID", "ig-biz-1")
+    monkeypatch.setattr(sync, "resolve_page_access_token", lambda: "page-token")
     monkeypatch.setattr(sync, "store_meta_message", _store)
     monkeypatch.setattr(
         sync,
