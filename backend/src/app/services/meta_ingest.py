@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-import os
 from datetime import datetime, timezone
 from typing import Any
 from collections.abc import Mapping
-from urllib.parse import unquote, urlparse
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.config.public_www import get_public_www
 from app.db.models import (
     Contact,
     ContactSource,
@@ -28,7 +26,7 @@ from app.db.repositories.contact import ContactRepository
 from app.db.repositories.meta import MetaRepository
 from app.db.repositories.sales_lead import SalesLeadRepository
 from app.utils.logging import get_logger, mask_pii
-from app.utils.validators import extract_instagram_username
+from app.utils.validators import extract_instagram_username, is_own_instagram_handle
 
 logger = get_logger(__name__)
 
@@ -52,19 +50,6 @@ _CONTACT_SOURCES = {
     MetaChannel.FACEBOOK: ContactSource.FACEBOOK,
     MetaChannel.INSTAGRAM: ContactSource.INSTAGRAM,
 }
-_RESERVED_INSTAGRAM_PATHS = frozenset(
-    {
-        "p",
-        "reel",
-        "reels",
-        "stories",
-        "explore",
-        "accounts",
-        "direct",
-        "about",
-        "legal",
-    }
-)
 
 
 def ingest_webhook_payload(
@@ -268,21 +253,14 @@ def _ensure_contact_and_lead(
     source_detail: str = _SOURCE_DETAIL,
 ) -> None:
     if conversation.contact_id is None:
-        existing = (
-            _find_contact_by_instagram_handle(session, instagram_handle)
-            if instagram_handle
-            else None
+        contact, created = _find_or_create_contact(
+            session,
+            conversation=conversation,
+            instagram_handle=instagram_handle,
+            source_detail=source_detail,
         )
-        if existing is not None:
-            conversation.contact_id = existing.id
-        else:
-            contact = _create_contact(
-                session,
-                conversation=conversation,
-                instagram_handle=instagram_handle,
-                source_detail=source_detail,
-            )
-            conversation.contact_id = contact.id
+        conversation.contact_id = contact.id
+        if created:
             counters["contacts_created"] = counters.get("contacts_created", 0) + 1
     elif instagram_handle:
         linked = ContactRepository(session).get_by_id(conversation.contact_id)
@@ -329,13 +307,18 @@ def _ensure_contact_and_lead(
     )
 
 
-def _create_contact(
+def _find_or_create_contact(
     session: Session,
     *,
     conversation: MetaConversation,
     instagram_handle: str | None,
-    source_detail: str = _SOURCE_DETAIL,
-) -> Contact:
+    source_detail: str,
+) -> tuple[Contact, bool]:
+    repo = ContactRepository(session)
+    if instagram_handle:
+        existing = repo.find_by_instagram_handle(instagram_handle)
+        if existing is not None:
+            return existing, False
     contact = Contact(
         first_name=_contact_first_name(conversation),
         instagram_handle=instagram_handle,
@@ -344,15 +327,27 @@ def _create_contact(
         source_detail=source_detail,
     )
     session.add(contact)
-    session.flush()
-    return contact
+    if _flush_new_contact(session, contact):
+        return contact, True
+    if instagram_handle:
+        raced = repo.find_by_instagram_handle(instagram_handle)
+        if raced is not None:
+            return raced, False
+    raise
 
 
-def _find_contact_by_instagram_handle(
-    session: Session,
-    handle: str,
-) -> Contact | None:
-    return ContactRepository(session).find_by_instagram_handle(handle)
+def _flush_new_contact(session: Session, contact: Contact) -> bool:
+    begin_nested = getattr(session, "begin_nested", None)
+    try:
+        if callable(begin_nested):
+            with begin_nested():
+                session.flush()
+        else:
+            session.flush()
+    except IntegrityError:
+        session.expunge(contact)
+        return False
+    return True
 
 
 def _maybe_set_instagram_handle(
@@ -362,7 +357,7 @@ def _maybe_set_instagram_handle(
 ) -> None:
     if contact.instagram_handle:
         return
-    other = _find_contact_by_instagram_handle(session, handle)
+    other = ContactRepository(session).find_by_instagram_handle(handle)
     if other is not None and other.id != contact.id:
         return
     contact.instagram_handle = handle
@@ -391,7 +386,6 @@ def _profile_name(
     *,
     is_echo: bool = False,
 ) -> str | None:
-    """Return the counterparty display name (recipient on echoes, sender otherwise)."""
     party = event.get("recipient") if is_echo else event.get("sender")
     from_party = _party_profile_name(party)
     if from_party:
@@ -407,47 +401,6 @@ def _profile_name(
             if isinstance(nested, str) and nested.strip():
                 return nested.strip()[:_MAX_PROFILE_NAME_LENGTH]
     return None
-
-
-def instagram_handle_from_profile_url(raw: str | None) -> str | None:
-    """Return the last Instagram path segment, or a bare handle, lowercased."""
-    if not isinstance(raw, str):
-        return None
-    stripped = raw.strip()
-    if not stripped:
-        return None
-    if "://" not in stripped and "/" not in stripped.lstrip("@"):
-        handle = stripped.lstrip("@").strip().strip("/")
-        return handle.lower() or None
-    candidate = stripped if "://" in stripped else f"https://{stripped.lstrip('/')}"
-    try:
-        parsed = urlparse(candidate)
-    except ValueError:
-        return None
-    parts = [unquote(part) for part in parsed.path.split("/") if part]
-    if not parts:
-        return None
-    handle = parts[0].lstrip("@").strip()
-    if not handle or handle.lower() in _RESERVED_INSTAGRAM_PATHS:
-        return None
-    return handle.lower()
-
-
-def own_instagram_handle() -> str | None:
-    """Business Instagram handle from PUBLIC_WWW / NEXT_PUBLIC profile URL."""
-    raw = get_public_www("INSTAGRAM_URL")
-    if not (isinstance(raw, str) and raw.strip()):
-        raw = os.getenv("NEXT_PUBLIC_INSTAGRAM_URL", "")
-    return instagram_handle_from_profile_url(raw)
-
-
-def is_own_instagram_handle(name: str | None) -> bool:
-    """True when *name* is the configured business Instagram handle."""
-    handle = own_instagram_handle()
-    if not handle or not isinstance(name, str):
-        return False
-    normalized = name.strip().lstrip("@").lower()
-    return bool(normalized) and normalized == handle
 
 
 def _message_type(message: Mapping[str, Any]) -> str:

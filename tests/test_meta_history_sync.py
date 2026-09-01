@@ -90,8 +90,31 @@ def test_sync_maps_graph_conversation_without_leads(
     assert counters["stored"] == 2
     assert stored[0]["create_leads"] is False
     assert stored[0]["platform_user_id"] == "igsid-9"
+    assert stored[0]["instagram_handle"] == "kitie"
     assert stored[0]["direction"] is MetaMessageDirection.INBOUND
     assert stored[1]["direction"] is MetaMessageDirection.OUTBOUND
+    assert stored[1]["instagram_handle"] == "kitie"
+
+
+def test_counterparty_splits_display_name_from_username() -> None:
+    user_id, profile, handle = sync._counterparty(
+        {
+            "participants": {
+                "data": [
+                    {"id": "page-1", "name": "Page"},
+                    {
+                        "id": "igsid-9",
+                        "name": "Feier Wang",
+                        "username": "@Kitie.W",
+                    },
+                ]
+            }
+        },
+        self_ids={"page-1"},
+    )
+    assert user_id == "igsid-9"
+    assert profile == "Feier Wang"
+    assert handle == "kitie.w"
 
 
 def test_sync_skips_own_instagram_handle_conversation(
@@ -155,6 +178,52 @@ def test_sync_skips_own_instagram_handle_conversation(
     assert counters["conversations"] == 1
     assert counters["stored"] == 1
     assert stored[0]["platform_user_id"] == "igsid-9"
+
+
+def test_sync_skips_own_handle_when_participant_has_display_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stored: list[object] = []
+
+    def _graph_get(
+        path: str,
+        *,
+        params: dict[str, str] | None = None,
+        token: str | None = None,
+    ) -> dict[str, object]:
+        if path == "page-1/conversations":
+            return {
+                "data": [
+                    {
+                        "id": "conv-self",
+                        "participants": {
+                            "data": [
+                                {"id": "page-1"},
+                                {
+                                    "id": "igsid-self",
+                                    "name": "Evolve Sprouts",
+                                    "username": "evolvesprouts",
+                                },
+                            ]
+                        },
+                    }
+                ]
+            }
+        raise AssertionError(f"unexpected Graph path {path}")
+
+    monkeypatch.setenv("META_PAGE_ID", "page-1")
+    monkeypatch.setenv(
+        "NEXT_PUBLIC_INSTAGRAM_URL", "https://www.instagram.com/evolvesprouts"
+    )
+    monkeypatch.delenv("PUBLIC_WWW_INSTAGRAM_URL", raising=False)
+    monkeypatch.setattr(sync, "resolve_page_access_token", lambda: "page-token")
+    monkeypatch.setattr(sync, "store_meta_message", _store_capturing(stored))
+    monkeypatch.setattr(sync, "graph_get", _graph_get)
+
+    counters = sync.sync_meta_channel_history(SimpleNamespace(), MetaChannel.INSTAGRAM)
+    assert counters["skipped"] >= 1
+    assert counters["conversations"] == 0
+    assert stored == []
 
 
 def test_sync_retries_conversation_list_with_smaller_limit(
