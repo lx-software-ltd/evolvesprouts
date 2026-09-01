@@ -30,6 +30,35 @@ export function relatedPartyFilterKey(party: RelatedPartyQuery): string {
   return party.contactId?.trim() || party.familyId?.trim() || party.organizationId?.trim() || '';
 }
 
+export type RelatedPartyEnrollmentFields = {
+  contactId?: string | null;
+  familyId?: string | null;
+  organizationId?: string | null;
+};
+
+/**
+ * Match the enrollment owned by the deep-link party. Contact, family, and
+ * organisation filters are exclusive (same precedence as `relatedPartyFilterKey`).
+ */
+export function findEnrollmentForRelatedParty<T extends RelatedPartyEnrollmentFields>(
+  enrollments: T[],
+  party: RelatedPartyQuery
+): T | null {
+  const contactId = party.contactId?.trim() ?? '';
+  const familyId = party.familyId?.trim() ?? '';
+  const organizationId = party.organizationId?.trim() ?? '';
+  if (contactId) {
+    return enrollments.find((row) => (row.contactId?.trim() ?? '') === contactId) ?? null;
+  }
+  if (familyId) {
+    return enrollments.find((row) => (row.familyId?.trim() ?? '') === familyId) ?? null;
+  }
+  if (organizationId) {
+    return enrollments.find((row) => (row.organizationId?.trim() ?? '') === organizationId) ?? null;
+  }
+  return null;
+}
+
 export function appendRelatedPartyQuery(query: URLSearchParams, party: RelatedPartyQuery): void {
   const contactId = party.contactId?.trim() ?? '';
   const familyId = party.familyId?.trim() ?? '';

@@ -132,6 +132,9 @@ const { mockUseServicesPage, state } = vi.hoisted(() => {
       updateVenuePartial: vi.fn().mockResolvedValue(null),
       deleteVenue: vi.fn().mockResolvedValue(undefined),
     },
+    contactFilterId: '',
+    familyFilterId: '',
+    organizationFilterId: '',
   };
   return {
     state,

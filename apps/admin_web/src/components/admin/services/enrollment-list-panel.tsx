@@ -19,9 +19,15 @@ import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { DeleteIcon } from '@/components/icons/action-icons';
+import { useAutoSelectOnce } from '@/hooks/use-auto-select-once';
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { useEnrollmentParentPickers } from '@/hooks/use-enrollment-parent-pickers';
 import { getAdminDefaultCurrencyCode } from '@/lib/config';
+import {
+  findEnrollmentForRelatedParty,
+  relatedPartyFilterKey,
+  type RelatedPartyQuery,
+} from '@/lib/contact-related-links';
 import {
   formatDate,
   formatEnumLabel,
@@ -73,6 +79,8 @@ export interface EnrollmentListPanelProps {
     payload: ApiSchemas['UpdateEnrollmentRequest']
   ) => Promise<void> | void;
   onDelete: (enrollmentId: string) => Promise<void> | void;
+  /** When set (Contacts Operations deep link), select the matching enrollment once. */
+  autoSelectParty?: RelatedPartyQuery;
 }
 
 export function EnrollmentListPanel({
@@ -89,6 +97,7 @@ export function EnrollmentListPanel({
   onCreate,
   onUpdate,
   onDelete,
+  autoSelectParty,
 }: EnrollmentListPanelProps) {
   const defaultCurrencyCode = getAdminDefaultCurrencyCode();
   const currencyOptions = getCurrencyOptions();
@@ -281,6 +290,21 @@ export function EnrollmentListPanel({
     setEnrolledAtLocal(formatIsoForDatetimeLocalInput(enrollment.enrolledAt));
     setEnrolledAtError('');
   };
+
+  const partyFilterKey = relatedPartyFilterKey(autoSelectParty ?? {});
+  const matchedEnrollment = useMemo(
+    () => (autoSelectParty ? findEnrollmentForRelatedParty(enrollments, autoSelectParty) : null),
+    [autoSelectParty, enrollments]
+  );
+  const autoSelectKey =
+    instanceId && partyFilterKey && matchedEnrollment
+      ? `${instanceId}:${partyFilterKey}:${matchedEnrollment.id}`
+      : '';
+  useAutoSelectOnce(autoSelectKey, Boolean(autoSelectKey) && !isLoading, () => {
+    if (matchedEnrollment) {
+      applyEnrollmentSelection(matchedEnrollment);
+    }
+  });
 
   const handleDeleteEnrollment = async (enrollment: Enrollment) => {
     const confirmed = await requestConfirm({

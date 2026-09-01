@@ -369,7 +369,7 @@ describe('FamiliesPanel', () => {
     );
     expect(screen.getByRole('link', { name: 'Invoices' })).toHaveAttribute(
       'href',
-      '/assets?tag=customer_invoice&query=Linked+%C2%B7+Alex+Smith'
+      '/assets?tag=customer_invoice&query=Alex+Smith'
     );
     expect(screen.getAllByRole('link', { name: 'Sales conversations' })).toHaveLength(1);
     expect(screen.getAllByRole('link', { name: 'Service instances' })).toHaveLength(1);
