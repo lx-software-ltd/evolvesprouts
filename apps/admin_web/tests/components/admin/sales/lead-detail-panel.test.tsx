@@ -12,18 +12,18 @@ const LEAD_FIXTURE: LeadDetail = {
     firstName: 'Jane',
     lastName: 'Doe',
     email: 'jane@example.com',
-    phoneRegion: null,
-    phoneNationalNumber: null,
-    phoneE164: null,
-    instagramHandle: null,
+    phoneRegion: 'HK',
+    phoneNationalNumber: '12345678',
+    phoneE164: '+85212345678',
+    instagramHandle: 'kitie.w',
     source: 'manual',
-    sourceDetail: null,
+    sourceDetail: 'Walk-in',
     contactType: 'parent',
     relationshipType: 'prospect',
   },
   leadType: 'consultation',
-  funnelStage: 'new',
-  assignedTo: null,
+  funnelStage: 'contacted',
+  assignedTo: 'user-1',
   createdAt: '2026-03-01T10:00:00Z',
   updatedAt: '2026-03-01T10:00:00Z',
   convertedAt: null,
@@ -56,96 +56,131 @@ const LEAD_FIXTURE: LeadDetail = {
   ],
 };
 
-function headingGrid(name: string): HTMLElement | null {
-  return screen.getByRole('heading', { name }).closest('.grid');
-}
+const USERS = [{ sub: 'user-1', name: 'Alex', email: 'alex@example.com' }];
 
 describe('LeadDetailPanel', () => {
-  it('places stage/quick-action and notes/timeline cards in paired rows', () => {
+  it('uses one editor card for create and does not render removed sub-cards', () => {
+    render(
+      <LeadDetailPanel
+        mode='create'
+        lead={null}
+        users={USERS}
+        isLoading={false}
+        error=''
+        onStartCreate={vi.fn()}
+        onCreate={vi.fn()}
+        onUpdate={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole('heading', { name: 'Lead' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create lead' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Lead Info' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Stage Control' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Notes' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Quick Actions' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Activity Timeline' })).not.toBeInTheDocument();
+  });
+
+  it('loads the selected lead onto the editor card and keeps activity only', () => {
     render(
       <LeadDetailPanel
         mode='edit'
         lead={LEAD_FIXTURE}
-        users={[{ sub: 'user-1', name: 'Alex', email: 'alex@example.com' }]}
+        users={USERS}
         isLoading={false}
         error=''
         onStartCreate={vi.fn()}
-        onCancelCreate={vi.fn()}
         onCreate={vi.fn()}
-        onUpdateStage={vi.fn()}
-        onAddNote={vi.fn()}
-        onAssign={vi.fn()}
+        onUpdate={vi.fn()}
       />
     );
 
-    const stageRow = headingGrid('Stage Control');
-    const notesRow = headingGrid('Notes');
-
-    expect(stageRow).toBe(headingGrid('Quick Actions'));
-    expect(notesRow).toBe(headingGrid('Activity Timeline'));
-    expect(stageRow).not.toBe(notesRow);
-    expect(stageRow?.className).toContain('md:grid-cols-2');
-    expect(notesRow?.className).toContain('md:grid-cols-2');
+    expect(screen.getByRole('heading', { name: 'Lead' })).toBeInTheDocument();
+    expect(screen.getByLabelText('First name')).toHaveValue('Jane');
+    expect(screen.getByLabelText('Last name')).toHaveValue('Doe');
+    expect(screen.getByLabelText('Email')).toHaveValue('jane@example.com');
+    expect(screen.getByLabelText('Instagram')).toHaveValue('kitie.w');
+    expect(screen.getByLabelText('Source detail')).toHaveValue('Walk-in');
+    expect(screen.getByLabelText('Stage')).toHaveValue('contacted');
+    expect(screen.getByLabelText('Assigned to')).toHaveValue('user-1');
+    expect(screen.getByRole('button', { name: 'Update lead' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Activity Timeline' })).toBeInTheDocument();
+    expect(screen.getByText('Created')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Lead Info' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Stage Control' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Notes' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Quick Actions' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Called the parent.')).not.toBeInTheDocument();
   });
 
-  it('shows the create-lead form in create mode', async () => {
+  it('submits create from the lead card', async () => {
     const user = userEvent.setup();
     const onCreate = vi.fn().mockResolvedValue(undefined);
-    const onCancelCreate = vi.fn();
 
     render(
       <LeadDetailPanel
         mode='create'
         lead={null}
-        users={[{ sub: 'user-1', name: 'Alex', email: 'alex@example.com' }]}
+        users={USERS}
         isLoading={false}
         error=''
         onStartCreate={vi.fn()}
-        onCancelCreate={onCancelCreate}
         onCreate={onCreate}
-        onUpdateStage={vi.fn()}
-        onAddNote={vi.fn()}
-        onAssign={vi.fn()}
+        onUpdate={vi.fn()}
       />
     );
 
-    expect(screen.getByRole('heading', { name: 'Lead' })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('First name *')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
-
-    await user.type(screen.getByPlaceholderText('First name *'), 'Sam');
+    await user.type(screen.getByLabelText('First name'), 'Sam');
     await user.click(screen.getByRole('button', { name: 'Create lead' }));
 
     expect(onCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         first_name: 'Sam',
-        source: 'manual',
         lead_type: 'consultation',
+        source: 'manual',
       })
     );
   });
 
-  it('returns to the create form from an existing lead', async () => {
+  it('submits update from the loaded lead card', async () => {
     const user = userEvent.setup();
-    const onStartCreate = vi.fn();
+    const onUpdate = vi.fn().mockResolvedValue(undefined);
 
     render(
       <LeadDetailPanel
         mode='edit'
         lead={LEAD_FIXTURE}
-        users={[{ sub: 'user-1', name: 'Alex', email: 'alex@example.com' }]}
+        users={USERS}
         isLoading={false}
         error=''
-        onStartCreate={onStartCreate}
-        onCancelCreate={vi.fn()}
+        onStartCreate={vi.fn()}
         onCreate={vi.fn()}
-        onUpdateStage={vi.fn()}
-        onAddNote={vi.fn()}
-        onAssign={vi.fn()}
+        onUpdate={onUpdate}
       />
     );
 
-    await user.click(screen.getByRole('button', { name: 'New lead' }));
-    expect(onStartCreate).toHaveBeenCalledTimes(1);
+    await user.selectOptions(screen.getByLabelText('Stage'), 'engaged');
+    await user.click(screen.getByRole('button', { name: 'Update lead' }));
+
+    expect(onUpdate).toHaveBeenCalledWith({
+      funnel_stage: 'engaged',
+      assigned_to: 'user-1',
+      lost_reason: null,
+      contact: expect.objectContaining({
+        id: 'contact-1',
+        first_name: 'Jane',
+        last_name: 'Doe',
+        email: 'jane@example.com',
+        phone_region: 'HK',
+        phone_number: '12345678',
+        instagram_handle: 'kitie.w',
+        source: 'manual',
+        source_detail: 'Walk-in',
+        contact_type: 'parent',
+      }),
+    });
   });
 });

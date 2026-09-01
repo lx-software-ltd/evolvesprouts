@@ -64,6 +64,7 @@ const { mockUseSalesPage, state } = vi.hoisted(() => {
       isLoading: false,
       error: '',
       createLeadEntry: vi.fn().mockResolvedValue(null),
+      updateLeadEntry: vi.fn().mockResolvedValue(null),
       updateStage: vi.fn().mockResolvedValue(null),
       assignLead: vi.fn().mockResolvedValue(null),
       addNote: vi.fn().mockResolvedValue(undefined),
