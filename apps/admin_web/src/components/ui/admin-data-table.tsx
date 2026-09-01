@@ -82,6 +82,10 @@ export interface AdminDataTableOperationsHeadCellProps {
   scope?: 'col' | 'row';
 }
 
+/** Icon-only Operations control: outline button shared by listing tables. */
+export const ADMIN_OPS_ICON_LINK_CLASS =
+  'inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400';
+
 /** Standard right-aligned operations column header for admin listing tables. */
 export function AdminDataTableOperationsHeadCell({
   children = 'Operations',

@@ -106,10 +106,9 @@ describe('LeadsTable', () => {
     expect(screen.queryByRole('columnheader', { name: 'Assigned' })).not.toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Operations' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Open lead' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Open contact' })).toHaveAttribute(
-      'href',
-      '/contacts?contact=contact-1'
-    );
+    const contactLink = screen.getByRole('link', { name: 'Open contact' });
+    expect(contactLink).toHaveAttribute('href', '/contacts?contact=contact-1');
+    expect(contactLink).toHaveClass('border-slate-300', 'bg-white', 'px-3');
     await user.click(screen.getByText('Jane Doe'));
     expect(onSelectLead).toHaveBeenCalledWith('lead-1');
     onSelectLead.mockClear();
