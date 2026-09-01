@@ -272,6 +272,37 @@ describe('AssetEditorPanel', () => {
     expect(screen.queryByLabelText('Replace PDF file')).not.toBeInTheDocument();
   });
 
+  it('locks visibility for expense-linked assets', async () => {
+    const expenseAsset = createAdminAssetFixture({
+      visibility: 'restricted',
+      tags: [{ id: 't1', name: 'expense_attachment', color: null }],
+    });
+    renderEditor({ selectedAsset: expenseAsset });
+
+    await waitFor(() => {
+      expect(mockGetAdminAssetShareLink).toHaveBeenCalledWith('asset-1');
+    });
+
+    expect(screen.getByLabelText('Visibility *')).toBeDisabled();
+  });
+
+  it('does not show replace PDF control for invoice-linked assets', async () => {
+    const invoiceAsset = createAdminAssetFixture({
+      tags: [{ id: 't1', name: 'customer_invoice', color: null }],
+    });
+    renderEditor({ selectedAsset: invoiceAsset });
+
+    await waitFor(() => {
+      expect(mockGetAdminAssetShareLink).toHaveBeenCalledWith('asset-1');
+    });
+
+    expect(screen.queryByLabelText('Replace PDF file')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Visibility *')).toBeDisabled();
+    expect(
+      screen.getByLabelText('Tag (linked to customer invoice; not editable)')
+    ).toBeDisabled();
+  });
+
   it('disables tag select and omits client_tag when asset is expense-linked', async () => {
     const user = userEvent.setup();
     const expenseAsset = createAdminAssetFixture({

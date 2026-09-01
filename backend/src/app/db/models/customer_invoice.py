@@ -8,7 +8,7 @@ from typing import Any
 from uuid import UUID
 
 import sqlalchemy as sa
-from sqlalchemy import ForeignKey, String, Text, text
+from sqlalchemy import ForeignKey, Index, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import TIMESTAMP, Numeric
@@ -31,6 +31,14 @@ class CustomerInvoice(Base):
     """AR invoice (draft, issued, or void)."""
 
     __tablename__ = "customer_invoices"
+    __table_args__ = (
+        Index(
+            "customer_invoices_asset_id_uidx",
+            "asset_id",
+            unique=True,
+            postgresql_where=text("asset_id IS NOT NULL"),
+        ),
+    )
 
     id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
@@ -106,6 +114,11 @@ class CustomerInvoice(Base):
     void_reason: Mapped[str | None] = mapped_column(Text(), nullable=True)
     issued_pdf_s3_key: Mapped[str | None] = mapped_column(Text(), nullable=True)
     issued_pdf_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    asset_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("assets.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
     pdf_template_version: Mapped[str | None] = mapped_column(Text(), nullable=True)
     paid_at: Mapped[datetime | None] = mapped_column(
         TIMESTAMP(timezone=True), nullable=True

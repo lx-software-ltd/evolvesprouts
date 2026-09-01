@@ -153,4 +153,31 @@ describe('AssetListPanel', () => {
     });
     expect(deleteButton).toBeDisabled();
   });
+
+  it('renders invoice tag with blue pill and disables delete', () => {
+    const invoiceAsset = createAdminAssetFixture({
+      title: 'INV-2026-000001 — Acme Family',
+      tags: [{ id: 'tag-inv', name: 'customer_invoice', color: null }],
+    });
+    renderPanel({ assets: [invoiceAsset] });
+
+    const tagPill = screen.getByText('Invoices').closest('span');
+    expect(tagPill).toBeTruthy();
+    expect(tagPill).toHaveClass('bg-blue-100', 'text-blue-900');
+
+    const row = screen.getByText('INV-2026-000001 — Acme Family').closest('tr');
+    expect(row).toBeTruthy();
+    const deleteButton = within(row as HTMLElement).getByRole('button', {
+      name: 'Cannot delete: asset is linked to customer invoices',
+    });
+    expect(deleteButton).toBeDisabled();
+  });
+
+  it('uses a search placeholder that mentions client', () => {
+    renderPanel();
+    expect(screen.getByLabelText('Search')).toHaveAttribute(
+      'placeholder',
+      'Title, file name, or client'
+    );
+  });
 });

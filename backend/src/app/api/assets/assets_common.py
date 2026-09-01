@@ -34,6 +34,7 @@ from app.services.asset_expense_tagging import (
     CLIENT_DOCUMENT_TAG_NAME,
     EXPENSE_ATTACHMENT_TAG_NAME,
 )
+from app.services.asset_invoice_tagging import CUSTOMER_INVOICE_TAG_NAME
 from app.services.aws_clients import get_s3_client
 from app.services.cloudfront_signing import generate_signed_download_url
 from app.utils import require_env
@@ -244,13 +245,28 @@ def parse_update_asset_payload(event: Mapping[str, Any]) -> dict[str, Any]:
     return result
 
 
-def asset_links_expense_attachment(asset: Asset) -> bool:
-    """Return True when the asset carries the expense_attachment tag (relationship loaded)."""
+def _asset_has_tag_name(asset: Asset, tag_name: str) -> bool:
+    needle = tag_name.lower()
     for link in asset.asset_tags:
         tag = link.tag
-        if tag is not None and tag.name.lower() == EXPENSE_ATTACHMENT_TAG_NAME.lower():
+        if tag is not None and tag.name.lower() == needle:
             return True
     return False
+
+
+def asset_links_expense_attachment(asset: Asset) -> bool:
+    """Return True when the asset carries the expense_attachment tag (relationship loaded)."""
+    return _asset_has_tag_name(asset, EXPENSE_ATTACHMENT_TAG_NAME)
+
+
+def asset_links_customer_invoice(asset: Asset) -> bool:
+    """Return True when the asset carries the customer_invoice tag (relationship loaded)."""
+    return _asset_has_tag_name(asset, CUSTOMER_INVOICE_TAG_NAME)
+
+
+def asset_links_restricted_system_document(asset: Asset) -> bool:
+    """Return True when expense or customer-invoice system tags are present."""
+    return asset_links_expense_attachment(asset) or asset_links_customer_invoice(asset)
 
 
 def parse_partial_update_asset_payload(event: Mapping[str, Any]) -> dict[str, Any]:

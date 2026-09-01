@@ -113,7 +113,7 @@ def test_complete_blocks_expense_tagged_asset(
     pending = f"assets/{asset_id}/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee-x.pdf"
     monkeypatch.setattr(content_replace, "head_s3_object", lambda **_k: _good_head())
     monkeypatch.setattr(
-        content_replace, "asset_links_expense_attachment", lambda _a: True
+        content_replace, "asset_links_restricted_system_document", lambda _a: True
     )
 
     class _Repo:
@@ -190,6 +190,46 @@ def test_init_returns_404_when_asset_missing(
         )
 
 
+def test_init_blocks_invoice_linked_asset(
+    monkeypatch: pytest.MonkeyPatch,
+    api_gateway_event: Any,
+) -> None:
+    asset_id = uuid4()
+
+    class _Repo:
+        def get_with_asset_tags(self, _id: UUID) -> Asset:
+            return _make_asset(asset_id=asset_id)
+
+    class _Sess:
+        def __enter__(self) -> _Sess:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+    monkeypatch.setattr(content_replace, "Session", lambda _e: _Sess())
+    monkeypatch.setattr(content_replace, "get_engine", lambda: object())
+    monkeypatch.setattr(content_replace, "set_audit_context", lambda *a, **k: None)
+    monkeypatch.setattr(content_replace, "AssetRepository", lambda _s: _Repo())
+    monkeypatch.setattr(
+        content_replace, "asset_links_restricted_system_document", lambda _a: True
+    )
+
+    with pytest.raises(ValidationError, match="invoice"):
+        content_replace.init_asset_content_replace(
+            api_gateway_event(
+                method="POST",
+                path="/x",
+                body=json.dumps(
+                    {"file_name": "a.pdf", "content_type": "application/pdf"}
+                ),
+            ),
+            asset_id,
+            identity_user_sub="u",
+            request_id=None,
+        )
+
+
 def test_init_blocks_expense_linked_asset(
     monkeypatch: pytest.MonkeyPatch,
     api_gateway_event: Any,
@@ -212,7 +252,7 @@ def test_init_blocks_expense_linked_asset(
     monkeypatch.setattr(content_replace, "set_audit_context", lambda *a, **k: None)
     monkeypatch.setattr(content_replace, "AssetRepository", lambda _s: _Repo())
     monkeypatch.setattr(
-        content_replace, "asset_links_expense_attachment", lambda _a: True
+        content_replace, "asset_links_restricted_system_document", lambda _a: True
     )
 
     with pytest.raises(ValidationError, match="expense"):
@@ -256,7 +296,7 @@ def test_complete_rejects_oversized_object(
     monkeypatch.setattr(content_replace, "set_audit_context", lambda *a, **k: None)
     monkeypatch.setattr(content_replace, "AssetRepository", lambda _s: _Repo())
     monkeypatch.setattr(
-        content_replace, "asset_links_expense_attachment", lambda _a: False
+        content_replace, "asset_links_restricted_system_document", lambda _a: False
     )
 
     with pytest.raises(ValidationError, match="between 1 and"):
@@ -309,7 +349,7 @@ def test_complete_rejects_non_pdf_head_content_type(
     monkeypatch.setattr(content_replace, "set_audit_context", lambda *a, **k: None)
     monkeypatch.setattr(content_replace, "AssetRepository", lambda _s: _Repo())
     monkeypatch.setattr(
-        content_replace, "asset_links_expense_attachment", lambda _a: False
+        content_replace, "asset_links_restricted_system_document", lambda _a: False
     )
 
     with pytest.raises(ValidationError, match="Content-Type"):
@@ -389,7 +429,7 @@ def test_complete_success_updates_and_deletes_previous(
     monkeypatch.setattr(content_replace, "set_audit_context", lambda *a, **k: None)
     monkeypatch.setattr(content_replace, "AssetRepository", lambda _s: repo)
     monkeypatch.setattr(
-        content_replace, "asset_links_expense_attachment", lambda _a: False
+        content_replace, "asset_links_restricted_system_document", lambda _a: False
     )
 
     resp = content_replace.complete_asset_content_replace(
@@ -464,7 +504,7 @@ def test_complete_does_not_delete_when_update_raises(
     monkeypatch.setattr(content_replace, "set_audit_context", lambda *a, **k: None)
     monkeypatch.setattr(content_replace, "AssetRepository", lambda _s: _Repo())
     monkeypatch.setattr(
-        content_replace, "asset_links_expense_attachment", lambda _a: False
+        content_replace, "asset_links_restricted_system_document", lambda _a: False
     )
 
     with pytest.raises(RuntimeError, match="simulated"):
@@ -528,7 +568,7 @@ def test_second_complete_same_pending_after_success_raises(
     monkeypatch.setattr(content_replace, "set_audit_context", lambda *a, **k: None)
     monkeypatch.setattr(content_replace, "AssetRepository", lambda _s: _Repo())
     monkeypatch.setattr(
-        content_replace, "asset_links_expense_attachment", lambda _a: False
+        content_replace, "asset_links_restricted_system_document", lambda _a: False
     )
 
     with pytest.raises(ValidationError, match="nothing to replace"):
@@ -603,7 +643,7 @@ def test_delete_previous_logs_warning_on_failure(
     monkeypatch.setattr(content_replace, "set_audit_context", lambda *a, **k: None)
     monkeypatch.setattr(content_replace, "AssetRepository", lambda _s: _Repo())
     monkeypatch.setattr(
-        content_replace, "asset_links_expense_attachment", lambda _a: False
+        content_replace, "asset_links_restricted_system_document", lambda _a: False
     )
 
     with caplog.at_level(logging.WARNING):

@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.api.assets.assets_common import (
     admin_asset_replace_content_type,
-    asset_links_expense_attachment,
+    asset_links_restricted_system_document,
     build_s3_key,
     delete_s3_object,
     file_name_from_pending_asset_content_key,
@@ -49,9 +49,9 @@ def init_asset_content_replace(
         asset = repository.get_with_asset_tags(asset_id)
         if asset is None:
             raise NotFoundError("Asset", str(asset_id))
-        if asset_links_expense_attachment(asset):
+        if asset_links_restricted_system_document(asset):
             raise ValidationError(
-                "File replacement is not allowed for expense-linked assets",
+                "File replacement is not allowed for expense- or invoice-linked assets",
                 field="asset",
             )
 
@@ -156,9 +156,9 @@ def complete_asset_content_replace(
         asset = repository.get_with_asset_tags(asset_id)
         if asset is None:
             raise NotFoundError("Asset", str(asset_id))
-        if asset_links_expense_attachment(asset):
+        if asset_links_restricted_system_document(asset):
             raise ValidationError(
-                "File replacement is not allowed for expense-linked assets",
+                "File replacement is not allowed for expense- or invoice-linked assets",
                 field="asset",
             )
 

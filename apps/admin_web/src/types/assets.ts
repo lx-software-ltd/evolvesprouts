@@ -30,6 +30,25 @@ export const EXPENSE_ATTACHMENT_ASSET_TAG = 'expense_attachment' as const;
 /** Admin-assignable client-facing document tag (matches admin API `client_tag`). */
 export const CLIENT_DOCUMENT_ASSET_TAG = 'client_document' as const;
 
+/** System tag name for assets linked to an issued customer invoice. */
+export const CUSTOMER_INVOICE_ASSET_TAG = 'customer_invoice' as const;
+
+export function isExpenseAttachmentAssetTag(tagName: string): boolean {
+  return tagName.toLowerCase() === EXPENSE_ATTACHMENT_ASSET_TAG;
+}
+
+export function isCustomerInvoiceAssetTag(tagName: string): boolean {
+  return tagName.toLowerCase() === CUSTOMER_INVOICE_ASSET_TAG;
+}
+
+export function isRestrictedSystemAssetTag(tagName: string): boolean {
+  return isExpenseAttachmentAssetTag(tagName) || isCustomerInvoiceAssetTag(tagName);
+}
+
+export function assetHasRestrictedSystemTag(asset: { tags: ReadonlyArray<{ name: string }> }): boolean {
+  return asset.tags.some((tag) => isRestrictedSystemAssetTag(tag.name));
+}
+
 /** Allowed `content_language` values for admin asset create/update (matches OpenAPI enum). */
 export type AdminAssetWriteContentLanguage = NonNullable<
   Exclude<ApiCreateAssetRequest['content_language'], null | undefined>
@@ -102,7 +121,7 @@ export interface UpsertAdminAssetInput {
   contentLanguage?: OptionalToNullable<ApiCreateAssetRequest['content_language']>;
   visibility: ApiCreateAssetRequest['visibility'];
   /**
-   * Maps to API `client_tag`. Omit on update when the asset is expense-tagged (API forbids the field).
+   * Maps to API `client_tag`. Omit on update when the asset is expense- or invoice-tagged (API forbids the field).
    */
   clientTag?: ApiCreateAssetRequest['client_tag'];
 }
@@ -117,7 +136,7 @@ export interface UpdateAdminAssetPatchInput {
   contentType?: string | null;
   contentLanguage?: OptionalToNullable<ApiPartialUpdateAssetRequest['content_language']>;
   visibility?: AssetVisibility;
-  /** Omit when the asset is expense-tagged (API forbids the field). */
+  /** Omit when the asset is expense- or invoice-tagged (API forbids the field). */
   clientTag?: typeof CLIENT_DOCUMENT_ASSET_TAG | null;
 }
 

@@ -21,6 +21,7 @@ from app.db.models.enums import (
     BillingPaymentStatus,
 )
 from app.db.models.payment_allocation import DocumentCounter, PaymentAllocation
+from app.services.asset_invoice_tagging import ensure_customer_invoice_asset
 from app.services.aws_clients import get_s3_client
 from app.services.customer_invoice_pdf import (
     render_invoice_pdf,
@@ -404,6 +405,7 @@ def refresh_invoice_pdf(session: Session, invoice: CustomerInvoice) -> None:
     invoice.issued_pdf_sha256 = digest
     invoice.pdf_template_version = INVOICE_PDF_TEMPLATE_VERSION
     session.flush()
+    ensure_customer_invoice_asset(session, invoice)
 
 
 def _invoice_preview_s3_key(invoice_id: UUID) -> str:

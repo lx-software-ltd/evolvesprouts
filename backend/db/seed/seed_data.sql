@@ -10,6 +10,11 @@ INSERT INTO tags (id, name, created_by)
 SELECT gen_random_uuid(), 'client_document', 'system'
 WHERE NOT EXISTS (SELECT 1 FROM tags WHERE lower(name) = lower('client_document'));
 
+-- System tag for assets linked to issued customer invoices (see migration 0077_invoice_assets).
+INSERT INTO tags (id, name, created_by)
+SELECT gen_random_uuid(), 'customer_invoice', 'system'
+WHERE NOT EXISTS (SELECT 1 FROM tags WHERE lower(name) = lower('customer_invoice'));
+
 -- Referral service keys on services (nullable column). Only set when exactly one row matches,
 -- so seed never assigns the same key to multiple services.
 UPDATE services s

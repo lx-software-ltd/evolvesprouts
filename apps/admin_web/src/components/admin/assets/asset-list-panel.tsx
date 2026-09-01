@@ -7,7 +7,11 @@ import type { AdminAsset, AssetVisibility, ListAdminAssetsInput } from '@/types/
 import {
   ASSET_VISIBILITIES,
   CLIENT_DOCUMENT_ASSET_TAG,
+  CUSTOMER_INVOICE_ASSET_TAG,
   EXPENSE_ATTACHMENT_ASSET_TAG,
+  isCustomerInvoiceAssetTag,
+  isExpenseAttachmentAssetTag,
+  isRestrictedSystemAssetTag,
 } from '@/types/assets';
 
 import { OpenAdminAssetInNewTabButton } from '@/components/admin/shared/open-admin-asset-in-new-tab-button';
@@ -134,7 +138,7 @@ export function AssetListPanel({
                   id='assets-search'
                   value={filters.query ?? ''}
                   onChange={(event) => onQueryChange(event.target.value)}
-                  placeholder='Title or file name'
+                  placeholder='Title, file name, or client'
                 />
               </div>
               <div className='min-w-[180px]'>
@@ -196,8 +200,14 @@ export function AssetListPanel({
             ) : (
               assets.map((asset) => {
                 const isSelected = asset.id === selectedAssetId;
-                const isExpenseLinked = asset.tags.some(
-                  (tag) => tag.name.toLowerCase() === EXPENSE_ATTACHMENT_ASSET_TAG
+                const isExpenseLinked = asset.tags.some((tag) =>
+                  isExpenseAttachmentAssetTag(tag.name)
+                );
+                const isInvoiceLinked = asset.tags.some((tag) =>
+                  isCustomerInvoiceAssetTag(tag.name)
+                );
+                const isRestrictedSystemLinked = asset.tags.some((tag) =>
+                  isRestrictedSystemAssetTag(tag.name)
                 );
                 const sortedTags = [...asset.tags].sort((a, b) =>
                   a.name.localeCompare(b.name)
@@ -227,11 +237,14 @@ export function AssetListPanel({
                             const nameLower = tag.name.toLowerCase();
                             const isExpense = nameLower === EXPENSE_ATTACHMENT_ASSET_TAG;
                             const isClient = nameLower === CLIENT_DOCUMENT_ASSET_TAG;
+                            const isInvoice = nameLower === CUSTOMER_INVOICE_ASSET_TAG;
                             const pillClass = isExpense
                               ? 'rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900'
                               : isClient
                                 ? 'rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-900'
-                                : 'rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-800';
+                                : isInvoice
+                                  ? 'rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-900'
+                                  : 'rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-800';
                             return (
                               <span key={tag.id} className={pillClass}>
                                 {formatAssetTagDisplayName(tag.name)}
@@ -264,16 +277,20 @@ export function AssetListPanel({
                           size='sm'
                           variant='danger'
                           onClick={(event) => void handleDeleteAsset(asset, event)}
-                          disabled={isDeletingAssetId === asset.id || isExpenseLinked}
+                          disabled={isDeletingAssetId === asset.id || isRestrictedSystemLinked}
                           title={
-                            isExpenseLinked
-                              ? 'Cannot delete assets linked to expenses'
-                              : 'Delete asset'
+                            isInvoiceLinked
+                              ? 'Cannot delete assets linked to customer invoices'
+                              : isExpenseLinked
+                                ? 'Cannot delete assets linked to expenses'
+                                : 'Delete asset'
                           }
                           aria-label={
-                            isExpenseLinked
-                              ? 'Cannot delete: asset is linked to expenses'
-                              : 'Delete asset'
+                            isInvoiceLinked
+                              ? 'Cannot delete: asset is linked to customer invoices'
+                              : isExpenseLinked
+                                ? 'Cannot delete: asset is linked to expenses'
+                                : 'Delete asset'
                           }
                         >
                           <DeleteIcon className='h-4 w-4' />
