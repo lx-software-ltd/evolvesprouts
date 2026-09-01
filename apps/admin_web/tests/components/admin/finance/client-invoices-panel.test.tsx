@@ -23,19 +23,9 @@ const billingMocks = vi.hoisted(() => ({
   listRecentEnrollmentsForInvoicing: vi.fn(),
 }));
 
-const enrollmentPickerMocks = vi.hoisted(() => ({
-  mockUseEnrollmentParentPickers: vi.fn(() => ({
-    contactOptions: [{ id: 'cccccccc-cccc-cccc-cccc-cccccccccccc', label: 'Pat Contact' }],
-    families: [{ id: 'dddddddd-dddd-dddd-dddd-dddddddddddd', label: 'Fam One' }],
-    organizations: [{ id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', label: 'Org One' }],
-    partnerOrganizations: [],
-    loading: false,
-    error: '',
-    labelByContactId: new Map(),
-    labelByFamilyId: new Map(),
-    labelByOrganizationId: new Map(),
-    labelByPartnerOrganizationId: new Map(),
-  })),
+const billToPartyMocks = vi.hoisted(() => ({
+  searchBillToParties: vi.fn(),
+  createBillToParty: vi.fn(),
 }));
 
 vi.mock('@/lib/billing-api', async (importOriginal) => {
@@ -63,9 +53,14 @@ vi.mock('@/lib/billing-api', async (importOriginal) => {
   };
 });
 
-vi.mock('@/hooks/use-enrollment-parent-pickers', () => ({
-  useEnrollmentParentPickers: enrollmentPickerMocks.mockUseEnrollmentParentPickers,
-}));
+vi.mock('@/lib/bill-to-party-api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/bill-to-party-api')>();
+  return {
+    ...actual,
+    searchBillToParties: billToPartyMocks.searchBillToParties,
+    createBillToParty: billToPartyMocks.createBillToParty,
+  };
+});
 
 import {
   ClientInvoicesPanel,
@@ -89,6 +84,11 @@ describe('ClientInvoicesPanel', () => {
     for (const key of Object.keys(billingMocks) as (keyof typeof billingMocks)[]) {
       billingMocks[key].mockReset();
     }
+    billToPartyMocks.searchBillToParties.mockReset();
+    billToPartyMocks.createBillToParty.mockReset();
+    billToPartyMocks.searchBillToParties.mockResolvedValue([
+      { id: 'cccccccc-cccc-cccc-cccc-cccccccccccc', label: 'Pat Contact' },
+    ]);
     billingMocks.listCustomerPayments.mockResolvedValue([]);
     billingMocks.listCustomerInvoices.mockResolvedValue({ items: [], next_cursor: null });
     billingMocks.listRecentEnrollmentsForInvoicing.mockResolvedValue({ items: [], truncated: false });
@@ -1552,10 +1552,8 @@ describe('ClientInvoicesPanel', () => {
     await userEvent.clear(unit);
     await userEvent.type(unit, '150');
 
-    await userEvent.selectOptions(
-      screen.getByLabelText(/^Contact$/i),
-      'cccccccc-cccc-cccc-cccc-cccccccccccc',
-    );
+    await userEvent.type(screen.getByLabelText(/^Contact$/i), 'Pa');
+    await userEvent.click(await screen.findByRole('option', { name: 'Pat Contact' }));
 
     await userEvent.click(screen.getByRole('button', { name: 'Create draft invoice from custom lines' }));
 
@@ -1598,10 +1596,8 @@ describe('ClientInvoicesPanel', () => {
       await userEvent.clear(unit);
       await userEvent.type(unit, '25');
 
-      await userEvent.selectOptions(
-        screen.getByLabelText(/^Contact$/i),
-        'cccccccc-cccc-cccc-cccc-cccccccccccc',
-      );
+      await userEvent.type(screen.getByLabelText(/^Contact$/i), 'Pa');
+      await userEvent.click(await screen.findByRole('option', { name: 'Pat Contact' }));
 
       await userEvent.click(screen.getByRole('button', { name: 'Create draft invoice from custom lines' }));
 

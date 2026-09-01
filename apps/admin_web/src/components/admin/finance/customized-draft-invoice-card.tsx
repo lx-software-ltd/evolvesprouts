@@ -13,19 +13,26 @@ import {
   AdminDataTableHeadCell,
   AdminDataTableOperationsHeadCell,
 } from '@/components/ui/admin-data-table';
+import {
+  BillToPartySearchOrCreateField,
+} from '@/components/admin/finance/bill-to-party-search-or-create-field';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import { useEnrollmentParentPickers } from '@/hooks/use-enrollment-parent-pickers';
 import { toErrorMessage } from '@/hooks/hook-errors';
+import {
+  createBillToParty,
+  isBillToPartyReady,
+  type BillToPartyKind,
+  type BillToPartyValue,
+} from '@/lib/bill-to-party-api';
 import { createDraftInvoice } from '@/lib/billing-api';
+import { BILL_TO_PARTY_SEARCH_MIN_CHARS } from '@/lib/parse-contact-search-query';
 
 export const CUSTOMIZED_DRAFT_INVOICE_FORM_ID = 'client-billing-customized-draft-form';
 const CUSTOMIZED_FORM_ID = CUSTOMIZED_DRAFT_INVOICE_FORM_ID;
 const MAX_CUSTOMIZED_LINES = 50;
-
-type CustomizedBillKind = 'contact' | 'family' | 'organization' | 'partner';
 
 type CustomizedLineDraftRow = {
   id: string;
@@ -71,7 +78,7 @@ export interface CustomizedDraftInvoiceCardProps {
   defaultCurrency: string;
   currencyOptions: readonly { value: string; label: string }[];
   editorBusy: boolean;
-  /** When false, bill-to pickers are not loaded until the user switches to customized mode in the parent. */
+  /** When false, the bill-to search field stays idle until customized mode is selected. */
   loadParents: boolean;
   /** Invoice date YMD from parent (shared with enrollment draft row). */
   draftInvoiceDate: string;
@@ -93,22 +100,13 @@ export function CustomizedDraftInvoiceCard({
   onCreated,
 }: CustomizedDraftInvoiceCardProps) {
   const customizedBillKindId = useId();
-  const customizedBillEntitySelectId = useId();
+  const customizedBillEntityInputId = useId();
   const customizedCurrencyId = useId();
-
-  const {
-    contactOptions,
-    families,
-    organizations,
-    partnerOrganizations,
-    loading: customizedPickerLoading,
-    error: customizedPickerError,
-  } = useEnrollmentParentPickers(loadParents);
 
   const customizedLineIdSeq = useRef(1);
 
-  const [customizedBillKind, setCustomizedBillKind] = useState<CustomizedBillKind>('contact');
-  const [customizedBillEntityId, setCustomizedBillEntityId] = useState('');
+  const [customizedBillKind, setCustomizedBillKind] = useState<BillToPartyKind>('contact');
+  const [billToParty, setBillToParty] = useState<BillToPartyValue>({ status: 'empty' });
   const [customizedCurrency, setCustomizedCurrency] = useState(() =>
     currencySelectValue(defaultCurrency, currencyOptions, defaultCurrency),
   );
@@ -116,33 +114,12 @@ export function CustomizedDraftInvoiceCard({
     makeCustomizedLineRow(1),
   ]);
 
-  useEffect(() => {
-    setCustomizedBillEntityId('');
-  }, [customizedBillKind]);
-
-  const customizedBillEntityOptions = useMemo(() => {
-    if (customizedBillKind === 'contact') {
-      return contactOptions;
-    }
-    if (customizedBillKind === 'family') {
-      return families;
-    }
-    if (customizedBillKind === 'partner') {
-      return partnerOrganizations;
-    }
-    return organizations;
-  }, [contactOptions, customizedBillKind, families, organizations, partnerOrganizations]);
-
   const customizedIssue = useMemo(() => {
-    if (!loadParents || customizedPickerLoading) {
+    if (!loadParents) {
       return '';
     }
-    if (customizedBillEntityId.trim() === '') {
-      return 'Select a bill-to party.';
-    }
-    const allowed = new Set(customizedBillEntityOptions.map((o) => o.id));
-    if (!allowed.has(customizedBillEntityId)) {
-      return 'Selected party is not in the list; pick again.';
+    if (!isBillToPartyReady(billToParty, BILL_TO_PARTY_SEARCH_MIN_CHARS)) {
+      return 'Search for an existing bill-to party or enter at least 2 characters to create one.';
     }
     if (customizedLines.length === 0) {
       return 'Add at least one line.';
@@ -196,10 +173,8 @@ export function CustomizedDraftInvoiceCard({
     }
     return '';
   }, [
-    customizedBillEntityId,
-    customizedBillEntityOptions,
+    billToParty,
     customizedLines,
-    customizedPickerLoading,
     loadParents,
   ]);
 
@@ -208,37 +183,34 @@ export function CustomizedDraftInvoiceCard({
       onValidityChange?.(false);
       return;
     }
-    const valid =
-      !customizedPickerError &&
-      !customizedPickerLoading &&
-      customizedIssue === '';
-    onValidityChange?.(valid);
-  }, [
-    customizedIssue,
-    customizedPickerError,
-    customizedPickerLoading,
-    loadParents,
-    onValidityChange,
-  ]);
+    onValidityChange?.(customizedIssue === '');
+  }, [customizedIssue, loadParents, onValidityChange]);
 
   const handleCreateCustomizedDraft = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (customizedPickerError) {
-      onDraftError?.(customizedPickerError);
-      return;
-    }
     if (customizedIssue) {
       onDraftError?.(customizedIssue);
       return;
     }
     onRequestBusy?.(true);
     try {
+      let partyId = '';
+      if (billToParty.status === 'existing') {
+        partyId = billToParty.id;
+      } else if (billToParty.status === 'create') {
+        const created = await createBillToParty(customizedBillKind, billToParty.query);
+        partyId = created.id;
+        setBillToParty({ status: 'existing', id: created.id, label: created.label });
+      } else {
+        onDraftError?.('Search for an existing bill-to party or enter at least 2 characters to create one.');
+        return;
+      }
       const billTo =
         customizedBillKind === 'contact'
-          ? { kind: 'contact' as const, contactId: customizedBillEntityId }
+          ? { kind: 'contact' as const, contactId: partyId }
           : customizedBillKind === 'family'
-            ? { kind: 'family' as const, familyId: customizedBillEntityId }
-            : { kind: 'organization' as const, organizationId: customizedBillEntityId };
+            ? { kind: 'family' as const, familyId: partyId }
+            : { kind: 'organization' as const, organizationId: partyId };
       const lines = customizedLines.map((ln) => {
         const row: {
           description: string;
@@ -273,6 +245,7 @@ export function CustomizedDraftInvoiceCard({
       await onCreated(result.invoiceId);
       customizedLineIdSeq.current += 1;
       setCustomizedLines([makeCustomizedLineRow(customizedLineIdSeq.current)]);
+      setBillToParty({ status: 'empty' });
     } catch (caught) {
       onDraftError?.(
         toErrorMessage(caught, 'Create draft failed.', { honorBackendMessage: true }),
@@ -282,23 +255,9 @@ export function CustomizedDraftInvoiceCard({
     }
   };
 
-  const entityFieldLabel =
-    customizedBillKind === 'contact'
-      ? 'Contact'
-      : customizedBillKind === 'family'
-        ? 'Family'
-        : customizedBillKind === 'partner'
-          ? 'Partner organization'
-          : 'Organization';
-
   return (
     <div className='space-y-4'>
       <form id={CUSTOMIZED_FORM_ID} className='space-y-4' onSubmit={(e) => void handleCreateCustomizedDraft(e)}>
-        {customizedPickerError ? (
-          <p className='text-sm text-red-700' role='alert'>
-            {customizedPickerError}
-          </p>
-        ) : null}
         <div className='flex flex-wrap gap-4'>
           <div className='min-w-[200px]'>
             <Label htmlFor={customizedBillKindId}>Bill to</Label>
@@ -306,8 +265,11 @@ export function CustomizedDraftInvoiceCard({
               id={customizedBillKindId}
               className='mt-1 w-full'
               value={customizedBillKind}
-              onChange={(e) => setCustomizedBillKind(e.target.value as CustomizedBillKind)}
-              disabled={editorBusy || customizedPickerLoading}
+              onChange={(e) => {
+                setCustomizedBillKind(e.target.value as BillToPartyKind);
+                setBillToParty({ status: 'empty' });
+              }}
+              disabled={editorBusy}
             >
               <option value='contact'>Contact</option>
               <option value='family'>Family</option>
@@ -315,25 +277,15 @@ export function CustomizedDraftInvoiceCard({
               <option value='partner'>Partner</option>
             </Select>
           </div>
-          <div className='min-w-[260px] flex-1'>
-            <Label htmlFor={customizedBillEntitySelectId}>{entityFieldLabel}</Label>
-            <Select
-              id={customizedBillEntitySelectId}
-              className='mt-1 w-full'
-              value={customizedBillEntityId}
-              onChange={(e) => setCustomizedBillEntityId(e.target.value)}
-              disabled={editorBusy || customizedPickerLoading}
-            >
-              <option value=''>
-                {customizedPickerLoading ? 'Loading parties…' : 'Select…'}
-              </option>
-              {customizedBillEntityOptions.map((opt) => (
-                <option key={opt.id} value={opt.id}>
-                  {opt.label}
-                </option>
-              ))}
-            </Select>
-          </div>
+          <BillToPartySearchOrCreateField
+            key={customizedBillKind}
+            kind={customizedBillKind}
+            inputId={customizedBillEntityInputId}
+            disabled={editorBusy}
+            enabled={loadParents}
+            value={billToParty}
+            onChange={setBillToParty}
+          />
           <div className='min-w-[140px]'>
             <Label htmlFor={customizedCurrencyId}>Currency</Label>
             <Select
@@ -516,7 +468,7 @@ export function CustomizedDraftInvoiceCard({
             </div>
           </div>
         </AdminCollapsibleSection>
-        {customizedIssue && loadParents && !customizedPickerLoading ? (
+        {customizedIssue && loadParents ? (
           <p className='text-sm text-amber-800'>{customizedIssue}</p>
         ) : null}
       </form>
