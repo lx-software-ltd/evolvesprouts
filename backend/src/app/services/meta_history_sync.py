@@ -20,14 +20,11 @@ from app.utils.logging import get_logger, mask_pii
 logger = get_logger(__name__)
 
 _SOURCE_DETAIL = "meta_history_sync"
-_CONVERSATION_LIMIT = 50
+_CONVERSATION_LIMIT = 15
 _MESSAGE_LIMIT = 20
 _MAX_PAGES = 40
-_MESSAGE_FIELDS = "id,created_time,from,message,attachments"
-_CONVERSATION_FIELDS = (
-    f"id,updated_time,participants,messages.limit({_MESSAGE_LIMIT})"
-    f"{{{_MESSAGE_FIELDS}}}"
-)
+_MESSAGE_FIELDS = "id,created_time,from,message"
+_CONVERSATION_FIELDS = "id,updated_time,participants"
 
 
 def sync_meta_channel_history(
@@ -84,6 +81,7 @@ def sync_meta_channel_history(
                     page_id=page_id,
                     self_ids=self_ids,
                     counters=counters,
+                    page_token=page_token,
                 )
         paging = payload.get("paging")
         cursors = paging.get("cursors") if isinstance(paging, Mapping) else None
@@ -94,6 +92,23 @@ def sync_meta_channel_history(
     return counters
 
 
+def _conversation_messages(
+    conversation_id: str, *, token: str
+) -> list[Mapping[str, Any]]:
+    payload = graph_get(
+        f"{conversation_id}/messages",
+        params={
+            "fields": _MESSAGE_FIELDS,
+            "limit": str(_MESSAGE_LIMIT),
+        },
+        token=token,
+    )
+    rows = payload.get("data")
+    if not isinstance(rows, list):
+        return []
+    return [row for row in rows if isinstance(row, Mapping)]
+
+
 def _ingest_conversation(
     session: Session,
     row: Mapping[str, Any],
@@ -102,6 +117,7 @@ def _ingest_conversation(
     page_id: str,
     self_ids: set[str],
     counters: dict[str, int],
+    page_token: str,
 ) -> None:
     platform_user_id, profile_name = _counterparty(row, self_ids=self_ids)
     if platform_user_id is None:
@@ -109,11 +125,17 @@ def _ingest_conversation(
         return
     counters["conversations"] += 1
     messages_wrapper = row.get("messages")
-    message_rows = (
+    nested_rows = (
         messages_wrapper.get("data") if isinstance(messages_wrapper, Mapping) else None
     )
-    if not isinstance(message_rows, list):
-        return
+    if isinstance(nested_rows, list):
+        message_rows = [item for item in nested_rows if isinstance(item, Mapping)]
+    else:
+        conversation_id = str(row.get("id") or "").strip()
+        if not conversation_id:
+            counters["skipped"] += 1
+            return
+        message_rows = _conversation_messages(conversation_id, token=page_token)
     for message_row in message_rows:
         if not isinstance(message_row, Mapping):
             counters["skipped"] += 1
