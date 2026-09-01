@@ -96,6 +96,16 @@ vi.mock('@/hooks/use-admin-users', () => ({
   useAdminUsers: () => ({ users: [], isLoading: false, error: '', refetch: vi.fn() }),
 }));
 
+vi.mock('@/lib/mailchimp-sync-api', () => ({
+  getMailchimpSyncStatus: vi.fn().mockResolvedValue({
+    counts_by_status: { pending: 0, synced: 0, failed: 0, unsubscribed: 0 },
+    archived_with_mailchimp_record: 0,
+    last_run_summary: null,
+  }),
+  runMailchimpSyncBatch: vi.fn(),
+  runMailchimpOrphanCleanup: vi.fn(),
+}));
+
 describe('ContactsPage', () => {
   beforeEach(() => {
     window.history.replaceState(null, '', '/contacts');
@@ -139,8 +149,14 @@ describe('ContactsPage', () => {
     expect(screen.getByRole('heading', { name: 'Organisations' })).toBeInTheDocument();
     expect(window.location.search).toBe('?tab=organizations');
 
+    await user.click(screen.getByRole('button', { name: 'Mailchimp' }));
+    expect(screen.getByRole('heading', { name: 'Mailchimp sync' })).toBeInTheDocument();
+    expect(window.location.search).toBe('?tab=mailchimp');
+    expect(screen.queryByRole('heading', { name: 'Contact' })).not.toBeInTheDocument();
+
     await user.click(screen.getByRole('button', { name: 'Contacts' }));
     expect(window.location.search).toBe('');
+    expect(screen.queryByRole('heading', { name: 'Mailchimp sync' })).not.toBeInTheDocument();
   });
 
   it('seeds the active sub-view from the URL query parameter on mount', async () => {
@@ -156,5 +172,23 @@ describe('ContactsPage', () => {
         screen.getByRole('heading', { name: 'Organisations' })
       ).toBeInTheDocument();
     });
+  });
+
+  it('opens the Mailchimp tab from the URL query parameter', async () => {
+    listEntityTags.mockResolvedValue([]);
+    listAllLocations.mockResolvedValue([]);
+    listGeographicAreas.mockResolvedValue([]);
+
+    window.history.replaceState(null, '', '/contacts?tab=mailchimp');
+    render(<ContactsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Mailchimp sync' })).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('heading', { name: 'Contact' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mailchimp' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
   });
 });
