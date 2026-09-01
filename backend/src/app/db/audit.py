@@ -81,6 +81,26 @@ def set_connection_audit_context(
     )
 
 
+def stamp_alembic_audit_context(
+    connection: Any,
+    user_id: str | None = None,
+    request_id: str | None = None,
+) -> None:
+    """Set session-scoped audit GUCs and commit the implicit SQLAlchemy txn.
+
+    Alembic uses ``transaction_per_migration`` so later revisions can see
+    committed enum values. Leaving this execute() txn open would nest those
+    commits and break ``ALTER TYPE ... ADD VALUE``.
+    """
+    set_connection_audit_context(
+        connection,
+        user_id=user_id,
+        request_id=request_id,
+        local=False,
+    )
+    connection.commit()
+
+
 def set_psycopg_audit_context(
     cursor: Any,
     user_id: str | None = None,

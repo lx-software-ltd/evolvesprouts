@@ -11,6 +11,7 @@ from app.db.audit import (
     ALEMBIC_AUDIT_USER_ID,
     set_connection_audit_context,
     set_psycopg_audit_context,
+    stamp_alembic_audit_context,
 )
 
 
@@ -37,6 +38,24 @@ def test_set_connection_audit_context_uses_session_scope_when_not_local() -> Non
     )
     assert executed[0][1] == {"user_id": "alembic", "is_local": False}
     assert executed[1][1] == {"request_id": "req-mig-1", "is_local": False}
+
+
+def test_stamp_alembic_audit_context_commits_after_session_gucs() -> None:
+    events: list[str] = []
+
+    class _Connection:
+        def execute(self, statement: Any, params: dict[str, Any]) -> None:
+            events.append(f"execute:{params.get('is_local')}")
+
+        def commit(self) -> None:
+            events.append("commit")
+
+    stamp_alembic_audit_context(
+        _Connection(),
+        user_id=ALEMBIC_AUDIT_USER_ID,
+        request_id="req-mig-2",
+    )
+    assert events == ["execute:False", "execute:False", "commit"]
 
 
 def test_sync_active_countries_stamps_alembic_actor(

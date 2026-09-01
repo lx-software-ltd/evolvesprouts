@@ -41,7 +41,7 @@ sys.path.append(str(base_dir / "src"))
 from app.db.audit import (  # noqa: E402
     ALEMBIC_AUDIT_USER_ID,
     migrations_audit_request_id,
-    set_connection_audit_context,
+    stamp_alembic_audit_context,
 )
 from app.db.base import Base  # noqa: E402
 from app.db import models  # noqa: F401,E402
@@ -107,12 +107,11 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        # Session-scoped (not SET LOCAL): Alembic commits per revision.
-        set_connection_audit_context(
+        # Session-scoped GUCs, then commit so transaction_per_migration works.
+        stamp_alembic_audit_context(
             connection,
             user_id=ALEMBIC_AUDIT_USER_ID,
             request_id=migrations_audit_request_id(),
-            local=False,
         )
         context.configure(
             connection=connection,
