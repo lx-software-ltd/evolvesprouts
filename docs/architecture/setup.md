@@ -130,8 +130,7 @@ For the OIDC provider itself, add the same tags:
 - `CDK_PARAM_MAILCHIMP_API_SECRET_ARN`
 - `CDK_PARAM_MAILCHIMP_WEBHOOK_SECRET`
 - `CDK_PARAM_META_APP_SECRET` (Meta app secret; HMAC for `POST /v1/whatsapp/webhook` and `POST /v1/meta/webhook`)
-- `CDK_PARAM_WHATSAPP_WEBHOOK_VERIFY_TOKEN` (Meta webhook handshake token for WhatsApp and Messenger/Instagram)
-- `CDK_PARAM_META_PAGE_ACCESS_TOKEN` (Page or system-user token for Graph inbox import)
+- `CDK_PARAM_WHATSAPP_WEBHOOK_VERIFY_TOKEN` (Meta webhook handshake token for WhatsApp and Messenger/Instagram; also used as the Graph inbox import Page token)
 - `CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD` (optional)
 - `NEXT_PUBLIC_WWW_CRM_API_KEY` (Public WWW browser API key)
 - `AMPLIFY_API_KEY`

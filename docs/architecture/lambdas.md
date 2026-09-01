@@ -676,15 +676,15 @@ their primary responsibilities.
 - DB access: RDS Proxy with IAM auth (`evolvesprouts_admin`)
 - VPC: Yes
 - Timeout / budget: **600s** Lambda timeout with **720s** SQS visibility
-- Permissions: Secrets Manager read for the Page access token
-  (`${resourcePrefix}-meta-page-access-token`), S3 read on the assets bucket,
-  Lambda invoke permission for `AwsApiProxyFunction`
+- Permissions: S3 read on the assets bucket, Lambda invoke permission for
+  `AwsApiProxyFunction`
 - Environment:
   - `DATABASE_SECRET_ARN`, `DATABASE_NAME`, `DATABASE_USERNAME`,
     `DATABASE_PROXY_ENDPOINT`, `DATABASE_IAM_AUTH`
   - `AWS_PROXY_FUNCTION_ARN`
   - `ASSETS_BUCKET_NAME`
-  - `META_PAGE_ACCESS_TOKEN_SECRET_ARN`
+  - `META_PAGE_ACCESS_TOKEN` (same CDK parameter / GitHub secret as
+    `WhatsappWebhookVerifyToken` / `CDK_PARAM_WHATSAPP_WEBHOOK_VERIFY_TOKEN`)
   - `META_PAGE_ID`, `META_INSTAGRAM_USER_ID`
   - `META_GRAPH_API_BASE_URL`, `META_GRAPH_API_VERSION`
   - `WHATSAPP_EXPORT_BUSINESS_NAMES`

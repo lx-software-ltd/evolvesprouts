@@ -222,7 +222,7 @@ interface InboxImportNestedStackProps extends cdk.NestedStackProps {
   awsProxyFunctionArn: string;
   assetsBucketName: string;
   assetsBucketArn: string;
-  metaPageAccessTokenSecretArn: string;
+  metaPageAccessToken: string;
   metaPageId: string;
   metaInstagramUserId: string;
   metaGraphApiBaseUrl: string;
@@ -282,7 +282,7 @@ class InboxImportNestedStack extends cdk.NestedStack {
         DATABASE_IAM_AUTH: "true",
         AWS_PROXY_FUNCTION_ARN: props.awsProxyFunctionArn,
         ASSETS_BUCKET_NAME: props.assetsBucketName,
-        META_PAGE_ACCESS_TOKEN_SECRET_ARN: props.metaPageAccessTokenSecretArn,
+        META_PAGE_ACCESS_TOKEN: props.metaPageAccessToken,
         META_PAGE_ID: props.metaPageId,
         META_INSTAGRAM_USER_ID: props.metaInstagramUserId,
         META_GRAPH_API_BASE_URL: props.metaGraphApiBaseUrl,
@@ -295,12 +295,6 @@ class InboxImportNestedStack extends cdk.NestedStack {
       new iam.PolicyStatement({
         actions: ["s3:GetObject", "s3:GetBucketLocation", "s3:ListBucket"],
         resources: [props.assetsBucketArn, `${props.assetsBucketArn}/*`],
-      })
-    );
-    this.processorFunction.addToRolePolicy(
-      new iam.PolicyStatement({
-        actions: ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"],
-        resources: [props.metaPageAccessTokenSecretArn],
       })
     );
 
@@ -863,17 +857,6 @@ export class ApiStack extends cdk.Stack {
         type: "String",
         default: "v21.0",
         description: "Meta Graph API version token used by inbox import.",
-      }
-    );
-    const metaPageAccessToken = new cdk.CfnParameter(
-      this,
-      "MetaPageAccessToken",
-      {
-        type: "String",
-        noEcho: true,
-        default: "",
-        description:
-          "Page or system-user access token for Graph conversation history import.",
       }
     );
     const whatsappExportBusinessNames = new cdk.CfnParameter(
@@ -2073,18 +2056,6 @@ export class ApiStack extends cdk.Stack {
       }
     );
     openrouterApiSecret.grantRead(adminFunction);
-    const metaPageAccessTokenSecret = new secretsmanager.Secret(
-      this,
-      "MetaPageAccessTokenSecret",
-      {
-        secretName: name("meta-page-access-token"),
-        description: "Meta Page access token for inbox conversation import",
-        secretStringValue: cdk.SecretValue.unsafePlainText(
-          metaPageAccessToken.valueAsString
-        ),
-        encryptionKey: secretsEncryptionKey,
-      }
-    );
 
     // Pack non-secret PUBLIC_WWW_* deployment config into a single Secrets
     // Manager JSON object so the admin Lambda's env-var dict stays under the
@@ -2308,7 +2279,7 @@ export class ApiStack extends cdk.Stack {
       awsProxyFunctionArn: awsProxyFunction.functionArn,
       assetsBucketName: assetsBucket.bucketName,
       assetsBucketArn: assetsBucket.bucketArn,
-      metaPageAccessTokenSecretArn: metaPageAccessTokenSecret.secretArn,
+      metaPageAccessToken: whatsappWebhookVerifyToken.valueAsString,
       metaPageId: metaPageId.valueAsString,
       metaInstagramUserId: metaInstagramUserId.valueAsString,
       metaGraphApiBaseUrl: metaGraphApiBaseUrl.valueAsString,
@@ -2318,7 +2289,6 @@ export class ApiStack extends cdk.Stack {
     database.grantAdminUserSecretRead(inboxImport.processorFunction);
     database.grantConnect(inboxImport.processorFunction, "evolvesprouts_admin");
     awsProxyFunction.grantInvoke(inboxImport.processorFunction);
-    metaPageAccessTokenSecret.grantRead(inboxImport.processorFunction);
     inboxImport.queue.grantSendMessages(adminFunction);
     adminFunction.addEnvironment(
       "INBOX_IMPORT_QUEUE_URL",

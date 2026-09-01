@@ -445,7 +445,7 @@ For each function above, the following resources are created:
 | `ExpenseParserFunction` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, S3 read for the assets bucket, read OpenRouter API secret (Secrets Manager + KMS decrypt on the `secrets-encryption-key` CMK), invoke `AwsApiProxyFunction` |
 | `InboundInvoiceEmailProcessor` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, S3 read/write for the assets bucket (including the `inbound-email/raw/` prefix), publish to the expense parser SNS topic |
 | `EventbriteSyncProcessor` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, read Eventbrite token secret, invoke `AwsApiProxyFunction` |
-| `InboxImportFunction` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, read `${resourcePrefix}-meta-page-access-token`, S3 read on the assets bucket, invoke `AwsApiProxyFunction` for Graph HTTP |
+| `InboxImportFunction` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, S3 read on the assets bucket, invoke `AwsApiProxyFunction` for Graph HTTP; Graph token is `META_PAGE_ACCESS_TOKEN` from `WhatsappWebhookVerifyToken` |
 
 **Lambda Log Groups:**
 - Explicitly created by CDK with KMS encryption

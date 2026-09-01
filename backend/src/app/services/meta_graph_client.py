@@ -107,7 +107,8 @@ def graph_get(
             if isinstance(candidate, dict):
                 parsed = candidate
         if status_code < 200 or status_code >= 300:
-            error = parsed.get("error") if isinstance(parsed.get("error"), dict) else {}
+            error_payload = parsed.get("error")
+            error = error_payload if isinstance(error_payload, dict) else {}
             detail = str(error.get("message") or raw_body[:400] or status_code)
             raise MetaGraphApiError(
                 status_code=status_code,
