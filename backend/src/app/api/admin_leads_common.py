@@ -28,6 +28,7 @@ from app.db.models.enums import (
     ContactType,
     FunnelStage,
     LeadEventType,
+    LeadLostReason,
     LeadType,
 )
 from app.exceptions import ValidationError
@@ -161,11 +162,10 @@ def parse_update_lead_payload(body: Mapping[str, Any]) -> dict[str, Any]:
         FunnelStage,
         "funnel_stage",
     )
-    lost_reason = validate_string_length(
+    lost_reason = _parse_optional_enum_value(
         body.get("lost_reason"),
+        LeadLostReason,
         "lost_reason",
-        max_length=MAX_DESCRIPTION_LENGTH,
-        required=False,
     )
     if funnel_stage == FunnelStage.LOST and not lost_reason:
         raise ValidationError(
@@ -213,7 +213,7 @@ def serialize_lead_summary(lead: SalesLead) -> dict[str, Any]:
         "updated_at": lead.updated_at.isoformat() if lead.updated_at else None,
         "converted_at": lead.converted_at.isoformat() if lead.converted_at else None,
         "lost_at": lead.lost_at.isoformat() if lead.lost_at else None,
-        "lost_reason": lead.lost_reason,
+        "lost_reason": lead.lost_reason.value if lead.lost_reason else None,
         "days_in_stage": days_in_stage,
         "last_activity_at": last_activity_at,
         "tags": _extract_contact_tags(lead.contact),

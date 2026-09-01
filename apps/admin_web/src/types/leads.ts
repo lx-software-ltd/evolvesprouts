@@ -16,6 +16,25 @@ export const LEAD_TYPES = defineEnumValues<LeadType>()(
   ['free_guide', 'event_inquiry', 'program_enrollment', 'consultation', 'partnership', 'other'] as const satisfies readonly LeadType[]
 );
 
+export type LostReason = ApiSchemas['LeadLostReason'];
+export const LOST_REASONS = defineEnumValues<LostReason>()(
+  [
+    'price_too_high',
+    'value_not_understood',
+    'ghosted',
+    'language_mismatch',
+    'other',
+  ] as const satisfies readonly LostReason[]
+);
+
+export const LOST_REASON_LABELS: Record<LostReason, string> = {
+  price_too_high: 'Price too high',
+  value_not_understood: 'Value not understood',
+  ghosted: 'Ghosted',
+  language_mismatch: 'Language mismatch',
+  other: 'Other',
+};
+
 export type ContactSource = ApiSchemas['ContactSource'];
 export const CONTACT_SOURCES = defineEnumValues<ContactSource>()(
   [
@@ -79,7 +98,7 @@ export interface LeadSummary {
   updatedAt: string | null;
   convertedAt: string | null;
   lostAt: string | null;
-  lostReason: string | null;
+  lostReason: LostReason | null;
   daysInStage: number;
   lastActivityAt: string | null;
   tags: string[];

@@ -4,7 +4,7 @@ import { useCallback } from 'react';
 
 import { updateAdminContact } from '@/lib/entity-api';
 import { createLead, createLeadNote, updateLead } from '@/lib/leads-api';
-import type { ContactSource, FunnelStage, LeadDetail, LeadType } from '@/types/leads';
+import type { ContactSource, FunnelStage, LeadDetail, LeadType, LostReason } from '@/types/leads';
 import type { components } from '@/types/generated/admin-api.generated';
 
 import { useMutationRunner } from './use-mutation-runner';
@@ -33,7 +33,7 @@ export interface CreateLeadEntryInput {
 export interface UpdateLeadEntryInput {
   funnel_stage: FunnelStage;
   assigned_to?: string | null;
-  lost_reason?: string | null;
+  lost_reason?: LostReason | null;
   contact?: {
     id: string;
     first_name: string;
@@ -83,7 +83,7 @@ export function useLeadMutations({ onSuccess }: MutationOptions = {}) {
   );
 
   const updateStage = useCallback(
-    async (id: string, stage: FunnelStage, lostReason?: string): Promise<LeadDetail | null> =>
+    async (id: string, stage: FunnelStage, lostReason?: LostReason): Promise<LeadDetail | null> =>
       runWithState(async () => {
         const updated = await updateLead(id, {
           funnel_stage: stage,
