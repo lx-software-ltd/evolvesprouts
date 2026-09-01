@@ -109,3 +109,36 @@ def test_graph_get_400_hints_page_token_exchange(
     assert exc_info.value.status_code == 400
     assert "Page Access Token" in str(exc_info.value)
     assert "fields=access_token" in str(exc_info.value)
+
+
+def test_graph_get_payload_too_large_is_not_retried(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("META_PAGE_ACCESS_TOKEN", "page-token")
+    calls = {"count": 0}
+
+    def _fake_http_invoke(**_kwargs: object) -> dict[str, object]:
+        calls["count"] += 1
+        return {
+            "status": 500,
+            "body": json.dumps(
+                {
+                    "error": {
+                        "message": (
+                            "Please reduce the amount of data you're asking "
+                            "for, then retry your request"
+                        )
+                    }
+                }
+            ),
+        }
+
+    monkeypatch.setattr(client, "http_invoke", _fake_http_invoke)
+
+    with pytest.raises(MetaGraphApiError) as exc_info:
+        client.graph_get("page-1/conversations")
+
+    assert exc_info.value.status_code == 500
+    assert "reduce the amount of data" in str(exc_info.value).lower()
+    assert "separate Graph calls" in str(exc_info.value)
+    assert calls["count"] == 1

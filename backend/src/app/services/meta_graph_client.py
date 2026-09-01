@@ -165,6 +165,11 @@ def graph_get(
                     f"{detail}. Conversations require a Page token; exchange "
                     "the system-user token with GET /{page-id}?fields=access_token."
                 )
+            if _is_graph_payload_too_large(status_code, detail):
+                detail = (
+                    f"{detail}. Inbox import lists conversations and fetches "
+                    "messages in separate Graph calls with a smaller page size."
+                )
             raise MetaGraphApiError(
                 status_code=status_code,
                 message=f"Meta Graph request failed ({status_code}): {detail}",
@@ -181,7 +186,13 @@ def graph_get(
     )
 
 
+def _is_graph_payload_too_large(status_code: int, detail: str) -> bool:
+    return "reduce the amount of data" in detail.lower() and status_code >= 400
+
+
 def _is_retryable_graph_error(exc: Exception) -> bool:
     if isinstance(exc, MetaGraphApiError):
+        if _is_graph_payload_too_large(exc.status_code, str(exc)):
+            return False
         return exc.status_code == 429 or exc.status_code >= 500
     return isinstance(exc, (ConnectionError, TimeoutError))

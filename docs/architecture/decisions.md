@@ -788,6 +788,10 @@ pulling history inline on the admin Lambda. Jobs live in `inbox_import_jobs`.
 
 - **Instagram / Messenger:** `POST /v1/admin/meta/import-jobs` lists Page
   conversations through the Graph Conversations API via `AwsApiProxyFunction`.
+  List threads (`id,updated_time,participants`) separately from
+  `GET /{conversation-id}/messages` (last 20 bodies). Nested
+  `messages.limit(20)` on a 50-row conversation page exceeds Graph payload
+  limits (`Please reduce the amount of data you're asking for`).
   Meta only returns message **bodies** for the last 20 messages per thread.
   Persist through the same `store_meta_message` path as webhooks (unique
   `platform_message_id`). Create placeholder contacts when missing. Do **not**
