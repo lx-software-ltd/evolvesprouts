@@ -731,8 +731,12 @@ Verify `GET` with `WHATSAPP_WEBHOOK_VERIFY_TOKEN` and `POST` with HMAC
 `X-Hub-Signature-256` using `META_APP_SECRET`. Persist inbound `messages`
 and coexistence `smb_message_echoes` (phone-app replies) into
 `whatsapp_conversations` / `whatsapp_messages`, and create a Contact plus
-open SalesLead on first inbound when none exists. Admin reads live at
-`GET /v1/admin/whatsapp/conversations` (Sales → WhatsApp tab).
+open SalesLead on first inbound or first outbound when none exists. Live
+webhooks move that open lead to `contacted` on the first outbound message
+and to `engaged` after three inbound messages on the same thread. History
+and export backfills still skip new leads and do not change funnel stage.
+Admin reads live at `GET /v1/admin/whatsapp/conversations` (Sales → WhatsApp
+tab).
 
 **Why:**
 - Same in-VPC Aurora access and operational surface as other CRM writes.
@@ -773,7 +777,11 @@ configured public Instagram profile URL (`PUBLIC_WWW_INSTAGRAM_URL` /
 `https://www.instagram.com/evolvesprouts`) so the business account is
 not imported as a contact. Persist threads in unified
 `meta_conversations` / `meta_messages` keyed by `(channel, platform_user_id)`.
-Create a Contact plus open SalesLead on first inbound when none exists.
+Create a Contact plus open SalesLead on first inbound or first outbound
+when none exists. Live webhooks move that open lead to `contacted` on the
+first outbound message and to `engaged` after three inbound messages on the
+same thread. Graph history import still skips new leads and does not change
+funnel stage.
 On Instagram inbound, persist `sender.username` on `contacts.instagram_handle`
 (lowercase, no leading `@`) when it is a username rather than IGSID, and reuse
 an existing contact with that handle, including archived rows. Messenger has

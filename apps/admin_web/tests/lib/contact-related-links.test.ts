@@ -5,6 +5,7 @@ import {
   adminPartyInvoicesDeepLink,
   adminPartySalesConversationsDeepLink,
   adminPartyServiceInstancesDeepLink,
+  adminSalesConversationDeepLink,
   adminSalesConversationsDeepLink,
   adminServiceInstancesDeepLink,
   findEnrollmentForRelatedParty,
@@ -22,6 +23,12 @@ describe('contact related deep links', () => {
   it('defaults to WhatsApp when the channel is missing', () => {
     expect(adminSalesConversationsDeepLink('abc-123', null)).toBe(
       '/sales?tab=whatsapp&contact=abc-123'
+    );
+  });
+
+  it('builds a sales inbox URL for one conversation', () => {
+    expect(adminSalesConversationDeepLink('abc-123', 'instagram', 'conv-9')).toBe(
+      '/sales?tab=instagram&contact=abc-123&conversation=conv-9'
     );
   });
 

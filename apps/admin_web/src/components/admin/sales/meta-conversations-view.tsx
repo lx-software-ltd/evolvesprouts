@@ -7,6 +7,7 @@ import { InboxImportStatus } from './inbox-import-status';
 
 import { useAutoSelectContactConversation } from '@/hooks/use-auto-select-contact-conversation';
 import { useMetaConversations } from '@/hooks/use-meta-conversations';
+import { useLocationSearchParam } from '@/hooks/use-query-tab-state';
 import { useRelatedPartySearchParams } from '@/hooks/use-related-party-search-params';
 import { useMetaMessages } from '@/hooks/use-meta-messages';
 import { formatDate } from '@/lib/format';
@@ -16,6 +17,7 @@ import {
   listInboxImportJobs,
   type InboxImportJobSummary,
 } from '@/lib/inbox-import-api';
+import { ADMIN_CONVERSATION_QUERY_PARAM } from '@/lib/contact-related-links';
 import type { MetaChannel } from '@/lib/meta-api';
 import { toErrorMessage } from '@/hooks/hook-errors';
 import { ViewIcon } from '@/components/icons/action-icons';
@@ -63,11 +65,13 @@ const CHANNEL_COPY: Record<
 export function MetaConversationsView({ channel }: { channel: MetaChannel }) {
   const copy = CHANNEL_COPY[channel];
   const party = useRelatedPartySearchParams();
+  const conversationId = useLocationSearchParam(ADMIN_CONVERSATION_QUERY_PARAM);
   const list = useMetaConversations(channel, party);
   const [selectedId, setSelectedId] = useAutoSelectContactConversation(
     party.partyFilterKey,
     list.conversations[0]?.id ?? null,
-    list.isLoading
+    list.isLoading,
+    conversationId
   );
   const detail = useMetaMessages(selectedId);
   const [importJob, setImportJob] = useState<InboxImportJobSummary | null>(null);

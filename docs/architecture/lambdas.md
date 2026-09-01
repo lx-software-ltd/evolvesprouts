@@ -58,10 +58,13 @@ their primary responsibilities.
   HMAC `X-Hub-Signature-256` via `META_APP_SECRET`; verify token
   `WHATSAPP_WEBHOOK_VERIFY_TOKEN`; persists conversations and creates
   WhatsApp CRM contacts/leads except history/export backfills which skip new
-  leads; sets audit actor `webhook:whatsapp`),
+  leads; live webhooks move an open lead to `contacted` on the first outbound
+  message and to `engaged` after three inbound messages on that thread; sets
+  audit actor `webhook:whatsapp`),
   `/v1/meta/webhook` (GET handshake + POST Messenger/Instagram inbound and
   `is_echo` messages; same HMAC and verify token; persists
   `meta_conversations` / `meta_messages` and creates CRM contacts/leads;
+  live webhooks apply the same `contacted` / `engaged` stage rules;
   Instagram ingest skips counterparties whose username matches the last
   path segment of `PUBLIC_WWW_INSTAGRAM_URL` / `NEXT_PUBLIC_INSTAGRAM_URL`;
   Instagram inbound stores `username` on `contacts.instagram_handle` and

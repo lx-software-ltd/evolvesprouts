@@ -1,6 +1,22 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+vi.mock('next/link', () => ({
+  default: ({
+    children,
+    href,
+    ...rest
+  }: {
+    children: React.ReactNode;
+    href: string;
+    [key: string]: unknown;
+  }) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
+}));
+
 const { listWhatsAppConversations, listMetaConversations, listWhatsAppMessages, listMetaMessages } =
   vi.hoisted(() => ({
     listWhatsAppConversations: vi.fn(),
@@ -21,59 +37,77 @@ vi.mock('@/lib/meta-api', () => ({
 
 import { LeadConversationCard } from '@/components/admin/sales/lead-conversation-card';
 
+function conversation(id: string, lastMessageAt: string) {
+  return { id, lastMessageAt, contactId: 'contact-1' };
+}
+
+function message(id: string, body: string, sentAt: string, direction: 'inbound' | 'outbound' = 'inbound') {
+  return { id, direction, messageType: 'text', body, sentAt };
+}
+
 describe('LeadConversationCard', () => {
-  it('merges Instagram, Messenger, and WhatsApp history', async () => {
+  it('shows the latest five conversations and links overflow to the inbox', async () => {
     listWhatsAppConversations.mockResolvedValue({
-      items: [{ id: 'wa-1' }],
+      items: [conversation('wa-1', '2026-03-02T10:00:00Z'), conversation('wa-2', '2026-03-06T10:00:00Z')],
       nextCursor: null,
-      totalCount: 1,
+      totalCount: 2,
     });
     listMetaConversations.mockImplementation(async ({ channel }: { channel?: string }) => ({
-      items: [{ id: channel === 'instagram' ? 'ig-1' : 'fb-1' }],
+      items:
+        channel === 'instagram'
+          ? [conversation('ig-1', '2026-03-01T10:00:00Z'), conversation('ig-2', '2026-03-05T10:00:00Z')]
+          : [
+              conversation('fb-1', '2026-03-03T10:00:00Z'),
+              conversation('fb-2', '2026-03-04T10:00:00Z'),
+              conversation('fb-3', '2026-03-07T10:00:00Z'),
+            ],
       nextCursor: null,
-      totalCount: 1,
+      totalCount: channel === 'instagram' ? 2 : 3,
     }));
-    listWhatsAppMessages.mockResolvedValue({
-      conversation: { id: 'wa-1' },
-      items: [
-        {
-          id: 'wa-msg-1',
-          waMessageId: 'w1',
-          direction: 'inbound',
-          messageType: 'text',
-          body: 'Hello from WhatsApp',
-          sentAt: '2026-03-02T10:00:00Z',
-        },
-      ],
-    });
+    listWhatsAppMessages.mockImplementation(async (conversationId: string) => ({
+      conversation: { id: conversationId },
+      items: [message(`${conversationId}-msg`, `Hello from ${conversationId}`, '2026-03-02T10:00:00Z')],
+    }));
     listMetaMessages.mockImplementation(async (conversationId: string) => ({
       conversation: { id: conversationId },
       items: [
-        {
-          id: `${conversationId}-msg`,
-          platformMessageId: conversationId,
-          direction: 'outbound',
-          messageType: 'text',
-          body: conversationId === 'ig-1' ? 'Hello from Instagram' : 'Hello from Messenger',
-          sentAt: conversationId === 'ig-1' ? '2026-03-01T10:00:00Z' : '2026-03-03T10:00:00Z',
-        },
+        message(
+          `${conversationId}-msg`,
+          `Hello from ${conversationId}`,
+          '2026-03-01T10:00:00Z',
+          'outbound'
+        ),
       ],
     }));
 
     render(<LeadConversationCard contactId='contact-1' />);
 
     await waitFor(() => {
-      expect(screen.getByText('Hello from Instagram')).toBeInTheDocument();
+      expect(screen.getByText('Hello from fb-3')).toBeInTheDocument();
     });
-    expect(screen.getByText('Hello from WhatsApp')).toBeInTheDocument();
-    expect(screen.getByText('Hello from Messenger')).toBeInTheDocument();
+    expect(screen.getByText('Hello from wa-2')).toBeInTheDocument();
+    expect(screen.getByText('Hello from ig-2')).toBeInTheDocument();
+    expect(screen.getByText('Hello from fb-2')).toBeInTheDocument();
+    expect(screen.getByText('Hello from fb-1')).toBeInTheDocument();
+    expect(screen.queryByText('Hello from ig-1')).not.toBeInTheDocument();
 
     const bodies = screen.getAllByText(/Hello from /).map((node) => node.textContent);
     expect(bodies).toEqual([
-      'Hello from Instagram',
-      'Hello from WhatsApp',
-      'Hello from Messenger',
+      'Hello from fb-3',
+      'Hello from wa-2',
+      'Hello from ig-2',
+      'Hello from fb-2',
+      'Hello from fb-1',
     ]);
+
+    expect(screen.getByRole('link', { name: /Hello from fb-3/i })).toHaveAttribute(
+      'href',
+      '/sales?tab=messenger&contact=contact-1&conversation=fb-3'
+    );
+    expect(screen.getByRole('link', { name: 'Open full conversation' })).toHaveAttribute(
+      'href',
+      '/sales?tab=whatsapp&contact=contact-1&conversation=wa-1'
+    );
   });
 
   it('shows an empty state when the contact has no conversations', async () => {
@@ -87,5 +121,6 @@ describe('LeadConversationCard', () => {
         screen.getByText('No Instagram, Messenger, or WhatsApp conversations for this contact.')
       ).toBeInTheDocument();
     });
+    expect(screen.queryByRole('link', { name: 'Open full conversation' })).not.toBeInTheDocument();
   });
 });

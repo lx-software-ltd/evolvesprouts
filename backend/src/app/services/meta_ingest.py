@@ -13,24 +13,19 @@ from app.db.models import (
     Contact,
     ContactSource,
     ContactType,
-    FunnelStage,
-    LeadEventType,
-    LeadType,
     MetaChannel,
     MetaConversation,
     MetaMessage,
     MetaMessageDirection,
-    SalesLead,
 )
 from app.db.repositories.contact import ContactRepository
 from app.db.repositories.meta import MetaRepository
-from app.db.repositories.sales_lead import SalesLeadRepository
+from app.services.lead_funnel_automation import link_conversation_lead_and_advance
 from app.utils.logging import get_logger, mask_pii
 from app.utils.validators import extract_instagram_username, is_own_instagram_handle
 
 logger = get_logger(__name__)
 
-_SYSTEM_ACTOR = "system"
 _SOURCE_DETAIL = "meta_webhook"
 _MAX_PLATFORM_USER_ID_LENGTH = 128
 _MAX_PAGE_ID_LENGTH = 128
@@ -38,10 +33,7 @@ _MAX_PLATFORM_MESSAGE_ID_LENGTH = 256
 _MAX_PROFILE_NAME_LENGTH = 256
 _MAX_MESSAGE_TYPE_LENGTH = 32
 _MS_TIMESTAMP_THRESHOLD = 10_000_000_000
-_CHANNEL_BY_OBJECT = {
-    "page": MetaChannel.FACEBOOK,
-    "instagram": MetaChannel.INSTAGRAM,
-}
+_CHANNEL_BY_OBJECT = {"page": MetaChannel.FACEBOOK, "instagram": MetaChannel.INSTAGRAM}
 _ANONYMOUS_NAMES = {
     MetaChannel.FACEBOOK: "Messenger contact",
     MetaChannel.INSTAGRAM: "Instagram contact",
@@ -222,7 +214,7 @@ def store_meta_message(
         conversation.last_message_at = sent_at
     conversation.updated_at = now
 
-    if direction is MetaMessageDirection.INBOUND and create_contacts:
+    if create_contacts:
         resolved_handle = instagram_handle
         if resolved_handle is None and channel is MetaChannel.INSTAGRAM:
             resolved_handle = extract_instagram_username(
@@ -237,6 +229,7 @@ def store_meta_message(
             counters=counters,
             create_leads=create_leads,
             source_detail=source_detail,
+            is_outbound=direction is MetaMessageDirection.OUTBOUND,
         )
 
     session.flush()
@@ -251,6 +244,7 @@ def _ensure_contact_and_lead(
     counters: dict[str, int],
     create_leads: bool = True,
     source_detail: str = _SOURCE_DETAIL,
+    is_outbound: bool = False,
 ) -> None:
     if conversation.contact_id is None:
         contact, created = _find_or_create_contact(
@@ -271,40 +265,25 @@ def _ensure_contact_and_lead(
     if contact_id is None:
         return
 
-    if conversation.lead_id is not None or not create_leads:
-        return
-
-    lead_repository = SalesLeadRepository(session)
-    open_lead = lead_repository.find_open_by_contact(contact_id)
-    if open_lead is not None:
-        conversation.lead_id = open_lead.id
-        return
-
-    lead = lead_repository.create_with_event(
-        SalesLead(
-            contact_id=contact_id,
-            lead_type=LeadType.OTHER,
-            funnel_stage=FunnelStage.NEW,
-        ),
-        LeadEventType.CREATED,
-        metadata={
-            "channel": conversation.channel.value,
-            "conversation_id": str(conversation.id),
-        },
-        to_stage=FunnelStage.NEW,
-        created_by=_SYSTEM_ACTOR,
+    created_before = counters.get("leads_created", 0)
+    link_conversation_lead_and_advance(
+        session,
+        conversation=conversation,
+        channel=conversation.channel.value,
+        counters=counters,
+        create_leads=create_leads,
+        is_outbound=is_outbound,
     )
-    conversation.lead_id = lead.id
-    counters["leads_created"] += 1
-    logger.info(
-        "Created sales lead from Meta conversation",
-        extra={
-            "lead_id": str(lead.id),
-            "conversation_id": str(conversation.id),
-            "channel": conversation.channel.value,
-            "platform_user_id": mask_pii(conversation.platform_user_id),
-        },
-    )
+    if counters.get("leads_created", 0) > created_before:
+        logger.info(
+            "Created sales lead from Meta conversation",
+            extra={
+                "lead_id": str(conversation.lead_id),
+                "conversation_id": str(conversation.id),
+                "channel": conversation.channel.value,
+                "platform_user_id": mask_pii(conversation.platform_user_id),
+            },
+        )
 
 
 def _find_or_create_contact(
@@ -365,9 +344,9 @@ def _maybe_set_instagram_handle(
 
 def _contact_first_name(conversation: MetaConversation) -> str:
     profile_name = (conversation.profile_name or "").strip()
-    if profile_name:
-        return profile_name[:100]
-    return _ANONYMOUS_NAMES[conversation.channel]
+    return (
+        profile_name[:100] if profile_name else _ANONYMOUS_NAMES[conversation.channel]
+    )
 
 
 def _party_profile_name(party: Any) -> str | None:

@@ -7,7 +7,8 @@ from uuid import uuid4
 
 import pytest
 
-from app.db.models.enums import WhatsAppMessageDirection
+from app.db.models.enums import FunnelStage, WhatsAppMessageDirection
+from app.services import lead_funnel_automation as funnel
 from app.services import whatsapp_ingest as ingest
 
 
@@ -72,7 +73,16 @@ def test_ingest_stores_inbound_and_creates_lead(
             return None
 
         def create_with_event(self, *_a: object, **_k: object) -> SimpleNamespace:
-            return SimpleNamespace(id=lead_id)
+            return SimpleNamespace(id=lead_id, funnel_stage=FunnelStage.NEW)
+
+        def get_by_id(self, _lead_id: object) -> None:
+            return None
+
+        def update(self, lead: object) -> object:
+            return lead
+
+        def add_event(self, **_k: object) -> SimpleNamespace:
+            return SimpleNamespace()
 
     class _FakeSession:
         def add(self, obj: object) -> None:
@@ -89,6 +99,7 @@ def test_ingest_stores_inbound_and_creates_lead(
     monkeypatch.setattr(ingest, "WhatsAppConversation", _FakeConversation)
     monkeypatch.setattr(ingest, "WhatsAppRepository", _FakeRepo)
     monkeypatch.setattr(ingest, "SalesLeadRepository", _FakeLeadRepo)
+    monkeypatch.setattr(funnel, "SalesLeadRepository", _FakeLeadRepo)
 
     payload = {
         "entry": [
@@ -168,7 +179,9 @@ def test_ingest_skips_duplicate_message(monkeypatch: pytest.MonkeyPatch) -> None
 
 def test_ingest_stores_coexistence_echo(monkeypatch: pytest.MonkeyPatch) -> None:
     conversation_id = uuid4()
+    lead_id = uuid4()
     added: list[object] = []
+    stage_events: list[object] = []
 
     class _FakeConversation:
         def __init__(self, **kwargs: object) -> None:
@@ -193,6 +206,26 @@ def test_ingest_stores_coexistence_echo(monkeypatch: pytest.MonkeyPatch) -> None
         def get_conversation_by_wa_id(self, _wa_id: str) -> None:
             return None
 
+    class _FakeLeadRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def find_open_by_contact(self, _contact_id: object) -> None:
+            return None
+
+        def create_with_event(self, *_a: object, **_k: object) -> SimpleNamespace:
+            return SimpleNamespace(id=lead_id, funnel_stage=FunnelStage.NEW)
+
+        def get_by_id(self, _lead_id: object) -> None:
+            return None
+
+        def update(self, lead: object) -> object:
+            return lead
+
+        def add_event(self, **kwargs: object) -> SimpleNamespace:
+            stage_events.append(kwargs)
+            return SimpleNamespace()
+
     class _FakeSession:
         def add(self, obj: object) -> None:
             added.append(obj)
@@ -205,6 +238,8 @@ def test_ingest_stores_coexistence_echo(monkeypatch: pytest.MonkeyPatch) -> None
 
     monkeypatch.setattr(ingest, "WhatsAppConversation", _FakeConversation)
     monkeypatch.setattr(ingest, "WhatsAppRepository", _FakeRepo)
+    monkeypatch.setattr(ingest, "SalesLeadRepository", _FakeLeadRepo)
+    monkeypatch.setattr(funnel, "SalesLeadRepository", _FakeLeadRepo)
 
     payload = {
         "entry": [
@@ -231,11 +266,12 @@ def test_ingest_stores_coexistence_echo(monkeypatch: pytest.MonkeyPatch) -> None
     }
     counters = ingest.ingest_webhook_payload(_FakeSession(), payload)
     assert counters["stored"] == 1
-    assert counters["leads_created"] == 0
+    assert counters["leads_created"] == 1
     assert any(
         getattr(item, "direction", None) is WhatsAppMessageDirection.OUTBOUND
         for item in added
     )
+    assert stage_events[0]["to_stage"] is FunnelStage.CONTACTED
 
 
 def test_ingest_history_chunk_does_not_create_leads(
@@ -289,6 +325,7 @@ def test_ingest_history_chunk_does_not_create_leads(
     monkeypatch.setattr(ingest, "WhatsAppConversation", _FakeConversation)
     monkeypatch.setattr(ingest, "WhatsAppRepository", _FakeRepo)
     monkeypatch.setattr(ingest, "SalesLeadRepository", _FakeLeadRepo)
+    monkeypatch.setattr(funnel, "SalesLeadRepository", _FakeLeadRepo)
 
     payload = {
         "entry": [
@@ -325,3 +362,93 @@ def test_ingest_history_chunk_does_not_create_leads(
     assert counters["stored"] == 1
     assert counters["leads_created"] == 0
     assert counters["contacts_created"] == 1
+
+
+def test_third_inbound_moves_existing_lead_to_engaged(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    conversation_id = uuid4()
+    lead_id = uuid4()
+    contact_id = uuid4()
+    stage_events: list[object] = []
+    lead = SimpleNamespace(
+        id=lead_id, funnel_stage=FunnelStage.CONTACTED, updated_at=None
+    )
+
+    class _FakeConversation:
+        def __init__(self) -> None:
+            self.id = conversation_id
+            self.wa_id = "85294479843"
+            self.profile_name = "Kitie"
+            self.contact_id = contact_id
+            self.lead_id = lead_id
+            self.inbound_count = 2
+            self.outbound_count = 1
+            self.first_inbound_at = None
+            self.last_message_at = None
+            self.updated_at = None
+
+    conversation = _FakeConversation()
+
+    class _FakeRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def find_message_by_wa_message_id(self, _mid: str) -> None:
+            return None
+
+        def get_conversation_by_wa_id(self, _wa_id: str) -> _FakeConversation:
+            return conversation
+
+    class _FakeLeadRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def get_by_id(self, _lead_id: object) -> SimpleNamespace:
+            return lead
+
+        def update(self, updated: object) -> object:
+            return updated
+
+        def add_event(self, **kwargs: object) -> SimpleNamespace:
+            stage_events.append(kwargs)
+            return SimpleNamespace()
+
+    class _FakeSession:
+        def add(self, _obj: object) -> None:
+            return None
+
+        def flush(self) -> None:
+            return None
+
+    monkeypatch.setattr(ingest, "WhatsAppRepository", _FakeRepo)
+    monkeypatch.setattr(ingest, "SalesLeadRepository", _FakeLeadRepo)
+    monkeypatch.setattr(funnel, "SalesLeadRepository", _FakeLeadRepo)
+
+    payload = {
+        "entry": [
+            {
+                "changes": [
+                    {
+                        "field": "messages",
+                        "value": {
+                            "messages": [
+                                {
+                                    "from": "85294479843",
+                                    "id": "wamid.THIRD",
+                                    "timestamp": "1710000003",
+                                    "type": "text",
+                                    "text": {"body": "Third inbound"},
+                                }
+                            ]
+                        },
+                    }
+                ]
+            }
+        ]
+    }
+    counters = ingest.ingest_webhook_payload(_FakeSession(), payload)
+    assert counters["stored"] == 1
+    assert counters["leads_created"] == 0
+    assert lead.funnel_stage is FunnelStage.ENGAGED
+    assert stage_events[0]["to_stage"] is FunnelStage.ENGAGED

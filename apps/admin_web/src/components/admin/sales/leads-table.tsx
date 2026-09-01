@@ -60,20 +60,6 @@ export function LeadsTable({
 }: LeadsTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
-  const assigneeLabelBySub = useMemo(() => {
-    const labels = new Map<string, string>();
-    for (const user of users) {
-      labels.set(user.sub, user.name || user.email || user.sub);
-    }
-    return labels;
-  }, [users]);
-
-  const resolveAssigneeLabel = (assignedTo: string | null): string => {
-    if (!assignedTo) {
-      return 'Unassigned';
-    }
-    return assigneeLabelBySub.get(assignedTo) ?? assignedTo;
-  };
 
   const handleCheck = (leadId: string, checked: boolean) => {
     setSelectedIds((current) =>
@@ -126,7 +112,6 @@ export function LeadsTable({
             <AdminDataTableHeadCell>Email</AdminDataTableHeadCell>
             <AdminDataTableHeadCell>Source</AdminDataTableHeadCell>
             <AdminDataTableHeadCell>Stage</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell>Assigned</AdminDataTableHeadCell>
             <AdminDataTableHeadCell>Created</AdminDataTableHeadCell>
             <AdminDataTableHeadCell>Days in stage</AdminDataTableHeadCell>
             <AdminDataTableOperationsHeadCell />
@@ -135,13 +120,13 @@ export function LeadsTable({
         <AdminDataTableBody>
           {isLoading ? (
             <tr>
-              <AdminDataTableCell colSpan={9} className='py-8 text-sm text-slate-600'>
+              <AdminDataTableCell colSpan={8} className='py-8 text-sm text-slate-600'>
                 Loading leads...
               </AdminDataTableCell>
             </tr>
           ) : leads.length === 0 ? (
             <tr>
-              <AdminDataTableCell colSpan={9} className='py-8 text-sm text-slate-600'>
+              <AdminDataTableCell colSpan={8} className='py-8 text-sm text-slate-600'>
                 No leads found for these filters.
               </AdminDataTableCell>
             </tr>
@@ -150,7 +135,6 @@ export function LeadsTable({
               <LeadsTableRow
                 key={lead.id}
                 lead={lead}
-                assigneeLabel={resolveAssigneeLabel(lead.assignedTo)}
                 isSelected={selectedLeadId === lead.id}
                 isChecked={selectedSet.has(lead.id)}
                 onSelect={onSelectLead}
