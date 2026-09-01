@@ -15,26 +15,16 @@ from app.db.models import (
     Contact,
     ContactSource,
     ContactType,
-    FunnelStage,
-    LeadEventType,
-    LeadType,
-    SalesLead,
     WhatsAppConversation,
     WhatsAppMessage,
     WhatsAppMessageDirection,
 )
-from app.db.repositories.sales_lead import SalesLeadRepository
 from app.db.repositories.whatsapp import WhatsAppRepository
-from app.services.sales_assignment import (
-    notify_lead_assignee,
-    record_new_lead_assignment_event,
-    resolve_create_assignee,
-)
+from app.services.lead_funnel_automation import link_conversation_lead_and_advance
 from app.utils.logging import get_logger, mask_pii
 
 logger = get_logger(__name__)
 
-_SYSTEM_ACTOR = "system"
 _SOURCE_DETAIL = "whatsapp_webhook"
 _MESSAGE_CHANGE_FIELDS = frozenset({"messages"})
 _ECHO_CHANGE_FIELDS = frozenset({"smb_message_echoes", "message_echoes"})
@@ -215,13 +205,14 @@ def store_whatsapp_message(
         conversation.last_message_at = sent_at
     conversation.updated_at = now
 
-    if direction is WhatsAppMessageDirection.INBOUND and create_contacts:
+    if create_contacts:
         _ensure_contact_and_lead(
             session,
             conversation=conversation,
             counters=counters,
             create_leads=create_leads,
             source_detail=source_detail,
+            is_outbound=direction is WhatsAppMessageDirection.OUTBOUND,
         )
 
     session.flush()
@@ -235,6 +226,7 @@ def _ensure_contact_and_lead(
     counters: dict[str, int],
     create_leads: bool = True,
     source_detail: str = _SOURCE_DETAIL,
+    is_outbound: bool = False,
 ) -> None:
     if conversation.contact_id is None:
         contact, created = _find_or_create_contact(
@@ -244,49 +236,26 @@ def _ensure_contact_and_lead(
         if created:
             counters["contacts_created"] = counters.get("contacts_created", 0) + 1
 
-    contact_id = conversation.contact_id
-    if contact_id is None:
+    if conversation.contact_id is None:
         return
-
-    if conversation.lead_id is not None or not create_leads:
-        return
-
-    lead_repository = SalesLeadRepository(session)
-    open_lead = lead_repository.find_open_by_contact(contact_id)
-    if open_lead is not None:
-        conversation.lead_id = open_lead.id
-        return
-
-    assigned_to = resolve_create_assignee(session)
-    lead = lead_repository.create_with_event(
-        SalesLead(
-            contact_id=contact_id,
-            lead_type=LeadType.OTHER,
-            funnel_stage=FunnelStage.NEW,
-            assigned_to=assigned_to,
-        ),
-        LeadEventType.CREATED,
-        metadata={"channel": "whatsapp", "conversation_id": str(conversation.id)},
-        to_stage=FunnelStage.NEW,
-        created_by=_SYSTEM_ACTOR,
+    created_before = counters.get("leads_created", 0)
+    link_conversation_lead_and_advance(
+        session,
+        conversation=conversation,
+        channel="whatsapp",
+        counters=counters,
+        create_leads=create_leads,
+        is_outbound=is_outbound,
     )
-    record_new_lead_assignment_event(
-        lead_repository,
-        lead_id=getattr(lead, "id", None),
-        assigned_to=assigned_to,
-        actor_sub=_SYSTEM_ACTOR,
-    )
-    notify_lead_assignee(session, lead, previous=None)
-    conversation.lead_id = lead.id
-    counters["leads_created"] += 1
-    logger.info(
-        "Created sales lead from WhatsApp conversation",
-        extra={
-            "lead_id": str(lead.id),
-            "conversation_id": str(conversation.id),
-            "wa_id": mask_pii(conversation.wa_id),
-        },
-    )
+    if counters.get("leads_created", 0) > created_before:
+        logger.info(
+            "Created sales lead from WhatsApp conversation",
+            extra={
+                "lead_id": str(conversation.lead_id),
+                "conversation_id": str(conversation.id),
+                "wa_id": mask_pii(conversation.wa_id),
+            },
+        )
 
 
 def _find_or_create_contact(

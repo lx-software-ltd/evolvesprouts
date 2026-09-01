@@ -101,11 +101,26 @@ export function adminPartyInvoicesDeepLink(partyName: string): string {
   return `/assets?${params.toString()}`;
 }
 
+export const ADMIN_CONVERSATION_QUERY_PARAM = 'conversation';
+
 export function adminSalesConversationsDeepLink(
   contactId: string,
   channel: SalesInboxTab | string | null | undefined
 ): string {
   return adminPartySalesConversationsDeepLink('contact', contactId, channel);
+}
+
+export function adminSalesConversationDeepLink(
+  contactId: string,
+  channel: SalesInboxTab | string | null | undefined,
+  conversationId: string
+): string {
+  const tab = isSalesInboxTab(channel) ? channel : 'whatsapp';
+  const query = new URLSearchParams();
+  query.set('tab', tab);
+  query.set(ADMIN_CONTACT_QUERY_PARAM, contactId);
+  query.set(ADMIN_CONVERSATION_QUERY_PARAM, conversationId);
+  return `/sales?${query.toString()}`;
 }
 
 export function adminServiceInstancesDeepLink(contactId: string): string {

@@ -6,6 +6,7 @@ import { ConversationNameCell } from './conversation-name-cell';
 import { InboxImportStatus } from './inbox-import-status';
 
 import { useAutoSelectContactConversation } from '@/hooks/use-auto-select-contact-conversation';
+import { useLocationSearchParam } from '@/hooks/use-query-tab-state';
 import { useRelatedPartySearchParams } from '@/hooks/use-related-party-search-params';
 import { useWhatsAppConversations } from '@/hooks/use-whatsapp-conversations';
 import { useWhatsAppMessages } from '@/hooks/use-whatsapp-messages';
@@ -13,6 +14,7 @@ import { toErrorMessage } from '@/hooks/hook-errors';
 import { createAdminAsset, deleteAdminAsset, uploadFileToPresignedUrl } from '@/lib/assets-api';
 import { formatDate } from '@/lib/format';
 import { formatInboxConversationName } from '@/lib/inbox-conversation-name';
+import { ADMIN_CONVERSATION_QUERY_PARAM } from '@/lib/contact-related-links';
 import {
   createWhatsAppExportImportJob,
   listInboxImportJobs,
@@ -47,11 +49,13 @@ const MAX_EXPORT_BYTES = 15 * 1024 * 1024;
 
 export function WhatsAppConversationsView() {
   const party = useRelatedPartySearchParams();
+  const conversationId = useLocationSearchParam(ADMIN_CONVERSATION_QUERY_PARAM);
   const list = useWhatsAppConversations(party);
   const [selectedId, setSelectedId] = useAutoSelectContactConversation(
     party.partyFilterKey,
     list.conversations[0]?.id ?? null,
-    list.isLoading
+    list.isLoading,
+    conversationId
   );
   const detail = useWhatsAppMessages(selectedId);
   const [exportFile, setExportFile] = useState<File | null>(null);

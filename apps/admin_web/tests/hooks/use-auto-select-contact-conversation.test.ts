@@ -23,6 +23,13 @@ describe('useAutoSelectContactConversation', () => {
     expect(result.current[0]).toBe('conv-1');
   });
 
+  it('selects a preferred conversation id even without a party filter', () => {
+    const { result } = renderHook(() =>
+      useAutoSelectContactConversation('', 'conv-1', false, 'conv-9')
+    );
+    expect(result.current[0]).toBe('conv-9');
+  });
+
   it('does not re-open after the user closes the chat', () => {
     const { result, rerender } = renderHook(
       ({ firstId }) => useAutoSelectContactConversation('contact-1', firstId, false),

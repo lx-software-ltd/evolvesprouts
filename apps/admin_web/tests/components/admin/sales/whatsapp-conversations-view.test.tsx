@@ -137,4 +137,29 @@ describe('WhatsAppConversationsView', () => {
     expect(await screen.findByText('How much?')).toBeInTheDocument();
     expect(mockListMessages).toHaveBeenCalledWith('conv-1');
   });
+
+  it('opens the conversation from a conversation deep link', async () => {
+    mockListMessages.mockResolvedValue({
+      conversation: listState.conversations[0],
+      items: [
+        {
+          id: 'msg-1',
+          waMessageId: 'wamid.1',
+          direction: 'inbound',
+          messageType: 'text',
+          body: 'How much?',
+          sentAt: '2026-08-02T00:00:00+00:00',
+        },
+      ],
+    });
+    window.history.replaceState(
+      null,
+      '',
+      '/sales?tab=whatsapp&contact=contact-1&conversation=conv-1'
+    );
+    render(<WhatsAppConversationsView />);
+
+    expect(await screen.findByText('How much?')).toBeInTheDocument();
+    expect(mockListMessages).toHaveBeenCalledWith('conv-1');
+  });
 });

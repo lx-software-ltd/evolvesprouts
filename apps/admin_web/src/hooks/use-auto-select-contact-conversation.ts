@@ -11,21 +11,24 @@ import { useState } from 'react';
 export function useAutoSelectContactConversation(
   partyFilterId: string,
   firstConversationId: string | null,
-  isLoading: boolean
+  isLoading: boolean,
+  preferredConversationId = ''
 ): [string | null, (next: string | null) => void] {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [openedForContactId, setOpenedForContactId] = useState('');
 
-  if (!partyFilterId && openedForContactId !== '') {
+  const openKey = preferredConversationId
+    ? `conversation:${preferredConversationId}`
+    : partyFilterId
+      ? `party:${partyFilterId}`
+      : '';
+  const targetId = preferredConversationId || firstConversationId;
+
+  if (!openKey && openedForContactId !== '') {
     setOpenedForContactId('');
-  } else if (
-    partyFilterId &&
-    !isLoading &&
-    firstConversationId &&
-    openedForContactId !== partyFilterId
-  ) {
-    setOpenedForContactId(partyFilterId);
-    setSelectedId(firstConversationId);
+  } else if (openKey && !isLoading && targetId && openedForContactId !== openKey) {
+    setOpenedForContactId(openKey);
+    setSelectedId(targetId);
   }
 
   return [selectedId, setSelectedId];

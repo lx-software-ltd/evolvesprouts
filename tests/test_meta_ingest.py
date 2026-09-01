@@ -8,7 +8,8 @@ from uuid import uuid4
 import pytest
 
 from app.db.models import Contact
-from app.db.models.enums import MetaChannel, MetaMessageDirection
+from app.db.models.enums import FunnelStage, MetaChannel, MetaMessageDirection
+from app.services import lead_funnel_automation as funnel
 from app.services import meta_ingest as ingest
 from app.utils.validators import (
     instagram_handle_from_profile_url,
@@ -117,7 +118,7 @@ def test_ingest_stores_inbound_instagram_and_creates_lead(
 
     monkeypatch.setattr(ingest, "MetaConversation", _FakeConversation)
     monkeypatch.setattr(ingest, "MetaRepository", _FakeRepo)
-    monkeypatch.setattr(ingest, "SalesLeadRepository", _FakeLeadRepo)
+    monkeypatch.setattr(funnel, "SalesLeadRepository", _FakeLeadRepo)
     monkeypatch.setattr(ingest, "ContactRepository", _contact_repo())
 
     payload = {
@@ -159,7 +160,9 @@ def test_ingest_stores_messenger_echo_as_outbound(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     conversation_id = uuid4()
+    lead_id = uuid4()
     added: list[object] = []
+    stage_events: list[object] = []
 
     class _FakeConversation:
         def __init__(self, **kwargs: object) -> None:
@@ -186,15 +189,39 @@ def test_ingest_stores_messenger_echo_as_outbound(
         def get_conversation_by_platform_user(self, **_k: object) -> None:
             return None
 
+    class _FakeLeadRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def find_open_by_contact(self, _contact_id: object) -> None:
+            return None
+
+        def create_with_event(self, *_a: object, **_k: object) -> SimpleNamespace:
+            return SimpleNamespace(id=lead_id, funnel_stage=FunnelStage.NEW)
+
+        def get_by_id(self, _lead_id: object) -> None:
+            return None
+
+        def update(self, lead: object) -> object:
+            return lead
+
+        def add_event(self, **kwargs: object) -> SimpleNamespace:
+            stage_events.append(kwargs)
+            return SimpleNamespace()
+
     class _FakeSession:
         def add(self, obj: object) -> None:
             added.append(obj)
 
         def flush(self) -> None:
-            return None
+            for obj in added:
+                if getattr(obj, "id", "missing") is None:
+                    setattr(obj, "id", uuid4())
 
     monkeypatch.setattr(ingest, "MetaConversation", _FakeConversation)
     monkeypatch.setattr(ingest, "MetaRepository", _FakeRepo)
+    monkeypatch.setattr(funnel, "SalesLeadRepository", _FakeLeadRepo)
+    monkeypatch.setattr(ingest, "ContactRepository", _contact_repo())
 
     payload = {
         "object": "page",
@@ -218,7 +245,7 @@ def test_ingest_stores_messenger_echo_as_outbound(
     }
     counters = ingest.ingest_webhook_payload(_FakeSession(), payload)
     assert counters["stored"] == 1
-    assert counters["leads_created"] == 0
+    assert counters["leads_created"] == 1
     conversation = next(
         item
         for item in added
@@ -229,6 +256,7 @@ def test_ingest_stores_messenger_echo_as_outbound(
         getattr(item, "direction", None) is MetaMessageDirection.OUTBOUND
         for item in added
     )
+    assert stage_events[0]["to_stage"] is FunnelStage.CONTACTED
 
 
 def test_ingest_skips_duplicate_message(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -380,7 +408,7 @@ def test_ingest_keeps_customer_instagram_when_own_handle_configured(
     )
     monkeypatch.setattr(ingest, "MetaConversation", _FakeConversation)
     monkeypatch.setattr(ingest, "MetaRepository", _FakeRepo)
-    monkeypatch.setattr(ingest, "SalesLeadRepository", _FakeLeadRepo)
+    monkeypatch.setattr(funnel, "SalesLeadRepository", _FakeLeadRepo)
     monkeypatch.setattr(ingest, "ContactRepository", _contact_repo())
 
     payload = {
@@ -440,18 +468,41 @@ def test_ingest_echo_does_not_use_business_handle_as_chat_name(
         def get_conversation_by_platform_user(self, **_k: object) -> None:
             return None
 
+    class _FakeLeadRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def find_open_by_contact(self, _contact_id: object) -> None:
+            return None
+
+        def create_with_event(self, *_a: object, **_k: object) -> SimpleNamespace:
+            return SimpleNamespace(id=uuid4(), funnel_stage=FunnelStage.NEW)
+
+        def get_by_id(self, _lead_id: object) -> None:
+            return None
+
+        def update(self, lead: object) -> object:
+            return lead
+
+        def add_event(self, **_k: object) -> SimpleNamespace:
+            return SimpleNamespace()
+
     class _FakeSession:
         def add(self, obj: object) -> None:
             added.append(obj)
 
         def flush(self) -> None:
-            return None
+            for obj in added:
+                if getattr(obj, "id", "missing") is None:
+                    setattr(obj, "id", uuid4())
 
     monkeypatch.setenv(
         "NEXT_PUBLIC_INSTAGRAM_URL", "https://www.instagram.com/evolvesprouts"
     )
     monkeypatch.setattr(ingest, "MetaConversation", _FakeConversation)
     monkeypatch.setattr(ingest, "MetaRepository", _FakeRepo)
+    monkeypatch.setattr(funnel, "SalesLeadRepository", _FakeLeadRepo)
+    monkeypatch.setattr(ingest, "ContactRepository", _contact_repo())
 
     payload = {
         "object": "instagram",
@@ -569,7 +620,7 @@ def test_ingest_reuses_contact_matching_instagram_handle(
 
     monkeypatch.setattr(ingest, "MetaConversation", _FakeConversation)
     monkeypatch.setattr(ingest, "MetaRepository", _FakeRepo)
-    monkeypatch.setattr(ingest, "SalesLeadRepository", _FakeLeadRepo)
+    monkeypatch.setattr(funnel, "SalesLeadRepository", _FakeLeadRepo)
     monkeypatch.setattr(ingest, "ContactRepository", _contact_repo(found=existing))
 
     payload = {
@@ -658,7 +709,7 @@ def test_ingest_reuses_archived_contact_matching_instagram_handle(
 
     monkeypatch.setattr(ingest, "MetaConversation", _FakeConversation)
     monkeypatch.setattr(ingest, "MetaRepository", _FakeRepo)
-    monkeypatch.setattr(ingest, "SalesLeadRepository", _FakeLeadRepo)
+    monkeypatch.setattr(funnel, "SalesLeadRepository", _FakeLeadRepo)
     monkeypatch.setattr(ingest, "ContactRepository", _contact_repo(found=existing))
 
     payload = {
@@ -725,8 +776,22 @@ def test_ingest_fills_instagram_handle_on_existing_contact(
         def flush(self) -> None:
             return None
 
+    class _FakeLeadRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def get_by_id(self, _lead_id: object) -> SimpleNamespace:
+            return SimpleNamespace(id=_lead_id, funnel_stage=FunnelStage.CONTACTED)
+
+        def update(self, lead: object) -> object:
+            return lead
+
+        def add_event(self, **_k: object) -> SimpleNamespace:
+            return SimpleNamespace()
+
     monkeypatch.setattr(ingest, "MetaRepository", _FakeRepo)
     monkeypatch.setattr(ingest, "ContactRepository", _contact_repo(linked=linked))
+    monkeypatch.setattr(funnel, "SalesLeadRepository", _FakeLeadRepo)
 
     payload = {
         "object": "instagram",
@@ -802,7 +867,7 @@ def test_ingest_facebook_contact_has_no_instagram_handle(
 
     monkeypatch.setattr(ingest, "MetaConversation", _FakeConversation)
     monkeypatch.setattr(ingest, "MetaRepository", _FakeRepo)
-    monkeypatch.setattr(ingest, "SalesLeadRepository", _FakeLeadRepo)
+    monkeypatch.setattr(funnel, "SalesLeadRepository", _FakeLeadRepo)
 
     payload = {
         "object": "page",

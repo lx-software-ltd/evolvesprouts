@@ -87,6 +87,7 @@ describe('LeadsTable', () => {
     expect(screen.queryByRole('button', { name: 'Export CSV' })).not.toBeInTheDocument();
     expect(table).toHaveTextContent('Manual');
     expect(table).toHaveTextContent('New');
+    expect(screen.queryByRole('columnheader', { name: 'Assigned' })).not.toBeInTheDocument();
     await user.click(screen.getByText('Jane Doe'));
     expect(onSelectLead).toHaveBeenCalledWith('lead-1');
   });

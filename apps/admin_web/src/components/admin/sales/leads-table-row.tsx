@@ -13,7 +13,6 @@ import { getStageBadgeClass } from './stage-utils';
 
 export interface LeadsTableRowProps {
   lead: LeadSummary;
-  assigneeLabel: string;
   isSelected: boolean;
   isChecked: boolean;
   onSelect: (leadId: string) => void;
@@ -22,7 +21,6 @@ export interface LeadsTableRowProps {
 
 export const LeadsTableRow = memo(function LeadsTableRow({
   lead,
-  assigneeLabel,
   isSelected,
   isChecked,
   onSelect,
@@ -54,7 +52,6 @@ export const LeadsTableRow = memo(function LeadsTableRow({
           {formatEnumLabel(lead.funnelStage)}
         </span>
       </AdminDataTableCell>
-      <AdminDataTableCell className='text-sm text-slate-700'>{assigneeLabel}</AdminDataTableCell>
       <AdminDataTableCell className='text-sm text-slate-700'>{formatDate(lead.createdAt)}</AdminDataTableCell>
       <AdminDataTableCell className='text-sm text-slate-700'>
         <span className={lead.daysInStage > 7 ? 'font-semibold text-amber-700' : ''}>
