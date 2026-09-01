@@ -18,7 +18,7 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-const { listState, mockListMessages } = vi.hoisted(() => {
+const { listState, mockListMessages, inboxImportApi } = vi.hoisted(() => {
   const listState = {
     conversations: [
       {
@@ -50,6 +50,11 @@ const { listState, mockListMessages } = vi.hoisted(() => {
   return {
     listState,
     mockListMessages: vi.fn(),
+    inboxImportApi: {
+      listInboxImportJobs: vi.fn(async () => []),
+      createMetaImportJob: vi.fn(),
+      formatInboxImportCounters: vi.fn(() => ''),
+    },
   };
 });
 
@@ -65,11 +70,7 @@ vi.mock('@/lib/meta-api', async () => {
   };
 });
 
-vi.mock('@/lib/inbox-import-api', () => ({
-  listInboxImportJobs: vi.fn().mockResolvedValue([]),
-  createMetaImportJob: vi.fn(),
-  formatInboxImportCounters: () => '',
-}));
+vi.mock('@/lib/inbox-import-api', () => inboxImportApi);
 
 import { MetaConversationsView } from '@/components/admin/sales/meta-conversations-view';
 

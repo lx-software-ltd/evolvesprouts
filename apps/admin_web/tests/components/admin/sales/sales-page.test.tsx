@@ -77,6 +77,61 @@ vi.mock('@/hooks/use-sales-page', () => ({
   useSalesPage: mockUseSalesPage,
 }));
 
+vi.mock('@/lib/inbox-import-api', () => ({
+  listInboxImportJobs: vi.fn(async () => []),
+  createMetaImportJob: vi.fn(),
+  createWhatsAppExportImportJob: vi.fn(),
+  formatInboxImportCounters: vi.fn(() => ''),
+}));
+
+vi.mock('@/hooks/use-whatsapp-conversations', () => ({
+  useWhatsAppConversations: () => ({
+    conversations: [],
+    filters: { q: '' },
+    setFilter: vi.fn(),
+    isLoading: false,
+    isLoadingMore: false,
+    error: '',
+    refetch: vi.fn(),
+    loadMore: vi.fn(),
+    hasMore: false,
+    totalCount: 0,
+  }),
+}));
+
+vi.mock('@/hooks/use-meta-conversations', () => ({
+  useMetaConversations: () => ({
+    conversations: [],
+    filters: { q: '' },
+    setFilter: vi.fn(),
+    isLoading: false,
+    isLoadingMore: false,
+    error: '',
+    refetch: vi.fn(),
+    loadMore: vi.fn(),
+    hasMore: false,
+    totalCount: 0,
+  }),
+}));
+
+vi.mock('@/hooks/use-whatsapp-messages', () => ({
+  useWhatsAppMessages: () => ({
+    conversation: null,
+    messages: [],
+    isLoading: false,
+    error: '',
+  }),
+}));
+
+vi.mock('@/hooks/use-meta-messages', () => ({
+  useMetaMessages: () => ({
+    conversation: null,
+    messages: [],
+    isLoading: false,
+    error: '',
+  }),
+}));
+
 import { SalesPage } from '@/components/admin/sales/sales-page';
 
 describe('SalesPage', () => {
@@ -90,6 +145,19 @@ describe('SalesPage', () => {
     expect(screen.getByRole('button', { name: 'WhatsApp' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Analytics' }));
     expect(state.setActiveView).toHaveBeenCalledWith('analytics');
+  });
+
+  it('shows inbox import controls on Instagram and WhatsApp views', () => {
+    state.activeView = 'instagram';
+    const { rerender } = render(<SalesPage />);
+    expect(screen.getByRole('button', { name: 'Import recent history' })).toBeInTheDocument();
+
+    state.activeView = 'whatsapp';
+    rerender(<SalesPage />);
+    expect(screen.getByText('Import WhatsApp export')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Import export' })).toBeDisabled();
+
+    state.activeView = 'pipeline';
   });
 
   it('starts inline create-lead flow from header', async () => {

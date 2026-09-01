@@ -65,12 +65,14 @@ def test_admin_meta_queues_graph_import(
         api_gateway_event,
         "/v1/admin/meta/import-jobs",
         method="POST",
-        body={"channel": "instagram"},
+        body=json.dumps({"channel": "instagram"}),
     )
     response = am.handle_admin_meta_request(event, "POST", "/v1/admin/meta/import-jobs")
     assert response["statusCode"] == 202
     body = json.loads(response["body"])
     assert body["inbox_import_job"]["id"] == str(job_id)
+    assert body["inbox_import_job"]["kind"] == "meta_graph"
+    assert body["inbox_import_job"]["channel"] == "instagram"
     assert added
     assert getattr(added[0], "kind") is InboxImportKind.META_GRAPH
     assert getattr(added[0], "channel") is MetaChannel.INSTAGRAM
@@ -83,7 +85,7 @@ def test_admin_whatsapp_import_requires_asset(
         api_gateway_event,
         "/v1/admin/whatsapp/import-jobs",
         method="POST",
-        body={},
+        body=json.dumps({}),
     )
     with pytest.raises(ValidationError):
         aw.handle_admin_whatsapp_request(

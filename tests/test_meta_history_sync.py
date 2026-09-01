@@ -15,7 +15,7 @@ def test_sync_maps_graph_conversation_without_leads(
 ) -> None:
     stored: list[object] = []
 
-    def _store(**kwargs: object) -> None:
+    def _store(_session: object, **kwargs: object) -> None:
         stored.append(kwargs)
         counters = kwargs["counters"]
         if isinstance(counters, dict):

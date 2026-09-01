@@ -18,7 +18,7 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-const { listState, mockListMessages } = vi.hoisted(() => {
+const { listState, mockListMessages, inboxImportApi } = vi.hoisted(() => {
   const listState = {
     conversations: [
       {
@@ -48,6 +48,11 @@ const { listState, mockListMessages } = vi.hoisted(() => {
   return {
     listState,
     mockListMessages: vi.fn(),
+    inboxImportApi: {
+      listInboxImportJobs: vi.fn(async () => []),
+      createWhatsAppExportImportJob: vi.fn(),
+      formatInboxImportCounters: vi.fn(() => ''),
+    },
   };
 });
 
@@ -59,11 +64,7 @@ vi.mock('@/lib/whatsapp-api', () => ({
   listWhatsAppMessages: (...args: unknown[]) => mockListMessages(...args),
 }));
 
-vi.mock('@/lib/inbox-import-api', () => ({
-  listInboxImportJobs: vi.fn().mockResolvedValue([]),
-  createWhatsAppExportImportJob: vi.fn(),
-  formatInboxImportCounters: () => '',
-}));
+vi.mock('@/lib/inbox-import-api', () => inboxImportApi);
 
 vi.mock('@/lib/assets-api', () => ({
   createAdminAsset: vi.fn(),

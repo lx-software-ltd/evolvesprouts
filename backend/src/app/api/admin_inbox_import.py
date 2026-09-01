@@ -154,6 +154,7 @@ def _enqueue_job(
         session.add(job)
         session.flush()
         job_id = job.id
+        summary = _serialize_job(job)
         session.commit()
     try:
         enqueue_inbox_import_job(job_id)
@@ -171,7 +172,7 @@ def _enqueue_job(
         ) from None
     return json_response(
         202,
-        {"inbox_import_job": _serialize_job_id(job_id)},
+        {"inbox_import_job": summary},
         event=event,
     )
 
@@ -254,20 +255,6 @@ def _serialize_job(job: InboxImportJob) -> dict[str, Any]:
         "counters": job.counters,
         "created_at": _isoformat(job.created_at),
         "updated_at": _isoformat(job.updated_at),
-    }
-
-
-def _serialize_job_id(job_id: UUID) -> dict[str, Any]:
-    return {
-        "id": str(job_id),
-        "kind": None,
-        "channel": None,
-        "attachment_asset_id": None,
-        "status": InboxImportJobStatus.PENDING.value,
-        "error_message": None,
-        "counters": None,
-        "created_at": None,
-        "updated_at": None,
     }
 
 

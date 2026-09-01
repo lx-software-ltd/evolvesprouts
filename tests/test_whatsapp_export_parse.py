@@ -56,7 +56,7 @@ def test_import_uses_business_names_as_outbound(
 
     stored: list[object] = []
 
-    def _store(**kwargs: object) -> None:
+    def _store(_session: object, **kwargs: object) -> None:
         stored.append(kwargs)
         counters = kwargs["counters"]
         if isinstance(counters, dict):
