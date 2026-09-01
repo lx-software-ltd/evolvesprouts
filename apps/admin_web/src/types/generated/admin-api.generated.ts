@@ -1474,6 +1474,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/leads/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get sales lead assignment settings */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Sales settings response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SalesSettingsResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update sales lead assignment settings */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateSalesSettingsRequest"];
+                };
+            };
+            responses: {
+                /** @description Updated sales settings. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SalesSettingsResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        trace?: never;
+    };
     "/v1/admin/whatsapp/conversations": {
         parameters: {
             query?: never;
@@ -7251,6 +7317,22 @@ export interface components {
             funnel_stage?: components["schemas"]["FunnelStage"];
             assigned_to?: string | null;
             lost_reason?: string | null;
+        };
+        SalesSettings: {
+            /** @description Cognito `sub` applied to new leads when create omits `assigned_to`. */
+            default_assigned_to: string | null;
+            /** @description When true, email the new assignee on first assignment and reassignment. Unassign does not send mail. */
+            notify_assignee_on_assignment: boolean;
+            /** Format: date-time */
+            updated_at?: string | null;
+            updated_by?: string | null;
+        };
+        SalesSettingsResponse: {
+            settings: components["schemas"]["SalesSettings"];
+        };
+        UpdateSalesSettingsRequest: {
+            default_assigned_to?: string | null;
+            notify_assignee_on_assignment?: boolean;
         };
         LeadAnalyticsResponse: {
             funnel: {

@@ -25,6 +25,11 @@ from app.db.models import (
 )
 from app.db.repositories.sales_lead import SalesLeadRepository
 from app.db.repositories.whatsapp import WhatsAppRepository
+from app.services.sales_assignment import (
+    notify_lead_assignee,
+    record_new_lead_assignment_event,
+    resolve_create_assignee,
+)
 from app.utils.logging import get_logger, mask_pii
 
 logger = get_logger(__name__)
@@ -252,17 +257,26 @@ def _ensure_contact_and_lead(
         conversation.lead_id = open_lead.id
         return
 
+    assigned_to = resolve_create_assignee(session)
     lead = lead_repository.create_with_event(
         SalesLead(
             contact_id=contact_id,
             lead_type=LeadType.OTHER,
             funnel_stage=FunnelStage.NEW,
+            assigned_to=assigned_to,
         ),
         LeadEventType.CREATED,
         metadata={"channel": "whatsapp", "conversation_id": str(conversation.id)},
         to_stage=FunnelStage.NEW,
         created_by=_SYSTEM_ACTOR,
     )
+    record_new_lead_assignment_event(
+        lead_repository,
+        lead_id=getattr(lead, "id", None),
+        assigned_to=assigned_to,
+        actor_sub=_SYSTEM_ACTOR,
+    )
+    notify_lead_assignee(session, lead, previous=None)
     conversation.lead_id = lead.id
     counters["leads_created"] += 1
     logger.info(

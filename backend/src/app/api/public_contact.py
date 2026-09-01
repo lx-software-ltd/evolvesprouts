@@ -28,6 +28,11 @@ from app.db.models.sales_lead import SalesLead
 from app.db.repositories.contact import ContactRepository
 from app.db.repositories.sales_lead import SalesLeadRepository
 from app.exceptions import ValidationError
+from app.services.sales_assignment import (
+    notify_lead_assignee,
+    record_new_lead_assignment_event,
+    resolve_create_assignee,
+)
 from app.services.turnstile import (
     extract_client_ip,
     extract_turnstile_token,
@@ -103,10 +108,12 @@ def handle_public_contact_us(
             contact_repo.update(contact)
             lead_type = _lead_type_for_intent(normalized["signup_intent"])
             if lead_repo.find_open_by_contact(contact.id) is None:
+                assigned_to = resolve_create_assignee(session)
                 lead = SalesLead(
                     contact_id=contact.id,
                     lead_type=lead_type,
                     funnel_stage=FunnelStage.NEW,
+                    assigned_to=assigned_to,
                 )
                 lead_repo.create_with_event(
                     lead,
@@ -116,7 +123,16 @@ def handle_public_contact_us(
                         "locale": normalized["locale"],
                     },
                 )
-            session.commit()
+                record_new_lead_assignment_event(
+                    lead_repo,
+                    lead_id=getattr(lead, "id", None),
+                    assigned_to=assigned_to,
+                    actor_sub=None,
+                )
+                session.commit()
+                notify_lead_assignee(session, lead, previous=None)
+            else:
+                session.commit()
     except Exception:
         logger.exception("Contact us Aurora persistence failed")
         return json_response(

@@ -68,6 +68,7 @@ from app.db.models.note import Note
 from app.db.models.organization import Organization, OrganizationMember
 from app.db.models.payment_allocation import DocumentCounter, PaymentAllocation
 from app.db.models.sales_lead import SalesLead, SalesLeadEvent
+from app.db.models.sales_settings import SalesSettings
 from app.db.models.service import (
     ConsultationDetails,
     EventDetails,
@@ -163,6 +164,7 @@ __all__ = [
     "RelationshipType",
     "SalesLead",
     "SalesLeadEvent",
+    "SalesSettings",
     "Service",
     "ServiceAsset",
     "ServiceDeliveryMode",

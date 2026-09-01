@@ -61,6 +61,7 @@ from app.db.repositories.sales_lead import SalesLeadRepository
 from app.db.repositories.service_instance import ServiceInstanceRepository
 from app.exceptions import ConflictError, ValidationError
 from app.services.customer_billing import record_reservation_customer_payment
+from app.services import sales_assignment
 from app.services.intro_call_slots import is_intro_call_slot_available  # noqa: F401
 from app.services.public_form_internal_notifications import (
     build_reservation_recap_lines,  # noqa: F401
@@ -398,10 +399,12 @@ def _handle_public_reservation(
                                 stripe_pi_idempotent_hit = True
                                 stripe_pi_existing_payment_id = _pay.id
 
+                    assigned_to = sales_assignment.resolve_create_assignee(session)
                     lead = SalesLead(
                         contact_id=contact.id,
                         lead_type=LeadType.PROGRAM_ENROLLMENT,
                         funnel_stage=FunnelStage.NEW,
+                        assigned_to=assigned_to,
                     )
                     lead_repo.create_with_event(
                         lead,
@@ -413,6 +416,13 @@ def _handle_public_reservation(
                             dc_row=dc_row,
                         ),
                     )
+                    sales_assignment.record_new_lead_assignment_event(
+                        lead_repo,
+                        lead_id=getattr(lead, "id", None),
+                        assigned_to=assigned_to,
+                        actor_sub=None,
+                    )
+                    sales_assignment.notify_lead_assignee(session, lead, previous=None)
                     if created_enrollment_id is not None:
                         audit = AuditService(
                             session,
