@@ -223,7 +223,8 @@ describe('EnrollmentListPanel', () => {
 
     expect(screen.getByLabelText('Contact')).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Update enrollment' })).toBeInTheDocument();
-    expect(screen.getByText('Jane Doe').closest('tr')).toHaveClass('bg-slate-100');
+    const table = screen.getByRole('table');
+    expect(within(table).getByText('Jane Doe').closest('tr')).toHaveClass('bg-slate-100');
   });
 
   it('auto-selects the family enrollment from a party deep link', () => {
@@ -254,7 +255,8 @@ describe('EnrollmentListPanel', () => {
 
     expect(screen.getByLabelText('Family')).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Update enrollment' })).toBeInTheDocument();
-    expect(screen.getByText('Smith family').closest('tr')).toHaveClass('bg-slate-100');
+    const table = screen.getByRole('table');
+    expect(within(table).getByText('Smith family').closest('tr')).toHaveClass('bg-slate-100');
   });
 
   it('auto-selects the organisation enrollment from a party deep link', () => {
@@ -286,6 +288,7 @@ describe('EnrollmentListPanel', () => {
 
     expect(screen.getByLabelText('Organization')).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Update enrollment' })).toBeInTheDocument();
-    expect(screen.getByText('Acme Org').closest('tr')).toHaveClass('bg-slate-100');
+    const table = screen.getByRole('table');
+    expect(within(table).getByText('Acme Org').closest('tr')).toHaveClass('bg-slate-100');
   });
 });
