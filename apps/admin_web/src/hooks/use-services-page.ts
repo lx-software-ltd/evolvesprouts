@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toErrorMessage } from '@/hooks/hook-errors';
 import { createInitialCustomerPaymentAfterEnrollmentCreate } from '@/lib/billing-api';
 import { listEntityTags, type EntityTagRef } from '@/lib/entity-api';
+import { ADMIN_CONTACT_QUERY_PARAM } from '@/lib/inbox-conversation-name';
 
 import { useDiscountCodes } from './use-discount-codes';
 import { useVenues } from './use-venues';
@@ -13,7 +14,7 @@ import { useEnrollmentMutations } from './use-enrollment-mutations';
 import { useInstanceList } from './use-instance-list';
 import { useInstanceMutations } from './use-instance-mutations';
 import { useLocationList } from './use-location-list';
-import { useQueryTabState } from './use-query-tab-state';
+import { useLocationSearchParam, useQueryTabState } from './use-query-tab-state';
 import { useServiceDetail } from './use-service-detail';
 import { useServiceList } from './use-service-list';
 import { useServiceMutations } from './use-service-mutations';
@@ -42,6 +43,7 @@ export type InstancesListStatusFilter = '' | 'not_completed' | 'completed';
 export const DEFAULT_INSTANCES_LIST_STATUS_FILTER: InstancesListStatusFilter = 'not_completed';
 
 export function useServicesPage() {
+  const contactFilterId = useLocationSearchParam(ADMIN_CONTACT_QUERY_PARAM);
   const [activeView, setActiveView] = useQueryTabState<ServicesView>(
     SERVICES_VIEW_KEYS,
     DEFAULT_SERVICES_VIEW
@@ -54,6 +56,11 @@ export function useServicesPage() {
   const [instancesStatusFilter, setInstancesStatusFilter] = useState<InstancesListStatusFilter>(
     DEFAULT_INSTANCES_LIST_STATUS_FILTER
   );
+  useEffect(() => {
+    if (contactFilterId) {
+      setInstancesStatusFilter('');
+    }
+  }, [contactFilterId]);
   const [instancesSearchQuery, setInstancesSearchQuery] = useState<string>('');
   const [entityTags, setEntityTags] = useState<EntityTagRef[]>([]);
   const [entityTagsLoading, setEntityTagsLoading] = useState(false);
@@ -108,6 +115,7 @@ export function useServicesPage() {
           listAllInstances: true,
           filterServiceId: instancesServiceFilter || null,
           filterServiceType: instancesServiceTypeFilter || null,
+          filterContactId: contactFilterId || null,
         }
       : undefined
   );

@@ -18,6 +18,8 @@ import {
   INVOICE_LIST_SEARCH_DEBOUNCE_MS,
   normalizeInvoiceRecipientList,
 } from "@/components/admin/finance/client-invoices-utils";
+import { useLocationSearchParam } from "@/hooks/use-query-tab-state";
+import { ADMIN_CONTACT_QUERY_PARAM } from "@/lib/inbox-conversation-name";
 
 export function useClientInvoicesInvoiceList({
   shared,
@@ -50,9 +52,15 @@ export function useClientInvoicesInvoiceList({
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<
     "draft" | "issued" | "void" | ""
   >("");
+  const contactFilterId = useLocationSearchParam(ADMIN_CONTACT_QUERY_PARAM);
   const [invoiceSettlementFilter, setInvoiceSettlementFilter] = useState<
     "not_completed" | "open" | "partially_paid" | "paid" | "no_charge" | ""
   >("not_completed");
+  useEffect(() => {
+    if (contactFilterId) {
+      setInvoiceSettlementFilter("");
+    }
+  }, [contactFilterId]);
   const [invoiceCurrencyFilter, setInvoiceCurrencyFilter] = useState("");
   const [invoiceSearchInput, setInvoiceSearchInput] = useState("");
   const [invoiceSearchDebounced, setInvoiceSearchDebounced] = useState("");
@@ -102,6 +110,7 @@ export function useClientInvoicesInvoiceList({
               invoiceSearchDebounced === ""
                 ? undefined
                 : invoiceSearchDebounced,
+            contactId: contactFilterId === "" ? undefined : contactFilterId,
             limit: 50,
           },
           signal,
@@ -126,6 +135,7 @@ export function useClientInvoicesInvoiceList({
       invoiceSearchDebounced,
       invoiceStatusFilter,
       invoiceSettlementFilter,
+      contactFilterId,
     ],
   );
 
@@ -149,6 +159,7 @@ export function useClientInvoicesInvoiceList({
         currency:
           invoiceCurrencyFilter === "" ? undefined : invoiceCurrencyFilter,
         q: invoiceSearchDebounced === "" ? undefined : invoiceSearchDebounced,
+        contactId: contactFilterId === "" ? undefined : contactFilterId,
         cursor: invoiceListCursor,
         limit: 50,
       });
@@ -168,6 +179,7 @@ export function useClientInvoicesInvoiceList({
     invoiceSearchDebounced,
     invoiceStatusFilter,
     invoiceSettlementFilter,
+    contactFilterId,
   ]);
 
   const selectedIssuedInvoice = useMemo(() => {

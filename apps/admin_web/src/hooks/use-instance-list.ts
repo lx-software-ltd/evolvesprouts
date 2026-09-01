@@ -14,6 +14,8 @@ export interface InstanceListGlobalOptions {
   filterServiceId?: string | null;
   /** Optional service type filter (only used with listAllInstances). */
   filterServiceType?: string | null;
+  /** Optional contact UUID filter (only used with listAllInstances). */
+  filterContactId?: string | null;
 }
 
 export function useInstanceList(
@@ -23,6 +25,7 @@ export function useInstanceList(
   const shouldListAll = Boolean(globalOptions?.listAllInstances);
   const filterServiceId = globalOptions?.filterServiceId?.trim() ?? '';
   const filterServiceType = globalOptions?.filterServiceType?.trim() ?? '';
+  const filterContactId = globalOptions?.filterContactId?.trim() ?? '';
   const fetcher = useCallback(
     async ({
       status,
@@ -46,6 +49,7 @@ export function useInstanceList(
               limit,
               serviceType: filterServiceType || undefined,
               serviceId: filterServiceId || undefined,
+              contactId: filterContactId || undefined,
             },
             signal
           )
@@ -59,7 +63,7 @@ export function useInstanceList(
             signal
           );
     },
-    [serviceId, shouldListAll, filterServiceId, filterServiceType]
+    [serviceId, shouldListAll, filterServiceId, filterServiceType, filterContactId]
   );
 
   const list = usePaginatedList<ServiceInstance, InstanceListFilters>({

@@ -96,6 +96,10 @@ def serialize_contact_summary(
     *,
     standalone_note_count: int = 0,
     has_completion_certificate: bool = False,
+    has_sales_conversation: bool = False,
+    sales_conversation_channel: str | None = None,
+    has_service_instance: bool = False,
+    has_invoice: bool = False,
 ) -> dict[str, Any]:
     logger.debug("Serializing contact summary", extra={"contact_id": str(contact.id)})
     family_ids = {str(m.family_id) for m in contact.family_members}
@@ -142,6 +146,10 @@ def serialize_contact_summary(
         "organization_ids": sorted(organization_ids),
         "standalone_note_count": standalone_note_count,
         "has_completion_certificate": has_completion_certificate,
+        "has_sales_conversation": has_sales_conversation,
+        "sales_conversation_channel": sales_conversation_channel,
+        "has_service_instance": has_service_instance,
+        "has_invoice": has_invoice,
     }
 
 

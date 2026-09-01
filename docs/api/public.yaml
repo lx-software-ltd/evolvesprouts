@@ -3625,6 +3625,9 @@ components:
         - organization_ids
         - standalone_note_count
         - has_completion_certificate
+        - has_sales_conversation
+        - has_service_instance
+        - has_invoice
       properties:
         id:
           type: string
@@ -3726,6 +3729,16 @@ components:
           type: integer
           minimum: 0
         has_completion_certificate:
+          type: boolean
+        has_sales_conversation:
+          type: boolean
+        sales_conversation_channel:
+          type: string
+          nullable: true
+          enum: [whatsapp, instagram, messenger]
+        has_service_instance:
+          type: boolean
+        has_invoice:
           type: boolean
     PublicContactListResponse:
       type: object

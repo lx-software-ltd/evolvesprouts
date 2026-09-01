@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { useQueryTabState } from '@/hooks/use-query-tab-state';
+import { useLocationSearchParam, useQueryTabState } from '@/hooks/use-query-tab-state';
 
 const VALID_KEYS = ['alpha', 'beta', 'gamma'] as const;
 type Key = (typeof VALID_KEYS)[number];
@@ -128,6 +128,12 @@ describe('useQueryTabState', () => {
       result.current[1]('gamma');
     });
     expect(window.location.search).toBe('?view=gamma');
+  });
+
+  it('reads a named search param via useLocationSearchParam', () => {
+    setLocation('/sales?tab=instagram&contact=abc-123');
+    const { result } = renderHook(() => useLocationSearchParam('contact'));
+    expect(result.current).toBe('abc-123');
   });
 
   it('ignores the starting URL when a different pathname is used', () => {

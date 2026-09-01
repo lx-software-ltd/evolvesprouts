@@ -5,7 +5,9 @@ import { useEffect, useState } from 'react';
 import { ConversationNameCell } from './conversation-name-cell';
 import { InboxImportStatus } from './inbox-import-status';
 
+import { useLocationSearchParam } from '@/hooks/use-query-tab-state';
 import { useWhatsAppConversations } from '@/hooks/use-whatsapp-conversations';
+import { ADMIN_CONTACT_QUERY_PARAM } from '@/lib/inbox-conversation-name';
 import { useWhatsAppMessages } from '@/hooks/use-whatsapp-messages';
 import { toErrorMessage } from '@/hooks/hook-errors';
 import { createAdminAsset, deleteAdminAsset, uploadFileToPresignedUrl } from '@/lib/assets-api';
@@ -43,7 +45,8 @@ function formatWhen(value: string | null): string {
 const MAX_EXPORT_BYTES = 15 * 1024 * 1024;
 
 export function WhatsAppConversationsView() {
-  const list = useWhatsAppConversations();
+  const contactId = useLocationSearchParam(ADMIN_CONTACT_QUERY_PARAM);
+  const list = useWhatsAppConversations(contactId);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const detail = useWhatsAppMessages(selectedId);
   const [exportFile, setExportFile] = useState<File | null>(null);

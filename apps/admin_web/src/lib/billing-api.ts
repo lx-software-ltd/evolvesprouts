@@ -25,6 +25,7 @@ export async function listCustomerInvoices(
     currency?: string;
     /** Case-insensitive substring on invoice number, bill-to fields, and ISO invoice date. */
     q?: string;
+    contactId?: string;
     cursor?: string | null;
     limit?: number;
   } = {},
@@ -43,6 +44,10 @@ export async function listCustomerInvoices(
   const qTrimmed = params.q?.trim() ?? '';
   if (qTrimmed !== '') {
     query.set('q', qTrimmed);
+  }
+  const contactIdTrimmed = params.contactId?.trim() ?? '';
+  if (contactIdTrimmed !== '') {
+    query.set('contact_id', contactIdTrimmed);
   }
   if (params.cursor) {
     query.set('cursor', params.cursor);

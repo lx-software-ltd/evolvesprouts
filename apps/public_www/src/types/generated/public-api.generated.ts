@@ -3326,6 +3326,11 @@ export interface components {
             organization_ids: string[];
             standalone_note_count: number;
             has_completion_certificate: boolean;
+            has_sales_conversation: boolean;
+            /** @enum {string|null} */
+            sales_conversation_channel?: "whatsapp" | "instagram" | "messenger" | null;
+            has_service_instance: boolean;
+            has_invoice: boolean;
         };
         PublicContactListResponse: {
             items: components["schemas"]["PublicContact"][];

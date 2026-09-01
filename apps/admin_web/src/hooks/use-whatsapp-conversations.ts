@@ -12,7 +12,7 @@ export type WhatsAppConversationFilters = {
 
 const DEFAULT_FILTERS: WhatsAppConversationFilters = { q: '' };
 
-export function useWhatsAppConversations() {
+export function useWhatsAppConversations(contactId = '') {
   const fetcher = useCallback(
     (params: WhatsAppConversationFilters & {
       cursor: string | null;
@@ -20,10 +20,15 @@ export function useWhatsAppConversations() {
       signal: AbortSignal;
     }) =>
       listWhatsAppConversations(
-        { cursor: params.cursor, limit: params.limit, q: params.q },
+        {
+          cursor: params.cursor,
+          limit: params.limit,
+          q: params.q,
+          contactId,
+        },
         params.signal
       ),
-    []
+    [contactId]
   );
 
   const list = usePaginatedList<WhatsAppConversationSummary, WhatsAppConversationFilters>({

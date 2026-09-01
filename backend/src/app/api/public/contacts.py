@@ -18,6 +18,7 @@ from app.api.admin_contacts_mutations import (
     delete_contact,
     update_contact,
 )
+from app.api.admin_contacts_related import related_flags_for_contacts
 from app.api.admin_entities_helpers import (
     parse_active_filter,
     parse_contact_type_filter,
@@ -112,6 +113,7 @@ def _list_contacts(event: Mapping[str, Any]) -> dict[str, Any]:
         cert_contact_ids = contact_ids_with_issued_certificates(
             session, [r.id for r in page_rows]
         )
+        related_flags = related_flags_for_contacts(session, [r.id for r in page_rows])
         return json_response(
             200,
             {
@@ -120,6 +122,7 @@ def _list_contacts(event: Mapping[str, Any]) -> dict[str, Any]:
                         r,
                         standalone_note_count=note_counts.get(r.id, 0),
                         has_completion_certificate=r.id in cert_contact_ids,
+                        **related_flags[r.id].as_serializer_kwargs(),
                     )
                     for r in page_rows
                 ],
@@ -138,6 +141,7 @@ def _get_contact(event: Mapping[str, Any], *, contact_id: UUID) -> dict[str, Any
             raise NotFoundError("Contact", str(contact_id))
         note_counts = repository.count_standalone_notes_for_contacts([contact.id])
         cert_ids = contact_ids_with_issued_certificates(session, [contact.id])
+        related_flags = related_flags_for_contacts(session, [contact.id])
         return json_response(
             200,
             {
@@ -145,6 +149,7 @@ def _get_contact(event: Mapping[str, Any], *, contact_id: UUID) -> dict[str, Any
                     contact,
                     standalone_note_count=note_counts.get(contact.id, 0),
                     has_completion_certificate=contact.id in cert_ids,
+                    **related_flags[contact.id].as_serializer_kwargs(),
                 )
             },
             event=event,
