@@ -172,9 +172,6 @@ export function MetaConversationsView({ channel }: { channel: MetaChannel }) {
                 placeholder={copy.searchPlaceholder}
               />
             </label>
-            <p className='text-sm text-slate-500'>
-              {list.totalCount == null ? '' : `${list.totalCount} conversations`}
-            </p>
             <Button
               type='button'
               onClick={() => {

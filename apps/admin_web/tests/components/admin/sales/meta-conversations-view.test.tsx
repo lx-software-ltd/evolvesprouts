@@ -93,6 +93,7 @@ describe('MetaConversationsView', () => {
     render(<MetaConversationsView channel='instagram' />);
 
     expect(screen.getByText('Instagram conversations')).toBeInTheDocument();
+    expect(screen.queryByText('1 conversations')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Import recent history' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Jane Doe' })).toHaveAttribute(
       'href',
@@ -107,5 +108,12 @@ describe('MetaConversationsView', () => {
 
     await user.click(screen.getByRole('button', { name: 'Close' }));
     expect(screen.queryByText('How much?')).not.toBeInTheDocument();
+  });
+
+  it('does not show a conversation count in the Messenger toolbar', () => {
+    render(<MetaConversationsView channel='facebook' />);
+
+    expect(screen.getByText('Messenger conversations')).toBeInTheDocument();
+    expect(screen.queryByText('1 conversations')).not.toBeInTheDocument();
   });
 });

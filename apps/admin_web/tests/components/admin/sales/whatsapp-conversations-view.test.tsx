@@ -93,6 +93,8 @@ describe('WhatsAppConversationsView', () => {
     render(<WhatsAppConversationsView />);
 
     expect(screen.getByText('Import WhatsApp export')).toBeInTheDocument();
+    expect(screen.getByText('WhatsApp conversations')).toBeInTheDocument();
+    expect(screen.queryByText('1 conversations')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Import export' })).toBeDisabled();
     expect(screen.getByRole('link', { name: 'Jane Doe' })).toHaveAttribute(
       'href',
