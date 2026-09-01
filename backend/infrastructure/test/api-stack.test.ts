@@ -200,6 +200,44 @@ function assertCognitoClientAllowlistWiring(template: Template): void {
   }
 }
 
+function assertInboxImportUsesDedicatedPageToken(stack: cdk.Stack): void {
+  const template = Template.fromStack(stack);
+  const parameters = template.findParameters("MetaPageAccessToken");
+  const pageToken = parameters.MetaPageAccessToken;
+  if (!pageToken || pageToken.NoEcho !== true) {
+    throw new Error(
+      "Expected CfnParameter MetaPageAccessToken with NoEcho for Graph inbox import",
+    );
+  }
+  const nested = stack.node.tryFindChild("InboxImport");
+  if (!(nested instanceof cdk.NestedStack)) {
+    throw new Error("Expected InboxImport nested stack on ApiStack");
+  }
+  const nestedTemplate = Template.fromStack(nested);
+  const functions = nestedTemplate.findResources("AWS::Lambda::Function");
+  const match = Object.entries(functions).find(([, resource]) => {
+    const name = (resource.Properties ?? {}).FunctionName;
+    return name === "evolvesprouts-InboxImportFunction";
+  });
+  if (!match) {
+    throw new Error(
+      "Expected Lambda FunctionName evolvesprouts-InboxImportFunction",
+    );
+  }
+  const [, resource] = match;
+  const vars = ((resource.Properties ?? {}).Environment ?? {}).Variables ?? {};
+  const value = (vars as Record<string, unknown>).META_PAGE_ACCESS_TOKEN;
+  const ref =
+    value && typeof value === "object"
+      ? (value as Record<string, unknown>).Ref
+      : undefined;
+  if (typeof ref !== "string" || ref.length === 0) {
+    throw new Error(
+      `InboxImportFunction META_PAGE_ACCESS_TOKEN must Ref a nested parameter; found ${JSON.stringify(value)}`,
+    );
+  }
+}
+
 function assertInboxImportHasNoReservedConcurrency(stack: cdk.Stack): void {
   const nested = stack.node.tryFindChild("InboxImport");
   if (!(nested instanceof cdk.NestedStack)) {
@@ -259,6 +297,7 @@ function main(): void {
   assertCognitoClientAllowlistWiring(template);
   assertApiTokenAuthorizerHasNoReservedConcurrency(template);
   assertInboxImportHasNoReservedConcurrency(stack);
+  assertInboxImportUsesDedicatedPageToken(stack);
 
   console.log("api-stack API Gateway stage cache assertions passed.");
 }

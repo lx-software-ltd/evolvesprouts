@@ -130,7 +130,8 @@ For the OIDC provider itself, add the same tags:
 - `CDK_PARAM_MAILCHIMP_API_SECRET_ARN`
 - `CDK_PARAM_MAILCHIMP_WEBHOOK_SECRET`
 - `CDK_PARAM_META_APP_SECRET` (Meta app secret; HMAC for `POST /v1/whatsapp/webhook` and `POST /v1/meta/webhook`)
-- `CDK_PARAM_WHATSAPP_WEBHOOK_VERIFY_TOKEN` (Meta webhook handshake token for WhatsApp and Messenger/Instagram; also used as the Graph inbox import Page token)
+- `CDK_PARAM_WHATSAPP_WEBHOOK_VERIFY_TOKEN` (Meta webhook handshake string for WhatsApp and Messenger/Instagram `hub.verify_token`; not a Graph access token)
+- `CDK_PARAM_META_PAGE_ACCESS_TOKEN` (Graph Page or system-user access token for Instagram/Messenger inbox history import)
 - `CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD` (optional)
 - `NEXT_PUBLIC_WWW_CRM_API_KEY` (Public WWW browser API key)
 - `AMPLIFY_API_KEY`
@@ -148,6 +149,25 @@ For the OIDC provider itself, add the same tags:
 - `FIGMA_OAUTH_CLIENT_ID`
 - `FIGMA_OAUTH_CLIENT_SECRET`
 - `FIGMA_OAUTH_REFRESH_TOKEN`
+
+### Meta Graph inbox import token
+
+`CDK_PARAM_WHATSAPP_WEBHOOK_VERIFY_TOKEN` is the custom string configured
+in Meta Developer Console → Webhooks → Verify token. Graph rejects it as
+`Invalid OAuth access token - Cannot parse access token`.
+
+Set `CDK_PARAM_META_PAGE_ACCESS_TOKEN` to a **Page** or **system-user**
+Graph token that can read conversations on the Evolve Sprouts Page:
+
+1. Meta Business Suite → **Business settings** → **Users** → **System users**.
+2. Assign the Facebook Page (and Instagram professional account) as assets.
+3. Generate a token for the Evolve Sprouts Meta app with at least
+   `pages_show_list`, `pages_messaging`, `pages_read_engagement`,
+   `instagram_basic`, and `instagram_manage_messages`.
+4. Paste the token into the GitHub secret and redeploy the backend.
+
+A WhatsApp Cloud API send token is a Graph token, but it usually lacks Page
+messaging permissions. Do not reuse the webhook verify string.
 
 ### Production environment — legacy CRM import workflow
 

@@ -64,6 +64,7 @@ The backend stack also requires Mailchimp/media lead parameters:
 - `MailchimpWebhookSecret`
 - `MetaAppSecret`
 - `WhatsappWebhookVerifyToken`
+- `MetaPageAccessToken` (Graph Page / system-user token for inbox import)
 - `MediaDefaultResourceKey`
 
 `MediaDefaultResourceKey` should match the `resource_key` value saved on the
