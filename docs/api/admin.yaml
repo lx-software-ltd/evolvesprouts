@@ -837,9 +837,10 @@ paths:
         Returns database audit history (trigger- and application-sourced rows in
         `audit_log`). Optional filters combine as in the admin Lambda handler:
         when `record_id` is set, `table` is required; `user_id` is a Cognito subject
-        (sub) or `api-key:<id>`. Use `email` to filter by Cognito email or API key
-        name (server resolves to sub or `api-key:<id>`); do not pass `user_id`
-        together with `email`.
+        (sub), `api-key:<id>`, or a system actor (`system`, `webhook:whatsapp`,
+        `webhook:meta`). Use `email` to filter by Cognito email, API key name, or
+        system-actor label (server resolves to sub, `api-key:<id>`, or the system
+        `user_id`); do not pass `user_id` together with `email`.
       security:
         - AdminBearerAuth: []
       parameters:
@@ -927,10 +928,13 @@ paths:
           in: query
           required: false
           description: >
-            Filter by Cognito email or API key name. Values containing `@` resolve
-            to a Cognito `sub` via `list_users`. Other values match `api_keys.name`
-            (case-insensitive) and become `api-key:<id>`. Mutually exclusive with
-            `user_id`. When no actor matches, the response is an empty list.
+            Filter by Cognito email, API key name, or system-actor label.
+            Values containing `@` resolve to a Cognito `sub` via `list_users`.
+            Other values first match known system actors (`System`,
+            `WhatsApp webhook`, `Meta webhook`, or stored ids `system`,
+            `webhook:whatsapp`, `webhook:meta`), then `api_keys.name`
+            (case-insensitive) which becomes `api-key:<id>`. Mutually exclusive
+            with `user_id`. When no actor matches, the response is an empty list.
           schema:
             type: string
         - name: action
@@ -7032,12 +7036,16 @@ components:
         user_id:
           type: string
           nullable: true
+          description: >
+            Cognito subject, `api-key:<id>` for token writes, or a system actor
+            (`system`, `webhook:whatsapp`, `webhook:meta`).
         user_email:
           type: string
           nullable: true
           description: >
-            Cognito email when the actor is a Cognito user, or the API key `name`
-            when `user_id` is `api-key:<id>` (optional).
+            Display label for the actor: Cognito email, API key `name` when
+            `user_id` is `api-key:<id>`, or a system-actor label such as
+            `WhatsApp webhook` (optional).
         request_id:
           type: string
           nullable: true

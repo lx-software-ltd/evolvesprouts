@@ -1,4 +1,4 @@
-"""Resolve audit-log actors (Cognito email or API key name)."""
+"""Resolve audit-log actors (Cognito email, API key name, or system writer)."""
 
 from __future__ import annotations
 
@@ -9,6 +9,11 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.db.audit import (
+    SYSTEM_AUDIT_USER_ID,
+    WEBHOOK_META_AUDIT_USER_ID,
+    WEBHOOK_WHATSAPP_AUDIT_USER_ID,
+)
 from app.db.models.api_key import ApiKey
 from app.exceptions import ValidationError
 from app.services import aws_proxy
@@ -17,10 +22,32 @@ from app.services.aws_proxy import AwsProxyError
 API_KEY_USER_ID_PREFIX = "api-key:"
 _MAX_API_KEY_NAME_FILTER = 200
 
+SYSTEM_ACTOR_LABELS: dict[str, str] = {
+    SYSTEM_AUDIT_USER_ID: "System",
+    WEBHOOK_WHATSAPP_AUDIT_USER_ID: "WhatsApp webhook",
+    WEBHOOK_META_AUDIT_USER_ID: "Meta webhook",
+}
+
 
 def is_api_key_user_id(user_id: str) -> bool:
     """Return True when ``user_id`` is an API-token actor."""
     return user_id.startswith(API_KEY_USER_ID_PREFIX)
+
+
+def is_system_actor_user_id(user_id: str) -> bool:
+    """Return True when ``user_id`` is a known system or webhook actor."""
+    return user_id in SYSTEM_ACTOR_LABELS
+
+
+def system_actor_user_id_for_label(name: str) -> str | None:
+    """Resolve a system-actor display label or stored ``user_id``."""
+    needle = name.strip().lower()
+    if not needle:
+        return None
+    for user_id, label in SYSTEM_ACTOR_LABELS.items():
+        if needle == label.lower() or needle == user_id.lower():
+            return user_id
+    return None
 
 
 def parse_api_key_id(user_id: str) -> UUID | None:
@@ -40,7 +67,7 @@ def api_key_actor_user_id(key_id: UUID) -> str:
 
 
 def validate_actor_filter(raw: str) -> str:
-    """Validate the ``email`` query value (Cognito email or API key name)."""
+    """Validate the ``email`` query value (Cognito email, API key, or system actor)."""
     value = raw.strip()
     if not value:
         raise ValidationError("email is required when provided", field="email")
@@ -94,7 +121,12 @@ def cognito_emails_for_subs(
     out: dict[str, str] = {}
     email_cache = cache if cache is not None else {}
     for sub in subs:
-        if not sub or '"' in sub or is_api_key_user_id(sub):
+        if (
+            not sub
+            or '"' in sub
+            or is_api_key_user_id(sub)
+            or is_system_actor_user_id(sub)
+        ):
             continue
         if sub in email_cache:
             out[sub] = email_cache[sub]
@@ -164,11 +196,15 @@ def actor_labels_for_user_ids(
     user_pool_id: str | None,
     cache: dict[str, str] | None = None,
 ) -> dict[str, str]:
-    """Build ``user_email`` display values for Cognito and API-key actors."""
+    """Build ``user_email`` display values for Cognito, API-key, and system actors."""
     distinct = [user_id for user_id in dict.fromkeys(user_ids) if user_id]
     if not distinct:
         return {}
     labels: dict[str, str] = {}
+    for user_id in distinct:
+        system_label = SYSTEM_ACTOR_LABELS.get(user_id)
+        if system_label is not None:
+            labels[user_id] = system_label
     if user_pool_id:
         labels.update(
             cognito_emails_for_subs(distinct, user_pool_id=user_pool_id, cache=cache)

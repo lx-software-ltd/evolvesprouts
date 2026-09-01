@@ -174,7 +174,7 @@ export function AuditLogsPanel({ auditableTables }: AuditLogsPanelProps) {
     <div className='space-y-6'>
       <PaginatedTableCard
         title='Audit logs'
-        description='Database change history for application tables. API-key writes show the key name as the actor.'
+        description='Database change history for application tables. API-key writes show the key name as the actor. Webhook and other system writes show a generic actor label.'
         isLoading={isLoading && items.length === 0}
         isLoadingMore={isLoadingMore}
         hasMore={Boolean(nextCursor)}
@@ -232,12 +232,12 @@ export function AuditLogsPanel({ auditableTables }: AuditLogsPanelProps) {
                 </Select>
               </div>
               <div>
-                <Label htmlFor='audit-user-email-filter'>User / API key</Label>
+                <Label htmlFor='audit-user-email-filter'>Actor</Label>
                 <Input
                   id='audit-user-email-filter'
                   type='text'
                   autoComplete='off'
-                  placeholder='Cognito email or API key name…'
+                  placeholder='Email, API key, or webhook…'
                   value={userEmailFilter}
                   onChange={(e) => setUserEmailFilter(e.target.value)}
                 />
@@ -290,7 +290,7 @@ export function AuditLogsPanel({ auditableTables }: AuditLogsPanelProps) {
                 <AdminDataTableHeadCell scope='col' className='hidden md:table-cell'>
                   Changed fields
                 </AdminDataTableHeadCell>
-                <AdminDataTableHeadCell scope='col'>User / API key</AdminDataTableHeadCell>
+                <AdminDataTableHeadCell scope='col'>Actor</AdminDataTableHeadCell>
                 <AdminDataTableOperationsHeadCell scope='col' />
               </tr>
             </AdminDataTableHead>
@@ -306,7 +306,7 @@ export function AuditLogsPanel({ auditableTables }: AuditLogsPanelProps) {
                     {item.changed_fields?.length ? item.changed_fields.join(', ') : '—'}
                   </AdminDataTableCell>
                   <AdminDataTableCell className='font-mono text-xs text-slate-700'>
-                    {item.user_email || '—'}
+                    {item.user_email || item.user_id || '—'}
                   </AdminDataTableCell>
                   <AdminDataTableCell className='text-right'>
                     <Button

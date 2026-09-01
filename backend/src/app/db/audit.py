@@ -48,6 +48,11 @@ from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
+# Stored in audit_log.user_id for non-Cognito / non-API-key writers.
+SYSTEM_AUDIT_USER_ID = "system"
+WEBHOOK_WHATSAPP_AUDIT_USER_ID = "webhook:whatsapp"
+WEBHOOK_META_AUDIT_USER_ID = "webhook:meta"
+
 
 def set_audit_context(
     session: Session,

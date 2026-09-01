@@ -109,8 +109,18 @@ def test_whatsapp_webhook_post_ingests_payload(
         def __exit__(self, *_a: object) -> bool:
             return False
 
+    audit_calls: list[dict[str, str | None]] = []
+
+    def _capture_audit(
+        _session: object,
+        user_id: str | None = None,
+        request_id: str | None = None,
+    ) -> None:
+        audit_calls.append({"user_id": user_id, "request_id": request_id})
+
     monkeypatch.setattr(wh, "Session", lambda _e: _FakeSessionCM())
     monkeypatch.setattr(wh, "get_engine", lambda: object())
+    monkeypatch.setattr(wh, "set_audit_context", _capture_audit)
     monkeypatch.setattr(
         wh,
         "ingest_webhook_payload",
@@ -135,3 +145,6 @@ def test_whatsapp_webhook_post_ingests_payload(
     body = json.loads(response["body"])
     assert body["stored"] == 1
     assert body["leads_created"] == 1
+    assert audit_calls == [
+        {"user_id": "webhook:whatsapp", "request_id": "test-request-id"}
+    ]

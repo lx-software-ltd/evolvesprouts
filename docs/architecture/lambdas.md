@@ -57,10 +57,11 @@ their primary responsibilities.
   `/v1/whatsapp/webhook` (GET handshake + POST inbound/echo messages;
   HMAC `X-Hub-Signature-256` via `META_APP_SECRET`; verify token
   `WHATSAPP_WEBHOOK_VERIFY_TOKEN`; persists conversations and creates
-  WhatsApp CRM contacts/leads),
+  WhatsApp CRM contacts/leads; sets audit actor `webhook:whatsapp`),
   `/v1/meta/webhook` (GET handshake + POST Messenger/Instagram inbound and
   `is_echo` messages; same HMAC and verify token; persists
-  `meta_conversations` / `meta_messages` and creates CRM contacts/leads),
+  `meta_conversations` / `meta_messages` and creates CRM contacts/leads;
+  sets audit actor `webhook:meta`),
   `/v1/public/whatsapp/*` and `/v1/public/meta/*` (hashed `x-api-token` conversation
   reads; name/dates/text only),
   `/v1/public/contacts` and `/v1/public/contacts/{id}` (hashed `x-api-token` CRM
@@ -129,7 +130,7 @@ their primary responsibilities.
   (`GET` lists all stored answer rows; `DELETE` clears all rows for the poll),
   `/v1/admin/polls/{poll_slug}/answers/export` (`GET`; CSV export),
   `/v1/admin/leads/*`, `/v1/admin/users`, `/v1/admin/instructors`,
-  `GET /v1/admin/audit-logs` and `GET /v1/admin/audit-logs/{id}` (read-only `audit_log` history; list supports filters `table`, `record_id`, `user_id`, `email`, `action`, `since`, `cursor`, `limit`; `email` resolves via Cognito `list_users` or `api_keys.name`; optional `user_email` is a Cognito email or API key name),
+  `GET /v1/admin/audit-logs` and `GET /v1/admin/audit-logs/{id}` (read-only `audit_log` history; list supports filters `table`, `record_id`, `user_id`, `email`, `action`, `since`, `cursor`, `limit`; `email` resolves via Cognito `list_users`, known system-actor labels/`user_id` values, or `api_keys.name`; optional `user_email` is a Cognito email, API key name, or system-actor label),
   `/v1/admin/services/*` (including `GET /v1/admin/services/instances` for
   cross-service instance listing with optional `service_id` / `service_type`
   filters; instance create/update accepts optional `cohort`, and
