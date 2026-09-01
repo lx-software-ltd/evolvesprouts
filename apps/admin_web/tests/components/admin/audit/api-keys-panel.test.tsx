@@ -77,11 +77,13 @@ describe('ApiKeysPanel', () => {
     expect(row).toHaveClass('sm:grid-cols-2');
   });
 
-  it('styles the Operations revoke action as danger', async () => {
+  it('styles the Operations revoke action as a danger icon button', async () => {
     render(<ApiKeysPanel />);
     expect(await screen.findByText('Partner read')).toBeInTheDocument();
 
-    expect(screen.getByRole('button', { name: 'Revoke' })).toHaveClass('bg-red-600');
+    const revoke = screen.getByRole('button', { name: 'Revoke API key' });
+    expect(revoke).toHaveClass('bg-red-600', 'h-8', 'min-w-8', 'px-0');
+    expect(revoke).toHaveAttribute('title', 'Revoke API key');
   });
 
   it('revokes a key from Operations after confirm', async () => {
@@ -90,7 +92,7 @@ describe('ApiKeysPanel', () => {
     render(<ApiKeysPanel />);
 
     expect(await screen.findByText('Partner read')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Revoke' }));
+    await user.click(screen.getByRole('button', { name: 'Revoke API key' }));
     const dialog = await screen.findByRole('alertdialog');
     await user.click(within(dialog).getByRole('button', { name: 'Revoke' }));
 

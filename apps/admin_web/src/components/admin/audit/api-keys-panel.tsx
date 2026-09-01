@@ -3,6 +3,7 @@
 import type { FormEvent } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { DeleteIcon } from '@/components/icons/action-icons';
 import { Button } from '@/components/ui/button';
 import {
   AdminDataTable,
@@ -306,11 +307,23 @@ export function ApiKeysPanel() {
                   <div className='flex justify-end'>
                     <Button
                       type='button'
+                      size='sm'
                       variant='danger'
+                      className='h-8 min-w-8 px-0'
                       disabled={row.status === 'revoked' || revokeBusyId === row.id}
                       onClick={() => void handleRevoke(row)}
+                      aria-label='Revoke API key'
+                      title='Revoke API key'
+                      aria-busy={revokeBusyId === row.id}
                     >
-                      {revokeBusyId === row.id ? 'Revoking…' : 'Revoke'}
+                      {revokeBusyId === row.id ? (
+                        <span
+                          className='inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-white border-t-transparent'
+                          aria-hidden
+                        />
+                      ) : (
+                        <DeleteIcon className='h-4 w-4 shrink-0' aria-hidden />
+                      )}
                     </Button>
                   </div>
                 </AdminDataTableCell>
