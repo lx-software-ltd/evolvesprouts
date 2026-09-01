@@ -3,7 +3,6 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { CONTACT_SOURCES } from '@/lib/contacts/contacts-panel-constants';
 import { formatEnumLabel } from '@/lib/format';
 import type { components } from '@/types/generated/admin-api.generated';
@@ -34,65 +33,64 @@ export function ContactEditorSourceFields({
   onReferralContactIdChange,
 }: ContactEditorSourceFieldsProps) {
   return (
-    <div className='space-y-4'>
-      <div className='grid grid-cols-1 gap-4 lg:grid-cols-4 lg:items-end'>
-        <div className='lg:col-span-1'>
-          <Label htmlFor='crm-contact-source'>Source</Label>
-          <Select
-            id='crm-contact-source'
-            value={source}
-            onChange={(e) => onSourceChange(e.target.value as ApiSchemas['EntityContactSource'])}
-          >
-            {CONTACT_SOURCES.map((v) => (
-              <option key={v} value={v}>
-                {formatEnumLabel(v)}
-              </option>
-            ))}
-          </Select>
-        </div>
-        {source === 'referral' ? (
-          <>
-            <div className='lg:col-span-1'>
-              <Label htmlFor='crm-contact-referral-search'>Find referring contact</Label>
-              <Input
-                id='crm-contact-referral-search'
-                value={referralSearchInput}
-                onChange={(e) => onReferralSearchInputChange(e.target.value)}
-                placeholder='Type at least 2 characters (name, email, phone, Instagram)'
-                autoComplete='off'
-              />
-            </div>
-            <div className='lg:col-span-1'>
-              <Label htmlFor='crm-contact-referral'>Referred by contact</Label>
-              <Select
-                id='crm-contact-referral'
-                value={referralContactId}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  const picked = referralSelectOptions.find((o) => o.id === v);
-                  onReferralContactIdChange(v, picked?.label ?? null);
-                }}
-              >
-                <option value=''>Select contact</option>
-                {referralSelectOptions.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          </>
-        ) : null}
-      </div>
+    <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-end'>
       <div>
+        <Label htmlFor='crm-contact-source'>Source</Label>
+        <Select
+          id='crm-contact-source'
+          value={source}
+          onChange={(e) => onSourceChange(e.target.value as ApiSchemas['EntityContactSource'])}
+        >
+          {CONTACT_SOURCES.map((v) => (
+            <option key={v} value={v}>
+              {formatEnumLabel(v)}
+            </option>
+          ))}
+        </Select>
+      </div>
+      <div className={source === 'referral' ? undefined : 'lg:col-span-3'}>
         <Label htmlFor='crm-contact-source-detail'>Source detail</Label>
-        <Textarea
+        <Input
           id='crm-contact-source-detail'
+          type='text'
           value={sourceDetail}
           onChange={(e) => onSourceDetailChange(e.target.value)}
-          rows={2}
+          autoComplete='off'
         />
       </div>
+      {source === 'referral' ? (
+        <>
+          <div>
+            <Label htmlFor='crm-contact-referral-search'>Find referring contact</Label>
+            <Input
+              id='crm-contact-referral-search'
+              value={referralSearchInput}
+              onChange={(e) => onReferralSearchInputChange(e.target.value)}
+              placeholder='Type at least 2 characters (name, email, phone, Instagram)'
+              autoComplete='off'
+            />
+          </div>
+          <div>
+            <Label htmlFor='crm-contact-referral'>Referred by contact</Label>
+            <Select
+              id='crm-contact-referral'
+              value={referralContactId}
+              onChange={(e) => {
+                const v = e.target.value;
+                const picked = referralSelectOptions.find((o) => o.id === v);
+                onReferralContactIdChange(v, picked?.label ?? null);
+              }}
+            >
+              <option value=''>Select contact</option>
+              {referralSelectOptions.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }
