@@ -39,6 +39,7 @@ export function FunnelChart({ funnel, activeStage = null, onSelectStage }: Funne
     contacted: '#06b6d4',
     engaged: '#6366f1',
     qualified: '#8b5cf6',
+    unqualified: '#f59e0b',
     converted: '#10b981',
     lost: '#ef4444',
   };
