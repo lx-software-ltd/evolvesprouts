@@ -73,28 +73,9 @@ vi.mock('@/hooks/use-confirm-dialog', () => ({
   ],
 }));
 
-const { mockUseInlineLocationSave } = vi.hoisted(() => ({
-  mockUseInlineLocationSave: vi.fn(() => ({
-    status: { isSaving: false, error: '' },
-    createSharedLocation: vi.fn(),
-    updateSharedLocation: vi.fn().mockResolvedValue(undefined),
-    clearError: vi.fn(),
-  })),
-}));
-
-vi.mock('@/hooks/use-inline-location-save', () => ({
-  useInlineLocationSave: mockUseInlineLocationSave,
-}));
-
 describe('PartnersPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseInlineLocationSave.mockReturnValue({
-      status: { isSaving: false, error: '' },
-      createSharedLocation: vi.fn(),
-      updateSharedLocation: vi.fn().mockResolvedValue(undefined),
-      clearError: vi.fn(),
-    });
   });
 
   it('always shows partner key field and creates with relationship_type partner', async () => {
@@ -214,15 +195,9 @@ describe('PartnersPanel', () => {
     );
   });
 
-  it('partner owning locked venue can Change and save via updateSharedLocation', async () => {
+  it('partner owning locked venue can Change and save via Update partner', async () => {
     const user = userEvent.setup();
-    const updateSharedLocation = vi.fn().mockResolvedValue(undefined);
-    mockUseInlineLocationSave.mockReturnValue({
-      status: { isSaving: false, error: '' },
-      createSharedLocation: vi.fn(),
-      updateSharedLocation,
-      clearError: vi.fn(),
-    });
+    const updatePartner = vi.fn().mockResolvedValue(null);
 
     const locId = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
     const partnerId = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
@@ -243,7 +218,7 @@ describe('PartnersPanel', () => {
       created_at: '2020-01-01T00:00:00.000Z',
       updated_at: '2020-01-01T00:00:00.000Z',
     };
-    const partners = buildPartnersHook({ partners: [row] });
+    const partners = buildPartnersHook({ partners: [row], updatePartner });
     const locations = [
       {
         id: locId,
@@ -285,14 +260,20 @@ describe('PartnersPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Change' }));
     await user.clear(screen.getByLabelText('Address'));
     await user.type(screen.getByLabelText('Address'), '2 Test St');
-    await user.click(screen.getByRole('button', { name: 'Update location' }));
+    await user.click(screen.getByRole('button', { name: 'Update partner' }));
 
     await waitFor(() => {
-      expect(updateSharedLocation).toHaveBeenCalledWith(
+      expect(updateLocationPartial).toHaveBeenCalledWith(
         locId,
         expect.objectContaining({ address: '2 Test St' })
       );
     });
+    expect(updatePartner).toHaveBeenCalledWith(
+      partnerId,
+      expect.objectContaining({
+        location_id: locId,
+      })
+    );
   });
 
   it('deletes partner after confirmation from table', async () => {

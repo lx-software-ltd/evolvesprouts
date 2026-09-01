@@ -4,8 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } fr
 
 import type { useAdminEntityContacts } from '@/hooks/use-admin-entity-contacts';
 import { useFamilyOrgPickers } from '@/hooks/use-family-org-pickers';
-import { useGeocodeVenueAddress } from '@/hooks/use-geocode-venue-address';
-import { useInlineLocationSave } from '@/hooks/use-inline-location-save';
+import { useEntityInlineLocation } from '@/hooks/use-entity-inline-location';
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import type { InlineLocationEmbeddedSummary } from '@/components/admin/locations/inline-location-editor';
 import { getAdminContact, type EntityPickerListItem } from '@/lib/entity-api';
@@ -38,7 +37,6 @@ export function useContactsPanelEditor({
   const { isSaving, createContact, updateContact, deleteContact, contacts: rows } = contacts;
 
   const [confirmDialogProps, requestConfirm] = useConfirmDialog();
-  const [pendingLocationLeaveDialogProps, requestPendingLocationLeaveConfirm] = useConfirmDialog();
   const [deleteActionError, setDeleteActionError] = useState('');
   const [notesTarget, setNotesTarget] = useState<ApiSchemas['AdminContact'] | null>(null);
   const { familyPicker, organizationPicker } = useFamilyOrgPickers();
@@ -74,14 +72,6 @@ export function useContactsPanelEditor({
   } | null>(null);
   const [active, setActive] = useState(true);
 
-  const {
-    status: locationSaveStatus,
-    createSharedLocation,
-    updateSharedLocation,
-    clearError: clearLocationSaveError,
-  } = useInlineLocationSave(refreshLocations);
-  const { geocode: geocodeLocation, isGeocoding: locationGeocoding } = useGeocodeVenueAddress();
-
   const selected = useMemo(
     () => rows.find((c) => c.id === selectedId) ?? null,
     [rows, selectedId]
@@ -106,53 +96,19 @@ export function useContactsPanelEditor({
     return { lines, footerNote };
   }, [linkedToFamilyOrOrg, selected]);
 
-  const inlineLocationStateKey =
-    editorMode === 'create' ? 'contact-new' : `contact:${selectedId ?? 'none'}`;
-
-  const resolvedLocation = useMemo(() => {
-    if (!pendingLocationId) {
-      return null;
-    }
-    return locations.find((l) => l.id === pendingLocationId) ?? null;
-  }, [locations, pendingLocationId]);
-
-  const embeddedLocationSummary = useMemo((): InlineLocationEmbeddedSummary | null => {
-    if (resolvedLocation) {
-      return null;
-    }
-    if (!pendingLocationId) {
-      return null;
-    }
-    if (optimisticLocationSummary && optimisticLocationSummary.id === pendingLocationId) {
-      return optimisticLocationSummary;
-    }
-    const s = selected?.location_summary;
-    if (s && s.id === pendingLocationId) {
-      return {
-        id: s.id,
-        name: s.name ?? null,
-        address: s.address ?? null,
-        areaName: s.area_name ?? 'Unknown area',
-        areaId: s.area_id,
-        lat: s.lat ?? null,
-        lng: s.lng ?? null,
-      };
-    }
-    return null;
-  }, [resolvedLocation, pendingLocationId, optimisticLocationSummary, selected?.location_summary]);
-
-  function summaryFromLocationRow(loc: LocationSummary): InlineLocationEmbeddedSummary {
-    const areaName = geographicAreas.find((a) => a.id === loc.areaId)?.name ?? 'Unknown area';
-    return {
-      id: loc.id,
-      name: loc.name,
-      address: loc.address,
-      areaName,
-      areaId: loc.areaId,
-      lat: loc.lat,
-      lng: loc.lng,
-    };
-  }
+  const location = useEntityInlineLocation({
+    editorMode,
+    selectedId,
+    stateKeyPrefix: 'contact',
+    pendingLocationId,
+    setPendingLocationId,
+    optimisticLocationSummary,
+    setOptimisticLocationSummary,
+    selectedLocationSummary: selected?.location_summary,
+    locations,
+    geographicAreas,
+    refreshLocations,
+  });
 
   const referralSelectOptions = useContactReferralSearch({
     source,
@@ -169,19 +125,6 @@ export function useContactsPanelEditor({
   useContactServiceLabels(editorMode, selectedId, setServiceLabelsState);
 
   async function resetCreateForm() {
-    if (editorMode === 'create' && pendingLocationId) {
-      const ok = await requestPendingLocationLeaveConfirm({
-        title: 'Leave without finishing?',
-        description:
-          'You saved an address to a new location but have not finished creating this contact yet. Leave anyway? The location row stays in the directory.',
-        confirmLabel: 'Leave',
-        cancelLabel: 'Stay',
-        variant: 'default',
-      });
-      if (!ok) {
-        return;
-      }
-    }
     setEditorMode('create');
     setSelectedId(null);
     setFirstName('');
@@ -201,7 +144,7 @@ export function useContactsPanelEditor({
     setDateOfBirth('');
     setPendingLocationId(null);
     setOptimisticLocationSummary(null);
-    clearLocationSaveError();
+    location.resetLocationDraft();
     setFamilySelectId('');
     setOrganizationSelectId('');
     setTagIds([]);
@@ -211,7 +154,14 @@ export function useContactsPanelEditor({
   async function handleSubmit(): Promise<void> {
     try {
       const dob = dateOfBirth.trim() ? dateOfBirth.trim() : null;
-      const loc = pendingLocationId;
+      let loc = pendingLocationId;
+      if (!locationFieldLocked) {
+        const resolved = await location.commitLocationForSubmit();
+        if (resolved.status === 'abort') {
+          return;
+        }
+        loc = resolved.locationId;
+      }
       const fam = familySelectId.trim();
       const org = organizationSelectId.trim();
       const family_ids = fam ? [fam] : [];
@@ -302,6 +252,7 @@ export function useContactsPanelEditor({
     }
   }
 
+  const resetLocationDraft = location.resetLocationDraft;
   const selectRow = useCallback((row: ApiSchemas['AdminContact']) => {
     setSelectedId(row.id);
     setEditorMode('edit');
@@ -322,12 +273,12 @@ export function useContactsPanelEditor({
     setDateOfBirth(row.date_of_birth ?? '');
     setPendingLocationId(row.location_id ?? null);
     setOptimisticLocationSummary(null);
-    clearLocationSaveError();
+    resetLocationDraft();
     setFamilySelectId(row.family_ids[0] ?? '');
     setOrganizationSelectId(row.organization_ids[0] ?? '');
     setTagIds([...row.tag_ids]);
     setActive(row.active);
-  }, [clearLocationSaveError]);
+  }, [resetLocationDraft]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -375,11 +326,13 @@ export function useContactsPanelEditor({
   }
 
   const saveDisabled =
-    isSaving || !firstName.trim() || (source === 'referral' && !referralContactId.trim());
+    isSaving ||
+    !firstName.trim() ||
+    (source === 'referral' && !referralContactId.trim()) ||
+    (!locationFieldLocked && location.locationDraftInvalid);
 
   return {
     confirmDialogProps,
-    pendingLocationLeaveDialogProps,
     deleteActionError,
     setDeleteActionError,
     notesTarget,
@@ -427,19 +380,10 @@ export function useContactsPanelEditor({
     isSaving,
     serviceLabels,
     linkedToFamilyOrOrg,
-    inlineLocationStateKey,
-    resolvedLocation,
-    embeddedLocationSummary,
+    location,
     readOnlyLockedLinesForEditor,
-    locationSaveStatus,
-    locationGeocoding,
-    geocodeLocation,
-    createSharedLocation,
-    updateSharedLocation,
-    clearLocationSaveError,
     setPendingLocationId,
     setOptimisticLocationSummary,
-    summaryFromLocationRow,
     saveDisabled,
     resetCreateForm,
     handleSubmit,

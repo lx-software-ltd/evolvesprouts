@@ -2,6 +2,10 @@
 
 import { useCallback, useState } from 'react';
 
+import {
+  buildLocationWritePayload,
+  type InlineLocationDraft,
+} from '@/components/admin/locations/inline-location-validation';
 import { toErrorMessage } from '@/hooks/hook-errors';
 import {
   createLocation,
@@ -15,6 +19,11 @@ type ApiSchemas = components['schemas'];
 export interface InlineLocationSaveStatus {
   isSaving: boolean;
   error: string;
+}
+
+export interface InlineLocationCommitResult {
+  id: string;
+  created: LocationSummary | null;
 }
 
 /**
@@ -60,6 +69,28 @@ export function useInlineLocationSave(refreshLocations: () => Promise<void> | vo
     [refreshLocations]
   );
 
+  const commitDraft = useCallback(
+    async (
+      existingId: string | null,
+      draft: InlineLocationDraft
+    ): Promise<InlineLocationCommitResult | null> => {
+      if (!draft.isPersistable) {
+        return existingId ? { id: existingId, created: null } : null;
+      }
+      const payload = buildLocationWritePayload(draft);
+      if (existingId) {
+        await updateSharedLocation(existingId, payload);
+        return { id: existingId, created: null };
+      }
+      const created = await createSharedLocation({
+        ...payload,
+        name: null,
+      });
+      return created ? { id: created.id, created } : null;
+    },
+    [createSharedLocation, updateSharedLocation]
+  );
+
   const clearError = useCallback(() => {
     setError('');
   }, []);
@@ -73,6 +104,7 @@ export function useInlineLocationSave(refreshLocations: () => Promise<void> | vo
     status,
     createSharedLocation,
     updateSharedLocation,
+    commitDraft,
     clearError,
   };
 }

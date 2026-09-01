@@ -174,7 +174,7 @@ describe('FamiliesPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Change' }));
     await user.clear(screen.getByLabelText('Address'));
     await user.type(screen.getByLabelText('Address'), '2 New St');
-    await user.click(screen.getByRole('button', { name: 'Update location' }));
+    await user.click(screen.getByRole('button', { name: 'Update family' }));
 
     await waitFor(() => {
       expect(updateLocationPartial).toHaveBeenCalledWith('loc-1', {
@@ -185,6 +185,12 @@ describe('FamiliesPanel', () => {
       });
     });
     expect(updateLocationPartial.mock.calls[0][1]).not.toHaveProperty('name');
+    expect(updateFamily).toHaveBeenCalledWith(
+      'fam-1',
+      expect.objectContaining({
+        location_id: 'loc-1',
+      })
+    );
   });
 
   it('toggles primary contact from the members table', async () => {

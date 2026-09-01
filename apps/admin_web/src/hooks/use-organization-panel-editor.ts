@@ -53,7 +53,6 @@ export function useOrganizationPanelEditor({
   } = organizations;
 
   const [confirmDialogProps, requestConfirm] = useConfirmDialog();
-  const [pendingLocationLeaveDialogProps, requestPendingLocationLeaveConfirm] = useConfirmDialog();
   const [deleteActionError, setDeleteActionError] = useState('');
 
   const [editorMode, setEditorMode] = useState<'create' | 'edit'>('create');
@@ -123,19 +122,6 @@ export function useOrganizationPanelEditor({
   }
 
   async function resetCreateForm() {
-    if (editorMode === 'create' && pendingLocationId) {
-      const ok = await requestPendingLocationLeaveConfirm({
-        title: 'Leave without finishing?',
-        description:
-          'You saved an address to a new location but have not finished creating this organisation yet. Leave anyway? The location row stays in the directory.',
-        confirmLabel: 'Leave',
-        cancelLabel: 'Stay',
-        variant: 'default',
-      });
-      if (!ok) {
-        return;
-      }
-    }
     setEditorMode('create');
     setSelectedId(null);
     setName('');
@@ -144,7 +130,7 @@ export function useOrganizationPanelEditor({
     setWebsite('');
     setPendingLocationId(null);
     setOptimisticLocationSummary(null);
-    location.clearLocationSaveError();
+    location.resetLocationDraft();
     setTagIds([]);
     setActive(true);
     setMemberContactId('');
@@ -152,7 +138,11 @@ export function useOrganizationPanelEditor({
 
   async function handleSubmit(): Promise<void> {
     try {
-      const loc = pendingLocationId;
+      const resolved = await location.commitLocationForSubmit();
+      if (resolved.status === 'abort') {
+        return;
+      }
+      const loc = resolved.locationId;
       if (editorMode === 'create') {
         await createOrganization({
           name: name.trim(),
@@ -240,7 +230,7 @@ export function useOrganizationPanelEditor({
     setWebsite(row.website ?? '');
     setPendingLocationId(row.location_id ?? null);
     setOptimisticLocationSummary(null);
-    location.clearLocationSaveError();
+    location.resetLocationDraft();
     setTagIds([...row.tag_ids]);
     setActive(row.active);
   }
@@ -259,7 +249,6 @@ export function useOrganizationPanelEditor({
 
   return {
     confirmDialogProps,
-    pendingLocationLeaveDialogProps,
     deleteActionError,
     setDeleteActionError,
     editorMode,

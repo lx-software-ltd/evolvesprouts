@@ -84,7 +84,11 @@ export function OrganizationEditorCard({
               Cancel
             </Button>
           ) : null}
-          <Button type='button' disabled={isSaving || !name.trim()} onClick={() => void handleSubmit()}>
+          <Button
+            type='button'
+            disabled={isSaving || !name.trim() || location.locationDraftInvalid}
+            onClick={() => void handleSubmit()}
+          >
             {editorMode === 'create' ? 'Create organisation' : 'Update organisation'}
           </Button>
         </>
@@ -174,10 +178,7 @@ export function OrganizationEditorCard({
                 ? 'To change the venue name or switch to a different address, use Services → Venues or update the partner organisation record.'
                 : null
             }
-            onSaveCreate={location.saveNewLocation}
-            onSaveUpdate={async (id, payload) => {
-              await location.updateSharedLocation(id, payload);
-            }}
+            onDraftChange={location.onLocationDraftChange}
             onClear={location.clearPendingLocation}
             onGeocode={location.geocodeLocation}
           />

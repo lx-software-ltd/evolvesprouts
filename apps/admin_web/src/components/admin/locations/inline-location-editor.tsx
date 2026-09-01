@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { AdminInlineError } from '@/components/ui/admin-inline-error';
@@ -10,11 +10,14 @@ import { Select } from '@/components/ui/select';
 import { formatGeocodeErrorMessage } from '@/hooks/hook-errors';
 import { formatEntityVenueLocationLabel, formatEnumLabel } from '@/lib/format';
 import type { GeographicAreaSummary, LocationSummary } from '@/types/services';
-import type { components } from '@/types/generated/admin-api.generated';
 
-import { computeLatLngErrors, parseOptionalCoordinate } from '@/components/admin/locations/inline-location-validation';
+import {
+  computeLatLngErrors,
+  evaluateInlineLocationDraft,
+  type InlineLocationDraft,
+} from '@/components/admin/locations/inline-location-validation';
 
-type ApiSchemas = components['schemas'];
+export type { InlineLocationDraft };
 
 export interface InlineLocationEmbeddedSummary {
   id: string;
@@ -37,15 +40,14 @@ export interface InlineLocationEditorProps {
   isSaving: boolean;
   /** When false and the block is read-only (e.g. contact linked to family/org), show this note under the summary. */
   readOnlyNote?: string | null;
-  onRequestEdit(): void;
-  onCancelEdit(): void;
-  onSaveCreate(payload: ApiSchemas['CreateLocationRequest']): Promise<string | null>;
-  onSaveUpdate(id: string, payload: ApiSchemas['PartialUpdateLocationRequest']): Promise<void>;
+  onRequestEdit?(): void;
+  onCancelEdit?(): void;
+  onDraftChange?(draft: InlineLocationDraft): void;
   onClear(): void;
   onGeocode(args: { area_id: string; address: string }): Promise<{ lat: number; lng: number }>;
-  /** When true, geocode / save-location runs are in flight (disables actions). */
+  /** When true, geocode runs are in flight (disables actions). */
   isGeocoding?: boolean;
-  /** Hook-level error (e.g. create/update location failed). */
+  /** Hook-level error (e.g. create/update location failed on parent submit). */
   saveError?: string;
   /** Allow Clear to unlink the owner when the linked venue is partner-org locked (Change stays hidden). */
   allowClearWhenLocked?: boolean;
@@ -138,8 +140,7 @@ function InlineLocationEditorInner({
   readOnlyNote,
   onRequestEdit,
   onCancelEdit,
-  onSaveCreate,
-  onSaveUpdate,
+  onDraftChange,
   onClear,
   onGeocode,
   isGeocoding = false,
@@ -199,22 +200,39 @@ function InlineLocationEditorInner({
     lngParseError,
     latRangeError,
     lngRangeError,
-    coordinatesInvalid,
     onlyOneCoordinate,
   } = computeLatLngErrors(lat, lng);
 
-  const latTrim = lat.trim();
-  const lngTrim = lng.trim();
-
   const areasReady = !areasLoading && areaOptions.length > 0;
-  const canSubmitLocation =
-    areasReady &&
-    Boolean(areaId) &&
-    !coordinatesInvalid &&
-    !onlyOneCoordinate &&
-    !effectiveReadOnly;
 
   const displaySummary = resolveDisplaySummary(location, embeddedSummary, areaNameForLocation);
+
+  useEffect(() => {
+    if (!onDraftChange) {
+      return;
+    }
+    onDraftChange(
+      evaluateInlineLocationDraft({
+        areaId,
+        address,
+        lat,
+        lng,
+        existingLocationId: location?.id ?? embeddedSummary?.id ?? null,
+        isEditing,
+        readOnly: effectiveReadOnly,
+      })
+    );
+  }, [
+    address,
+    areaId,
+    effectiveReadOnly,
+    embeddedSummary?.id,
+    isEditing,
+    lat,
+    lng,
+    location?.id,
+    onDraftChange,
+  ]);
 
   function handleRequestEdit() {
     if (effectiveReadOnly) {
@@ -235,7 +253,7 @@ function InlineLocationEditorInner({
     }
     setGeocodeError('');
     setIsEditing(true);
-    onRequestEdit();
+    onRequestEdit?.();
   }
 
   function handleCancelEdit() {
@@ -246,7 +264,7 @@ function InlineLocationEditorInner({
       setLngState('');
       setGeocodeError('');
       setIsEditing(true);
-      onCancelEdit();
+      onCancelEdit?.();
       return;
     }
     if (location) {
@@ -264,7 +282,7 @@ function InlineLocationEditorInner({
     }
     setGeocodeError('');
     setIsEditing(false);
-    onCancelEdit();
+    onCancelEdit?.();
   }
 
   async function handleFillCoordinates() {
@@ -284,45 +302,6 @@ function InlineLocationEditorInner({
           'Geocoding failed. Check the address and geographic area, then try again.'
         )
       );
-    }
-  }
-
-  async function handleSaveLocation() {
-    if (!canSubmitLocation || !areaId) {
-      return;
-    }
-    const latParsed = parseOptionalCoordinate(lat);
-    const lngParsed = parseOptionalCoordinate(lng);
-    const latValue: number | null = latTrim === '' ? null : (latParsed as number);
-    const lngValue: number | null = lngTrim === '' ? null : (lngParsed as number);
-    if (!location) {
-      const createPayload: ApiSchemas['CreateLocationRequest'] = {
-        area_id: areaId,
-        name: null,
-        address: address.trim() || null,
-        lat: latValue,
-        lng: lngValue,
-      };
-      const id = await onSaveCreate(createPayload);
-      if (id) {
-        setIsEditing(false);
-      }
-      return;
-    }
-    if (lockedFromPartner) {
-      return;
-    }
-    const partialPayload: ApiSchemas['PartialUpdateLocationRequest'] = {
-      area_id: areaId,
-      address: address.trim() || null,
-      lat: latValue,
-      lng: lngValue,
-    };
-    try {
-      await onSaveUpdate(location.id, partialPayload);
-      setIsEditing(false);
-    } catch {
-      // Parent surfaces error; keep edit mode.
     }
   }
 
@@ -522,14 +501,6 @@ function InlineLocationEditorInner({
                   Cancel
                 </Button>
               ) : null}
-              <Button
-                type='button'
-                size='sm'
-                disabled={isSaving || isGeocoding || !canSubmitLocation}
-                onClick={() => void handleSaveLocation()}
-              >
-                {location ? 'Update location' : 'Save location'}
-              </Button>
             </div>
           </div>
         ) : null}

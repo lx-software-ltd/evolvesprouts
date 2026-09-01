@@ -5,6 +5,7 @@ import {
   InlineLocationEditor,
   type InlineLocationEmbeddedSummary,
 } from '@/components/admin/locations/inline-location-editor';
+import type { InlineLocationDraft } from '@/components/admin/locations/inline-location-validation';
 import type { GeographicAreaSummary, LocationSummary } from '@/types/services';
 
 export interface EntityInlineLocationSectionProps {
@@ -19,13 +20,7 @@ export interface EntityInlineLocationSectionProps {
   saveError: string;
   allowClearWhenLocked?: boolean;
   lockedSummaryExtra?: string | null;
-  onSaveCreate: (
-    payload: Parameters<NonNullable<Parameters<typeof InlineLocationEditor>[0]['onSaveCreate']>>[0]
-  ) => Promise<string | null>;
-  onSaveUpdate: (
-    locationId: string,
-    payload: Parameters<NonNullable<Parameters<typeof InlineLocationEditor>[0]['onSaveUpdate']>>[1]
-  ) => Promise<void>;
+  onDraftChange: (draft: InlineLocationDraft) => void;
   onClear: () => void;
   onGeocode: NonNullable<Parameters<typeof InlineLocationEditor>[0]['onGeocode']>;
 }
@@ -42,8 +37,7 @@ export function EntityInlineLocationSection({
   saveError,
   allowClearWhenLocked,
   lockedSummaryExtra,
-  onSaveCreate,
-  onSaveUpdate,
+  onDraftChange,
   onClear,
   onGeocode,
 }: EntityInlineLocationSectionProps) {
@@ -61,10 +55,7 @@ export function EntityInlineLocationSection({
         isSaving={isSaving}
         isGeocoding={isGeocoding}
         saveError={saveError}
-        onRequestEdit={() => {}}
-        onCancelEdit={() => {}}
-        onSaveCreate={onSaveCreate}
-        onSaveUpdate={onSaveUpdate}
+        onDraftChange={onDraftChange}
         onClear={onClear}
         onGeocode={onGeocode}
       />

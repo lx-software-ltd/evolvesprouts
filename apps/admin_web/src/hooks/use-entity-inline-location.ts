@@ -1,8 +1,12 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import type { InlineLocationEmbeddedSummary } from '@/components/admin/locations/inline-location-editor';
+import {
+  EMPTY_INLINE_LOCATION_DRAFT,
+  type InlineLocationDraft,
+} from '@/components/admin/locations/inline-location-validation';
 import { useGeocodeVenueAddress } from '@/hooks/use-geocode-venue-address';
 import { useInlineLocationSave } from '@/hooks/use-inline-location-save';
 import type { GeographicAreaSummary, LocationSummary } from '@/types/services';
@@ -31,6 +35,10 @@ export interface UseEntityInlineLocationOptions {
   refreshLocations: () => Promise<void> | void;
 }
 
+export type LocationSubmitResolution =
+  | { status: 'abort' }
+  | { status: 'ready'; locationId: string | null };
+
 export function useEntityInlineLocation({
   editorMode,
   selectedId,
@@ -44,6 +52,8 @@ export function useEntityInlineLocation({
   geographicAreas,
   refreshLocations,
 }: UseEntityInlineLocationOptions) {
+  const [locationDraft, setLocationDraft] = useState<InlineLocationDraft>(EMPTY_INLINE_LOCATION_DRAFT);
+
   const inlineLocationStateKey =
     editorMode === 'create' ? `${stateKeyPrefix}-new` : `${stateKeyPrefix}:${selectedId ?? 'none'}`;
 
@@ -94,11 +104,19 @@ export function useEntityInlineLocation({
 
   const {
     status: locationSaveStatus,
-    createSharedLocation,
-    updateSharedLocation,
+    commitDraft,
     clearError: clearLocationSaveError,
   } = useInlineLocationSave(refreshLocations);
   const { geocode: geocodeLocation, isGeocoding: locationGeocoding } = useGeocodeVenueAddress();
+
+  const onLocationDraftChange = useCallback((draft: InlineLocationDraft) => {
+    setLocationDraft(draft);
+  }, []);
+
+  const resetLocationDraft = useCallback(() => {
+    setLocationDraft(EMPTY_INLINE_LOCATION_DRAFT);
+    clearLocationSaveError();
+  }, [clearLocationSaveError]);
 
   function clearPendingLocation() {
     setPendingLocationId(null);
@@ -106,17 +124,32 @@ export function useEntityInlineLocation({
     clearLocationSaveError();
   }
 
-  async function saveNewLocation(
-    payload: Parameters<typeof createSharedLocation>[0]
-  ): Promise<string | null> {
-    const created = await createSharedLocation(payload);
-    if (created) {
-      setPendingLocationId(created.id);
-      setOptimisticLocationSummary(summaryFromLocationRow(created));
-      return created.id;
+  async function commitLocationForSubmit(): Promise<LocationSubmitResolution> {
+    if (locationDraft.isInvalid) {
+      return { status: 'abort' };
     }
-    return null;
+    if (locationDraft.isPersistable) {
+      try {
+        const committed = await commitDraft(locationDraft.existingLocationId, locationDraft);
+        if (!committed) {
+          return { status: 'abort' };
+        }
+        setPendingLocationId(committed.id);
+        if (committed.created) {
+          setOptimisticLocationSummary(summaryFromLocationRow(committed.created));
+        }
+        return { status: 'ready', locationId: committed.id };
+      } catch {
+        return { status: 'abort' };
+      }
+    }
+    if (locationDraft.isEditing) {
+      return { status: 'ready', locationId: locationDraft.isEmpty ? null : pendingLocationId };
+    }
+    return { status: 'ready', locationId: pendingLocationId };
   }
+
+  const locationDraftInvalid = locationDraft.isInvalid || locationSaveStatus.isSaving;
 
   return {
     inlineLocationStateKey,
@@ -125,11 +158,12 @@ export function useEntityInlineLocation({
     locationSaveStatus,
     locationGeocoding,
     geocodeLocation,
-    createSharedLocation,
-    updateSharedLocation,
     clearLocationSaveError,
     clearPendingLocation,
-    saveNewLocation,
+    resetLocationDraft,
+    onLocationDraftChange,
+    commitLocationForSubmit,
+    locationDraftInvalid,
     summaryFromLocationRow,
   };
 }
