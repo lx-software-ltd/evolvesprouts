@@ -553,6 +553,18 @@ maps legacy `note.id` to the **first** inserted row’s UUID.
 - Immutable event log for lead lifecycle transitions and actions.
 - Rows cascade delete with parent lead (`lead_id` FK with `ON DELETE CASCADE`).
 
+### `sales_lead_ai_suggestions`
+
+- Purpose: persisted AI closing suggestions for a sales lead (OpenRouter).
+- Stores structured JSON (`summary`, `actions`, `follow_ups`, `risks`), optional
+  `conversation_watermark_at` (max contact message `sent_at` at generation),
+  `generated_at`, `generated_by`, and `model`.
+- Multiple rows per lead are retained (history); admin APIs return the newest.
+- Stale when older than 24 hours or when the contact has a newer WhatsApp/Meta
+  message than the watermark.
+- FK `lead_id` → `sales_leads.id` with `ON DELETE CASCADE`.
+- No seed rows (generated on demand).
+
 ### `whatsapp_conversations`
 
 - Purpose: one WhatsApp Cloud API thread per counterparty `wa_id`.

@@ -152,6 +152,68 @@ def test_handle_admin_leads_dispatches_note_creation(
     assert response is marker
 
 
+def test_handle_admin_leads_dispatches_ai_suggestion_get(
+    monkeypatch: Any,
+    api_gateway_event: Any,
+    admin_identity: dict[str, str],
+) -> None:
+    marker = {"statusCode": 200, "body": "{}"}
+    monkeypatch.setattr(
+        admin_leads,
+        "extract_identity",
+        lambda _: _build_admin_identity(admin_identity),
+    )
+    monkeypatch.setattr(
+        admin_leads, "_get_lead_ai_suggestion", lambda *_args, **_kwargs: marker
+    )
+    lead_id = str(uuid4())
+
+    response = admin_leads.handle_admin_leads_request(
+        api_gateway_event(
+            method="GET", path=f"/v1/admin/leads/{lead_id}/ai-suggestion"
+        ),
+        "GET",
+        f"/v1/admin/leads/{lead_id}/ai-suggestion",
+    )
+
+    assert response is marker
+
+
+def test_handle_admin_leads_dispatches_ai_suggestion_post(
+    monkeypatch: Any,
+    api_gateway_event: Any,
+    admin_identity: dict[str, str],
+) -> None:
+    marker = {"statusCode": 201, "body": "{}"}
+    captured: dict[str, Any] = {}
+    monkeypatch.setattr(
+        admin_leads,
+        "extract_identity",
+        lambda _: _build_admin_identity(admin_identity),
+    )
+
+    def _fake_create(event: Any, *, lead_id: Any, actor_sub: str) -> dict[str, Any]:
+        captured["lead_id"] = str(lead_id)
+        captured["actor_sub"] = actor_sub
+        captured["event"] = event
+        return marker
+
+    monkeypatch.setattr(admin_leads, "_create_lead_ai_suggestion", _fake_create)
+    lead_id = str(uuid4())
+
+    response = admin_leads.handle_admin_leads_request(
+        api_gateway_event(
+            method="POST", path=f"/v1/admin/leads/{lead_id}/ai-suggestion"
+        ),
+        "POST",
+        f"/v1/admin/leads/{lead_id}/ai-suggestion",
+    )
+
+    assert response is marker
+    assert captured["lead_id"] == lead_id
+    assert captured["actor_sub"] == admin_identity["userSub"]
+
+
 def test_parse_lead_filters_defaults_to_standard_admin_limit(
     api_gateway_event: Any,
 ) -> None:

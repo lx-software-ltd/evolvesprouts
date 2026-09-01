@@ -39,6 +39,11 @@ from app.db.repositories import (
     SalesLeadRepository,
 )
 from app.exceptions import NotFoundError, ValidationError
+from app.services.lead_close_suggestion import (
+    generate_and_store_suggestion,
+    get_latest_suggestion,
+    serialize_suggestion,
+)
 from app.services.sales_assignment import (
     notify_lead_assignee,
     record_new_lead_assignment_event,
@@ -94,6 +99,15 @@ def handle_admin_leads_request(
         if method != "POST":
             return json_response(405, {"error": "Method not allowed"}, event=event)
         return _create_lead_note(event, lead_id=lead_id, actor_sub=identity.user_sub)
+
+    if len(parts) == 4 and parts[3] == "ai-suggestion":
+        if method == "GET":
+            return _get_lead_ai_suggestion(event, lead_id=lead_id)
+        if method == "POST":
+            return _create_lead_ai_suggestion(
+                event, lead_id=lead_id, actor_sub=identity.user_sub
+            )
+        return json_response(405, {"error": "Method not allowed"}, event=event)
 
     return json_response(404, {"error": "Not found"}, event=event)
 
@@ -367,6 +381,72 @@ def _create_lead_note(
         )
         session.commit()
         return json_response(201, {"note": serialize_note(note)}, event=event)
+
+
+def _get_lead_ai_suggestion(
+    event: Mapping[str, Any],
+    *,
+    lead_id: UUID,
+) -> dict[str, Any]:
+    with Session(get_engine()) as session:
+        lead_repo = SalesLeadRepository(session)
+        lead = lead_repo.get_by_id(lead_id)
+        if lead is None:
+            raise NotFoundError("SalesLead", str(lead_id))
+        suggestion = get_latest_suggestion(session, lead_id=lead.id)
+        if suggestion is None:
+            return json_response(200, {"suggestion": None}, event=event)
+        return json_response(
+            200,
+            {
+                "suggestion": serialize_suggestion(
+                    session,
+                    suggestion=suggestion,
+                    contact_id=lead.contact_id,
+                )
+            },
+            event=event,
+        )
+
+
+def _create_lead_ai_suggestion(
+    event: Mapping[str, Any],
+    *,
+    lead_id: UUID,
+    actor_sub: str,
+) -> dict[str, Any]:
+    with Session(get_engine()) as session:
+        set_audit_context(
+            session,
+            user_id=actor_sub,
+            request_id=request_id(event),
+        )
+        lead_repo = SalesLeadRepository(session)
+        lead = lead_repo.get_by_id_with_details(lead_id)
+        if lead is None:
+            raise NotFoundError("SalesLead", str(lead_id))
+        try:
+            suggestion = generate_and_store_suggestion(
+                session,
+                lead=lead,
+                actor_sub=actor_sub,
+            )
+        except RuntimeError as exc:
+            logger_message = str(exc)
+            raise ValidationError(logger_message, field="ai_suggestion") from exc
+        session.commit()
+        session.refresh(suggestion)
+        return json_response(
+            201,
+            {
+                "suggestion": serialize_suggestion(
+                    session,
+                    suggestion=suggestion,
+                    contact_id=lead.contact_id,
+                )
+            },
+            event=event,
+        )
 
 
 def _get_analytics(event: Mapping[str, Any]) -> dict[str, Any]:

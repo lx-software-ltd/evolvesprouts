@@ -92,6 +92,30 @@ export interface LeadDetail extends LeadSummary {
   notes: LeadNote[];
 }
 
+export interface LeadAiFollowUp {
+  channel: string;
+  messageExcerpt: string;
+  draftReply: string;
+  rationale: string;
+}
+
+export interface LeadAiSuggestion {
+  id: string;
+  leadId: string;
+  summary: string;
+  actions: string[];
+  followUps: LeadAiFollowUp[];
+  risks: string[];
+  generatedAt: string | null;
+  generatedBy: string | null;
+  model: string | null;
+  conversationWatermarkAt: string | null;
+  isStale: boolean;
+  staleReasons: string[];
+  staleAfter: string | null;
+  latestMessageAt: string | null;
+}
+
 export interface LeadListFilters {
   stage: FunnelStage[];
   source: ContactSource[];
