@@ -17,7 +17,7 @@ from app.api.admin_request import (
 from app.api.admin_validators import (
     MAX_DESCRIPTION_LENGTH,
     MAX_NAME_LENGTH,
-    MAX_SOCIAL_HANDLE_LENGTH,
+    parse_optional_instagram_handle,
     validate_email,
     validate_phone_fields,
     validate_string_length,
@@ -123,11 +123,8 @@ def parse_create_lead_payload(body: Mapping[str, Any]) -> dict[str, Any]:
         "phone_region": phone_region,
         "phone_national_number": phone_national_number,
         "skip_phone_update": skip_phone_update,
-        "instagram_handle": validate_string_length(
-            body.get("instagram_handle"),
-            "instagram_handle",
-            max_length=MAX_SOCIAL_HANDLE_LENGTH,
-            required=False,
+        "instagram_handle": parse_optional_instagram_handle(
+            body.get("instagram_handle")
         ),
         "source": source,
         "source_detail": validate_string_length(

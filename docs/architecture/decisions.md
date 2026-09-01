@@ -769,6 +769,9 @@ Meta app. Dispatch on `object`: `page` is Messenger (`facebook`),
 traffic stays on `/v1/whatsapp/webhook`). Persist threads in unified
 `meta_conversations` / `meta_messages` keyed by `(channel, platform_user_id)`.
 Create a Contact plus open SalesLead on first inbound when none exists.
+On Instagram inbound, persist `sender.username` on `contacts.instagram_handle`
+(lowercase, no leading `@`) when it is a username rather than IGSID, and reuse
+an existing contact with that handle. Messenger has no handle field.
 Do not store IGSID/PSID on `contacts.instagram_handle`. Admin reads live at
 `GET /v1/admin/meta/conversations` (Sales → Instagram / Messenger tabs).
 Token reads live at `GET /v1/public/meta/conversations` and omit Page-scoped

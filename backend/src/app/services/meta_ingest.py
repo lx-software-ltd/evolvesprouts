@@ -21,9 +21,11 @@ from app.db.models import (
     MetaMessageDirection,
     SalesLead,
 )
+from app.db.repositories.contact import ContactRepository
 from app.db.repositories.meta import MetaRepository
 from app.db.repositories.sales_lead import SalesLeadRepository
 from app.utils.logging import get_logger, mask_pii
+from app.utils.validators import extract_instagram_username
 
 logger = get_logger(__name__)
 
@@ -116,12 +118,21 @@ def _ingest_messaging_event(
     if resolved_page_id is None:
         resolved_page_id = sender_id if is_echo else recipient_id
 
+    instagram_handle = None
+    if channel is MetaChannel.INSTAGRAM:
+        instagram_handle = extract_instagram_username(
+            event,
+            message,
+            platform_user_id=platform_user_id,
+        )
+
     store_meta_message(
         session,
         channel=channel,
         platform_user_id=platform_user_id,
         page_id=resolved_page_id,
         profile_name=_profile_name(event, message),
+        instagram_handle=instagram_handle,
         message=message,
         timestamp=event.get("timestamp"),
         direction=(
@@ -138,6 +149,7 @@ def store_meta_message(
     platform_user_id: str,
     page_id: str | None,
     profile_name: str | None,
+    instagram_handle: str | None = None,
     message: Mapping[str, Any],
     timestamp: Any,
     direction: MetaMessageDirection,
@@ -204,9 +216,17 @@ def store_meta_message(
     conversation.updated_at = now
 
     if direction is MetaMessageDirection.INBOUND and create_contacts:
+        resolved_handle = instagram_handle
+        if resolved_handle is None and channel is MetaChannel.INSTAGRAM:
+            resolved_handle = extract_instagram_username(
+                {},
+                message,
+                platform_user_id=platform_user_id,
+            )
         _ensure_contact_and_lead(
             session,
             conversation=conversation,
+            instagram_handle=resolved_handle,
             counters=counters,
             create_leads=create_leads,
             source_detail=source_detail,
@@ -220,16 +240,32 @@ def _ensure_contact_and_lead(
     session: Session,
     *,
     conversation: MetaConversation,
+    instagram_handle: str | None,
     counters: dict[str, int],
     create_leads: bool = True,
     source_detail: str = _SOURCE_DETAIL,
 ) -> None:
     if conversation.contact_id is None:
-        contact = _create_contact(
-            session, conversation=conversation, source_detail=source_detail
+        existing = (
+            _find_contact_by_instagram_handle(session, instagram_handle)
+            if instagram_handle
+            else None
         )
-        conversation.contact_id = contact.id
-        counters["contacts_created"] = counters.get("contacts_created", 0) + 1
+        if existing is not None:
+            conversation.contact_id = existing.id
+        else:
+            contact = _create_contact(
+                session,
+                conversation=conversation,
+                instagram_handle=instagram_handle,
+                source_detail=source_detail,
+            )
+            conversation.contact_id = contact.id
+            counters["contacts_created"] = counters.get("contacts_created", 0) + 1
+    elif instagram_handle:
+        linked = ContactRepository(session).get_by_id(conversation.contact_id)
+        if linked is not None:
+            _maybe_set_instagram_handle(session, linked, instagram_handle)
 
     contact_id = conversation.contact_id
     if contact_id is None:
@@ -275,10 +311,12 @@ def _create_contact(
     session: Session,
     *,
     conversation: MetaConversation,
+    instagram_handle: str | None,
     source_detail: str = _SOURCE_DETAIL,
 ) -> Contact:
     contact = Contact(
         first_name=_contact_first_name(conversation),
+        instagram_handle=instagram_handle,
         contact_type=ContactType.OTHER,
         source=_CONTACT_SOURCES[conversation.channel],
         source_detail=source_detail,
@@ -286,6 +324,26 @@ def _create_contact(
     session.add(contact)
     session.flush()
     return contact
+
+
+def _find_contact_by_instagram_handle(
+    session: Session,
+    handle: str,
+) -> Contact | None:
+    return ContactRepository(session).find_by_instagram_handle(handle)
+
+
+def _maybe_set_instagram_handle(
+    session: Session,
+    contact: Contact,
+    handle: str,
+) -> None:
+    if contact.instagram_handle:
+        return
+    other = _find_contact_by_instagram_handle(session, handle)
+    if other is not None and other.id != contact.id:
+        return
+    contact.instagram_handle = handle
 
 
 def _contact_first_name(conversation: MetaConversation) -> str:
