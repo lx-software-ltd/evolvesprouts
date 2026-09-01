@@ -95,7 +95,12 @@ export function useLeadConversationHistory(contactId: string | null) {
 
       const messageTotal = thread.inboundCount + thread.outboundCount;
       const selected = selectLeadConversationMessages(
-        result.items,
+        result.items.map((item) => ({
+          id: item.id,
+          direction: item.direction,
+          body: item.body,
+          sentAt: item.sentAt,
+        })),
         messageTotal > LEAD_CONVERSATION_MESSAGE_LIMIT
       );
       setConversation({

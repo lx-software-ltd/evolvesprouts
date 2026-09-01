@@ -49,15 +49,15 @@ export function selectLatestLeadConversationThread(
   return sorted[0] ?? null;
 }
 
-export function selectLeadConversationMessages<T extends LeadConversationMessage>(
-  messages: T[],
+export function selectLeadConversationMessages(
+  messages: readonly LeadConversationMessage[],
   extras = false,
   limit = LEAD_CONVERSATION_MESSAGE_LIMIT
 ): {
-  items: T[];
+  items: LeadConversationMessage[];
   hasMore: boolean;
 } {
-  const sorted = sortMessagesNewestFirst(messages);
+  const sorted = sortMessagesNewestFirst([...messages]);
   return {
     items: sorted.slice(0, limit),
     hasMore: extras || sorted.length > limit,
