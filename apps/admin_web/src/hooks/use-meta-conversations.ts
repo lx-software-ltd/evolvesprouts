@@ -16,7 +16,7 @@ export type MetaConversationFilters = {
 
 const DEFAULT_FILTERS: MetaConversationFilters = { q: '' };
 
-export function useMetaConversations(channel: MetaChannel) {
+export function useMetaConversations(channel: MetaChannel, contactId = '') {
   const fetcher = useCallback(
     (params: MetaConversationFilters & {
       cursor: string | null;
@@ -24,10 +24,16 @@ export function useMetaConversations(channel: MetaChannel) {
       signal: AbortSignal;
     }) =>
       listMetaConversations(
-        { cursor: params.cursor, limit: params.limit, q: params.q, channel },
+        {
+          cursor: params.cursor,
+          limit: params.limit,
+          q: params.q,
+          channel,
+          contactId,
+        },
         params.signal
       ),
-    [channel]
+    [channel, contactId]
   );
 
   const list = usePaginatedList<MetaConversationSummary, MetaConversationFilters>({

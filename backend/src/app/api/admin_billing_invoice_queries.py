@@ -17,12 +17,14 @@ from app.api.admin_billing_invoice_serializers import (
     serialize_invoice_detail,
     serialize_invoice_summary,
 )
+from app.api.admin_contacts_related import invoice_party_filter
 from app.api.admin_request import (
     encode_created_cursor,
     parse_created_cursor,
     parse_limit,
     query_param,
 )
+from app.api.admin_services_payload_utils import parse_optional_uuid
 from app.api.assets.assets_common import (
     generate_download_url,
     signed_link_no_cache_headers,
@@ -65,11 +67,14 @@ def list_invoices(
 
     q_param = query_param(event, "q")
     q_raw = str(q_param).strip()[:_MAX_INVOICE_LIST_Q_LEN] if q_param else ""
+    contact_id = parse_optional_uuid(query_param(event, "contact_id"), "contact_id")
 
     cursor_ts, cursor_id = parse_created_cursor(query_param(event, "cursor"))
 
     with _session_with_audit(user_sub, request_id) as session:
         stmt = select(CustomerInvoice)
+        if contact_id is not None:
+            stmt = stmt.where(invoice_party_filter(session, contact_id))
         if status_filter is not None:
             stmt = stmt.where(CustomerInvoice.status == status_filter)
         if settlement_filter == "open":

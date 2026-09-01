@@ -16,3 +16,6 @@ export { default as VendorInactiveIcon } from './svg/vendor-inactive-icon.svg';
 export { default as QrLinkIcon } from './svg/qr-link-icon.svg';
 export { default as WarningTriangleIcon } from './svg/warning-triangle-icon.svg';
 export { default as ViewIcon } from './svg/eye-icon.svg';
+export { default as ConversationIcon } from './svg/conversation-icon.svg';
+export { default as ServiceInstanceIcon } from './svg/service-instance-icon.svg';
+export { default as InvoiceIcon } from './svg/invoice-icon.svg';

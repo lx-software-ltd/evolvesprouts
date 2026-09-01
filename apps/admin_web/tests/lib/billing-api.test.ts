@@ -229,4 +229,18 @@ describe('listCustomerInvoices', () => {
       }),
     );
   });
+
+  it('passes contact_id query param through to the admin API', async () => {
+    mockAdminApiRequest.mockResolvedValueOnce({ items: [], next_cursor: null });
+
+    await listCustomerInvoices({ contactId: '11111111-1111-1111-1111-111111111111' });
+
+    expect(mockAdminApiRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        endpointPath:
+          '/v1/admin/billing/invoices?contact_id=11111111-1111-1111-1111-111111111111',
+        method: 'GET',
+      }),
+    );
+  });
 });

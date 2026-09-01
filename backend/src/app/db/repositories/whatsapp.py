@@ -83,11 +83,14 @@ class WhatsAppRepository(BaseRepository[WhatsAppConversation]):
         cursor_id: UUID | None = None,
         search: str | None = None,
         search_wa_id: bool = True,
+        contact_id: UUID | None = None,
     ) -> list[WhatsAppConversation]:
         """List conversations, most recent activity first."""
         statement = select(WhatsAppConversation).options(
             selectinload(WhatsAppConversation.contact)
         )
+        if contact_id is not None:
+            statement = statement.where(WhatsAppConversation.contact_id == contact_id)
         statement = self._apply_search(statement, search, search_wa_id=search_wa_id)
         if cursor_last_message_at is not None and cursor_id is not None:
             statement = statement.where(
@@ -104,10 +107,16 @@ class WhatsAppRepository(BaseRepository[WhatsAppConversation]):
         return list(self._session.execute(statement).scalars().all())
 
     def count_conversations(
-        self, *, search: str | None = None, search_wa_id: bool = True
+        self,
+        *,
+        search: str | None = None,
+        search_wa_id: bool = True,
+        contact_id: UUID | None = None,
     ) -> int:
         """Count conversations matching the optional search filter."""
         statement = select(func.count(WhatsAppConversation.id))
+        if contact_id is not None:
+            statement = statement.where(WhatsAppConversation.contact_id == contact_id)
         statement = self._apply_search(statement, search, search_wa_id=search_wa_id)
         return int(self._session.execute(statement).scalar_one())
 

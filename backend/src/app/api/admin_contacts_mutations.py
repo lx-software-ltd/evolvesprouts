@@ -23,6 +23,7 @@ from app.api.admin_contacts_helpers import (
     sync_memberships_from_body,
     validate_referrer_contact,
 )
+from app.api.admin_contacts_related import related_flags_for_contacts
 from app.api.admin_entities_helpers import (
     request_id,
     ensure_location_exists,
@@ -217,12 +218,14 @@ def create_contact(
         if loaded is None:
             raise DatabaseError("Failed to load contact after create")
         note_counts = repository.count_standalone_notes_for_contacts([loaded.id])
+        related_flags = related_flags_for_contacts(session, [loaded.id])
         return json_response(
             201,
             {
                 "contact": serialize_contact_summary(
                     loaded,
                     standalone_note_count=note_counts.get(loaded.id, 0),
+                    **related_flags[loaded.id].as_serializer_kwargs(),
                 )
             },
             event=event,
@@ -401,10 +404,12 @@ def update_contact(
         if loaded is None:
             raise DatabaseError("Failed to load contact after update")
         note_counts = repository.count_standalone_notes_for_contacts([loaded.id])
+        related_flags = related_flags_for_contacts(session, [loaded.id])
         payload = {
             "contact": serialize_contact_summary(
                 loaded,
                 standalone_note_count=note_counts.get(loaded.id, 0),
+                **related_flags[loaded.id].as_serializer_kwargs(),
             )
         }
 

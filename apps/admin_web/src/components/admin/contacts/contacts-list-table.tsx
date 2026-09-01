@@ -1,9 +1,23 @@
 'use client';
 
 import type { MouseEvent } from 'react';
+import Link from 'next/link';
 
-import { ArchiveIcon, DeleteIcon, NoteIcon, RestoreIcon } from '@/components/icons/action-icons';
+import {
+  ArchiveIcon,
+  ConversationIcon,
+  DeleteIcon,
+  InvoiceIcon,
+  NoteIcon,
+  RestoreIcon,
+  ServiceInstanceIcon,
+} from '@/components/icons/action-icons';
 import { Button } from '@/components/ui/button';
+import {
+  adminContactInvoicesDeepLink,
+  adminSalesConversationsDeepLink,
+  adminServiceInstancesDeepLink,
+} from '@/lib/contact-related-links';
 import {
   AdminDataTable,
   AdminDataTableBody,
@@ -24,6 +38,9 @@ import type { EntityListFilters } from '@/types/entity-list';
 import type { components } from '@/types/generated/admin-api.generated';
 
 type ApiSchemas = components['schemas'];
+
+const RELATED_LINK_CLASS =
+  'inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-slate-300 bg-white px-0 text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400';
 
 export interface ContactsListTableProps {
   rows: ApiSchemas['AdminContact'][];
@@ -163,6 +180,39 @@ export function ContactsListTable({
                 <AdminDataTableCell>{formatEnumLabel(row.contact_type)}</AdminDataTableCell>
                 <AdminDataTableCell className='text-right'>
                   <div className='flex flex-wrap justify-end gap-2'>
+                    {row.has_sales_conversation ? (
+                      <Link
+                        href={adminSalesConversationsDeepLink(row.id, row.sales_conversation_channel)}
+                        className={RELATED_LINK_CLASS}
+                        onClick={(event) => event.stopPropagation()}
+                        aria-label='Sales conversations'
+                        title='Sales conversations'
+                      >
+                        <ConversationIcon className='h-4 w-4 shrink-0' aria-hidden />
+                      </Link>
+                    ) : null}
+                    {row.has_service_instance ? (
+                      <Link
+                        href={adminServiceInstancesDeepLink(row.id)}
+                        className={RELATED_LINK_CLASS}
+                        onClick={(event) => event.stopPropagation()}
+                        aria-label='Service instances'
+                        title='Service instances'
+                      >
+                        <ServiceInstanceIcon className='h-4 w-4 shrink-0' aria-hidden />
+                      </Link>
+                    ) : null}
+                    {row.has_invoice ? (
+                      <Link
+                        href={adminContactInvoicesDeepLink(row.id)}
+                        className={RELATED_LINK_CLASS}
+                        onClick={(event) => event.stopPropagation()}
+                        aria-label='Invoices'
+                        title='Invoices'
+                      >
+                        <InvoiceIcon className='h-4 w-4 shrink-0' aria-hidden />
+                      </Link>
+                    ) : null}
                     <Button
                       type='button'
                       size='sm'

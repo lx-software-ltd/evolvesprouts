@@ -16,6 +16,7 @@ from app.api.admin_service_instance_partners import (
     validate_partner_organization_ids,
 )
 from app.api.admin_entities_helpers import replace_service_instance_tags
+from app.api.admin_contacts_related import enrollment_instance_ids_for_contact
 from app.api.admin_services_common import (
     encode_instance_cursor,
     parse_create_instance_payload,
@@ -252,12 +253,14 @@ def handle_admin_all_service_instances_request(
     limit = filters["limit"]
     service_id_filter = filters["service_id"]
     service_type_filter = filters["service_type"]
+    contact_id_filter = filters["contact_id"]
     logger.info(
         "Listing service instances (global)",
         extra={
             "limit": limit,
             "service_id": str(service_id_filter) if service_id_filter else None,
             "service_type": service_type_filter.value if service_type_filter else None,
+            "contact_id": str(contact_id_filter) if contact_id_filter else None,
         },
     )
     with Session(get_engine()) as session:
@@ -267,6 +270,11 @@ def handle_admin_all_service_instances_request(
             if service is None:
                 raise NotFoundError("Service", str(service_id_filter))
 
+        instance_ids = (
+            enrollment_instance_ids_for_contact(session, contact_id_filter)
+            if contact_id_filter is not None
+            else None
+        )
         repository = ServiceInstanceRepository(session)
         rows = repository.list_instances_global(
             limit=limit + 1,
@@ -275,11 +283,13 @@ def handle_admin_all_service_instances_request(
             service_type=service_type_filter,
             cursor_created_at=filters["cursor_created_at"],
             cursor_id=filters["cursor_id"],
+            instance_ids=instance_ids,
         )
         total_count = repository.count_instances_global(
             status=filters["status"],
             service_id=service_id_filter,
             service_type=service_type_filter,
+            instance_ids=instance_ids,
         )
         has_more = len(rows) > limit
         page_rows = rows[:limit]

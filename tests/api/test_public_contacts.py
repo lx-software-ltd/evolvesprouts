@@ -7,6 +7,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.api.admin_contacts_related import empty_related_flags
 from app.api.public import contacts as pcontacts
 from app.exceptions import AuthenticationError, AuthorizationError, NotFoundError
 
@@ -39,6 +40,12 @@ class _FakeSessionCM:
 
     def __exit__(self, *_a: object) -> bool:
         return False
+
+
+def _empty_related_flags(
+    _session: object, contact_ids: list[object]
+) -> dict[object, object]:
+    return {contact_id: empty_related_flags() for contact_id in contact_ids}
 
 
 def test_public_contacts_requires_token(api_gateway_event: Any) -> None:
@@ -92,6 +99,7 @@ def test_public_contacts_lists_with_admin_payload(
         "contact_ids_with_issued_certificates",
         lambda _s, _ids: {contact_id},
     )
+    monkeypatch.setattr(pcontacts, "related_flags_for_contacts", _empty_related_flags)
     monkeypatch.setattr(
         pcontacts,
         "serialize_contact_summary",
@@ -149,6 +157,7 @@ def test_public_contacts_get_returns_contact(
     monkeypatch.setattr(
         pcontacts, "contact_ids_with_issued_certificates", lambda _s, _ids: set()
     )
+    monkeypatch.setattr(pcontacts, "related_flags_for_contacts", _empty_related_flags)
     monkeypatch.setattr(
         pcontacts,
         "serialize_contact_summary",

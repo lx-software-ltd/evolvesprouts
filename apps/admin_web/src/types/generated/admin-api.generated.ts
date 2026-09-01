@@ -1487,6 +1487,8 @@ export interface paths {
                     cursor?: string;
                     /** @description Case-insensitive search on profile name or WhatsApp id. */
                     q?: string;
+                    /** @description Restrict results to conversations linked to this CRM contact. */
+                    contact_id?: string;
                 };
                 header?: never;
                 path?: never;
@@ -1690,6 +1692,8 @@ export interface paths {
                     q?: string;
                     /** @description Restrict results to `facebook` (Messenger) or `instagram`. */
                     channel?: components["schemas"]["MetaChannel"];
+                    /** @description Restrict results to conversations linked to this CRM contact. */
+                    contact_id?: string;
                 };
                 header?: never;
                 path?: never;
@@ -2109,6 +2113,11 @@ export interface paths {
                     service_id?: string;
                     /** @description When set, only instances whose parent service has this type. */
                     service_type?: components["schemas"]["ServiceType"];
+                    /**
+                     * @description When set, only instances with a non-cancelled enrollment attributed to this
+                     *     contact or to a family or organisation they belong to.
+                     */
+                    contact_id?: string;
                 };
                 header?: never;
                 path?: never;
@@ -5417,7 +5426,7 @@ export interface paths {
         };
         /**
          * List customer invoices
-         * @description Cursor-paginated list ordered by `created_at` descending, then `id` descending. Pass `next_cursor` from the previous response as `cursor` for the next page. Returns all invoices for the tenant; **admin authorization is required** (API Gateway admin group). Filter by optional `currency` (three-letter ISO code), `status`, optional `settlement` (issued invoices only: `open`, `partially_paid`, `paid`, `no_charge` for zero-total issued invoices, or `not_completed` for draft invoices and issued positive-total rows that are neither paid nor no-charge; combined with `status` using AND), and free-text `q` (case-insensitive substring match on `invoice_number`, bill-to display name, email, location snapshot text, and ISO `invoice_date` formatted as `YYYY-MM-DD`).
+         * @description Cursor-paginated list ordered by `created_at` descending, then `id` descending. Pass `next_cursor` from the previous response as `cursor` for the next page. Returns all invoices for the tenant; **admin authorization is required** (API Gateway admin group). Filter by optional `currency` (three-letter ISO code), `status`, optional `settlement` (issued invoices only: `open`, `partially_paid`, `paid`, `no_charge` for zero-total issued invoices, or `not_completed` for draft invoices and issued positive-total rows that are neither paid nor no-charge; combined with `status` using AND), and free-text `q` (case-insensitive substring match on `invoice_number`, bill-to display name, email, location snapshot text, and ISO `invoice_date` formatted as `YYYY-MM-DD`). Optional `contact_id` restricts results to invoices billed to that contact or to a family or organisation they belong to.
          */
         get: {
             parameters: {
@@ -5429,6 +5438,8 @@ export interface paths {
                     currency?: string;
                     /** @description Case-insensitive substring filter on invoice number, bill-to name/email/location text, and invoice issue date (ISO `YYYY-MM-DD` only). */
                     q?: string;
+                    /** @description Restrict to invoices billed to this contact or to a family or organisation they belong to. */
+                    contact_id?: string;
                     /** @description Opaque cursor from a prior `next_cursor` value. */
                     cursor?: string;
                     limit?: number;
@@ -8676,6 +8687,27 @@ export interface components {
             standalone_note_count: number;
             /** @description True when the contact has at least one issued (non-voided) completion certificate. */
             has_completion_certificate: boolean;
+            /**
+             * @description True when the contact is linked to at least one WhatsApp, Instagram, or Messenger
+             *     conversation.
+             */
+            has_sales_conversation: boolean;
+            /**
+             * @description Preferred Sales inbox tab for this contact: the channel of the most recently
+             *     active linked conversation. Null when `has_sales_conversation` is false.
+             * @enum {string|null}
+             */
+            sales_conversation_channel?: "whatsapp" | "instagram" | "messenger" | null;
+            /**
+             * @description True when the contact has at least one non-cancelled enrollment attributed to
+             *     the contact or to a family or organisation they belong to.
+             */
+            has_service_instance: boolean;
+            /**
+             * @description True when at least one customer invoice is billed to the contact or to a family
+             *     or organisation they belong to.
+             */
+            has_invoice: boolean;
         };
         PdfDownloadResponse: {
             /** Format: uri */

@@ -5,10 +5,14 @@ import { useEffect, useState } from 'react';
 import { ConversationNameCell } from './conversation-name-cell';
 import { InboxImportStatus } from './inbox-import-status';
 
+import { useLocationSearchParam } from '@/hooks/use-query-tab-state';
 import { useMetaConversations } from '@/hooks/use-meta-conversations';
 import { useMetaMessages } from '@/hooks/use-meta-messages';
 import { formatDate } from '@/lib/format';
-import { formatInboxConversationName } from '@/lib/inbox-conversation-name';
+import {
+  ADMIN_CONTACT_QUERY_PARAM,
+  formatInboxConversationName,
+} from '@/lib/inbox-conversation-name';
 import {
   createMetaImportJob,
   listInboxImportJobs,
@@ -60,7 +64,8 @@ const CHANNEL_COPY: Record<
 
 export function MetaConversationsView({ channel }: { channel: MetaChannel }) {
   const copy = CHANNEL_COPY[channel];
-  const list = useMetaConversations(channel);
+  const contactId = useLocationSearchParam(ADMIN_CONTACT_QUERY_PARAM);
+  const list = useMetaConversations(channel, contactId);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const detail = useMetaMessages(selectedId);
   const [importJob, setImportJob] = useState<InboxImportJobSummary | null>(null);

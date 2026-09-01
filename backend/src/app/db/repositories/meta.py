@@ -65,11 +65,14 @@ class MetaRepository(BaseRepository[MetaConversation]):
         search: str | None = None,
         channel: MetaChannel | None = None,
         search_platform_user_id: bool = True,
+        contact_id: UUID | None = None,
     ) -> list[MetaConversation]:
         """List conversations, most recent activity first."""
         statement = select(MetaConversation).options(
             selectinload(MetaConversation.contact)
         )
+        if contact_id is not None:
+            statement = statement.where(MetaConversation.contact_id == contact_id)
         if channel is not None:
             statement = statement.where(MetaConversation.channel == channel)
         statement = self._apply_search(
@@ -95,9 +98,12 @@ class MetaRepository(BaseRepository[MetaConversation]):
         search: str | None = None,
         channel: MetaChannel | None = None,
         search_platform_user_id: bool = True,
+        contact_id: UUID | None = None,
     ) -> int:
         """Count conversations matching the optional filters."""
         statement = select(func.count(MetaConversation.id))
+        if contact_id is not None:
+            statement = statement.where(MetaConversation.contact_id == contact_id)
         if channel is not None:
             statement = statement.where(MetaConversation.channel == channel)
         statement = self._apply_search(

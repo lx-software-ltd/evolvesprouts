@@ -40,6 +40,7 @@ export interface MetaConversationListParams {
   limit?: number;
   q?: string;
   channel?: MetaChannel;
+  contactId?: string;
 }
 
 function parseChannel(value: unknown): MetaChannel {
@@ -98,6 +99,9 @@ export async function listMetaConversations(
   }
   if (params.channel) {
     query.set('channel', params.channel);
+  }
+  if (params.contactId?.trim()) {
+    query.set('contact_id', params.contactId.trim());
   }
   const suffix = query.toString() ? `?${query.toString()}` : '';
   const payload = unwrapPayload(

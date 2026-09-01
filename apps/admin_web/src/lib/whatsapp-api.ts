@@ -35,6 +35,7 @@ export interface WhatsAppConversationListParams {
   cursor?: string | null;
   limit?: number;
   q?: string;
+  contactId?: string;
 }
 
 function parseConversation(value: unknown): WhatsAppConversationSummary {
@@ -84,6 +85,9 @@ export async function listWhatsAppConversations(
   }
   if (params.q?.trim()) {
     query.set('q', params.q.trim());
+  }
+  if (params.contactId?.trim()) {
+    query.set('contact_id', params.contactId.trim());
   }
   const suffix = query.toString() ? `?${query.toString()}` : '';
   const payload = unwrapPayload(

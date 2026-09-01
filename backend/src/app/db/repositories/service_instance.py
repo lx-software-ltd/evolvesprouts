@@ -169,6 +169,7 @@ class ServiceInstanceRepository(BaseRepository[ServiceInstance]):
         service_type: ServiceType | None = None,
         cursor_created_at: datetime | None = None,
         cursor_id: UUID | None = None,
+        instance_ids: set[UUID] | None = None,
     ) -> list[ServiceInstance]:
         """List instances across services with optional filters and cursor pagination."""
         statement = select(ServiceInstance).options(
@@ -193,6 +194,10 @@ class ServiceInstanceRepository(BaseRepository[ServiceInstance]):
             statement = statement.where(ServiceInstance.service_id == service_id)
         if status is not None:
             statement = statement.where(ServiceInstance.status == status)
+        if instance_ids is not None:
+            if not instance_ids:
+                return []
+            statement = statement.where(ServiceInstance.id.in_(instance_ids))
         if cursor_created_at is not None and cursor_id is not None:
             statement = statement.where(
                 or_(
@@ -214,8 +219,11 @@ class ServiceInstanceRepository(BaseRepository[ServiceInstance]):
         status: InstanceStatus | None = None,
         service_id: UUID | None = None,
         service_type: ServiceType | None = None,
+        instance_ids: set[UUID] | None = None,
     ) -> int:
         """Count instances matching optional filters."""
+        if instance_ids is not None and not instance_ids:
+            return 0
         statement = select(func.count(ServiceInstance.id))
         if service_type is not None:
             statement = statement.join(
@@ -227,6 +235,8 @@ class ServiceInstanceRepository(BaseRepository[ServiceInstance]):
             statement = statement.where(ServiceInstance.service_id == service_id)
         if status is not None:
             statement = statement.where(ServiceInstance.status == status)
+        if instance_ids is not None:
+            statement = statement.where(ServiceInstance.id.in_(instance_ids))
         count = self._session.execute(statement).scalar_one_or_none()
         return int(count or 0)
 

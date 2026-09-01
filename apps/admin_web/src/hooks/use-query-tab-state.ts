@@ -21,6 +21,15 @@ import { useCallback, useEffect, useSyncExternalStore } from 'react';
  * - An effect strips unknown tab values and explicit-default tab values
  *   from the URL. It only mutates `history`; it never calls `setState`.
  */
+export function useLocationSearchParam(paramName: string): string {
+  const search = useSyncExternalStore(
+    subscribeToLocationSearch,
+    getClientLocationSearch,
+    getServerLocationSearch
+  );
+  return new URLSearchParams(search).get(paramName)?.trim() ?? '';
+}
+
 export function useQueryTabState<T extends string>(
   validKeys: readonly T[],
   defaultKey: T,

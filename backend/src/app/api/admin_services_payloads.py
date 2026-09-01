@@ -183,6 +183,9 @@ def parse_global_instance_list_filters(event: Mapping[str, Any]) -> dict[str, An
             ServiceType,
             "service_type",
         ),
+        "contact_id": parse_optional_uuid(
+            query_param(event, "contact_id"), "contact_id"
+        ),
     }
 
 

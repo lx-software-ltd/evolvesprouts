@@ -597,6 +597,48 @@ def test_list_invoices_combined_settlement_currency_and_q_sql(
     assert "customer_invoices.invoice_number" in stmt_text
 
 
+def test_list_invoices_filters_by_contact_id(
+    api_gateway_event: Any,
+    admin_identity: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: list[Any] = []
+
+    @contextmanager
+    def _fake_session(_u: str, _r: str | None) -> Any:
+        s = MagicMock()
+
+        def _exec(stmt: Any, *a: Any, **k: Any) -> MagicMock:
+            captured.append(stmt)
+            out = MagicMock()
+            out.scalars.return_value.all.return_value = []
+            out.all.return_value = []
+            return out
+
+        s.execute.side_effect = _exec
+        yield s
+
+    patch_billing_sessions(monkeypatch, _fake_session)
+
+    contact_id = "11111111-1111-1111-1111-111111111111"
+    ev = api_gateway_event(
+        method="GET",
+        path="/v1/admin/billing/invoices",
+        query_params={"contact_id": contact_id},
+        authorizer_context=admin_identity,
+    )
+    r = admin_billing.handle_admin_billing_request(
+        ev, "GET", "/v1/admin/billing/invoices"
+    )
+    assert r["statusCode"] == 200
+    list_stmt = next(
+        stmt
+        for stmt in captured
+        if "customer_invoices.bill_to_contact_id" in str(stmt).lower()
+    )
+    assert "customer_invoices.bill_to_contact_id" in str(list_stmt).lower()
+
+
 def test_list_invoices_applies_free_text_query_param(
     api_gateway_event: Any,
     admin_identity: dict[str, str],

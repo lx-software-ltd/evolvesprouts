@@ -173,6 +173,9 @@ describe('ContactsPanel', () => {
       tags: [],
       standalone_note_count: 0,
       has_completion_certificate: false,
+      has_sales_conversation: false,
+      has_service_instance: false,
+      has_invoice: false,
     };
     const familyOnly: components['schemas']['AdminContact'] = {
       ...baseRow,
@@ -243,6 +246,9 @@ describe('ContactsPanel', () => {
       tags: [],
       standalone_note_count: 0,
       has_completion_certificate: false,
+      has_sales_conversation: false,
+      has_service_instance: false,
+      has_invoice: false,
     };
     const clientOnly: components['schemas']['AdminContact'] = {
       ...baseRow,
@@ -306,6 +312,9 @@ describe('ContactsPanel', () => {
       tags: [],
       standalone_note_count: 0,
       has_completion_certificate: true,
+      has_sales_conversation: false,
+      has_service_instance: false,
+      has_invoice: false,
       first_name: 'Grad',
       last_name: 'uate',
       family_ids: [],
@@ -326,6 +335,77 @@ describe('ContactsPanel', () => {
       />
     );
     expect(screen.getByText(/Grad uate/)).toHaveTextContent('Grad uate 🎓');
+  });
+
+  it('shows related-record operation links only when those records exist', () => {
+    const withLinks: components['schemas']['AdminContact'] = {
+      id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      first_name: 'Linked',
+      last_name: 'Person',
+      email: null,
+      instagram_handle: null,
+      phone_region: null,
+      phone_national_number: null,
+      phone_e164: null,
+      contact_type: 'parent',
+      relationship_type: 'client',
+      source: 'manual',
+      mailchimp_status: 'pending',
+      active: true,
+      created_at: '2020-01-01T00:00:00.000Z',
+      updated_at: '2020-01-01T00:00:00.000Z',
+      tag_ids: [],
+      tags: [],
+      family_ids: [],
+      organization_ids: [],
+      family_location_summary: null,
+      organization_location_summary: null,
+      standalone_note_count: 0,
+      has_completion_certificate: false,
+      has_sales_conversation: true,
+      sales_conversation_channel: 'instagram',
+      has_service_instance: true,
+      has_invoice: true,
+    };
+    const withoutLinks: components['schemas']['AdminContact'] = {
+      ...withLinks,
+      id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      first_name: 'Plain',
+      last_name: 'Person',
+      has_sales_conversation: false,
+      sales_conversation_channel: null,
+      has_service_instance: false,
+      has_invoice: false,
+    };
+
+    render(
+      <ContactsPanel
+        contacts={buildContactsHook({ contacts: [withLinks, withoutLinks] })}
+        adminUsers={[]}
+        onPatchStandaloneNoteCount={vi.fn()}
+        tags={[]}
+        locations={[]}
+        geographicAreas={[]}
+        areasLoading={false}
+        refreshLocations={noopRefresh}
+      />
+    );
+
+    expect(screen.getByRole('link', { name: 'Sales conversations' })).toHaveAttribute(
+      'href',
+      '/sales?tab=instagram&contact=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+    );
+    expect(screen.getByRole('link', { name: 'Service instances' })).toHaveAttribute(
+      'href',
+      '/services?contact=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+    );
+    expect(screen.getByRole('link', { name: 'Invoices' })).toHaveAttribute(
+      'href',
+      '/finance?contact=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+    );
+    expect(screen.getAllByRole('link', { name: 'Sales conversations' })).toHaveLength(1);
+    expect(screen.getAllByRole('link', { name: 'Service instances' })).toHaveLength(1);
+    expect(screen.getAllByRole('link', { name: 'Invoices' })).toHaveLength(1);
   });
 
   it('shows read-only family and organisation venue lines in the Location box when the row is selected', async () => {
@@ -363,6 +443,9 @@ describe('ContactsPanel', () => {
       organization_location_summary: summary,
       standalone_note_count: 0,
       has_completion_certificate: false,
+      has_sales_conversation: false,
+      has_service_instance: false,
+      has_invoice: false,
     };
     const contacts = buildContactsHook({ contacts: [row] });
 
@@ -417,6 +500,9 @@ describe('ContactsPanel', () => {
       organization_ids: [],
       standalone_note_count: 0,
       has_completion_certificate: false,
+      has_sales_conversation: false,
+      has_service_instance: false,
+      has_invoice: false,
     };
     const contacts = buildContactsHook({
       deleteContact,
@@ -510,6 +596,9 @@ describe('ContactsPanel', () => {
       organization_location_summary: null,
       standalone_note_count: 0,
       has_completion_certificate: false,
+      has_sales_conversation: false,
+      has_service_instance: false,
+      has_invoice: false,
     };
     const contacts = buildContactsHook({ contacts: [row] });
 
@@ -661,6 +750,9 @@ describe('ContactsPanel', () => {
       location_summary: null,
       standalone_note_count: 0,
       has_completion_certificate: false,
+      has_sales_conversation: false,
+      has_service_instance: false,
+      has_invoice: false,
     };
     const contacts = buildContactsHook({
       updateContact,
@@ -753,6 +845,9 @@ describe('ContactsPanel', () => {
       tags: [],
       standalone_note_count: 0,
       has_completion_certificate: false,
+      has_sales_conversation: false,
+      has_service_instance: false,
+      has_invoice: false,
       family_ids: [],
       organization_ids: [],
       family_location_summary: null,
