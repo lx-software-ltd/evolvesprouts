@@ -16,6 +16,9 @@ from app.templates.ses.intro_call_confirmation import (
 from app.templates.ses.contact_confirmation import (
     get_ses_template_definitions as contact_templates,
 )
+from app.templates.ses.invoice_email import (
+    get_ses_template_definitions as invoice_templates,
+)
 from app.templates.ses.media_download_link import (
     get_ses_template_definitions as media_templates,
 )
@@ -36,6 +39,7 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
         + media_templates()
         + booking_templates()
         + intro_call_templates()
+        + invoice_templates()
     )
     names = [t["TemplateName"] for t in all_defs]
 

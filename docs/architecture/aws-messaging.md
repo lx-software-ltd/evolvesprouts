@@ -78,6 +78,14 @@ errors until templates catch up.
   horizontal rule before the closing note, a single **WhatsApp** + **FAQ** sentence
   with CTA links, and FPS pay instructions only when payment is pending and
   `payment_method` is `fps_qr` (plus a short “already paid” disclaimer).
+- **Issued invoice email** (`evolvesprouts-invoice-{locale}`): stored SES
+  templates share the transactional HTML shell (logo, orange header, footer).
+  Admin `POST /v1/admin/billing/invoices/{id}/email` sends via `SendRawEmail`
+  (MIME HTML + plain text + issued PDF attachment) because SES
+  `SendTemplatedEmail` cannot attach files. Runtime send currently uses the
+  `en` locale. The body includes bill-to greeting, invoice number, invoice/due
+  dates, formatted total (and balance due when positive), a zero-total or paid
+  note when applicable, an attachment note, and the shared WhatsApp + FAQ line.
 
 ## Components
 

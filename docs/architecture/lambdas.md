@@ -178,7 +178,8 @@ their primary responsibilities.
   signed resource so draft/void preview PDFs re-uploaded to the same S3 key are not edge-cached
   as an older file),
   allocations, `POST /v1/admin/billing/invoices/{id}/email` (comma- or semicolon-separated
-  `toEmail` recipient list), export;
+  `toEmail` recipient list; branded MIME body from `evolvesprouts-invoice-{locale}`
+  copy plus the issued invoice PDF attachment; send path stays `SendRawEmail`), export;
   enrollment lines on issued invoices: **zero-total** issues immediately transition linked enrollments from `registered` to `confirmed` and promote the enrolled CRM party when it is still `prospect` to `client` (family or organization enrollments: every contact member of that family or organization); **positive-total** issues leave enrollment status unchanged until the first **payment allocation** is created against that issued invoice, which performs the same `registered`→`confirmed` and prospect→client promotions idempotently;
   handler code split across `admin_billing*.py` modules under `app.api`, same Lambda),
   `/v1/user/assets/*`,
@@ -353,7 +354,10 @@ their primary responsibilities.
 - Trigger: CloudFormation custom resource `SesEmailTemplates`
 - Stack: nested stack `evolvesprouts-Messaging` (`backend/infrastructure/lib/messaging-stack.ts`)
 - Purpose: create/update/delete SES stored email templates used by public
-  transactional flows (contact, media download link, booking confirmation).
+  transactional flows (contact, media download link, booking confirmation,
+  intro-call confirmation) and the admin issued-invoice email
+  (`evolvesprouts-invoice-{locale}`). Invoice send uses `SendRawEmail` so the
+  issued PDF can be attached; stored templates keep catalog copy aligned.
   Pending FPS bookings may instead send booking confirmation via
   `SendRawEmail` (multipart HTML + inline PNG) when the client supplies a valid
   PNG data URL. Stored booking-confirmation templates expose `{{service_type_label}}`

@@ -239,6 +239,7 @@ def test_ses_template_manager_create_upserts_templates(monkeypatch: Any) -> None
     monkeypatch.setattr(handler, "media_templates", lambda: [])
     monkeypatch.setattr(handler, "booking_templates", lambda: [])
     monkeypatch.setattr(handler, "intro_call_templates", lambda: [])
+    monkeypatch.setattr(handler, "invoice_templates", lambda: [])
 
     result = handler.lambda_handler({"RequestType": "Create"}, None)
 
@@ -282,6 +283,7 @@ def test_ses_template_manager_create_updates_existing_template(
     monkeypatch.setattr(handler, "media_templates", lambda: [])
     monkeypatch.setattr(handler, "booking_templates", lambda: [])
     monkeypatch.setattr(handler, "intro_call_templates", lambda: [])
+    monkeypatch.setattr(handler, "invoice_templates", lambda: [])
 
     handler.lambda_handler({"RequestType": "Update"}, None)
 

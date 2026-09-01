@@ -27,6 +27,13 @@ from app.services.customer_invoice_pdf import (
 )
 from app.services.customer_receipt_pdf import render_receipt_pdf
 from app.services.email import send_mime_email_with_optional_attachments
+from app.templates.booking_confirmation_render import substitute_shell_placeholders
+from app.templates.invoice_email_content import DEFAULT_INVOICE_EMAIL_LOCALE
+from app.templates.invoice_email_render import render_invoice_email
+from app.templates.transactional_shell_data import (
+    merge_transactional_shell_template_data,
+    resolve_whatsapp_url_for_template,
+)
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -442,25 +449,57 @@ def send_invoice_email(
     session: Session, *, invoice_id: UUID, to_addresses: list[str]
 ) -> None:
     inv = session.get(CustomerInvoice, invoice_id)
-    if inv is None or not inv.issued_pdf_s3_key:
+    if inv is None:
+        logger.info(
+            "invoice_email_skipped",
+            extra={"reason": "invoice_not_found", "invoice_id": str(invoice_id)},
+        )
+        return
+    if not (inv.issued_pdf_s3_key or "").strip():
+        logger.info(
+            "invoice_email_skipped",
+            extra={"reason": "missing_issued_pdf", "invoice_id": str(invoice_id)},
+        )
         return
     bucket = os.getenv("ASSETS_BUCKET_NAME", "").strip()
     if not bucket:
+        logger.warning(
+            "invoice_email_skipped",
+            extra={"reason": "assets_bucket_missing", "invoice_id": str(invoice_id)},
+        )
         return
     obj = get_s3_client().get_object(Bucket=bucket, Key=inv.issued_pdf_s3_key)
     pdf_bytes = obj["Body"].read()
     src = _confirmation_from_address()
     if not src:
+        logger.warning(
+            "invoice_email_skipped",
+            extra={"reason": "from_address_missing", "invoice_id": str(invoice_id)},
+        )
         return
-    num = inv.invoice_number or str(inv.id)
-    subject = f"Invoice {num}"
-    body_text = f"Please find invoice {num} attached."
+    locale = DEFAULT_INVOICE_EMAIL_LOCALE
+    num = (inv.invoice_number or str(inv.id)).strip()
+    shell = merge_transactional_shell_template_data(locale=locale, template_data={})
+    subject, html_doc, body_text = render_invoice_email(
+        locale=locale,
+        bill_to_name=inv.bill_to_display_name or "",
+        invoice_number=num,
+        invoice_date=inv.invoice_date,
+        due_date=inv.due_date,
+        total=Decimal(str(inv.total)),
+        balance_due=Decimal(str(inv.balance_due)),
+        currency=inv.currency,
+        is_paid=inv.paid_at is not None,
+        whatsapp_url=resolve_whatsapp_url_for_template(),
+        faq_url=str(shell.get("faq_url") or ""),
+    )
+    body_html = substitute_shell_placeholders(html_doc, shell)
     send_mime_email_with_optional_attachments(
         source=src,
         to_addresses=to_addresses,
         subject=subject,
         body_text=body_text,
-        body_html=f"<p>{body_text}</p>",
+        body_html=body_html,
         attachments=[(f"invoice-{num}.pdf", "application/pdf", pdf_bytes)],
     )
     inv.email_sent_at = datetime.now(UTC)
