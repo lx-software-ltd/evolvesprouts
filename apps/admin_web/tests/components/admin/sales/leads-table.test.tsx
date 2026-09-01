@@ -67,6 +67,7 @@ function renderComponent(overrides: Partial<ComponentProps<typeof LeadsTable>> =
       onLoadMore={onLoadMore}
       onSelectLead={onSelectLead}
       onFilterChange={onFilterChange}
+      onRefresh={vi.fn()}
       onBulkAssign={onBulkAssign}
       onBulkStageChange={onBulkStageChange}
       {...overrides}

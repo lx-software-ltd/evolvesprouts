@@ -134,9 +134,37 @@ vi.mock('@/hooks/use-meta-messages', () => ({
   }),
 }));
 
+vi.mock('@/components/admin/sales/funnel-chart', () => ({
+  FunnelChart: () => <div>Funnel</div>,
+}));
+
+vi.mock('@/components/admin/sales/source-breakdown', () => ({
+  SourceBreakdown: () => <div>Source Breakdown</div>,
+}));
+
+vi.mock('@/components/admin/sales/conversion-funnel', () => ({
+  ConversionFunnel: () => <div>Conversion Funnel</div>,
+}));
+
+vi.mock('@/components/admin/sales/leads-over-time', () => ({
+  LeadsOverTime: () => <div>Leads Over Time</div>,
+}));
+
+vi.mock('@/components/admin/sales/time-in-stage', () => ({
+  TimeInStage: () => <div>Time in Stage</div>,
+}));
+
 import { SalesPage } from '@/components/admin/sales/sales-page';
 
 describe('SalesPage', () => {
+  beforeEach(() => {
+    state.activeView = 'pipeline';
+    state.isCreateMode = true;
+    state.selectedLeadId = null;
+    state.startCreateLead.mockClear();
+    state.setActiveView.mockClear();
+  });
+
   it('renders tabs and triggers view switch', async () => {
     const user = userEvent.setup();
     render(<SalesPage />);
@@ -147,6 +175,19 @@ describe('SalesPage', () => {
     expect(screen.getByRole('button', { name: 'WhatsApp' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Analytics' }));
     expect(state.setActiveView).toHaveBeenCalledWith('analytics');
+  });
+
+  it('keeps KPI cards and date filters off the pipeline tab', () => {
+    state.activeView = 'pipeline';
+    state.isCreateMode = true;
+    render(<SalesPage />);
+
+    expect(screen.queryByText('Total leads')).not.toBeInTheDocument();
+    expect(screen.queryByText('Source Breakdown')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Date range preset')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Lead' })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('First name *')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create lead' })).toBeInTheDocument();
   });
 
   it('shows inbox import controls on Instagram and WhatsApp views', () => {
@@ -162,11 +203,30 @@ describe('SalesPage', () => {
     state.activeView = 'pipeline';
   });
 
-  it('starts inline create-lead flow from header', async () => {
+  it('starts inline create-lead flow from the existing-lead editor', async () => {
     const user = userEvent.setup();
+    state.activeView = 'pipeline';
+    state.isCreateMode = false;
     render(<SalesPage />);
 
-    await user.click(screen.getAllByRole('button', { name: 'New lead' })[0]);
+    await user.click(screen.getByRole('button', { name: 'New lead' }));
     expect(state.startCreateLead).toHaveBeenCalledTimes(1);
+  });
+
+  it('moves KPI cards, funnel, source breakdown, and date filters to analytics', async () => {
+    state.activeView = 'analytics';
+    render(<SalesPage />);
+
+    expect(screen.getByRole('heading', { name: 'Sales Analytics' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Date range preset')).toBeInTheDocument();
+    expect(await screen.findByText('Total leads')).toBeInTheDocument();
+    expect(screen.getByText('Conversion rate')).toBeInTheDocument();
+    expect(screen.getByText('Avg. days to convert')).toBeInTheDocument();
+    expect(screen.getByText('New this week')).toBeInTheDocument();
+    expect(screen.getByText('Funnel')).toBeInTheDocument();
+    expect(screen.getByText('Source Breakdown')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'New lead' })).not.toBeInTheDocument();
+
+    state.activeView = 'pipeline';
   });
 });

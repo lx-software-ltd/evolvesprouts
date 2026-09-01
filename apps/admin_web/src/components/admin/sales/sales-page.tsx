@@ -3,7 +3,6 @@
 import dynamic from 'next/dynamic';
 import { useCallback, useState } from 'react';
 
-import { FunnelOverview } from './funnel-overview';
 import { LeadDetailPanel } from './lead-detail-panel';
 import { LeadsTable } from './leads-table';
 import { SalesHeader } from './sales-header';
@@ -71,39 +70,26 @@ export function SalesPage() {
         onChange={state.setActiveView}
       />
 
-      {INBOX_VIEWS.has(state.activeView) ? null : (
-      <SalesHeader
-        activeView={state.activeView}
-        dateRange={state.leadAnalytics.dateRange}
-        filters={state.leadList.filters}
-        onDateRangeChange={(range) => {
-          state.leadAnalytics.setDateRange(range);
-          state.leadList.setFilter('dateFrom', range.dateFrom);
-          state.leadList.setFilter('dateTo', range.dateTo);
-        }}
-        onRefresh={async () => {
-          await state.leadList.refetch();
-          await state.leadDetail.refetch();
-          await state.leadAnalytics.refetch();
-          await state.adminUsers.refetch();
-        }}
-        onNewLead={state.startCreateLead}
-      />
-      )}
+      {state.activeView === 'analytics' ? (
+        <SalesHeader
+          dateRange={state.leadAnalytics.dateRange}
+          onDateRangeChange={state.leadAnalytics.setDateRange}
+          onRefresh={async () => {
+            await state.leadAnalytics.refetch();
+          }}
+        />
+      ) : null}
 
-      {state.activeView === 'whatsapp' ? (
-        <WhatsAppConversationsView />
-      ) : state.activeView === 'instagram' ? (
-        <MetaConversationsView channel='instagram' />
-      ) : state.activeView === 'messenger' ? (
-        <MetaConversationsView channel='facebook' />
+      {INBOX_VIEWS.has(state.activeView) ? (
+        state.activeView === 'whatsapp' ? (
+          <WhatsAppConversationsView />
+        ) : state.activeView === 'instagram' ? (
+          <MetaConversationsView channel='instagram' />
+        ) : (
+          <MetaConversationsView channel='facebook' />
+        )
       ) : state.activeView === 'pipeline' ? (
         <>
-          <FunnelOverview
-            analytics={state.leadAnalytics.analytics}
-            selectedStage={state.leadList.filters.stage[0] ?? null}
-            onSelectStage={(stage) => state.leadList.setFilter('stage', stage ? [stage] : [])}
-          />
           <LeadDetailPanel
             key={`${state.isCreateMode ? 'create' : 'edit'}-${state.selectedLeadId ?? 'none'}`}
             mode={state.isCreateMode ? 'create' : 'edit'}
@@ -149,6 +135,11 @@ export function SalesPage() {
             onLoadMore={state.leadList.loadMore}
             onSelectLead={state.setSelectedLeadId}
             onFilterChange={state.leadList.setFilter}
+            onRefresh={async () => {
+              await state.leadList.refetch();
+              await state.leadDetail.refetch();
+              await state.adminUsers.refetch();
+            }}
             onBulkAssign={async (leadIds, assignedTo) => {
               setBulkActionError('');
               const { failed } = await runBulkLeadOps(leadIds, (leadId) =>

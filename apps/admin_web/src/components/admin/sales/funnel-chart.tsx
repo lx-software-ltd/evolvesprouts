@@ -20,11 +20,11 @@ import { getStageBadgeClass } from './stage-utils';
 
 export interface FunnelChartProps {
   funnel: Record<string, number>;
-  activeStage: FunnelStage | null;
-  onSelectStage: (stage: FunnelStage | null) => void;
+  activeStage?: FunnelStage | null;
+  onSelectStage?: (stage: FunnelStage | null) => void;
 }
 
-export function FunnelChart({ funnel, activeStage, onSelectStage }: FunnelChartProps) {
+export function FunnelChart({ funnel, activeStage = null, onSelectStage }: FunnelChartProps) {
   const total = FUNNEL_STAGES.reduce(
     (accumulator, stage) => accumulator + (funnel[stage] ?? 0),
     0
@@ -75,20 +75,22 @@ export function FunnelChart({ funnel, activeStage, onSelectStage }: FunnelChartP
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <div className='flex flex-wrap gap-2'>
-        {FUNNEL_STAGES.map((stage) => (
-          <button
-            key={stage}
-            type='button'
-            className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${getStageBadgeClass(stage)} ${
-              activeStage === stage ? 'ring-2 ring-slate-400' : ''
-            }`}
-            onClick={() => onSelectStage(activeStage === stage ? null : stage)}
-          >
-            {formatEnumLabel(stage)}
-          </button>
-        ))}
-      </div>
+      {onSelectStage ? (
+        <div className='flex flex-wrap gap-2'>
+          {FUNNEL_STAGES.map((stage) => (
+            <button
+              key={stage}
+              type='button'
+              className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${getStageBadgeClass(stage)} ${
+                activeStage === stage ? 'ring-2 ring-slate-400' : ''
+              }`}
+              onClick={() => onSelectStage(activeStage === stage ? null : stage)}
+            >
+              {formatEnumLabel(stage)}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </Card>
   );
 }

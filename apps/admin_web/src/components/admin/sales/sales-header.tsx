@@ -1,10 +1,6 @@
 'use client';
 
-import { LeadExportButton } from './lead-export-button';
-
-import type { LeadListFilters } from '@/types/leads';
 import type { DateRange } from '@/hooks/use-lead-analytics';
-import type { SalesView } from '@/hooks/use-sales-page';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,12 +8,9 @@ import { Select } from '@/components/ui/select';
 import { formatDateForInput } from '@/lib/format';
 
 export interface SalesHeaderProps {
-  activeView: SalesView;
   dateRange: DateRange;
   onDateRangeChange: (nextDateRange: DateRange) => void;
   onRefresh: () => Promise<void> | void;
-  onNewLead: () => void;
-  filters: LeadListFilters;
 }
 
 function buildPresetDateRange(value: string): DateRange {
@@ -49,29 +42,16 @@ function buildPresetDateRange(value: string): DateRange {
   return { dateFrom: null, dateTo: null };
 }
 
-export function SalesHeader({
-  activeView,
-  dateRange,
-  onDateRangeChange,
-  onRefresh,
-  onNewLead,
-  filters,
-}: SalesHeaderProps) {
-  const title = activeView === 'analytics' ? 'Sales Analytics' : 'Sales Pipeline';
-  const presetValue =
-    dateRange.dateFrom === null && dateRange.dateTo === null ? 'all' : 'custom';
+export function SalesHeader({ dateRange, onDateRangeChange, onRefresh }: SalesHeaderProps) {
+  const presetValue = dateRange.dateFrom === null && dateRange.dateTo === null ? 'all' : 'custom';
 
   return (
     <div className='flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:rounded-xl sm:p-5'>
       <div className='flex flex-col gap-2 md:flex-row md:items-center md:justify-between'>
-        <h1 className='text-xl font-semibold text-slate-900'>{title}</h1>
+        <h1 className='text-xl font-semibold text-slate-900'>Sales Analytics</h1>
         <div className='flex flex-wrap gap-2'>
           <Button type='button' variant='ghost' onClick={() => void onRefresh()}>
             Refresh
-          </Button>
-          <LeadExportButton filters={filters} />
-          <Button type='button' onClick={onNewLead}>
-            New lead
           </Button>
         </div>
       </div>
@@ -92,6 +72,7 @@ export function SalesHeader({
         </Select>
         <Input
           type='date'
+          aria-label='Analytics date from'
           value={dateRange.dateFrom ?? ''}
           onChange={(event) =>
             onDateRangeChange({ ...dateRange, dateFrom: event.target.value || null })
@@ -99,6 +80,7 @@ export function SalesHeader({
         />
         <Input
           type='date'
+          aria-label='Analytics date to'
           value={dateRange.dateTo ?? ''}
           onChange={(event) =>
             onDateRangeChange({ ...dateRange, dateTo: event.target.value || null })

@@ -12,7 +12,10 @@ import {
   AdminDataTableHeadCell,
   AdminDataTableOperationsHeadCell,
 } from '@/components/ui/admin-data-table';
+import { Button } from '@/components/ui/button';
 import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
+
+import { LeadExportButton } from './lead-export-button';
 import { LeadsBulkActions } from './leads-bulk-actions';
 import { LeadsFilterBar } from './leads-filter-bar';
 import { LeadsTableRow } from './leads-table-row';
@@ -33,6 +36,7 @@ export interface LeadsTableProps {
     key: TKey,
     value: LeadListFilters[TKey]
   ) => void;
+  onRefresh: () => Promise<void> | void;
   onBulkAssign: (leadIds: string[], assignedTo: string | null) => Promise<void> | void;
   onBulkStageChange: (
     leadIds: string[],
@@ -54,6 +58,7 @@ export function LeadsTable({
   onLoadMore,
   onSelectLead,
   onFilterChange,
+  onRefresh,
   onBulkAssign,
   onBulkStageChange,
 }: LeadsTableProps) {
@@ -92,6 +97,12 @@ export function LeadsTable({
       onLoadMore={onLoadMore}
       toolbar={
         <div className='mb-3 space-y-3'>
+          <div className='flex flex-wrap justify-start gap-2'>
+            <Button type='button' variant='ghost' onClick={() => void onRefresh()}>
+              Refresh
+            </Button>
+            <LeadExportButton filters={filters} />
+          </div>
           <LeadsFilterBar filters={filters} users={users} onFilterChange={onFilterChange} />
           <LeadsBulkActions
             selectedCount={selectedIds.length}

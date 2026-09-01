@@ -14,7 +14,6 @@ import type { AdminUser, ContactSource, FunnelStage, LeadDetail, LeadType } from
 import { StatusBanner } from '@/components/status-banner';
 import { AdminEditorCard } from '@/components/ui/admin-editor-card';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { PhoneField } from '@/components/ui/phone-field';
 import { Select } from '@/components/ui/select';
@@ -119,21 +118,16 @@ export function LeadDetailPanel({
   if (mode === 'create') {
     return (
       <AdminEditorCard
-        title='Create Lead'
-        description='Create a new lead inline above the pipeline table.'
+        title='Lead'
+        description='Create a lead or select a row below to view details.'
         actions={
-          <>
-            <Button type='button' variant='secondary' onClick={onCancelCreate} disabled={isLoading}>
-              Cancel
-            </Button>
-            <Button
-              type='button'
-              onClick={() => void handleCreate()}
-              disabled={isLoading || createForm.firstName.trim().length === 0}
-            >
-              {isLoading ? 'Creating...' : 'Create lead'}
-            </Button>
-          </>
+          <Button
+            type='button'
+            onClick={() => void handleCreate()}
+            disabled={isLoading || createForm.firstName.trim().length === 0}
+          >
+            {isLoading ? 'Creating...' : 'Create lead'}
+          </Button>
         }
       >
         {error ? (
@@ -263,13 +257,15 @@ export function LeadDetailPanel({
   }
 
   return (
-    <Card title='Lead Details' className='space-y-4'>
-      <div className='flex justify-start gap-2'>
-        <Button type='button' onClick={onStartCreate}>
+    <AdminEditorCard
+      title='Lead'
+      description='Select a row below to view details, or create a new lead.'
+      actions={
+        <Button type='button' variant='secondary' onClick={onStartCreate} disabled={isLoading}>
           New lead
         </Button>
-      </div>
-
+      }
+    >
       {error ? (
         <StatusBanner variant='error' title='Lead'>
           {error}
@@ -298,6 +294,6 @@ export function LeadDetailPanel({
           </div>
         </div>
       )}
-    </Card>
+    </AdminEditorCard>
   );
 }

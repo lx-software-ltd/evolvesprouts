@@ -1,5 +1,6 @@
 import { EMPTY_ANALYTICS } from './analytics-defaults';
 import { ConversionFunnel } from './conversion-funnel';
+import { FunnelOverview } from './funnel-overview';
 import { LeadsOverTime } from './leads-over-time';
 import { TimeInStage } from './time-in-stage';
 
@@ -12,10 +13,13 @@ export interface AnalyticsViewProps {
 export function AnalyticsView({ analytics }: AnalyticsViewProps) {
   const data = analytics ?? EMPTY_ANALYTICS;
   return (
-    <div className='grid grid-cols-1 gap-4 lg:grid-cols-2'>
-      <ConversionFunnel rates={data.stageConversionRates} />
-      <LeadsOverTime values={data.leadsOverTime} />
-      <TimeInStage values={data.avgDaysInStage} />
+    <div className='space-y-4'>
+      <FunnelOverview analytics={data} />
+      <div className='grid grid-cols-1 gap-4 lg:grid-cols-2'>
+        <ConversionFunnel rates={data.stageConversionRates} />
+        <LeadsOverTime values={data.leadsOverTime} />
+        <TimeInStage values={data.avgDaysInStage} />
+      </div>
     </div>
   );
 }
