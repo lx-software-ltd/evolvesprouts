@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 from uuid import UUID
 
 from app.exceptions import ValidationError
+from app.utils.validators import instagram_handle_for_storage
 
 # --- Security validation functions ---
 
@@ -157,6 +158,23 @@ def validate_string_length(
             field=field_name,
         )
     return value
+
+
+def parse_optional_instagram_handle(value: Any) -> str | None:
+    """Normalize an Instagram handle for storage (no leading ``@``, max 30)."""
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        value = str(value)
+    stored = instagram_handle_for_storage(value)
+    if stored is None:
+        return None
+    if len(stored) > 30:
+        raise ValidationError(
+            "instagram_handle must be at most 30 characters",
+            field="instagram_handle",
+        )
+    return stored
 
 
 def _validate_url(url: str, field_name: str = "url") -> str:

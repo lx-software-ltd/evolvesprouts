@@ -51,7 +51,7 @@ def serialize_contact_picker_row(contact: Contact) -> dict[str, Any]:
     label = (
         " ".join(p for p in parts if p).strip()
         or (contact.email or "")
-        or (contact.instagram_handle or "")
+        or (f"@{contact.instagram_handle}" if contact.instagram_handle else "")
         or str(contact.id)
     )
     return {"id": str(contact.id), "label": label}

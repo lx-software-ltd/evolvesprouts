@@ -71,6 +71,21 @@ export function linkedVenueReadOnlyLines(row: ApiSchemas['AdminContact']): {
   return { lines, footerNote };
 }
 
+/** Stored handle has no leading ``@``. Empty input becomes ``null``. */
+export function instagramHandleForStorage(value: string | null | undefined): string | null {
+  if (value == null) {
+    return null;
+  }
+  const stored = value.trim().replace(/^@+/, '').trim().toLowerCase();
+  return stored || null;
+}
+
+/** Display-only ``@handle``. Does not change the stored value. */
+export function formatInstagramHandleDisplay(value: string | null | undefined): string {
+  const stored = instagramHandleForStorage(value);
+  return stored ? `@${stored}` : '';
+}
+
 export function contactRowLabel(row: ApiSchemas['AdminContact']): string {
   const name = [row.first_name, row.last_name].filter(Boolean).join(' ').trim();
   if (name) {

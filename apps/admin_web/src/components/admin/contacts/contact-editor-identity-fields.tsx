@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { PhoneField } from '@/components/ui/phone-field';
 import { Select } from '@/components/ui/select';
 import { CONTACT_TYPES } from '@/lib/contacts/contacts-panel-constants';
+import { instagramHandleForStorage } from '@/lib/contacts/contacts-panel-helpers';
 import { formatEnumLabel } from '@/lib/format';
 import { CONTACT_RELATIONSHIP_TYPES } from '@/types/entity-relationship';
 import type { components } from '@/types/generated/admin-api.generated';
@@ -131,12 +132,24 @@ export function ContactEditorIdentityFields({
         </div>
         <div>
           <Label htmlFor='crm-contact-ig'>Instagram</Label>
-          <Input
-            id='crm-contact-ig'
-            value={instagramHandle}
-            onChange={(e) => onInstagramHandleChange(e.target.value)}
-            autoComplete='off'
-          />
+          <div className='relative'>
+            <span
+              className='pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-slate-500 sm:text-sm'
+              aria-hidden
+            >
+              @
+            </span>
+            <Input
+              id='crm-contact-ig'
+              className='pl-7'
+              value={instagramHandle}
+              onChange={(e) =>
+                onInstagramHandleChange(instagramHandleForStorage(e.target.value) ?? '')
+              }
+              autoComplete='off'
+              placeholder='username'
+            />
+          </div>
         </div>
         <div>
           <Label htmlFor='crm-contact-dob'>Date of birth</Label>

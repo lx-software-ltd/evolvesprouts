@@ -10,7 +10,11 @@ import type { InlineLocationEmbeddedSummary } from '@/components/admin/locations
 import { getAdminContact, type EntityPickerListItem } from '@/lib/entity-api';
 import { readAdminContactQueryId } from '@/lib/inbox-conversation-name';
 import { contactPhoneRequestFields } from '@/lib/phone-request';
-import { contactRowLabel, linkedVenueReadOnlyLines } from '@/lib/contacts/contacts-panel-helpers';
+import {
+  contactRowLabel,
+  instagramHandleForStorage,
+  linkedVenueReadOnlyLines,
+} from '@/lib/contacts/contacts-panel-helpers';
 import { useContactReferralSearch } from '@/hooks/use-contact-referral-search';
 import { useContactServiceLabels } from '@/hooks/use-contact-service-labels';
 import { CONTACT_RELATIONSHIP_TYPES, relationshipTypeForEditor } from '@/types/entity-relationship';
@@ -176,7 +180,7 @@ export function useContactsPanelEditor({
           first_name: firstName.trim(),
           last_name: lastName.trim() || null,
           email: email.trim() || null,
-          instagram_handle: instagramHandle.trim() || null,
+          instagram_handle: instagramHandleForStorage(instagramHandle),
           ...contactPhoneRequestFields(phoneRegion, phoneNational),
           contact_type: contactType,
           relationship_type: relationshipType,
@@ -200,7 +204,7 @@ export function useContactsPanelEditor({
         first_name: firstName.trim(),
         last_name: lastName.trim() || null,
         email: email.trim() || null,
-        instagram_handle: instagramHandle.trim() || null,
+        instagram_handle: instagramHandleForStorage(instagramHandle),
         ...contactPhoneRequestFields(phoneRegion, phoneNational),
         contact_type: contactType,
         relationship_type: relationshipType,
@@ -259,7 +263,7 @@ export function useContactsPanelEditor({
     setFirstName(row.first_name);
     setLastName(row.last_name ?? '');
     setEmail(row.email ?? '');
-    setInstagramHandle(row.instagram_handle ?? '');
+    setInstagramHandle(instagramHandleForStorage(row.instagram_handle) ?? '');
     setPhoneRegion(row.phone_region ?? 'HK');
     setPhoneNational(row.phone_national_number ?? '');
     setContactType(row.contact_type);

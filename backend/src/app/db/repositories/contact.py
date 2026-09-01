@@ -22,6 +22,7 @@ from app.db.models.enums import (
     RelationshipType,
 )
 from app.db.repositories.base import BaseRepository
+from app.utils.validators import instagram_handle_for_storage
 
 _SOURCE_PRIORITY: dict[ContactSource, int] = {
     ContactSource.FREE_GUIDE: 10,
@@ -149,6 +150,16 @@ class ContactRepository(BaseRepository[Contact]):
         """Case-insensitive lookup by email address."""
         normalized_email = _normalize_email(email)
         statement = select(Contact).where(func.lower(Contact.email) == normalized_email)
+        return self._session.execute(statement).scalar_one_or_none()
+
+    def find_by_instagram_handle(self, handle: str) -> Contact | None:
+        """Case-insensitive lookup by stored Instagram handle (no leading ``@``)."""
+        normalized = instagram_handle_for_storage(handle)
+        if not normalized:
+            return None
+        statement = select(Contact).where(
+            func.lower(Contact.instagram_handle) == normalized
+        )
         return self._session.execute(statement).scalar_one_or_none()
 
     def upsert_by_email(

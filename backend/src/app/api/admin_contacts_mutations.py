@@ -34,6 +34,7 @@ from app.api.admin_entities_serializers import serialize_contact_summary
 from app.api.admin_request import parse_body
 from app.api.admin_services_payload_utils import parse_optional_uuid, parse_uuid_list
 from app.api.admin_validators import (
+    parse_optional_instagram_handle,
     validate_email,
     validate_phone_fields,
     validate_string_length,
@@ -115,13 +116,7 @@ def create_contact(
         required=False,
     )
     email = validate_email(body.get("email"))
-    instagram_raw = validate_string_length(
-        body.get("instagram_handle"),
-        "instagram_handle",
-        max_length=30,
-        required=False,
-    )
-    instagram_handle = instagram_raw.lower() if instagram_raw else None
+    instagram_handle = parse_optional_instagram_handle(body.get("instagram_handle"))
     phone_pair = _parse_contact_phone_pair(body, allow_absent=True)
     phone_region: str | None = None
     phone_national: str | None = None
@@ -285,13 +280,9 @@ def update_contact(
         if "email" in body:
             contact.email = validate_email(body.get("email"))
         if "instagram_handle" in body:
-            ig = validate_string_length(
-                body.get("instagram_handle"),
-                "instagram_handle",
-                max_length=30,
-                required=False,
+            contact.instagram_handle = parse_optional_instagram_handle(
+                body.get("instagram_handle")
             )
-            contact.instagram_handle = ig.lower() if ig else None
         if _phone_fields_in_body(body):
             pair = _parse_contact_phone_pair(body, allow_absent=False)
             contact.phone_region, contact.phone_national_number = pair

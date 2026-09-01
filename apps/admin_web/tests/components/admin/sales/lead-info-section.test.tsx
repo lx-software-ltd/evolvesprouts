@@ -58,4 +58,9 @@ describe('LeadInfoSection', () => {
     );
     expect(screen.getByText(/Phone:/).parentElement).toHaveTextContent('Phone: +852 1234 5678');
   });
+
+  it('shows Instagram handles with a leading @', () => {
+    render(<LeadInfoSection lead={leadFixture({ instagramHandle: 'kitie.w' })} />);
+    expect(screen.getByText(/Instagram:/).parentElement).toHaveTextContent('Instagram: @kitie.w');
+  });
 });

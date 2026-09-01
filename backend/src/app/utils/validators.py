@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import re
-
+from collections.abc import Mapping
+from typing import Any
 from uuid import UUID
 
 
@@ -67,6 +68,73 @@ def validate_range(
     if not min_val <= value <= max_val:
         raise ValueError(f"{field_name} must be between {min_val} and {max_val}")
     return value
+
+
+_INSTAGRAM_HANDLE_MAX_LENGTH = 30
+_INSTAGRAM_HANDLE_RE = re.compile(r"^[a-z0-9._]{1,30}$")
+
+
+def instagram_handle_for_storage(value: str | None) -> str | None:
+    """Return a stored Instagram handle: no leading ``@``, lowercased.
+
+    Empty or whitespace-only input returns ``None``. Does not validate charset.
+    """
+    if value is None:
+        return None
+    trimmed = str(value).strip().lstrip("@").strip()
+    if not trimmed:
+        return None
+    return trimmed.lower()
+
+
+def parse_instagram_username(
+    value: str | None,
+    *,
+    platform_user_id: str | None = None,
+) -> str | None:
+    """Return a handle suitable for ``contacts.instagram_handle``, or ``None``.
+
+    Rejects display names, IGSID/PSID copies, and values that are not Instagram
+    username characters. Never stores a leading ``@``.
+    """
+    handle = instagram_handle_for_storage(value)
+    if handle is None or len(handle) > _INSTAGRAM_HANDLE_MAX_LENGTH:
+        return None
+    if not _INSTAGRAM_HANDLE_RE.fullmatch(handle):
+        return None
+    if platform_user_id is not None:
+        scoped = str(platform_user_id).strip().lower()
+        if scoped and handle == scoped:
+            return None
+    return handle
+
+
+def extract_instagram_username(
+    event: Mapping[str, Any],
+    message: Mapping[str, Any],
+    *,
+    platform_user_id: str,
+) -> str | None:
+    """Return the first valid Instagram username from a Meta payload."""
+    values: list[str] = []
+    sender = event.get("sender")
+    if isinstance(sender, Mapping):
+        username = sender.get("username")
+        if isinstance(username, str) and username.strip():
+            values.append(username)
+    for key in ("username", "from"):
+        value = message.get(key)
+        if isinstance(value, str) and value.strip():
+            values.append(value)
+        elif isinstance(value, Mapping):
+            nested = value.get("username")
+            if isinstance(nested, str) and nested.strip():
+                values.append(nested)
+    for raw in values:
+        handle = parse_instagram_username(raw, platform_user_id=platform_user_id)
+        if handle is not None:
+            return handle
+    return None
 
 
 def sanitize_string(
