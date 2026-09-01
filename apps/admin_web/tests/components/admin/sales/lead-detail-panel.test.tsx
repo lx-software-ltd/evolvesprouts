@@ -204,6 +204,63 @@ describe('LeadDetailPanel', () => {
     expect(screen.getByLabelText('Stage')).toHaveValue('contacted');
   });
 
+  it('omits assigned_to on create when the assignee field is untouched', async () => {
+    const user = userEvent.setup();
+    const onCreate = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <LeadDetailPanel
+        mode='create'
+        lead={null}
+        users={USERS}
+        isLoading={false}
+        error=''
+        onStartCreate={vi.fn()}
+        onCreate={onCreate}
+        onUpdate={vi.fn()}
+      />
+    );
+
+    await user.type(screen.getByLabelText('First name'), 'Sam');
+    await user.click(screen.getByRole('button', { name: 'Create lead' }));
+
+    expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        first_name: 'Sam',
+      })
+    );
+    expect(onCreate.mock.calls[0][0]).not.toHaveProperty('assigned_to');
+  });
+
+  it('sends the prefilled default assignee when the user does not change it', async () => {
+    const user = userEvent.setup();
+    const onCreate = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <LeadDetailPanel
+        mode='create'
+        lead={null}
+        users={USERS}
+        defaultAssignedTo='user-1'
+        isLoading={false}
+        error=''
+        onStartCreate={vi.fn()}
+        onCreate={onCreate}
+        onUpdate={vi.fn()}
+      />
+    );
+
+    await user.type(screen.getByLabelText('First name'), 'Sam');
+    await user.click(screen.getByRole('button', { name: 'Create lead' }));
+
+    expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        first_name: 'Sam',
+        assigned_to: 'user-1',
+      })
+    );
+  });
+
   it('prefills create assignee from defaultAssignedTo until the user changes it', async () => {
     const user = userEvent.setup();
     const onCreate = vi.fn().mockResolvedValue(undefined);

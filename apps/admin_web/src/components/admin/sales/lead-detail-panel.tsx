@@ -164,7 +164,9 @@ export function LeadDetailPanel({
         await onCreate({
           ...sharedContact,
           lead_type: form.leadType,
-          assigned_to: form.assignedTo || null,
+          ...(assigneeTouched || form.assignedTo
+            ? { assigned_to: form.assignedTo || null }
+            : {}),
         });
         return;
       }
