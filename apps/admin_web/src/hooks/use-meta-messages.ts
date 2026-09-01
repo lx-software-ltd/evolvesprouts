@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { sortMessagesNewestFirst } from '@/lib/lead-conversation-previews';
 import { listMetaMessages, type MetaMessageSummary } from '@/lib/meta-api';
 
 export function useMetaMessages(conversationId: string | null) {
@@ -27,7 +28,7 @@ export function useMetaMessages(conversationId: string | null) {
       if (latestRequestIdRef.current !== requestId) {
         return;
       }
-      setMessages([...result.items].reverse());
+      setMessages(sortMessagesNewestFirst(result.items));
     } catch (err) {
       if (latestRequestIdRef.current !== requestId) {
         return;
