@@ -196,3 +196,102 @@ def test_sync_skips_conversation_when_messages_still_too_large(
     assert counters["stored"] == 1
     assert counters["skipped"] >= 1
     assert stored[0]["platform_user_id"] == "user-1"
+
+
+def test_sync_skips_conversation_on_proxy_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stored: list[object] = []
+
+    def _graph_get(
+        path: str,
+        *,
+        params: dict[str, str] | None = None,
+        token: str | None = None,
+    ) -> dict[str, object]:
+        if path == "page-1/conversations":
+            return {
+                "data": [
+                    {
+                        "id": "conv-ok",
+                        "participants": {
+                            "data": [{"id": "page-1"}, {"id": "user-1", "name": "A"}]
+                        },
+                    },
+                    {
+                        "id": "conv-slow",
+                        "participants": {
+                            "data": [{"id": "page-1"}, {"id": "user-2", "name": "B"}]
+                        },
+                    },
+                ]
+            }
+        if path == "conv-ok/messages":
+            return {
+                "data": [
+                    {
+                        "id": "m1",
+                        "created_time": "2026-01-02T03:04:05+0000",
+                        "from": {"id": "user-1"},
+                        "message": "hi",
+                    }
+                ]
+            }
+        if path == "conv-slow/messages":
+            raise MetaGraphApiError(
+                status_code=502,
+                message="Meta Graph proxy call failed: TimeoutError",
+            )
+        raise AssertionError(f"unexpected Graph path {path}")
+
+    monkeypatch.setenv("META_PAGE_ID", "page-1")
+    monkeypatch.setattr(sync, "resolve_page_access_token", lambda: "page-token")
+    monkeypatch.setattr(sync, "store_meta_message", _store_capturing(stored))
+    monkeypatch.setattr(sync, "graph_get", _graph_get)
+
+    counters = sync.sync_meta_channel_history(SimpleNamespace(), MetaChannel.INSTAGRAM)
+    assert counters["stored"] == 1
+    assert counters["skipped"] >= 1
+    assert stored[0]["platform_user_id"] == "user-1"
+
+
+def test_sync_stops_paging_after_later_list_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pages = {"count": 0}
+
+    def _graph_get(
+        path: str,
+        *,
+        params: dict[str, str] | None = None,
+        token: str | None = None,
+    ) -> dict[str, object]:
+        if path != "page-1/conversations":
+            return {"data": []}
+        pages["count"] += 1
+        if pages["count"] == 1:
+            return {
+                "data": [
+                    {
+                        "id": "conv-1",
+                        "participants": {
+                            "data": [{"id": "page-1"}, {"id": "user-1", "name": "A"}]
+                        },
+                    }
+                ],
+                "paging": {"cursors": {"after": "cursor-2"}},
+            }
+        raise MetaGraphApiError(
+            status_code=502,
+            message="Meta Graph proxy call failed: TimeoutError",
+        )
+
+    monkeypatch.setenv("META_PAGE_ID", "page-1")
+    monkeypatch.setattr(sync, "resolve_page_access_token", lambda: "page-token")
+    monkeypatch.setattr(sync, "store_meta_message", _store_capturing([]))
+    monkeypatch.setattr(sync, "graph_get", _graph_get)
+
+    counters = sync.sync_meta_channel_history(SimpleNamespace(), MetaChannel.INSTAGRAM)
+    assert counters["conversations"] == 1
+    assert counters["skipped"] >= 1
+    assert pages["count"] == 2

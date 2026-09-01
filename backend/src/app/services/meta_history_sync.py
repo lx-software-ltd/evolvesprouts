@@ -13,6 +13,7 @@ from app.services.meta_graph_client import (
     MetaGraphApiError,
     graph_get,
     is_graph_payload_too_large,
+    is_graph_skippable_failure,
     resolve_page_access_token,
 )
 from app.services.meta_ingest import store_meta_message
@@ -59,12 +60,18 @@ def sync_meta_channel_history(
     pages = 0
     while pages < _MAX_PAGES:
         pages += 1
-        payload = _list_conversation_page(
-            page_id,
-            platform=platform,
-            after=after,
-            token=page_token,
-        )
+        try:
+            payload = _list_conversation_page(
+                page_id,
+                platform=platform,
+                after=after,
+                token=page_token,
+            )
+        except MetaGraphApiError as exc:
+            if is_graph_skippable_failure(exc) and pages > 1:
+                counters["skipped"] += 1
+                break
+            raise
         rows = payload.get("data")
         if not isinstance(rows, list):
             break
@@ -79,6 +86,7 @@ def sync_meta_channel_history(
                     counters=counters,
                     page_token=page_token,
                 )
+                _commit_progress(session)
         paging = payload.get("paging")
         cursors = paging.get("cursors") if isinstance(paging, Mapping) else None
         next_after = cursors.get("after") if isinstance(cursors, Mapping) else None
@@ -86,6 +94,12 @@ def sync_meta_channel_history(
             break
         after = next_after.strip()
     return counters
+
+
+def _commit_progress(session: Session) -> None:
+    commit = getattr(session, "commit", None)
+    if callable(commit):
+        commit()
 
 
 def _graph_get_reducing_limit(
@@ -195,7 +209,7 @@ def _ingest_conversation(
                 token=page_token,
             )
         except MetaGraphApiError as exc:
-            if is_graph_payload_too_large(exc):
+            if is_graph_skippable_failure(exc):
                 counters["skipped"] += 1
                 return
             raise
@@ -219,7 +233,7 @@ def _ingest_conversation(
         try:
             message_rows = _conversation_messages(conversation_id, token=page_token)
         except MetaGraphApiError as exc:
-            if is_graph_payload_too_large(exc):
+            if is_graph_skippable_failure(exc):
                 counters["skipped"] += 1
                 return
             raise

@@ -134,7 +134,7 @@ def graph_get(
                 method="GET",
                 url=url,
                 headers={"Authorization": f"Bearer {access_token}"},
-                timeout=25,
+                timeout=40,
             )
         except AwsProxyError as exc:
             raise MetaGraphApiError(
@@ -191,6 +191,19 @@ def is_graph_payload_too_large(exc: BaseException) -> bool:
     if not isinstance(exc, MetaGraphApiError):
         return False
     return _is_graph_payload_too_large(exc.status_code, str(exc))
+
+
+def is_graph_skippable_failure(exc: BaseException) -> bool:
+    """Return True when one conversation or page can be skipped.
+
+    Payload-too-large and outbound proxy timeouts (502 TimeoutError) should
+    not fail the whole inbox import after Graph retries are exhausted.
+    """
+    if not isinstance(exc, MetaGraphApiError):
+        return False
+    if is_graph_payload_too_large(exc):
+        return True
+    return exc.status_code == 502 and "timeout" in str(exc).lower()
 
 
 def _is_graph_payload_too_large(status_code: int, detail: str) -> bool:

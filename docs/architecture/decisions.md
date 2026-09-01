@@ -793,8 +793,12 @@ pulling history inline on the admin Lambda. Jobs live in `inbox_import_jobs`.
   `GET /{conversation-id}/messages` (`from{id,name,username}`, 5 per page,
   last 20 bodies). Retry a path with a smaller `limit` when Graph returns
   `Please reduce the amount of data you're asking for`; skip a thread that
-  still fails at `limit=1`. Nested `messages.limit(20)` on a wide
-  conversation page exceeds Graph payload limits.
+  still fails at `limit=1`. Skip a thread (and stop paging after the
+  first list page) when the outbound Graph proxy times out (`502
+  TimeoutError`) so one slow Instagram call does not fail the job.
+  Commit after each thread so earlier imports survive a later timeout.
+  Nested `messages.limit(20)` on a wide conversation page exceeds Graph
+  payload limits.
   Meta only returns message **bodies** for the last 20 messages per thread.
   Persist through the same `store_meta_message` path as webhooks (unique
   `platform_message_id`). Create placeholder contacts when missing. Do **not**

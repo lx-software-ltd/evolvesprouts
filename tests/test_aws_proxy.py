@@ -121,6 +121,46 @@ def test_handle_http_preserves_caller_user_agent(monkeypatch: Any) -> None:
     assert captured_headers["User-agent"] == "CustomAgent/2.0"
 
 
+def test_handle_http_caps_timeout_at_60_seconds(monkeypatch: Any) -> None:
+    monkeypatch.setenv("ALLOWED_HTTP_URLS", "https://api.example.com/")
+    aws_proxy._ALLOWED_HTTP_URLS = None
+    captured: dict[str, int] = {}
+
+    class _FakeResponse:
+        status = 200
+
+        def read(self) -> bytes:
+            return b"{}"
+
+        def getheaders(self) -> list[tuple[str, str]]:
+            return []
+
+        def __enter__(self) -> "_FakeResponse":
+            return self
+
+        def __exit__(self, *_: object) -> None:
+            pass
+
+    def _fake_urlopen(_req: Any, *, timeout: int = 10) -> _FakeResponse:
+        captured["timeout"] = timeout
+        return _FakeResponse()
+
+    import urllib.request
+
+    monkeypatch.setattr(urllib.request, "urlopen", _fake_urlopen)
+
+    aws_proxy._handle_http(
+        {
+            "type": "http",
+            "method": "GET",
+            "url": "https://api.example.com/v1/test",
+            "timeout": 90,
+        }
+    )
+
+    assert captured["timeout"] == 60
+
+
 def test_proxy_handler_routes_http_requests(monkeypatch: Any) -> None:
     marker = {"result": {"status": 200}}
     monkeypatch.setattr(aws_proxy, "_handle_http", lambda *_: marker)
