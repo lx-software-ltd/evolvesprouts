@@ -189,6 +189,8 @@ describe('SalesPage', () => {
     expect(screen.getByRole('heading', { name: 'Lead' })).toBeInTheDocument();
     expect(screen.getByLabelText('First name')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create lead' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Export CSV' })).not.toBeInTheDocument();
   });
 
   it('shows inbox import controls on Instagram and WhatsApp views', () => {

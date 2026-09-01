@@ -122,11 +122,6 @@ export function SalesPage() {
             onLoadMore={state.leadList.loadMore}
             onSelectLead={state.setSelectedLeadId}
             onFilterChange={state.leadList.setFilter}
-            onRefresh={async () => {
-              await state.leadList.refetch();
-              await state.leadDetail.refetch();
-              await state.adminUsers.refetch();
-            }}
             onBulkAssign={async (leadIds, assignedTo) => {
               setBulkActionError('');
               const { failed } = await runBulkLeadOps(leadIds, (leadId) =>
