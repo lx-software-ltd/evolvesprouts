@@ -39,6 +39,18 @@ def test_parse_sales_settings_payload_rejects_unknown_field() -> None:
         settings_api.parse_sales_settings_payload({"foo": 1})
 
 
+def test_parse_sales_settings_payload_accepts_helper_detector() -> None:
+    payload = settings_api.parse_sales_settings_payload(
+        {"helper_detector_enabled": True}
+    )
+    assert payload == {"helper_detector_enabled": True}
+
+
+def test_parse_sales_settings_payload_rejects_non_bool_helper_detector() -> None:
+    with pytest.raises(ValidationError, match="boolean"):
+        settings_api.parse_sales_settings_payload({"helper_detector_enabled": "yes"})
+
+
 def test_parse_create_lead_marks_assigned_to_omitted() -> None:
     payload = parse_create_lead_payload(
         {
@@ -71,6 +83,7 @@ def test_handle_sales_settings_get(
     row = MagicMock()
     row.default_assigned_to = "user-1"
     row.notify_assignee_on_assignment = True
+    row.helper_detector_enabled = False
     row.updated_at = None
     row.updated_by = "admin-1"
     repo = MagicMock()

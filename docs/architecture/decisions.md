@@ -845,6 +845,24 @@ pulling history inline on the admin Lambda. Jobs live in `inbox_import_jobs`.
 - Reusing persist + unique message ids keeps webhook and import idempotent.
 - Historical inbound must not flood the Sales pipeline with `NEW` leads.
 
+## Helper Detector for automated sales leads
+
+**Decision:** Persist a `helper_detector_enabled` flag on the singleton
+`sales_settings` row (default off). When enabled, automated new-lead paths
+(WhatsApp/Meta ingest, public contact/reservations, media free-guide) call
+OpenRouter through the same chat-completion pipeline as the invoice expense
+parser. Clear Filipino or Bahasa (Indonesian/Malay) name/username signals set
+funnel stage to `unqualified` (an open stage). Contact type becomes `helper`
+only when it is currently `other`. Manual admin lead create does not run the
+detector.
+
+**Why:**
+- Sales ops need a Config toggle without redeploying.
+- Reusing the OpenRouter expense-parser path keeps secrets, proxy, retries, and
+  model env vars consistent.
+- Fail-open keeps webhook and form latency bounded when the model is slow or
+  unavailable.
+
 ## Keeping Documentation Up to Date
 
 **Decision:** Architecture documentation in `docs/architecture/` describes

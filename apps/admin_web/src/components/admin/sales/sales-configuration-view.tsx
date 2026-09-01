@@ -35,15 +35,19 @@ export function SalesConfigurationView({
   const [notifyAssignee, setNotifyAssignee] = useState(
     settings?.notify_assignee_on_assignment ?? false
   );
+  const [helperDetectorEnabled, setHelperDetectorEnabled] = useState(
+    settings?.helper_detector_enabled ?? false
+  );
   const [hydratedKey, setHydratedKey] = useState<string | null>(null);
 
   const settingsKey = settings
-    ? `${settings.default_assigned_to ?? ''}:${settings.notify_assignee_on_assignment}`
+    ? `${settings.default_assigned_to ?? ''}:${settings.notify_assignee_on_assignment}:${settings.helper_detector_enabled}`
     : null;
   if (settingsKey && settingsKey !== hydratedKey) {
     setHydratedKey(settingsKey);
     setDefaultAssignedTo(settings?.default_assigned_to ?? '');
     setNotifyAssignee(settings?.notify_assignee_on_assignment ?? false);
+    setHelperDetectorEnabled(settings?.helper_detector_enabled ?? false);
   }
 
   const staleUserLabel =
@@ -56,6 +60,7 @@ export function SalesConfigurationView({
       await onSave({
         default_assigned_to: defaultAssignedTo || null,
         notify_assignee_on_assignment: notifyAssignee,
+        helper_detector_enabled: helperDetectorEnabled,
       });
     } catch {
       // Keep the form visible so users can correct and retry.
@@ -65,7 +70,7 @@ export function SalesConfigurationView({
   return (
     <AdminEditorCard
       title='Sales configuration'
-      description='Choose who receives new leads and whether they are emailed when a lead is assigned to them.'
+      description='Choose who receives new leads, assignment email notifications, and Helper Detector.'
       actions={
         <Button type='submit' form={SETTINGS_FORM_ID} disabled={isLoading || isSaving}>
           {isSaving ? 'Saving...' : 'Save'}
@@ -129,6 +134,29 @@ export function SalesConfigurationView({
             >
               Email the assignee when a lead is assigned to them
             </Label>
+          </div>
+
+          <div className='flex items-start gap-2'>
+            <input
+              id='sales-settings-helper-detector'
+              type='checkbox'
+              className='mt-1 h-4 w-4 rounded border-slate-300 text-slate-900'
+              checked={helperDetectorEnabled}
+              onChange={(event) => setHelperDetectorEnabled(event.target.checked)}
+            />
+            <div>
+              <Label
+                htmlFor='sales-settings-helper-detector'
+                className='mb-0 cursor-pointer font-normal'
+              >
+                Helper Detector
+              </Label>
+              <p className='mt-1 text-xs text-slate-500'>
+                When enabled, new automated leads whose name or username looks Filipino
+                or Bahasa (Indonesian/Malay) are set to funnel stage Unqualified. Contact
+                type becomes Helper only when it is currently Other.
+              </p>
+            </div>
           </div>
         </form>
       )}

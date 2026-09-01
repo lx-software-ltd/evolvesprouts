@@ -28,6 +28,7 @@ from app.db.models.sales_lead import SalesLead
 from app.db.repositories.contact import ContactRepository
 from app.db.repositories.sales_lead import SalesLeadRepository
 from app.exceptions import ValidationError
+from app.services.helper_detector import maybe_apply_helper_detector
 from app.services.sales_assignment import (
     notify_lead_assignee,
     record_new_lead_assignment_event,
@@ -129,6 +130,7 @@ def handle_public_contact_us(
                     assigned_to=assigned_to,
                     actor_sub=None,
                 )
+                maybe_apply_helper_detector(session, contact, lead)
                 session.commit()
                 notify_lead_assignee(session, lead, previous=None)
             else:

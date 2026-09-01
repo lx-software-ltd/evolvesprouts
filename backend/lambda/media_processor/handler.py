@@ -30,6 +30,7 @@ from app.api.assets.share_links import (
 from app.db.repositories.asset import AssetRepository
 from app.db.repositories.contact import ContactRepository
 from app.db.repositories.sales_lead import SalesLeadRepository
+from app.services.helper_detector import maybe_apply_helper_detector
 from app.services.sales_assignment import (
     notify_lead_assignee,
     record_new_lead_assignment_event,
@@ -214,6 +215,7 @@ def _process_message(message: dict[str, Any]) -> bool:
             assigned_to=assigned_to,
             actor_sub=_SYSTEM_ACTOR,
         )
+        maybe_apply_helper_detector(session, contact, lead, created_by=_SYSTEM_ACTOR)
         notify_lead_assignee(session, lead, previous=None)
 
         _ensure_contact_tag(

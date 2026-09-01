@@ -7,11 +7,13 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.db.models.contact import Contact
 from app.db.models.enums import FunnelStage, LeadEventType, LeadType
 from app.db.models.meta import MetaConversation
 from app.db.models.sales_lead import SalesLead
 from app.db.models.whatsapp import WhatsAppConversation
 from app.db.repositories.sales_lead import SalesLeadRepository
+from app.services.helper_detector import maybe_apply_helper_detector
 from app.services.sales_assignment import (
     notify_lead_assignee,
     record_new_lead_assignment_event,
@@ -118,6 +120,15 @@ def link_conversation_lead_and_advance(
                 actor_sub=_SYSTEM_ACTOR,
             )
             notify_lead_assignee(session, lead, previous=None)
+            getter = getattr(session, "get", None)
+            contact = None
+            if callable(getter):
+                try:
+                    contact = getter(Contact, contact_id)
+                except Exception:
+                    contact = None
+            if contact is not None:
+                maybe_apply_helper_detector(session, contact, lead)
             counters["leads_created"] += 1
         conversation.lead_id = lead.id
 

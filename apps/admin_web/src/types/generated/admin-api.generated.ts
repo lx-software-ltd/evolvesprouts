@@ -7026,7 +7026,7 @@ export interface components {
             allowed_domains: string[];
         };
         /** @enum {string} */
-        FunnelStage: "new" | "contacted" | "engaged" | "qualified" | "converted" | "lost";
+        FunnelStage: "new" | "contacted" | "engaged" | "qualified" | "unqualified" | "converted" | "lost";
         /** @enum {string} */
         LeadType: "free_guide" | "event_inquiry" | "program_enrollment" | "consultation" | "partnership" | "other";
         /** @enum {string} */
@@ -7054,9 +7054,9 @@ export interface components {
             id: string;
             event_type: components["schemas"]["LeadEventType"];
             /** @enum {string|null} */
-            from_stage?: "new" | "contacted" | "engaged" | "qualified" | "converted" | "lost" | null;
+            from_stage?: "new" | "contacted" | "engaged" | "qualified" | "unqualified" | "converted" | "lost" | null;
             /** @enum {string|null} */
-            to_stage?: "new" | "contacted" | "engaged" | "qualified" | "converted" | "lost" | null;
+            to_stage?: "new" | "contacted" | "engaged" | "qualified" | "unqualified" | "converted" | "lost" | null;
             metadata?: {
                 [key: string]: unknown;
             } | null;
@@ -7323,6 +7323,8 @@ export interface components {
             default_assigned_to: string | null;
             /** @description When true, email the new assignee on first assignment and reassignment. Unassign does not send mail. */
             notify_assignee_on_assignment: boolean;
+            /** @description When true, new automated leads are classified with OpenRouter; Filipino or Bahasa (Indonesian/Malay) name/username signals set funnel stage to `unqualified` and contact type to `helper` when the contact type is `other`. */
+            helper_detector_enabled: boolean;
             /** Format: date-time */
             updated_at?: string | null;
             updated_by?: string | null;
@@ -7333,6 +7335,7 @@ export interface components {
         UpdateSalesSettingsRequest: {
             default_assigned_to?: string | null;
             notify_assignee_on_assignment?: boolean;
+            helper_detector_enabled?: boolean;
         };
         LeadAnalyticsResponse: {
             funnel: {

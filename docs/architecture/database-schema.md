@@ -34,8 +34,8 @@ Seed data lives in `backend/db/seed/seed_data.sql`.
   `partner`, `other`.
 - Enum `lead_type`: `free_guide`, `event_inquiry`, `program_enrollment`,
   `consultation`, `partnership`, `other`.
-- Enum `funnel_stage`: `new`, `contacted`, `engaged`, `qualified`, `converted`,
-  `lost`.
+- Enum `funnel_stage`: `new`, `contacted`, `engaged`, `qualified`, `unqualified`,
+  `converted`, `lost`.
 - Enum `lead_event_type`: `created`, `stage_changed`, `note_added`, `email_sent`,
   `email_opened`, `guide_downloaded`, `assigned`, `converted`, `lost`.
 - Enum `service_type`: `training_course`, `event`, `consultation`, `intro_call`.
@@ -543,6 +543,9 @@ maps legacy `note.id` to the **first** inserted row’s UUID.
   and media/free-guide leads).
 - `notify_assignee_on_assignment` emails the new assignee on first assignment and
   reassignment. Unassign does not send mail.
+- `helper_detector_enabled` toggles AI Helper Detector on automated new leads
+  (Filipino/Bahasa name signals → funnel stage `unqualified`, contact type
+  `helper` only when current type is `other`). Default off.
 - `updated_by` stores the admin Cognito `sub` that last saved the row.
 
 ### `sales_lead_events`
