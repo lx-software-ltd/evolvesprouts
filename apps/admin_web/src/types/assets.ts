@@ -30,6 +30,25 @@ export const EXPENSE_ATTACHMENT_ASSET_TAG = 'expense_attachment' as const;
 /** Admin-assignable client-facing document tag (matches admin API `client_tag`). */
 export const CLIENT_DOCUMENT_ASSET_TAG = 'client_document' as const;
 
+/** System tag name for assets linked to an issued customer invoice. */
+export const CUSTOMER_INVOICE_ASSET_TAG = 'customer_invoice' as const;
+
+export function isExpenseAttachmentAssetTag(tagName: string): boolean {
+  return tagName.toLowerCase() === EXPENSE_ATTACHMENT_ASSET_TAG;
+}
+
+export function isCustomerInvoiceAssetTag(tagName: string): boolean {
+  return tagName.toLowerCase() === CUSTOMER_INVOICE_ASSET_TAG;
+}
+
+export function isRestrictedSystemAssetTag(tagName: string): boolean {
+  return isExpenseAttachmentAssetTag(tagName) || isCustomerInvoiceAssetTag(tagName);
+}
+
+export function assetHasRestrictedSystemTag(asset: { tags: ReadonlyArray<{ name: string }> }): boolean {
+  return asset.tags.some((tag) => isRestrictedSystemAssetTag(tag.name));
+}
+
 /** Allowed `content_language` values for admin asset create/update (matches OpenAPI enum). */
 export type AdminAssetWriteContentLanguage = NonNullable<
   Exclude<ApiCreateAssetRequest['content_language'], null | undefined>

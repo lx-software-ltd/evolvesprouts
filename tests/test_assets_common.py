@@ -10,7 +10,9 @@ from unittest.mock import MagicMock
 
 from app.api.admin_request import parse_cursor
 from app.api.assets.assets_common import (
+    asset_links_customer_invoice,
     asset_links_expense_attachment,
+    asset_links_restricted_system_document,
     file_name_from_pending_asset_content_key,
     head_s3_object,
     paginate_response,
@@ -321,6 +323,22 @@ def test_asset_links_expense_attachment_detects_tag() -> None:
         asset_tags=[SimpleNamespace(tag=SimpleNamespace(name="client_document"))]
     )
     assert asset_links_expense_attachment(other) is False
+
+
+def test_asset_links_customer_invoice_detects_tag() -> None:
+    asset = SimpleNamespace(
+        asset_tags=[
+            SimpleNamespace(tag=SimpleNamespace(name="customer_invoice")),
+        ]
+    )
+    assert asset_links_customer_invoice(asset) is True
+    assert asset_links_restricted_system_document(asset) is True
+
+    other = SimpleNamespace(
+        asset_tags=[SimpleNamespace(tag=SimpleNamespace(name="client_document"))]
+    )
+    assert asset_links_customer_invoice(other) is False
+    assert asset_links_restricted_system_document(other) is False
 
 
 def test_parse_init_asset_content_replace_payload_accepts_snake_and_camel() -> None:

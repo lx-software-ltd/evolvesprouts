@@ -36,6 +36,7 @@ from app.services.asset_expense_tagging import (
     CLIENT_DOCUMENT_TAG_NAME,
     EXPENSE_ATTACHMENT_TAG_NAME,
 )
+from app.services.asset_invoice_tagging import CUSTOMER_INVOICE_TAG_NAME
 from app.utils import json_response
 from app.utils.logging import get_logger
 
@@ -47,6 +48,7 @@ _SYSTEM_TAG_NAMES_LOWER: frozenset[str] = frozenset(
     {
         EXPENSE_ATTACHMENT_TAG_NAME.lower(),
         CLIENT_DOCUMENT_TAG_NAME.lower(),
+        CUSTOMER_INVOICE_TAG_NAME.lower(),
     }
 )
 

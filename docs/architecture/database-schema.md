@@ -121,7 +121,9 @@ Columns:
 - `created_at` (timestamptz, default `now()`)
 - `updated_at` (timestamptz, default `now()`)
 
-Object key pattern: `assets/{asset_id}/{uuid}-{sanitized_filename}`
+Object key pattern: `assets/{asset_id}/{uuid}-{sanitized_filename}` for uploaded
+files. Issued customer invoice PDFs keep `billing/invoices/{invoice_id}.pdf` and
+reuse that key on the linked `assets` row.
 
 Indexes:
 - `assets_visibility_idx` on `visibility`
@@ -209,6 +211,16 @@ backfills from existing `expense_attachments`.
 The `client_document` tag is a system tag for admin-assignable client-facing
 documents; migration `0015_add_client_document_tag` ensures it exists (seed data
 also inserts it for fresh databases).
+
+The `customer_invoice` tag is a reserved system tag for issued (and later voided)
+customer invoice PDFs. Migration `0077_invoice_assets` adds
+`customer_invoices.asset_id` (nullable unique FK → `assets.id`, `ON DELETE RESTRICT`),
+inserts the tag, backfills assets for rows that already have `issued_pdf_s3_key`,
+and forces existing `expense_attachment` assets to `visibility = restricted`.
+Issuing or refreshing an invoice PDF creates or updates that restricted asset.
+Admin list search on assets also matches the linked invoice `bill_to_display_name`
+and `invoice_number`. These assets cannot be deleted, have their file replaced, or
+be made public.
 
 Migration `0016_delete_expenses_missing_vendor` removes expenses with no vendor
 (`vendor_id` null and legacy `vendor_name` null or whitespace-only), removes the
@@ -740,6 +752,9 @@ Migration `0055_customer_billing_ar` introduces:
   `customer_invoices` (CRM snapshot of linked `locations` venue/address plus geographic
   district and country labels when resolvable, refreshed when drafts are resolved and again
   immediately before issuance).
+- Migration `0077_invoice_assets` adds nullable unique `customer_invoices.asset_id`
+  (FK → `assets.id`, `ON DELETE RESTRICT`) so issued invoice PDFs appear in the admin
+  Assets list under the reserved `customer_invoice` tag.
 - Migration `0066_cp_enroll_extref_uq` adds a partial unique index on
   `customer_payments (enrollment_id, external_reference)` when `external_reference` is not null,
   so duplicate manual inbound references for the same enrollment return HTTP 409 from the admin API.

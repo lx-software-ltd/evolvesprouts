@@ -190,7 +190,10 @@ const deviceAttestationFailClosed = new cdk.CfnParameter(
 writes. The replace presign binds **`Content-Type: application/pdf`**, and **complete**
 rejects non-PDF S3 metadata, enforces a **maximum object size** on head, and validates the
 pending key’s **`UUID-` filename prefix** so arbitrary key suffixes cannot be smuggled in.
-Expense-linked assets cannot use replace.
+Expense-linked and customer-invoice-linked assets cannot use replace, cannot be
+deleted, and must remain `visibility=restricted` (setting `public` returns 400).
+Customer invoice PDFs stay off the public free-assets list because they are
+restricted and do not receive the `client_document` tag.
 
 ### CORS Configuration
 

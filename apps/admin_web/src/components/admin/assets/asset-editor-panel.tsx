@@ -13,7 +13,9 @@ import { formatEnumLabel, matchAdminSelectableContentLanguage } from '@/lib/form
 import {
   ASSET_VISIBILITIES,
   CLIENT_DOCUMENT_ASSET_TAG,
-  EXPENSE_ATTACHMENT_ASSET_TAG,
+  assetHasRestrictedSystemTag,
+  isCustomerInvoiceAssetTag,
+  isExpenseAttachmentAssetTag,
 } from '@/types/assets';
 
 import type { AssetUploadPhase } from '@/hooks/use-asset-mutations';
@@ -127,7 +129,7 @@ function buildEditMetadataPatch(
     visibility: AssetVisibility;
     contentLanguage: AdminAssetWriteContentLanguage | null;
     clientTagValue: typeof CLIENT_DOCUMENT_ASSET_TAG | null;
-    isExpenseLinked: boolean;
+    isRestrictedSystemLinked: boolean;
   }
 ): UpdateAdminAssetPatchInput {
   const patch: UpdateAdminAssetPatchInput = {};
@@ -140,14 +142,14 @@ function buildEditMetadataPatch(
   if (input.resourceKey !== (asset.resourceKey ?? null)) {
     patch.resourceKey = input.resourceKey;
   }
-  if (input.visibility !== asset.visibility) {
+  if (!input.isRestrictedSystemLinked && input.visibility !== asset.visibility) {
     patch.visibility = input.visibility;
   }
   const prevLangCanonical = canonicalContentLanguageFromApi(asset.contentLanguage);
   if (input.contentLanguage !== prevLangCanonical) {
     patch.contentLanguage = input.contentLanguage;
   }
-  if (!input.isExpenseLinked) {
+  if (!input.isRestrictedSystemLinked) {
     const hadClient = assetHasClientDocumentTag(asset);
     const nextHasClient = input.clientTagValue === CLIENT_DOCUMENT_ASSET_TAG;
     if (hadClient !== nextHasClient) {
@@ -182,9 +184,15 @@ export function AssetEditorPanel({
 
   const isEditMode = Boolean(selectedAsset);
   const isExpenseLinked = Boolean(
-    selectedAsset?.tags.some((t) => t.name.toLowerCase() === EXPENSE_ATTACHMENT_ASSET_TAG)
+    selectedAsset?.tags.some((t) => isExpenseAttachmentAssetTag(t.name))
   );
-  const canReplaceFile = isEditMode && Boolean(onReplaceFile) && !isExpenseLinked;
+  const isInvoiceLinked = Boolean(
+    selectedAsset?.tags.some((t) => isCustomerInvoiceAssetTag(t.name))
+  );
+  const isRestrictedSystemLinked = Boolean(
+    selectedAsset && assetHasRestrictedSystemTag(selectedAsset)
+  );
+  const canReplaceFile = isEditMode && Boolean(onReplaceFile) && !isRestrictedSystemLinked;
 
   const metadataPatch = useMemo(() => {
     if (!selectedAsset) {
@@ -210,9 +218,9 @@ export function AssetEditorPanel({
       visibility: formState.visibility,
       contentLanguage,
       clientTagValue,
-      isExpenseLinked,
+      isRestrictedSystemLinked,
     });
-  }, [selectedAsset, formState, isExpenseLinked]);
+  }, [selectedAsset, formState, isRestrictedSystemLinked]);
 
   const hasMetadataChangesForSubmit = Object.keys(metadataPatch).length > 0;
 
@@ -455,6 +463,12 @@ export function AssetEditorPanel({
             <Select
               id='asset-visibility'
               value={formState.visibility}
+              disabled={isSavingAsset || isRestrictedSystemLinked}
+              title={
+                isRestrictedSystemLinked
+                  ? 'Visibility must remain restricted for expense and invoice assets.'
+                  : undefined
+              }
               onChange={(event) =>
                 setFormState((previous) => ({
                   ...previous,
@@ -506,9 +520,11 @@ export function AssetEditorPanel({
             <div className='space-y-2 lg:col-span-2'>
               <Label htmlFor='asset-file-name'>Current file</Label>
               <Input id='asset-file-name' value={selectedAsset.fileName || '—'} disabled readOnly />
-              {isExpenseLinked ? (
+              {isRestrictedSystemLinked ? (
                 <p className='text-xs text-slate-600'>
-                  File replacement is not available for assets linked to an expense.
+                  {isInvoiceLinked
+                    ? 'File replacement is not available for assets linked to a customer invoice.'
+                    : 'File replacement is not available for assets linked to an expense.'}
                 </p>
               ) : canReplaceFile ? (
                 <div className='space-y-2 pt-1'>
@@ -538,7 +554,17 @@ export function AssetEditorPanel({
         <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-end'>
           <div className='space-y-2'>
             <Label htmlFor='asset-tag'>Tag</Label>
-            {isEditMode && isExpenseLinked ? (
+            {isEditMode && isInvoiceLinked ? (
+              <Select
+                id='asset-tag'
+                value='invoice'
+                disabled
+                aria-label='Tag (linked to customer invoice; not editable)'
+                title='Tags cannot be changed for assets linked to a customer invoice.'
+              >
+                <option value='invoice'>Invoices</option>
+              </Select>
+            ) : isEditMode && isExpenseLinked ? (
               <Select
                 id='asset-tag'
                 value='expense'

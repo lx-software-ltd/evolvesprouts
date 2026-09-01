@@ -20,6 +20,7 @@ from app.db.models import (
     AssetTag,
     AssetType,
     AssetVisibility,
+    CustomerInvoice,
     Tag,
 )
 from app.db.repositories.base import BaseRepository
@@ -113,11 +114,17 @@ class AssetRepository(BaseRepository[Asset]):
         if query:
             escaped = _escape_like_pattern(query.strip())
             pattern = f"%{escaped}%"
+            statement = statement.outerjoin(
+                CustomerInvoice,
+                CustomerInvoice.asset_id == Asset.id,
+            )
             statement = statement.where(
                 or_(
                     Asset.title.ilike(pattern, escape="\\"),
                     Asset.file_name.ilike(pattern, escape="\\"),
                     Asset.resource_key.ilike(pattern, escape="\\"),
+                    CustomerInvoice.bill_to_display_name.ilike(pattern, escape="\\"),
+                    CustomerInvoice.invoice_number.ilike(pattern, escape="\\"),
                 )
             )
         if load_tags:
@@ -125,6 +132,8 @@ class AssetRepository(BaseRepository[Asset]):
                 selectinload(Asset.asset_tags).selectinload(AssetTag.tag),
             )
         statement = statement.order_by(Asset.id).limit(limit)
+        if query:
+            statement = statement.distinct()
         return self._session.execute(statement).scalars().all()
 
     def get_with_asset_tags(self, asset_id: UUID) -> Asset | None:
@@ -330,6 +339,14 @@ class AssetRepository(BaseRepository[Asset]):
         if s3_key is not None:
             asset.s3_key = s3_key
         return self.update(asset)
+
+    def find_by_s3_key(self, s3_key: str) -> Asset | None:
+        """Return an asset that already uses this object key, if any."""
+        normalized = s3_key.strip()
+        if not normalized:
+            return None
+        stmt = select(Asset).where(Asset.s3_key == normalized)
+        return self._session.execute(stmt).scalar_one_or_none()
 
     def find_by_resource_key(self, resource_key: str) -> Asset | None:
         """Return an asset by normalized media resource key."""

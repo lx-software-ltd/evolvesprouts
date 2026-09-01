@@ -1,6 +1,10 @@
 import { getAdminDefaultCurrencyCode } from '@/lib/config';
 import { formatAmountInCurrency } from '@/lib/vendor-spend';
-import { CLIENT_DOCUMENT_ASSET_TAG, EXPENSE_ATTACHMENT_ASSET_TAG } from '@/types/assets';
+import {
+  CLIENT_DOCUMENT_ASSET_TAG,
+  CUSTOMER_INVOICE_ASSET_TAG,
+  EXPENSE_ATTACHMENT_ASSET_TAG,
+} from '@/types/assets';
 import type {
   DiscountCode,
   LocationSummary,
@@ -367,6 +371,9 @@ export function formatAssetTagDisplayName(tagName: string): string {
   }
   if (lower === CLIENT_DOCUMENT_ASSET_TAG) {
     return 'Client';
+  }
+  if (lower === CUSTOMER_INVOICE_ASSET_TAG) {
+    return 'Invoices';
   }
   return formatEnumLabel(tagName);
 }

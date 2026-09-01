@@ -1404,6 +1404,10 @@ def test_refresh_invoice_sets_invoice_template_version(
         "app.services.customer_billing.store_pdf_in_assets_bucket",
         lambda **_: None,
     )
+    monkeypatch.setattr(
+        "app.services.customer_billing.ensure_customer_invoice_asset",
+        lambda *_a, **_k: None,
+    )
     customer_billing.refresh_invoice_pdf(session, inv)  # type: ignore[arg-type]
     assert inv.pdf_template_version == customer_billing.INVOICE_PDF_TEMPLATE_VERSION
 

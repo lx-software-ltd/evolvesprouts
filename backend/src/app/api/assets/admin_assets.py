@@ -20,6 +20,7 @@ from app.api.assets.admin_share_links import (
     rotate_share_link,
 )
 from app.api.assets.assets_common import (
+    asset_links_customer_invoice,
     asset_links_expense_attachment,
     build_s3_key,
     delete_s3_object,
@@ -39,6 +40,7 @@ from app.api.assets.assets_common import (
 )
 from app.db.audit import set_audit_context
 from app.db.engine import get_engine
+from app.db.models import Asset, AssetVisibility
 from app.db.repositories.asset import AssetRepository
 from app.exceptions import NotFoundError, ValidationError
 from app.services.asset_expense_tagging import CLIENT_DOCUMENT_TAG_NAME
@@ -241,6 +243,11 @@ def _update_asset(
         asset = repository.get_with_asset_tags(asset_id)
         if asset is None:
             raise NotFoundError("Asset", str(asset_id))
+        _reject_restricted_system_asset_mutation(
+            asset,
+            visibility=payload.get("visibility"),
+            client_tag_specified=bool(payload.get("client_tag_specified")),
+        )
 
         updated = repository.update_asset(
             asset,
@@ -257,11 +264,6 @@ def _update_asset(
             visibility=payload.get("visibility"),
         )
         if payload.get("client_tag_specified"):
-            if asset_links_expense_attachment(asset):
-                raise ValidationError(
-                    "client_tag cannot be changed for assets linked to an expense",
-                    field="client_tag",
-                )
             repository.set_client_document_tag_link(
                 asset_id,
                 link=payload.get("client_tag") == CLIENT_DOCUMENT_TAG_NAME,
@@ -284,9 +286,19 @@ def _delete_asset(event: Mapping[str, Any], asset_id: UUID) -> dict[str, Any]:
             session, user_id=identity.user_sub or "", request_id=request_id
         )
         repository = AssetRepository(session)
-        asset = repository.get_by_id(asset_id)
+        asset = repository.get_with_asset_tags(asset_id)
         if asset is None:
             raise NotFoundError("Asset", str(asset_id))
+        if asset_links_expense_attachment(asset):
+            raise ValidationError(
+                "Cannot delete assets linked to expenses",
+                field="asset",
+            )
+        if asset_links_customer_invoice(asset):
+            raise ValidationError(
+                "Cannot delete assets linked to customer invoices",
+                field="asset",
+            )
 
         delete_s3_object(s3_key=asset.s3_key)
         repository.delete(asset)
@@ -361,6 +373,33 @@ def _delete_grant(
         repository.delete_grant(grant)
         session.commit()
         return json_response(204, {}, event=event)
+
+
+def _reject_restricted_system_asset_mutation(
+    asset: Asset,
+    *,
+    visibility: AssetVisibility | None,
+    client_tag_specified: bool,
+) -> None:
+    expense_linked = asset_links_expense_attachment(asset)
+    invoice_linked = asset_links_customer_invoice(asset)
+    if not (expense_linked or invoice_linked):
+        return
+    if visibility is not None and visibility != AssetVisibility.RESTRICTED:
+        raise ValidationError(
+            "visibility must remain restricted for expense- and invoice-linked assets",
+            field="visibility",
+        )
+    if client_tag_specified:
+        if expense_linked:
+            raise ValidationError(
+                "client_tag cannot be changed for assets linked to an expense",
+                field="client_tag",
+            )
+        raise ValidationError(
+            "client_tag cannot be changed for assets linked to a customer invoice",
+            field="client_tag",
+        )
 
 
 def _request_id(event: Mapping[str, Any]) -> str | None:

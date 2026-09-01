@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
-from app.db.models import AssetTag, ExpenseAttachment, Tag
+from app.db.models import Asset, AssetTag, AssetVisibility, ExpenseAttachment, Tag
 
 # System tag applied to assets referenced by expense_attachments (unique name).
 EXPENSE_ATTACHMENT_TAG_NAME = "expense_attachment"
@@ -47,6 +47,11 @@ def sync_expense_attachment_tags_for_assets(
                 pg_insert(AssetTag)
                 .values(asset_id=asset_id, tag_id=tag_id)
                 .on_conflict_do_nothing()
+            )
+            session.execute(
+                update(Asset)
+                .where(Asset.id == asset_id)
+                .values(visibility=AssetVisibility.RESTRICTED)
             )
         else:
             session.execute(

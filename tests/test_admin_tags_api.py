@@ -122,8 +122,12 @@ def test_list_tags_rejects_conflicting_query_params(
         admin_tags.handle_admin_tags_request(event, "GET", "/v1/admin/tags")
 
 
+@pytest.mark.parametrize(
+    "name",
+    ["expense_attachment", "client_document", "customer_invoice"],
+)
 def test_create_tag_rejects_reserved_system_name(
-    monkeypatch: Any, api_gateway_event: Any
+    monkeypatch: Any, api_gateway_event: Any, name: str
 ) -> None:
     monkeypatch.setattr(
         admin_tags,
@@ -133,7 +137,7 @@ def test_create_tag_rejects_reserved_system_name(
     event = api_gateway_event(
         method="POST",
         path="/v1/admin/tags",
-        body=json.dumps({"name": "expense_attachment"}),
+        body=json.dumps({"name": name}),
     )
     with pytest.raises(ValidationError, match="reserved"):
         admin_tags.handle_admin_tags_request(event, "POST", "/v1/admin/tags")

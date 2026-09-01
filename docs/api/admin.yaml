@@ -162,7 +162,9 @@ paths:
           required: false
           schema:
             type: string
-          description: Case-insensitive match on title, file name, or resource key.
+          description: >
+            Case-insensitive match on title, file name, or resource key. For assets linked to a
+            customer invoice, also matches `bill_to_display_name` and `invoice_number`.
         - name: visibility
           in: query
           required: false
@@ -302,6 +304,9 @@ paths:
           $ref: "#/components/responses/NotFound"
     delete:
       summary: Delete admin asset
+      description: >
+        Permanently deletes the asset metadata and its S3 object. Not allowed when the asset has
+        the `expense_attachment` or `customer_invoice` tag (400).
       security:
         - AdminBearerAuth: []
       responses:
@@ -323,7 +328,7 @@ paths:
         Step 1 of 2 for replacing the binary stored for an asset while keeping the same asset id.
         Returns a presigned upload URL for a new S3 key under `assets/{id}/...`. Call
         `POST /v1/admin/assets/{id}/content/complete` after the client uploads to that URL.
-        Not allowed when the asset has the `expense_attachment` tag (400). The presigned PUT binds
+        Not allowed when the asset has the `expense_attachment` or `customer_invoice` tag (400). The presigned PUT binds
         `Content-Type: application/pdf` regardless of optional `content_type` in the body.
       security:
         - AdminBearerAuth: []
@@ -356,7 +361,7 @@ paths:
         Step 2 of 2: verifies the object exists at `pending_s3_key`, updates the asset to point at it,
         deletes the previous S3 object, and returns the updated asset. The `pending_s3_key` must be
         the value returned by `POST .../content/init` for this asset id. Not allowed when the asset
-        has the `expense_attachment` tag (400).
+        has the `expense_attachment` or `customer_invoice` tag (400).
         `file_name` must match the filename embedded in `pending_s3_key` after server-side sanitization
         (same rules as init). The object name segment must begin with a standard UUID prefix
         (`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx-`) from init. Stored `content_type` is always
@@ -2665,7 +2670,7 @@ paths:
       summary: Update CRM tag
       description: |
         Set `archived` to `false` to restore an archived tag (clear `archived_at`).
-        System-managed tags (`expense_attachment`, `client_document`) cannot be renamed or archived;
+        System-managed tags (`expense_attachment`, `client_document`, `customer_invoice`) cannot be renamed or archived;
         they may be edited for color/description only.
       security:
         - AdminBearerAuth: []
@@ -2698,7 +2703,7 @@ paths:
       summary: Delete or archive CRM tag
       description: |
         Always returns **200** with `usage_count` and `deleted`. System-managed tags
-        (`expense_attachment`, `client_document`) return **400** and must not be removed.
+        (`expense_attachment`, `client_document`, `customer_invoice`) return **400** and must not be removed.
         When `usage_count` is zero, the tag is **hard-deleted** (`deleted: true`), including
         an archived tag with no remaining links. When `usage_count` is greater than zero,
         the tag is **archived** (`deleted: false`, `tag` present); repeated calls are idempotent
@@ -7722,13 +7727,17 @@ components:
         visibility:
           type: string
           enum: [public, restricted]
+          description: >
+            Must remain `restricted` for assets tagged `expense_attachment` or `customer_invoice` (400
+            if set to `public`).
         client_tag:
           type: string
           nullable: true
           enum: [client_document]
           description: >
             When present, sets or clears the client_document tag on the asset. Omit this property to leave
-            the client tag unchanged. Must not be sent for assets that have the expense_attachment tag (400).
+            the client tag unchanged. Must not be sent for assets that have the `expense_attachment` or
+            `customer_invoice` tag (400).
     CreateAssetResponse:
       type: object
       required:
@@ -8891,7 +8900,7 @@ components:
             is_system:
               type: boolean
               description: >
-                True for reserved asset-pipeline tags (`expense_attachment`, `client_document`).
+                True for reserved asset-pipeline tags (`expense_attachment`, `client_document`, `customer_invoice`).
                 These cannot be renamed, archived, or deleted via the admin API.
     AdminCalendarManualBlockRef:
       type: object
