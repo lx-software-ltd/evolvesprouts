@@ -13,6 +13,7 @@ vi.mock('@/lib/leads-api', () => ({
 }));
 
 import { LeadAiSuggestionPanel } from '@/components/admin/sales/lead-ai-suggestion-panel';
+import { AdminApiError } from '@/lib/api-admin-client';
 
 describe('LeadAiSuggestionPanel', () => {
   beforeEach(() => {
@@ -88,5 +89,31 @@ describe('LeadAiSuggestionPanel', () => {
     });
     expect(screen.getByText(/older than 24 hours/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Refresh suggestion' })).toBeInTheDocument();
+  });
+
+  it('shows a friendly message when generation hits a gateway timeout', async () => {
+    fetchLeadAiSuggestion.mockResolvedValue(null);
+    generateLeadAiSuggestion.mockRejectedValue(
+      new AdminApiError({
+        statusCode: 504,
+        payload: { error: 'Gateway Timeout' },
+        message: 'Gateway Timeout',
+      })
+    );
+
+    const user = userEvent.setup();
+    render(<LeadAiSuggestionPanel leadId='lead-1' />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/No suggestion yet/i)).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Generate suggestion' }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/The AI model took too long to respond/i)
+      ).toBeInTheDocument();
+    });
   });
 });

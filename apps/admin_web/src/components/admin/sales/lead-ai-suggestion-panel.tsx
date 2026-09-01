@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { StatusBanner } from '@/components/status-banner';
 import { AdminEditorCard } from '@/components/ui/admin-editor-card';
 import { Button } from '@/components/ui/button';
+import { AdminApiError } from '@/lib/api-admin-client';
 import { fetchLeadAiSuggestion, generateLeadAiSuggestion } from '@/lib/leads-api';
 import type { LeadAiSuggestion } from '@/types/leads';
 
@@ -26,6 +27,18 @@ function formatStaleReasons(reasons: string[]): string {
     .join('; ');
 }
 
+function formatLeadAiSuggestionError(error: unknown, fallback: string): string {
+  if (error instanceof AdminApiError) {
+    if (error.statusCode === 502 || error.statusCode === 504) {
+      return 'The AI model took too long to respond. Please try again in a moment.';
+    }
+  }
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+  return fallback;
+}
+
 export function LeadAiSuggestionPanel({ leadId }: LeadAiSuggestionPanelProps) {
   const [suggestion, setSuggestion] = useState<LeadAiSuggestion | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,7 +52,7 @@ export function LeadAiSuggestionPanel({ leadId }: LeadAiSuggestionPanelProps) {
       const next = await fetchLeadAiSuggestion(leadId);
       setSuggestion(next);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Failed to load AI suggestion.');
+      setError(formatLeadAiSuggestionError(loadError, 'Failed to load AI suggestion.'));
     } finally {
       setIsLoading(false);
     }
@@ -57,9 +70,7 @@ export function LeadAiSuggestionPanel({ leadId }: LeadAiSuggestionPanelProps) {
       setSuggestion(next);
     } catch (generateError) {
       setError(
-        generateError instanceof Error
-          ? generateError.message
-          : 'Failed to generate AI suggestion.'
+        formatLeadAiSuggestionError(generateError, 'Failed to generate AI suggestion.')
       );
     } finally {
       setIsGenerating(false);

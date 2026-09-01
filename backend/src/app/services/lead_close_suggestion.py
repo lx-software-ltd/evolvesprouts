@@ -17,6 +17,7 @@ from app.db.models.sales_lead import SalesLead
 from app.db.models.sales_lead_ai_suggestion import SalesLeadAiSuggestion
 from app.db.models.whatsapp import WhatsAppConversation, WhatsAppMessage
 from app.services.lead_close_brand_context import EVOLVESPROUTS_BRAND_CONTEXT
+from app.services.aws_proxy import AwsProxyError
 from app.services.openrouter_client import (
     configured_model_name,
     extract_message_text,
@@ -31,7 +32,14 @@ _MAX_LEAD_MESSAGES = 30
 _MAX_SIMILAR_LEADS = 6
 _MAX_NOTES_PER_LEAD = 8
 _MAX_EVENTS = 12
-_OPENROUTER_TIMEOUT_SECONDS = 20
+# Admin Lambda and API Gateway sync integrations cap at 29s. Leave headroom for
+# DB work and the in-VPC proxy invoke; a single OpenRouter attempt must finish
+# inside that budget (production traces showed ~26s end-to-end on success).
+_OPENROUTER_TIMEOUT_SECONDS = 26
+_OPENROUTER_MAX_ATTEMPTS = 1
+_SLOW_OPENROUTER_USER_MESSAGE = (
+    "The AI model took too long to respond. Please try again in a moment."
+)
 _JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL | re.IGNORECASE)
 
 _SYSTEM_PROMPT = """
@@ -164,12 +172,18 @@ def generate_and_store_suggestion(
         },
     )
 
-    raw_body = openrouter_chat_completion(
-        system_prompt=_SYSTEM_PROMPT,
-        user_content=user_prompt,
-        timeout=_OPENROUTER_TIMEOUT_SECONDS,
-        temperature=0.2,
-    )
+    try:
+        raw_body = openrouter_chat_completion(
+            system_prompt=_SYSTEM_PROMPT,
+            user_content=user_prompt,
+            timeout=_OPENROUTER_TIMEOUT_SECONDS,
+            temperature=0.2,
+            max_attempts=_OPENROUTER_MAX_ATTEMPTS,
+        )
+    except AwsProxyError as exc:
+        raise RuntimeError(_format_openrouter_failure(exc)) from exc
+    except RuntimeError as exc:
+        raise RuntimeError(_format_openrouter_failure(exc)) from exc
     text = extract_message_text(raw_body)
     payload = _normalize_payload(_parse_json_object(text))
 
@@ -454,3 +468,23 @@ def _as_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value.replace(tzinfo=UTC)
     return value.astimezone(UTC)
+
+
+def _format_openrouter_failure(exc: BaseException) -> str:
+    """Map proxy/OpenRouter failures to a short admin-safe message."""
+    message = str(exc).strip()
+    lowered = message.lower()
+    timeout_markers = (
+        "timed out",
+        "timeout",
+        "timeouterror",
+        "read timed out",
+        "deadline exceeded",
+    )
+    if any(marker in lowered for marker in timeout_markers):
+        return _SLOW_OPENROUTER_USER_MESSAGE
+    if isinstance(exc, AwsProxyError) and exc.code in {"TimeoutError", "URLError"}:
+        return _SLOW_OPENROUTER_USER_MESSAGE
+    if "status 504" in lowered or "status 502" in lowered:
+        return _SLOW_OPENROUTER_USER_MESSAGE
+    return message or _SLOW_OPENROUTER_USER_MESSAGE

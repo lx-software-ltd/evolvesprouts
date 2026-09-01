@@ -65,6 +65,7 @@ def openrouter_chat_completion(
     timeout: int,
     temperature: float = 0,
     plugins: Sequence[Mapping[str, Any]] | None = None,
+    max_attempts: int | None = None,
 ) -> str:
     """POST a chat completion and return the raw HTTP response body string.
 
@@ -98,10 +99,14 @@ def openrouter_chat_completion(
         "Content-Type": "application/json",
     }
 
+    attempts = max_attempts if max_attempts is not None else _MAX_RETRY_ATTEMPTS
+    if attempts < 1:
+        raise ValueError("max_attempts must be at least 1")
+
     last_status = 0
     last_body = ""
     last_envelope_code: int | None = None
-    for attempt in range(1, _MAX_RETRY_ATTEMPTS + 1):
+    for attempt in range(1, attempts + 1):
         response = http_invoke(
             method="POST",
             url=endpoint_url,
@@ -127,7 +132,7 @@ def openrouter_chat_completion(
         )
         last_envelope_code = envelope_code
 
-        if (http_retryable or envelope_retryable) and attempt < _MAX_RETRY_ATTEMPTS:
+        if (http_retryable or envelope_retryable) and attempt < attempts:
             delay = _retry_delay_seconds(response.get("headers"), attempt)
             preview = _format_openrouter_error_preview(body)
             logger.warning(
