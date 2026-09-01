@@ -64,6 +64,32 @@ describe('AuditLogsPage', () => {
     });
   });
 
+  it('stacks table name above the action badge in one column', async () => {
+    mockListAuditLogs.mockResolvedValue({
+      items: [
+        {
+          id: '00000000-0000-4000-8000-000000000005',
+          table_name: 'customer_invoices',
+          record_id: 'inv-1',
+          action: 'DRAFT_CREATED_CUSTOMIZED',
+          timestamp: '2024-01-05T00:00:00.000Z',
+          source: 'application',
+        },
+      ],
+      next_cursor: null,
+    });
+    render(<AuditLogsPage />);
+    await waitFor(() => {
+      const table = screen.getByRole('table');
+      expect(within(table).getByRole('columnheader', { name: 'Table / action' })).toBeInTheDocument();
+      expect(within(table).queryByRole('columnheader', { name: 'Table', exact: true })).not.toBeInTheDocument();
+      expect(within(table).queryByRole('columnheader', { name: 'Action', exact: true })).not.toBeInTheDocument();
+      const stackedCell = within(table).getByText('customer_invoices').closest('td');
+      expect(stackedCell).not.toBeNull();
+      expect(within(stackedCell as HTMLElement).getByText('DRAFT_CREATED_CUSTOMIZED')).toBeInTheDocument();
+    });
+  });
+
   it('shows webhook actor label in the Actor column', async () => {
     mockListAuditLogs.mockResolvedValue({
       items: [

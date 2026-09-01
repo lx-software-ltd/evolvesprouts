@@ -285,8 +285,7 @@ export function AuditLogsPanel({ auditableTables }: AuditLogsPanelProps) {
             <AdminDataTableHead>
               <tr>
                 <AdminDataTableHeadCell scope='col'>{timestampHeader}</AdminDataTableHeadCell>
-                <AdminDataTableHeadCell scope='col'>Table</AdminDataTableHeadCell>
-                <AdminDataTableHeadCell scope='col'>Action</AdminDataTableHeadCell>
+                <AdminDataTableHeadCell scope='col'>Table / action</AdminDataTableHeadCell>
                 <AdminDataTableHeadCell scope='col' className='hidden md:table-cell'>
                   Changed fields
                 </AdminDataTableHeadCell>
@@ -298,9 +297,11 @@ export function AuditLogsPanel({ auditableTables }: AuditLogsPanelProps) {
               {items.map((item) => (
                 <tr key={item.id} className='hover:bg-slate-50'>
                   <AdminDataTableCell className='text-slate-600'>{formatDate(item.timestamp)}</AdminDataTableCell>
-                  <AdminDataTableCell className='font-medium text-slate-900'>{item.table_name}</AdminDataTableCell>
                   <AdminDataTableCell>
-                    <ActionBadge action={item.action} />
+                    <div className='space-y-1'>
+                      <div className='font-medium text-slate-900'>{item.table_name}</div>
+                      <ActionBadge action={item.action} />
+                    </div>
                   </AdminDataTableCell>
                   <AdminDataTableCell className='hidden text-slate-500 md:table-cell'>
                     {item.changed_fields?.length ? item.changed_fields.join(', ') : '—'}

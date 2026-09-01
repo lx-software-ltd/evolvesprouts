@@ -1,17 +1,33 @@
-import type { components } from '@/types/generated/admin-api.generated';
+const INSERT_LIKE_ACTIONS = new Set([
+  'INSERT',
+  'DRAFT_CREATED',
+  'DRAFT_CREATED_CUSTOMIZED',
+]);
 
-type AuditLogAction = components['schemas']['AuditLog']['action'];
+const DELETE_LIKE_ACTIONS = new Set([
+  'DELETE',
+  'DELETE_DRAFT',
+  'VOID_FROM_DRAFT',
+  'VOID_FROM_ISSUED',
+]);
 
-export function ActionBadge({ action }: { action: AuditLogAction }) {
-  const colors: Record<AuditLogAction, string> = {
-    INSERT: 'bg-green-100 text-green-800',
-    UPDATE: 'bg-blue-100 text-blue-800',
-    DELETE: 'bg-red-100 text-red-800',
-  };
+export function actionBadgeClassName(action: string): string {
+  if (INSERT_LIKE_ACTIONS.has(action)) {
+    return 'bg-green-100 text-green-800';
+  }
+  if (action === 'UPDATE') {
+    return 'bg-blue-100 text-blue-800';
+  }
+  if (DELETE_LIKE_ACTIONS.has(action)) {
+    return 'bg-red-100 text-red-800';
+  }
+  return 'bg-slate-100 text-slate-700';
+}
 
+export function ActionBadge({ action }: { action: string }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${colors[action]}`}
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${actionBadgeClassName(action)}`}
     >
       {action}
     </span>
