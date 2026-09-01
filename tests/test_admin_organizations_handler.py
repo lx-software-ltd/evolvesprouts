@@ -429,7 +429,7 @@ def test_get_organization_returns_partner_row_via_non_vendor_loader(
 
         def get_non_vendor_organization_by_id(self, organization_id: UUID) -> object:
             assert organization_id == partner_id
-            return object()
+            return type("Org", (), {"id": partner_id})()
 
     class _FakeSessionCtx:
         def __enter__(self) -> object:
