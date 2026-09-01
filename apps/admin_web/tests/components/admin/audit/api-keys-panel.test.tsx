@@ -66,6 +66,24 @@ describe('ApiKeysPanel', () => {
     expect(await screen.findByText(/esk_shown_once/)).toBeInTheDocument();
   });
 
+  it('places scope and expires at on the same editor row', async () => {
+    render(<ApiKeysPanel />);
+    expect(await screen.findByText('Partner read')).toBeInTheDocument();
+
+    const scope = screen.getByLabelText('Scope');
+    const expires = screen.getByLabelText('Expires at (optional)');
+    const row = scope.closest('div.grid');
+    expect(row).toBe(expires.closest('div.grid'));
+    expect(row).toHaveClass('sm:grid-cols-2');
+  });
+
+  it('styles the Operations revoke action as danger', async () => {
+    render(<ApiKeysPanel />);
+    expect(await screen.findByText('Partner read')).toBeInTheDocument();
+
+    expect(screen.getByRole('button', { name: 'Revoke' })).toHaveClass('bg-red-600');
+  });
+
   it('revokes a key from Operations after confirm', async () => {
     mockRevoke.mockResolvedValue({ ...sampleKey, status: 'revoked' });
     const user = userEvent.setup();
