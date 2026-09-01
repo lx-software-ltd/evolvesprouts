@@ -82,8 +82,8 @@ describe('AuditLogsPage', () => {
     await waitFor(() => {
       const table = screen.getByRole('table');
       expect(within(table).getByRole('columnheader', { name: 'Table / action' })).toBeInTheDocument();
-      expect(within(table).queryByRole('columnheader', { name: 'Table', exact: true })).not.toBeInTheDocument();
-      expect(within(table).queryByRole('columnheader', { name: 'Action', exact: true })).not.toBeInTheDocument();
+      expect(within(table).queryByRole('columnheader', { name: /^Table$/ })).not.toBeInTheDocument();
+      expect(within(table).queryByRole('columnheader', { name: /^Action$/ })).not.toBeInTheDocument();
       const stackedCell = within(table).getByText('customer_invoices').closest('td');
       expect(stackedCell).not.toBeNull();
       expect(within(stackedCell as HTMLElement).getByText('DRAFT_CREATED_CUSTOMIZED')).toBeInTheDocument();
