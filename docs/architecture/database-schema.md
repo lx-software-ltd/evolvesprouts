@@ -535,6 +535,16 @@ maps legacy `note.id` to the **first** inserted row’s UUID.
 - `sales_leads_guide_dedup_idx` enforces idempotency for media processing
   by unique (`contact_id`, `lead_type`, `asset_id`) when `asset_id` is present.
 
+### `sales_settings`
+
+- Purpose: singleton sales configuration (always `id = 1`).
+- `default_assigned_to` is an optional Cognito `sub` applied when a new lead is
+  created without an explicit assignee (admin create, public forms, inbox ingest,
+  and media/free-guide leads).
+- `notify_assignee_on_assignment` emails the new assignee on first assignment and
+  reassignment. Unassign does not send mail.
+- `updated_by` stores the admin Cognito `sub` that last saved the row.
+
 ### `sales_lead_events`
 
 - Immutable event log for lead lifecycle transitions and actions.

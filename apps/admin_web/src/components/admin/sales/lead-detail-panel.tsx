@@ -88,6 +88,7 @@ export interface LeadDetailPanelProps {
   mode: 'create' | 'edit';
   lead: LeadDetail | null;
   users: AdminUser[];
+  defaultAssignedTo?: string | null;
   isLoading: boolean;
   error: string;
   onStartCreate: () => void;
@@ -99,6 +100,7 @@ export function LeadDetailPanel({
   mode,
   lead,
   users,
+  defaultAssignedTo = null,
   isLoading,
   error,
   onStartCreate,
@@ -106,18 +108,36 @@ export function LeadDetailPanel({
   onUpdate,
 }: LeadDetailPanelProps) {
   const [form, setForm] = useState<LeadEditorFormState>(() =>
-    mode === 'edit' && lead ? formFromLead(lead) : EMPTY_EDITOR_FORM
+    mode === 'edit' && lead
+      ? formFromLead(lead)
+      : { ...EMPTY_EDITOR_FORM, assignedTo: defaultAssignedTo ?? '' }
   );
   const [hydratedLeadId, setHydratedLeadId] = useState<string | null>(
     mode === 'edit' && lead ? lead.id : null
+  );
+  const [assigneeTouched, setAssigneeTouched] = useState(false);
+  const [appliedDefault, setAppliedDefault] = useState(
+    Boolean(mode === 'create' && defaultAssignedTo)
   );
 
   if (mode === 'edit' && lead && hydratedLeadId !== lead.id) {
     setHydratedLeadId(lead.id);
     setForm(formFromLead(lead));
+    setAssigneeTouched(false);
+    setAppliedDefault(true);
   } else if (mode === 'create' && hydratedLeadId !== null) {
     setHydratedLeadId(null);
-    setForm(EMPTY_EDITOR_FORM);
+    setForm({ ...EMPTY_EDITOR_FORM, assignedTo: defaultAssignedTo ?? '' });
+    setAssigneeTouched(false);
+    setAppliedDefault(Boolean(defaultAssignedTo));
+  } else if (
+    mode === 'create' &&
+    !assigneeTouched &&
+    !appliedDefault &&
+    defaultAssignedTo
+  ) {
+    setForm((previous) => ({ ...previous, assignedTo: defaultAssignedTo }));
+    setAppliedDefault(true);
   }
 
   const needsLostReason = mode === 'edit' && form.funnelStage === 'lost';
@@ -144,7 +164,9 @@ export function LeadDetailPanel({
         await onCreate({
           ...sharedContact,
           lead_type: form.leadType,
-          assigned_to: form.assignedTo || null,
+          ...(assigneeTouched || form.assignedTo
+            ? { assigned_to: form.assignedTo || null }
+            : {}),
         });
         return;
       }
@@ -330,11 +352,15 @@ export function LeadDetailPanel({
                 <Select
                   id='lead-editor-assigned-to'
                   value={form.assignedTo}
-                  onChange={(event) =>
-                    setForm((previous) => ({ ...previous, assignedTo: event.target.value }))
-                  }
+                  onChange={(event) => {
+                    setAssigneeTouched(true);
+                    setForm((previous) => ({ ...previous, assignedTo: event.target.value }));
+                  }}
                 >
                   <option value=''>Unassigned</option>
+                  {form.assignedTo && !users.some((user) => user.sub === form.assignedTo) ? (
+                    <option value={form.assignedTo}>{form.assignedTo}</option>
+                  ) : null}
                   {users.map((user) => (
                     <option key={user.sub} value={user.sub}>
                       {user.name || user.email || user.sub}

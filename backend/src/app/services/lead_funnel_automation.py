@@ -11,6 +11,11 @@ from sqlalchemy.orm import Session
 from app.db.models.enums import FunnelStage, LeadEventType, LeadType
 from app.db.models.sales_lead import SalesLead
 from app.db.repositories.sales_lead import SalesLeadRepository
+from app.services.sales_assignment import (
+    notify_lead_assignee,
+    record_new_lead_assignment_event,
+    resolve_create_assignee,
+)
 
 _SYSTEM_ACTOR = "system"
 
@@ -97,11 +102,13 @@ def link_conversation_lead_and_advance(
     elif create_leads:
         lead = repository.find_open_by_contact(contact_id)
         if lead is None:
+            assigned_to = resolve_create_assignee(session)
             lead = repository.create_with_event(
                 SalesLead(
                     contact_id=contact_id,
                     lead_type=LeadType.OTHER,
                     funnel_stage=FunnelStage.NEW,
+                    assigned_to=assigned_to,
                 ),
                 LeadEventType.CREATED,
                 metadata={
@@ -111,6 +118,13 @@ def link_conversation_lead_and_advance(
                 to_stage=FunnelStage.NEW,
                 created_by=_SYSTEM_ACTOR,
             )
+            record_new_lead_assignment_event(
+                repository,
+                lead_id=getattr(lead, "id", None),
+                assigned_to=assigned_to,
+                actor_sub=_SYSTEM_ACTOR,
+            )
+            notify_lead_assignee(session, lead, previous=None)
             counters["leads_created"] += 1
         conversation.lead_id = lead.id
 

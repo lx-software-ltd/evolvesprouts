@@ -19,6 +19,7 @@ from app.db.repositories.inbound_email import InboundEmailRepository
 from app.db.repositories.location import LocationRepository
 from app.db.repositories.organization import OrganizationRepository
 from app.db.repositories.sales_lead import SalesLeadRepository
+from app.db.repositories.sales_settings import SalesSettingsRepository
 from app.db.repositories.service import ServiceRepository
 from app.db.repositories.service_instance import ServiceInstanceRepository
 from app.db.repositories.whatsapp import WhatsAppRepository
@@ -39,6 +40,7 @@ __all__ = [
     "LocationRepository",
     "OrganizationRepository",
     "SalesLeadRepository",
+    "SalesSettingsRepository",
     "ServiceRepository",
     "ServiceInstanceRepository",
     "WhatsAppRepository",

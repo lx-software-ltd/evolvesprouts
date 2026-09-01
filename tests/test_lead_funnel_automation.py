@@ -6,7 +6,10 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 from app.db.models.enums import FunnelStage, LeadEventType
-from app.services.lead_funnel_automation import maybe_advance_lead_funnel
+from app.services.lead_funnel_automation import (
+    link_conversation_lead_and_advance,
+    maybe_advance_lead_funnel,
+)
 
 
 class _FakeLeadRepo:
@@ -113,3 +116,65 @@ def test_second_outbound_does_not_change_contacted_lead(monkeypatch) -> None:
 
     assert result is None
     assert lead.funnel_stage is FunnelStage.CONTACTED
+
+
+def test_link_creates_lead_with_default_assignee(monkeypatch) -> None:
+    created: list[object] = []
+    assignment_events: list[object] = []
+    notifications: list[object] = []
+    lead_id = uuid4()
+
+    class _CreateRepo(_FakeLeadRepo):
+        def find_open_by_contact(self, _contact_id: object) -> None:
+            return None
+
+        def create_with_event(
+            self, lead: object, *_a: object, **_k: object
+        ) -> SimpleNamespace:
+            created.append(lead)
+            return SimpleNamespace(
+                id=lead_id,
+                assigned_to=getattr(lead, "assigned_to", None),
+                funnel_stage=FunnelStage.NEW,
+            )
+
+    repo = _CreateRepo(object())
+    monkeypatch.setattr(
+        "app.services.lead_funnel_automation.SalesLeadRepository",
+        lambda _session: repo,
+    )
+    monkeypatch.setattr(
+        "app.services.lead_funnel_automation.resolve_create_assignee",
+        lambda _session: "user-default",
+    )
+    monkeypatch.setattr(
+        "app.services.lead_funnel_automation.record_new_lead_assignment_event",
+        lambda *_a, **kwargs: assignment_events.append(kwargs),
+    )
+    monkeypatch.setattr(
+        "app.services.lead_funnel_automation.notify_lead_assignee",
+        lambda *_a, **kwargs: notifications.append(kwargs),
+    )
+
+    conversation = SimpleNamespace(
+        id=uuid4(),
+        contact_id=uuid4(),
+        lead_id=None,
+        inbound_count=0,
+        outbound_count=0,
+    )
+    counters = {"leads_created": 0}
+    link_conversation_lead_and_advance(
+        object(),
+        conversation=conversation,
+        channel="whatsapp",
+        counters=counters,
+        create_leads=True,
+        is_outbound=False,
+    )
+
+    assert counters["leads_created"] == 1
+    assert getattr(created[0], "assigned_to", None) == "user-default"
+    assert assignment_events[0]["assigned_to"] == "user-default"
+    assert notifications[0]["previous"] is None
+    assert conversation.lead_id == lead_id

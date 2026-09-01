@@ -12,7 +12,10 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.api.admin_leads_common import (
+    count_leads_in_window,
     encode_lead_cursor,
+    max_datetime,
+    min_datetime,
     parse_create_lead_payload,
     parse_lead_filters,
     parse_optional_datetime,
@@ -22,6 +25,7 @@ from app.api.admin_leads_common import (
     serialize_lead_summary,
     serialize_note,
 )
+from app.api.admin_sales_settings import handle_sales_settings_request
 from app.api.admin_request import parse_body, parse_uuid, query_param
 from app.api.admin_validators import MAX_DESCRIPTION_LENGTH, validate_string_length
 from app.api.assets.assets_common import extract_identity, split_route_parts
@@ -35,6 +39,11 @@ from app.db.repositories import (
     SalesLeadRepository,
 )
 from app.exceptions import NotFoundError, ValidationError
+from app.services.sales_assignment import (
+    notify_lead_assignee,
+    record_new_lead_assignment_event,
+    resolve_create_assignee,
+)
 from app.utils import json_response
 from app.utils.responses import get_cors_headers, get_security_headers
 
@@ -69,6 +78,9 @@ def handle_admin_leads_request(
         if method != "GET":
             return json_response(405, {"error": "Method not allowed"}, event=event)
         return _export_leads(event)
+
+    if len(parts) == 3 and parts[2] == "settings":
+        return handle_sales_settings_request(event, method, actor_sub=identity.user_sub)
 
     lead_id = parse_uuid(parts[2])
     if len(parts) == 3:
@@ -187,26 +199,29 @@ def _create_lead(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, Any]:
             contact.instagram_handle = payload["instagram_handle"]
         contact_repo.update(contact)
 
+        assigned_to = resolve_create_assignee(
+            session,
+            assigned_to=payload["assigned_to"],
+            assigned_to_provided=payload["assigned_to_provided"],
+        )
         lead = lead_repo.create_with_event(
             SalesLead(
                 contact_id=contact.id,
                 lead_type=payload["lead_type"],
                 funnel_stage=FunnelStage.NEW,
-                assigned_to=payload["assigned_to"],
+                assigned_to=assigned_to,
             ),
             LeadEventType.CREATED,
             from_stage=None,
             to_stage=FunnelStage.NEW,
             created_by=actor_sub,
         )
-
-        if payload["assigned_to"]:
-            lead_repo.add_event(
-                lead_id=lead.id,
-                event_type=LeadEventType.ASSIGNED,
-                metadata={"from": None, "to": payload["assigned_to"]},
-                created_by=actor_sub,
-            )
+        record_new_lead_assignment_event(
+            lead_repo,
+            lead_id=lead.id,
+            assigned_to=assigned_to,
+            actor_sub=actor_sub,
+        )
 
         if payload["note"]:
             note = note_repo.create(
@@ -228,6 +243,7 @@ def _create_lead(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, Any]:
         created = lead_repo.get_by_id_with_details(lead.id)
         if created is None:
             raise NotFoundError("SalesLead", str(lead.id))
+        notify_lead_assignee(session, created, previous=None)
         return json_response(
             201,
             {"lead": serialize_lead_detail(created)},
@@ -283,8 +299,9 @@ def _update_lead(
                     created_by=actor_sub,
                 )
 
+        previous_assignee = lead.assigned_to
+        assignment_changed = False
         if payload["assigned_to_provided"]:
-            previous_assignee = lead.assigned_to
             if previous_assignee != payload["assigned_to"]:
                 lead.assigned_to = payload["assigned_to"]
                 lead.updated_at = datetime.now(UTC)
@@ -295,11 +312,14 @@ def _update_lead(
                     metadata={"from": previous_assignee, "to": payload["assigned_to"]},
                     created_by=actor_sub,
                 )
+                assignment_changed = True
 
         session.commit()
         updated = repository.get_by_id_with_details(lead.id)
         if updated is None:
             raise NotFoundError("SalesLead", str(lead.id))
+        if assignment_changed:
+            notify_lead_assignee(session, updated, previous=previous_assignee)
         return json_response(200, {"lead": serialize_lead_detail(updated)}, event=event)
 
 
@@ -367,16 +387,16 @@ def _get_analytics(event: Mapping[str, Any]) -> dict[str, Any]:
             datetime.min.time(),
             tzinfo=UTC,
         )
-        week_window_start = _max_datetime(date_from, week_start)
-        week_window_end = _min_datetime(date_to, now)
-        month_window_start = _max_datetime(date_from, month_start)
-        month_window_end = _min_datetime(date_to, now)
-        leads_this_week = _count_in_window(
+        week_window_start = max_datetime(date_from, week_start)
+        week_window_end = min_datetime(date_to, now)
+        month_window_start = max_datetime(date_from, month_start)
+        month_window_end = min_datetime(date_to, now)
+        leads_this_week = count_leads_in_window(
             repository,
             date_from=week_window_start,
             date_to=week_window_end,
         )
-        leads_this_month = _count_in_window(
+        leads_this_month = count_leads_in_window(
             repository,
             date_from=month_window_start,
             date_to=month_window_end,
@@ -473,26 +493,3 @@ def _export_leads(event: Mapping[str, Any]) -> dict[str, Any]:
             "headers": response_headers,
             "body": output.getvalue(),
         }
-
-
-def _max_datetime(first: datetime | None, second: datetime) -> datetime:
-    if first is None:
-        return second
-    return first if first >= second else second
-
-
-def _min_datetime(first: datetime | None, second: datetime) -> datetime:
-    if first is None:
-        return second
-    return first if first <= second else second
-
-
-def _count_in_window(
-    repository: SalesLeadRepository,
-    *,
-    date_from: datetime,
-    date_to: datetime,
-) -> int:
-    if date_from > date_to:
-        return 0
-    return repository.count_leads(date_from=date_from, date_to=date_to)

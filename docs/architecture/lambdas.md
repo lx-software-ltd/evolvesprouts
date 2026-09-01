@@ -145,7 +145,8 @@ their primary responsibilities.
   `evolvesprouts-poll-responses`), `/v1/admin/polls/{poll_slug}/answers`
   (`GET` lists all stored answer rows; `DELETE` clears all rows for the poll),
   `/v1/admin/polls/{poll_slug}/answers/export` (`GET`; CSV export),
-  `/v1/admin/leads/*`, `/v1/admin/users`, `/v1/admin/instructors`,
+  `/v1/admin/leads/*` (including `GET|PATCH /v1/admin/leads/settings` for the
+  default new-lead assignee and assignee-notification toggle), `/v1/admin/users`, `/v1/admin/instructors`,
   `GET /v1/admin/audit-logs` and `GET /v1/admin/audit-logs/{id}` (read-only `audit_log` history; list supports filters `table`, `record_id`, `user_id`, `email`, `action`, `since`, `cursor`, `limit`; `email` resolves via Cognito `list_users`, known system-actor labels/`user_id` values, or `api_keys.name`; optional `user_email` is a Cognito email, API key name, or system-actor label),
   `/v1/admin/services/*` (including `GET /v1/admin/services/instances` for
   cross-service instance listing with optional `service_id` / `service_type` /

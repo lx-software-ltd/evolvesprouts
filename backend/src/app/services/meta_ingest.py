@@ -261,8 +261,7 @@ def _ensure_contact_and_lead(
         if linked is not None:
             _maybe_set_instagram_handle(session, linked, instagram_handle)
 
-    contact_id = conversation.contact_id
-    if contact_id is None:
+    if conversation.contact_id is None:
         return
 
     created_before = counters.get("leads_created", 0)

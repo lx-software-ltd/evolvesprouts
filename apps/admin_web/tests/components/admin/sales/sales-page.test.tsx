@@ -20,6 +20,17 @@ const { mockUseSalesPage, state } = vi.hoisted(() => {
       error: '',
       refetch: vi.fn().mockResolvedValue(undefined),
     },
+    salesSettings: {
+      settings: {
+        default_assigned_to: null,
+        notify_assignee_on_assignment: false,
+      },
+      isLoading: false,
+      isSaving: false,
+      error: '',
+      refetch: vi.fn().mockResolvedValue(undefined),
+      save: vi.fn().mockResolvedValue(undefined),
+    },
     leadList: {
       leads: [],
       filters: {
@@ -171,6 +182,7 @@ describe('SalesPage', () => {
     render(<SalesPage />);
 
     expect(screen.getByRole('button', { name: 'Pipeline' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Configuration' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Instagram' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Messenger' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'WhatsApp' })).toBeInTheDocument();
@@ -214,6 +226,20 @@ describe('SalesPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(state.startCreateLead).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the configuration card on the configuration tab', () => {
+    state.activeView = 'configuration';
+    render(<SalesPage />);
+
+    expect(screen.getByRole('heading', { name: 'Sales configuration' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Default assignee')).toBeInTheDocument();
+    expect(
+      screen.getByLabelText('Email the assignee when a lead is assigned to them')
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
+
+    state.activeView = 'pipeline';
   });
 
   it('moves KPI cards, funnel, source breakdown, and date filters to analytics', async () => {

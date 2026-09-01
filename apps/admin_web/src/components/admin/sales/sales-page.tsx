@@ -5,6 +5,7 @@ import { useCallback, useState } from 'react';
 
 import { LeadDetailPanel } from './lead-detail-panel';
 import { LeadsTable } from './leads-table';
+import { SalesConfigurationView } from './sales-configuration-view';
 import { SalesHeader } from './sales-header';
 import { MetaConversationsView } from './meta-conversations-view';
 import { WhatsAppConversationsView } from './whatsapp-conversations-view';
@@ -31,6 +32,7 @@ const AnalyticsView = dynamic(
 const SALES_TAB_ITEMS: { key: SalesView; label: string }[] = [
   { key: 'pipeline', label: 'Pipeline' },
   { key: 'analytics', label: 'Analytics' },
+  { key: 'configuration', label: 'Configuration' },
   { key: 'instagram', label: 'Instagram' },
   { key: 'messenger', label: 'Messenger' },
   { key: 'whatsapp', label: 'WhatsApp' },
@@ -43,6 +45,7 @@ export function SalesPage() {
   const [bulkActionError, setBulkActionError] = useState('');
   const hasAnyError =
     state.adminUsers.error ||
+    state.salesSettings.error ||
     state.leadList.error ||
     state.leadDetail.error ||
     state.leadAnalytics.error ||
@@ -88,6 +91,15 @@ export function SalesPage() {
         ) : (
           <MetaConversationsView channel='facebook' />
         )
+      ) : state.activeView === 'configuration' ? (
+        <SalesConfigurationView
+          users={state.adminUsers.users}
+          settings={state.salesSettings.settings}
+          isLoading={state.salesSettings.isLoading || state.adminUsers.isLoading}
+          isSaving={state.salesSettings.isSaving}
+          error={state.salesSettings.error}
+          onSave={state.salesSettings.save}
+        />
       ) : state.activeView === 'pipeline' ? (
         <>
           <LeadDetailPanel
@@ -95,6 +107,7 @@ export function SalesPage() {
             mode={state.isCreateMode ? 'create' : 'edit'}
             lead={state.leadDetail.lead}
             users={state.adminUsers.users}
+            defaultAssignedTo={state.salesSettings.settings?.default_assigned_to ?? null}
             isLoading={state.mutations.isLoading || state.leadDetail.isLoading}
             error={state.mutations.error}
             onStartCreate={state.startCreateLead}
@@ -114,7 +127,6 @@ export function SalesPage() {
             filters={state.leadList.filters}
             users={state.adminUsers.users}
             selectedLeadId={state.selectedLeadId}
-            totalCount={state.leadList.totalCount}
             isLoading={state.leadList.isLoading}
             isLoadingMore={state.leadList.isLoadingMore}
             error={state.leadList.error}
