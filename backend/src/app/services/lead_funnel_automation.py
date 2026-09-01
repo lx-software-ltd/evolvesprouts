@@ -23,6 +23,8 @@ class ConversationLeadLink(Protocol):
     inbound_count: int | None
     outbound_count: int | None
     id: UUID
+
+
 _RANK = {
     FunnelStage.NEW: 0,
     FunnelStage.CONTACTED: 1,

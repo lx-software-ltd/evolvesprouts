@@ -98,7 +98,6 @@ def test_ingest_stores_inbound_and_creates_lead(
 
     monkeypatch.setattr(ingest, "WhatsAppConversation", _FakeConversation)
     monkeypatch.setattr(ingest, "WhatsAppRepository", _FakeRepo)
-    monkeypatch.setattr(ingest, "SalesLeadRepository", _FakeLeadRepo)
     monkeypatch.setattr(funnel, "SalesLeadRepository", _FakeLeadRepo)
 
     payload = {
@@ -231,14 +230,15 @@ def test_ingest_stores_coexistence_echo(monkeypatch: pytest.MonkeyPatch) -> None
             added.append(obj)
 
         def flush(self) -> None:
-            return None
+            for obj in added:
+                if getattr(obj, "id", "missing") is None:
+                    setattr(obj, "id", uuid4())
 
         def execute(self, *_a: object, **_k: object) -> SimpleNamespace:
             return SimpleNamespace(scalar_one_or_none=lambda: None)
 
     monkeypatch.setattr(ingest, "WhatsAppConversation", _FakeConversation)
     monkeypatch.setattr(ingest, "WhatsAppRepository", _FakeRepo)
-    monkeypatch.setattr(ingest, "SalesLeadRepository", _FakeLeadRepo)
     monkeypatch.setattr(funnel, "SalesLeadRepository", _FakeLeadRepo)
 
     payload = {
@@ -324,7 +324,6 @@ def test_ingest_history_chunk_does_not_create_leads(
 
     monkeypatch.setattr(ingest, "WhatsAppConversation", _FakeConversation)
     monkeypatch.setattr(ingest, "WhatsAppRepository", _FakeRepo)
-    monkeypatch.setattr(ingest, "SalesLeadRepository", _FakeLeadRepo)
     monkeypatch.setattr(funnel, "SalesLeadRepository", _FakeLeadRepo)
 
     payload = {
@@ -422,7 +421,6 @@ def test_third_inbound_moves_existing_lead_to_engaged(
             return None
 
     monkeypatch.setattr(ingest, "WhatsAppRepository", _FakeRepo)
-    monkeypatch.setattr(ingest, "SalesLeadRepository", _FakeLeadRepo)
     monkeypatch.setattr(funnel, "SalesLeadRepository", _FakeLeadRepo)
 
     payload = {

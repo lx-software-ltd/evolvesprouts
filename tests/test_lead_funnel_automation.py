@@ -53,7 +53,9 @@ def test_third_inbound_moves_contacted_lead_to_engaged(monkeypatch) -> None:
         "app.services.lead_funnel_automation.SalesLeadRepository",
         lambda _session: repo,
     )
-    lead = SimpleNamespace(id=uuid4(), funnel_stage=FunnelStage.CONTACTED, updated_at=None)
+    lead = SimpleNamespace(
+        id=uuid4(), funnel_stage=FunnelStage.CONTACTED, updated_at=None
+    )
 
     result = maybe_advance_lead_funnel(
         object(),
@@ -74,7 +76,9 @@ def test_does_not_move_qualified_or_later_leads(monkeypatch) -> None:
         "app.services.lead_funnel_automation.SalesLeadRepository",
         lambda _session: repo,
     )
-    lead = SimpleNamespace(id=uuid4(), funnel_stage=FunnelStage.QUALIFIED, updated_at=None)
+    lead = SimpleNamespace(
+        id=uuid4(), funnel_stage=FunnelStage.QUALIFIED, updated_at=None
+    )
 
     result = maybe_advance_lead_funnel(
         object(),
@@ -95,7 +99,9 @@ def test_second_outbound_does_not_change_contacted_lead(monkeypatch) -> None:
         "app.services.lead_funnel_automation.SalesLeadRepository",
         lambda _session: repo,
     )
-    lead = SimpleNamespace(id=uuid4(), funnel_stage=FunnelStage.CONTACTED, updated_at=None)
+    lead = SimpleNamespace(
+        id=uuid4(), funnel_stage=FunnelStage.CONTACTED, updated_at=None
+    )
 
     result = maybe_advance_lead_funnel(
         object(),
