@@ -568,6 +568,18 @@ maps legacy `note.id` to the **first** inserted row’s UUID.
 - FK `lead_id` → `sales_leads.id` with `ON DELETE CASCADE`.
 - No seed rows (generated on demand).
 
+
+### `sales_lead_ai_suggestion_jobs`
+
+- Purpose: async generation jobs for lead AI close suggestions (SQS worker).
+- Status lifecycle: `pending` → `processing` → `succeeded` | `failed`.
+- Timing columns: `created_at`, `started_at`, `finished_at` (plus `updated_at`) so
+  admins can measure queue wait and OpenRouter duration.
+- Optional `suggestion_id` FK → `sales_lead_ai_suggestions.id` (`ON DELETE SET NULL`)
+  when the job succeeds.
+- FK `lead_id` → `sales_leads.id` with `ON DELETE CASCADE`.
+- No seed rows (created on demand).
+
 ### `whatsapp_conversations`
 
 - Purpose: one WhatsApp Cloud API thread per counterparty `wa_id`.

@@ -2123,8 +2123,8 @@ export interface paths {
         };
         put?: never;
         /**
-         * Generate AI close suggestion for a lead
-         * @description Generates a new closing/follow-up suggestion via the shared OpenRouter pipeline (same Secrets Manager key, allow-listed chat-completions URL, and AWS HTTP proxy as expense invoice parsing). Persists the result with a conversation watermark for staleness checks. Does not send messages.
+         * Queue AI close suggestion generation for a lead
+         * @description Enqueues an asynchronous job that generates a closing/follow-up suggestion via the shared OpenRouter pipeline (same Secrets Manager key, allow-listed chat-completions URL, and AWS HTTP proxy as expense invoice parsing). Poll `GET /v1/admin/leads/{id}/ai-suggestion/jobs/{job_id}` for status, timing (`queue_wait_ms`, `duration_ms`), and the resulting suggestion. Does not send messages.
          */
         post: {
             parameters: {
@@ -2138,13 +2138,13 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Suggestion generated and stored. */
-                201: {
+                /** @description Generation job accepted. */
+                202: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["LeadAiSuggestionResponse"];
+                        "application/json": components["schemas"]["LeadAiSuggestionJobResponse"];
                     };
                 };
                 400: components["responses"]["BadRequest"];
@@ -2152,6 +2152,55 @@ export interface paths {
                 404: components["responses"]["NotFound"];
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/leads/{id}/ai-suggestion/jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Sales lead identifier. */
+                id: components["parameters"]["LeadId"];
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Get lead AI suggestion job status
+         * @description Returns job status and timing. When `status` is `succeeded`, includes the serialized suggestion. Use `queue_wait_ms` (created→started) and `duration_ms` (started→finished) to time OpenRouter runs.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Sales lead identifier. */
+                    id: components["parameters"]["LeadId"];
+                    job_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Job status payload. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LeadAiSuggestionJobResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -7237,6 +7286,33 @@ export interface components {
         };
         LeadAiSuggestionResponse: {
             suggestion: components["schemas"]["LeadAiSuggestion"] | null;
+        };
+        LeadAiSuggestionJob: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            lead_id: string;
+            /** @enum {string} */
+            status: "pending" | "processing" | "succeeded" | "failed";
+            error_message?: string | null;
+            /** Format: uuid */
+            suggestion_id?: string | null;
+            /** Format: date-time */
+            created_at?: string | null;
+            /** Format: date-time */
+            started_at?: string | null;
+            /** Format: date-time */
+            finished_at?: string | null;
+            /** Format: date-time */
+            updated_at?: string | null;
+            /** @description Milliseconds from created_at to started_at. */
+            queue_wait_ms?: number | null;
+            /** @description Milliseconds from started_at to finished_at (OpenRouter run). */
+            duration_ms?: number | null;
+            suggestion?: components["schemas"]["LeadAiSuggestion"] | null;
+        };
+        LeadAiSuggestionJobResponse: {
+            job: components["schemas"]["LeadAiSuggestionJob"];
         };
         WhatsAppConversationSummary: {
             /** Format: uuid */

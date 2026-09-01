@@ -93,9 +93,9 @@ their primary responsibilities.
   CDN or browser caching keyed only by URL (not `s3_key`) may show stale bytes until TTL—
   downloads keyed by changing `s3_key` generally avoid that.
   `/v1/admin/leads/{id}/ai-suggestion` (GET latest stored close suggestion / POST
-  generate via OpenRouter through `AwsApiProxyFunction` using the same secret, model,
-  and chat-completions URL as expense parsing; persists JSON advice with a conversation
-  watermark; stale after 24 hours or when newer WhatsApp/Meta messages arrive),
+  enqueues async generation on `LeadAiSuggestionFunction` via SQS; poll
+  `/v1/admin/leads/{id}/ai-suggestion/jobs/{job_id}` for status and timing),
+  `/v1/admin/leads/{id}/ai-suggestion/jobs/{job_id}` (GET job status / duration),
   `/v1/admin/contacts/*` (including `GET /v1/admin/contacts` optional `contact_type` filter;
   list and single-contact responses include read-only `family_location_summary` and
   `organization_location_summary` when the contact is linked to a family or organisation that has a venue location,
