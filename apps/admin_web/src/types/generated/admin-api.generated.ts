@@ -66,7 +66,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    /** @description Case-insensitive match on title, file name, or resource key. */
+                    /** @description Case-insensitive match on title, file name, or resource key. For assets linked to a customer invoice, also matches `bill_to_display_name` and `invoice_number`. */
                     query?: string;
                     visibility?: "public" | "restricted";
                     asset_type?: "guide" | "video" | "pdf" | "document";
@@ -202,7 +202,10 @@ export interface paths {
             };
         };
         post?: never;
-        /** Delete admin asset */
+        /**
+         * Delete admin asset
+         * @description Permanently deletes the asset metadata and its S3 object. Not allowed when the asset has the `expense_attachment` or `customer_invoice` tag (400).
+         */
         delete: {
             parameters: {
                 query?: never;
@@ -276,7 +279,7 @@ export interface paths {
         put?: never;
         /**
          * Begin admin asset file replacement
-         * @description Step 1 of 2 for replacing the binary stored for an asset while keeping the same asset id. Returns a presigned upload URL for a new S3 key under `assets/{id}/...`. Call `POST /v1/admin/assets/{id}/content/complete` after the client uploads to that URL. Not allowed when the asset has the `expense_attachment` tag (400). The presigned PUT binds `Content-Type: application/pdf` regardless of optional `content_type` in the body.
+         * @description Step 1 of 2 for replacing the binary stored for an asset while keeping the same asset id. Returns a presigned upload URL for a new S3 key under `assets/{id}/...`. Call `POST /v1/admin/assets/{id}/content/complete` after the client uploads to that URL. Not allowed when the asset has the `expense_attachment` or `customer_invoice` tag (400). The presigned PUT binds `Content-Type: application/pdf` regardless of optional `content_type` in the body.
          */
         post: {
             parameters: {
@@ -328,7 +331,7 @@ export interface paths {
         put?: never;
         /**
          * Complete admin asset file replacement
-         * @description Step 2 of 2: verifies the object exists at `pending_s3_key`, updates the asset to point at it, deletes the previous S3 object, and returns the updated asset. The `pending_s3_key` must be the value returned by `POST .../content/init` for this asset id. Not allowed when the asset has the `expense_attachment` tag (400). `file_name` must match the filename embedded in `pending_s3_key` after server-side sanitization (same rules as init). The object name segment must begin with a standard UUID prefix (`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx-`) from init. Stored `content_type` is always `application/pdf`; the uploaded object's S3 Content-Type and size are validated on complete (max 50 MiB). This call is not idempotent across different `pending_s3_key` values: repeating complete with a stale key after a successful replace returns 400. Concurrent replaces for the same asset are last-writer-wins; earlier pending keys may become orphans if never completed. BadRequest responses may include `field` values such as `pending_s3_key`, `file_name`, `content_type`, or `asset` depending on the failure.
+         * @description Step 2 of 2: verifies the object exists at `pending_s3_key`, updates the asset to point at it, deletes the previous S3 object, and returns the updated asset. The `pending_s3_key` must be the value returned by `POST .../content/init` for this asset id. Not allowed when the asset has the `expense_attachment` or `customer_invoice` tag (400). `file_name` must match the filename embedded in `pending_s3_key` after server-side sanitization (same rules as init). The object name segment must begin with a standard UUID prefix (`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx-`) from init. Stored `content_type` is always `application/pdf`; the uploaded object's S3 Content-Type and size are validated on complete (max 50 MiB). This call is not idempotent across different `pending_s3_key` values: repeating complete with a stale key after a successful replace returns 400. Concurrent replaces for the same asset are last-writer-wins; earlier pending keys may become orphans if never completed. BadRequest responses may include `field` values such as `pending_s3_key`, `file_name`, `content_type`, or `asset` depending on the failure.
          */
         post: {
             parameters: {
@@ -3467,7 +3470,7 @@ export interface paths {
         /**
          * Delete or archive CRM tag
          * @description Always returns **200** with `usage_count` and `deleted`. System-managed tags
-         *     (`expense_attachment`, `client_document`) return **400** and must not be removed.
+         *     (`expense_attachment`, `client_document`, `customer_invoice`) return **400** and must not be removed.
          *     When `usage_count` is zero, the tag is **hard-deleted** (`deleted: true`), including
          *     an archived tag with no remaining links. When `usage_count` is greater than zero,
          *     the tag is **archived** (`deleted: false`, `tag` present); repeated calls are idempotent
@@ -3504,7 +3507,7 @@ export interface paths {
         /**
          * Update CRM tag
          * @description Set `archived` to `false` to restore an archived tag (clear `archived_at`).
-         *     System-managed tags (`expense_attachment`, `client_document`) cannot be renamed or archived;
+         *     System-managed tags (`expense_attachment`, `client_document`, `customer_invoice`) cannot be renamed or archived;
          *     they may be edited for color/description only.
          */
         patch: {
@@ -7926,10 +7929,13 @@ export interface components {
              * @enum {string|null}
              */
             content_language?: "en" | "zh-CN" | "zh-HK" | null;
-            /** @enum {string} */
+            /**
+             * @description Must remain `restricted` for assets tagged `expense_attachment` or `customer_invoice` (400 if set to `public`).
+             * @enum {string}
+             */
             visibility?: "public" | "restricted";
             /**
-             * @description When present, sets or clears the client_document tag on the asset. Omit this property to leave the client tag unchanged. Must not be sent for assets that have the expense_attachment tag (400).
+             * @description When present, sets or clears the client_document tag on the asset. Omit this property to leave the client tag unchanged. Must not be sent for assets that have the `expense_attachment` or `customer_invoice` tag (400).
              * @enum {string|null}
              */
             client_tag?: "client_document" | null;
@@ -8472,7 +8478,7 @@ export interface components {
             archived_at: string | null;
             /** @description Count of junction rows across contacts, families, organisations, assets, services, and service instances referencing this tag. */
             usage_count: number;
-            /** @description True for reserved asset-pipeline tags (`expense_attachment`, `client_document`). These cannot be renamed, archived, or deleted via the admin API. */
+            /** @description True for reserved asset-pipeline tags (`expense_attachment`, `client_document`, `customer_invoice`). These cannot be renamed, archived, or deleted via the admin API. */
             is_system: boolean;
         };
         AdminCalendarManualBlockRef: {
