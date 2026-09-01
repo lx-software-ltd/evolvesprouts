@@ -121,7 +121,7 @@ export interface UpsertAdminAssetInput {
   contentLanguage?: OptionalToNullable<ApiCreateAssetRequest['content_language']>;
   visibility: ApiCreateAssetRequest['visibility'];
   /**
-   * Maps to API `client_tag`. Omit on update when the asset is expense-tagged (API forbids the field).
+   * Maps to API `client_tag`. Omit on update when the asset is expense- or invoice-tagged (API forbids the field).
    */
   clientTag?: ApiCreateAssetRequest['client_tag'];
 }
@@ -136,7 +136,7 @@ export interface UpdateAdminAssetPatchInput {
   contentType?: string | null;
   contentLanguage?: OptionalToNullable<ApiPartialUpdateAssetRequest['content_language']>;
   visibility?: AssetVisibility;
-  /** Omit when the asset is expense-tagged (API forbids the field). */
+  /** Omit when the asset is expense- or invoice-tagged (API forbids the field). */
   clientTag?: typeof CLIENT_DOCUMENT_ASSET_TAG | null;
 }
 

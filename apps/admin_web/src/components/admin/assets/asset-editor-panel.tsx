@@ -43,7 +43,7 @@ interface AssetEditorPanelProps {
   uploadError: string;
   hasPendingUpload: boolean;
   onRetryUpload: () => Promise<void>;
-  /** When set in edit mode (non–expense-linked assets), user may pick a new PDF and save to replace file content. */
+  /** When set in edit mode (non–expense- or invoice-linked assets), user may pick a new PDF and save to replace file content. */
   onReplaceFile?: (file: File) => Promise<boolean>;
   onCreate: (
     payload: {
