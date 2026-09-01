@@ -3,6 +3,22 @@ import userEvent from '@testing-library/user-event';
 import type { ComponentProps } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+vi.mock('next/link', () => ({
+  default: ({
+    children,
+    href,
+    ...rest
+  }: {
+    children: React.ReactNode;
+    href: string;
+    [key: string]: unknown;
+  }) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
+}));
+
 import { LeadsTable } from '@/components/admin/sales/leads-table';
 import type { LeadSummary } from '@/types/leads';
 
@@ -88,8 +104,17 @@ describe('LeadsTable', () => {
     expect(table).toHaveTextContent('Manual');
     expect(table).toHaveTextContent('New');
     expect(screen.queryByRole('columnheader', { name: 'Assigned' })).not.toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Operations' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open lead' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open contact' })).toHaveAttribute(
+      'href',
+      '/contacts?contact=contact-1'
+    );
     await user.click(screen.getByText('Jane Doe'));
     expect(onSelectLead).toHaveBeenCalledWith('lead-1');
+    onSelectLead.mockClear();
+    await user.click(screen.getByRole('link', { name: 'Open contact' }));
+    expect(onSelectLead).not.toHaveBeenCalled();
   });
 
   it('loads more leads when load-more is clicked', async () => {

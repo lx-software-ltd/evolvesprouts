@@ -88,6 +88,14 @@ describe('MetaConversationsView', () => {
           platformMessageId: 'm_1',
           direction: 'inbound',
           messageType: 'text',
+          body: 'Older question',
+          sentAt: '2026-08-01T00:00:00+00:00',
+        },
+        {
+          id: 'msg-2',
+          platformMessageId: 'm_2',
+          direction: 'outbound',
+          messageType: 'text',
           body: 'How much?',
           sentAt: '2026-08-02T00:00:00+00:00',
         },
@@ -109,6 +117,8 @@ describe('MetaConversationsView', () => {
     await user.click(screen.getByRole('button', { name: 'View conversation Jane Doe' }));
     expect(mockListMessages).toHaveBeenCalledWith('conv-1');
     expect(await screen.findByText('How much?')).toBeInTheDocument();
+    const messageBodies = screen.getAllByText(/How much\?|Older question/).map((node) => node.textContent);
+    expect(messageBodies).toEqual(['How much?', 'Older question']);
 
     await user.click(screen.getByRole('button', { name: 'Close' }));
     expect(screen.queryByText('How much?')).not.toBeInTheDocument();

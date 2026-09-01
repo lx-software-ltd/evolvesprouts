@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
-  selectLeadConversationThreads,
+  LEAD_CONVERSATION_MESSAGE_LIMIT,
+  selectLatestLeadConversationThread,
+  selectLeadConversationMessages,
   type LeadConversationChannel,
+  type LeadConversationMessage,
   type LeadConversationThread,
 } from '@/lib/lead-conversation-previews';
 import { listMetaConversations, listMetaMessages } from '@/lib/meta-api';
@@ -13,33 +16,13 @@ import { toErrorMessage } from './hook-errors';
 
 export type { LeadConversationChannel };
 
-export interface LeadConversationPreview {
-  id: string;
-  channel: LeadConversationChannel;
-  contactId: string | null;
-  lastMessageAt: string | null;
-  latestDirection: 'inbound' | 'outbound' | null;
-  latestBody: string | null;
-}
+export type LeadConversationPreviewMessage = LeadConversationMessage;
 
-const FETCH_LIMIT = 6;
-
-function latestMessage(items: Array<{ direction: 'inbound' | 'outbound'; body: string | null; sentAt: string }>): {
-  direction: 'inbound' | 'outbound';
-  body: string | null;
-  sentAt: string;
-} | null {
-  return items.reduce<(typeof items)[number] | null>((current, item) => {
-    if (!current) {
-      return item;
-    }
-    return Date.parse(item.sentAt) >= Date.parse(current.sentAt) ? item : current;
-  }, null);
-}
+const CHANNEL_FETCH_LIMIT = 1;
 
 export function useLeadConversationHistory(contactId: string | null) {
-  const [conversations, setConversations] = useState<LeadConversationPreview[]>([]);
-  const [overflow, setOverflow] = useState<LeadConversationPreview | null>(null);
+  const [conversation, setConversation] = useState<LeadConversationThread | null>(null);
+  const [messages, setMessages] = useState<LeadConversationPreviewMessage[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -47,8 +30,8 @@ export function useLeadConversationHistory(contactId: string | null) {
 
   const refetch = useCallback(async () => {
     if (!contactId) {
-      setConversations([]);
-      setOverflow(null);
+      setConversation(null);
+      setMessages([]);
       setHasMore(false);
       setError('');
       setIsLoading(false);
@@ -61,77 +44,73 @@ export function useLeadConversationHistory(contactId: string | null) {
     setError('');
     try {
       const [whatsapp, instagram, messenger] = await Promise.all([
-        listWhatsAppConversations({ contactId, limit: FETCH_LIMIT }),
-        listMetaConversations({ contactId, channel: 'instagram', limit: FETCH_LIMIT }),
-        listMetaConversations({ contactId, channel: 'facebook', limit: FETCH_LIMIT }),
+        listWhatsAppConversations({ contactId, limit: CHANNEL_FETCH_LIMIT }),
+        listMetaConversations({ contactId, channel: 'instagram', limit: CHANNEL_FETCH_LIMIT }),
+        listMetaConversations({ contactId, channel: 'facebook', limit: CHANNEL_FETCH_LIMIT }),
       ]);
       if (latestRequestIdRef.current !== requestId) {
         return;
       }
 
-      const threads: LeadConversationThread[] = [
+      const thread = selectLatestLeadConversationThread([
         ...whatsapp.items.map((row) => ({
           id: row.id,
           channel: 'whatsapp' as const,
           lastMessageAt: row.lastMessageAt,
           contactId: row.contactId,
+          inboundCount: row.inboundCount,
+          outboundCount: row.outboundCount,
         })),
         ...instagram.items.map((row) => ({
           id: row.id,
           channel: 'instagram' as const,
           lastMessageAt: row.lastMessageAt,
           contactId: row.contactId,
+          inboundCount: row.inboundCount,
+          outboundCount: row.outboundCount,
         })),
         ...messenger.items.map((row) => ({
           id: row.id,
           channel: 'messenger' as const,
           lastMessageAt: row.lastMessageAt,
           contactId: row.contactId,
+          inboundCount: row.inboundCount,
+          outboundCount: row.outboundCount,
         })),
-      ];
-      const selected = selectLeadConversationThreads(
-        threads,
-        Boolean(whatsapp.nextCursor || instagram.nextCursor || messenger.nextCursor)
-      );
-      const previewTargets = [
-        ...selected.items,
-        ...(selected.overflow ? [selected.overflow] : []),
-      ];
+      ]);
+      if (!thread) {
+        setConversation(null);
+        setMessages([]);
+        setHasMore(false);
+        return;
+      }
 
-      const previews = await Promise.all(
-        previewTargets.map(async (thread) => {
-          const result =
-            thread.channel === 'whatsapp'
-              ? await listWhatsAppMessages(thread.id)
-              : await listMetaMessages(thread.id);
-          const latest = latestMessage(result.items);
-          return {
-            id: thread.id,
-            channel: thread.channel,
-            contactId: thread.contactId ?? contactId,
-            lastMessageAt: latest?.sentAt ?? thread.lastMessageAt,
-            latestDirection: latest?.direction ?? null,
-            latestBody: latest?.body ?? null,
-          } satisfies LeadConversationPreview;
-        })
-      );
+      const result =
+        thread.channel === 'whatsapp'
+          ? await listWhatsAppMessages(thread.id)
+          : await listMetaMessages(thread.id);
       if (latestRequestIdRef.current !== requestId) {
         return;
       }
 
-      const overflowPreview = selected.overflow
-        ? (previews.find((row) => row.id === selected.overflow?.id) ?? null)
-        : null;
-      setConversations(previews.filter((row) => row.id !== overflowPreview?.id));
-      setOverflow(overflowPreview);
+      const messageTotal = thread.inboundCount + thread.outboundCount;
+      const selected = selectLeadConversationMessages(
+        result.items,
+        messageTotal > LEAD_CONVERSATION_MESSAGE_LIMIT
+      );
+      setConversation({
+        ...thread,
+        contactId: thread.contactId ?? contactId,
+      });
+      setMessages(selected.items);
       setHasMore(selected.hasMore);
     } catch (err) {
       if (latestRequestIdRef.current !== requestId) {
         return;
       }
       setError(toErrorMessage(err, 'Failed to load conversations.'));
-      setConversations([]);
-      setOverflow(null);
+      setConversation(null);
+      setMessages([]);
       setHasMore(false);
     } finally {
       if (latestRequestIdRef.current === requestId) {
@@ -144,5 +123,5 @@ export function useLeadConversationHistory(contactId: string | null) {
     void refetch();
   }, [refetch]);
 
-  return { conversations, overflow, hasMore, isLoading, error, refetch };
+  return { conversation, messages, hasMore, isLoading, error, refetch };
 }
