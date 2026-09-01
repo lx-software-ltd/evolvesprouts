@@ -5,7 +5,6 @@ import { useContactsPanelEditor } from '@/hooks/use-contacts-panel-editor';
 import { ContactEditorCard } from '@/components/admin/contacts/contact-editor-card';
 import { ContactNotesPanel } from '@/components/admin/contacts/contact-notes-panel';
 import { ContactsListTable } from '@/components/admin/contacts/contacts-list-table';
-import { MailchimpSyncCard } from '@/components/admin/contacts/mailchimp-sync-card';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { EntityTagRef } from '@/lib/entity-api';
 import type { AdminUser } from '@/types/leads';
@@ -56,7 +55,6 @@ export function ContactsPanel({
   return (
     <div className='space-y-6'>
       <ConfirmDialog {...editor.confirmDialogProps} />
-      <MailchimpSyncCard />
       <ContactEditorCard
         editor={editor}
         tags={tags}

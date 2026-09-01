@@ -45,16 +45,6 @@ vi.mock('@/lib/entity-api', async (importOriginal) => {
   };
 });
 
-vi.mock('@/lib/mailchimp-sync-api', () => ({
-  getMailchimpSyncStatus: vi.fn().mockResolvedValue({
-    counts_by_status: { pending: 0, synced: 0, failed: 0, unsubscribed: 0 },
-    archived_with_mailchimp_record: 0,
-    last_run_summary: null,
-  }),
-  runMailchimpSyncBatch: vi.fn(),
-  runMailchimpOrphanCleanup: vi.fn(),
-}));
-
 const noopRefresh = vi.fn().mockResolvedValue(undefined);
 
 function buildContactsHook(
@@ -806,7 +796,7 @@ describe('ContactsPanel', () => {
     });
   });
 
-  it('renders Mailchimp sync before Contact in heading order', () => {
+  it('does not render the Mailchimp sync card on the contacts list', () => {
     const contacts = buildContactsHook();
     render(
       <ContactsPanel
@@ -821,8 +811,8 @@ describe('ContactsPanel', () => {
         refreshFamilyOrgLists={vi.fn()}
       />
     );
-    const headings = screen.getAllByRole('heading').map((el) => el.textContent ?? '');
-    expect(headings.indexOf('Mailchimp sync')).toBeLessThan(headings.indexOf('Contact'));
+    expect(screen.queryByRole('heading', { name: 'Mailchimp sync' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Contact' })).toBeInTheDocument();
   });
 
   it('opens the matching contact in the editor from the contact query param', async () => {

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 
 import { ContactsPanel } from '@/components/admin/contacts/contacts-panel';
 import { FamiliesPanel } from '@/components/admin/contacts/families-panel';
+import { MailchimpSyncCard } from '@/components/admin/contacts/mailchimp-sync-card';
 import { OrganizationsPanel } from '@/components/admin/contacts/organizations-panel';
 import { AdminPageErrorBanner } from '@/components/admin/admin-page-error-banner';
 import { AdminTabStrip } from '@/components/ui/admin-tab-strip';
@@ -22,6 +23,7 @@ const TAB_ITEMS = [
   { key: 'contacts', label: 'Contacts' },
   { key: 'families', label: 'Families' },
   { key: 'organizations', label: 'Organisations' },
+  { key: 'mailchimp', label: 'Mailchimp' },
 ] as const;
 
 type ContactsView = (typeof TAB_ITEMS)[number]['key'];
@@ -155,7 +157,7 @@ export function ContactsPage() {
           contactOptions={contactOptions}
           contactsForMembership={contactsForMembership}
         />
-      ) : (
+      ) : activeView === 'organizations' ? (
         <OrganizationsPanel
           organizations={organizations}
           tags={tags}
@@ -166,6 +168,8 @@ export function ContactsPage() {
           contactOptions={contactOptions}
           contactsForMembership={contactsForMembership}
         />
+      ) : (
+        <MailchimpSyncCard />
       )}
     </div>
   );
