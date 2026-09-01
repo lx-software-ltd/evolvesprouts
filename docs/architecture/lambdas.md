@@ -54,10 +54,11 @@ their primary responsibilities.
   sort key `CONTROL`; default is all off; same contract as `/www/v1/polls/{poll_slug}/control`),
   `/v1/admin/geographic-areas`,
   `/v1/mailchimp/webhook` (GET/POST),
-  `/v1/whatsapp/webhook` (GET handshake + POST inbound/echo messages;
+  `/v1/whatsapp/webhook` (GET handshake + POST inbound/echo/`history` messages;
   HMAC `X-Hub-Signature-256` via `META_APP_SECRET`; verify token
   `WHATSAPP_WEBHOOK_VERIFY_TOKEN`; persists conversations and creates
-  WhatsApp CRM contacts/leads; sets audit actor `webhook:whatsapp`),
+  WhatsApp CRM contacts/leads except history/export backfills which skip new
+  leads; sets audit actor `webhook:whatsapp`),
   `/v1/meta/webhook` (GET handshake + POST Messenger/Instagram inbound and
   `is_echo` messages; same HMAC and verify token; persists
   `meta_conversations` / `meta_messages` and creates CRM contacts/leads;
@@ -306,8 +307,11 @@ their primary responsibilities.
   `contact_inquiry`, `community_newsletter`, and `event_notification` when no
   open lead exists; post-success SES + Mailchimp + recaps via
   `run_contact_us_post_success`),
-  WhatsApp Cloud API webhook ingestion on `/v1/whatsapp/webhook`,
+  WhatsApp Cloud API webhook ingestion on `/v1/whatsapp/webhook`
+  (including coexistence `history` chunks when Meta sends them),
   Messenger and Instagram webhook ingestion on `/v1/meta/webhook`,
+  admin inbox import enqueue on `/v1/admin/meta/import-jobs` and
+  `/v1/admin/whatsapp/import-jobs` (SQS `evolvesprouts-inbox-import-queue`),
   Stripe PaymentIntent creation for
   inline public booking modal payments on `/v1/reservations/payment-intent`
   (card-only `payment_method_types[]=card`; wallet buttons are disabled in the
@@ -659,6 +663,32 @@ their primary responsibilities.
   - `INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS` (optional comma-separated
     substrings; empty disables filtering; see `InboundInvoiceAllowedSenderPatterns`
     CDK parameter / GitHub var `CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS`)
+
+### Inbox import processor
+- Function: InboxImportFunction
+- Handler: backend/lambda/inbox_import/handler.py
+- Trigger: SQS queue (`evolvesprouts-inbox-import-queue`) with plain JSON bodies
+  (`{"job_id": "<uuid>"}`)
+- Purpose: process admin-queued Meta Graph conversation backfills (last 20
+  message bodies per Instagram/Messenger thread) and WhatsApp Business App
+  `.txt`/`.zip` export parses into the existing conversation tables. Creates
+  missing contacts; does not create new sales leads.
+- DB access: RDS Proxy with IAM auth (`evolvesprouts_admin`)
+- VPC: Yes
+- Timeout / budget: **600s** Lambda timeout with **720s** SQS visibility
+- Permissions: Secrets Manager read for the Page access token
+  (`${resourcePrefix}-meta-page-access-token`), S3 read on the assets bucket,
+  Lambda invoke permission for `AwsApiProxyFunction`
+- Environment:
+  - `DATABASE_SECRET_ARN`, `DATABASE_NAME`, `DATABASE_USERNAME`,
+    `DATABASE_PROXY_ENDPOINT`, `DATABASE_IAM_AUTH`
+  - `AWS_PROXY_FUNCTION_ARN`
+  - `ASSETS_BUCKET_NAME`
+  - `META_PAGE_ACCESS_TOKEN_SECRET_ARN`
+  - `META_PAGE_ID`, `META_INSTAGRAM_USER_ID`
+  - `META_GRAPH_API_BASE_URL`, `META_GRAPH_API_VERSION`
+  - `WHATSAPP_EXPORT_BUSINESS_NAMES`
+  - `INBOX_IMPORT_LAMBDA_TIMEOUT_SECONDS`
 
 ### Eventbrite sync processor
 - Function: EventbriteSyncProcessor

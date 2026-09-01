@@ -11,6 +11,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.api.admin_inbox_import import handle_meta_import_jobs
 from app.api.admin_request import parse_uuid, query_param
 from app.api.assets.assets_common import extract_identity, split_route_parts
 from app.db.engine import get_engine
@@ -38,6 +39,12 @@ def handle_admin_meta_request(
     identity = extract_identity(event)
     if not identity.user_sub:
         raise ValidationError("Authenticated user is required", field="authorization")
+
+    import_response = handle_meta_import_jobs(
+        event, method, parts, actor_sub=identity.user_sub
+    )
+    if import_response is not None:
+        return import_response
 
     if len(parts) == 3 and parts[2] == "conversations":
         if method != "GET":

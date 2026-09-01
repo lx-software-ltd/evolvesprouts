@@ -9,6 +9,7 @@ from uuid import UUID
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.db.models.enums import WhatsAppMessageDirection
 from app.db.models.whatsapp import WhatsAppConversation, WhatsAppMessage
 from app.db.repositories.base import BaseRepository
 
@@ -48,6 +49,29 @@ class WhatsAppRepository(BaseRepository[WhatsAppConversation]):
         """Fetch a stored message by WhatsApp message id (webhook dedup)."""
         statement = select(WhatsAppMessage).where(
             WhatsAppMessage.wa_message_id == wa_message_id
+        )
+        return self._session.execute(statement).scalar_one_or_none()
+
+    def find_message_by_content(
+        self,
+        *,
+        conversation_id: UUID,
+        sent_at: datetime,
+        direction: WhatsAppMessageDirection,
+        body: str | None,
+    ) -> WhatsAppMessage | None:
+        """Fetch a stored message matching conversation, time, direction, and body."""
+        statement = (
+            select(WhatsAppMessage)
+            .where(
+                WhatsAppMessage.conversation_id == conversation_id,
+                WhatsAppMessage.sent_at == sent_at,
+                WhatsAppMessage.direction == direction,
+                WhatsAppMessage.body.is_(None)
+                if body is None
+                else WhatsAppMessage.body == body,
+            )
+            .limit(1)
         )
         return self._session.execute(statement).scalar_one_or_none()
 

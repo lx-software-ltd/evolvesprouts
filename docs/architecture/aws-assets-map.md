@@ -445,6 +445,7 @@ For each function above, the following resources are created:
 | `ExpenseParserFunction` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, S3 read for the assets bucket, read OpenRouter API secret (Secrets Manager + KMS decrypt on the `secrets-encryption-key` CMK), invoke `AwsApiProxyFunction` |
 | `InboundInvoiceEmailProcessor` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, S3 read/write for the assets bucket (including the `inbound-email/raw/` prefix), publish to the expense parser SNS topic |
 | `EventbriteSyncProcessor` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, read Eventbrite token secret, invoke `AwsApiProxyFunction` |
+| `InboxImportFunction` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, read `${resourcePrefix}-meta-page-access-token`, S3 read on the assets bucket, invoke `AwsApiProxyFunction` for Graph HTTP |
 
 **Lambda Log Groups:**
 - Explicitly created by CDK with KMS encryption
@@ -514,8 +515,12 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | `/v1/meta/webhook` | GET, POST | None (HMAC + verify token) | `EvolvesproutsAdminFunction` | Messenger and Instagram webhook; inbound + `is_echo` |
 | `/v1/admin/whatsapp/conversations` | GET | Admin Group | `EvolvesproutsAdminFunction` | Paginated captured WhatsApp threads |
 | `/v1/admin/whatsapp/conversations/{id}/messages` | GET | Admin Group | `EvolvesproutsAdminFunction` | Messages for one thread |
+| `/v1/admin/whatsapp/import-jobs` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | Queue/list WhatsApp export import jobs |
+| `/v1/admin/whatsapp/import-jobs/{id}` | GET | Admin Group | `EvolvesproutsAdminFunction` | WhatsApp export import job detail |
 | `/v1/admin/meta/conversations` | GET | Admin Group | `EvolvesproutsAdminFunction` | Paginated captured Messenger/Instagram threads |
 | `/v1/admin/meta/conversations/{id}/messages` | GET | Admin Group | `EvolvesproutsAdminFunction` | Messages for one Meta thread |
+| `/v1/admin/meta/import-jobs` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | Queue/list Instagram/Messenger Graph import jobs |
+| `/v1/admin/meta/import-jobs/{id}` | GET | Admin Group | `EvolvesproutsAdminFunction` | Meta Graph import job detail |
 | `/v1/public/meta/conversations` | GET | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token reads; name/dates only |
 | `/v1/public/meta/conversations/{id}/messages` | GET | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token message reads without scoped ids |
 | `/v1/public/contacts` | GET, POST | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token contact list/create; `user` GET only |

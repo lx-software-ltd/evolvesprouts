@@ -59,6 +59,18 @@ vi.mock('@/lib/whatsapp-api', () => ({
   listWhatsAppMessages: (...args: unknown[]) => mockListMessages(...args),
 }));
 
+vi.mock('@/lib/inbox-import-api', () => ({
+  listInboxImportJobs: vi.fn().mockResolvedValue([]),
+  createWhatsAppExportImportJob: vi.fn(),
+  formatInboxImportCounters: () => '',
+}));
+
+vi.mock('@/lib/assets-api', () => ({
+  createAdminAsset: vi.fn(),
+  deleteAdminAsset: vi.fn(),
+  uploadFileToPresignedUrl: vi.fn(),
+}));
+
 import { WhatsAppConversationsView } from '@/components/admin/sales/whatsapp-conversations-view';
 
 describe('WhatsAppConversationsView', () => {
@@ -79,6 +91,8 @@ describe('WhatsAppConversationsView', () => {
     const user = userEvent.setup();
     render(<WhatsAppConversationsView />);
 
+    expect(screen.getByText('Import WhatsApp export')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Import export' })).toBeDisabled();
     expect(screen.getByRole('link', { name: 'Jane Doe' })).toHaveAttribute(
       'href',
       '/contacts?contact=contact-1'

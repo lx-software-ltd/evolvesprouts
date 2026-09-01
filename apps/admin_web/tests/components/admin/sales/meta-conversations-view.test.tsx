@@ -65,6 +65,12 @@ vi.mock('@/lib/meta-api', async () => {
   };
 });
 
+vi.mock('@/lib/inbox-import-api', () => ({
+  listInboxImportJobs: vi.fn().mockResolvedValue([]),
+  createMetaImportJob: vi.fn(),
+  formatInboxImportCounters: () => '',
+}));
+
 import { MetaConversationsView } from '@/components/admin/sales/meta-conversations-view';
 
 describe('MetaConversationsView', () => {
@@ -86,6 +92,7 @@ describe('MetaConversationsView', () => {
     render(<MetaConversationsView channel='instagram' />);
 
     expect(screen.getByText('Instagram conversations')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Import recent history' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Jane Doe' })).toHaveAttribute(
       'href',
       '/contacts?contact=contact-1'

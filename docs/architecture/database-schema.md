@@ -549,6 +549,21 @@ maps legacy `note.id` to the **first** inserted row’s UUID.
 - Individual inbound or outbound (`message.is_echo`) Messenger/Instagram messages.
 - Unique `platform_message_id` for webhook idempotency; cascade delete with parent conversation.
 
+### `inbox_import_jobs`
+
+- Purpose: admin-triggered async backfill of recent Messenger/Instagram Graph
+  threads (`kind=meta_graph`) or WhatsApp Business App chat exports
+  (`kind=whatsapp_export`).
+- `channel` is set for Graph jobs (`facebook` / `instagram`) and null for
+  WhatsApp exports. Optional `attachment_asset_id` points at the uploaded
+  `.txt` / `.zip` (ON DELETE SET NULL).
+- `options` JSON holds export hints (`counterparty_wa_id`,
+  `business_display_names`). `counters` JSON stores stored/duplicate/skipped
+  totals. Status strings match bulk expense import
+  (`pending` / `processing` / `succeeded` / `succeeded_with_errors` / `failed`).
+- No seed rows. Historical import creates contacts when missing and does not
+  create new sales leads.
+
 ## Table: api_keys
 
 - Hashed API tokens for `/v1/public/*` routes (header `x-api-token`).

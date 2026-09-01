@@ -210,6 +210,121 @@ class EventbriteSyncNestedStack extends cdk.NestedStack {
   }
 }
 
+interface InboxImportNestedStackProps extends cdk.NestedStackProps {
+  resourcePrefix: string;
+  vpc: ec2.IVpc;
+  lambdaSecurityGroup: ec2.ISecurityGroup;
+  sharedLambdaEnvEncryptionKey: kms.IKey;
+  sharedLambdaLogEncryptionKey: kms.IKey;
+  sqsEncryptionKey: kms.IKey;
+  databaseSecretArn: string;
+  databaseProxyEndpoint: string;
+  awsProxyFunctionArn: string;
+  assetsBucketName: string;
+  assetsBucketArn: string;
+  metaPageAccessTokenSecretArn: string;
+  metaPageId: string;
+  metaInstagramUserId: string;
+  metaGraphApiBaseUrl: string;
+  metaGraphApiVersion: string;
+  whatsappExportBusinessNames: string;
+}
+
+class InboxImportNestedStack extends cdk.NestedStack {
+  public readonly queue: sqs.Queue;
+  public readonly deadLetterQueue: sqs.Queue;
+  public readonly processorFunction: lambda.Function;
+
+  public constructor(
+    scope: Construct,
+    id: string,
+    props: InboxImportNestedStackProps
+  ) {
+    super(scope, id, props);
+
+    const name = (suffix: string) => `${props.resourcePrefix}-${suffix}`;
+    const lambdaFactory = new PythonLambdaFactory(this, {
+      vpc: props.vpc,
+      securityGroups: [props.lambdaSecurityGroup],
+      environmentEncryptionKey: props.sharedLambdaEnvEncryptionKey,
+      logEncryptionKey: props.sharedLambdaLogEncryptionKey,
+    });
+
+    this.deadLetterQueue = new sqs.Queue(this, "InboxImportDLQ", {
+      queueName: name("inbox-import-dlq"),
+      retentionPeriod: cdk.Duration.days(14),
+      encryption: sqs.QueueEncryption.KMS,
+      encryptionMasterKey: props.sqsEncryptionKey,
+    });
+
+    this.queue = new sqs.Queue(this, "InboxImportQueue", {
+      queueName: name("inbox-import-queue"),
+      visibilityTimeout: cdk.Duration.seconds(720),
+      deadLetterQueue: {
+        queue: this.deadLetterQueue,
+        maxReceiveCount: 3,
+      },
+      encryption: sqs.QueueEncryption.KMS,
+      encryptionMasterKey: props.sqsEncryptionKey,
+    });
+
+    this.processorFunction = lambdaFactory.create("InboxImportFunction", {
+      functionName: name("InboxImportFunction"),
+      handler: "lambda/inbox_import/handler.lambda_handler",
+      timeout: cdk.Duration.seconds(600),
+      manageLogGroup: false,
+      environment: {
+        INBOX_IMPORT_LAMBDA_TIMEOUT_SECONDS: "600",
+        DATABASE_SECRET_ARN: props.databaseSecretArn,
+        DATABASE_NAME: "evolvesprouts",
+        DATABASE_USERNAME: "evolvesprouts_admin",
+        DATABASE_PROXY_ENDPOINT: props.databaseProxyEndpoint,
+        DATABASE_IAM_AUTH: "true",
+        AWS_PROXY_FUNCTION_ARN: props.awsProxyFunctionArn,
+        ASSETS_BUCKET_NAME: props.assetsBucketName,
+        META_PAGE_ACCESS_TOKEN_SECRET_ARN: props.metaPageAccessTokenSecretArn,
+        META_PAGE_ID: props.metaPageId,
+        META_INSTAGRAM_USER_ID: props.metaInstagramUserId,
+        META_GRAPH_API_BASE_URL: props.metaGraphApiBaseUrl,
+        META_GRAPH_API_VERSION: props.metaGraphApiVersion,
+        WHATSAPP_EXPORT_BUSINESS_NAMES: props.whatsappExportBusinessNames,
+      },
+    }).function;
+
+    this.processorFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["s3:GetObject", "s3:GetBucketLocation", "s3:ListBucket"],
+        resources: [props.assetsBucketArn, `${props.assetsBucketArn}/*`],
+      })
+    );
+    this.processorFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"],
+        resources: [props.metaPageAccessTokenSecretArn],
+      })
+    );
+
+    this.processorFunction.addEventSource(
+      new lambdaEventSources.SqsEventSource(this.queue, {
+        batchSize: 1,
+        reportBatchItemFailures: true,
+      })
+    );
+
+    new cdk.aws_cloudwatch.Alarm(this, "InboxImportDLQAlarm", {
+      alarmName: name("inbox-import-dlq-alarm"),
+      alarmDescription:
+        "Inbox import messages failed processing and landed in DLQ",
+      metric: this.deadLetterQueue.metricApproximateNumberOfMessagesVisible({
+        period: cdk.Duration.minutes(5),
+      }),
+      threshold: 1,
+      evaluationPeriods: 1,
+      treatMissingData: cdk.aws_cloudwatch.TreatMissingData.NOT_BREACHING,
+    });
+  }
+}
+
 export class ApiStack extends cdk.Stack {
   public constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -714,6 +829,61 @@ export class ApiStack extends cdk.Stack {
         default: "",
         description:
           "Shared verify token for the Meta WhatsApp Cloud API webhook handshake",
+      }
+    );
+    const metaPageId = new cdk.CfnParameter(this, "MetaPageId", {
+      type: "String",
+      default: "",
+      description:
+        "Facebook Page id used to list Messenger and Instagram conversations for inbox import.",
+    });
+    const metaInstagramUserId = new cdk.CfnParameter(
+      this,
+      "MetaInstagramUserId",
+      {
+        type: "String",
+        default: "",
+        description:
+          "Optional Instagram professional account id used to identify outbound Graph messages.",
+      }
+    );
+    const metaGraphApiBaseUrl = new cdk.CfnParameter(
+      this,
+      "MetaGraphApiBaseUrl",
+      {
+        type: "String",
+        default: "https://graph.facebook.com",
+        description: "Meta Graph API origin used by inbox import (no version path).",
+      }
+    );
+    const metaGraphApiVersion = new cdk.CfnParameter(
+      this,
+      "MetaGraphApiVersion",
+      {
+        type: "String",
+        default: "v21.0",
+        description: "Meta Graph API version token used by inbox import.",
+      }
+    );
+    const metaPageAccessToken = new cdk.CfnParameter(
+      this,
+      "MetaPageAccessToken",
+      {
+        type: "String",
+        noEcho: true,
+        default: "",
+        description:
+          "Page or system-user access token for Graph conversation history import.",
+      }
+    );
+    const whatsappExportBusinessNames = new cdk.CfnParameter(
+      this,
+      "WhatsappExportBusinessNames",
+      {
+        type: "String",
+        default: "",
+        description:
+          "Optional comma-separated WhatsApp export display names treated as outbound.",
       }
     );
     const evolveSproutsStripeSecretKey = new cdk.CfnParameter(
@@ -1837,6 +2007,7 @@ export class ApiStack extends cdk.Stack {
       "https://api.stripe.com/v1/",
       eventbriteApiBaseUrl.valueAsString,
       openrouterChatCompletionsUrl.valueAsString,
+      "https://graph.facebook.com",
     ];
 
     const awsProxyFunction = createPythonFunction("AwsApiProxyFunction", {
@@ -1902,6 +2073,18 @@ export class ApiStack extends cdk.Stack {
       }
     );
     openrouterApiSecret.grantRead(adminFunction);
+    const metaPageAccessTokenSecret = new secretsmanager.Secret(
+      this,
+      "MetaPageAccessTokenSecret",
+      {
+        secretName: name("meta-page-access-token"),
+        description: "Meta Page access token for inbox conversation import",
+        secretStringValue: cdk.SecretValue.unsafePlainText(
+          metaPageAccessToken.valueAsString
+        ),
+        encryptionKey: secretsEncryptionKey,
+      }
+    );
 
     // Pack non-secret PUBLIC_WWW_* deployment config into a single Secrets
     // Manager JSON object so the admin Lambda's env-var dict stays under the
@@ -2112,6 +2295,35 @@ export class ApiStack extends cdk.Stack {
     database.grantAdminUserSecretRead(eventbriteSync.processorFunction);
     database.grantConnect(eventbriteSync.processorFunction, "evolvesprouts_admin");
     awsProxyFunction.grantInvoke(eventbriteSync.processorFunction);
+
+    const inboxImport = new InboxImportNestedStack(this, "InboxImport", {
+      resourcePrefix,
+      vpc,
+      lambdaSecurityGroup,
+      sharedLambdaEnvEncryptionKey,
+      sharedLambdaLogEncryptionKey,
+      sqsEncryptionKey,
+      databaseSecretArn: database.adminUserSecret.secretArn,
+      databaseProxyEndpoint: database.proxy.endpoint,
+      awsProxyFunctionArn: awsProxyFunction.functionArn,
+      assetsBucketName: assetsBucket.bucketName,
+      assetsBucketArn: assetsBucket.bucketArn,
+      metaPageAccessTokenSecretArn: metaPageAccessTokenSecret.secretArn,
+      metaPageId: metaPageId.valueAsString,
+      metaInstagramUserId: metaInstagramUserId.valueAsString,
+      metaGraphApiBaseUrl: metaGraphApiBaseUrl.valueAsString,
+      metaGraphApiVersion: metaGraphApiVersion.valueAsString,
+      whatsappExportBusinessNames: whatsappExportBusinessNames.valueAsString,
+    });
+    database.grantAdminUserSecretRead(inboxImport.processorFunction);
+    database.grantConnect(inboxImport.processorFunction, "evolvesprouts_admin");
+    awsProxyFunction.grantInvoke(inboxImport.processorFunction);
+    metaPageAccessTokenSecret.grantRead(inboxImport.processorFunction);
+    inboxImport.queue.grantSendMessages(adminFunction);
+    adminFunction.addEnvironment(
+      "INBOX_IMPORT_QUEUE_URL",
+      inboxImport.queue.queueUrl
+    );
 
     // -------------------------------------------------------------------------
     // Inbound invoice email processing (SES + S3 + SNS + SQS)
@@ -3606,6 +3818,14 @@ export class ApiStack extends cdk.Stack {
       value: eventbriteSync.processorLambdaDlq.queueUrl,
       description:
         "SQS dead letter queue URL for failed EventbriteSyncProcessor Lambda invocations",
+    });
+    new cdk.CfnOutput(this, "InboxImportQueueUrl", {
+      value: inboxImport.queue.queueUrl,
+      description: "SQS queue URL for Meta/WhatsApp inbox history import jobs",
+    });
+    new cdk.CfnOutput(this, "InboxImportDLQUrl", {
+      value: inboxImport.deadLetterQueue.queueUrl,
+      description: "SQS dead letter queue URL for failed inbox import jobs",
     });
     new cdk.CfnOutput(this, "InboundInvoiceRecipientAddress", {
       value: inboundInvoiceRecipientAddress,

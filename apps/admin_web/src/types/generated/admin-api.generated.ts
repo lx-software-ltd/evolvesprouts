@@ -1560,6 +1560,118 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/whatsapp/import-jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List WhatsApp export import jobs */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    cursor?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated WhatsApp export import jobs. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InboxImportJobListResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        put?: never;
+        /**
+         * Queue a WhatsApp chat export import
+         * @description Upload a `.txt` or `.zip` WhatsApp Business App export as a restricted document asset first, then pass its id. Does not create new sales leads. Graph Cloud API cannot pull WhatsApp history; this parses a phone export.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateWhatsAppExportImportJobRequest"];
+                };
+            };
+            responses: {
+                /** @description Import job queued. */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InboxImportJobResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/whatsapp/import-jobs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Get a WhatsApp export import job */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Job detail. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InboxImportJobResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/meta/conversations": {
         parameters: {
             query?: never;
@@ -1639,6 +1751,118 @@ export interface paths {
                     };
                 };
                 400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/meta/import-jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Messenger and Instagram Graph import jobs */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    cursor?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated Meta Graph import jobs. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InboxImportJobListResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        put?: never;
+        /**
+         * Queue a Messenger or Instagram recent-history import
+         * @description Pulls Graph Conversations API threads for the configured Page. Meta only returns message bodies for the last 20 messages per thread. Does not create new sales leads. Creates placeholder contacts when a thread has no contact yet.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateMetaImportJobRequest"];
+                };
+            };
+            responses: {
+                /** @description Import job queued. */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InboxImportJobResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/meta/import-jobs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Get a Messenger or Instagram Graph import job */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Job detail. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InboxImportJobResponse"];
+                    };
+                };
                 403: components["responses"]["Forbidden"];
                 404: components["responses"]["NotFound"];
             };
@@ -6857,6 +7081,56 @@ export interface components {
         MetaMessageListResponse: {
             conversation: components["schemas"]["MetaConversationSummary"];
             items: components["schemas"]["MetaMessageSummary"][];
+        };
+        /** @enum {string} */
+        InboxImportKind: "meta_graph" | "whatsapp_export";
+        /** @enum {string} */
+        InboxImportJobStatus: "pending" | "processing" | "succeeded" | "succeeded_with_errors" | "failed";
+        InboxImportJobCounters: {
+            stored?: number;
+            duplicates?: number;
+            skipped?: number;
+            contacts_created?: number;
+            leads_created?: number;
+            conversations?: number;
+            skipped_no_body?: number;
+            skipped_no_wa_id?: number;
+        } & {
+            [key: string]: unknown;
+        };
+        InboxImportJobSummary: {
+            /** Format: uuid */
+            id: string;
+            kind?: components["schemas"]["InboxImportKind"];
+            channel?: components["schemas"]["MetaChannel"];
+            /** Format: uuid */
+            attachment_asset_id?: string | null;
+            status: components["schemas"]["InboxImportJobStatus"];
+            error_message?: string | null;
+            counters?: components["schemas"]["InboxImportJobCounters"];
+            /** Format: date-time */
+            created_at?: string | null;
+            /** Format: date-time */
+            updated_at?: string | null;
+        };
+        InboxImportJobListResponse: {
+            items: components["schemas"]["InboxImportJobSummary"][];
+            next_cursor?: string | null;
+            total_count: number;
+        };
+        InboxImportJobResponse: {
+            inbox_import_job: components["schemas"]["InboxImportJobSummary"];
+        };
+        CreateMetaImportJobRequest: {
+            channel: components["schemas"]["MetaChannel"];
+        };
+        CreateWhatsAppExportImportJobRequest: {
+            /** Format: uuid */
+            attachment_asset_id: string;
+            /** @description Optional E.164 digits for the chat partner when the export filename has no phone. */
+            counterparty_wa_id?: string;
+            /** @description Display names in the export that are the business (outbound). */
+            business_display_names?: string[];
         };
         /**
          * @description admin is full access on token-protected routes; user is GET only.

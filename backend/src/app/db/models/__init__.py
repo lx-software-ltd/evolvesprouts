@@ -16,6 +16,11 @@ from app.db.models.customer_receipt import CustomerReceipt
 from app.db.models.discount_code import DiscountCode
 from app.db.models.enrollment import Enrollment
 from app.db.models.expense import Expense, ExpenseAttachment
+from app.db.models.inbox_import_job import (
+    InboxImportJob,
+    InboxImportJobStatus,
+    InboxImportKind,
+)
 from app.db.models.inbound_email import InboundEmail
 from app.db.models.enums import (
     AccessGrantType,
@@ -132,6 +137,9 @@ __all__ = [
     "FamilyTag",
     "FunnelStage",
     "GeographicArea",
+    "InboxImportJob",
+    "InboxImportJobStatus",
+    "InboxImportKind",
     "InboundEmail",
     "InboundEmailStatus",
     "InstanceSessionSlot",

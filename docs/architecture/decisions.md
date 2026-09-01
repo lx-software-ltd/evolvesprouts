@@ -780,6 +780,31 @@ user ids and page ids.
 - Public payloads stay useful without exposing Meta scoped ids.
 - LinkedIn Pages messaging is partner-only and remains out of scope.
 
+## Inbox history import (Graph + WhatsApp export)
+
+**Decision:** Add an admin-triggered async inbox import worker
+(`InboxImportFunction` on `evolvesprouts-inbox-import-queue`) instead of
+pulling history inline on the admin Lambda. Jobs live in `inbox_import_jobs`.
+
+- **Instagram / Messenger:** `POST /v1/admin/meta/import-jobs` lists Page
+  conversations through the Graph Conversations API via `AwsApiProxyFunction`.
+  Meta only returns message **bodies** for the last 20 messages per thread.
+  Persist through the same `store_meta_message` path as webhooks (unique
+  `platform_message_id`). Create placeholder contacts when missing. Do **not**
+  create new Sales leads.
+- **WhatsApp Cloud API:** there is no GET history endpoint. Continue live
+  webhook ingest, and persist coexistence `history` webhook chunks when Meta
+  sends them (still no new leads). Older chats come from a Business App
+  `.txt` / `.zip` export via `POST /v1/admin/whatsapp/import-jobs`.
+- Store the Page token in Secrets Manager
+  (`${resourcePrefix}-meta-page-access-token`). Page / IG ids and Graph origin
+  come from CDK parameters (GitHub vars/secrets), not hardcoded values.
+
+**Why:**
+- Graph and zip parsing exceed API Gateway timeouts.
+- Reusing persist + unique message ids keeps webhook and import idempotent.
+- Historical inbound must not flood the Sales pipeline with `NEW` leads.
+
 ## Keeping Documentation Up to Date
 
 **Decision:** Architecture documentation in `docs/architecture/` describes

@@ -1,14 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ConversationNameCell } from './conversation-name-cell';
+import { InboxImportStatus } from './inbox-import-status';
 
 import { useMetaConversations } from '@/hooks/use-meta-conversations';
 import { useMetaMessages } from '@/hooks/use-meta-messages';
 import { formatDate } from '@/lib/format';
 import { formatInboxConversationName } from '@/lib/inbox-conversation-name';
+import {
+  createMetaImportJob,
+  listInboxImportJobs,
+  type InboxImportJobSummary,
+} from '@/lib/inbox-import-api';
 import type { MetaChannel } from '@/lib/meta-api';
+import { toErrorMessage } from '@/hooks/hook-errors';
 import { ViewIcon } from '@/components/icons/action-icons';
 import { AdminEditorCard } from '@/components/ui/admin-editor-card';
 import {
@@ -37,13 +44,15 @@ const CHANNEL_COPY: Record<
 > = {
   instagram: {
     title: 'Instagram conversations',
-    description: 'Inbound Instagram Direct messages and echoes captured from Meta webhooks.',
+    description:
+      'Inbound Instagram Direct messages and echoes captured from Meta webhooks. Import recent history pulls the last 20 Graph message bodies per thread.',
     searchPlaceholder: 'Name or Instagram user id',
     idLabel: 'Instagram user id',
   },
   facebook: {
     title: 'Messenger conversations',
-    description: 'Inbound Messenger messages and echoes captured from Meta webhooks.',
+    description:
+      'Inbound Messenger messages and echoes captured from Meta webhooks. Import recent history pulls the last 20 Graph message bodies per thread.',
     searchPlaceholder: 'Name or Messenger user id',
     idLabel: 'Messenger user id',
   },
@@ -54,11 +63,52 @@ export function MetaConversationsView({ channel }: { channel: MetaChannel }) {
   const list = useMetaConversations(channel);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const detail = useMetaMessages(selectedId);
+  const [importJob, setImportJob] = useState<InboxImportJobSummary | null>(null);
+  const [importError, setImportError] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void listInboxImportJobs('/v1/admin/meta/import-jobs')
+      .then((jobs) => {
+        if (!cancelled) {
+          setImportJob(jobs.find((job) => job.channel === channel) ?? jobs[0] ?? null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setImportJob(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [channel]);
+
+  async function handleImportRecentHistory() {
+    setIsImporting(true);
+    setImportError('');
+    try {
+      const job = await createMetaImportJob(channel);
+      setImportJob(job);
+      await list.refetch();
+    } catch (error) {
+      setImportError(toErrorMessage(error, 'Could not start inbox import.'));
+    } finally {
+      setIsImporting(false);
+    }
+  }
 
   const selected = list.conversations.find((row) => row.id === selectedId) ?? null;
 
   return (
     <div className='space-y-4'>
+      {importError ? (
+        <StatusBanner variant='error' title='Inbox import'>
+          {importError}
+        </StatusBanner>
+      ) : null}
+      <InboxImportStatus job={importJob} />
       {selected ? (
         <AdminEditorCard
           title={
@@ -125,6 +175,15 @@ export function MetaConversationsView({ channel }: { channel: MetaChannel }) {
             <p className='text-sm text-slate-500'>
               {list.totalCount == null ? '' : `${list.totalCount} conversations`}
             </p>
+            <Button
+              type='button'
+              onClick={() => {
+                void handleImportRecentHistory();
+              }}
+              disabled={isImporting}
+            >
+              {isImporting ? 'Importing…' : 'Import recent history'}
+            </Button>
           </div>
         }
       >
