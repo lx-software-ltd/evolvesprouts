@@ -21,7 +21,7 @@ function formatJson(obj: Record<string, unknown> | null | undefined): string {
 }
 
 export function AuditLogDetailDialog({ log, onClose }: AuditLogDetailDialogProps) {
-  const userEmail = log.user_email ?? null;
+  const actorLabel = log.user_email || log.user_id || null;
 
   return (
     <ConfirmDialog
@@ -65,8 +65,8 @@ export function AuditLogDetailDialog({ log, onClose }: AuditLogDetailDialogProps
             </p>
           </div>
           <div>
-            <span className='font-medium text-slate-500'>User / API key</span>
-            <p className='mt-1 break-all font-mono text-xs'>{userEmail || '—'}</p>
+            <span className='font-medium text-slate-500'>Actor</span>
+            <p className='mt-1 break-all font-mono text-xs'>{actorLabel || '—'}</p>
           </div>
           <div>
             <span className='font-medium text-slate-500'>Request ID</span>

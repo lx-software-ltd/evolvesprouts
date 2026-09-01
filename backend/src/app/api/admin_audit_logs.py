@@ -15,6 +15,7 @@ from app.api.admin_audit_actors import (
     api_key_user_id_for_name,
     cognito_emails_for_subs,
     cognito_sub_for_email,
+    system_actor_user_id_for_label,
     validate_actor_filter,
 )
 from app.api.admin_request import (
@@ -234,7 +235,9 @@ def _list_audit_logs(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, A
                     actor_filter, user_pool_id=user_pool_id
                 )
             else:
-                resolved = api_key_user_id_for_name(session, actor_filter)
+                resolved = system_actor_user_id_for_label(actor_filter)
+                if resolved is None:
+                    resolved = api_key_user_id_for_name(session, actor_filter)
             if resolved is None:
                 return json_response(
                     200,

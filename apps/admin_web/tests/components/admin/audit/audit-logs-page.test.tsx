@@ -40,7 +40,7 @@ describe('AuditLogsPage', () => {
     });
   });
 
-  it('shows API key name in the User / API key column', async () => {
+  it('shows API key name in the Actor column', async () => {
     mockListAuditLogs.mockResolvedValue({
       items: [
         {
@@ -64,6 +64,56 @@ describe('AuditLogsPage', () => {
     });
   });
 
+  it('stacks table name above the action badge in one column', async () => {
+    mockListAuditLogs.mockResolvedValue({
+      items: [
+        {
+          id: '00000000-0000-4000-8000-000000000005',
+          table_name: 'customer_invoices',
+          record_id: 'inv-1',
+          action: 'DRAFT_CREATED_CUSTOMIZED',
+          timestamp: '2024-01-05T00:00:00.000Z',
+          source: 'application',
+        },
+      ],
+      next_cursor: null,
+    });
+    render(<AuditLogsPage />);
+    await waitFor(() => {
+      const table = screen.getByRole('table');
+      expect(within(table).getByRole('columnheader', { name: 'Table / action' })).toBeInTheDocument();
+      expect(within(table).queryByRole('columnheader', { name: 'Table', exact: true })).not.toBeInTheDocument();
+      expect(within(table).queryByRole('columnheader', { name: 'Action', exact: true })).not.toBeInTheDocument();
+      const stackedCell = within(table).getByText('customer_invoices').closest('td');
+      expect(stackedCell).not.toBeNull();
+      expect(within(stackedCell as HTMLElement).getByText('DRAFT_CREATED_CUSTOMIZED')).toBeInTheDocument();
+    });
+  });
+
+  it('shows webhook actor label in the Actor column', async () => {
+    mockListAuditLogs.mockResolvedValue({
+      items: [
+        {
+          id: '00000000-0000-4000-8000-000000000004',
+          table_name: 'whatsapp_conversations',
+          record_id: 'w1',
+          action: 'UPDATE' as const,
+          timestamp: '2024-01-04T00:00:00.000Z',
+          source: 'trigger',
+          user_id: 'webhook:whatsapp',
+          user_email: 'WhatsApp webhook',
+        },
+      ],
+      next_cursor: null,
+    });
+    render(<AuditLogsPage />);
+    await waitFor(() => {
+      const table = screen.getByRole('table');
+      expect(within(table).getByText('WhatsApp webhook')).toBeInTheDocument();
+      expect(within(table).getByText('whatsapp_conversations')).toBeInTheDocument();
+    });
+  });
+
   it('passes email filter to listAuditLogs when user types email and applies', async () => {
     const user = userEvent.setup();
     render(<AuditLogsPage />);
@@ -71,7 +121,7 @@ describe('AuditLogsPage', () => {
       expect(mockListAuditLogs).toHaveBeenCalled();
     });
 
-    await user.type(screen.getByLabelText('User / API key'), 'ops@example.com');
+    await user.type(screen.getByLabelText('Actor'), 'ops@example.com');
     await user.click(screen.getByRole('button', { name: 'Apply filters' }));
 
     await waitFor(() => {

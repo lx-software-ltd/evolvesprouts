@@ -58,7 +58,7 @@ This ensures:
 | `table_name` | TEXT | Name of the modified table |
 | `record_id` | TEXT | Primary key of the modified record |
 | `action` | TEXT | INSERT, UPDATE, or DELETE |
-| `user_id` | TEXT | Cognito user sub, or `api-key:<id>` for token writes |
+| `user_id` | TEXT | Cognito user sub, `api-key:<id>` for token writes, or a system actor (`system`, `webhook:whatsapp`, `webhook:meta`) |
 | `request_id` | TEXT | Lambda request ID for log correlation |
 | `old_values` | JSONB | Previous values (UPDATE/DELETE) |
 | `new_values` | JSONB | New values (INSERT/UPDATE) |
@@ -208,13 +208,21 @@ This implementation supports:
 Audit logs can be queried via the admin API at `/v1/admin/audit-logs`. The admin web
 viewer lives under **Audit** at `/audit` (top-level navigation).
 
-The admin UI can filter by Cognito email or API key name using the `email` query
-parameter. Values containing `@` resolve to a Cognito `sub` via
-`aws_proxy.invoke('cognito-idp', 'list_users', ...)`. Other values match
-`api_keys.name` (case-insensitive) and become `user_id = api-key:<id>`.
-The response is an empty list when no actor matches. List and detail responses
-may include optional `user_email`: Cognito email for human actors, or the API
-key `name` (raw) for `api-key:<id>` writes.
+The admin UI Actor filter uses the `email` query parameter. Values containing
+`@` resolve to a Cognito `sub` via `aws_proxy.invoke('cognito-idp',
+'list_users', ...)`. Other values first match known system-actor labels or
+stored ids (`System` / `system`, `WhatsApp webhook` / `webhook:whatsapp`,
+`Meta webhook` / `webhook:meta`), then `api_keys.name` (case-insensitive)
+which becomes `user_id = api-key:<id>`. The response is an empty list when no
+actor matches. List and detail responses may include optional `user_email`:
+Cognito email for human actors, the API key `name` (raw) for `api-key:<id>`
+writes, or a system-actor label for webhook and other automated writers.
+
+WhatsApp and Meta Cloud API webhooks set `set_audit_context` with
+`user_id = webhook:whatsapp` or `webhook:meta` before ingest so trigger-written
+rows (including `whatsapp_conversations` updates) show an actor. Historical
+rows written before that context exist keep a null `user_id`. Inbound invoice
+ingest already stores `user_id = system`.
 
 For full endpoint details (parameters, request/response schemas), see the
 OpenAPI spec: [`docs/api/admin.yaml`](../api/admin.yaml) — search for

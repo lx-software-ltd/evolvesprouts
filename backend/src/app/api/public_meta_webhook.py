@@ -12,6 +12,7 @@ from collections.abc import Mapping
 
 from sqlalchemy.orm import Session
 
+from app.db.audit import WEBHOOK_META_AUDIT_USER_ID, set_audit_context
 from app.db.engine import get_engine
 from app.services.meta_ingest import ingest_webhook_payload
 from app.utils import json_response
@@ -61,7 +62,13 @@ def handle_meta_webhook(
         return json_response(400, {"error": "Invalid payload"}, event=event)
 
     try:
+        request_id = str(event.get("requestContext", {}).get("requestId") or "")
         with Session(get_engine()) as session:
+            set_audit_context(
+                session,
+                user_id=WEBHOOK_META_AUDIT_USER_ID,
+                request_id=request_id or None,
+            )
             counters = ingest_webhook_payload(session, payload)
             session.commit()
     except Exception:

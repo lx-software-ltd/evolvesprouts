@@ -1136,6 +1136,100 @@ def test_api_key_name_filter_no_match_returns_empty(
     assert json.loads(r["body"]) == {"items": [], "next_cursor": None}
 
 
+def test_system_actor_labels_skip_cognito(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cognito_calls: list[str] = []
+
+    def fake_invoke(_svc: str, _action: str, params: dict[str, Any]) -> dict[str, Any]:
+        cognito_calls.append(params["Filter"])
+        return {"Users": []}
+
+    class _Session:
+        def execute(self, *_a: object, **_k: object) -> None:
+            raise AssertionError("API key lookup should not run for system actors")
+
+    monkeypatch.setattr(admin_audit_actors.aws_proxy, "invoke", fake_invoke)
+    labels = admin_audit_actors.actor_labels_for_user_ids(
+        _Session(),  # type: ignore[arg-type]
+        ["webhook:whatsapp", "webhook:meta", "system"],
+        user_pool_id="pool-1",
+    )
+    assert labels == {
+        "webhook:whatsapp": "WhatsApp webhook",
+        "webhook:meta": "Meta webhook",
+        "system": "System",
+    }
+    assert cognito_calls == []
+
+
+def test_system_actor_filter_resolves(
+    api_gateway_event: Any,
+    admin_identity: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    row = _row(user="webhook:whatsapp")
+    repo_calls: list[dict[str, Any]] = []
+
+    class _Session:
+        def __init__(self, *_a: object, **_k: object) -> None:
+            pass
+
+        def __enter__(self) -> "_Session":
+            return self
+
+        def __exit__(self, *_a: object) -> None:
+            return None
+
+        def execute(self, *_a: object, **_k: object) -> None:
+            return None
+
+    class _Repo:
+        def __init__(self, _session: Any) -> None:
+            pass
+
+        def get_user_activity(self, **kwargs: Any) -> list[AuditLog]:
+            repo_calls.append(kwargs)
+            return [row]
+
+    monkeypatch.setattr(admin_audit_logs, "Session", _Session)
+    monkeypatch.setattr(admin_audit_logs, "get_engine", lambda: object())
+    monkeypatch.setattr(admin_audit_logs, "AuditLogRepository", _Repo)
+    monkeypatch.setattr(
+        admin_audit_logs,
+        "_actor_labels_for_user_ids",
+        lambda *_a, **_: {"webhook:whatsapp": "WhatsApp webhook"},
+    )
+
+    r = admin_audit_logs.handle_admin_audit_logs_request(
+        api_gateway_event(
+            method="GET",
+            path="/v1/admin/audit-logs",
+            query_params={"email": "WhatsApp webhook"},
+            authorizer_context=admin_identity,
+        ),
+        "GET",
+        "/v1/admin/audit-logs",
+    )
+    assert r["statusCode"] == 200
+    body = json.loads(r["body"])
+    assert body["items"][0]["user_email"] == "WhatsApp webhook"
+    assert repo_calls[0]["user_id"] == "webhook:whatsapp"
+
+
+def test_system_actor_user_id_for_label_accepts_id_or_display() -> None:
+    assert (
+        admin_audit_actors.system_actor_user_id_for_label("whatsapp webhook")
+        == "webhook:whatsapp"
+    )
+    assert admin_audit_actors.system_actor_user_id_for_label("SYSTEM") == "system"
+    assert (
+        admin_audit_actors.system_actor_user_id_for_label("webhook:meta")
+        == "webhook:meta"
+    )
+    assert admin_audit_actors.system_actor_user_id_for_label("unknown") is None
+
+
 def test_missing_api_key_falls_back_to_user_id() -> None:
     user_id = f"api-key:{uuid4()}"
 
