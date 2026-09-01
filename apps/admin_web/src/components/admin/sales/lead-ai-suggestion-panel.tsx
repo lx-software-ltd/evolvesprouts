@@ -1,13 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { StatusBanner } from '@/components/status-banner';
 import { AdminEditorCard } from '@/components/ui/admin-editor-card';
 import { Button } from '@/components/ui/button';
 import { AdminApiError } from '@/lib/api-admin-client';
-import { fetchLeadAiSuggestion, generateLeadAiSuggestion } from '@/lib/leads-api';
-import type { LeadAiSuggestion } from '@/types/leads';
+import {
+  enqueueLeadAiSuggestionJob,
+  fetchLeadAiSuggestion,
+  pollLeadAiSuggestionJob,
+} from '@/lib/leads-api';
+import type { LeadAiSuggestion, LeadAiSuggestionJob } from '@/types/leads';
 
 export interface LeadAiSuggestionPanelProps {
   leadId: string;
@@ -27,6 +31,16 @@ function formatStaleReasons(reasons: string[]): string {
     .join('; ');
 }
 
+function formatDuration(ms: number | null | undefined): string {
+  if (ms == null || Number.isNaN(ms)) {
+    return '—';
+  }
+  if (ms < 1000) {
+    return `${ms} ms`;
+  }
+  return `${(ms / 1000).toFixed(1)} s`;
+}
+
 function formatLeadAiSuggestionError(error: unknown, fallback: string): string {
   if (error instanceof AdminApiError) {
     if (error.statusCode === 502 || error.statusCode === 504) {
@@ -41,9 +55,11 @@ function formatLeadAiSuggestionError(error: unknown, fallback: string): string {
 
 export function LeadAiSuggestionPanel({ leadId }: LeadAiSuggestionPanelProps) {
   const [suggestion, setSuggestion] = useState<LeadAiSuggestion | null>(null);
+  const [lastJob, setLastJob] = useState<LeadAiSuggestionJob | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState('');
+  const abortRef = useRef<AbortController | null>(null);
 
   const loadSuggestion = useCallback(async () => {
     setIsLoading(true);
@@ -60,15 +76,32 @@ export function LeadAiSuggestionPanel({ leadId }: LeadAiSuggestionPanelProps) {
 
   useEffect(() => {
     void loadSuggestion();
+    return () => {
+      abortRef.current?.abort();
+    };
   }, [loadSuggestion]);
 
   async function handleGenerate() {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setIsGenerating(true);
     setError('');
+    setLastJob(null);
     try {
-      const next = await generateLeadAiSuggestion(leadId);
-      setSuggestion(next);
+      const queued = await enqueueLeadAiSuggestionJob(leadId);
+      setLastJob(queued);
+      const finished = await pollLeadAiSuggestionJob(leadId, queued.id, controller.signal);
+      setLastJob(finished);
+      if (finished.suggestion) {
+        setSuggestion(finished.suggestion);
+      } else {
+        await loadSuggestion();
+      }
     } catch (generateError) {
+      if (generateError instanceof DOMException && generateError.name === 'AbortError') {
+        return;
+      }
       setError(
         formatLeadAiSuggestionError(generateError, 'Failed to generate AI suggestion.')
       );
@@ -94,6 +127,23 @@ export function LeadAiSuggestionPanel({ leadId }: LeadAiSuggestionPanelProps) {
         <StatusBanner variant='error' title='AI suggestion'>
           {error}
         </StatusBanner>
+      ) : null}
+
+      {isGenerating ? (
+        <p className='text-sm text-slate-600'>
+          Generating suggestion
+          {lastJob?.status ? ` (${lastJob.status})` : ''}…
+        </p>
+      ) : null}
+
+      {lastJob && (lastJob.status === 'succeeded' || lastJob.status === 'failed') ? (
+        <p className='text-xs text-slate-500'>
+          Last run: queue {formatDuration(lastJob.queueWaitMs)} · model{' '}
+          {formatDuration(lastJob.durationMs)}
+          {lastJob.finishedAt
+            ? ` · finished ${new Date(lastJob.finishedAt).toLocaleString()}`
+            : ''}
+        </p>
       ) : null}
 
       {isLoading ? <p className='text-sm text-slate-600'>Loading suggestion…</p> : null}

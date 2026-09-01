@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -32,14 +33,19 @@ _MAX_LEAD_MESSAGES = 30
 _MAX_SIMILAR_LEADS = 6
 _MAX_NOTES_PER_LEAD = 8
 _MAX_EVENTS = 12
-# Admin Lambda and API Gateway sync integrations cap at 29s. Leave headroom for
-# DB work and the in-VPC proxy invoke; a single OpenRouter attempt must finish
-# inside that budget (production traces showed ~26s end-to-end on success).
-_OPENROUTER_TIMEOUT_SECONDS = 26
-_OPENROUTER_MAX_ATTEMPTS = 1
 _SLOW_OPENROUTER_USER_MESSAGE = (
     "The AI model took too long to respond. Please try again in a moment."
 )
+
+
+def _openrouter_timeout_seconds() -> int:
+    raw = os.getenv("LEAD_AI_OPENROUTER_TIMEOUT_SECONDS", "90").strip()
+    try:
+        return max(5, min(int(raw), 240))
+    except ValueError:
+        return 90
+
+
 _JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL | re.IGNORECASE)
 
 _SYSTEM_PROMPT = """
@@ -176,9 +182,8 @@ def generate_and_store_suggestion(
         raw_body = openrouter_chat_completion(
             system_prompt=_SYSTEM_PROMPT,
             user_content=user_prompt,
-            timeout=_OPENROUTER_TIMEOUT_SECONDS,
+            timeout=_openrouter_timeout_seconds(),
             temperature=0.2,
-            max_attempts=_OPENROUTER_MAX_ATTEMPTS,
         )
     except AwsProxyError as exc:
         raise RuntimeError(_format_openrouter_failure(exc)) from exc

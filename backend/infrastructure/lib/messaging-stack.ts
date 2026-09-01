@@ -85,6 +85,10 @@ export class MessagingNestedStack extends cdk.NestedStack {
   public readonly bulkExpenseImportQueue: sqs.Queue;
   public readonly bulkExpenseImportFunction: lambda.Function;
 
+  public readonly leadAiSuggestionDLQ: sqs.Queue;
+  public readonly leadAiSuggestionQueue: sqs.Queue;
+  public readonly leadAiSuggestionFunction: lambda.Function;
+
   public constructor(scope: Construct, id: string, props: MessagingNestedStackProps) {
     super(scope, id, props);
 
@@ -531,6 +535,108 @@ export class MessagingNestedStack extends cdk.NestedStack {
       alarmDescription:
         "Bulk expense import messages failed processing and landed in DLQ",
       metric: this.bulkExpenseImportDLQ.metricApproximateNumberOfMessagesVisible({
+        period: cdk.Duration.minutes(5),
+      }),
+      threshold: 1,
+      evaluationPeriods: 1,
+      treatMissingData: cdk.aws_cloudwatch.TreatMissingData.NOT_BREACHING,
+    });
+
+    // -------------------------------------------------------------------------
+    // Lead AI suggestion (direct SQS; OpenRouter close advice)
+    // -------------------------------------------------------------------------
+
+    this.leadAiSuggestionDLQ = new sqs.Queue(this, "LeadAiSuggestionDLQ", {
+      queueName: name("lead-ai-suggestion-dlq"),
+      retentionPeriod: cdk.Duration.days(14),
+      encryption: sqs.QueueEncryption.KMS,
+      encryptionMasterKey: props.sqsEncryptionKey,
+    });
+
+    this.leadAiSuggestionQueue = new sqs.Queue(this, "LeadAiSuggestionQueue", {
+      queueName: name("lead-ai-suggestion-queue"),
+      visibilityTimeout: cdk.Duration.seconds(180),
+      deadLetterQueue: {
+        queue: this.leadAiSuggestionDLQ,
+        maxReceiveCount: 3,
+      },
+      encryption: sqs.QueueEncryption.KMS,
+      encryptionMasterKey: props.sqsEncryptionKey,
+    });
+
+    this.leadAiSuggestionFunction = createPythonFunction("LeadAiSuggestionFunction", {
+      handler: "lambda/lead_ai_suggestion/handler.lambda_handler",
+      timeout: cdk.Duration.seconds(120),
+      manageLogGroup: false,
+      reservedConcurrentExecutions: -1,
+      environment: {
+        LEAD_AI_SUGGESTION_LAMBDA_TIMEOUT_SECONDS: "120",
+        LEAD_AI_OPENROUTER_TIMEOUT_SECONDS: "90",
+        DATABASE_SECRET_ARN: props.databaseSecretArn,
+        DATABASE_NAME: "evolvesprouts",
+        DATABASE_USERNAME: "evolvesprouts_admin",
+        DATABASE_PROXY_ENDPOINT: props.databaseProxyEndpoint,
+        DATABASE_IAM_AUTH: "true",
+        OPENROUTER_API_KEY_SECRET_ARN: props.openrouterApiSecretArn,
+        OPENROUTER_CHAT_COMPLETIONS_URL: props.openrouterChatCompletionsUrl,
+        OPENROUTER_MODEL: props.openrouterModel,
+        AWS_PROXY_FUNCTION_ARN: props.awsProxyFunctionArn,
+      },
+    });
+
+    this.leadAiSuggestionFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"],
+        resources: [props.databaseSecretArn, props.openrouterApiSecretArn],
+      })
+    );
+    if (props.databaseSecretKmsKeyArn) {
+      this.leadAiSuggestionFunction.addToRolePolicy(
+        new iam.PolicyStatement({
+          actions: ["kms:Decrypt"],
+          resources: [props.databaseSecretKmsKeyArn],
+        })
+      );
+    }
+    if (props.openrouterApiSecretKmsKeyArn) {
+      this.leadAiSuggestionFunction.addToRolePolicy(
+        new iam.PolicyStatement({
+          actions: ["kms:Decrypt"],
+          resources: [props.openrouterApiSecretKmsKeyArn],
+        })
+      );
+    }
+    this.leadAiSuggestionFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["rds-db:connect"],
+        resources: [
+          cdk.Fn.join("", [
+            "arn:", cdk.Aws.PARTITION, ":rds-db:", cdk.Aws.REGION, ":", cdk.Aws.ACCOUNT_ID,
+            ":dbuser:", cdk.Fn.select(6, cdk.Fn.split(":", props.databaseProxyArn)),
+            "/evolvesprouts_admin",
+          ]),
+        ],
+      })
+    );
+    this.leadAiSuggestionFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["lambda:InvokeFunction"],
+        resources: [props.awsProxyFunctionArn],
+      })
+    );
+
+    this.leadAiSuggestionFunction.addEventSource(
+      new lambdaEventSources.SqsEventSource(this.leadAiSuggestionQueue, {
+        batchSize: 1,
+        reportBatchItemFailures: true,
+      })
+    );
+
+    new cdk.aws_cloudwatch.Alarm(this, "LeadAiSuggestionDLQAlarm", {
+      alarmName: name("lead-ai-suggestion-dlq-alarm"),
+      alarmDescription:
+        "Lead AI suggestion messages failed processing and landed in DLQ",
+      metric: this.leadAiSuggestionDLQ.metricApproximateNumberOfMessagesVisible({
         period: cdk.Duration.minutes(5),
       }),
       threshold: 1,

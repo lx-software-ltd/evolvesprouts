@@ -118,6 +118,27 @@ export interface LeadAiFollowUp {
   rationale: string;
 }
 
+export type LeadAiSuggestionJobStatus =
+  | 'pending'
+  | 'processing'
+  | 'succeeded'
+  | 'failed';
+
+export interface LeadAiSuggestionJob {
+  id: string;
+  leadId: string;
+  status: LeadAiSuggestionJobStatus;
+  errorMessage: string | null;
+  suggestionId: string | null;
+  createdAt: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+  updatedAt: string | null;
+  queueWaitMs: number | null;
+  durationMs: number | null;
+  suggestion: LeadAiSuggestion | null;
+}
+
 export interface LeadAiSuggestion {
   id: string;
   leadId: string;

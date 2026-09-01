@@ -39,8 +39,16 @@ from app.db.repositories import (
     SalesLeadRepository,
 )
 from app.exceptions import NotFoundError, ValidationError
+from app.db.models.sales_lead_ai_suggestion_job import (
+    SalesLeadAiSuggestionJob,
+    SalesLeadAiSuggestionJobStatus,
+)
+from app.db.repositories.sales_lead_ai_suggestion_job import (
+    SalesLeadAiSuggestionJobRepository,
+)
+from app.services.lead_ai_suggestion_events import enqueue_lead_ai_suggestion_job
+from app.services.lead_ai_suggestion_serialize import serialize_lead_ai_suggestion_job
 from app.services.lead_close_suggestion import (
-    generate_and_store_suggestion,
     get_latest_suggestion,
     serialize_suggestion,
 )
@@ -107,6 +115,12 @@ def handle_admin_leads_request(
             return _create_lead_ai_suggestion(
                 event, lead_id=lead_id, actor_sub=identity.user_sub
             )
+        return json_response(405, {"error": "Method not allowed"}, event=event)
+
+    if len(parts) == 6 and parts[3] == "ai-suggestion" and parts[4] == "jobs":
+        job_id = parse_uuid(parts[5])
+        if method == "GET":
+            return _get_lead_ai_suggestion_job(event, lead_id=lead_id, job_id=job_id)
         return json_response(405, {"error": "Method not allowed"}, event=event)
 
     return json_response(404, {"error": "Not found"}, event=event)
@@ -312,17 +326,6 @@ def _update_lead(
                     metadata=None,
                     created_by=actor_sub,
                 )
-            elif (
-                next_stage == FunnelStage.LOST
-                and payload["lost_reason"] is not None
-                and lead.lost_reason != payload["lost_reason"]
-            ):
-                lead.lost_reason = payload["lost_reason"]
-                lead.updated_at = datetime.now(UTC)
-                if lead.lost_at is None:
-                    lead.lost_at = datetime.now(UTC)
-                lead.converted_at = None
-                repository.update(lead)
 
         previous_assignee = lead.assigned_to
         assignment_changed = False
@@ -433,27 +436,88 @@ def _create_lead_ai_suggestion(
             request_id=request_id(event),
         )
         lead_repo = SalesLeadRepository(session)
-        lead = lead_repo.get_by_id_with_details(lead_id)
+        lead = lead_repo.get_by_id(lead_id)
         if lead is None:
             raise NotFoundError("SalesLead", str(lead_id))
-        try:
-            suggestion = generate_and_store_suggestion(
-                session,
-                lead=lead,
-                actor_sub=actor_sub,
-            )
-        except RuntimeError as exc:
-            logger_message = str(exc)
-            raise ValidationError(logger_message, field="ai_suggestion") from exc
+        job = SalesLeadAiSuggestionJob(
+            lead_id=lead.id,
+            created_by=actor_sub,
+            status=SalesLeadAiSuggestionJobStatus.PENDING,
+        )
+        session.add(job)
+        session.flush()
+        job_id = job.id
         session.commit()
-        session.refresh(suggestion)
+
+    try:
+        enqueue_lead_ai_suggestion_job(job_id)
+    except ValidationError:
+        with Session(get_engine()) as session:
+            stale = session.get(SalesLeadAiSuggestionJob, job_id)
+            if stale is not None:
+                session.delete(stale)
+                session.commit()
+        raise
+    except Exception:
+        with Session(get_engine()) as session:
+            job_repo = SalesLeadAiSuggestionJobRepository(session)
+            failed = job_repo.get_by_id(job_id)
+            if failed is not None:
+                job_repo.mark_failed(
+                    failed, "Could not queue AI suggestion; try again shortly."
+                )
+                session.commit()
+        raise ValidationError(
+            "AI suggestion could not be queued; try again shortly.",
+            field="configuration",
+        ) from None
+
+    with Session(get_engine()) as session:
+        job_repo = SalesLeadAiSuggestionJobRepository(session)
+        persisted_job = job_repo.get_by_id(job_id)
+        if persisted_job is None:
+            raise NotFoundError("SalesLeadAiSuggestionJob", str(job_id))
         return json_response(
-            201,
-            {
-                "suggestion": serialize_suggestion(
+            202,
+            {"job": serialize_lead_ai_suggestion_job(persisted_job)},
+            event=event,
+        )
+
+
+def _get_lead_ai_suggestion_job(
+    event: Mapping[str, Any],
+    *,
+    lead_id: UUID,
+    job_id: UUID,
+) -> dict[str, Any]:
+    with Session(get_engine()) as session:
+        lead_repo = SalesLeadRepository(session)
+        lead = lead_repo.get_by_id(lead_id)
+        if lead is None:
+            raise NotFoundError("SalesLead", str(lead_id))
+        job_repo = SalesLeadAiSuggestionJobRepository(session)
+        job = job_repo.get_for_lead(job_id, lead_id=lead.id)
+        if job is None:
+            raise NotFoundError("SalesLeadAiSuggestionJob", str(job_id))
+        suggestion_payload = None
+        if (
+            job.status == SalesLeadAiSuggestionJobStatus.SUCCEEDED
+            and job.suggestion_id is not None
+        ):
+            from app.db.models.sales_lead_ai_suggestion import SalesLeadAiSuggestion
+
+            suggestion = session.get(SalesLeadAiSuggestion, job.suggestion_id)
+            if suggestion is not None:
+                suggestion_payload = serialize_suggestion(
                     session,
                     suggestion=suggestion,
                     contact_id=lead.contact_id,
+                )
+        return json_response(
+            200,
+            {
+                "job": serialize_lead_ai_suggestion_job(
+                    job, suggestion=suggestion_payload
                 )
             },
             event=event,

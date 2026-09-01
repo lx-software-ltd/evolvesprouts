@@ -16,7 +16,10 @@ def test_openrouter_chat_completion_respects_max_attempts(
 
     def _fake_http_invoke(**_kwargs: Any) -> dict[str, Any]:
         calls.append(1)
-        return {"status": 429, "body": '{"error":{"message":"rate limited","code":429}}'}
+        return {
+            "status": 429,
+            "body": '{"error":{"message":"rate limited","code":429}}',
+        }
 
     monkeypatch.setenv(
         "OPENROUTER_CHAT_COMPLETIONS_URL",
@@ -45,7 +48,10 @@ def test_openrouter_chat_completion_defaults_to_three_attempts(
 
     def _fake_http_invoke(**_kwargs: Any) -> dict[str, Any]:
         calls.append(1)
-        return {"status": 429, "body": '{"error":{"message":"rate limited","code":429}}'}
+        return {
+            "status": 429,
+            "body": '{"error":{"message":"rate limited","code":429}}',
+        }
 
     monkeypatch.setenv(
         "OPENROUTER_CHAT_COMPLETIONS_URL",

@@ -2229,6 +2229,12 @@ export class ApiStack extends cdk.Stack {
       messaging.bulkExpenseImportQueue.queueUrl
     );
 
+    awsProxyFunction.grantInvoke(messaging.leadAiSuggestionFunction);
+    database.grantAdminUserSecretRead(messaging.leadAiSuggestionFunction);
+    database.grantConnect(messaging.leadAiSuggestionFunction, "evolvesprouts_admin");
+
+    messaging.leadAiSuggestionQueue.grantSendMessages(adminFunction)
+
     adminFunction.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ["sns:Publish"],
@@ -3844,6 +3850,13 @@ export class ApiStack extends cdk.Stack {
         value: customHostedDomain.attrCloudFrontDistribution,
       }
     );
+
+    new cdk.CfnOutput(this, "LeadAiSuggestionQueueUrl", {
+      value: messaging.leadAiSuggestionQueue.queueUrl,
+    });
+    new cdk.CfnOutput(this, "LeadAiSuggestionDLQUrl", {
+      value: messaging.leadAiSuggestionDLQ.queueUrl,
+    });
     customAuthDomainOutput.condition = useCustomDomain;
 
     const apiCustomDomainTarget = new cdk.CfnOutput(
