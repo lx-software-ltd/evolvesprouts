@@ -374,6 +374,11 @@ export function ServicesPage() {
                 enrollmentId
               );
             }}
+            autoSelectParty={{
+              contactId: state.contactFilterId,
+              familyId: state.familyFilterId,
+              organizationId: state.organizationFilterId,
+            }}
           />
         </>
       ) : state.activeView === 'discount-codes' ? (
