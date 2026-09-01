@@ -3,26 +3,30 @@
 import { useState } from 'react';
 
 import { ActivityTimeline } from './activity-timeline';
-import { LeadInfoSection } from './lead-info-section';
-import { LeadQuickActions } from './lead-quick-actions';
-import { NotesSection } from './notes-section';
-import { StageControl } from './stage-control';
 
-import { CONTACT_SOURCES, LEAD_TYPES } from '@/types/leads';
+import { CONTACT_TYPES } from '@/lib/contacts/contacts-panel-constants';
+import { instagramHandleForStorage } from '@/lib/contacts/contacts-panel-helpers';
+import { formatEnumLabel } from '@/lib/format';
+import { contactPhoneRequestFields } from '@/lib/phone-request';
+import { CONTACT_SOURCES, FUNNEL_STAGES, LEAD_TYPES } from '@/types/leads';
 import type { AdminUser, ContactSource, FunnelStage, LeadDetail, LeadType } from '@/types/leads';
+import type { components } from '@/types/generated/admin-api.generated';
+import type { CreateLeadEntryInput, UpdateLeadEntryInput } from '@/hooks/use-lead-mutations';
 
 import { StatusBanner } from '@/components/status-banner';
 import { AdminEditorCard } from '@/components/ui/admin-editor-card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { PhoneField } from '@/components/ui/phone-field';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { instagramHandleForStorage } from '@/lib/contacts/contacts-panel-helpers';
-import { formatEnumLabel } from '@/lib/format';
-import { contactPhoneRequestFields } from '@/lib/phone-request';
 
-interface CreateLeadFormState {
+type EntityContactType = components['schemas']['EntityContactType'];
+
+const LEAD_EDITOR_FORM_ID = 'lead-editor-form';
+
+interface LeadEditorFormState {
   firstName: string;
   lastName: string;
   email: string;
@@ -32,12 +36,14 @@ interface CreateLeadFormState {
   source: ContactSource;
   sourceDetail: string;
   leadType: LeadType;
-  contactType: string;
+  contactType: EntityContactType;
   assignedTo: string;
+  funnelStage: FunnelStage;
+  lostReason: string;
   note: string;
 }
 
-const EMPTY_CREATE_FORM: CreateLeadFormState = {
+const EMPTY_EDITOR_FORM: LeadEditorFormState = {
   firstName: '',
   lastName: '',
   email: '',
@@ -49,8 +55,35 @@ const EMPTY_CREATE_FORM: CreateLeadFormState = {
   leadType: 'consultation',
   contactType: 'parent',
   assignedTo: '',
+  funnelStage: 'new',
+  lostReason: '',
   note: '',
 };
+
+function asContactType(value: string | null | undefined): EntityContactType {
+  return CONTACT_TYPES.includes(value as EntityContactType)
+    ? (value as EntityContactType)
+    : 'parent';
+}
+
+function formFromLead(lead: LeadDetail): LeadEditorFormState {
+  return {
+    firstName: lead.contact.firstName ?? '',
+    lastName: lead.contact.lastName ?? '',
+    email: lead.contact.email ?? '',
+    phoneRegion: lead.contact.phoneRegion ?? 'HK',
+    phoneNational: lead.contact.phoneNationalNumber ?? '',
+    instagramHandle: instagramHandleForStorage(lead.contact.instagramHandle) ?? '',
+    source: lead.contact.source ?? 'manual',
+    sourceDetail: lead.contact.sourceDetail ?? '',
+    leadType: lead.leadType,
+    contactType: asContactType(lead.contact.contactType),
+    assignedTo: lead.assignedTo ?? '',
+    funnelStage: lead.funnelStage,
+    lostReason: lead.lostReason ?? '',
+    note: '',
+  };
+}
 
 export interface LeadDetailPanelProps {
   mode: 'create' | 'edit';
@@ -59,24 +92,8 @@ export interface LeadDetailPanelProps {
   isLoading: boolean;
   error: string;
   onStartCreate: () => void;
-  onCancelCreate: () => void;
-  onCreate: (payload: {
-    first_name: string;
-    last_name?: string | null;
-    email?: string | null;
-    phone_region?: string | null;
-    phone_number?: string | null;
-    instagram_handle?: string | null;
-    source: ContactSource;
-    source_detail?: string | null;
-    lead_type: LeadType;
-    contact_type?: string | null;
-    assigned_to?: string | null;
-    note?: string | null;
-  }) => Promise<void> | void;
-  onUpdateStage: (stage: FunnelStage, lostReason?: string) => Promise<void> | void;
-  onAddNote: (content: string) => Promise<void> | void;
-  onAssign: (assignedTo: string | null) => Promise<void> | void;
+  onCreate: (payload: CreateLeadEntryInput) => Promise<void> | void;
+  onUpdate: (payload: UpdateLeadEntryInput) => Promise<void> | void;
 }
 
 export function LeadDetailPanel({
@@ -86,214 +103,335 @@ export function LeadDetailPanel({
   isLoading,
   error,
   onStartCreate,
-  onCancelCreate,
   onCreate,
-  onUpdateStage,
-  onAddNote,
-  onAssign,
+  onUpdate,
 }: LeadDetailPanelProps) {
-  const [createForm, setCreateForm] = useState<CreateLeadFormState>(EMPTY_CREATE_FORM);
+  const [form, setForm] = useState<LeadEditorFormState>(() =>
+    mode === 'edit' && lead ? formFromLead(lead) : EMPTY_EDITOR_FORM
+  );
+  const [hydratedLeadId, setHydratedLeadId] = useState<string | null>(
+    mode === 'edit' && lead ? lead.id : null
+  );
 
-  const handleCreate = async () => {
+  if (mode === 'edit' && lead && hydratedLeadId !== lead.id) {
+    setHydratedLeadId(lead.id);
+    setForm(formFromLead(lead));
+  } else if (mode === 'create' && hydratedLeadId !== null) {
+    setHydratedLeadId(null);
+    setForm(EMPTY_EDITOR_FORM);
+  }
+
+  const needsLostReason = mode === 'edit' && form.funnelStage === 'lost';
+  const saveDisabled =
+    isLoading ||
+    form.firstName.trim().length === 0 ||
+    (needsLostReason && form.lostReason.trim().length === 0);
+
+  const handleSubmit = async () => {
+    const phone = contactPhoneRequestFields(form.phoneRegion, form.phoneNational);
+    const sharedContact = {
+      first_name: form.firstName.trim(),
+      last_name: form.lastName.trim() || null,
+      email: form.email.trim() || null,
+      ...phone,
+      instagram_handle: instagramHandleForStorage(form.instagramHandle),
+      source: form.source,
+      source_detail: form.sourceDetail.trim() || null,
+      contact_type: form.contactType,
+    };
+
     try {
-      await onCreate({
-        first_name: createForm.firstName.trim(),
-        last_name: createForm.lastName.trim() || null,
-        email: createForm.email.trim() || null,
-        ...contactPhoneRequestFields(createForm.phoneRegion, createForm.phoneNational),
-        instagram_handle: instagramHandleForStorage(createForm.instagramHandle),
-        source: createForm.source,
-        source_detail: createForm.sourceDetail.trim() || null,
-        lead_type: createForm.leadType,
-        contact_type: createForm.contactType || null,
-        assigned_to: createForm.assignedTo || null,
-        note: createForm.note.trim() || null,
+      if (mode === 'create') {
+        await onCreate({
+          ...sharedContact,
+          lead_type: form.leadType,
+          assigned_to: form.assignedTo || null,
+          note: form.note.trim() || null,
+        });
+        return;
+      }
+      await onUpdate({
+        funnel_stage: form.funnelStage,
+        assigned_to: form.assignedTo || null,
+        lost_reason: form.funnelStage === 'lost' ? form.lostReason.trim() : null,
+        contact: lead?.contact.id
+          ? {
+              id: lead.contact.id,
+              ...sharedContact,
+            }
+          : undefined,
       });
-      onCancelCreate();
     } catch {
-      // Keep the form visible to let users correct and retry.
+      // Keep the form visible so users can correct and retry.
     }
   };
 
-  if (mode === 'create') {
-    return (
+  return (
+    <div className='space-y-4'>
       <AdminEditorCard
         title='Lead'
-        description='Create a lead or select a row below to view details.'
+        description='Create a lead or select a row below to edit.'
         actions={
-          <Button
-            type='button'
-            onClick={() => void handleCreate()}
-            disabled={isLoading || createForm.firstName.trim().length === 0}
-          >
-            {isLoading ? 'Creating...' : 'Create lead'}
-          </Button>
+          <>
+            {mode === 'edit' ? (
+              <Button type='button' variant='secondary' onClick={onStartCreate} disabled={isLoading}>
+                Cancel
+              </Button>
+            ) : null}
+            <Button type='submit' form={LEAD_EDITOR_FORM_ID} disabled={saveDisabled}>
+              {isLoading
+                ? mode === 'create'
+                  ? 'Creating...'
+                  : 'Updating...'
+                : mode === 'create'
+                  ? 'Create lead'
+                  : 'Update lead'}
+            </Button>
+          </>
         }
       >
         {error ? (
-          <StatusBanner variant='error' title='Create Lead'>
+          <StatusBanner variant='error' title='Lead'>
             {error}
           </StatusBanner>
         ) : null}
 
-        <div className='space-y-3'>
-          <div className='grid grid-cols-1 gap-3 md:grid-cols-2'>
-            <Input
-              value={createForm.firstName}
-              onChange={(event) => setCreateForm((previous) => ({ ...previous, firstName: event.target.value }))}
-              placeholder='First name *'
-            />
-            <Input
-              value={createForm.lastName}
-              onChange={(event) => setCreateForm((previous) => ({ ...previous, lastName: event.target.value }))}
-              placeholder='Last name'
-            />
-            <Input
-              value={createForm.email}
-              onChange={(event) => setCreateForm((previous) => ({ ...previous, email: event.target.value }))}
-              type='email'
-              placeholder='Email'
-            />
-            <div className='md:col-span-2'>
-              <PhoneField
-                region={createForm.phoneRegion}
-                national={createForm.phoneNational}
-                onRegionChange={(value) =>
-                  setCreateForm((previous) => ({ ...previous, phoneRegion: value }))
-                }
-                onNationalChange={(value) =>
-                  setCreateForm((previous) => ({ ...previous, phoneNational: value }))
-                }
-                regionLabel='Phone country / region'
-                nationalLabel='Phone number (national digits)'
-              />
+        {mode === 'edit' && !lead ? (
+          <p className='text-sm text-slate-600'>
+            {isLoading ? 'Loading lead…' : 'Select a lead below to edit, or create a new lead.'}
+          </p>
+        ) : (
+          <form
+            id={LEAD_EDITOR_FORM_ID}
+            className='space-y-4'
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleSubmit();
+            }}
+          >
+            <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4'>
+              <div>
+                <Label htmlFor='lead-editor-first-name'>First name</Label>
+                <Input
+                  id='lead-editor-first-name'
+                  value={form.firstName}
+                  onChange={(event) =>
+                    setForm((previous) => ({ ...previous, firstName: event.target.value }))
+                  }
+                  autoComplete='off'
+                />
+              </div>
+              <div>
+                <Label htmlFor='lead-editor-last-name'>Last name</Label>
+                <Input
+                  id='lead-editor-last-name'
+                  value={form.lastName}
+                  onChange={(event) =>
+                    setForm((previous) => ({ ...previous, lastName: event.target.value }))
+                  }
+                  autoComplete='off'
+                />
+              </div>
+              <div>
+                <Label htmlFor='lead-editor-contact-type'>Contact type</Label>
+                <Select
+                  id='lead-editor-contact-type'
+                  value={form.contactType}
+                  onChange={(event) =>
+                    setForm((previous) => ({
+                      ...previous,
+                      contactType: event.target.value as EntityContactType,
+                    }))
+                  }
+                >
+                  {CONTACT_TYPES.map((contactType) => (
+                    <option key={contactType} value={contactType}>
+                      {formatEnumLabel(contactType)}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor='lead-editor-lead-type'>Lead type</Label>
+                <Select
+                  id='lead-editor-lead-type'
+                  value={form.leadType}
+                  disabled={mode === 'edit'}
+                  onChange={(event) =>
+                    setForm((previous) => ({
+                      ...previous,
+                      leadType: event.target.value as LeadType,
+                    }))
+                  }
+                >
+                  {LEAD_TYPES.map((leadType) => (
+                    <option key={leadType} value={leadType}>
+                      {formatEnumLabel(leadType)}
+                    </option>
+                  ))}
+                </Select>
+              </div>
             </div>
-            <div className='relative'>
-              <span
-                className='pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-slate-500 sm:text-sm'
-                aria-hidden
-              >
-                @
-              </span>
-              <Input
-                className='pl-7'
-                value={createForm.instagramHandle}
-                onChange={(event) =>
-                  setCreateForm((previous) => ({
-                    ...previous,
-                    instagramHandle: instagramHandleForStorage(event.target.value) ?? '',
-                  }))
-                }
-                placeholder='username'
-                aria-label='Instagram handle'
-              />
+
+            <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4'>
+              <div>
+                <Label htmlFor='lead-editor-email'>Email</Label>
+                <Input
+                  id='lead-editor-email'
+                  type='email'
+                  value={form.email}
+                  onChange={(event) =>
+                    setForm((previous) => ({ ...previous, email: event.target.value }))
+                  }
+                  autoComplete='off'
+                />
+              </div>
+              <div>
+                <PhoneField
+                  variant='compact'
+                  combinedLabel='Phone number'
+                  regionLabel='Phone country / region'
+                  nationalLabel='Phone number (national digits)'
+                  region={form.phoneRegion}
+                  national={form.phoneNational}
+                  onRegionChange={(value) =>
+                    setForm((previous) => ({ ...previous, phoneRegion: value }))
+                  }
+                  onNationalChange={(value) =>
+                    setForm((previous) => ({ ...previous, phoneNational: value }))
+                  }
+                  nationalInputId='lead-editor-phone-national'
+                />
+              </div>
+              <div>
+                <Label htmlFor='lead-editor-instagram'>Instagram</Label>
+                <div className='relative'>
+                  <span
+                    className='pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-slate-500 sm:text-sm'
+                    aria-hidden
+                  >
+                    @
+                  </span>
+                  <Input
+                    id='lead-editor-instagram'
+                    className='pl-7'
+                    value={form.instagramHandle}
+                    onChange={(event) =>
+                      setForm((previous) => ({
+                        ...previous,
+                        instagramHandle: instagramHandleForStorage(event.target.value) ?? '',
+                      }))
+                    }
+                    placeholder='username'
+                    autoComplete='off'
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor='lead-editor-assigned-to'>Assigned to</Label>
+                <Select
+                  id='lead-editor-assigned-to'
+                  value={form.assignedTo}
+                  onChange={(event) =>
+                    setForm((previous) => ({ ...previous, assignedTo: event.target.value }))
+                  }
+                >
+                  <option value=''>Unassigned</option>
+                  {users.map((user) => (
+                    <option key={user.sub} value={user.sub}>
+                      {user.name || user.email || user.sub}
+                    </option>
+                  ))}
+                </Select>
+              </div>
             </div>
-            <Select
-              value={createForm.source}
-              onChange={(event) =>
-                setCreateForm((previous) => ({ ...previous, source: event.target.value as ContactSource }))
-              }
-            >
-              {CONTACT_SOURCES.map((sourceOption) => (
-                <option key={sourceOption} value={sourceOption}>
-                  {formatEnumLabel(sourceOption)}
-                </option>
-              ))}
-            </Select>
-            <Input
-              value={createForm.sourceDetail}
-              onChange={(event) =>
-                setCreateForm((previous) => ({ ...previous, sourceDetail: event.target.value }))
-              }
-              placeholder='Source detail'
-            />
-            <Select
-              value={createForm.leadType}
-              onChange={(event) =>
-                setCreateForm((previous) => ({ ...previous, leadType: event.target.value as LeadType }))
-              }
-            >
-              {LEAD_TYPES.map((leadTypeOption) => (
-                <option key={leadTypeOption} value={leadTypeOption}>
-                  {formatEnumLabel(leadTypeOption)}
-                </option>
-              ))}
-            </Select>
-            <Select
-              value={createForm.contactType}
-              onChange={(event) =>
-                setCreateForm((previous) => ({ ...previous, contactType: event.target.value }))
-              }
-            >
-              <option value='parent'>Parent</option>
-              <option value='child'>Child</option>
-              <option value='helper'>Helper</option>
-              <option value='professional'>Professional</option>
-              <option value='other'>Other</option>
-            </Select>
-            <Select
-              value={createForm.assignedTo}
-              onChange={(event) =>
-                setCreateForm((previous) => ({ ...previous, assignedTo: event.target.value }))
-              }
-            >
-              <option value=''>Unassigned</option>
-              {users.map((user) => (
-                <option key={user.sub} value={user.sub}>
-                  {user.name || user.email || user.sub}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <Textarea
-            value={createForm.note}
-            onChange={(event) => setCreateForm((previous) => ({ ...previous, note: event.target.value }))}
-            placeholder='Initial note'
-            rows={3}
-          />
-        </div>
+
+            <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4'>
+              <div>
+                <Label htmlFor='lead-editor-source'>Source</Label>
+                <Select
+                  id='lead-editor-source'
+                  value={form.source}
+                  onChange={(event) =>
+                    setForm((previous) => ({
+                      ...previous,
+                      source: event.target.value as ContactSource,
+                    }))
+                  }
+                >
+                  {CONTACT_SOURCES.map((sourceOption) => (
+                    <option key={sourceOption} value={sourceOption}>
+                      {formatEnumLabel(sourceOption)}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div className='sm:col-span-2'>
+                <Label htmlFor='lead-editor-source-detail'>Source detail</Label>
+                <Input
+                  id='lead-editor-source-detail'
+                  value={form.sourceDetail}
+                  onChange={(event) =>
+                    setForm((previous) => ({ ...previous, sourceDetail: event.target.value }))
+                  }
+                  autoComplete='off'
+                />
+              </div>
+              {mode === 'edit' ? (
+                <div>
+                  <Label htmlFor='lead-editor-stage'>Stage</Label>
+                  <Select
+                    id='lead-editor-stage'
+                    value={form.funnelStage}
+                    onChange={(event) =>
+                      setForm((previous) => ({
+                        ...previous,
+                        funnelStage: event.target.value as FunnelStage,
+                      }))
+                    }
+                  >
+                    {FUNNEL_STAGES.map((stage) => (
+                      <option key={stage} value={stage}>
+                        {formatEnumLabel(stage)}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              ) : null}
+            </div>
+
+            {needsLostReason ? (
+              <div>
+                <Label htmlFor='lead-editor-lost-reason'>Lost reason</Label>
+                <Textarea
+                  id='lead-editor-lost-reason'
+                  value={form.lostReason}
+                  onChange={(event) =>
+                    setForm((previous) => ({ ...previous, lostReason: event.target.value }))
+                  }
+                  rows={3}
+                />
+              </div>
+            ) : null}
+
+            {mode === 'create' ? (
+              <div>
+                <Label htmlFor='lead-editor-note'>Initial note</Label>
+                <Textarea
+                  id='lead-editor-note'
+                  value={form.note}
+                  onChange={(event) =>
+                    setForm((previous) => ({ ...previous, note: event.target.value }))
+                  }
+                  rows={3}
+                />
+              </div>
+            ) : null}
+          </form>
+        )}
       </AdminEditorCard>
-    );
-  }
 
-  return (
-    <AdminEditorCard
-      title='Lead'
-      description='Select a row below to view details, or create a new lead.'
-      actions={
-        <Button type='button' variant='secondary' onClick={onStartCreate} disabled={isLoading}>
-          New lead
-        </Button>
-      }
-    >
-      {error ? (
-        <StatusBanner variant='error' title='Lead'>
-          {error}
-        </StatusBanner>
-      ) : null}
-
-      {!lead ? (
-        <p className='text-sm text-slate-600'>Select a lead to view details, or create a new lead.</p>
-      ) : (
-        <div className='space-y-4'>
-          <LeadInfoSection lead={lead} />
-          <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
-            <StageControl currentStage={lead.funnelStage} isLoading={isLoading} onUpdateStage={onUpdateStage} />
-            <LeadQuickActions
-              lead={lead}
-              users={users}
-              isLoading={isLoading}
-              onMarkConverted={() => onUpdateStage('converted')}
-              onMarkLost={(lostReason) => onUpdateStage('lost', lostReason)}
-              onAssign={onAssign}
-            />
-          </div>
-          <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
-            <NotesSection notes={lead.notes} users={users} isLoading={isLoading} onAddNote={onAddNote} />
-            <ActivityTimeline events={lead.events} users={users} />
-          </div>
-        </div>
-      )}
-    </AdminEditorCard>
+      {mode === 'edit' && lead ? <ActivityTimeline events={lead.events} users={users} /> : null}
+    </div>
   );
 }

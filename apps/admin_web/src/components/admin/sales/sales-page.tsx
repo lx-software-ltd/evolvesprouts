@@ -98,28 +98,15 @@ export function SalesPage() {
             isLoading={state.mutations.isLoading || state.leadDetail.isLoading}
             error={state.mutations.error}
             onStartCreate={state.startCreateLead}
-            onCancelCreate={state.cancelCreateLead}
             onCreate={async (payload) => {
               await state.mutations.createLeadEntry(payload);
               state.cancelCreateLead();
             }}
-            onUpdateStage={async (stage, lostReason) => {
+            onUpdate={async (payload) => {
               if (!state.selectedLeadId) {
                 return;
               }
-              await state.mutations.updateStage(state.selectedLeadId, stage, lostReason);
-            }}
-            onAddNote={async (content) => {
-              if (!state.selectedLeadId) {
-                return;
-              }
-              await state.mutations.addNote(state.selectedLeadId, content);
-            }}
-            onAssign={async (assignedTo) => {
-              if (!state.selectedLeadId) {
-                return;
-              }
-              await state.mutations.assignLead(state.selectedLeadId, assignedTo);
+              await state.mutations.updateLeadEntry(state.selectedLeadId, payload);
             }}
           />
           <LeadsTable

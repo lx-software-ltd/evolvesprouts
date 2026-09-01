@@ -64,6 +64,7 @@ const { mockUseSalesPage, state } = vi.hoisted(() => {
       isLoading: false,
       error: '',
       createLeadEntry: vi.fn().mockResolvedValue(null),
+      updateLeadEntry: vi.fn().mockResolvedValue(null),
       updateStage: vi.fn().mockResolvedValue(null),
       assignLead: vi.fn().mockResolvedValue(null),
       addNote: vi.fn().mockResolvedValue(undefined),
@@ -186,7 +187,7 @@ describe('SalesPage', () => {
     expect(screen.queryByText('Source Breakdown')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Date range preset')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Lead' })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('First name *')).toBeInTheDocument();
+    expect(screen.getByLabelText('First name')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create lead' })).toBeInTheDocument();
   });
 
@@ -209,7 +210,7 @@ describe('SalesPage', () => {
     state.isCreateMode = false;
     render(<SalesPage />);
 
-    await user.click(screen.getByRole('button', { name: 'New lead' }));
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(state.startCreateLead).toHaveBeenCalledTimes(1);
   });
 
