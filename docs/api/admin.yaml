@@ -842,7 +842,7 @@ paths:
         `audit_log`). Optional filters combine as in the admin Lambda handler:
         when `record_id` is set, `table` is required; `user_id` is a Cognito subject
         (sub), `api-key:<id>`, or a system actor (`system`, `webhook:whatsapp`,
-        `webhook:meta`). Use `email` to filter by Cognito email, API key name, or
+        `webhook:meta`, `alembic`). Use `email` to filter by Cognito email, API key name, or
         system-actor label (server resolves to sub, `api-key:<id>`, or the system
         `user_id`); do not pass `user_id` together with `email`.
       security:
@@ -935,8 +935,9 @@ paths:
             Filter by Cognito email, API key name, or system-actor label.
             Values containing `@` resolve to a Cognito `sub` via `list_users`.
             Other values first match known system actors (`System`,
-            `WhatsApp webhook`, `Meta webhook`, or stored ids `system`,
-            `webhook:whatsapp`, `webhook:meta`), then `api_keys.name`
+            `WhatsApp webhook`, `Meta webhook`, `Alembic`, or stored ids
+            `system`, `webhook:whatsapp`, `webhook:meta`, `alembic`), then
+            `api_keys.name`
             (case-insensitive) which becomes `api-key:<id>`. Mutually exclusive
             with `user_id`. When no actor matches, the response is an empty list.
           schema:
@@ -7311,7 +7312,7 @@ components:
           nullable: true
           description: >
             Cognito subject, `api-key:<id>` for token writes, or a system actor
-            (`system`, `webhook:whatsapp`, `webhook:meta`).
+            (`system`, `webhook:whatsapp`, `webhook:meta`, `alembic`).
         user_email:
           type: string
           nullable: true

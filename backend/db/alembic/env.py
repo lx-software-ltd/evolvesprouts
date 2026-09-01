@@ -38,6 +38,11 @@ if config.config_file_name is not None:
 base_dir = Path(__file__).resolve().parents[2]
 sys.path.append(str(base_dir / "src"))
 
+from app.db.audit import (  # noqa: E402
+    ALEMBIC_AUDIT_USER_ID,
+    migrations_audit_request_id,
+    set_connection_audit_context,
+)
 from app.db.base import Base  # noqa: E402
 from app.db import models  # noqa: F401,E402
 from app.db.connection import ensure_database_url_sslmode  # noqa: E402
@@ -102,6 +107,13 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
+        # Session-scoped (not SET LOCAL): Alembic commits per revision.
+        set_connection_audit_context(
+            connection,
+            user_id=ALEMBIC_AUDIT_USER_ID,
+            request_id=migrations_audit_request_id(),
+            local=False,
+        )
         context.configure(
             connection=connection,
             target_metadata=target_metadata,

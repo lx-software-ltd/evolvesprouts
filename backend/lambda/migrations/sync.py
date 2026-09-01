@@ -7,6 +7,11 @@ from typing import Any
 
 from psycopg import sql
 
+from app.db.audit import (
+    ALEMBIC_AUDIT_USER_ID,
+    migrations_audit_request_id,
+    set_psycopg_audit_context,
+)
 from app.utils.logging import get_logger
 
 from .secrets import _load_db_user_secret, _validate_db_username
@@ -107,6 +112,11 @@ def _sync_active_countries(database_url: str) -> None:
 
     with _psycopg_connect(database_url) as connection:
         with connection.cursor() as cursor:
+            set_psycopg_audit_context(
+                cursor,
+                user_id=ALEMBIC_AUDIT_USER_ID,
+                request_id=migrations_audit_request_id(),
+            )
             cursor.execute(
                 "SELECT EXISTS ("
                 "  SELECT 1 FROM information_schema.tables "
