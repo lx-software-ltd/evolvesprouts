@@ -23,6 +23,10 @@ from app.api.admin_entities_helpers import (
     replace_family_tags,
 )
 from app.api.admin_entities_serializers import serialize_family_summary
+from app.api.admin_party_related import (
+    family_related_serializer_kwargs,
+    related_flags_for_families,
+)
 from app.api.admin_request import (
     encode_cursor,
     parse_body,
@@ -143,10 +147,16 @@ def _list_families(event: Mapping[str, Any]) -> dict[str, Any]:
             encode_cursor(page_rows[-1].id) if has_more and page_rows else None
         )
         total_count = repository.count_for_admin(query=query, active=active)
+        flags_by_id = related_flags_for_families(session, [r.id for r in page_rows])
         return json_response(
             200,
             {
-                "items": [serialize_family_summary(r) for r in page_rows],
+                "items": [
+                    serialize_family_summary(
+                        r, **flags_by_id[r.id].as_serializer_kwargs()
+                    )
+                    for r in page_rows
+                ],
                 "next_cursor": next_cursor,
                 "total_count": total_count,
             },
@@ -162,7 +172,11 @@ def _get_family(event: Mapping[str, Any], *, family_id: UUID) -> dict[str, Any]:
             raise NotFoundError("Family", str(family_id))
         return json_response(
             200,
-            {"family": serialize_family_summary(family)},
+            {
+                "family": serialize_family_summary(
+                    family, **family_related_serializer_kwargs(session, family.id)
+                )
+            },
             event=event,
         )
 
@@ -201,7 +215,11 @@ def _create_family(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, Any
             raise DatabaseError("Failed to load family after create")
         return json_response(
             201,
-            {"family": serialize_family_summary(loaded)},
+            {
+                "family": serialize_family_summary(
+                    loaded, **family_related_serializer_kwargs(session, loaded.id)
+                )
+            },
             event=event,
         )
 
@@ -261,7 +279,11 @@ def _update_family(
             raise DatabaseError("Failed to load family after update")
         return json_response(
             200,
-            {"family": serialize_family_summary(loaded)},
+            {
+                "family": serialize_family_summary(
+                    loaded, **family_related_serializer_kwargs(session, loaded.id)
+                )
+            },
             event=event,
         )
 
@@ -318,7 +340,11 @@ def _add_family_member(
             raise DatabaseError("Failed to load family after adding member")
         return json_response(
             201,
-            {"family": serialize_family_summary(loaded)},
+            {
+                "family": serialize_family_summary(
+                    loaded, **family_related_serializer_kwargs(session, loaded.id)
+                )
+            },
             event=event,
         )
 
@@ -371,7 +397,11 @@ def _update_family_member(
             raise DatabaseError("Failed to load family after updating member")
         return json_response(
             200,
-            {"family": serialize_family_summary(loaded)},
+            {
+                "family": serialize_family_summary(
+                    loaded, **family_related_serializer_kwargs(session, loaded.id)
+                )
+            },
             event=event,
         )
 
@@ -399,6 +429,10 @@ def _remove_family_member(
             raise DatabaseError("Failed to load family after removing member")
         return json_response(
             200,
-            {"family": serialize_family_summary(loaded)},
+            {
+                "family": serialize_family_summary(
+                    loaded, **family_related_serializer_kwargs(session, loaded.id)
+                )
+            },
             event=event,
         )

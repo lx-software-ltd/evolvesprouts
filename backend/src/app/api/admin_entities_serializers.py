@@ -168,7 +168,14 @@ def serialize_family_member_row(member: FamilyMember) -> dict[str, Any]:
     }
 
 
-def serialize_family_summary(family: Family) -> dict[str, Any]:
+def serialize_family_summary(
+    family: Family,
+    *,
+    has_sales_conversation: bool = False,
+    sales_conversation_channel: str | None = None,
+    has_service_instance: bool = False,
+    has_invoice: bool = False,
+) -> dict[str, Any]:
     tags = sorted(
         (serialize_tag_ref(ft.tag) for ft in family.family_tags if ft.tag),
         key=lambda t: t["name"].lower(),
@@ -192,6 +199,10 @@ def serialize_family_summary(family: Family) -> dict[str, Any]:
         "tag_ids": [t["id"] for t in tags],
         "tags": tags,
         "members": members,
+        "has_sales_conversation": has_sales_conversation,
+        "sales_conversation_channel": sales_conversation_channel,
+        "has_service_instance": has_service_instance,
+        "has_invoice": has_invoice,
     }
 
 
@@ -210,7 +221,14 @@ def serialize_organization_member_row(member: OrganizationMember) -> dict[str, A
     }
 
 
-def serialize_organization_summary(org: Organization) -> dict[str, Any]:
+def serialize_organization_summary(
+    org: Organization,
+    *,
+    has_sales_conversation: bool = False,
+    sales_conversation_channel: str | None = None,
+    has_service_instance: bool = False,
+    has_invoice: bool = False,
+) -> dict[str, Any]:
     tags = sorted(
         (serialize_tag_ref(ot.tag) for ot in org.organization_tags if ot.tag),
         key=lambda t: t["name"].lower(),
@@ -238,4 +256,8 @@ def serialize_organization_summary(org: Organization) -> dict[str, Any]:
         "tag_ids": [t["id"] for t in tags],
         "tags": tags,
         "members": members,
+        "has_sales_conversation": has_sales_conversation,
+        "sales_conversation_channel": sales_conversation_channel,
+        "has_service_instance": has_service_instance,
+        "has_invoice": has_invoice,
     }

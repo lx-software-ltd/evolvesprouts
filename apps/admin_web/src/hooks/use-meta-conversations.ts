@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react';
 
+import type { RelatedPartyQuery } from '@/lib/contact-related-links';
 import {
   listMetaConversations,
   type MetaChannel,
@@ -16,7 +17,10 @@ export type MetaConversationFilters = {
 
 const DEFAULT_FILTERS: MetaConversationFilters = { q: '' };
 
-export function useMetaConversations(channel: MetaChannel, contactId = '') {
+export function useMetaConversations(channel: MetaChannel, party: RelatedPartyQuery = {}) {
+  const contactId = party.contactId ?? '';
+  const familyId = party.familyId ?? '';
+  const organizationId = party.organizationId ?? '';
   const fetcher = useCallback(
     (params: MetaConversationFilters & {
       cursor: string | null;
@@ -30,10 +34,12 @@ export function useMetaConversations(channel: MetaChannel, contactId = '') {
           q: params.q,
           channel,
           contactId,
+          familyId,
+          organizationId,
         },
         params.signal
       ),
-    [channel, contactId]
+    [channel, contactId, familyId, organizationId]
   );
 
   const list = usePaginatedList<MetaConversationSummary, MetaConversationFilters>({

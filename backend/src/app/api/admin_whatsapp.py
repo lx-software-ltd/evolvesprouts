@@ -12,8 +12,11 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.api.admin_inbox_import import handle_whatsapp_import_jobs
+from app.api.admin_party_related import (
+    conversation_contact_ids_for_party,
+    parse_related_party_ids,
+)
 from app.api.admin_request import parse_uuid, query_param
-from app.api.admin_services_payload_utils import parse_optional_uuid
 from app.api.assets.assets_common import extract_identity, split_route_parts
 from app.db.engine import get_engine
 from app.db.models.whatsapp import WhatsAppConversation, WhatsAppMessage
@@ -62,22 +65,28 @@ def handle_admin_whatsapp_request(
 def _list_conversations(event: Mapping[str, Any]) -> dict[str, Any]:
     limit = _parse_limit(query_param(event, "limit"))
     search = _parse_search(query_param(event, "q"))
-    contact_id = parse_optional_uuid(query_param(event, "contact_id"), "contact_id")
+    contact_id, family_id, organization_id = parse_related_party_ids(event)
     cursor_last_message_at, cursor_id = _parse_cursor(query_param(event, "cursor"))
 
     with Session(get_engine()) as session:
         repository = WhatsAppRepository(session)
+        party_contact_ids = conversation_contact_ids_for_party(
+            session, family_id=family_id, organization_id=organization_id
+        )
         rows = repository.list_conversations(
             limit=limit + 1,
             cursor_last_message_at=cursor_last_message_at,
             cursor_id=cursor_id,
             search=search,
             contact_id=contact_id,
+            contact_ids=party_contact_ids,
         )
         has_more = len(rows) > limit
         page_rows = rows[:limit]
         total_count = repository.count_conversations(
-            search=search, contact_id=contact_id
+            search=search,
+            contact_id=contact_id,
+            contact_ids=party_contact_ids,
         )
         next_cursor = _encode_cursor(page_rows[-1]) if has_more and page_rows else None
         return json_response(

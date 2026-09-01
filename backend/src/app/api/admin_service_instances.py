@@ -17,6 +17,10 @@ from app.api.admin_service_instance_partners import (
 )
 from app.api.admin_entities_helpers import replace_service_instance_tags
 from app.api.admin_contacts_related import enrollment_instance_ids_for_contact
+from app.api.admin_party_related import (
+    enrollment_instance_ids_for_family,
+    enrollment_instance_ids_for_organization,
+)
 from app.api.admin_services_common import (
     encode_instance_cursor,
     parse_create_instance_payload,
@@ -253,7 +257,9 @@ def handle_admin_all_service_instances_request(
     limit = filters["limit"]
     service_id_filter = filters["service_id"]
     service_type_filter = filters["service_type"]
-    contact_id_filter = filters["contact_id"]
+    contact_id_filter = filters.get("contact_id")
+    family_id_filter = filters.get("family_id")
+    organization_id_filter = filters.get("organization_id")
     logger.info(
         "Listing service instances (global)",
         extra={
@@ -261,6 +267,10 @@ def handle_admin_all_service_instances_request(
             "service_id": str(service_id_filter) if service_id_filter else None,
             "service_type": service_type_filter.value if service_type_filter else None,
             "contact_id": str(contact_id_filter) if contact_id_filter else None,
+            "family_id": str(family_id_filter) if family_id_filter else None,
+            "organization_id": (
+                str(organization_id_filter) if organization_id_filter else None
+            ),
         },
     )
     with Session(get_engine()) as session:
@@ -270,11 +280,18 @@ def handle_admin_all_service_instances_request(
             if service is None:
                 raise NotFoundError("Service", str(service_id_filter))
 
-        instance_ids = (
-            enrollment_instance_ids_for_contact(session, contact_id_filter)
-            if contact_id_filter is not None
-            else None
-        )
+        if contact_id_filter is not None:
+            instance_ids = enrollment_instance_ids_for_contact(
+                session, contact_id_filter
+            )
+        elif family_id_filter is not None:
+            instance_ids = enrollment_instance_ids_for_family(session, family_id_filter)
+        elif organization_id_filter is not None:
+            instance_ids = enrollment_instance_ids_for_organization(
+                session, organization_id_filter
+            )
+        else:
+            instance_ids = None
         repository = ServiceInstanceRepository(session)
         rows = repository.list_instances_global(
             limit=limit + 1,

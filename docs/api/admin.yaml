@@ -84,7 +84,7 @@ info:
     - `GET /v1/admin/billing/payments/{id}/unapplied`
     - `POST /v1/admin/billing/payments/{id}/confirm`
     - `GET /v1/admin/billing/enrollments/recent-for-invoicing`
-    - `GET|POST /v1/admin/billing/invoices` (GET optional `status`, `currency`, `contact_id`, `cursor`, `limit`; POST is either enrollment-based draft (`draftKind: enrollment_merge`, `enrollmentIds`, `currency` optional when derivable) or customized draft (`draftKind: customized_manual`, `billTo`, `currency`, `lines`); see request schemas)
+    - `GET|POST /v1/admin/billing/invoices` (GET optional `status`, `currency`, `contact_id`, `family_id`, `organization_id`, `cursor`, `limit`; POST is either enrollment-based draft (`draftKind: enrollment_merge`, `enrollmentIds`, `currency` optional when derivable) or customized draft (`draftKind: customized_manual`, `billTo`, `currency`, `lines`); see request schemas)
     - `GET|DELETE /v1/admin/billing/invoices/{id}` (`DELETE` removes **draft** invoices only)
     - `GET /v1/admin/billing/invoices/{id}/pdf`
     - `POST /v1/admin/billing/invoices/{id}/issue`
@@ -1298,7 +1298,27 @@ paths:
         - name: contact_id
           in: query
           required: false
-          description: Restrict results to conversations linked to this CRM contact.
+          description: >
+            Restrict results to conversations linked to this CRM contact. Mutually
+            exclusive with `family_id` and `organization_id`.
+          schema:
+            type: string
+            format: uuid
+        - name: family_id
+          in: query
+          required: false
+          description: >
+            Restrict results to conversations linked to any member contact of this
+            family. Mutually exclusive with `contact_id` and `organization_id`.
+          schema:
+            type: string
+            format: uuid
+        - name: organization_id
+          in: query
+          required: false
+          description: >
+            Restrict results to conversations linked to any member contact of this
+            organisation. Mutually exclusive with `contact_id` and `family_id`.
           schema:
             type: string
             format: uuid
@@ -1465,7 +1485,27 @@ paths:
         - name: contact_id
           in: query
           required: false
-          description: Restrict results to conversations linked to this CRM contact.
+          description: >
+            Restrict results to conversations linked to this CRM contact. Mutually
+            exclusive with `family_id` and `organization_id`.
+          schema:
+            type: string
+            format: uuid
+        - name: family_id
+          in: query
+          required: false
+          description: >
+            Restrict results to conversations linked to any member contact of this
+            family. Mutually exclusive with `contact_id` and `organization_id`.
+          schema:
+            type: string
+            format: uuid
+        - name: organization_id
+          in: query
+          required: false
+          description: >
+            Restrict results to conversations linked to any member contact of this
+            organisation. Mutually exclusive with `contact_id` and `family_id`.
           schema:
             type: string
             format: uuid
@@ -1804,7 +1844,28 @@ paths:
           required: false
           description: |
             When set, only instances with a non-cancelled enrollment attributed to this
-            contact or to a family or organisation they belong to.
+            contact or to a family or organisation they belong to. Mutually exclusive
+            with `family_id` and `organization_id`.
+          schema:
+            type: string
+            format: uuid
+        - name: family_id
+          in: query
+          required: false
+          description: |
+            When set, only instances with a non-cancelled enrollment attributed to this
+            family or to one of its member contacts. Mutually exclusive with
+            `contact_id` and `organization_id`.
+          schema:
+            type: string
+            format: uuid
+        - name: organization_id
+          in: query
+          required: false
+          description: |
+            When set, only instances with a non-cancelled enrollment attributed to this
+            organisation or to one of its member contacts. Mutually exclusive with
+            `contact_id` and `family_id`.
           schema:
             type: string
             format: uuid
@@ -4044,7 +4105,9 @@ paths:
         and free-text `q` (case-insensitive substring match on `invoice_number`, bill-to display name,
         email, location snapshot text, and ISO `invoice_date` formatted as `YYYY-MM-DD`).
         Optional `contact_id` restricts results to invoices billed to that contact or to a family
-        or organisation they belong to.
+        or organisation they belong to. Optional `family_id` or `organization_id` restricts results
+        to invoices billed to that party or to one of its member contacts. Only one of
+        `contact_id`, `family_id`, or `organization_id` may be set.
       security:
         - AdminBearerAuth: []
       parameters:
@@ -4088,7 +4151,25 @@ paths:
           required: false
           description: >
             Restrict to invoices billed to this contact or to a family or organisation they
-            belong to.
+            belong to. Mutually exclusive with `family_id` and `organization_id`.
+          schema:
+            type: string
+            format: uuid
+        - name: family_id
+          in: query
+          required: false
+          description: >
+            Restrict to invoices billed to this family or to one of its member contacts.
+            Mutually exclusive with `contact_id` and `organization_id`.
+          schema:
+            type: string
+            format: uuid
+        - name: organization_id
+          in: query
+          required: false
+          description: >
+            Restrict to invoices billed to this organisation or to one of its member
+            contacts. Mutually exclusive with `contact_id` and `family_id`.
           schema:
             type: string
             format: uuid
@@ -10018,6 +10099,9 @@ components:
         - tag_ids
         - tags
         - members
+        - has_sales_conversation
+        - has_service_instance
+        - has_invoice
       properties:
         id:
           type: string
@@ -10059,6 +10143,28 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AdminFamilyMember"
+        has_sales_conversation:
+          type: boolean
+          description: |
+            True when any family member is linked to at least one WhatsApp, Instagram,
+            or Messenger conversation.
+        sales_conversation_channel:
+          type: string
+          nullable: true
+          enum: [whatsapp, instagram, messenger]
+          description: |
+            Preferred Sales inbox tab for this family: the channel of the most recently
+            active conversation among members. Null when `has_sales_conversation` is false.
+        has_service_instance:
+          type: boolean
+          description: |
+            True when the family has at least one non-cancelled enrollment attributed to
+            the family or to one of its member contacts.
+        has_invoice:
+          type: boolean
+          description: |
+            True when at least one customer invoice is billed to the family or to one of
+            its member contacts.
     AdminFamilyListResponse:
       type: object
       required:
@@ -10192,6 +10298,9 @@ components:
         - tag_ids
         - tags
         - members
+        - has_sales_conversation
+        - has_service_instance
+        - has_invoice
       properties:
         id:
           type: string
@@ -10252,6 +10361,29 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AdminOrganizationMember"
+        has_sales_conversation:
+          type: boolean
+          description: |
+            True when any organisation member is linked to at least one WhatsApp,
+            Instagram, or Messenger conversation.
+        sales_conversation_channel:
+          type: string
+          nullable: true
+          enum: [whatsapp, instagram, messenger]
+          description: |
+            Preferred Sales inbox tab for this organisation: the channel of the most
+            recently active conversation among members. Null when `has_sales_conversation`
+            is false.
+        has_service_instance:
+          type: boolean
+          description: |
+            True when the organisation has at least one non-cancelled enrollment
+            attributed to the organisation or to one of its member contacts.
+        has_invoice:
+          type: boolean
+          description: |
+            True when at least one customer invoice is billed to the organisation or to
+            one of its member contacts.
     AdminOrganizationListResponse:
       type: object
       required:

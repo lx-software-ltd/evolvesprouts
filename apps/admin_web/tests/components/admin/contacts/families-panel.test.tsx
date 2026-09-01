@@ -24,6 +24,13 @@ import type { useAdminEntityFamilies } from '@/hooks/use-admin-entity-families';
 
 const noopRefresh = vi.fn().mockResolvedValue(undefined);
 
+const emptyRelatedFlags = {
+  has_sales_conversation: false,
+  sales_conversation_channel: null,
+  has_service_instance: false,
+  has_invoice: false,
+} as const;
+
 const hkArea = {
   id: 'area-hk',
   parentId: null,
@@ -139,6 +146,7 @@ describe('FamiliesPanel', () => {
           active: true,
           created_at: '2020-01-01T00:00:00.000Z',
           updated_at: '2020-01-01T00:00:00.000Z',
+          ...emptyRelatedFlags,
         },
       ],
     });
@@ -219,6 +227,7 @@ describe('FamiliesPanel', () => {
           active: true,
           created_at: '2020-01-01T00:00:00.000Z',
           updated_at: '2020-01-01T00:00:00.000Z',
+          ...emptyRelatedFlags,
         },
       ],
     });
@@ -267,6 +276,7 @@ describe('FamiliesPanel', () => {
           active: true,
           created_at: '2020-01-01T00:00:00.000Z',
           updated_at: '2020-01-01T00:00:00.000Z',
+          ...emptyRelatedFlags,
         },
       ],
     });
@@ -290,5 +300,71 @@ describe('FamiliesPanel', () => {
     await waitFor(() => {
       expect(deleteFamily).toHaveBeenCalledWith('fam-del');
     });
+  });
+
+  it('shows related-record operation links only when those records exist', () => {
+    const families = buildFamiliesHook({
+      families: [
+        {
+          id: 'fam-linked',
+          family_name: 'Linked',
+          relationship_type: 'client',
+          location_id: null,
+          location_summary: null,
+          tag_ids: [],
+          tags: [],
+          members: [],
+          active: true,
+          created_at: '2020-01-01T00:00:00.000Z',
+          updated_at: '2020-01-01T00:00:00.000Z',
+          has_sales_conversation: true,
+          sales_conversation_channel: 'instagram',
+          has_service_instance: true,
+          has_invoice: true,
+        },
+        {
+          id: 'fam-plain',
+          family_name: 'Plain',
+          relationship_type: 'prospect',
+          location_id: null,
+          location_summary: null,
+          tag_ids: [],
+          tags: [],
+          members: [],
+          active: true,
+          created_at: '2020-01-01T00:00:00.000Z',
+          updated_at: '2020-01-01T00:00:00.000Z',
+          ...emptyRelatedFlags,
+        },
+      ],
+    });
+
+    render(
+      <FamiliesPanel
+        families={families}
+        tags={[]}
+        locations={[]}
+        geographicAreas={[]}
+        areasLoading={false}
+        refreshLocations={noopRefresh}
+        contactOptions={[]}
+        contactsForMembership={[]}
+      />
+    );
+
+    const salesLink = screen.getByRole('link', { name: 'Sales conversations' });
+    expect(salesLink).toHaveAttribute('href', '/sales?tab=instagram&family=fam-linked');
+    expect(salesLink).toHaveClass('h-8', 'px-3');
+    expect(screen.getByRole('link', { name: 'Service instances' })).toHaveAttribute(
+      'href',
+      '/services?family=fam-linked'
+    );
+    expect(screen.getByRole('link', { name: 'Invoices' })).toHaveAttribute(
+      'href',
+      '/finance?family=fam-linked'
+    );
+    expect(screen.getAllByRole('link', { name: 'Sales conversations' })).toHaveLength(1);
+    expect(screen.getAllByRole('link', { name: 'Service instances' })).toHaveLength(1);
+    expect(screen.getAllByRole('link', { name: 'Invoices' })).toHaveLength(1);
   });
 });

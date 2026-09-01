@@ -18,8 +18,7 @@ import {
   INVOICE_LIST_SEARCH_DEBOUNCE_MS,
   normalizeInvoiceRecipientList,
 } from "@/components/admin/finance/client-invoices-utils";
-import { useLocationSearchParam } from "@/hooks/use-query-tab-state";
-import { ADMIN_CONTACT_QUERY_PARAM } from "@/lib/inbox-conversation-name";
+import { useRelatedPartySearchParams } from "@/hooks/use-related-party-search-params";
 
 export function useClientInvoicesInvoiceList({
   shared,
@@ -52,15 +51,20 @@ export function useClientInvoicesInvoiceList({
   const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<
     "draft" | "issued" | "void" | ""
   >("");
-  const contactFilterId = useLocationSearchParam(ADMIN_CONTACT_QUERY_PARAM);
+  const {
+    contactId: contactFilterId,
+    familyId: familyFilterId,
+    organizationId: organizationFilterId,
+    partyFilterKey,
+  } = useRelatedPartySearchParams();
   const [invoiceSettlementFilter, setInvoiceSettlementFilter] = useState<
     "not_completed" | "open" | "partially_paid" | "paid" | "no_charge" | ""
   >("not_completed");
   useEffect(() => {
-    if (contactFilterId) {
+    if (partyFilterKey) {
       setInvoiceSettlementFilter("");
     }
-  }, [contactFilterId]);
+  }, [partyFilterKey]);
   const [invoiceCurrencyFilter, setInvoiceCurrencyFilter] = useState("");
   const [invoiceSearchInput, setInvoiceSearchInput] = useState("");
   const [invoiceSearchDebounced, setInvoiceSearchDebounced] = useState("");
@@ -111,6 +115,9 @@ export function useClientInvoicesInvoiceList({
                 ? undefined
                 : invoiceSearchDebounced,
             contactId: contactFilterId === "" ? undefined : contactFilterId,
+            familyId: familyFilterId === "" ? undefined : familyFilterId,
+            organizationId:
+              organizationFilterId === "" ? undefined : organizationFilterId,
             limit: 50,
           },
           signal,
@@ -136,6 +143,8 @@ export function useClientInvoicesInvoiceList({
       invoiceStatusFilter,
       invoiceSettlementFilter,
       contactFilterId,
+      familyFilterId,
+      organizationFilterId,
     ],
   );
 
@@ -160,6 +169,9 @@ export function useClientInvoicesInvoiceList({
           invoiceCurrencyFilter === "" ? undefined : invoiceCurrencyFilter,
         q: invoiceSearchDebounced === "" ? undefined : invoiceSearchDebounced,
         contactId: contactFilterId === "" ? undefined : contactFilterId,
+        familyId: familyFilterId === "" ? undefined : familyFilterId,
+        organizationId:
+          organizationFilterId === "" ? undefined : organizationFilterId,
         cursor: invoiceListCursor,
         limit: 50,
       });
@@ -180,6 +192,8 @@ export function useClientInvoicesInvoiceList({
     invoiceStatusFilter,
     invoiceSettlementFilter,
     contactFilterId,
+    familyFilterId,
+    organizationFilterId,
   ]);
 
   const selectedIssuedInvoice = useMemo(() => {

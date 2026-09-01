@@ -6,9 +6,8 @@ import { ConversationNameCell } from './conversation-name-cell';
 import { InboxImportStatus } from './inbox-import-status';
 
 import { useAutoSelectContactConversation } from '@/hooks/use-auto-select-contact-conversation';
-import { useLocationSearchParam } from '@/hooks/use-query-tab-state';
+import { useRelatedPartySearchParams } from '@/hooks/use-related-party-search-params';
 import { useWhatsAppConversations } from '@/hooks/use-whatsapp-conversations';
-import { ADMIN_CONTACT_QUERY_PARAM } from '@/lib/inbox-conversation-name';
 import { useWhatsAppMessages } from '@/hooks/use-whatsapp-messages';
 import { toErrorMessage } from '@/hooks/hook-errors';
 import { createAdminAsset, deleteAdminAsset, uploadFileToPresignedUrl } from '@/lib/assets-api';
@@ -47,10 +46,10 @@ function formatWhen(value: string | null): string {
 const MAX_EXPORT_BYTES = 15 * 1024 * 1024;
 
 export function WhatsAppConversationsView() {
-  const contactId = useLocationSearchParam(ADMIN_CONTACT_QUERY_PARAM);
-  const list = useWhatsAppConversations(contactId);
+  const party = useRelatedPartySearchParams();
+  const list = useWhatsAppConversations(party);
   const [selectedId, setSelectedId] = useAutoSelectContactConversation(
-    contactId,
+    party.partyFilterKey,
     list.conversations[0]?.id ?? null,
     list.isLoading
   );

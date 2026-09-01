@@ -77,6 +77,16 @@ def _install_organizations_persistence_fakes(
     )
     monkeypatch.setattr(
         admin_organizations,
+        "organization_related_serializer_kwargs",
+        lambda _session, _oid: {
+            "has_sales_conversation": False,
+            "sales_conversation_channel": None,
+            "has_service_instance": False,
+            "has_invoice": False,
+        },
+    )
+    monkeypatch.setattr(
+        admin_organizations,
         "extract_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
@@ -440,8 +450,18 @@ def test_get_organization_returns_partner_row_via_non_vendor_loader(
     )
     monkeypatch.setattr(
         admin_organizations,
+        "organization_related_serializer_kwargs",
+        lambda _session, _oid: {
+            "has_sales_conversation": False,
+            "sales_conversation_channel": None,
+            "has_service_instance": False,
+            "has_invoice": False,
+        },
+    )
+    monkeypatch.setattr(
+        admin_organizations,
         "serialize_organization_summary",
-        lambda _org: {
+        lambda _org, **_k: {
             "id": str(partner_id),
             "relationship_type": "partner",
             "members": [],

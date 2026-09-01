@@ -46,8 +46,18 @@ def families_session(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     monkeypatch.setattr(admin_families, "set_audit_context", lambda *_a, **_k: None)
     monkeypatch.setattr(
         admin_families,
+        "family_related_serializer_kwargs",
+        lambda _session, _fid: {
+            "has_sales_conversation": False,
+            "sales_conversation_channel": None,
+            "has_service_instance": False,
+            "has_invoice": False,
+        },
+    )
+    monkeypatch.setattr(
+        admin_families,
         "serialize_family_summary",
-        lambda _fam: {"serialized": True},
+        lambda _fam, **_k: {"serialized": True},
     )
     return session
 

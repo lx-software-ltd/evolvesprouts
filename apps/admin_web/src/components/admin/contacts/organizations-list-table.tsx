@@ -3,8 +3,14 @@
 import { useCallback } from 'react';
 import type { MouseEvent } from 'react';
 
+import { RelatedRecordOpsLinks } from '@/components/admin/contacts/related-record-ops-links';
 import { DeleteIcon } from '@/components/icons/action-icons';
 import { Button } from '@/components/ui/button';
+import {
+  adminPartyInvoicesDeepLink,
+  adminPartySalesConversationsDeepLink,
+  adminPartyServiceInstancesDeepLink,
+} from '@/lib/contact-related-links';
 import {
   AdminDataTable,
   AdminDataTableBody,
@@ -135,6 +141,18 @@ export function OrganizationsListTable({
                 <AdminDataTableCell>{row.active ? 'Active' : 'Archived'}</AdminDataTableCell>
                 <AdminDataTableCell className='text-right'>
                   <div className='flex flex-wrap justify-end gap-2'>
+                    <RelatedRecordOpsLinks
+                      salesHref={adminPartySalesConversationsDeepLink(
+                        'organization',
+                        row.id,
+                        row.sales_conversation_channel
+                      )}
+                      instancesHref={adminPartyServiceInstancesDeepLink('organization', row.id)}
+                      invoicesHref={adminPartyInvoicesDeepLink('organization', row.id)}
+                      hasSalesConversation={row.has_sales_conversation}
+                      hasServiceInstance={row.has_service_instance}
+                      hasInvoice={row.has_invoice}
+                    />
                     <Button
                       type='button'
                       size='sm'

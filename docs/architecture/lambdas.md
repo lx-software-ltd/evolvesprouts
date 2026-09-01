@@ -110,7 +110,10 @@ their primary responsibilities.
   organisation the contact belongs to), and `DELETE /v1/admin/contacts/{id}`
   for hard-deleting a contact after clearing blocking CRM rows),
   `/v1/admin/families/picker`, `/v1/admin/families/*` (`GET /v1/admin/families` optional `query`
-  matches family name and linked member contacts' names or email; `PATCH /v1/admin/families/{id}` with
+  matches family name and linked member contacts' names or email; family list and single-family
+  responses include related-record flags `has_sales_conversation` (with optional
+  `sales_conversation_channel`), `has_service_instance`, and `has_invoice`;
+  `PATCH /v1/admin/families/{id}` with
   `relationship_type` updates that field on the family and on every member contact; including `DELETE /v1/admin/families/{id}`
   for hard-deleting a family after clearing blocking CRM rows; `GET /v1/admin/families/{id}/services`
   for read-only purchased-service labels on a family (including member contacts); `POST /v1/admin/families/{id}/members`
@@ -118,7 +121,9 @@ their primary responsibilities.
   updates membership fields such as primary contact),
   `/v1/admin/organizations/picker` (optional `relationship_type` query mirrors organisation list
   semantics; default excludes both vendors and partners; pass `relationship_type=partner` for
-  partner-only admin pickers), `/v1/admin/organizations/*` (CRM organisations and vendor
+  partner-only admin pickers), `/v1/admin/organizations/*` (organisation list and single-org
+  responses include related-record flags `has_sales_conversation` (with optional
+  `sales_conversation_channel`), `has_service_instance`, and `has_invoice`; CRM organisations and vendor
   rows share one resource; default list excludes vendors and partners; Services → Partners lists
   partners with `GET /v1/admin/organizations?relationship_type=partner`; Finance lists vendors with
   `GET /v1/admin/organizations?relationship_type=vendor` (optional `sort=name` for case-insensitive
@@ -141,7 +146,7 @@ their primary responsibilities.
   `GET /v1/admin/audit-logs` and `GET /v1/admin/audit-logs/{id}` (read-only `audit_log` history; list supports filters `table`, `record_id`, `user_id`, `email`, `action`, `since`, `cursor`, `limit`; `email` resolves via Cognito `list_users`, known system-actor labels/`user_id` values, or `api_keys.name`; optional `user_email` is a Cognito email, API key name, or system-actor label),
   `/v1/admin/services/*` (including `GET /v1/admin/services/instances` for
   cross-service instance listing with optional `service_id` / `service_type` /
-  `contact_id` filters; instance create/update accepts optional `cohort`, and
+  `contact_id` / `family_id` / `organization_id` filters; instance create/update accepts optional `cohort`, and
   `tag_ids` with `tags` / `tag_ids` echoed on instance responses; completing an instance
   (`status: completed`) bulk-updates `registered` / `confirmed` enrollments on that
   instance to `completed` (cancelled, waitlisted, and already-completed rows unchanged);
@@ -178,7 +183,7 @@ their primary responsibilities.
     finishes OpenRouter bulk extraction and creates one expense per parsed row (sharing that attachment).
   - `DELETE /v1/admin/expenses/bulk-import-jobs/{job_id}` — creator-scoped hard delete of the job row only
     (does not remove created expenses; the bulk worker treats a missing job id as already handled).
-  `/v1/admin/billing/*` (customer AR: `GET /v1/admin/billing/payments` optional `invoice_id` filters to payments with an allocation to that invoice; `POST /v1/admin/billing/payments` creates either a refund (`direction: refund`) or a manual inbound payment (`direction: inbound`; `enrollmentId` is optional on inbound—omit to record a no-enrollment payment for later allocation to a customized invoice; when set, currency must match the enrollment billing currency; duplicate non-null `externalReference` per enrollment returns **409**); `GET /v1/admin/billing/payments/{id}` includes `allocationInvoices`, `orphanPaymentDeletable`, and `externalReference` when set; `PATCH /v1/admin/billing/payments/{id}` updates manual inbound payments without a Stripe PaymentIntent (enrollment immutable; succeeded rows limit field changes; duplicate non-null `externalReference` per enrollment returns **409**; application audit action `MANUAL_INBOUND_PAYMENT_UPDATED`); `DELETE /v1/admin/billing/payments/{id}` removes eligible orphan inbound payments (pending or free/zero, enrollment unlinked or cancelled, no allocations/receipt/refund children); payments, `GET /v1/admin/billing/invoices` (optional `status`, optional `settlement` for settlement slices (open/partially_paid/paid/no_charge apply to issued rows; `not_completed` includes draft invoices and issued positive-total rows that are not paid or no-charge), `currency`, optional `contact_id` for invoices billed to that contact or their family/organisation, and `q` matching invoice number, bill-to text fields, and ISO `invoice_date`; each summary includes cached `amountAllocated` / `balanceDue` / `paidAt` / `isPaid`), invoice get/detail, draft invoices via
+  `/v1/admin/billing/*` (customer AR: `GET /v1/admin/billing/payments` optional `invoice_id` filters to payments with an allocation to that invoice; `POST /v1/admin/billing/payments` creates either a refund (`direction: refund`) or a manual inbound payment (`direction: inbound`; `enrollmentId` is optional on inbound—omit to record a no-enrollment payment for later allocation to a customized invoice; when set, currency must match the enrollment billing currency; duplicate non-null `externalReference` per enrollment returns **409**); `GET /v1/admin/billing/payments/{id}` includes `allocationInvoices`, `orphanPaymentDeletable`, and `externalReference` when set; `PATCH /v1/admin/billing/payments/{id}` updates manual inbound payments without a Stripe PaymentIntent (enrollment immutable; succeeded rows limit field changes; duplicate non-null `externalReference` per enrollment returns **409**; application audit action `MANUAL_INBOUND_PAYMENT_UPDATED`); `DELETE /v1/admin/billing/payments/{id}` removes eligible orphan inbound payments (pending or free/zero, enrollment unlinked or cancelled, no allocations/receipt/refund children); payments, `GET /v1/admin/billing/invoices` (optional `status`, optional `settlement` for settlement slices (open/partially_paid/paid/no_charge apply to issued rows; `not_completed` includes draft invoices and issued positive-total rows that are not paid or no-charge), `currency`, optional `contact_id` / `family_id` / `organization_id` (mutually exclusive) for invoices billed to that party or their members, and `q` matching invoice number, bill-to text fields, and ISO `invoice_date`; each summary includes cached `amountAllocated` / `balanceDue` / `paidAt` / `isPaid`), invoice get/detail, draft invoices via
   `POST /v1/admin/billing/invoices` with `draftKind` `enrollment_merge` or `customized_manual`,
   `GET /v1/admin/billing/enrollments/recent-for-invoicing` (draft invoice enrollment picker: non-cancelled rows with `enrolled_at` within the last 730 rolling days), `POST /v1/admin/billing/dashboard/resolve-bill-to-primary-contacts` (bulk family/organisation→primary contact id map for dashboard spend rollups), `DELETE /v1/admin/billing/invoices/{id}` (draft-only permanent delete; blocked when allocations exist), `GET /v1/admin/billing/invoices/{id}/pdf`
   (returns a CloudFront-signed URL; each response includes a unique cache-bust query on the

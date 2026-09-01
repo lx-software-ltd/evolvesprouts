@@ -1,3 +1,4 @@
+import { appendRelatedPartyQuery, type RelatedPartyQuery } from '@/lib/contact-related-links';
 import { adminApiRequest } from '@/lib/api-admin-client';
 import { unwrapPayload } from '@/lib/api-payload';
 import { getAdminDefaultCurrencyCode } from '@/lib/config';
@@ -25,10 +26,9 @@ export async function listCustomerInvoices(
     currency?: string;
     /** Case-insensitive substring on invoice number, bill-to fields, and ISO invoice date. */
     q?: string;
-    contactId?: string;
     cursor?: string | null;
     limit?: number;
-  } = {},
+  } & RelatedPartyQuery = {},
   signal?: AbortSignal,
 ): Promise<{ items: CustomerInvoiceSummary[]; next_cursor: string | null }> {
   const query = new URLSearchParams();
@@ -45,10 +45,7 @@ export async function listCustomerInvoices(
   if (qTrimmed !== '') {
     query.set('q', qTrimmed);
   }
-  const contactIdTrimmed = params.contactId?.trim() ?? '';
-  if (contactIdTrimmed !== '') {
-    query.set('contact_id', contactIdTrimmed);
-  }
+  appendRelatedPartyQuery(query, params);
   if (params.cursor) {
     query.set('cursor', params.cursor);
   }

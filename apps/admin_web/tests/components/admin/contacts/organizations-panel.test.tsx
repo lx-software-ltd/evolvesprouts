@@ -26,6 +26,13 @@ import type { components } from '@/types/generated/admin-api.generated';
 
 const noopRefresh = vi.fn().mockResolvedValue(undefined);
 
+const emptyRelatedFlags = {
+  has_sales_conversation: false,
+  sales_conversation_channel: null,
+  has_service_instance: false,
+  has_invoice: false,
+} as const;
+
 const hkArea = {
   id: 'area-hk',
   parentId: null,
@@ -160,6 +167,7 @@ describe('OrganizationsPanel', () => {
       active: true,
       created_at: '2020-01-01T00:00:00.000Z',
       updated_at: '2020-01-01T00:00:00.000Z',
+      ...emptyRelatedFlags,
     };
     const organizations = buildOrgsHook({
       organizations: [row],
@@ -228,6 +236,7 @@ describe('OrganizationsPanel', () => {
       active: true,
       created_at: '2020-01-01T00:00:00.000Z',
       updated_at: '2020-01-01T00:00:00.000Z',
+      ...emptyRelatedFlags,
     };
     const organizations = buildOrgsHook({
       updateOrganization,
@@ -302,6 +311,7 @@ describe('OrganizationsPanel', () => {
       active: true,
       created_at: '2020-01-01T00:00:00.000Z',
       updated_at: '2020-01-01T00:00:00.000Z',
+      ...emptyRelatedFlags,
     };
     const organizations = buildOrgsHook({
       deleteOrganization,
@@ -327,5 +337,65 @@ describe('OrganizationsPanel', () => {
     await waitFor(() => {
       expect(deleteOrganization).toHaveBeenCalledWith('org-del');
     });
+  });
+
+  it('shows related-record operation links only when those records exist', () => {
+    const withLinks: components['schemas']['AdminOrganization'] = {
+      id: 'org-linked',
+      name: 'Linked Org',
+      organization_type: 'company',
+      relationship_type: 'client',
+      partner_key: null,
+      website: null,
+      location_id: null,
+      location_summary: null,
+      tag_ids: [],
+      tags: [],
+      members: [],
+      active: true,
+      created_at: '2020-01-01T00:00:00.000Z',
+      updated_at: '2020-01-01T00:00:00.000Z',
+      has_sales_conversation: true,
+      sales_conversation_channel: 'messenger',
+      has_service_instance: true,
+      has_invoice: true,
+    };
+    const withoutLinks: components['schemas']['AdminOrganization'] = {
+      ...withLinks,
+      id: 'org-plain',
+      name: 'Plain Org',
+      ...emptyRelatedFlags,
+    };
+    const organizations = buildOrgsHook({
+      organizations: [withLinks, withoutLinks],
+    });
+
+    render(
+      <OrganizationsPanel
+        organizations={organizations}
+        tags={[]}
+        locations={[]}
+        geographicAreas={[]}
+        areasLoading={false}
+        refreshLocations={noopRefresh}
+        contactOptions={[]}
+        contactsForMembership={[]}
+      />
+    );
+
+    const salesLink = screen.getByRole('link', { name: 'Sales conversations' });
+    expect(salesLink).toHaveAttribute('href', '/sales?tab=messenger&organization=org-linked');
+    expect(salesLink).toHaveClass('h-8', 'px-3');
+    expect(screen.getByRole('link', { name: 'Service instances' })).toHaveAttribute(
+      'href',
+      '/services?organization=org-linked'
+    );
+    expect(screen.getByRole('link', { name: 'Invoices' })).toHaveAttribute(
+      'href',
+      '/finance?organization=org-linked'
+    );
+    expect(screen.getAllByRole('link', { name: 'Sales conversations' })).toHaveLength(1);
+    expect(screen.getAllByRole('link', { name: 'Service instances' })).toHaveLength(1);
+    expect(screen.getAllByRole('link', { name: 'Invoices' })).toHaveLength(1);
   });
 });

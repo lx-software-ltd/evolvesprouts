@@ -1490,8 +1490,12 @@ export interface paths {
                     cursor?: string;
                     /** @description Case-insensitive search on profile name or WhatsApp id. */
                     q?: string;
-                    /** @description Restrict results to conversations linked to this CRM contact. */
+                    /** @description Restrict results to conversations linked to this CRM contact. Mutually exclusive with `family_id` and `organization_id`. */
                     contact_id?: string;
+                    /** @description Restrict results to conversations linked to any member contact of this family. Mutually exclusive with `contact_id` and `organization_id`. */
+                    family_id?: string;
+                    /** @description Restrict results to conversations linked to any member contact of this organisation. Mutually exclusive with `contact_id` and `family_id`. */
+                    organization_id?: string;
                 };
                 header?: never;
                 path?: never;
@@ -1695,8 +1699,12 @@ export interface paths {
                     q?: string;
                     /** @description Restrict results to `facebook` (Messenger) or `instagram`. */
                     channel?: components["schemas"]["MetaChannel"];
-                    /** @description Restrict results to conversations linked to this CRM contact. */
+                    /** @description Restrict results to conversations linked to this CRM contact. Mutually exclusive with `family_id` and `organization_id`. */
                     contact_id?: string;
+                    /** @description Restrict results to conversations linked to any member contact of this family. Mutually exclusive with `contact_id` and `organization_id`. */
+                    family_id?: string;
+                    /** @description Restrict results to conversations linked to any member contact of this organisation. Mutually exclusive with `contact_id` and `family_id`. */
+                    organization_id?: string;
                 };
                 header?: never;
                 path?: never;
@@ -2118,9 +2126,22 @@ export interface paths {
                     service_type?: components["schemas"]["ServiceType"];
                     /**
                      * @description When set, only instances with a non-cancelled enrollment attributed to this
-                     *     contact or to a family or organisation they belong to.
+                     *     contact or to a family or organisation they belong to. Mutually exclusive
+                     *     with `family_id` and `organization_id`.
                      */
                     contact_id?: string;
+                    /**
+                     * @description When set, only instances with a non-cancelled enrollment attributed to this
+                     *     family or to one of its member contacts. Mutually exclusive with
+                     *     `contact_id` and `organization_id`.
+                     */
+                    family_id?: string;
+                    /**
+                     * @description When set, only instances with a non-cancelled enrollment attributed to this
+                     *     organisation or to one of its member contacts. Mutually exclusive with
+                     *     `contact_id` and `family_id`.
+                     */
+                    organization_id?: string;
                 };
                 header?: never;
                 path?: never;
@@ -5429,7 +5450,7 @@ export interface paths {
         };
         /**
          * List customer invoices
-         * @description Cursor-paginated list ordered by `created_at` descending, then `id` descending. Pass `next_cursor` from the previous response as `cursor` for the next page. Returns all invoices for the tenant; **admin authorization is required** (API Gateway admin group). Filter by optional `currency` (three-letter ISO code), `status`, optional `settlement` (issued invoices only: `open`, `partially_paid`, `paid`, `no_charge` for zero-total issued invoices, or `not_completed` for draft invoices and issued positive-total rows that are neither paid nor no-charge; combined with `status` using AND), and free-text `q` (case-insensitive substring match on `invoice_number`, bill-to display name, email, location snapshot text, and ISO `invoice_date` formatted as `YYYY-MM-DD`). Optional `contact_id` restricts results to invoices billed to that contact or to a family or organisation they belong to.
+         * @description Cursor-paginated list ordered by `created_at` descending, then `id` descending. Pass `next_cursor` from the previous response as `cursor` for the next page. Returns all invoices for the tenant; **admin authorization is required** (API Gateway admin group). Filter by optional `currency` (three-letter ISO code), `status`, optional `settlement` (issued invoices only: `open`, `partially_paid`, `paid`, `no_charge` for zero-total issued invoices, or `not_completed` for draft invoices and issued positive-total rows that are neither paid nor no-charge; combined with `status` using AND), and free-text `q` (case-insensitive substring match on `invoice_number`, bill-to display name, email, location snapshot text, and ISO `invoice_date` formatted as `YYYY-MM-DD`). Optional `contact_id` restricts results to invoices billed to that contact or to a family or organisation they belong to. Optional `family_id` or `organization_id` restricts results to invoices billed to that party or to one of its member contacts. Only one of `contact_id`, `family_id`, or `organization_id` may be set.
          */
         get: {
             parameters: {
@@ -5441,8 +5462,12 @@ export interface paths {
                     currency?: string;
                     /** @description Case-insensitive substring filter on invoice number, bill-to name/email/location text, and invoice issue date (ISO `YYYY-MM-DD` only). */
                     q?: string;
-                    /** @description Restrict to invoices billed to this contact or to a family or organisation they belong to. */
+                    /** @description Restrict to invoices billed to this contact or to a family or organisation they belong to. Mutually exclusive with `family_id` and `organization_id`. */
                     contact_id?: string;
+                    /** @description Restrict to invoices billed to this family or to one of its member contacts. Mutually exclusive with `contact_id` and `organization_id`. */
+                    family_id?: string;
+                    /** @description Restrict to invoices billed to this organisation or to one of its member contacts. Mutually exclusive with `contact_id` and `family_id`. */
+                    organization_id?: string;
                     /** @description Opaque cursor from a prior `next_cursor` value. */
                     cursor?: string;
                     limit?: number;
@@ -8978,6 +9003,27 @@ export interface components {
             tag_ids: string[];
             tags: components["schemas"]["EntityTagRef"][];
             members: components["schemas"]["AdminFamilyMember"][];
+            /**
+             * @description True when any family member is linked to at least one WhatsApp, Instagram,
+             *     or Messenger conversation.
+             */
+            has_sales_conversation: boolean;
+            /**
+             * @description Preferred Sales inbox tab for this family: the channel of the most recently
+             *     active conversation among members. Null when `has_sales_conversation` is false.
+             * @enum {string|null}
+             */
+            sales_conversation_channel?: "whatsapp" | "instagram" | "messenger" | null;
+            /**
+             * @description True when the family has at least one non-cancelled enrollment attributed to
+             *     the family or to one of its member contacts.
+             */
+            has_service_instance: boolean;
+            /**
+             * @description True when at least one customer invoice is billed to the family or to one of
+             *     its member contacts.
+             */
+            has_invoice: boolean;
         };
         AdminFamilyListResponse: {
             items: components["schemas"]["AdminFamily"][];
@@ -9065,6 +9111,28 @@ export interface components {
             tag_ids: string[];
             tags: components["schemas"]["EntityTagRef"][];
             members: components["schemas"]["AdminOrganizationMember"][];
+            /**
+             * @description True when any organisation member is linked to at least one WhatsApp,
+             *     Instagram, or Messenger conversation.
+             */
+            has_sales_conversation: boolean;
+            /**
+             * @description Preferred Sales inbox tab for this organisation: the channel of the most
+             *     recently active conversation among members. Null when `has_sales_conversation`
+             *     is false.
+             * @enum {string|null}
+             */
+            sales_conversation_channel?: "whatsapp" | "instagram" | "messenger" | null;
+            /**
+             * @description True when the organisation has at least one non-cancelled enrollment
+             *     attributed to the organisation or to one of its member contacts.
+             */
+            has_service_instance: boolean;
+            /**
+             * @description True when at least one customer invoice is billed to the organisation or to
+             *     one of its member contacts.
+             */
+            has_invoice: boolean;
         };
         AdminOrganizationListResponse: {
             items: components["schemas"]["AdminOrganization"][];
