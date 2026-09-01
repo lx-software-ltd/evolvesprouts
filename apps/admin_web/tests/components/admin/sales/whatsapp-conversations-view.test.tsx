@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('next/link', () => ({
   default: ({
@@ -75,6 +75,10 @@ vi.mock('@/lib/assets-api', () => ({
 import { WhatsAppConversationsView } from '@/components/admin/sales/whatsapp-conversations-view';
 
 describe('WhatsAppConversationsView', () => {
+  afterEach(() => {
+    window.history.replaceState(null, '', '/sales');
+  });
+
   it('lists conversations and loads messages on row click', async () => {
     mockListMessages.mockResolvedValue({
       conversation: listState.conversations[0],
@@ -92,7 +96,9 @@ describe('WhatsAppConversationsView', () => {
     const user = userEvent.setup();
     render(<WhatsAppConversationsView />);
 
-    expect(screen.getByText('Import WhatsApp export')).toBeInTheDocument();
+    const importToggle = screen.getByText('Import WhatsApp export');
+    expect(importToggle.closest('details')).not.toBeNull();
+    expect(importToggle.closest('details')).not.toHaveAttribute('open');
     expect(screen.getByText('WhatsApp conversations')).toBeInTheDocument();
     expect(screen.queryByText('1 conversations')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Import export' })).toBeDisabled();
@@ -109,5 +115,26 @@ describe('WhatsAppConversationsView', () => {
 
     await user.click(screen.getByRole('button', { name: 'Close' }));
     expect(screen.queryByText('How much?')).not.toBeInTheDocument();
+  });
+
+  it('opens the first conversation when a contact deep link is present', async () => {
+    mockListMessages.mockResolvedValue({
+      conversation: listState.conversations[0],
+      items: [
+        {
+          id: 'msg-1',
+          waMessageId: 'wamid.1',
+          direction: 'inbound',
+          messageType: 'text',
+          body: 'How much?',
+          sentAt: '2026-08-02T00:00:00+00:00',
+        },
+      ],
+    });
+    window.history.replaceState(null, '', '/sales?tab=whatsapp&contact=contact-1');
+    render(<WhatsAppConversationsView />);
+
+    expect(await screen.findByText('How much?')).toBeInTheDocument();
+    expect(mockListMessages).toHaveBeenCalledWith('conv-1');
   });
 });

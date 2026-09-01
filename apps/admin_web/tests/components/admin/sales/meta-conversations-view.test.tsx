@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('next/link', () => ({
   default: ({
@@ -75,6 +75,10 @@ vi.mock('@/lib/inbox-import-api', () => inboxImportApi);
 import { MetaConversationsView } from '@/components/admin/sales/meta-conversations-view';
 
 describe('MetaConversationsView', () => {
+  afterEach(() => {
+    window.history.replaceState(null, '', '/sales');
+  });
+
   it('lists Instagram conversations and loads messages on row click', async () => {
     mockListMessages.mockResolvedValue({
       conversation: listState.conversations[0],
@@ -115,5 +119,26 @@ describe('MetaConversationsView', () => {
 
     expect(screen.getByText('Messenger conversations')).toBeInTheDocument();
     expect(screen.queryByText('1 conversations')).not.toBeInTheDocument();
+  });
+
+  it('opens the first conversation when a contact deep link is present', async () => {
+    mockListMessages.mockResolvedValue({
+      conversation: listState.conversations[0],
+      items: [
+        {
+          id: 'msg-1',
+          platformMessageId: 'm_1',
+          direction: 'inbound',
+          messageType: 'text',
+          body: 'How much?',
+          sentAt: '2026-08-02T00:00:00+00:00',
+        },
+      ],
+    });
+    window.history.replaceState(null, '', '/sales?tab=instagram&contact=contact-1');
+    render(<MetaConversationsView channel='instagram' />);
+
+    expect(await screen.findByText('How much?')).toBeInTheDocument();
+    expect(mockListMessages).toHaveBeenCalledWith('conv-1');
   });
 });

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { ConversationNameCell } from './conversation-name-cell';
 import { InboxImportStatus } from './inbox-import-status';
 
+import { useAutoSelectContactConversation } from '@/hooks/use-auto-select-contact-conversation';
 import { useLocationSearchParam } from '@/hooks/use-query-tab-state';
 import { useMetaConversations } from '@/hooks/use-meta-conversations';
 import { useMetaMessages } from '@/hooks/use-meta-messages';
@@ -66,7 +67,11 @@ export function MetaConversationsView({ channel }: { channel: MetaChannel }) {
   const copy = CHANNEL_COPY[channel];
   const contactId = useLocationSearchParam(ADMIN_CONTACT_QUERY_PARAM);
   const list = useMetaConversations(channel, contactId);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useAutoSelectContactConversation(
+    contactId,
+    list.conversations[0]?.id ?? null,
+    list.isLoading
+  );
   const detail = useMetaMessages(selectedId);
   const [importJob, setImportJob] = useState<InboxImportJobSummary | null>(null);
   const [importError, setImportError] = useState('');
