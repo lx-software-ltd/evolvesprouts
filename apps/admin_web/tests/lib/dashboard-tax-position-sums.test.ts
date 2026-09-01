@@ -10,6 +10,7 @@ function row(
     classificationDate: '2025-06-01',
     description: 'x',
     tax: '0',
+    status: '',
     needsInvoiceDateWarning: false,
     invoiceNumber: null,
     ...partial,

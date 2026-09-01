@@ -16,13 +16,12 @@ import type { CustomerInvoiceSummary } from '@/lib/billing-api';
 import { sumTaxFiscalYearKindWithFxCoverage } from '@/lib/dashboard-tax-position-sums';
 import { getFiscalYearRangeInclusive } from '@/lib/fiscal-year';
 import {
+  DEFAULT_TAX_FISCAL_YEAR_STATUS_FILTER,
   buildTaxFiscalYearRows,
   defaultFiscalYearStartYear,
 } from '@/lib/tax-fiscal-year-report';
 import { formatAmountInDefaultCurrency } from '@/lib/vendor-spend';
-import type { Expense, ExpenseStatus } from '@/types/expenses';
-
-const TAX_POSITION_EXPENSE_STATUS: ExpenseStatus = 'paid';
+import type { Expense } from '@/types/expenses';
 
 export interface TaxPositionCardProps {
   expenses: Expense[] | null;
@@ -53,7 +52,7 @@ export function TaxPositionCard({
       expensesPayload,
       issuedInvoicesPayload,
       fyStartYear,
-      TAX_POSITION_EXPENSE_STATUS,
+      DEFAULT_TAX_FISCAL_YEAR_STATUS_FILTER,
     );
   }, [expensesPayload, issuedInvoicesPayload, fyStartYear]);
 

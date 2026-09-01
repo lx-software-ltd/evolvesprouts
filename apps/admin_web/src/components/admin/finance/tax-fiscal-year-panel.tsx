@@ -28,13 +28,16 @@ import { listAllAdminExpenses } from '@/lib/expenses-api';
 import { getFiscalYearRangeInclusive } from '@/lib/fiscal-year';
 import { formatDateOnly, formatEnumLabel } from '@/lib/format';
 import {
+  DEFAULT_TAX_FISCAL_YEAR_STATUS_FILTER,
+  TAX_FISCAL_YEAR_STATUS_FILTERS,
   buildTaxFiscalYearRows,
   defaultFiscalYearStartYear,
   taxFiscalYearRowsToCsv,
   type TaxFiscalYearRow,
+  type TaxFiscalYearStatusFilter,
 } from '@/lib/tax-fiscal-year-report';
 import { formatMoneyLineWithFxToDefault } from '@/lib/vendor-spend';
-import { EXPENSE_STATUSES, type Expense, type ExpenseStatus } from '@/types/expenses';
+import type { Expense } from '@/types/expenses';
 
 function isTaxDisplayedAsDash(tax: string | undefined): boolean {
   const t = tax?.trim() ?? '';
@@ -47,15 +50,17 @@ function isTaxDisplayedAsDash(tax: string | undefined): boolean {
 
 export function TaxFiscalYearPanel() {
   const fySelectId = useId();
-  const expenseStatusSelectId = useId();
+  const statusSelectId = useId();
   const [fyStartYear, setFyStartYear] = useState(
     () => Math.max(MIN_ADMIN_TAX_FISCAL_YEAR_START, defaultFiscalYearStartYear()),
   );
-  const [expenseStatusFilter, setExpenseStatusFilter] = useState<ExpenseStatus>('paid');
+  const [statusFilter, setStatusFilter] = useState<TaxFiscalYearStatusFilter>(
+    DEFAULT_TAX_FISCAL_YEAR_STATUS_FILTER,
+  );
   const [loadError, setLoadError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [expensesPayload, setExpensesPayload] = useState<Expense[] | null>(null);
-  const [issuedInvoicesPayload, setIssuedInvoicesPayload] = useState<CustomerInvoiceSummary[] | null>(null);
+  const [invoicesPayload, setInvoicesPayload] = useState<CustomerInvoiceSummary[] | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,17 +70,17 @@ export function TaxFiscalYearPanel() {
       try {
         const [expenses, invoices] = await Promise.all([
           listAllAdminExpenses(),
-          listAllCustomerInvoices({ status: 'issued' }),
+          listAllCustomerInvoices(),
         ]);
         if (!cancelled) {
           setExpensesPayload(expenses);
-          setIssuedInvoicesPayload(invoices);
+          setInvoicesPayload(invoices);
         }
       } catch (error) {
         if (!cancelled) {
           setLoadError(toErrorMessage(error, 'Could not load tax fiscal-year data.'));
           setExpensesPayload([]);
-          setIssuedInvoicesPayload([]);
+          setInvoicesPayload([]);
         }
       } finally {
         if (!cancelled) {
@@ -89,11 +94,11 @@ export function TaxFiscalYearPanel() {
   }, []);
 
   const rows = useMemo<TaxFiscalYearRow[]>(() => {
-    if (!expensesPayload || !issuedInvoicesPayload) {
+    if (!expensesPayload || !invoicesPayload) {
       return [];
     }
-    return buildTaxFiscalYearRows(expensesPayload, issuedInvoicesPayload, fyStartYear, expenseStatusFilter);
-  }, [expensesPayload, issuedInvoicesPayload, fyStartYear, expenseStatusFilter]);
+    return buildTaxFiscalYearRows(expensesPayload, invoicesPayload, fyStartYear, statusFilter);
+  }, [expensesPayload, invoicesPayload, fyStartYear, statusFilter]);
 
   const rowsNeedForeignFx = useMemo(() => {
     const defaultCurrency = getAdminDefaultCurrencyCode();
@@ -104,7 +109,7 @@ export function TaxFiscalYearPanel() {
     () => rows.map((row) => row.currency?.trim().toUpperCase()).filter((c): c is string => Boolean(c)),
     [rows]
   );
-  const taxFxEnabled = rowsNeedForeignFx && Boolean(expensesPayload && issuedInvoicesPayload);
+  const taxFxEnabled = rowsNeedForeignFx && Boolean(expensesPayload && invoicesPayload);
   const { fxMultipliers, fxError } = useFxMultipliersForCurrencies(taxFxCurrencyCodes, taxFxEnabled);
 
   const fyMeta = useMemo(() => getFiscalYearRangeInclusive(fyStartYear), [fyStartYear]);
@@ -117,18 +122,18 @@ export function TaxFiscalYearPanel() {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = `tax-fiscal-year-${fyStartYear}-${fyStartYear + 1}-${expenseStatusFilter}.csv`;
+    anchor.download = `tax-fiscal-year-${fyStartYear}-${fyStartYear + 1}-${statusFilter}.csv`;
     anchor.rel = 'noopener';
     anchor.click();
     URL.revokeObjectURL(url);
-  }, [rows, fyStartYear, expenseStatusFilter]);
+  }, [rows, fyStartYear, statusFilter]);
 
   const tableError = [loadError, fxError].filter(Boolean).join(' • ');
 
   return (
     <PaginatedTableCard
       title='Tax'
-      description={`Hong Kong fiscal year ${fyMeta.start} to ${fyMeta.end}. Expenses use invoice date when set; otherwise paid date. Revenue uses issued invoice totals by the invoice date (issue timestamp if missing).`}
+      description={`Hong Kong fiscal year ${fyMeta.start} to ${fyMeta.end}. Expenses use invoice date when set; otherwise paid date. Revenue uses invoice totals by the invoice date (issue timestamp if missing).`}
       isLoading={isLoading}
       isLoadingMore={false}
       hasMore={false}
@@ -157,14 +162,14 @@ export function TaxFiscalYearPanel() {
             </Select>
           </div>
           <div className='min-w-[180px]'>
-            <Label htmlFor={expenseStatusSelectId}>Expense status</Label>
+            <Label htmlFor={statusSelectId}>Status</Label>
             <Select
-              id={expenseStatusSelectId}
-              value={expenseStatusFilter}
-              onChange={(event) => setExpenseStatusFilter(event.target.value as ExpenseStatus)}
+              id={statusSelectId}
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value as TaxFiscalYearStatusFilter)}
               disabled={isLoading || Boolean(tableError)}
             >
-              {EXPENSE_STATUSES.map((entry) => (
+              {TAX_FISCAL_YEAR_STATUS_FILTERS.map((entry) => (
                 <option key={entry} value={entry}>
                   {formatEnumLabel(entry)}
                 </option>
@@ -190,7 +195,7 @@ export function TaxFiscalYearPanel() {
             <AdminDataTableHeadCell>Description</AdminDataTableHeadCell>
             <AdminDataTableHeadCell>Amount</AdminDataTableHeadCell>
             <AdminDataTableHeadCell>Tax</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell>Expense status</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell>Status</AdminDataTableHeadCell>
           </tr>
         </AdminDataTableHead>
         <AdminDataTableBody>
@@ -241,9 +246,7 @@ export function TaxFiscalYearPanel() {
                       : formatMoneyLineWithFxToDefault(row.tax, row.currency, fxMultipliers ?? new Map())}
                 </span>
               </AdminDataTableCell>
-              <AdminDataTableCell>
-                {row.kind === 'expense' && row.expenseStatus ? formatEnumLabel(row.expenseStatus) : '—'}
-              </AdminDataTableCell>
+              <AdminDataTableCell>{row.status !== '' ? row.status : '—'}</AdminDataTableCell>
             </tr>
           ))}
         </AdminDataTableBody>
