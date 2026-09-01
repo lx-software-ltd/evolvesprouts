@@ -137,7 +137,7 @@ def _handle_http(event: Mapping[str, Any]) -> dict[str, Any]:
         url:     Full URL
         headers: Optional dict of request headers
         body:    Optional request body (string)
-        timeout: Optional timeout in seconds (default 10, max 30)
+        timeout: Optional timeout in seconds (default 10, max 60)
     """
     import urllib.request
     import urllib.error
@@ -146,7 +146,7 @@ def _handle_http(event: Mapping[str, Any]) -> dict[str, Any]:
     url: str = event.get("url") or ""
     headers: dict[str, str] = event.get("headers") or {}
     body: str | None = event.get("body")
-    timeout: int = min(int(event.get("timeout") or 10), 30)
+    timeout: int = min(int(event.get("timeout") or 10), 60)
 
     if not any(k.lower() == "user-agent" for k in headers):
         headers["User-Agent"] = _HTTP_PROXY_USER_AGENT

@@ -142,3 +142,17 @@ def test_graph_get_payload_too_large_is_not_retried(
     assert "reduce the amount of data" in str(exc_info.value).lower()
     assert "smaller limit" in str(exc_info.value)
     assert calls["count"] == 1
+
+
+def test_is_graph_skippable_failure_includes_proxy_timeout() -> None:
+    timeout = MetaGraphApiError(
+        status_code=502,
+        message="Meta Graph proxy call failed: TimeoutError",
+    )
+    assert client.is_graph_skippable_failure(timeout) is True
+    assert (
+        client.is_graph_skippable_failure(
+            MetaGraphApiError(status_code=401, message="nope")
+        )
+        is False
+    )
