@@ -111,11 +111,32 @@ describe('LeadDetailPanel', () => {
     expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Lead Info' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Stage Control' })).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Notes' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Contact notes' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Initial note')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Quick Actions' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Activity Timeline' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Conversation' })).not.toBeInTheDocument();
+  });
+
+  it('hides notes and contact notes until a lead is selected', () => {
+    render(
+      <LeadDetailPanel
+        mode='edit'
+        lead={null}
+        users={USERS}
+        isLoading={false}
+        error=''
+        onStartCreate={vi.fn()}
+        onCreate={vi.fn()}
+        onUpdate={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Select a lead below to edit, or create a new lead.')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Notes' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Contact notes' })).not.toBeInTheDocument();
+    expect(listAdminContactNotes).not.toHaveBeenCalled();
   });
 
   it('loads the selected lead onto the editor card and keeps activity only', async () => {
@@ -186,6 +207,8 @@ describe('LeadDetailPanel', () => {
     );
 
     expect(screen.getByText('Loading lead…')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Notes' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Contact notes' })).not.toBeInTheDocument();
 
     rerender(
       <LeadDetailPanel
