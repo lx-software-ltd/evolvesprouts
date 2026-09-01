@@ -31,7 +31,7 @@ from app.templates.booking_confirmation_render import substitute_shell_placehold
 from app.templates.invoice_email_content import DEFAULT_INVOICE_EMAIL_LOCALE
 from app.templates.invoice_email_render import render_invoice_email
 from app.templates.transactional_shell_data import (
-    merge_transactional_template_shell_data,
+    merge_transactional_shell_template_data,
     resolve_whatsapp_url_for_template,
 )
 from app.utils.logging import get_logger
@@ -479,7 +479,7 @@ def send_invoice_email(
         return
     locale = DEFAULT_INVOICE_EMAIL_LOCALE
     num = (inv.invoice_number or str(inv.id)).strip()
-    shell = merge_transactional_template_shell_data(locale=locale, template_data={})
+    shell = merge_transactional_shell_template_data(locale=locale, template_data={})
     subject, html_doc, body_text = render_invoice_email(
         locale=locale,
         bill_to_name=inv.bill_to_display_name or "",
