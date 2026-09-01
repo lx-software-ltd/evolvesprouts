@@ -325,4 +325,3 @@ def test_ingest_history_chunk_does_not_create_leads(
     assert counters["stored"] == 1
     assert counters["leads_created"] == 0
     assert counters["contacts_created"] == 1
-

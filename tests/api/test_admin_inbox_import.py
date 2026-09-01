@@ -53,7 +53,9 @@ def test_admin_meta_queues_graph_import(
         def __exit__(self, *_a: object) -> bool:
             return False
 
-    monkeypatch.setattr("app.api.admin_inbox_import.Session", lambda _e: _FakeSessionCM())
+    monkeypatch.setattr(
+        "app.api.admin_inbox_import.Session", lambda _e: _FakeSessionCM()
+    )
     monkeypatch.setattr("app.api.admin_inbox_import.get_engine", lambda: object())
     monkeypatch.setattr(
         "app.api.admin_inbox_import.enqueue_inbox_import_job", lambda _jid: None
@@ -126,7 +128,9 @@ def test_admin_meta_lists_import_jobs(
     monkeypatch.setattr(
         "app.api.admin_inbox_import.InboxImportJobRepository", _FakeRepo
     )
-    monkeypatch.setattr("app.api.admin_inbox_import.Session", lambda _e: _FakeSessionCM())
+    monkeypatch.setattr(
+        "app.api.admin_inbox_import.Session", lambda _e: _FakeSessionCM()
+    )
     monkeypatch.setattr("app.api.admin_inbox_import.get_engine", lambda: object())
 
     event = _identity_event(api_gateway_event, "/v1/admin/meta/import-jobs")

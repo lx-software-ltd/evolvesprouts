@@ -57,7 +57,9 @@ def parse_whatsapp_export(
 ) -> list[ParsedExportChat]:
     """Parse a chat ``.txt`` or a zip of chat transcripts (media files ignored)."""
     if len(raw_bytes) > _MAX_ARCHIVE_BYTES:
-        raise ValidationError("WhatsApp export is too large", field="attachment_asset_id")
+        raise ValidationError(
+            "WhatsApp export is too large", field="attachment_asset_id"
+        )
     lowered = filename.lower()
     mime = (content_type or "").lower()
     if lowered.endswith(".zip") or "zip" in mime:
@@ -222,4 +224,3 @@ def _decode_text(raw_bytes: bytes) -> str:
         except UnicodeDecodeError:
             continue
     return raw_bytes.decode("utf-8", errors="replace")
-

@@ -59,7 +59,9 @@ def import_parsed_whatsapp_chats(
                 if _normalized_name(message.sender) in outbound_names
                 else WhatsAppMessageDirection.INBOUND
             )
-            profile_name = chat.title if direction is WhatsAppMessageDirection.INBOUND else None
+            profile_name = (
+                chat.title if direction is WhatsAppMessageDirection.INBOUND else None
+            )
             store_whatsapp_message(
                 session,
                 wa_id=wa_id,

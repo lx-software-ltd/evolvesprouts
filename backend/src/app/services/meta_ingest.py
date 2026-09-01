@@ -364,7 +364,11 @@ def _parse_timestamp(raw_value: Any) -> datetime | None:
             raw_value = stripped
         else:
             normalized = stripped.replace("Z", "+00:00")
-            if len(normalized) >= 5 and normalized[-5] in "+-" and normalized[-3] != ":":
+            if (
+                len(normalized) >= 5
+                and normalized[-5] in "+-"
+                and normalized[-3] != ":"
+            ):
                 normalized = f"{normalized[:-2]}:{normalized[-2:]}"
             try:
                 parsed = datetime.fromisoformat(normalized)

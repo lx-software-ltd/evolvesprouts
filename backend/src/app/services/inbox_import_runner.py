@@ -131,9 +131,7 @@ def _run_whatsapp_export(session: Session, job: InboxImportJob) -> dict[str, int
         raise ValidationError("Export asset was not found", field="attachment_asset_id")
     bucket = os.getenv("ASSETS_BUCKET_NAME", "").strip()
     if not bucket:
-        raise ValidationError(
-            "Assets bucket is not configured", field="configuration"
-        )
+        raise ValidationError("Assets bucket is not configured", field="configuration")
     response = get_s3_client().get_object(Bucket=bucket, Key=asset.s3_key)
     body = response["Body"].read()
     chats = parse_whatsapp_export(
@@ -143,11 +141,7 @@ def _run_whatsapp_export(session: Session, job: InboxImportJob) -> dict[str, int
     )
     options = job.options if isinstance(job.options, dict) else {}
     names_raw = options.get("business_display_names")
-    names = (
-        [str(item) for item in names_raw]
-        if isinstance(names_raw, list)
-        else []
-    )
+    names = [str(item) for item in names_raw] if isinstance(names_raw, list) else []
     counterparty = options.get("counterparty_wa_id")
     return import_parsed_whatsapp_chats(
         session,

@@ -203,7 +203,9 @@ def _get_job(
         job = InboxImportJobRepository(session).get_by_id(job_id)
         if job is None or job.kind is not kind:
             raise NotFoundError("InboxImportJob", str(job_id))
-        return json_response(200, {"inbox_import_job": _serialize_job(job)}, event=event)
+        return json_response(
+            200, {"inbox_import_job": _serialize_job(job)}, event=event
+        )
 
 
 def _assert_export_asset(session: Session, asset_id: UUID) -> None:
