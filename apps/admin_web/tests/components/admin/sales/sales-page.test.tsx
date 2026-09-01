@@ -183,6 +183,7 @@ describe('SalesPage', () => {
     render(<SalesPage />);
 
     expect(screen.queryByText('Total leads')).not.toBeInTheDocument();
+    expect(screen.queryByText('0 total')).not.toBeInTheDocument();
     expect(screen.queryByText('Source Breakdown')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Date range preset')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Lead' })).toBeInTheDocument();
