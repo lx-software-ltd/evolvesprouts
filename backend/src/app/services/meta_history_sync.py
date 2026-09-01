@@ -12,6 +12,7 @@ from app.db.models.enums import MetaChannel, MetaMessageDirection
 from app.services.meta_graph_client import (
     MetaGraphApiError,
     graph_get,
+    is_graph_payload_too_large,
     resolve_page_access_token,
 )
 from app.services.meta_ingest import store_meta_message
@@ -20,11 +21,12 @@ from app.utils.logging import get_logger, mask_pii
 logger = get_logger(__name__)
 
 _SOURCE_DETAIL = "meta_history_sync"
-_CONVERSATION_LIMIT = 15
+_CONVERSATION_LIMIT = 5
 _MESSAGE_LIMIT = 20
-_MAX_PAGES = 40
-_MESSAGE_FIELDS = "id,created_time,from,message"
-_CONVERSATION_FIELDS = "id,updated_time,participants"
+_MESSAGE_PAGE = 5
+_MAX_PAGES = 80
+_MESSAGE_FIELDS = "id,created_time,from{id,name,username},message"
+_CONVERSATION_FIELDS = "id,participants.limit(5){id,name,username}"
 
 
 def sync_meta_channel_history(
@@ -57,16 +59,10 @@ def sync_meta_channel_history(
     pages = 0
     while pages < _MAX_PAGES:
         pages += 1
-        params = {
-            "platform": platform,
-            "fields": _CONVERSATION_FIELDS,
-            "limit": str(_CONVERSATION_LIMIT),
-        }
-        if after:
-            params["after"] = after
-        payload = graph_get(
-            f"{page_id}/conversations",
-            params=params,
+        payload = _list_conversation_page(
+            page_id,
+            platform=platform,
+            after=after,
             token=page_token,
         )
         rows = payload.get("data")
@@ -92,21 +88,91 @@ def sync_meta_channel_history(
     return counters
 
 
+def _graph_get_reducing_limit(
+    path: str,
+    *,
+    params: dict[str, str],
+    token: str,
+) -> dict[str, Any]:
+    raw_limit = str(params.get("limit") or "1").strip()
+    try:
+        current = max(1, int(raw_limit))
+    except ValueError:
+        current = 1
+    while True:
+        attempt = dict(params)
+        attempt["limit"] = str(current)
+        try:
+            return graph_get(path, params=attempt, token=token)
+        except MetaGraphApiError as exc:
+            if not is_graph_payload_too_large(exc) or current <= 1:
+                raise
+            current = max(1, current // 2)
+
+
+def _list_conversation_page(
+    page_id: str,
+    *,
+    platform: str,
+    after: str | None,
+    token: str,
+) -> dict[str, Any]:
+    params = {
+        "platform": platform,
+        "fields": _CONVERSATION_FIELDS,
+        "limit": str(_CONVERSATION_LIMIT),
+    }
+    if after:
+        params["after"] = after
+    try:
+        return _graph_get_reducing_limit(
+            f"{page_id}/conversations",
+            params=params,
+            token=token,
+        )
+    except MetaGraphApiError as exc:
+        if not is_graph_payload_too_large(exc):
+            raise
+        slim = dict(params)
+        slim["fields"] = "id"
+        slim["limit"] = "1"
+        return graph_get(f"{page_id}/conversations", params=slim, token=token)
+
+
 def _conversation_messages(
     conversation_id: str, *, token: str
 ) -> list[Mapping[str, Any]]:
-    payload = graph_get(
-        f"{conversation_id}/messages",
-        params={
+    collected: list[Mapping[str, Any]] = []
+    after: str | None = None
+    while len(collected) < _MESSAGE_LIMIT:
+        remaining = _MESSAGE_LIMIT - len(collected)
+        params = {
             "fields": _MESSAGE_FIELDS,
-            "limit": str(_MESSAGE_LIMIT),
-        },
-        token=token,
-    )
-    rows = payload.get("data")
-    if not isinstance(rows, list):
-        return []
-    return [row for row in rows if isinstance(row, Mapping)]
+            "limit": str(min(_MESSAGE_PAGE, remaining)),
+        }
+        if after:
+            params["after"] = after
+        try:
+            payload = _graph_get_reducing_limit(
+                f"{conversation_id}/messages",
+                params=params,
+                token=token,
+            )
+        except MetaGraphApiError as exc:
+            if is_graph_payload_too_large(exc) and collected:
+                break
+            raise
+        rows = payload.get("data")
+        if not isinstance(rows, list) or not rows:
+            break
+        collected.extend(row for row in rows if isinstance(row, Mapping))
+        paging = payload.get("paging")
+        cursors = paging.get("cursors") if isinstance(paging, Mapping) else None
+        next_after = cursors.get("after") if isinstance(cursors, Mapping) else None
+        if not isinstance(next_after, str) or not next_after.strip():
+            break
+        after = next_after.strip()
+    return collected[:_MESSAGE_LIMIT]
 
 
 def _ingest_conversation(
@@ -119,23 +185,44 @@ def _ingest_conversation(
     counters: dict[str, int],
     page_token: str,
 ) -> None:
-    platform_user_id, profile_name = _counterparty(row, self_ids=self_ids)
+    conversation_id = str(row.get("id") or "").strip()
+    detail = row
+    if detail.get("participants") is None and conversation_id:
+        try:
+            fetched = graph_get(
+                conversation_id,
+                params={"fields": _CONVERSATION_FIELDS},
+                token=page_token,
+            )
+        except MetaGraphApiError as exc:
+            if is_graph_payload_too_large(exc):
+                counters["skipped"] += 1
+                return
+            raise
+        if fetched:
+            detail = {**dict(row), **fetched}
+    platform_user_id, profile_name = _counterparty(detail, self_ids=self_ids)
     if platform_user_id is None:
         counters["skipped"] += 1
         return
     counters["conversations"] += 1
-    messages_wrapper = row.get("messages")
+    messages_wrapper = detail.get("messages")
     nested_rows = (
         messages_wrapper.get("data") if isinstance(messages_wrapper, Mapping) else None
     )
     if isinstance(nested_rows, list):
         message_rows = [item for item in nested_rows if isinstance(item, Mapping)]
     else:
-        conversation_id = str(row.get("id") or "").strip()
         if not conversation_id:
             counters["skipped"] += 1
             return
-        message_rows = _conversation_messages(conversation_id, token=page_token)
+        try:
+            message_rows = _conversation_messages(conversation_id, token=page_token)
+        except MetaGraphApiError as exc:
+            if is_graph_payload_too_large(exc):
+                counters["skipped"] += 1
+                return
+            raise
     for message_row in message_rows:
         if not isinstance(message_row, Mapping):
             counters["skipped"] += 1
