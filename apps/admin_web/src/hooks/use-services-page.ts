@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { toErrorMessage } from '@/hooks/hook-errors';
+import { useAutoSelectOnce } from '@/hooks/use-auto-select-once';
+import { useRelatedPartySearchParams } from '@/hooks/use-related-party-search-params';
 import { createInitialCustomerPaymentAfterEnrollmentCreate } from '@/lib/billing-api';
 import { listEntityTags, type EntityTagRef } from '@/lib/entity-api';
-import { useRelatedPartySearchParams } from '@/hooks/use-related-party-search-params';
+import { compareInstancesByFirstSlotStartsDesc } from '@/lib/format';
 
 import { useDiscountCodes } from './use-discount-codes';
 import { useVenues } from './use-venues';
@@ -135,6 +137,25 @@ export function useServicesPage() {
     () => instanceList.instances.find((entry) => entry.id === selectedInstanceId) ?? null,
     [instanceList.instances, selectedInstanceId]
   );
+  const firstPartyInstanceId = useMemo(() => {
+    if (activeView !== 'instances' || !partyFilterKey || instanceList.isLoading) {
+      return null;
+    }
+    if (instanceList.instances.length === 0) {
+      return null;
+    }
+    const [first] = [...instanceList.instances].sort(compareInstancesByFirstSlotStartsDesc);
+    return first?.id ?? null;
+  }, [activeView, partyFilterKey, instanceList.isLoading, instanceList.instances]);
+  useAutoSelectOnce(
+    partyFilterKey,
+    Boolean(firstPartyInstanceId) && activeView === 'instances' && !instanceList.isLoading,
+    () => {
+      if (firstPartyInstanceId) {
+        setSelectedInstanceId(firstPartyInstanceId);
+      }
+    }
+  );
 
   const enrollmentServiceId =
     activeView === 'instances' ? (selectedInstance?.serviceId ?? null) : selectedServiceId;
@@ -233,5 +254,8 @@ export function useServicesPage() {
     discountCodes,
     venues,
     enrollmentCustomerPaymentError,
+    contactFilterId,
+    familyFilterId,
+    organizationFilterId,
   };
 }

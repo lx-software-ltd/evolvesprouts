@@ -142,7 +142,7 @@ export function FamiliesListTable({
                         row.sales_conversation_channel
                       )}
                       instancesHref={adminPartyServiceInstancesDeepLink('family', row.id)}
-                      invoicesHref={adminPartyInvoicesDeepLink(nameCell)}
+                      invoicesHref={adminPartyInvoicesDeepLink(primaryLabel ?? '')}
                       hasSalesConversation={row.has_sales_conversation}
                       hasServiceInstance={row.has_service_instance}
                       hasInvoice={row.has_invoice}

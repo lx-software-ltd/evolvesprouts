@@ -7,6 +7,7 @@ import {
   adminPartyServiceInstancesDeepLink,
   adminSalesConversationsDeepLink,
   adminServiceInstancesDeepLink,
+  findEnrollmentForRelatedParty,
   isSalesInboxTab,
 } from '@/lib/contact-related-links';
 import { CUSTOMER_INVOICE_ASSET_TAG } from '@/types/assets';
@@ -60,5 +61,18 @@ describe('contact related deep links', () => {
     expect(adminPartyInvoicesDeepLink('Linked Org')).toBe(
       `/assets?tag=${CUSTOMER_INVOICE_ASSET_TAG}&query=Linked+Org`
     );
+  });
+
+  it('finds the enrollment owned by the deep-link party', () => {
+    const enrollments = [
+      { id: 'e-contact', contactId: 'c-1', familyId: null, organizationId: null },
+      { id: 'e-family', contactId: 'c-1', familyId: 'f-1', organizationId: null },
+      { id: 'e-org', contactId: null, familyId: null, organizationId: 'o-1' },
+    ];
+    expect(findEnrollmentForRelatedParty(enrollments, { contactId: 'c-1' })?.id).toBe('e-contact');
+    expect(findEnrollmentForRelatedParty(enrollments, { familyId: 'f-1' })?.id).toBe('e-family');
+    expect(findEnrollmentForRelatedParty(enrollments, { organizationId: 'o-1' })?.id).toBe('e-org');
+    expect(findEnrollmentForRelatedParty(enrollments, { contactId: 'missing' })).toBeNull();
+    expect(findEnrollmentForRelatedParty(enrollments, {})).toBeNull();
   });
 });

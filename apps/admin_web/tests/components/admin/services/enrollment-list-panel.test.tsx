@@ -195,4 +195,97 @@ describe('EnrollmentListPanel', () => {
     expect(currencyField.tagName).toBe('SELECT');
     expect(screen.getByRole('option', { name: 'HKD Hong Kong Dollar' })).toBeInTheDocument();
   });
+
+  it('auto-selects the contact enrollment from a party deep link', () => {
+    const other: Enrollment = {
+      ...ENROLLMENT_FIXTURE,
+      id: 'enrollment-other',
+      contactId: 'contact-other',
+    };
+    render(
+      <EnrollmentListPanel
+        enrollments={[other, ENROLLMENT_FIXTURE]}
+        serviceId='service-1'
+        instanceId='instance-1'
+        canCreate={true}
+        isLoading={false}
+        isLoadingMore={false}
+        hasMore={false}
+        error=''
+        isMutating={false}
+        onLoadMore={vi.fn()}
+        onCreate={vi.fn()}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        autoSelectParty={{ contactId: 'contact-1' }}
+      />
+    );
+
+    expect(screen.getByLabelText('Contact')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Update enrollment' })).toBeInTheDocument();
+    expect(screen.getByText('Jane Doe').closest('tr')).toHaveClass('bg-slate-100');
+  });
+
+  it('auto-selects the family enrollment from a party deep link', () => {
+    const familyEnrollment: Enrollment = {
+      ...ENROLLMENT_FIXTURE,
+      id: 'enrollment-family',
+      contactId: null,
+      familyId: 'family-1',
+    };
+    render(
+      <EnrollmentListPanel
+        enrollments={[ENROLLMENT_FIXTURE, familyEnrollment]}
+        serviceId='service-1'
+        instanceId='instance-1'
+        canCreate={true}
+        isLoading={false}
+        isLoadingMore={false}
+        hasMore={false}
+        error=''
+        isMutating={false}
+        onLoadMore={vi.fn()}
+        onCreate={vi.fn()}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        autoSelectParty={{ familyId: 'family-1' }}
+      />
+    );
+
+    expect(screen.getByLabelText('Family')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Update enrollment' })).toBeInTheDocument();
+    expect(screen.getByText('Smith family').closest('tr')).toHaveClass('bg-slate-100');
+  });
+
+  it('auto-selects the organisation enrollment from a party deep link', () => {
+    const orgEnrollment: Enrollment = {
+      ...ENROLLMENT_FIXTURE,
+      id: 'enrollment-org',
+      contactId: null,
+      familyId: null,
+      organizationId: 'org-1',
+    };
+    render(
+      <EnrollmentListPanel
+        enrollments={[ENROLLMENT_FIXTURE, orgEnrollment]}
+        serviceId='service-1'
+        instanceId='instance-1'
+        canCreate={true}
+        isLoading={false}
+        isLoadingMore={false}
+        hasMore={false}
+        error=''
+        isMutating={false}
+        onLoadMore={vi.fn()}
+        onCreate={vi.fn()}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        autoSelectParty={{ organizationId: 'org-1' }}
+      />
+    );
+
+    expect(screen.getByLabelText('Organization')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Update enrollment' })).toBeInTheDocument();
+    expect(screen.getByText('Acme Org').closest('tr')).toHaveClass('bg-slate-100');
+  });
 });
