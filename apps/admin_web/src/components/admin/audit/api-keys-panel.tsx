@@ -3,6 +3,7 @@
 import type { FormEvent } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { DeleteIcon } from '@/components/icons/action-icons';
 import { Button } from '@/components/ui/button';
 import {
   AdminDataTable,
@@ -215,37 +216,43 @@ export function ApiKeysPanel() {
               required
             />
           </div>
-          <div>
-            <Label htmlFor='api-key-scope'>Scope</Label>
-            <Select
-              id='api-key-scope'
-              value={scope}
-              onChange={(event) => setScope(event.target.value === 'admin' ? 'admin' : 'user')}
-              disabled={editorMode === 'view'}
-            >
-              <option value='user'>User (read-only)</option>
-              <option value='admin'>Admin (full access)</option>
-            </Select>
-          </div>
-          {editorMode === 'create' ? (
+          <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
             <div>
-              <Label htmlFor='api-key-expires'>Expires at (optional)</Label>
-              <Input
-                id='api-key-expires'
-                type='datetime-local'
-                value={expiresAt}
-                onChange={(event) => setExpiresAt(event.target.value)}
-              />
+              <Label htmlFor='api-key-scope'>Scope</Label>
+              <Select
+                id='api-key-scope'
+                value={scope}
+                onChange={(event) => setScope(event.target.value === 'admin' ? 'admin' : 'user')}
+                disabled={editorMode === 'view'}
+              >
+                <option value='user'>User (read-only)</option>
+                <option value='admin'>Admin (full access)</option>
+              </Select>
             </div>
-          ) : (
+            <div>
+              <Label htmlFor='api-key-expires'>
+                {editorMode === 'create' ? 'Expires at (optional)' : 'Expires at'}
+              </Label>
+              {editorMode === 'create' ? (
+                <Input
+                  id='api-key-expires'
+                  type='datetime-local'
+                  value={expiresAt}
+                  onChange={(event) => setExpiresAt(event.target.value)}
+                />
+              ) : (
+                <Input id='api-key-expires' value={formatWhen(selectedRow?.expires_at)} disabled readOnly />
+              )}
+            </div>
+          </div>
+          {editorMode === 'view' ? (
             <div className='space-y-1 text-sm text-slate-600'>
               <p>Prefix: {selectedRow?.key_prefix ?? '—'}</p>
               <p>Status: {selectedRow?.status ?? '—'}</p>
               <p>Created: {formatWhen(selectedRow?.created_at)}</p>
               <p>Last used: {formatWhen(selectedRow?.last_used_at)}</p>
-              <p>Expires: {formatWhen(selectedRow?.expires_at)}</p>
             </div>
-          )}
+          ) : null}
         </form>
       </AdminEditorCard>
 
@@ -300,11 +307,23 @@ export function ApiKeysPanel() {
                   <div className='flex justify-end'>
                     <Button
                       type='button'
-                      variant='secondary'
+                      size='sm'
+                      variant='danger'
+                      className='h-8 min-w-8 px-0'
                       disabled={row.status === 'revoked' || revokeBusyId === row.id}
                       onClick={() => void handleRevoke(row)}
+                      aria-label='Revoke API key'
+                      title='Revoke API key'
+                      aria-busy={revokeBusyId === row.id}
                     >
-                      {revokeBusyId === row.id ? 'Revoking…' : 'Revoke'}
+                      {revokeBusyId === row.id ? (
+                        <span
+                          className='inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-white border-t-transparent'
+                          aria-hidden
+                        />
+                      ) : (
+                        <DeleteIcon className='h-4 w-4 shrink-0' aria-hidden />
+                      )}
                     </Button>
                   </div>
                 </AdminDataTableCell>

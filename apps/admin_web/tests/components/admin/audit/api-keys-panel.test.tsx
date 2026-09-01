@@ -66,13 +66,33 @@ describe('ApiKeysPanel', () => {
     expect(await screen.findByText(/esk_shown_once/)).toBeInTheDocument();
   });
 
+  it('places scope and expires at on the same editor row', async () => {
+    render(<ApiKeysPanel />);
+    expect(await screen.findByText('Partner read')).toBeInTheDocument();
+
+    const scope = screen.getByLabelText('Scope');
+    const expires = screen.getByLabelText('Expires at (optional)');
+    const row = scope.closest('div.grid');
+    expect(row).toBe(expires.closest('div.grid'));
+    expect(row).toHaveClass('sm:grid-cols-2');
+  });
+
+  it('styles the Operations revoke action as a danger icon button', async () => {
+    render(<ApiKeysPanel />);
+    expect(await screen.findByText('Partner read')).toBeInTheDocument();
+
+    const revoke = screen.getByRole('button', { name: 'Revoke API key' });
+    expect(revoke).toHaveClass('bg-red-600', 'h-8', 'min-w-8', 'px-0');
+    expect(revoke).toHaveAttribute('title', 'Revoke API key');
+  });
+
   it('revokes a key from Operations after confirm', async () => {
     mockRevoke.mockResolvedValue({ ...sampleKey, status: 'revoked' });
     const user = userEvent.setup();
     render(<ApiKeysPanel />);
 
     expect(await screen.findByText('Partner read')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Revoke' }));
+    await user.click(screen.getByRole('button', { name: 'Revoke API key' }));
     const dialog = await screen.findByRole('alertdialog');
     await user.click(within(dialog).getByRole('button', { name: 'Revoke' }));
 
