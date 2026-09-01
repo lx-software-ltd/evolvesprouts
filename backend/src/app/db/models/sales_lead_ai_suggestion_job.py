@@ -7,7 +7,7 @@ from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy import ForeignKey, String, Text, text
+from sqlalchemy import ForeignKey, Text, text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import TIMESTAMP
