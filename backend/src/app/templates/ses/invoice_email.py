@@ -77,9 +77,7 @@ def _inner_html_and_text_for_locale(loc: str) -> tuple[str, str]:
     )
     row_total_mid = _row(labels["total"], "{{total_display}}", bordered=True)
     row_total_final = _row(labels["total"], "{{total_display}}", bordered=False)
-    row_balance = _row(
-        labels["balance_due"], "{{balance_due_display}}", bordered=False
-    )
+    row_balance = _row(labels["balance_due"], "{{balance_due_display}}", bordered=False)
     zero_note = (
         "{{#if is_zero_total}}"
         '<p style="margin:0 0 16px;padding:12px;background:#f3f8f2;'
@@ -88,9 +86,7 @@ def _inner_html_and_text_for_locale(loc: str) -> tuple[str, str]:
         "{{/if}}"
     )
     paid_note = (
-        "{{#if is_paid}}"
-        f'<p style="margin:0 0 16px;">{PAID_NOTE[loc]}</p>'
-        "{{/if}}"
+        "{{#if is_paid}}" f'<p style="margin:0 0 16px;">{PAID_NOTE[loc]}</p>' "{{/if}}"
     )
     inner_html = (
         _greeting_html(loc)

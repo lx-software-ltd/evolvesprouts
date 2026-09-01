@@ -5729,7 +5729,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Email issued invoice PDF */
+        /**
+         * Email issued invoice PDF
+         * @description Sends a branded transactional email (shared Evolve Sprouts HTML shell) with the issued invoice PDF attached. Recipients are operator-supplied. Draft invoices without an issued PDF are a no-op (response still reports `sent: true`). Locale for the current send path is `en`.
+         */
         post: {
             parameters: {
                 query?: never;
