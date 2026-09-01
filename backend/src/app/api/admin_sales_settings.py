@@ -97,7 +97,9 @@ def _get_sales_settings(event: Mapping[str, Any], *, actor_sub: str) -> dict[str
         )
 
 
-def _patch_sales_settings(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, Any]:
+def _patch_sales_settings(
+    event: Mapping[str, Any], *, actor_sub: str
+) -> dict[str, Any]:
     body = parse_body(event)
     payload = parse_sales_settings_payload(body)
     with Session(get_engine()) as session:

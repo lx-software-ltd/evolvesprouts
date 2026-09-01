@@ -158,7 +158,9 @@ def maybe_notify_assignee(
         )
 
 
-def notify_lead_assignee(session: Session, lead: SalesLead, *, previous: str | None) -> None:
+def notify_lead_assignee(
+    session: Session, lead: SalesLead, *, previous: str | None
+) -> None:
     """Notify from a persisted lead row when assignment changed to a user."""
     contact = getattr(lead, "contact", None)
     raw_type = getattr(lead, "lead_type", None)

@@ -40,9 +40,7 @@ def test_resolve_create_assignee_uses_explicit_value() -> None:
 def test_resolve_create_assignee_explicit_null_overrides_default() -> None:
     session = _SessionWithGet(_FakeSettings())
     assert (
-        sa.resolve_create_assignee(
-            session, assigned_to=None, assigned_to_provided=True
-        )
+        sa.resolve_create_assignee(session, assigned_to=None, assigned_to_provided=True)
         is None
     )
 
@@ -126,7 +124,9 @@ def test_maybe_notify_assignee_sends_on_first_assign(monkeypatch: Any) -> None:
     send = MagicMock()
     monkeypatch.setattr(sa, "send_email", send)
     monkeypatch.setattr(
-        sa, "cognito_emails_for_subs", lambda subs, user_pool_id: {subs[0]: "a@example.com"}
+        sa,
+        "cognito_emails_for_subs",
+        lambda subs, user_pool_id: {subs[0]: "a@example.com"},
     )
     monkeypatch.setenv("SES_SENDER_EMAIL", "from@example.com")
     monkeypatch.setenv("COGNITO_USER_POOL_ID", "pool-1")
@@ -153,7 +153,9 @@ def test_maybe_notify_assignee_sends_on_reassignment(monkeypatch: Any) -> None:
     send = MagicMock()
     monkeypatch.setattr(sa, "send_email", send)
     monkeypatch.setattr(
-        sa, "cognito_emails_for_subs", lambda subs, user_pool_id: {subs[0]: "b@example.com"}
+        sa,
+        "cognito_emails_for_subs",
+        lambda subs, user_pool_id: {subs[0]: "b@example.com"},
     )
     monkeypatch.setenv("SES_SENDER_EMAIL", "from@example.com")
     monkeypatch.setenv("COGNITO_USER_POOL_ID", "pool-1")
