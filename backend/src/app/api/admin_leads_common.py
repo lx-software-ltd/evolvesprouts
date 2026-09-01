@@ -141,6 +141,7 @@ def parse_create_lead_payload(body: Mapping[str, Any]) -> dict[str, Any]:
         )
         or ContactType.PARENT,
         "assigned_to": _parse_optional_text(body.get("assigned_to")),
+        "assigned_to_provided": "assigned_to" in body,
         "note": validate_string_length(
             body.get("note"),
             "note",
@@ -431,3 +432,29 @@ def _normalize_datetime(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value.replace(tzinfo=UTC)
     return value.astimezone(UTC)
+
+
+def max_datetime(first: datetime | None, second: datetime) -> datetime:
+    """Return the later of two datetimes when the first may be unset."""
+    if first is None:
+        return second
+    return first if first >= second else second
+
+
+def min_datetime(first: datetime | None, second: datetime) -> datetime:
+    """Return the earlier of two datetimes when the first may be unset."""
+    if first is None:
+        return second
+    return first if first <= second else second
+
+
+def count_leads_in_window(
+    repository: Any,
+    *,
+    date_from: datetime,
+    date_to: datetime,
+) -> int:
+    """Count leads in an inclusive window; empty when the range is inverted."""
+    if date_from > date_to:
+        return 0
+    return repository.count_leads(date_from=date_from, date_to=date_to)

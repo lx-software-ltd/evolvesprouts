@@ -8,12 +8,20 @@ import { useLeadDetail } from './use-lead-detail';
 import { useLeadList } from './use-lead-list';
 import { useLeadMutations } from './use-lead-mutations';
 import { useQueryTabState } from './use-query-tab-state';
+import { useSalesSettings } from './use-sales-settings';
 
-export type SalesView = 'pipeline' | 'analytics' | 'instagram' | 'messenger' | 'whatsapp';
+export type SalesView =
+  | 'pipeline'
+  | 'analytics'
+  | 'configuration'
+  | 'instagram'
+  | 'messenger'
+  | 'whatsapp';
 
 export const SALES_VIEW_KEYS: readonly SalesView[] = [
   'pipeline',
   'analytics',
+  'configuration',
   'instagram',
   'messenger',
   'whatsapp',
@@ -29,6 +37,7 @@ export function useSalesPage() {
   const [isCreateMode, setIsCreateMode] = useState(true);
 
   const adminUsers = useAdminUsers();
+  const salesSettings = useSalesSettings();
   const leadList = useLeadList();
 
   const selectedLeadId = useMemo(() => {
@@ -81,6 +90,7 @@ export function useSalesPage() {
     startCreateLead,
     cancelCreateLead,
     adminUsers,
+    salesSettings,
     leadList,
     leadDetail,
     leadAnalytics,

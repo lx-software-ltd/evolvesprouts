@@ -41,6 +41,38 @@ def test_handle_admin_leads_dispatches_collection_get(
     assert response is marker
 
 
+def test_handle_admin_leads_dispatches_settings(
+    monkeypatch: Any,
+    api_gateway_event: Any,
+    admin_identity: dict[str, str],
+) -> None:
+    marker = {"statusCode": 200, "body": "{}"}
+    captured: dict[str, Any] = {}
+    monkeypatch.setattr(
+        admin_leads,
+        "extract_identity",
+        lambda _: _build_admin_identity(admin_identity),
+    )
+
+    def _fake_settings(event: Any, method: str, *, actor_sub: str) -> dict[str, Any]:
+        captured["method"] = method
+        captured["actor_sub"] = actor_sub
+        captured["event"] = event
+        return marker
+
+    monkeypatch.setattr(admin_leads, "handle_sales_settings_request", _fake_settings)
+
+    response = admin_leads.handle_admin_leads_request(
+        api_gateway_event(method="PATCH", path="/v1/admin/leads/settings"),
+        "PATCH",
+        "/v1/admin/leads/settings",
+    )
+
+    assert response is marker
+    assert captured["method"] == "PATCH"
+    assert captured["actor_sub"] == admin_identity["userSub"]
+
+
 def test_handle_admin_leads_dispatches_analytics_before_uuid_parsing(
     monkeypatch: Any,
     api_gateway_event: Any,

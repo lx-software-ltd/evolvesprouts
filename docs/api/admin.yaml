@@ -99,6 +99,7 @@ info:
     - `POST /v1/admin/leads/{id}/notes`
     - `GET /v1/admin/leads/analytics`
     - `GET /v1/admin/leads/export`
+    - `GET|PATCH /v1/admin/leads/settings`
     - `GET /v1/admin/whatsapp/conversations`
     - `GET /v1/admin/whatsapp/conversations/{id}/messages`
     - `GET|POST /v1/admin/whatsapp/import-jobs`
@@ -1262,6 +1263,48 @@ paths:
             text/csv:
               schema:
                 type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/admin/leads/settings:
+    get:
+      summary: Get sales lead assignment settings
+      security:
+        - AdminBearerAuth: []
+      responses:
+        "200":
+          description: Sales settings response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesSettingsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      summary: Update sales lead assignment settings
+      security:
+        - AdminBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSalesSettingsRequest"
+      responses:
+        "200":
+          description: Updated sales settings.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesSettingsResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "403":
@@ -6197,6 +6240,46 @@ components:
         lost_reason:
           type: string
           nullable: true
+    SalesSettings:
+      type: object
+      required:
+        - default_assigned_to
+        - notify_assignee_on_assignment
+      properties:
+        default_assigned_to:
+          type: string
+          nullable: true
+          description: Cognito `sub` applied to new leads when create omits `assigned_to`.
+          maxLength: 128
+        notify_assignee_on_assignment:
+          type: boolean
+          description: >
+            When true, email the new assignee on first assignment and reassignment.
+            Unassign does not send mail.
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_by:
+          type: string
+          nullable: true
+    SalesSettingsResponse:
+      type: object
+      required:
+        - settings
+      properties:
+        settings:
+          $ref: "#/components/schemas/SalesSettings"
+    UpdateSalesSettingsRequest:
+      type: object
+      minProperties: 1
+      properties:
+        default_assigned_to:
+          type: string
+          nullable: true
+          maxLength: 128
+        notify_assignee_on_assignment:
+          type: boolean
     LeadAnalyticsResponse:
       type: object
       required:

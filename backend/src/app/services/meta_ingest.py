@@ -25,6 +25,11 @@ from app.db.models import (
 from app.db.repositories.contact import ContactRepository
 from app.db.repositories.meta import MetaRepository
 from app.db.repositories.sales_lead import SalesLeadRepository
+from app.services.sales_assignment import (
+    notify_lead_assignee,
+    record_new_lead_assignment_event,
+    resolve_create_assignee,
+)
 from app.utils.logging import get_logger, mask_pii
 from app.utils.validators import extract_instagram_username, is_own_instagram_handle
 
@@ -280,11 +285,13 @@ def _ensure_contact_and_lead(
         conversation.lead_id = open_lead.id
         return
 
+    assigned_to = resolve_create_assignee(session)
     lead = lead_repository.create_with_event(
         SalesLead(
             contact_id=contact_id,
             lead_type=LeadType.OTHER,
             funnel_stage=FunnelStage.NEW,
+            assigned_to=assigned_to,
         ),
         LeadEventType.CREATED,
         metadata={
@@ -294,6 +301,13 @@ def _ensure_contact_and_lead(
         to_stage=FunnelStage.NEW,
         created_by=_SYSTEM_ACTOR,
     )
+    record_new_lead_assignment_event(
+        lead_repository,
+        lead_id=getattr(lead, "id", None),
+        assigned_to=assigned_to,
+        actor_sub=_SYSTEM_ACTOR,
+    )
+    notify_lead_assignee(session, lead, previous=None)
     conversation.lead_id = lead.id
     counters["leads_created"] += 1
     logger.info(
