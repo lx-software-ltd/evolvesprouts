@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   listAdminContactNotes,
@@ -69,6 +69,10 @@ const CONTACT: components['schemas']['AdminContact'] = {
 };
 
 describe('ContactNotesPanel', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('loads notes and supports add, edit, and delete flows', async () => {
     const user = userEvent.setup();
     const onStandaloneNoteCountChange = vi.fn();
@@ -140,6 +144,15 @@ describe('ContactNotesPanel', () => {
     await waitFor(() => {
       expect(deleteAdminContactNote).toHaveBeenCalledWith(CONTACT.id, 'note-1');
     });
+  });
+
+  it('shows the notes editor before a contact exists', () => {
+    render(<ContactNotesPanel contact={null} adminUsers={[]} />);
+
+    expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
+    expect(screen.getByText('Save the lead to add notes for the linked contact.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add note' })).toBeDisabled();
+    expect(listAdminContactNotes).not.toHaveBeenCalled();
   });
 
   it('shows load errors from the API', async () => {

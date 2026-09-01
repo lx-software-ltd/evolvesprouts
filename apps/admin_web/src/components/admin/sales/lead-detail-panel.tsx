@@ -3,7 +3,9 @@
 import { useState } from 'react';
 
 import { ActivityTimeline } from './activity-timeline';
+import { LeadConversationCard } from './lead-conversation-card';
 
+import { ContactNotesPanel } from '@/components/admin/contacts/contact-notes-panel';
 import { CONTACT_TYPES } from '@/lib/contacts/contacts-panel-constants';
 import { instagramHandleForStorage } from '@/lib/contacts/contacts-panel-helpers';
 import { formatEnumLabel } from '@/lib/format';
@@ -40,7 +42,6 @@ interface LeadEditorFormState {
   assignedTo: string;
   funnelStage: FunnelStage;
   lostReason: string;
-  note: string;
 }
 
 const EMPTY_EDITOR_FORM: LeadEditorFormState = {
@@ -57,7 +58,6 @@ const EMPTY_EDITOR_FORM: LeadEditorFormState = {
   assignedTo: '',
   funnelStage: 'new',
   lostReason: '',
-  note: '',
 };
 
 function asContactType(value: string | null | undefined): EntityContactType {
@@ -81,7 +81,6 @@ function formFromLead(lead: LeadDetail): LeadEditorFormState {
     assignedTo: lead.assignedTo ?? '',
     funnelStage: lead.funnelStage,
     lostReason: lead.lostReason ?? '',
-    note: '',
   };
 }
 
@@ -146,7 +145,6 @@ export function LeadDetailPanel({
           ...sharedContact,
           lead_type: form.leadType,
           assigned_to: form.assignedTo || null,
-          note: form.note.trim() || null,
         });
         return;
       }
@@ -414,24 +412,32 @@ export function LeadDetailPanel({
               </div>
             ) : null}
 
-            {mode === 'create' ? (
-              <div>
-                <Label htmlFor='lead-editor-note'>Initial note</Label>
-                <Textarea
-                  id='lead-editor-note'
-                  value={form.note}
-                  onChange={(event) =>
-                    setForm((previous) => ({ ...previous, note: event.target.value }))
-                  }
-                  rows={3}
-                />
-              </div>
-            ) : null}
           </form>
         )}
       </AdminEditorCard>
 
-      {mode === 'edit' && lead ? <ActivityTimeline events={lead.events} users={users} /> : null}
+      <ContactNotesPanel
+        contact={
+          lead?.contact.id
+            ? {
+                id: lead.contact.id,
+                first_name: lead.contact.firstName ?? '',
+                last_name: lead.contact.lastName,
+                email: lead.contact.email,
+              }
+            : null
+        }
+        adminUsers={users}
+        title='Notes'
+        description='These are the same standalone contact notes used on the Contacts page.'
+      />
+
+      {mode === 'edit' && lead ? (
+        <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+          <ActivityTimeline events={lead.events} users={users} />
+          <LeadConversationCard contactId={lead.contact.id} />
+        </div>
+      ) : null}
     </div>
   );
 }

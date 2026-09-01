@@ -1,6 +1,38 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const {
+  listAdminContactNotes,
+  listWhatsAppConversations,
+  listMetaConversations,
+  listWhatsAppMessages,
+  listMetaMessages,
+} = vi.hoisted(() => ({
+  listAdminContactNotes: vi.fn().mockResolvedValue([]),
+  listWhatsAppConversations: vi.fn().mockResolvedValue({ items: [], nextCursor: null, totalCount: 0 }),
+  listMetaConversations: vi.fn().mockResolvedValue({ items: [], nextCursor: null, totalCount: 0 }),
+  listWhatsAppMessages: vi.fn().mockResolvedValue({ conversation: {}, items: [] }),
+  listMetaMessages: vi.fn().mockResolvedValue({ conversation: {}, items: [] }),
+}));
+
+vi.mock('@/lib/entity-api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/entity-api')>();
+  return {
+    ...actual,
+    listAdminContactNotes,
+  };
+});
+
+vi.mock('@/lib/whatsapp-api', () => ({
+  listWhatsAppConversations,
+  listWhatsAppMessages,
+}));
+
+vi.mock('@/lib/meta-api', () => ({
+  listMetaConversations,
+  listMetaMessages,
+}));
 
 import { LeadDetailPanel } from '@/components/admin/sales/lead-detail-panel';
 import type { LeadDetail } from '@/types/leads';
@@ -45,20 +77,21 @@ const LEAD_FIXTURE: LeadDetail = {
       createdAt: '2026-03-01T10:00:00Z',
     },
   ],
-  notes: [
-    {
-      id: 'note-1',
-      content: 'Called the parent.',
-      created_by: 'user-1',
-      created_at: '2026-03-01T11:00:00Z',
-      updated_at: '2026-03-01T11:00:00Z',
-    },
-  ],
+  notes: [],
 };
 
 const USERS = [{ sub: 'user-1', name: 'Alex', email: 'alex@example.com' }];
 
 describe('LeadDetailPanel', () => {
+  beforeEach(() => {
+    listAdminContactNotes.mockReset();
+    listAdminContactNotes.mockResolvedValue([]);
+    listWhatsAppConversations.mockResolvedValue({ items: [], nextCursor: null, totalCount: 0 });
+    listMetaConversations.mockResolvedValue({ items: [], nextCursor: null, totalCount: 0 });
+    listWhatsAppMessages.mockResolvedValue({ conversation: {}, items: [] });
+    listMetaMessages.mockResolvedValue({ conversation: {}, items: [] });
+  });
+
   it('uses one editor card for create and does not render removed sub-cards', () => {
     render(
       <LeadDetailPanel
@@ -78,12 +111,24 @@ describe('LeadDetailPanel', () => {
     expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Lead Info' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Stage Control' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Notes' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Initial note')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Quick Actions' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Activity Timeline' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Conversation' })).not.toBeInTheDocument();
   });
 
-  it('loads the selected lead onto the editor card and keeps activity only', () => {
+  it('loads the selected lead onto the editor card and keeps activity only', async () => {
+    listAdminContactNotes.mockResolvedValueOnce([
+      {
+        id: 'note-1',
+        content: 'Called the parent.',
+        created_by: 'user-1',
+        created_at: '2026-03-01T11:00:00Z',
+        updated_at: '2026-03-01T11:00:00Z',
+      },
+    ]);
+
     render(
       <LeadDetailPanel
         mode='edit'
@@ -107,13 +152,19 @@ describe('LeadDetailPanel', () => {
     expect(screen.getByLabelText('Assigned to')).toHaveValue('user-1');
     expect(screen.getByRole('button', { name: 'Update lead' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Called the parent.')).toBeInTheDocument();
+    });
     expect(screen.getByRole('heading', { name: 'Activity Timeline' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Conversation' })).toBeInTheDocument();
     expect(screen.getByText('Created')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Lead Info' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Stage Control' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Notes' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Quick Actions' })).not.toBeInTheDocument();
-    expect(screen.queryByText('Called the parent.')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Activity Timeline' }).closest('.grid')
+    ).toBe(screen.getByRole('heading', { name: 'Conversation' }).closest('.grid'));
   });
 
   it('hydrates the editor when lead detail arrives after selection', () => {

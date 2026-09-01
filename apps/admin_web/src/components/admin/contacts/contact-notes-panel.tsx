@@ -34,14 +34,19 @@ type AdminContact = components['schemas']['AdminContact'];
 
 const NOTES_EDITOR_FORM_ID = 'contact-notes-editor-form';
 
+export type NotesContactRef = Pick<AdminContact, 'id' | 'first_name'> &
+  Partial<Pick<AdminContact, 'last_name' | 'email'>>;
+
 export interface ContactNotesPanelProps {
-  contact: AdminContact;
+  contact: NotesContactRef | null;
   adminUsers: AdminUser[];
-  onClose: () => void;
-  onStandaloneNoteCountChange: (contactId: string, count: number) => void;
+  onClose?: () => void;
+  onStandaloneNoteCountChange?: (contactId: string, count: number) => void;
+  title?: string;
+  description?: string;
 }
 
-function contactDisplayName(contact: AdminContact): string {
+function contactDisplayName(contact: NotesContactRef): string {
   const name = [contact.first_name, contact.last_name].filter(Boolean).join(' ').trim();
   return name || contact.email || contact.id;
 }
@@ -65,6 +70,8 @@ export function ContactNotesPanel({
   adminUsers,
   onClose,
   onStandaloneNoteCountChange,
+  title,
+  description,
 }: ContactNotesPanelProps) {
   const contentFieldId = useId();
   const [notes, setNotes] = useState<NoteRow[]>([]);
@@ -77,7 +84,13 @@ export function ContactNotesPanel({
   const [contentDraft, setContentDraft] = useState('');
   const [confirmDialogProps, requestConfirm] = useConfirmDialog();
 
-  const contactId = contact.id;
+  const contactId = contact?.id ?? null;
+  const notesTitle = title ?? (contact ? `Notes · ${contactDisplayName(contact)}` : 'Notes');
+  const notesDescription =
+    description ??
+    (contact
+      ? 'Standalone contact notes (not tied to a sales lead). The table badge reflects this count only; concurrent edits elsewhere update after you refresh the contact list. Notes attached to sales leads are managed on the lead detail screen.'
+      : 'Create the lead to add notes on the linked contact.');
 
   useEffect(() => {
     let cancelled = false;
@@ -87,13 +100,19 @@ export function ContactNotesPanel({
     setEditorMode('create');
     setEditingId(null);
     setContentDraft('');
+    if (!contactId) {
+      setNotes([]);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     void (async () => {
       try {
         const rows = await listAdminContactNotes(contactId, controller.signal);
         if (!cancelled) {
-          setNotes(rows);
-          onStandaloneNoteCountChange(contactId, rows.length);
+          const nextNotes = Array.isArray(rows) ? rows : [];
+          setNotes(nextNotes);
+          onStandaloneNoteCountChange?.(contactId, nextNotes.length);
         }
       } catch (err) {
         if (cancelled || (err instanceof DOMException && err.name === 'AbortError')) {
@@ -122,7 +141,7 @@ export function ContactNotesPanel({
   }
 
   async function handleSaveNote() {
-    if (!contentDraft.trim()) {
+    if (!contactId || !contentDraft.trim()) {
       return;
     }
     setIsMutating(true);
@@ -134,7 +153,7 @@ export function ContactNotesPanel({
           const next = [created, ...notes];
           setNotes(next);
           resetEditor();
-          onStandaloneNoteCountChange(contactId, next.length);
+          onStandaloneNoteCountChange?.(contactId, next.length);
         }
         return;
       }
@@ -148,7 +167,7 @@ export function ContactNotesPanel({
         const next = notes.map((note) => (note.id === updated.id ? updated : note));
         setNotes(next);
         resetEditor();
-        onStandaloneNoteCountChange(contactId, next.length);
+        onStandaloneNoteCountChange?.(contactId, next.length);
       }
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to save note');
@@ -158,6 +177,9 @@ export function ContactNotesPanel({
   }
 
   async function handleDeleteNote(note: NoteRow) {
+    if (!contactId) {
+      return;
+    }
     const confirmed = await requestConfirm({
       title: 'Delete note',
       description: 'Permanently delete this note? This cannot be undone.',
@@ -176,7 +198,7 @@ export function ContactNotesPanel({
       if (editingId === note.id) {
         resetEditor();
       }
-      onStandaloneNoteCountChange(contactId, next.length);
+      onStandaloneNoteCountChange?.(contactId, next.length);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to delete note');
     } finally {
@@ -193,23 +215,23 @@ export function ContactNotesPanel({
   return (
     <>
       <AdminEditorCard
-        title={`Notes · ${contactDisplayName(contact)}`}
-        description='Standalone contact notes (not tied to a sales lead). The table badge reflects this count only; concurrent edits elsewhere update after you refresh the contact list. Notes attached to sales leads are managed on the lead detail screen.'
+        title={notesTitle}
+        description={notesDescription}
         actions={
           <>
             {editorMode === 'edit' ? (
               <Button type='button' variant='secondary' disabled={isMutating} onClick={resetEditor}>
                 Cancel
               </Button>
-            ) : (
+            ) : onClose ? (
               <Button type='button' variant='secondary' onClick={onClose}>
                 Close notes
               </Button>
-            )}
+            ) : null}
             <Button
               type='submit'
               form={NOTES_EDITOR_FORM_ID}
-              disabled={isLoading || isMutating || !contentDraft.trim()}
+              disabled={!contactId || isLoading || isMutating || !contentDraft.trim()}
             >
               {editorMode === 'create' ? 'Add note' : 'Update note'}
             </Button>
@@ -237,7 +259,7 @@ export function ContactNotesPanel({
             value={contentDraft}
             onChange={(event) => setContentDraft(event.target.value)}
             rows={editorMode === 'create' ? 3 : 4}
-            disabled={isLoading || isMutating}
+            disabled={!contactId || isLoading || isMutating}
             placeholder='Add a note about this contact…'
           />
         </form>
@@ -265,7 +287,9 @@ export function ContactNotesPanel({
             {!isLoading && notes.length === 0 ? (
               <tr>
                 <AdminDataTableCell colSpan={3} className='py-8 text-sm text-slate-600'>
-                  No notes yet for this contact.
+                  {contactId
+                    ? 'No notes yet for this contact.'
+                    : 'Save the lead to add notes for the linked contact.'}
                 </AdminDataTableCell>
               </tr>
             ) : (
