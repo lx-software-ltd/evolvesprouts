@@ -1,13 +1,14 @@
 'use client';
 
+import Link from 'next/link';
 import { memo } from 'react';
 
 import type { LeadSummary } from '@/types/leads';
 
-import { ArrowRightIcon } from '@/components/icons/action-icons';
+import { ContactIcon } from '@/components/icons/action-icons';
 import { AdminDataTableCell } from '@/components/ui/admin-data-table';
-import { Button } from '@/components/ui/button';
 import { formatDate, formatEnumLabel } from '@/lib/format';
+import { adminContactDeepLink } from '@/lib/inbox-conversation-name';
 
 import { getStageBadgeClass } from './stage-utils';
 
@@ -26,6 +27,8 @@ export const LeadsTableRow = memo(function LeadsTableRow({
   onSelect,
   onCheck,
 }: LeadsTableRowProps) {
+  const contactId = lead.contact.id?.trim() ?? '';
+
   return (
     <tr
       className={`cursor-pointer ${isSelected ? 'bg-slate-100' : 'hover:bg-slate-50'}`}
@@ -59,16 +62,16 @@ export const LeadsTableRow = memo(function LeadsTableRow({
         </span>
       </AdminDataTableCell>
       <AdminDataTableCell className='text-right' onClick={(event) => event.stopPropagation()}>
-        <Button
-          type='button'
-          size='sm'
-          variant='ghost'
-          onClick={() => onSelect(lead.id)}
-          aria-label='Open lead'
-          title='Open lead'
-        >
-          <ArrowRightIcon className='h-4 w-4' />
-        </Button>
+        {contactId ? (
+          <Link
+            href={adminContactDeepLink(contactId)}
+            className='inline-flex h-8 min-w-8 items-center justify-center rounded-md text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400'
+            aria-label='Open contact'
+            title='Open contact'
+          >
+            <ContactIcon className='h-4 w-4' aria-hidden />
+          </Link>
+        ) : null}
       </AdminDataTableCell>
     </tr>
   );

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { sortMessagesNewestFirst } from '@/lib/lead-conversation-previews';
 import { listWhatsAppMessages, type WhatsAppMessageSummary } from '@/lib/whatsapp-api';
 
 export function useWhatsAppMessages(conversationId: string | null) {
@@ -27,7 +28,7 @@ export function useWhatsAppMessages(conversationId: string | null) {
       if (latestRequestIdRef.current !== requestId) {
         return;
       }
-      setMessages([...result.items].reverse());
+      setMessages(sortMessagesNewestFirst(result.items));
     } catch (err) {
       if (latestRequestIdRef.current !== requestId) {
         return;
