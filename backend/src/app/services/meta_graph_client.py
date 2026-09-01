@@ -110,6 +110,11 @@ def graph_get(
             error_payload = parsed.get("error")
             error = error_payload if isinstance(error_payload, dict) else {}
             detail = str(error.get("message") or raw_body[:400] or status_code)
+            if status_code == 401:
+                detail = (
+                    f"{detail}. META_PAGE_ACCESS_TOKEN must be a Graph Page "
+                    "or system-user access token, not the webhook verify string."
+                )
             raise MetaGraphApiError(
                 status_code=status_code,
                 message=f"Meta Graph request failed ({status_code}): {detail}",

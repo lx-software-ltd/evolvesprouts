@@ -829,6 +829,17 @@ export class ApiStack extends cdk.Stack {
           "Shared verify token for the Meta WhatsApp Cloud API webhook handshake",
       }
     );
+    const metaPageAccessToken = new cdk.CfnParameter(
+      this,
+      "MetaPageAccessToken",
+      {
+        type: "String",
+        noEcho: true,
+        default: "",
+        description:
+          "Graph Page or system-user access token for inbox history import (not the webhook verify token)",
+      }
+    );
     const metaPageId = new cdk.CfnParameter(this, "MetaPageId", {
       type: "String",
       default: "",
@@ -2283,7 +2294,7 @@ export class ApiStack extends cdk.Stack {
       awsProxyFunctionArn: awsProxyFunction.functionArn,
       assetsBucketName: assetsBucket.bucketName,
       assetsBucketArn: assetsBucket.bucketArn,
-      metaPageAccessToken: whatsappWebhookVerifyToken.valueAsString,
+      metaPageAccessToken: metaPageAccessToken.valueAsString,
       metaPageId: metaPageId.valueAsString,
       metaInstagramUserId: metaInstagramUserId.valueAsString,
       metaGraphApiBaseUrl: metaGraphApiBaseUrl.valueAsString,

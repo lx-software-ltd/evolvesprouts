@@ -796,11 +796,15 @@ pulling history inline on the admin Lambda. Jobs live in `inbox_import_jobs`.
   webhook ingest, and persist coexistence `history` webhook chunks when Meta
   sends them (still no new leads). Older chats come from a Business App
   `.txt` / `.zip` export via `POST /v1/admin/whatsapp/import-jobs`.
-- Graph import reuses the existing WhatsApp webhook token
-  (`WhatsappWebhookVerifyToken` / GitHub secret
-  `CDK_PARAM_WHATSAPP_WEBHOOK_VERIFY_TOKEN`) as `META_PAGE_ACCESS_TOKEN` on
-  `InboxImportFunction`. Page / IG ids and Graph origin come from CDK
-  parameters (GitHub vars), not hardcoded values.
+- Graph import uses a dedicated Page / system-user access token
+  (`MetaPageAccessToken` / GitHub secret `CDK_PARAM_META_PAGE_ACCESS_TOKEN`)
+  as `META_PAGE_ACCESS_TOKEN` on `InboxImportFunction`. The WhatsApp
+  webhook verify string is only for `hub.verify_token` and is not a Graph
+  Bearer token. Page / IG ids and Graph origin come from CDK parameters
+  (GitHub vars), not hardcoded values. The token is a `noEcho` CfnParameter
+  passed as Lambda env (same pattern as `WhatsappWebhookVerifyToken`); do
+  not create a separate Secrets Manager secret for it (that caused a
+  CloudFormation cycle on the shared secrets KMS key).
 
 **Why:**
 - Graph and zip parsing exceed API Gateway timeouts.
