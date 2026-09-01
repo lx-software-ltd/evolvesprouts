@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
 /**
  * When a Contacts Operations deep link includes `?contact=`, open the first
@@ -13,22 +13,19 @@ export function useAutoSelectContactConversation(
   isLoading: boolean
 ): [string | null, (next: string | null) => void] {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const openedForContactRef = useRef('');
+  const [openedForContactId, setOpenedForContactId] = useState('');
 
-  useEffect(() => {
-    if (!contactId) {
-      openedForContactRef.current = '';
-      return;
-    }
-    if (isLoading || !firstConversationId) {
-      return;
-    }
-    if (openedForContactRef.current === contactId) {
-      return;
-    }
-    openedForContactRef.current = contactId;
+  if (!contactId && openedForContactId !== '') {
+    setOpenedForContactId('');
+  } else if (
+    contactId &&
+    !isLoading &&
+    firstConversationId &&
+    openedForContactId !== contactId
+  ) {
+    setOpenedForContactId(contactId);
     setSelectedId(firstConversationId);
-  }, [contactId, firstConversationId, isLoading]);
+  }
 
   return [selectedId, setSelectedId];
 }
