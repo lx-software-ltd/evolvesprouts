@@ -874,6 +874,7 @@ def test_find_or_create_reuses_contact_after_unique_handle_race(
             profile_name="kitie.w",
         ),
         instagram_handle="kitie.w",
+        source_detail="meta_webhook",
     )
     assert created is False
     assert contact is existing
