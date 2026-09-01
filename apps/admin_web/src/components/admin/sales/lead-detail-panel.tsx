@@ -416,27 +416,28 @@ export function LeadDetailPanel({
         )}
       </AdminEditorCard>
 
-      <ContactNotesPanel
-        contact={
-          lead?.contact.id
-            ? {
-                id: lead.contact.id,
-                first_name: lead.contact.firstName ?? '',
-                last_name: lead.contact.lastName,
-                email: lead.contact.email,
-              }
-            : null
-        }
-        adminUsers={users}
-        title='Notes'
-        description='These are the same standalone contact notes used on the Contacts page.'
-      />
-
       {mode === 'edit' && lead ? (
-        <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
-          <ActivityTimeline events={lead.events} users={users} />
-          <LeadConversationCard contactId={lead.contact.id} />
-        </div>
+        <>
+          <ContactNotesPanel
+            contact={
+              lead.contact.id
+                ? {
+                    id: lead.contact.id,
+                    first_name: lead.contact.firstName ?? '',
+                    last_name: lead.contact.lastName,
+                    email: lead.contact.email,
+                  }
+                : null
+            }
+            adminUsers={users}
+            title='Notes'
+            description='These are the same standalone contact notes used on the Contacts page.'
+          />
+          <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+            <ActivityTimeline events={lead.events} users={users} />
+            <LeadConversationCard contactId={lead.contact.id} />
+          </div>
+        </>
       ) : null}
     </div>
   );
