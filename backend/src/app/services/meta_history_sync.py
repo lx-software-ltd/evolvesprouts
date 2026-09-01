@@ -16,7 +16,7 @@ from app.services.meta_graph_client import (
     is_graph_skippable_failure,
     resolve_page_access_token,
 )
-from app.services.meta_ingest import store_meta_message
+from app.services.meta_ingest import is_own_instagram_handle, store_meta_message
 from app.utils.logging import get_logger, mask_pii
 
 logger = get_logger(__name__)
@@ -218,6 +218,12 @@ def _ingest_conversation(
     platform_user_id, profile_name = _counterparty(detail, self_ids=self_ids)
     if platform_user_id is None:
         counters["skipped"] += 1
+        return
+    if channel is MetaChannel.INSTAGRAM and is_own_instagram_handle(profile_name):
+        counters["skipped"] += 1
+        logger.info(
+            "Skipped Instagram history thread for the configured business handle"
+        )
         return
     counters["conversations"] += 1
     messages_wrapper = detail.get("messages")

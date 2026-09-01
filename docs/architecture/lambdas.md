@@ -62,6 +62,8 @@ their primary responsibilities.
   `/v1/meta/webhook` (GET handshake + POST Messenger/Instagram inbound and
   `is_echo` messages; same HMAC and verify token; persists
   `meta_conversations` / `meta_messages` and creates CRM contacts/leads;
+  Instagram ingest skips counterparties whose username matches the last
+  path segment of `PUBLIC_WWW_INSTAGRAM_URL` / `NEXT_PUBLIC_INSTAGRAM_URL`;
   sets audit actor `webhook:meta`),
   `/v1/public/whatsapp/*` and `/v1/public/meta/*` (hashed `x-api-token` conversation
   reads; name/dates/text only),
@@ -682,7 +684,9 @@ their primary responsibilities.
   per-thread messages are separate slim Graph calls that shrink `limit`
   when Graph rejects the payload) and WhatsApp Business App
   `.txt`/`.zip` export parses into the existing conversation tables. Creates
-  missing contacts; does not create new sales leads.
+  missing contacts; does not create new sales leads. Instagram Graph
+  import also skips threads whose participant username matches the
+  configured public Instagram handle.
 - DB access: RDS Proxy with IAM auth (`evolvesprouts_admin`)
 - VPC: Yes
 - Timeout / budget: **600s** Lambda timeout with **720s** SQS visibility
@@ -701,6 +705,8 @@ their primary responsibilities.
   - `META_PAGE_ID`, `META_INSTAGRAM_USER_ID`
   - `META_GRAPH_API_BASE_URL`, `META_GRAPH_API_VERSION`
   - `WHATSAPP_EXPORT_BUSINESS_NAMES`
+  - `PUBLIC_WWW_INSTAGRAM_URL` (CDK `PublicWwwInstagramUrl`; last path
+    segment is the business Instagram handle skipped during Graph import)
   - `INBOX_IMPORT_LAMBDA_TIMEOUT_SECONDS`
 
 ### Eventbrite sync processor

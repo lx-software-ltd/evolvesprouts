@@ -228,6 +228,7 @@ interface InboxImportNestedStackProps extends cdk.NestedStackProps {
   metaGraphApiBaseUrl: string;
   metaGraphApiVersion: string;
   whatsappExportBusinessNames: string;
+  publicWwwInstagramUrl: string;
 }
 
 class InboxImportNestedStack extends cdk.NestedStack {
@@ -292,6 +293,7 @@ class InboxImportNestedStack extends cdk.NestedStack {
         META_GRAPH_API_BASE_URL: props.metaGraphApiBaseUrl,
         META_GRAPH_API_VERSION: props.metaGraphApiVersion,
         WHATSAPP_EXPORT_BUSINESS_NAMES: props.whatsappExportBusinessNames,
+        PUBLIC_WWW_INSTAGRAM_URL: props.publicWwwInstagramUrl,
       },
     }).function;
 
@@ -1103,7 +1105,7 @@ export class ApiStack extends cdk.Stack {
         type: "String",
         default: "",
         description:
-          "Optional Instagram profile URL for transactional email footers; align with NEXT_PUBLIC_INSTAGRAM_URL.",
+          "Optional Instagram profile URL for transactional email footers and to skip importing the business Instagram handle; align with NEXT_PUBLIC_INSTAGRAM_URL.",
       }
     );
     const publicWwwLinkedinUrl = new cdk.CfnParameter(
@@ -2300,6 +2302,7 @@ export class ApiStack extends cdk.Stack {
       metaGraphApiBaseUrl: metaGraphApiBaseUrl.valueAsString,
       metaGraphApiVersion: metaGraphApiVersion.valueAsString,
       whatsappExportBusinessNames: whatsappExportBusinessNames.valueAsString,
+      publicWwwInstagramUrl: publicWwwInstagramUrl.valueAsString,
     });
     database.grantAdminUserSecretRead(inboxImport.processorFunction);
     database.grantConnect(inboxImport.processorFunction, "evolvesprouts_admin");

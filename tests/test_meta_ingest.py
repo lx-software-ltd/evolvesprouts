@@ -244,6 +244,233 @@ def test_ingest_skips_duplicate_message(monkeypatch: pytest.MonkeyPatch) -> None
     assert counters["stored"] == 0
 
 
+def test_instagram_handle_from_profile_url() -> None:
+    assert (
+        ingest.instagram_handle_from_profile_url(
+            "https://www.instagram.com/evolvesprouts"
+        )
+        == "evolvesprouts"
+    )
+    assert (
+        ingest.instagram_handle_from_profile_url(
+            "https://www.instagram.com/EvolveSprouts/?hl=en"
+        )
+        == "evolvesprouts"
+    )
+    assert ingest.instagram_handle_from_profile_url("@evolvesprouts") == "evolvesprouts"
+    assert ingest.instagram_handle_from_profile_url("instagram.com/evolvesprouts") == (
+        "evolvesprouts"
+    )
+    assert ingest.instagram_handle_from_profile_url(
+        "https://www.instagram.com/p/abc"
+    ) is (None)
+    assert ingest.instagram_handle_from_profile_url("") is None
+
+
+def test_ingest_skips_own_instagram_handle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class _FakeRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def find_message_by_platform_message_id(self, _mid: str) -> None:
+            raise AssertionError("own Instagram handle must not persist")
+
+        def get_conversation_by_platform_user(self, **_k: object) -> None:
+            raise AssertionError("own Instagram handle must not persist")
+
+    monkeypatch.setenv(
+        "NEXT_PUBLIC_INSTAGRAM_URL", "https://www.instagram.com/evolvesprouts"
+    )
+    monkeypatch.delenv("PUBLIC_WWW_INSTAGRAM_URL", raising=False)
+    monkeypatch.setattr(ingest, "MetaRepository", _FakeRepo)
+
+    payload = {
+        "object": "instagram",
+        "entry": [
+            {
+                "id": "17841400000000000",
+                "messaging": [
+                    {
+                        "sender": {"id": "igsid-self", "username": "EvolveSprouts"},
+                        "recipient": {"id": "17841400000000000"},
+                        "timestamp": 1710000000000,
+                        "message": {"mid": "m_self", "text": "Note to self"},
+                    }
+                ],
+            }
+        ],
+    }
+    counters = ingest.ingest_webhook_payload(SimpleNamespace(), payload)
+    assert counters["skipped"] == 1
+    assert counters["stored"] == 0
+    assert counters["leads_created"] == 0
+
+
+def test_ingest_keeps_customer_instagram_when_own_handle_configured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    conversation_id = uuid4()
+    added: list[object] = []
+
+    class _FakeConversation:
+        def __init__(self, **kwargs: object) -> None:
+            self.id = conversation_id
+            self.channel = kwargs.get("channel")
+            self.platform_user_id = kwargs.get("platform_user_id")
+            self.page_id = kwargs.get("page_id")
+            self.profile_name = kwargs.get("profile_name")
+            self.contact_id = None
+            self.lead_id = None
+            self.inbound_count = 0
+            self.outbound_count = 0
+            self.first_inbound_at = None
+            self.last_message_at = None
+            self.updated_at = None
+
+    class _FakeRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def find_message_by_platform_message_id(self, _mid: str) -> None:
+            return None
+
+        def get_conversation_by_platform_user(self, **_k: object) -> None:
+            return None
+
+    class _FakeLeadRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def find_open_by_contact(self, _contact_id: object) -> None:
+            return None
+
+        def create_with_event(self, *_a: object, **_k: object) -> SimpleNamespace:
+            return SimpleNamespace(id=uuid4())
+
+    class _FakeSession:
+        def add(self, obj: object) -> None:
+            added.append(obj)
+
+        def flush(self) -> None:
+            for obj in added:
+                if getattr(obj, "id", "missing") is None:
+                    setattr(obj, "id", uuid4())
+
+    monkeypatch.setenv(
+        "PUBLIC_WWW_INSTAGRAM_URL", "https://www.instagram.com/evolvesprouts"
+    )
+    monkeypatch.setattr(ingest, "MetaConversation", _FakeConversation)
+    monkeypatch.setattr(ingest, "MetaRepository", _FakeRepo)
+    monkeypatch.setattr(ingest, "SalesLeadRepository", _FakeLeadRepo)
+    monkeypatch.setattr(
+        ingest, "_find_contact_by_instagram_handle", lambda *_a, **_k: None
+    )
+
+    payload = {
+        "object": "instagram",
+        "entry": [
+            {
+                "id": "17841400000000000",
+                "messaging": [
+                    {
+                        "sender": {"id": "igsid-user-1", "username": "kitie.w"},
+                        "recipient": {"id": "17841400000000000"},
+                        "timestamp": 1710000000000,
+                        "message": {"mid": "m_customer", "text": "How much?"},
+                    }
+                ],
+            }
+        ],
+    }
+    counters = ingest.ingest_webhook_payload(_FakeSession(), payload)
+    assert counters["stored"] == 1
+    conversation = next(
+        item
+        for item in added
+        if getattr(item, "platform_user_id", None) == "igsid-user-1"
+    )
+    assert conversation.profile_name == "kitie.w"
+
+
+def test_ingest_echo_does_not_use_business_handle_as_chat_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    conversation_id = uuid4()
+    added: list[object] = []
+
+    class _FakeConversation:
+        def __init__(self, **kwargs: object) -> None:
+            self.id = conversation_id
+            self.channel = kwargs.get("channel")
+            self.platform_user_id = kwargs.get("platform_user_id")
+            self.page_id = kwargs.get("page_id")
+            self.profile_name = kwargs.get("profile_name")
+            self.contact_id = None
+            self.lead_id = None
+            self.inbound_count = 0
+            self.outbound_count = 0
+            self.first_inbound_at = None
+            self.last_message_at = None
+            self.updated_at = None
+
+    class _FakeRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def find_message_by_platform_message_id(self, _mid: str) -> None:
+            return None
+
+        def get_conversation_by_platform_user(self, **_k: object) -> None:
+            return None
+
+    class _FakeSession:
+        def add(self, obj: object) -> None:
+            added.append(obj)
+
+        def flush(self) -> None:
+            return None
+
+    monkeypatch.setenv(
+        "NEXT_PUBLIC_INSTAGRAM_URL", "https://www.instagram.com/evolvesprouts"
+    )
+    monkeypatch.setattr(ingest, "MetaConversation", _FakeConversation)
+    monkeypatch.setattr(ingest, "MetaRepository", _FakeRepo)
+
+    payload = {
+        "object": "instagram",
+        "entry": [
+            {
+                "id": "17841400000000000",
+                "messaging": [
+                    {
+                        "sender": {
+                            "id": "17841400000000000",
+                            "username": "evolvesprouts",
+                        },
+                        "recipient": {"id": "igsid-user-1", "username": "kitie.w"},
+                        "timestamp": 1710000000,
+                        "message": {
+                            "mid": "m_echo",
+                            "text": "Thanks",
+                            "is_echo": True,
+                        },
+                    }
+                ],
+            }
+        ],
+    }
+    counters = ingest.ingest_webhook_payload(_FakeSession(), payload)
+    assert counters["stored"] == 1
+    conversation = next(
+        item
+        for item in added
+        if getattr(item, "platform_user_id", None) == "igsid-user-1"
+    )
+    assert conversation.profile_name == "kitie.w"
+
+
 def test_contact_first_name_never_uses_last_four() -> None:
     conversation = SimpleNamespace(
         channel=MetaChannel.INSTAGRAM,

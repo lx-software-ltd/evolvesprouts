@@ -94,6 +94,69 @@ def test_sync_maps_graph_conversation_without_leads(
     assert stored[1]["direction"] is MetaMessageDirection.OUTBOUND
 
 
+def test_sync_skips_own_instagram_handle_conversation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stored: list[object] = []
+
+    def _graph_get(
+        path: str,
+        *,
+        params: dict[str, str] | None = None,
+        token: str | None = None,
+    ) -> dict[str, object]:
+        if path == "page-1/conversations":
+            return {
+                "data": [
+                    {
+                        "id": "conv-self",
+                        "participants": {
+                            "data": [
+                                {"id": "page-1"},
+                                {"id": "igsid-self", "username": "evolvesprouts"},
+                            ]
+                        },
+                    },
+                    {
+                        "id": "conv-1",
+                        "participants": {
+                            "data": [
+                                {"id": "page-1"},
+                                {"id": "igsid-9", "username": "kitie"},
+                            ]
+                        },
+                    },
+                ]
+            }
+        if path == "conv-1/messages":
+            return {
+                "data": [
+                    {
+                        "id": "m_ok",
+                        "created_time": "2026-01-02T03:04:05+0000",
+                        "from": {"id": "igsid-9", "username": "kitie"},
+                        "message": "Hello",
+                    }
+                ]
+            }
+        raise AssertionError(f"unexpected Graph path {path}")
+
+    monkeypatch.setenv("META_PAGE_ID", "page-1")
+    monkeypatch.setenv(
+        "NEXT_PUBLIC_INSTAGRAM_URL", "https://www.instagram.com/evolvesprouts"
+    )
+    monkeypatch.delenv("PUBLIC_WWW_INSTAGRAM_URL", raising=False)
+    monkeypatch.setattr(sync, "resolve_page_access_token", lambda: "page-token")
+    monkeypatch.setattr(sync, "store_meta_message", _store_capturing(stored))
+    monkeypatch.setattr(sync, "graph_get", _graph_get)
+
+    counters = sync.sync_meta_channel_history(SimpleNamespace(), MetaChannel.INSTAGRAM)
+    assert counters["skipped"] >= 1
+    assert counters["conversations"] == 1
+    assert counters["stored"] == 1
+    assert stored[0]["platform_user_id"] == "igsid-9"
+
+
 def test_sync_retries_conversation_list_with_smaller_limit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

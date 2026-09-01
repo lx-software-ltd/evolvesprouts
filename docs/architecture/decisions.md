@@ -766,7 +766,12 @@ existing `EvolvesproutsAdminFunction` at public `GET`/`POST /v1/meta/webhook`.
 Reuse `META_APP_SECRET` and `WHATSAPP_WEBHOOK_VERIFY_TOKEN` from the same
 Meta app. Dispatch on `object`: `page` is Messenger (`facebook`),
 `instagram` is Instagram Direct. Skip `whatsapp_business_account` (that
-traffic stays on `/v1/whatsapp/webhook`). Persist threads in unified
+traffic stays on `/v1/whatsapp/webhook`). Skip Instagram threads whose
+counterparty username or chat name matches the last path segment of the
+configured public Instagram profile URL (`PUBLIC_WWW_INSTAGRAM_URL` /
+`NEXT_PUBLIC_INSTAGRAM_URL`, for example `evolvesprouts` from
+`https://www.instagram.com/evolvesprouts`) so the business account is
+not imported as a contact. Persist threads in unified
 `meta_conversations` / `meta_messages` keyed by `(channel, platform_user_id)`.
 Create a Contact plus open SalesLead on first inbound when none exists.
 On Instagram inbound, persist `sender.username` on `contacts.instagram_handle`
@@ -802,6 +807,8 @@ pulling history inline on the admin Lambda. Jobs live in `inbox_import_jobs`.
   Commit after each thread so earlier imports survive a later timeout.
   Nested `messages.limit(20)` on a wide conversation page exceeds Graph
   payload limits.
+  Skip Instagram threads whose participant username matches the last path
+  segment of `PUBLIC_WWW_INSTAGRAM_URL` / `NEXT_PUBLIC_INSTAGRAM_URL`.
   Meta only returns message **bodies** for the last 20 messages per thread.
   Persist through the same `store_meta_message` path as webhooks (unique
   `platform_message_id`). Create placeholder contacts when missing. Do **not**
