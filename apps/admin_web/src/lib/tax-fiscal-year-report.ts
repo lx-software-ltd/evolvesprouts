@@ -7,7 +7,21 @@ import {
   parseIsoDateOnly,
   todayHongKongDateString,
 } from '@/lib/fiscal-year';
+import { formatEnumLabel } from '@/lib/format';
+import { getInvoiceSettlementBadgeLabel } from '@/lib/invoice-settlement-display';
 import type { Expense, ExpenseStatus } from '@/types/expenses';
+
+export const TAX_FISCAL_YEAR_STATUS_FILTERS = [
+  'recognized',
+  'in_progress',
+  'voided',
+  'amended',
+  'all',
+] as const;
+
+export type TaxFiscalYearStatusFilter = (typeof TAX_FISCAL_YEAR_STATUS_FILTERS)[number];
+
+export const DEFAULT_TAX_FISCAL_YEAR_STATUS_FILTER: TaxFiscalYearStatusFilter = 'recognized';
 
 export interface TaxFiscalYearRow {
   kind: 'expense' | 'revenue';
@@ -16,7 +30,7 @@ export interface TaxFiscalYearRow {
   currency: string;
   amount: string;
   tax: string;
-  expenseStatus?: string;
+  status: string;
   referenceId: string;
   needsInvoiceDateWarning: boolean;
   invoiceNumber: string | null;
@@ -46,17 +60,54 @@ function revenueClassificationDate(inv: CustomerInvoiceSummary): {
   return { date: issued, needsInvoiceDateWarning: true };
 }
 
+function expenseMatchesStatusFilter(
+  status: ExpenseStatus,
+  filter: TaxFiscalYearStatusFilter,
+): boolean {
+  switch (filter) {
+    case 'all':
+      return true;
+    case 'recognized':
+      return status === 'paid';
+    case 'in_progress':
+      return status === 'draft' || status === 'submitted';
+    case 'voided':
+      return status === 'voided';
+    case 'amended':
+      return status === 'amended';
+  }
+}
+
+function invoiceMatchesStatusFilter(
+  status: string | null | undefined,
+  filter: TaxFiscalYearStatusFilter,
+): boolean {
+  const st = (status ?? '').trim().toLowerCase();
+  switch (filter) {
+    case 'all':
+      return true;
+    case 'recognized':
+      return st === 'issued';
+    case 'in_progress':
+      return st === 'draft';
+    case 'voided':
+      return st === 'void';
+    case 'amended':
+      return false;
+  }
+}
+
 export function buildTaxFiscalYearRows(
   expenses: Expense[],
-  issuedInvoices: CustomerInvoiceSummary[],
+  invoices: CustomerInvoiceSummary[],
   fyStartYear: number,
-  expenseStatusFilter: ExpenseStatus,
+  statusFilter: TaxFiscalYearStatusFilter,
 ): TaxFiscalYearRow[] {
   const { start, end } = getFiscalYearRangeInclusive(fyStartYear);
 
   const expenseRows: TaxFiscalYearRow[] = [];
   for (const expense of expenses) {
-    if (expense.status !== expenseStatusFilter) {
+    if (!expenseMatchesStatusFilter(expense.status, statusFilter)) {
       continue;
     }
     const { date, needsInvoiceDateWarning } = expenseClassificationDate(expense);
@@ -71,7 +122,7 @@ export function buildTaxFiscalYearRows(
       currency: expense.currency?.trim().toUpperCase() ?? '',
       amount: expense.total?.trim() ?? '',
       tax: expense.tax?.trim() ?? '',
-      expenseStatus: expense.status,
+      status: formatEnumLabel(expense.status),
       referenceId: expense.id,
       needsInvoiceDateWarning,
       invoiceNumber: expense.invoiceNumber?.trim() ?? null,
@@ -79,12 +130,12 @@ export function buildTaxFiscalYearRows(
   }
 
   const revenueRows: TaxFiscalYearRow[] = [];
-  for (const inv of issuedInvoices) {
+  for (const inv of invoices) {
     const invId = inv.id?.trim() ?? '';
     if (invId === '') {
       continue;
     }
-    if (inv.status !== 'issued') {
+    if (!invoiceMatchesStatusFilter(inv.status, statusFilter)) {
       continue;
     }
     const { date: revenueDate, needsInvoiceDateWarning } = revenueClassificationDate(inv);
@@ -102,6 +153,7 @@ export function buildTaxFiscalYearRows(
       currency: inv.currency?.trim().toUpperCase() ?? '',
       amount: inv.total?.trim() ?? '',
       tax: inv.taxTotal?.trim() ?? '',
+      status: getInvoiceSettlementBadgeLabel(inv),
       referenceId: invId,
       needsInvoiceDateWarning,
       invoiceNumber: inv.invoiceNumber ?? null,
@@ -138,7 +190,7 @@ export function taxFiscalYearRowsToCsv(rows: TaxFiscalYearRow[]): string {
     'currency',
     'amount',
     'tax',
-    'expense_status',
+    'status',
     'invoice_number',
     'reference_id',
     'needs_invoice_date_warning',
@@ -152,7 +204,7 @@ export function taxFiscalYearRowsToCsv(rows: TaxFiscalYearRow[]): string {
       row.currency,
       row.amount,
       row.tax,
-      row.expenseStatus ?? '',
+      row.status,
       row.invoiceNumber ?? '',
       row.referenceId,
       row.needsInvoiceDateWarning ? 'yes' : 'no',
