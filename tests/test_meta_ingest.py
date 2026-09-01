@@ -10,7 +10,28 @@ import pytest
 from app.db.models import Contact
 from app.db.models.enums import MetaChannel, MetaMessageDirection
 from app.services import meta_ingest as ingest
-from app.utils.validators import parse_instagram_username
+from app.utils.validators import (
+    instagram_handle_from_profile_url,
+    parse_instagram_username,
+)
+
+
+def _contact_repo(
+    *,
+    found: object | None = None,
+    linked: object | None = None,
+) -> type:
+    class _FakeContactRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def find_by_instagram_handle(self, _handle: str) -> object | None:
+            return found
+
+        def get_by_id(self, _contact_id: object) -> object | None:
+            return linked
+
+    return _FakeContactRepo
 
 
 def test_parse_timestamp_seconds_and_milliseconds() -> None:
@@ -97,9 +118,7 @@ def test_ingest_stores_inbound_instagram_and_creates_lead(
     monkeypatch.setattr(ingest, "MetaConversation", _FakeConversation)
     monkeypatch.setattr(ingest, "MetaRepository", _FakeRepo)
     monkeypatch.setattr(ingest, "SalesLeadRepository", _FakeLeadRepo)
-    monkeypatch.setattr(
-        ingest, "_find_contact_by_instagram_handle", lambda *_a, **_k: None
-    )
+    monkeypatch.setattr(ingest, "ContactRepository", _contact_repo())
 
     payload = {
         "object": "instagram",
@@ -246,25 +265,23 @@ def test_ingest_skips_duplicate_message(monkeypatch: pytest.MonkeyPatch) -> None
 
 def test_instagram_handle_from_profile_url() -> None:
     assert (
-        ingest.instagram_handle_from_profile_url(
-            "https://www.instagram.com/evolvesprouts"
-        )
+        instagram_handle_from_profile_url("https://www.instagram.com/evolvesprouts")
         == "evolvesprouts"
     )
     assert (
-        ingest.instagram_handle_from_profile_url(
+        instagram_handle_from_profile_url(
             "https://www.instagram.com/EvolveSprouts/?hl=en"
         )
         == "evolvesprouts"
     )
-    assert ingest.instagram_handle_from_profile_url("@evolvesprouts") == "evolvesprouts"
-    assert ingest.instagram_handle_from_profile_url("instagram.com/evolvesprouts") == (
+    assert instagram_handle_from_profile_url("@evolvesprouts") == "evolvesprouts"
+    assert instagram_handle_from_profile_url("instagram.com/evolvesprouts") == (
         "evolvesprouts"
     )
-    assert ingest.instagram_handle_from_profile_url(
-        "https://www.instagram.com/p/abc"
-    ) is (None)
-    assert ingest.instagram_handle_from_profile_url("") is None
+    assert instagram_handle_from_profile_url("https://www.instagram.com/p/abc") is (
+        None
+    )
+    assert instagram_handle_from_profile_url("") is None
 
 
 def test_ingest_skips_own_instagram_handle(
@@ -364,9 +381,7 @@ def test_ingest_keeps_customer_instagram_when_own_handle_configured(
     monkeypatch.setattr(ingest, "MetaConversation", _FakeConversation)
     monkeypatch.setattr(ingest, "MetaRepository", _FakeRepo)
     monkeypatch.setattr(ingest, "SalesLeadRepository", _FakeLeadRepo)
-    monkeypatch.setattr(
-        ingest, "_find_contact_by_instagram_handle", lambda *_a, **_k: None
-    )
+    monkeypatch.setattr(ingest, "ContactRepository", _contact_repo())
 
     payload = {
         "object": "instagram",
@@ -496,6 +511,7 @@ def test_parse_instagram_username_rejects_igsid_and_display_names() -> None:
         is None
     )
     assert parse_instagram_username("instagram user") is None
+    assert parse_instagram_username("17841400000000001") is None
 
 
 def test_ingest_reuses_contact_matching_instagram_handle(
@@ -554,9 +570,7 @@ def test_ingest_reuses_contact_matching_instagram_handle(
     monkeypatch.setattr(ingest, "MetaConversation", _FakeConversation)
     monkeypatch.setattr(ingest, "MetaRepository", _FakeRepo)
     monkeypatch.setattr(ingest, "SalesLeadRepository", _FakeLeadRepo)
-    monkeypatch.setattr(
-        ingest, "_find_contact_by_instagram_handle", lambda *_a, **_k: existing
-    )
+    monkeypatch.setattr(ingest, "ContactRepository", _contact_repo(found=existing))
 
     payload = {
         "object": "instagram",
@@ -584,6 +598,93 @@ def test_ingest_reuses_contact_matching_instagram_handle(
     )
     assert conversation.contact_id == existing_id
     assert not any(isinstance(item, Contact) for item in added)
+
+
+def test_ingest_reuses_archived_contact_matching_instagram_handle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    conversation_id = uuid4()
+    existing_id = uuid4()
+    added: list[object] = []
+    existing = SimpleNamespace(
+        id=existing_id,
+        instagram_handle="kitie.w",
+        archived_at="2026-01-01T00:00:00+00:00",
+    )
+
+    class _FakeConversation:
+        def __init__(self, **kwargs: object) -> None:
+            self.id = conversation_id
+            self.channel = kwargs.get("channel")
+            self.platform_user_id = kwargs.get("platform_user_id")
+            self.page_id = kwargs.get("page_id")
+            self.profile_name = kwargs.get("profile_name")
+            self.contact_id = None
+            self.lead_id = None
+            self.inbound_count = 0
+            self.outbound_count = 0
+            self.first_inbound_at = None
+            self.last_message_at = None
+            self.updated_at = None
+
+    class _FakeRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def find_message_by_platform_message_id(self, _mid: str) -> None:
+            return None
+
+        def get_conversation_by_platform_user(self, **_k: object) -> None:
+            return None
+
+    class _FakeLeadRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def find_open_by_contact(self, _contact_id: object) -> None:
+            return None
+
+        def create_with_event(self, *_a: object, **_k: object) -> SimpleNamespace:
+            return SimpleNamespace(id=uuid4())
+
+    class _FakeSession:
+        def add(self, obj: object) -> None:
+            added.append(obj)
+
+        def flush(self) -> None:
+            for obj in added:
+                if getattr(obj, "id", "missing") is None:
+                    setattr(obj, "id", uuid4())
+
+    monkeypatch.setattr(ingest, "MetaConversation", _FakeConversation)
+    monkeypatch.setattr(ingest, "MetaRepository", _FakeRepo)
+    monkeypatch.setattr(ingest, "SalesLeadRepository", _FakeLeadRepo)
+    monkeypatch.setattr(ingest, "ContactRepository", _contact_repo(found=existing))
+
+    payload = {
+        "object": "instagram",
+        "entry": [
+            {
+                "id": "17841400000000000",
+                "messaging": [
+                    {
+                        "sender": {"id": "igsid-archived", "username": "kitie.w"},
+                        "recipient": {"id": "17841400000000000"},
+                        "timestamp": 1710000000000,
+                        "message": {"mid": "m_archived", "text": "Hi"},
+                    }
+                ],
+            }
+        ],
+    }
+    counters = ingest.ingest_webhook_payload(_FakeSession(), payload)
+    assert counters["contacts_created"] == 0
+    conversation = next(
+        item
+        for item in added
+        if getattr(item, "platform_user_id", None) == "igsid-archived"
+    )
+    assert conversation.contact_id == existing_id
 
 
 def test_ingest_fills_instagram_handle_on_existing_contact(
@@ -617,16 +718,6 @@ def test_ingest_fills_instagram_handle_on_existing_contact(
         def get_conversation_by_platform_user(self, **_k: object) -> object:
             return existing_conversation
 
-    class _FakeContactRepo:
-        def __init__(self, _session: object) -> None:
-            pass
-
-        def get_by_id(self, _contact_id: object) -> object:
-            return linked
-
-        def find_by_instagram_handle(self, _handle: str) -> None:
-            return None
-
     class _FakeSession:
         def add(self, obj: object) -> None:
             return None
@@ -635,10 +726,7 @@ def test_ingest_fills_instagram_handle_on_existing_contact(
             return None
 
     monkeypatch.setattr(ingest, "MetaRepository", _FakeRepo)
-    monkeypatch.setattr(ingest, "ContactRepository", _FakeContactRepo)
-    monkeypatch.setattr(
-        ingest, "_find_contact_by_instagram_handle", lambda *_a, **_k: None
-    )
+    monkeypatch.setattr(ingest, "ContactRepository", _contact_repo(linked=linked))
 
     payload = {
         "object": "instagram",
@@ -737,3 +825,58 @@ def test_ingest_facebook_contact_has_no_instagram_handle(
     contact = next(item for item in added if isinstance(item, Contact))
     assert contact.instagram_handle is None
     assert contact.source.value == "facebook"
+
+
+def test_find_or_create_reuses_contact_after_unique_handle_race(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from sqlalchemy.exc import IntegrityError
+
+    existing = SimpleNamespace(id=uuid4(), instagram_handle="kitie.w")
+    lookups = {"count": 0}
+
+    class _FakeContactRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def find_by_instagram_handle(self, _handle: str) -> object | None:
+            lookups["count"] += 1
+            if lookups["count"] == 1:
+                return None
+            return existing
+
+    class _Nested:
+        def __enter__(self) -> object:
+            return self
+
+        def __exit__(self, *_a: object) -> bool:
+            return False
+
+    class _FakeSession:
+        def add(self, obj: object) -> None:
+            self.added = obj
+
+        def begin_nested(self) -> _Nested:
+            return _Nested()
+
+        def flush(self) -> None:
+            raise IntegrityError("INSERT", {}, Exception("unique"))
+
+        def expunge(self, obj: object) -> None:
+            self.expunged = obj
+
+    monkeypatch.setattr(ingest, "ContactRepository", _FakeContactRepo)
+    session = _FakeSession()
+    contact, created = ingest._find_or_create_contact(
+        session,  # type: ignore[arg-type]
+        conversation=SimpleNamespace(
+            channel=MetaChannel.INSTAGRAM,
+            profile_name="kitie.w",
+        ),
+        instagram_handle="kitie.w",
+        source_detail="meta_webhook",
+    )
+    assert created is False
+    assert contact is existing
+    assert lookups["count"] == 2
+    assert getattr(session, "expunged", None) is not None

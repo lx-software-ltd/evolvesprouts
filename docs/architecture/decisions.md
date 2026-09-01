@@ -776,7 +776,8 @@ not imported as a contact. Persist threads in unified
 Create a Contact plus open SalesLead on first inbound when none exists.
 On Instagram inbound, persist `sender.username` on `contacts.instagram_handle`
 (lowercase, no leading `@`) when it is a username rather than IGSID, and reuse
-an existing contact with that handle. Messenger has no handle field.
+an existing contact with that handle, including archived rows. Messenger has
+no handle field. Missing webhook usernames stay unmatched (no Graph lookup).
 Do not store IGSID/PSID on `contacts.instagram_handle`. Admin reads live at
 `GET /v1/admin/meta/conversations` (Sales → Instagram / Messenger tabs).
 Token reads live at `GET /v1/public/meta/conversations` and omit Page-scoped
@@ -811,8 +812,9 @@ pulling history inline on the admin Lambda. Jobs live in `inbox_import_jobs`.
   segment of `PUBLIC_WWW_INSTAGRAM_URL` / `NEXT_PUBLIC_INSTAGRAM_URL`.
   Meta only returns message **bodies** for the last 20 messages per thread.
   Persist through the same `store_meta_message` path as webhooks (unique
-  `platform_message_id`). Create placeholder contacts when missing. Do **not**
-  create new Sales leads.
+  `platform_message_id`). Pass participant `username` as `instagram_handle`
+  so history import reuses CRM contacts the same way live ingest does.
+  Create placeholder contacts when missing. Do **not** create new Sales leads.
 - **WhatsApp Cloud API:** there is no GET history endpoint. Continue live
   webhook ingest, and persist coexistence `history` webhook chunks when Meta
   sends them (still no new leads). Older chats come from a Business App

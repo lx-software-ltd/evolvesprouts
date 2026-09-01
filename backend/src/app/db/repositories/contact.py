@@ -153,12 +153,19 @@ class ContactRepository(BaseRepository[Contact]):
         return self._session.execute(statement).scalar_one_or_none()
 
     def find_by_instagram_handle(self, handle: str) -> Contact | None:
-        """Case-insensitive lookup by stored Instagram handle (no leading ``@``)."""
+        """Case-insensitive lookup by stored Instagram handle.
+
+        Includes archived contacts so Instagram ingest can reuse them. Matches
+        stored values with or without a leading ``@``.
+        """
         normalized = instagram_handle_for_storage(handle)
         if not normalized:
             return None
-        statement = select(Contact).where(
-            func.lower(Contact.instagram_handle) == normalized
+        statement = (
+            select(Contact)
+            .where(func.lower(func.ltrim(Contact.instagram_handle, "@")) == normalized)
+            .order_by(Contact.created_at.asc())
+            .limit(1)
         )
         return self._session.execute(statement).scalar_one_or_none()
 

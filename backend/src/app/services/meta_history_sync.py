@@ -18,6 +18,7 @@ from app.services.meta_graph_client import (
 )
 from app.services.meta_ingest import is_own_instagram_handle, store_meta_message
 from app.utils.logging import get_logger, mask_pii
+from app.utils.validators import parse_instagram_username
 
 logger = get_logger(__name__)
 
@@ -215,11 +216,16 @@ def _ingest_conversation(
             raise
         if fetched:
             detail = {**dict(row), **fetched}
-    platform_user_id, profile_name = _counterparty(detail, self_ids=self_ids)
+    platform_user_id, profile_name, instagram_handle = _counterparty(
+        detail, self_ids=self_ids
+    )
     if platform_user_id is None:
         counters["skipped"] += 1
         return
-    if channel is MetaChannel.INSTAGRAM and is_own_instagram_handle(profile_name):
+    if channel is MetaChannel.INSTAGRAM and (
+        is_own_instagram_handle(profile_name)
+        or is_own_instagram_handle(instagram_handle)
+    ):
         counters["skipped"] += 1
         logger.info(
             "Skipped Instagram history thread for the configured business handle"
@@ -254,6 +260,7 @@ def _ingest_conversation(
             platform_user_id=platform_user_id,
             page_id=page_id,
             profile_name=profile_name,
+            instagram_handle=instagram_handle,
             self_ids=self_ids,
             counters=counters,
         )
@@ -267,6 +274,7 @@ def _ingest_graph_message(
     platform_user_id: str,
     page_id: str,
     profile_name: str | None,
+    instagram_handle: str | None,
     self_ids: set[str],
     counters: dict[str, int],
 ) -> None:
@@ -298,6 +306,7 @@ def _ingest_graph_message(
         platform_user_id=platform_user_id,
         page_id=page_id,
         profile_name=profile_name,
+        instagram_handle=instagram_handle,
         message=webhook_message,
         timestamp=message_row.get("created_time"),
         direction=(
@@ -323,21 +332,27 @@ def _ingest_graph_message(
 
 def _counterparty(
     row: Mapping[str, Any], *, self_ids: set[str]
-) -> tuple[str | None, str | None]:
+) -> tuple[str | None, str | None, str | None]:
     participants = row.get("participants")
     data = participants.get("data") if isinstance(participants, Mapping) else None
     if not isinstance(data, list):
-        return None, None
+        return None, None, None
     for participant in data:
         if not isinstance(participant, Mapping):
             continue
         participant_id = str(participant.get("id") or "").strip()
         if not participant_id or participant_id in self_ids:
             continue
-        name = participant.get("name") or participant.get("username")
-        profile = name.strip() if isinstance(name, str) and name.strip() else None
-        return participant_id, profile
-    return None, None
+        raw_name = participant.get("name")
+        raw_username = participant.get("username")
+        name = raw_name.strip() if isinstance(raw_name, str) else ""
+        username = raw_username.strip() if isinstance(raw_username, str) else ""
+        profile = name or username or None
+        handle = parse_instagram_username(
+            username or None, platform_user_id=participant_id
+        )
+        return participant_id, profile, handle
+    return None, None, None
 
 
 def _graph_attachments(raw_value: Any) -> list[dict[str, Any]]:

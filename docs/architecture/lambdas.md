@@ -64,6 +64,8 @@ their primary responsibilities.
   `meta_conversations` / `meta_messages` and creates CRM contacts/leads;
   Instagram ingest skips counterparties whose username matches the last
   path segment of `PUBLIC_WWW_INSTAGRAM_URL` / `NEXT_PUBLIC_INSTAGRAM_URL`;
+  Instagram inbound stores `username` on `contacts.instagram_handle` and
+  reuses an existing contact with that handle (including archived);
   sets audit actor `webhook:meta`),
   `/v1/public/whatsapp/*` and `/v1/public/meta/*` (hashed `x-api-token` conversation
   reads; name/dates/text only),
@@ -688,7 +690,8 @@ their primary responsibilities.
   `.txt`/`.zip` export parses into the existing conversation tables. Creates
   missing contacts; does not create new sales leads. Instagram Graph
   import also skips threads whose participant username matches the
-  configured public Instagram handle.
+  configured public Instagram handle, and passes that username through
+  as `instagram_handle` for CRM reuse.
 - DB access: RDS Proxy with IAM auth (`evolvesprouts_admin`)
 - VPC: Yes
 - Timeout / budget: **600s** Lambda timeout with **720s** SQS visibility

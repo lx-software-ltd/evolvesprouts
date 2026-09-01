@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import os
 import re
 from collections.abc import Mapping
 from typing import Any
+from urllib.parse import unquote, urlparse
 from uuid import UUID
 
 
@@ -72,6 +74,20 @@ def validate_range(
 
 _INSTAGRAM_HANDLE_MAX_LENGTH = 30
 _INSTAGRAM_HANDLE_RE = re.compile(r"^[a-z0-9._]{1,30}$")
+_IGSID_LIKE_DIGIT_LENGTH = 15
+_RESERVED_INSTAGRAM_PATHS = frozenset(
+    {
+        "p",
+        "reel",
+        "reels",
+        "stories",
+        "explore",
+        "accounts",
+        "direct",
+        "about",
+        "legal",
+    }
+)
 
 
 def instagram_handle_for_storage(value: str | None) -> str | None:
@@ -101,6 +117,8 @@ def parse_instagram_username(
     if handle is None or len(handle) > _INSTAGRAM_HANDLE_MAX_LENGTH:
         return None
     if not _INSTAGRAM_HANDLE_RE.fullmatch(handle):
+        return None
+    if handle.isdigit() and len(handle) >= _IGSID_LIKE_DIGIT_LENGTH:
         return None
     if platform_user_id is not None:
         scoped = str(platform_user_id).strip().lower()
@@ -135,6 +153,49 @@ def extract_instagram_username(
         if handle is not None:
             return handle
     return None
+
+
+def instagram_handle_from_profile_url(raw: str | None) -> str | None:
+    """Return the last Instagram path segment, or a bare handle, lowercased."""
+    if not isinstance(raw, str):
+        return None
+    stripped = raw.strip()
+    if not stripped:
+        return None
+    if "://" not in stripped and "/" not in stripped.lstrip("@"):
+        handle = stripped.lstrip("@").strip().strip("/")
+        return handle.lower() or None
+    candidate = stripped if "://" in stripped else f"https://{stripped.lstrip('/')}"
+    try:
+        parsed = urlparse(candidate)
+    except ValueError:
+        return None
+    parts = [unquote(part) for part in parsed.path.split("/") if part]
+    if not parts:
+        return None
+    handle = parts[0].lstrip("@").strip()
+    if not handle or handle.lower() in _RESERVED_INSTAGRAM_PATHS:
+        return None
+    return handle.lower()
+
+
+def own_instagram_handle() -> str | None:
+    """Business Instagram handle from PUBLIC_WWW / NEXT_PUBLIC profile URL."""
+    from app.config.public_www import get_public_www
+
+    raw = get_public_www("INSTAGRAM_URL")
+    if not (isinstance(raw, str) and raw.strip()):
+        raw = os.getenv("NEXT_PUBLIC_INSTAGRAM_URL", "")
+    return instagram_handle_from_profile_url(raw)
+
+
+def is_own_instagram_handle(name: str | None) -> bool:
+    """True when *name* is the configured business Instagram handle."""
+    handle = own_instagram_handle()
+    if not handle or not isinstance(name, str):
+        return False
+    normalized = name.strip().lstrip("@").lower()
+    return bool(normalized) and normalized == handle
 
 
 def sanitize_string(

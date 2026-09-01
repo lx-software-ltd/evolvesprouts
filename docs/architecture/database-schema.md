@@ -460,9 +460,10 @@ maps legacy `note.id` to the **first** inserted row’s UUID.
 - Key fields: `email`, `first_name`, `contact_type`, `source`,
   `mailchimp_status`.
 - `instagram_handle` is unique (case-insensitive), max 30 characters, stored
-  without a leading `@`. Admin UI prefixes `@` for display only. Do not store
-  Messenger PSID or Instagram IGSID here. Messenger has no equivalent handle
-  column.
+  without a leading `@`. Admin UI prefixes `@` for display only. Instagram
+  inbound ingest persists Meta `username` here and reuses an existing contact
+  (including archived) with that handle. Do not store Messenger PSID or
+  Instagram IGSID here. Messenger has no equivalent handle column.
 - Phone numbers: `phone_region` (`varchar(2)`, ISO 3166-1 alpha-2, upper-case)
   and `phone_national_number` (`varchar(20)`, digits only — E.164 national
   significant number). Both are nullable and must be set or cleared together
