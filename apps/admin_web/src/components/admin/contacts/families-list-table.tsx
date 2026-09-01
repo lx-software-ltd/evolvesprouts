@@ -121,6 +121,7 @@ export function FamiliesListTable({
         <AdminDataTableBody>
           {rows.map((row) => {
             const primaryLabel = primaryMemberLabel(row.members);
+            const nameCell = formatFamilyOrOrganizationPartyLabel(row.family_name, primaryLabel);
             return (
               <tr
                 key={row.id}
@@ -129,9 +130,7 @@ export function FamiliesListTable({
                 }`}
                 onClick={() => onSelectRow(row.id)}
               >
-                <AdminDataTableCell>
-                  {formatFamilyOrOrganizationPartyLabel(row.family_name, primaryLabel) || '—'}
-                </AdminDataTableCell>
+                <AdminDataTableCell>{nameCell || '—'}</AdminDataTableCell>
                 <AdminDataTableCell>{row.members.length}</AdminDataTableCell>
                 <AdminDataTableCell>{row.active ? 'Active' : 'Archived'}</AdminDataTableCell>
                 <AdminDataTableCell className='text-right'>
@@ -143,7 +142,7 @@ export function FamiliesListTable({
                         row.sales_conversation_channel
                       )}
                       instancesHref={adminPartyServiceInstancesDeepLink('family', row.id)}
-                      invoicesHref={adminPartyInvoicesDeepLink('family', row.id)}
+                      invoicesHref={adminPartyInvoicesDeepLink(nameCell)}
                       hasSalesConversation={row.has_sales_conversation}
                       hasServiceInstance={row.has_service_instance}
                       hasInvoice={row.has_invoice}

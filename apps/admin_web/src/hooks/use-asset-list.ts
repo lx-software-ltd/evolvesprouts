@@ -12,14 +12,9 @@ import {
 
 import { toErrorMessage } from './hook-errors';
 import { useDebouncedCallback } from './use-debounced-callback';
+import { useLocationSearchParam } from './use-query-tab-state';
 
 type Filters = Pick<ListAdminAssetsInput, 'query' | 'visibility' | 'tagName'>;
-
-const DEFAULT_FILTERS: Filters = {
-  query: '',
-  visibility: '',
-  tagName: CLIENT_DOCUMENT_ASSET_TAG,
-};
 
 const ASSET_LIST_TYPE_FILTER = 'document' as const;
 
@@ -45,9 +40,19 @@ export interface UseAssetListReturn {
   applyDeletedAsset: (assetId: string) => void;
 }
 
+function filtersFromLocation(query: string, tag: string): Filters {
+  return {
+    query,
+    visibility: '',
+    tagName: tag || CLIENT_DOCUMENT_ASSET_TAG,
+  };
+}
+
 export function useAssetList(): UseAssetListReturn {
-  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
-  const filtersRef = useRef<Filters>(DEFAULT_FILTERS);
+  const urlQuery = useLocationSearchParam('query');
+  const urlTag = useLocationSearchParam('tag');
+  const [filters, setFilters] = useState<Filters>(() => filtersFromLocation(urlQuery, urlTag));
+  const filtersRef = useRef<Filters>(filtersFromLocation(urlQuery, urlTag));
   const latestRefreshRequestIdRef = useRef(0);
   const [assets, setAssets] = useState<AdminAsset[]>([]);
   const [linkedTagNames, setLinkedTagNames] = useState<string[]>([]);
@@ -140,6 +145,23 @@ export function useAssetList(): UseAssetListReturn {
   useEffect(() => {
     void refreshAssets();
   }, [refreshAssets]);
+
+  useEffect(() => {
+    const nextFilters = {
+      ...filtersRef.current,
+      query: urlQuery,
+      tagName: urlTag || CLIENT_DOCUMENT_ASSET_TAG,
+    };
+    if (
+      nextFilters.query === filtersRef.current.query &&
+      nextFilters.tagName === filtersRef.current.tagName
+    ) {
+      return;
+    }
+    filtersRef.current = nextFilters;
+    setFilters(nextFilters);
+    void refreshAssets(nextFilters);
+  }, [refreshAssets, urlQuery, urlTag]);
 
   const debouncedRefresh = useDebouncedCallback((nextFilters: Partial<Filters>) => {
     void refreshAssets(nextFilters);

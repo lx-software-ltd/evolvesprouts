@@ -313,7 +313,15 @@ describe('FamiliesPanel', () => {
           location_summary: null,
           tag_ids: [],
           tags: [],
-          members: [],
+          members: [
+            {
+              id: 'mem-linked',
+              contact_id: 'c-linked',
+              contact_label: 'Alex Smith',
+              role: 'parent',
+              is_primary_contact: true,
+            },
+          ],
           active: true,
           created_at: '2020-01-01T00:00:00.000Z',
           updated_at: '2020-01-01T00:00:00.000Z',
@@ -361,7 +369,7 @@ describe('FamiliesPanel', () => {
     );
     expect(screen.getByRole('link', { name: 'Invoices' })).toHaveAttribute(
       'href',
-      '/finance?family=fam-linked'
+      '/assets?tag=customer_invoice&query=Linked+%C2%B7+Alex+Smith'
     );
     expect(screen.getAllByRole('link', { name: 'Sales conversations' })).toHaveLength(1);
     expect(screen.getAllByRole('link', { name: 'Service instances' })).toHaveLength(1);

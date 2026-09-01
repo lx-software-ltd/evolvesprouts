@@ -1,4 +1,5 @@
 import { ADMIN_CONTACT_QUERY_PARAM } from '@/lib/inbox-conversation-name';
+import { CUSTOMER_INVOICE_ASSET_TAG } from '@/types/assets';
 
 export const ADMIN_FAMILY_QUERY_PARAM = 'family';
 export const ADMIN_ORGANIZATION_QUERY_PARAM = 'organization';
@@ -61,8 +62,14 @@ export function adminPartyServiceInstancesDeepLink(kind: RelatedPartyKind, id: s
   return `/services?${partySearch(kind, id)}`;
 }
 
-export function adminPartyInvoicesDeepLink(kind: RelatedPartyKind, id: string): string {
-  return `/finance?${partySearch(kind, id)}`;
+export function adminPartyInvoicesDeepLink(partyName: string): string {
+  const params = new URLSearchParams();
+  params.set('tag', CUSTOMER_INVOICE_ASSET_TAG);
+  const query = partyName.trim();
+  if (query) {
+    params.set('query', query);
+  }
+  return `/assets?${params.toString()}`;
 }
 
 export function adminSalesConversationsDeepLink(
@@ -76,8 +83,8 @@ export function adminServiceInstancesDeepLink(contactId: string): string {
   return adminPartyServiceInstancesDeepLink('contact', contactId);
 }
 
-export function adminContactInvoicesDeepLink(contactId: string): string {
-  return adminPartyInvoicesDeepLink('contact', contactId);
+export function adminContactInvoicesDeepLink(partyName: string): string {
+  return adminPartyInvoicesDeepLink(partyName);
 }
 
 export function isSalesInboxTab(value: string | null | undefined): value is SalesInboxTab {
