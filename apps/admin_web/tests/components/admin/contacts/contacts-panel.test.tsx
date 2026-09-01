@@ -391,10 +391,12 @@ describe('ContactsPanel', () => {
       />
     );
 
-    expect(screen.getByRole('link', { name: 'Sales conversations' })).toHaveAttribute(
+    const salesLink = screen.getByRole('link', { name: 'Sales conversations' });
+    expect(salesLink).toHaveAttribute(
       'href',
       '/sales?tab=instagram&contact=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
     );
+    expect(salesLink).toHaveClass('h-8', 'px-3');
     expect(screen.getByRole('link', { name: 'Service instances' })).toHaveAttribute(
       'href',
       '/services?contact=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'

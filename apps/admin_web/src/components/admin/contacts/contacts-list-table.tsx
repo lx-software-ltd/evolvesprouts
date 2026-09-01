@@ -40,7 +40,7 @@ import type { components } from '@/types/generated/admin-api.generated';
 type ApiSchemas = components['schemas'];
 
 const RELATED_LINK_CLASS =
-  'inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-slate-300 bg-white px-0 text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400';
+  'inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400';
 
 export interface ContactsListTableProps {
   rows: ApiSchemas['AdminContact'][];
