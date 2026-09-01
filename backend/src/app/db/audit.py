@@ -30,6 +30,7 @@ Usage:
 from __future__ import annotations
 
 import enum
+import os
 from decimal import Decimal
 from datetime import datetime
 from datetime import timezone
@@ -52,6 +53,70 @@ logger = get_logger(__name__)
 SYSTEM_AUDIT_USER_ID = "system"
 WEBHOOK_WHATSAPP_AUDIT_USER_ID = "webhook:whatsapp"
 WEBHOOK_META_AUDIT_USER_ID = "webhook:meta"
+ALEMBIC_AUDIT_USER_ID = "alembic"
+_MIGRATIONS_REQUEST_ID_ENV = "MIGRATIONS_REQUEST_ID"
+
+
+def migrations_audit_request_id() -> str | None:
+    """Return the deploy-time request id set by the migrations Lambda."""
+    value = os.getenv(_MIGRATIONS_REQUEST_ID_ENV, "").strip()
+    return value or None
+
+
+def set_connection_audit_context(
+    connection: Any,
+    user_id: str | None = None,
+    request_id: str | None = None,
+    *,
+    local: bool = True,
+) -> None:
+    """Set audit GUCs on a SQLAlchemy Connection or Session."""
+    connection.execute(
+        text("SELECT set_config('app.current_user_id', :user_id, :is_local)"),
+        {"user_id": user_id or "", "is_local": local},
+    )
+    connection.execute(
+        text("SELECT set_config('app.current_request_id', :request_id, :is_local)"),
+        {"request_id": request_id or "", "is_local": local},
+    )
+
+
+def stamp_alembic_audit_context(
+    connection: Any,
+    user_id: str | None = None,
+    request_id: str | None = None,
+) -> None:
+    """Set session-scoped audit GUCs and commit the implicit SQLAlchemy txn.
+
+    Alembic uses ``transaction_per_migration`` so later revisions can see
+    committed enum values. Leaving this execute() txn open would nest those
+    commits and break ``ALTER TYPE ... ADD VALUE``.
+    """
+    set_connection_audit_context(
+        connection,
+        user_id=user_id,
+        request_id=request_id,
+        local=False,
+    )
+    connection.commit()
+
+
+def set_psycopg_audit_context(
+    cursor: Any,
+    user_id: str | None = None,
+    request_id: str | None = None,
+    *,
+    local: bool = True,
+) -> None:
+    """Set audit GUCs on a psycopg cursor."""
+    cursor.execute(
+        "SELECT set_config('app.current_user_id', %s, %s)",
+        (user_id or "", local),
+    )
+    cursor.execute(
+        "SELECT set_config('app.current_request_id', %s, %s)",
+        (request_id or "", local),
+    )
 
 
 def set_audit_context(
@@ -81,14 +146,7 @@ def set_audit_context(
     # psycopg. set_config(name, value, is_local) is a regular SQL function
     # that properly accepts bind parameters, and is_local=true makes the
     # setting transaction-scoped (equivalent to SET LOCAL).
-    session.execute(
-        text("SELECT set_config('app.current_user_id', :user_id, true)"),
-        {"user_id": user_id or ""},
-    )
-    session.execute(
-        text("SELECT set_config('app.current_request_id', :request_id, true)"),
-        {"request_id": request_id or ""},
-    )
+    set_connection_audit_context(session, user_id=user_id, request_id=request_id)
 
 
 def clear_audit_context(session: Session) -> None:

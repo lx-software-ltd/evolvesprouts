@@ -35,6 +35,9 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
         return {"PhysicalResourceId": physical_id, "Data": data}
 
     try:
+        request_id = str(getattr(context, "aws_request_id", "") or "").strip()
+        if request_id:
+            os.environ["MIGRATIONS_REQUEST_ID"] = request_id
         database_url = get_database_url()
 
         parsed = urlparse(database_url)
@@ -108,6 +111,9 @@ def _handle_seed_only(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
     logger.info("Running seed-only mode (direct invocation)")
 
     try:
+        request_id = str(getattr(context, "aws_request_id", "") or "").strip()
+        if request_id:
+            os.environ["MIGRATIONS_REQUEST_ID"] = request_id
         database_url = get_database_url()
 
         seed_path = os.getenv(

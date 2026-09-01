@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.audit import (
+    ALEMBIC_AUDIT_USER_ID,
     SYSTEM_AUDIT_USER_ID,
     WEBHOOK_META_AUDIT_USER_ID,
     WEBHOOK_WHATSAPP_AUDIT_USER_ID,
@@ -26,6 +27,7 @@ SYSTEM_ACTOR_LABELS: dict[str, str] = {
     SYSTEM_AUDIT_USER_ID: "System",
     WEBHOOK_WHATSAPP_AUDIT_USER_ID: "WhatsApp webhook",
     WEBHOOK_META_AUDIT_USER_ID: "Meta webhook",
+    ALEMBIC_AUDIT_USER_ID: "Alembic",
 }
 
 

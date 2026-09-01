@@ -439,6 +439,9 @@ their primary responsibilities.
 - Trigger: CloudFormation custom resource during deploy
 - Purpose: run Alembic migrations and optional seed SQL
 - DB access: direct cluster endpoint with password auth
+- Audit: DML from Alembic, seed SQL, and `_sync_active_countries` sets
+  `user_id = alembic` (also syncs `geographic_areas.active` from
+  `ACTIVE_COUNTRY_CODES`)
 
 ### Import legacy CRM
 - Function: ImportLegacyVenuesFunction (physical name `evolvesprouts-ImportLegacyVenuesFunction`)
