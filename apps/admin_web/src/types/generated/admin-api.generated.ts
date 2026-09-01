@@ -2082,6 +2082,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/leads/{id}/ai-suggestion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Sales lead identifier. */
+                id: components["parameters"]["LeadId"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Get latest AI close suggestion for a lead
+         * @description Returns the newest stored AI closing suggestion for the lead, including staleness metadata. `suggestion` is null when none has been generated yet. A suggestion is stale when it is older than 24 hours or when a newer WhatsApp/Meta message exists for the lead contact after the stored conversation watermark.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Sales lead identifier. */
+                    id: components["parameters"]["LeadId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Latest suggestion payload (or null). */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LeadAiSuggestionResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        put?: never;
+        /**
+         * Generate AI close suggestion for a lead
+         * @description Generates a new closing/follow-up suggestion via the shared OpenRouter pipeline (same Secrets Manager key, allow-listed chat-completions URL, and AWS HTTP proxy as expense invoice parsing). Persists the result with a conversation watermark for staleness checks. Does not send messages.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Sales lead identifier. */
+                    id: components["parameters"]["LeadId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Suggestion generated and stored. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LeadAiSuggestionResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/services": {
         parameters: {
             query?: never;
@@ -7115,6 +7191,47 @@ export interface components {
             organization?: Record<string, never> | null;
             events?: components["schemas"]["LeadEvent"][];
             notes?: components["schemas"]["Note"][];
+        };
+        LeadAiFollowUp: {
+            /** @description Conversation channel for the suggested reply. */
+            channel: string;
+            /** @description Short excerpt of the inbound message being addressed. */
+            message_excerpt: string;
+            /** @description Suggested outbound reply text (not sent automatically). */
+            draft_reply: string;
+            /** @description Why this follow-up is recommended. */
+            rationale: string;
+        };
+        LeadAiSuggestion: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            lead_id: string;
+            summary: string;
+            actions: string[];
+            follow_ups: components["schemas"]["LeadAiFollowUp"][];
+            risks: string[];
+            /** Format: date-time */
+            generated_at: string;
+            generated_by?: string | null;
+            model?: string | null;
+            /** Format: date-time */
+            conversation_watermark_at?: string | null;
+            is_stale: boolean;
+            stale_reasons: ("age" | "new_conversation")[];
+            /**
+             * Format: date-time
+             * @description Timestamp when the suggestion becomes age-stale (generated_at + 24h).
+             */
+            stale_after: string;
+            /**
+             * Format: date-time
+             * @description Newest WhatsApp/Meta message time for the lead contact, if any.
+             */
+            latest_message_at?: string | null;
+        };
+        LeadAiSuggestionResponse: {
+            suggestion: components["schemas"]["LeadAiSuggestion"] | null;
         };
         WhatsAppConversationSummary: {
             /** Format: uuid */

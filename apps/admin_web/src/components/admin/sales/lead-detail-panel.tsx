@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { ActivityTimeline } from './activity-timeline';
+import { LeadAiSuggestionPanel } from './lead-ai-suggestion-panel';
 import { LeadConversationCard } from './lead-conversation-card';
 
 import { ContactNotesPanel } from '@/components/admin/contacts/contact-notes-panel';
@@ -459,6 +460,7 @@ export function LeadDetailPanel({
             title='Notes'
             description='These are the same standalone contact notes used on the Contacts page.'
           />
+          <LeadAiSuggestionPanel leadId={lead.id} />
           <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
             <ActivityTimeline events={lead.events} users={users} />
             <LeadConversationCard contactId={lead.contact.id} />

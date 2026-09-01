@@ -6,6 +6,7 @@ import type { components } from '@/types/generated/admin-api.generated';
 import type {
   ContactSource,
   FunnelStage,
+  LeadAiSuggestion,
   LeadAnalytics,
   LeadDetail,
   LeadEvent,
@@ -230,6 +231,67 @@ export async function createLeadNote(
   });
   const root = unwrapPayload(payload);
   return root.note ? parseLeadNote(root.note) : null;
+}
+
+function parseLeadAiSuggestion(value: unknown): LeadAiSuggestion | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const followUpsRaw = Array.isArray(value.follow_ups) ? value.follow_ups : [];
+  const followUps = followUpsRaw
+    .filter((entry) => isRecord(entry))
+    .map((entry) => ({
+      channel: asNullableString(entry.channel) ?? 'unknown',
+      messageExcerpt: asNullableString(entry.message_excerpt) ?? '',
+      draftReply: asNullableString(entry.draft_reply) ?? '',
+      rationale: asNullableString(entry.rationale) ?? '',
+    }));
+  const staleReasons = Array.isArray(value.stale_reasons)
+    ? value.stale_reasons.map((entry) => String(entry))
+    : [];
+  return {
+    id: asNullableString(value.id) ?? '',
+    leadId: asNullableString(value.lead_id) ?? '',
+    summary: asNullableString(value.summary) ?? '',
+    actions: Array.isArray(value.actions)
+      ? value.actions.map((entry) => String(entry)).filter(Boolean)
+      : [],
+    followUps,
+    risks: Array.isArray(value.risks)
+      ? value.risks.map((entry) => String(entry)).filter(Boolean)
+      : [],
+    generatedAt: asNullableString(value.generated_at),
+    generatedBy: asNullableString(value.generated_by),
+    model: asNullableString(value.model),
+    conversationWatermarkAt: asNullableString(value.conversation_watermark_at),
+    isStale: Boolean(value.is_stale),
+    staleReasons,
+    staleAfter: asNullableString(value.stale_after),
+    latestMessageAt: asNullableString(value.latest_message_at),
+  };
+}
+
+export async function fetchLeadAiSuggestion(leadId: string): Promise<LeadAiSuggestion | null> {
+  const payload = await adminApiRequest<{ suggestion?: unknown }>({
+    endpointPath: `/v1/admin/leads/${leadId}/ai-suggestion`,
+    method: 'GET',
+  });
+  const root = unwrapPayload(payload);
+  return parseLeadAiSuggestion(root.suggestion);
+}
+
+export async function generateLeadAiSuggestion(leadId: string): Promise<LeadAiSuggestion> {
+  const payload = await adminApiRequest<{ suggestion?: unknown }>({
+    endpointPath: `/v1/admin/leads/${leadId}/ai-suggestion`,
+    method: 'POST',
+    expectedSuccessStatuses: [200, 201],
+  });
+  const root = unwrapPayload(payload);
+  const suggestion = parseLeadAiSuggestion(root.suggestion);
+  if (!suggestion) {
+    throw new Error('AI suggestion response was empty.');
+  }
+  return suggestion;
 }
 
 export async function getLeadAnalytics(params: AnalyticsParams): Promise<LeadAnalytics> {
