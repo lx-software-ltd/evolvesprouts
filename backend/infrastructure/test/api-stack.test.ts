@@ -236,6 +236,13 @@ function assertInboxImportUsesDedicatedPageToken(stack: cdk.Stack): void {
       `InboxImportFunction META_PAGE_ACCESS_TOKEN must Ref a nested parameter; found ${JSON.stringify(value)}`,
     );
   }
+  const instagramUrl = (vars as Record<string, unknown>)
+    .PUBLIC_WWW_INSTAGRAM_URL;
+  if (instagramUrl === undefined || instagramUrl === null) {
+    throw new Error(
+      "InboxImportFunction must set PUBLIC_WWW_INSTAGRAM_URL so Graph import can skip the business Instagram handle",
+    );
+  }
 }
 
 function assertInboxImportHasNoReservedConcurrency(stack: cdk.Stack): void {

@@ -731,7 +731,7 @@ Meta Commerce Manager, or potentially via the Catalog API
 | LinkedIn DMs → CRM | No programmatic path | Use redirect-to-trackable-channel workaround |
 | Mailchimp | Fully integrated (backend subscriber sync with tags, webhook reconciliation) | Build nurture sequences per tag |
 | WhatsApp → CRM | Cloud API webhook on Admin Lambda (`/v1/whatsapp/webhook`, including coexistence `history`); Sales → WhatsApp inbox plus `.txt`/`.zip` export import | Subscribe Meta `messages` + `smb_message_echoes` + `history`; Cloud API cannot GET old chats |
-| Instagram DMs → CRM | Meta webhook on Admin Lambda (`/v1/meta/webhook`, `object: instagram`); Sales → Instagram inbox; Graph import of last 20 bodies/thread | Subscribe Instagram `messages`; `CDK_PARAM_META_PAGE_ACCESS_TOKEN` + `CDK_PARAM_META_PAGE_ID` for history import |
+| Instagram DMs → CRM | Meta webhook on Admin Lambda (`/v1/meta/webhook`, `object: instagram`); Sales → Instagram inbox; Graph import of last 20 bodies/thread; skip own profile handle from `NEXT_PUBLIC_INSTAGRAM_URL` | Subscribe Instagram `messages`; `CDK_PARAM_META_PAGE_ACCESS_TOKEN` + `CDK_PARAM_META_PAGE_ID` for history import |
 | Messenger DMs → CRM | Meta webhook on Admin Lambda (`/v1/meta/webhook`, `object: page`); Sales → Messenger inbox; Graph import of last 20 bodies/thread | Subscribe Page `messages`; same Graph import as Instagram |
 
 ### Potential improvements

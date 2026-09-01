@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 from typing import Any
 from collections.abc import Mapping
+from urllib.parse import unquote, urlparse
 
 from sqlalchemy.orm import Session
 
+from app.config.public_www import get_public_www
 from app.db.models import (
     Contact,
     ContactSource,
@@ -47,6 +50,19 @@ _CONTACT_SOURCES = {
     MetaChannel.FACEBOOK: ContactSource.FACEBOOK,
     MetaChannel.INSTAGRAM: ContactSource.INSTAGRAM,
 }
+_RESERVED_INSTAGRAM_PATHS = frozenset(
+    {
+        "p",
+        "reel",
+        "reels",
+        "stories",
+        "explore",
+        "accounts",
+        "direct",
+        "about",
+        "legal",
+    }
+)
 
 
 def ingest_webhook_payload(
@@ -116,12 +132,18 @@ def _ingest_messaging_event(
     if resolved_page_id is None:
         resolved_page_id = sender_id if is_echo else recipient_id
 
+    profile_name = _profile_name(event, message, is_echo=is_echo)
+    if channel is MetaChannel.INSTAGRAM and is_own_instagram_handle(profile_name):
+        counters["skipped"] += 1
+        logger.info("Skipped Instagram webhook for the configured business handle")
+        return
+
     store_meta_message(
         session,
         channel=channel,
         platform_user_id=platform_user_id,
         page_id=resolved_page_id,
-        profile_name=_profile_name(event, message),
+        profile_name=profile_name,
         message=message,
         timestamp=event.get("timestamp"),
         direction=(
@@ -295,13 +317,29 @@ def _contact_first_name(conversation: MetaConversation) -> str:
     return _ANONYMOUS_NAMES[conversation.channel]
 
 
-def _profile_name(event: Mapping[str, Any], message: Mapping[str, Any]) -> str | None:
-    sender = event.get("sender")
-    if isinstance(sender, Mapping):
-        for key in ("name", "username"):
-            value = sender.get(key)
-            if isinstance(value, str) and value.strip():
-                return value.strip()[:_MAX_PROFILE_NAME_LENGTH]
+def _party_profile_name(party: Any) -> str | None:
+    if not isinstance(party, Mapping):
+        return None
+    for key in ("username", "name"):
+        value = party.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()[:_MAX_PROFILE_NAME_LENGTH]
+    return None
+
+
+def _profile_name(
+    event: Mapping[str, Any],
+    message: Mapping[str, Any],
+    *,
+    is_echo: bool = False,
+) -> str | None:
+    """Return the counterparty display name (recipient on echoes, sender otherwise)."""
+    party = event.get("recipient") if is_echo else event.get("sender")
+    from_party = _party_profile_name(party)
+    if from_party:
+        return from_party
+    if is_echo:
+        return None
     for key in ("username", "from"):
         value = message.get(key)
         if isinstance(value, str) and value.strip():
@@ -311,6 +349,47 @@ def _profile_name(event: Mapping[str, Any], message: Mapping[str, Any]) -> str |
             if isinstance(nested, str) and nested.strip():
                 return nested.strip()[:_MAX_PROFILE_NAME_LENGTH]
     return None
+
+
+def instagram_handle_from_profile_url(raw: str | None) -> str | None:
+    """Return the last Instagram path segment, or a bare handle, lowercased."""
+    if not isinstance(raw, str):
+        return None
+    stripped = raw.strip()
+    if not stripped:
+        return None
+    if "://" not in stripped and "/" not in stripped.lstrip("@"):
+        handle = stripped.lstrip("@").strip().strip("/")
+        return handle.lower() or None
+    candidate = stripped if "://" in stripped else f"https://{stripped.lstrip('/')}"
+    try:
+        parsed = urlparse(candidate)
+    except ValueError:
+        return None
+    parts = [unquote(part) for part in parsed.path.split("/") if part]
+    if not parts:
+        return None
+    handle = parts[0].lstrip("@").strip()
+    if not handle or handle.lower() in _RESERVED_INSTAGRAM_PATHS:
+        return None
+    return handle.lower()
+
+
+def own_instagram_handle() -> str | None:
+    """Business Instagram handle from PUBLIC_WWW / NEXT_PUBLIC profile URL."""
+    raw = get_public_www("INSTAGRAM_URL")
+    if not (isinstance(raw, str) and raw.strip()):
+        raw = os.getenv("NEXT_PUBLIC_INSTAGRAM_URL", "")
+    return instagram_handle_from_profile_url(raw)
+
+
+def is_own_instagram_handle(name: str | None) -> bool:
+    """True when *name* is the configured business Instagram handle."""
+    handle = own_instagram_handle()
+    if not handle or not isinstance(name, str):
+        return False
+    normalized = name.strip().lstrip("@").lower()
+    return bool(normalized) and normalized == handle
 
 
 def _message_type(message: Mapping[str, Any]) -> str:

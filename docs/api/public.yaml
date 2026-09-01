@@ -34,6 +34,8 @@ info:
       handshake plus inbound and coexistence echo messages.
     - Messenger and Instagram webhook (`GET`/`POST /v1/meta/webhook`) for the
       same Meta app handshake plus Page/IG Direct messages and echoes.
+      Instagram ingest skips the business profile handle from
+      `PUBLIC_WWW_INSTAGRAM_URL` / `NEXT_PUBLIC_INSTAGRAM_URL`.
     - Token-authenticated WhatsApp conversation reads (`GET
       /v1/public/whatsapp/conversations` and
       `GET /v1/public/whatsapp/conversations/{id}/messages`) using `x-api-token`.
@@ -329,7 +331,11 @@ paths:
         plus `is_echo` outbound copies. Requests must include a valid
         `X-Hub-Signature-256` HMAC of the raw body using `META_APP_SECRET`.
         WhatsApp payloads (`object: whatsapp_business_account`) are ignored
-        here and stay on `/v1/whatsapp/webhook`.
+        here and stay on `/v1/whatsapp/webhook`. Instagram events whose
+        counterparty username matches the last path segment of the
+        configured public Instagram profile URL
+        (`PUBLIC_WWW_INSTAGRAM_URL` / `NEXT_PUBLIC_INSTAGRAM_URL`) are
+        skipped so the business account is not imported.
       requestBody:
         required: true
         content:
