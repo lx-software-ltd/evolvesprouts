@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
+from typing import TypedDict
 from uuid import UUID
 
 from sqlalchemy import or_, select
@@ -27,6 +28,13 @@ SALES_INBOX_INSTAGRAM = "instagram"
 SALES_INBOX_MESSENGER = "messenger"
 
 
+class ContactRelatedSerializerKwargs(TypedDict):
+    has_sales_conversation: bool
+    sales_conversation_channel: str | None
+    has_service_instance: bool
+    has_invoice: bool
+
+
 @dataclass(frozen=True, slots=True)
 class ContactRelatedFlags:
     """Presence of related sales, service, and invoice records."""
@@ -36,7 +44,7 @@ class ContactRelatedFlags:
     has_service_instance: bool = False
     has_invoice: bool = False
 
-    def as_serializer_kwargs(self) -> dict[str, bool | str | None]:
+    def as_serializer_kwargs(self) -> ContactRelatedSerializerKwargs:
         return {
             "has_sales_conversation": self.has_sales_conversation,
             "sales_conversation_channel": self.sales_conversation_channel,
@@ -282,7 +290,9 @@ def _contact_ids_with_invoices(session: Session, contact_ids: list[UUID]) -> set
     return matches
 
 
-def enrollment_instance_ids_for_contact(session: Session, contact_id: UUID) -> set[UUID]:
+def enrollment_instance_ids_for_contact(
+    session: Session, contact_id: UUID
+) -> set[UUID]:
     """Instance ids with a non-cancelled enrollment attributed to the contact."""
     family_ids, organization_ids = contact_family_and_org_ids(session, contact_id)
     conditions = [Enrollment.contact_id == contact_id]
