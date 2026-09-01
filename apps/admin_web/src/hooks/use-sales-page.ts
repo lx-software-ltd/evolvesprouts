@@ -25,10 +25,8 @@ export function useSalesPage() {
     SALES_VIEW_KEYS,
     DEFAULT_SALES_VIEW
   );
-  const [selectedLeadIdState, setSelectedLeadIdState] = useState<string | null | undefined>(
-    undefined
-  );
-  const [isCreateMode, setIsCreateMode] = useState(false);
+  const [selectedLeadIdState, setSelectedLeadIdState] = useState<string | null>(null);
+  const [isCreateMode, setIsCreateMode] = useState(true);
 
   const adminUsers = useAdminUsers();
   const leadList = useLeadList();
@@ -37,11 +35,8 @@ export function useSalesPage() {
     if (isCreateMode) {
       return null;
     }
-    if (selectedLeadIdState !== undefined) {
-      return selectedLeadIdState;
-    }
-    return leadList.leads[0]?.id ?? null;
-  }, [isCreateMode, leadList.leads, selectedLeadIdState]);
+    return selectedLeadIdState;
+  }, [isCreateMode, selectedLeadIdState]);
 
   const setSelectedLeadId = useCallback((leadId: string | null) => {
     setSelectedLeadIdState(leadId);

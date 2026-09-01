@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { LeadDetailPanel } from '@/components/admin/sales/lead-detail-panel';
@@ -85,5 +86,66 @@ describe('LeadDetailPanel', () => {
     expect(stageRow).not.toBe(notesRow);
     expect(stageRow?.className).toContain('md:grid-cols-2');
     expect(notesRow?.className).toContain('md:grid-cols-2');
+  });
+
+  it('shows the create-lead form in create mode', async () => {
+    const user = userEvent.setup();
+    const onCreate = vi.fn().mockResolvedValue(undefined);
+    const onCancelCreate = vi.fn();
+
+    render(
+      <LeadDetailPanel
+        mode='create'
+        lead={null}
+        users={[{ sub: 'user-1', name: 'Alex', email: 'alex@example.com' }]}
+        isLoading={false}
+        error=''
+        onStartCreate={vi.fn()}
+        onCancelCreate={onCancelCreate}
+        onCreate={onCreate}
+        onUpdateStage={vi.fn()}
+        onAddNote={vi.fn()}
+        onAssign={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole('heading', { name: 'Lead' })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('First name *')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+
+    await user.type(screen.getByPlaceholderText('First name *'), 'Sam');
+    await user.click(screen.getByRole('button', { name: 'Create lead' }));
+
+    expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        first_name: 'Sam',
+        source: 'manual',
+        lead_type: 'consultation',
+      })
+    );
+  });
+
+  it('returns to the create form from an existing lead', async () => {
+    const user = userEvent.setup();
+    const onStartCreate = vi.fn();
+
+    render(
+      <LeadDetailPanel
+        mode='edit'
+        lead={LEAD_FIXTURE}
+        users={[{ sub: 'user-1', name: 'Alex', email: 'alex@example.com' }]}
+        isLoading={false}
+        error=''
+        onStartCreate={onStartCreate}
+        onCancelCreate={vi.fn()}
+        onCreate={vi.fn()}
+        onUpdateStage={vi.fn()}
+        onAddNote={vi.fn()}
+        onAssign={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'New lead' }));
+    expect(onStartCreate).toHaveBeenCalledTimes(1);
   });
 });

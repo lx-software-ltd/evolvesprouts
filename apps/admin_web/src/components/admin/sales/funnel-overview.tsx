@@ -7,11 +7,11 @@ import type { FunnelStage, LeadAnalytics } from '@/types/leads';
 
 export interface FunnelOverviewProps {
   analytics: LeadAnalytics | null;
-  selectedStage: FunnelStage | null;
-  onSelectStage: (stage: FunnelStage | null) => void;
+  selectedStage?: FunnelStage | null;
+  onSelectStage?: (stage: FunnelStage | null) => void;
 }
 
-export function FunnelOverview({ analytics, selectedStage, onSelectStage }: FunnelOverviewProps) {
+export function FunnelOverview({ analytics, selectedStage = null, onSelectStage }: FunnelOverviewProps) {
   const data = analytics ?? EMPTY_ANALYTICS;
   const totalLeads = Object.values(data.funnel).reduce((accumulator, value) => accumulator + value, 0);
 
