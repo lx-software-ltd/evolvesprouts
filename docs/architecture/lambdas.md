@@ -679,7 +679,8 @@ their primary responsibilities.
   (`{"job_id": "<uuid>"}`)
 - Purpose: process admin-queued Meta Graph conversation backfills (last 20
   message bodies per Instagram/Messenger thread; conversation list and
-  per-thread messages are separate Graph calls) and WhatsApp Business App
+  per-thread messages are separate slim Graph calls that shrink `limit`
+  when Graph rejects the payload) and WhatsApp Business App
   `.txt`/`.zip` export parses into the existing conversation tables. Creates
   missing contacts; does not create new sales leads.
 - DB access: RDS Proxy with IAM auth (`evolvesprouts_admin`)

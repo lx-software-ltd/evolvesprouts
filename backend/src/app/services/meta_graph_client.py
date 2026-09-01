@@ -167,8 +167,8 @@ def graph_get(
                 )
             if _is_graph_payload_too_large(status_code, detail):
                 detail = (
-                    f"{detail}. Inbox import lists conversations and fetches "
-                    "messages in separate Graph calls with a smaller page size."
+                    f"{detail}. Inbox import retries the same path with a "
+                    "smaller limit and slimmer participant/from fields."
                 )
             raise MetaGraphApiError(
                 status_code=status_code,
@@ -184,6 +184,13 @@ def graph_get(
         logger=logger,
         operation_name="meta.graph.get",
     )
+
+
+def is_graph_payload_too_large(exc: BaseException) -> bool:
+    """Return True when Graph rejected the request as too large."""
+    if not isinstance(exc, MetaGraphApiError):
+        return False
+    return _is_graph_payload_too_large(exc.status_code, str(exc))
 
 
 def _is_graph_payload_too_large(status_code: int, detail: str) -> bool:

@@ -140,5 +140,5 @@ def test_graph_get_payload_too_large_is_not_retried(
 
     assert exc_info.value.status_code == 500
     assert "reduce the amount of data" in str(exc_info.value).lower()
-    assert "separate Graph calls" in str(exc_info.value)
+    assert "smaller limit" in str(exc_info.value)
     assert calls["count"] == 1
