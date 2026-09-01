@@ -153,6 +153,10 @@ describe('LeadDetailPanel', () => {
     expect(screen.getByRole('button', { name: 'Update lead' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Contact notes' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Notes' }).closest('.grid')).toBe(
+      screen.getByRole('heading', { name: 'Contact notes' }).closest('.grid')
+    );
     await waitFor(() => {
       expect(screen.getByText('Called the parent.')).toBeInTheDocument();
     });

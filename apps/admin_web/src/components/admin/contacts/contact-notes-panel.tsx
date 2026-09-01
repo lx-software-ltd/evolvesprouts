@@ -214,6 +214,7 @@ export function ContactNotesPanel({
 
   return (
     <>
+      <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
       <AdminEditorCard
         title={notesTitle}
         description={notesDescription}
@@ -338,6 +339,7 @@ export function ContactNotesPanel({
           </AdminDataTableBody>
         </AdminDataTable>
       </PaginatedTableCard>
+      </div>
 
       <ConfirmDialog {...confirmDialogProps} />
     </>

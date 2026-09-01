@@ -150,6 +150,10 @@ describe('ContactNotesPanel', () => {
     render(<ContactNotesPanel contact={null} adminUsers={[]} />);
 
     expect(screen.getByRole('heading', { name: 'Notes' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Contact notes' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Notes' }).closest('.grid')).toBe(
+      screen.getByRole('heading', { name: 'Contact notes' }).closest('.grid')
+    );
     expect(screen.getByText('Save the lead to add notes for the linked contact.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add note' })).toBeDisabled();
     expect(listAdminContactNotes).not.toHaveBeenCalled();
