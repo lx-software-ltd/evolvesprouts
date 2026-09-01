@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Protocol
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
 from app.db.models.enums import FunnelStage, LeadEventType, LeadType
+from app.db.models.meta import MetaConversation
 from app.db.models.sales_lead import SalesLead
+from app.db.models.whatsapp import WhatsAppConversation
 from app.db.repositories.sales_lead import SalesLeadRepository
 from app.services.sales_assignment import (
     notify_lead_assignee,
@@ -19,15 +20,7 @@ from app.services.sales_assignment import (
 
 _SYSTEM_ACTOR = "system"
 
-
-class ConversationLeadLink(Protocol):
-    """Minimal conversation fields needed to attach and advance a sales lead."""
-
-    contact_id: UUID | None
-    lead_id: UUID | None
-    inbound_count: int | None
-    outbound_count: int | None
-    id: UUID
+ConversationLeadLink = WhatsAppConversation | MetaConversation
 
 
 _RANK = {
