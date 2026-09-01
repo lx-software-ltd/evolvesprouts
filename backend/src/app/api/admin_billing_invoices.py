@@ -14,6 +14,9 @@ from app.api.admin_billing_common import _session_with_audit
 from app.api.admin_billing_invoice_draft_helpers import (
     _resolve_bill_to_party_from_invoice_fks,
 )
+from app.api.admin_billing_payment_create import (
+    create_pending_payment_for_issued_invoice,
+)
 from app.api.admin_request import parse_body
 from app.db.audit import AuditService
 from app.db.models import Contact, Family, Organization
@@ -142,6 +145,9 @@ def _issue_invoice(
         refresh_invoice_pdf(session, inv)
         maybe_confirm_enrollments_on_zero_total_invoice_issue(session, inv)
         recompute_invoice_settlement(session, inv)
+        pending_pay = create_pending_payment_for_issued_invoice(
+            session, inv, user_sub=user_sub, request_id=request_id
+        )
 
         return json_response(
             200,
@@ -149,6 +155,7 @@ def _issue_invoice(
                 "invoiceId": str(inv.id),
                 "invoiceNumber": inv.invoice_number,
                 "issuedPdfSha256": inv.issued_pdf_sha256,
+                "paymentId": str(pending_pay.id) if pending_pay is not None else None,
             },
             event=event,
         )

@@ -1111,6 +1111,11 @@ def test_issue_preserves_draft_invoice_date_and_derives_due_date(
         "AuditService",
         lambda *_a, **_k: MagicMock(log_custom=lambda **_kw: None),
     )
+    monkeypatch.setattr(
+        admin_billing_invoices_mod,
+        "create_pending_payment_for_issued_invoice",
+        lambda *_a, **_k: None,
+    )
 
     ev = api_gateway_event(
         method="POST",
@@ -1203,6 +1208,11 @@ def test_issue_legacy_draft_without_invoice_date_uses_snapshot(
         admin_billing_invoices_mod,
         "AuditService",
         lambda *_a, **_k: MagicMock(log_custom=lambda **_kw: None),
+    )
+    monkeypatch.setattr(
+        admin_billing_invoices_mod,
+        "create_pending_payment_for_issued_invoice",
+        lambda *_a, **_k: None,
     )
 
     ev = api_gateway_event(

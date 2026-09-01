@@ -16,12 +16,15 @@ import pytest
 from app.api import admin_billing
 from app.api import admin_billing_invoice_queries as admin_billing_invoice_queries_mod
 from app.api import admin_billing_invoices as admin_billing_invoices_mod
+from app.api import admin_billing_payment_create as admin_billing_payment_create_mod
 from app.api.admin_billing_invoice_serializers import parse_optional_invoice_settlement
 from app.db.models import Contact
 from app.db.models.customer_invoice import CustomerInvoice
 from app.db.models.enums import (
     BillingBillToKind,
     BillingInvoiceStatus,
+    BillingPaymentDirection,
+    BillingPaymentStatus,
 )
 from app.exceptions import ValidationError
 
@@ -898,6 +901,11 @@ def test_issue_invoice_calls_recompute_invoice_settlement(
         "maybe_confirm_enrollments_on_zero_total_invoice_issue",
         lambda *_a, **_k: None,
     )
+    monkeypatch.setattr(
+        admin_billing_invoices_mod,
+        "create_pending_payment_for_issued_invoice",
+        lambda *_a, **_k: None,
+    )
 
     @contextmanager
     def _fake_session(_u: str, _r: str | None) -> Any:
@@ -933,3 +941,250 @@ def test_issue_invoice_calls_recompute_invoice_settlement(
     )
     assert r["statusCode"] == 200
     assert touched == [inv_id]
+
+
+def _issued_invoice_for_payment_stub(
+    *,
+    total: Decimal,
+    currency: str = "HKD",
+    bill_to_kind: BillingBillToKind = BillingBillToKind.CONTACT,
+    bill_to_contact_id: UUID | None = None,
+) -> SimpleNamespace:
+    return SimpleNamespace(
+        id=uuid4(),
+        total=total,
+        currency=currency,
+        bill_to_kind=bill_to_kind,
+        bill_to_contact_id=bill_to_contact_id,
+    )
+
+
+def test_create_pending_payment_for_issued_invoice_links_single_enrollment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    en_id = uuid4()
+    contact_id = uuid4()
+    inv = _issued_invoice_for_payment_stub(
+        total=Decimal("250.5000"),
+        currency="hkd",
+        bill_to_contact_id=contact_id,
+    )
+    session = MagicMock()
+
+    def _add(obj: Any) -> None:
+        obj.id = uuid4()
+
+    session.add.side_effect = _add
+    monkeypatch.setattr(
+        admin_billing_payment_create_mod,
+        "distinct_enrollment_ids_on_invoice",
+        lambda _s, _i: [en_id],
+    )
+    audit = MagicMock()
+    monkeypatch.setattr(
+        admin_billing_payment_create_mod,
+        "AuditService",
+        lambda *_a, **_k: audit,
+    )
+
+    pay = admin_billing_payment_create_mod.create_pending_payment_for_issued_invoice(
+        session,
+        inv,
+        user_sub="user-1",
+        request_id="req-1",  # type: ignore[arg-type]
+    )
+    assert pay is not None
+    assert pay.direction == BillingPaymentDirection.INBOUND
+    assert pay.status == BillingPaymentStatus.PENDING
+    assert pay.method == "fps"
+    assert pay.amount == Decimal("250.5000")
+    assert pay.currency == "HKD"
+    assert pay.enrollment_id == en_id
+    assert pay.contact_id == contact_id
+    assert pay.succeeded_at is None
+    assert pay.confirmed_by is None
+    session.add.assert_called_once_with(pay)
+    audit.log_custom.assert_called_once()
+    logged = audit.log_custom.call_args.kwargs
+    assert logged["action"] == "INVOICE_ISSUE_PAYMENT_CREATED"
+    assert logged["new_values"]["invoice_id"] == str(inv.id)
+    assert logged["new_values"]["enrollment_id"] == str(en_id)
+
+
+def test_create_pending_payment_for_issued_invoice_customized_has_no_enrollment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    contact_id = uuid4()
+    inv = _issued_invoice_for_payment_stub(
+        total=Decimal("80"),
+        bill_to_contact_id=contact_id,
+    )
+    session = MagicMock()
+    session.add.side_effect = lambda obj: setattr(obj, "id", uuid4())
+    monkeypatch.setattr(
+        admin_billing_payment_create_mod,
+        "distinct_enrollment_ids_on_invoice",
+        lambda _s, _i: [],
+    )
+    monkeypatch.setattr(
+        admin_billing_payment_create_mod,
+        "AuditService",
+        lambda *_a, **_k: MagicMock(),
+    )
+
+    pay = admin_billing_payment_create_mod.create_pending_payment_for_issued_invoice(
+        session,
+        inv,
+        user_sub="user-1",
+        request_id=None,  # type: ignore[arg-type]
+    )
+    assert pay is not None
+    assert pay.enrollment_id is None
+    assert pay.contact_id == contact_id
+    assert pay.amount == Decimal("80")
+    assert pay.currency == "HKD"
+    assert pay.status == BillingPaymentStatus.PENDING
+
+
+def test_create_pending_payment_for_issued_invoice_multi_enrollment_unsets_enrollment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    inv = _issued_invoice_for_payment_stub(
+        total=Decimal("40"),
+        bill_to_kind=BillingBillToKind.FAMILY,
+        bill_to_contact_id=None,
+    )
+    session = MagicMock()
+    session.add.side_effect = lambda obj: setattr(obj, "id", uuid4())
+    monkeypatch.setattr(
+        admin_billing_payment_create_mod,
+        "distinct_enrollment_ids_on_invoice",
+        lambda _s, _i: [uuid4(), uuid4()],
+    )
+    monkeypatch.setattr(
+        admin_billing_payment_create_mod,
+        "AuditService",
+        lambda *_a, **_k: MagicMock(),
+    )
+
+    pay = admin_billing_payment_create_mod.create_pending_payment_for_issued_invoice(
+        session,
+        inv,
+        user_sub="user-1",
+        request_id=None,  # type: ignore[arg-type]
+    )
+    assert pay is not None
+    assert pay.enrollment_id is None
+    assert pay.contact_id is None
+    assert pay.method == "fps"
+
+
+def test_create_pending_payment_for_issued_invoice_skips_zero_total(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    inv = _issued_invoice_for_payment_stub(total=Decimal("0"))
+    session = MagicMock()
+    monkeypatch.setattr(
+        admin_billing_payment_create_mod,
+        "distinct_enrollment_ids_on_invoice",
+        lambda *_a, **_k: pytest.fail("should not query enrollments"),
+    )
+
+    pay = admin_billing_payment_create_mod.create_pending_payment_for_issued_invoice(
+        session,
+        inv,
+        user_sub="user-1",
+        request_id=None,  # type: ignore[arg-type]
+    )
+    assert pay is None
+    session.add.assert_not_called()
+
+
+def test_issue_invoice_returns_created_payment_id(
+    api_gateway_event: Any,
+    admin_identity: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    inv_id = uuid4()
+    pay_id = uuid4()
+    bill_cid = uuid4()
+    inv = SimpleNamespace(
+        id=inv_id,
+        status=BillingInvoiceStatus.DRAFT,
+        currency="HKD",
+        total=Decimal("100"),
+        bill_to_kind=BillingBillToKind.CONTACT,
+        bill_to_contact_id=bill_cid,
+        bill_to_family_id=None,
+        bill_to_organization_id=None,
+        bill_to_display_name="Pat",
+        bill_to_email="p@example.com",
+        bill_to_snapshot=None,
+        invoice_date=date(2024, 3, 10),
+        due_date=None,
+        invoice_number=None,
+        invoice_sequence=None,
+        issued_at=None,
+        issued_pdf_sha256="abc",
+    )
+
+    monkeypatch.setattr(
+        admin_billing_invoices_mod,
+        "recompute_invoice_settlement",
+        lambda *_a, **_k: None,
+    )
+    monkeypatch.setattr(
+        admin_billing_invoices_mod,
+        "next_invoice_number",
+        lambda _session: ("INV-PAY-1", 1),
+    )
+    monkeypatch.setattr(
+        admin_billing_invoices_mod, "refresh_invoice_pdf", lambda *_a, **_k: None
+    )
+    monkeypatch.setattr(
+        admin_billing_invoices_mod,
+        "maybe_confirm_enrollments_on_zero_total_invoice_issue",
+        lambda *_a, **_k: None,
+    )
+    monkeypatch.setattr(
+        admin_billing_invoices_mod,
+        "create_pending_payment_for_issued_invoice",
+        lambda *_a, **_k: SimpleNamespace(id=pay_id),
+    )
+
+    @contextmanager
+    def _fake_session(_u: str, _r: str | None) -> Any:
+        s = MagicMock()
+
+        def _get(model: Any, pk: Any) -> Any:
+            if model is CustomerInvoice and pk == inv_id:
+                return inv
+            if model is Contact and pk == bill_cid:
+                return SimpleNamespace(
+                    id=bill_cid,
+                    first_name="P",
+                    last_name="N",
+                    email="p@example.com",
+                )
+            return None
+
+        s.get.side_effect = _get
+        s.flush = MagicMock()
+        yield s
+
+    monkeypatch.setattr(
+        admin_billing_invoices_mod, "_session_with_audit", _fake_session
+    )
+
+    ev = api_gateway_event(
+        method="POST",
+        path=f"/v1/admin/billing/invoices/{inv_id}/issue",
+        authorizer_context=admin_identity,
+    )
+    r = admin_billing.handle_admin_billing_request(
+        ev, "POST", f"/v1/admin/billing/invoices/{inv_id}/issue"
+    )
+    assert r["statusCode"] == 200
+    body = json.loads(r["body"])
+    assert body["paymentId"] == str(pay_id)
+    assert body["invoiceId"] == str(inv_id)

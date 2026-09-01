@@ -347,7 +347,7 @@ export function useClientInvoicesInvoiceList({
             ? ` (SHA-256: ${out.issuedPdfSha256.slice(0, 16)}…)`
             : ""),
       );
-      await billingRefresh.refreshInvoices();
+      await billingRefresh.refreshBillingLists();
     } catch (caught) {
       setActionError(
         toErrorMessage(caught, "Issue failed.", { honorBackendMessage: true }),

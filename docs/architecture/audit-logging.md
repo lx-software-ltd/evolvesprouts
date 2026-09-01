@@ -165,6 +165,7 @@ and `share_token` are redacted in admin audit API responses.
 
 Application-level `AuditService` entries supplement invoice draft/issue flows where noted in code
 (for example `DRAFT_CREATED` and `DRAFT_CREATED_CUSTOMIZED` on `customer_invoices` when creating enrollment-based or customized drafts,
+`INVOICE_ISSUE_PAYMENT_CREATED` on `customer_payments` when issue inserts a pending inbound stub,
 and `DELETE_DRAFT` before a draft invoice row is removed).
 
 **Public reservations:** Trigger-written `audit_log` rows for enrollments and related tables

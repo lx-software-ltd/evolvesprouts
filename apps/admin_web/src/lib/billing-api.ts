@@ -384,11 +384,13 @@ export async function issueInvoice(invoiceId: string): Promise<{
   invoiceId: string;
   invoiceNumber?: string;
   issuedPdfSha256?: string | null;
+  paymentId?: string | null;
 }> {
   const payload = await adminApiRequest<{
     invoiceId?: string;
     invoiceNumber?: string;
     issuedPdfSha256?: string | null;
+    paymentId?: string | null;
   }>({
     endpointPath: `/v1/admin/billing/invoices/${invoiceId}/issue`,
     method: 'POST',
@@ -403,6 +405,7 @@ export async function issueInvoice(invoiceId: string): Promise<{
     invoiceId: id,
     invoiceNumber: root.invoiceNumber,
     issuedPdfSha256: root.issuedPdfSha256,
+    paymentId: root.paymentId,
   };
 }
 

@@ -18,9 +18,10 @@ from app.utils.logging import get_logger
 logger = get_logger(__name__)
 
 
-def _distinct_enrollment_ids_on_invoice(
+def distinct_enrollment_ids_on_invoice(
     session: Session, invoice_id: UUID
 ) -> list[UUID]:
+    """Return distinct non-null enrollment ids on invoice lines."""
     stmt = (
         select(CustomerInvoiceLine.enrollment_id)
         .where(
@@ -31,6 +32,12 @@ def _distinct_enrollment_ids_on_invoice(
     )
     rows = list(session.scalars(stmt).all())
     return [eid for eid in rows if eid is not None]
+
+
+def _distinct_enrollment_ids_on_invoice(
+    session: Session, invoice_id: UUID
+) -> list[UUID]:
+    return distinct_enrollment_ids_on_invoice(session, invoice_id)
 
 
 def promote_prospect_party_for_enrollment(

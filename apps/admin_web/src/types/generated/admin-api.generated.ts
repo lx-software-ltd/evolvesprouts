@@ -5642,7 +5642,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Issue invoice (assign number, PDF hash) */
+        /**
+         * Issue invoice (assign number, PDF hash)
+         * @description Issues a draft invoice (number, snapshot dates, PDF). For positive-total invoices, also creates one pending inbound `customer_payments` row with amount and currency copied from the invoice and method `fps`. `enrollment_id` is set only when the invoice has exactly one enrollment line; customized and multi-enrollment invoices leave it unset. Zero-total invoices skip payment creation (`paymentId` is null). The payment is not allocated at issue time.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -5665,6 +5668,11 @@ export interface paths {
                             invoiceId?: string;
                             invoiceNumber?: string;
                             issuedPdfSha256?: string | null;
+                            /**
+                             * Format: uuid
+                             * @description Pending inbound customer payment created at issue. Null for zero-total invoices.
+                             */
+                            paymentId?: string | null;
                         };
                     };
                 };
