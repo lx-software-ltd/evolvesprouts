@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { ConversationNameCell } from './conversation-name-cell';
 import { InboxImportStatus } from './inbox-import-status';
 
+import { useAutoSelectContactConversation } from '@/hooks/use-auto-select-contact-conversation';
 import { useLocationSearchParam } from '@/hooks/use-query-tab-state';
 import { useWhatsAppConversations } from '@/hooks/use-whatsapp-conversations';
 import { ADMIN_CONTACT_QUERY_PARAM } from '@/lib/inbox-conversation-name';
@@ -19,6 +20,7 @@ import {
   type InboxImportJobSummary,
 } from '@/lib/inbox-import-api';
 import { ViewIcon } from '@/components/icons/action-icons';
+import { AdminCollapsibleSection } from '@/components/ui/admin-collapsible-section';
 import { AdminEditorCard } from '@/components/ui/admin-editor-card';
 import { FileUploadButton } from '@/components/ui/file-upload-button';
 import { Label } from '@/components/ui/label';
@@ -47,7 +49,11 @@ const MAX_EXPORT_BYTES = 15 * 1024 * 1024;
 export function WhatsAppConversationsView() {
   const contactId = useLocationSearchParam(ADMIN_CONTACT_QUERY_PARAM);
   const list = useWhatsAppConversations(contactId);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useAutoSelectContactConversation(
+    contactId,
+    list.conversations[0]?.id ?? null,
+    list.isLoading
+  );
   const detail = useWhatsAppMessages(selectedId);
   const [exportFile, setExportFile] = useState<File | null>(null);
   const [counterpartyWaId, setCounterpartyWaId] = useState('');
@@ -134,67 +140,6 @@ export function WhatsAppConversationsView() {
 
   return (
     <div className='space-y-4'>
-      <AdminEditorCard
-        title='Import WhatsApp export'
-        description='Cloud API cannot pull old WhatsApp chats. Upload a Business App .txt or .zip export. Contacts are created when missing; no new sales leads are opened.'
-        actions={
-          <Button
-            type='submit'
-            form='whatsapp-export-import'
-            disabled={isImporting || !exportFile}
-          >
-            {isImporting ? 'Importing…' : 'Import export'}
-          </Button>
-        }
-      >
-        {importError ? (
-          <StatusBanner variant='error' title='WhatsApp export'>
-            {importError}
-          </StatusBanner>
-        ) : null}
-        <InboxImportStatus job={importJob} />
-        <form
-          id='whatsapp-export-import'
-          className='space-y-3'
-          onSubmit={(event) => {
-            event.preventDefault();
-            void handleImportExport();
-          }}
-        >
-          <div>
-            <Label htmlFor='whatsapp-export-file'>Chat export (.txt or .zip, max 15MB)</Label>
-            <FileUploadButton
-              id='whatsapp-export-file'
-              accept='.txt,.zip,text/plain,application/zip'
-              disabled={isImporting}
-              selectedFileName={exportFile?.name ?? null}
-              emptyLabel='No file selected'
-              buttonLabel='Choose export'
-              onChange={(event) => {
-                setExportFile(event.target.files?.[0] ?? null);
-              }}
-            />
-          </div>
-          <label className='flex flex-col gap-1 text-sm text-slate-700'>
-            Counterparty WhatsApp number (optional)
-            <Input
-              value={counterpartyWaId}
-              onChange={(event) => setCounterpartyWaId(event.target.value)}
-              placeholder='85291234567'
-              disabled={isImporting}
-            />
-          </label>
-          <label className='flex flex-col gap-1 text-sm text-slate-700'>
-            Business display names (optional, comma-separated)
-            <Input
-              value={businessNames}
-              onChange={(event) => setBusinessNames(event.target.value)}
-              placeholder='Names that are outbound in the export'
-              disabled={isImporting}
-            />
-          </label>
-        </form>
-      </AdminEditorCard>
       {selected ? (
         <AdminEditorCard
           title={
@@ -248,16 +193,80 @@ export function WhatsAppConversationsView() {
         error={list.error}
         onLoadMore={list.loadMore}
         toolbar={
-          <div className='mb-3 flex flex-wrap items-end gap-3'>
-            <label className='flex min-w-48 flex-1 flex-col gap-1 text-sm text-slate-700'>
-              Search
-              <Input
-                type='search'
-                value={list.filters.q}
-                onChange={(event) => list.setFilter('q', event.target.value)}
-                placeholder='Name or WhatsApp id'
-              />
-            </label>
+          <div className='mb-3 space-y-3'>
+            <AdminCollapsibleSection
+              id='whatsapp-export-import-section'
+              title='Import WhatsApp export'
+              disabled={isImporting}
+            >
+              <p className='mb-3 text-sm text-slate-600'>
+                Cloud API cannot pull old WhatsApp chats. Upload a Business App .txt or .zip
+                export. Contacts are created when missing; no new sales leads are opened.
+              </p>
+              {importError ? (
+                <StatusBanner variant='error' title='WhatsApp export'>
+                  {importError}
+                </StatusBanner>
+              ) : null}
+              <InboxImportStatus job={importJob} />
+              <form
+                id='whatsapp-export-import'
+                className='space-y-3'
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void handleImportExport();
+                }}
+              >
+                <div>
+                  <Label htmlFor='whatsapp-export-file'>Chat export (.txt or .zip, max 15MB)</Label>
+                  <FileUploadButton
+                    id='whatsapp-export-file'
+                    accept='.txt,.zip,text/plain,application/zip'
+                    disabled={isImporting}
+                    selectedFileName={exportFile?.name ?? null}
+                    emptyLabel='No file selected'
+                    buttonLabel='Choose export'
+                    onChange={(event) => {
+                      setExportFile(event.target.files?.[0] ?? null);
+                    }}
+                  />
+                </div>
+                <label className='flex flex-col gap-1 text-sm text-slate-700'>
+                  Counterparty WhatsApp number (optional)
+                  <Input
+                    value={counterpartyWaId}
+                    onChange={(event) => setCounterpartyWaId(event.target.value)}
+                    placeholder='85291234567'
+                    disabled={isImporting}
+                  />
+                </label>
+                <label className='flex flex-col gap-1 text-sm text-slate-700'>
+                  Business display names (optional, comma-separated)
+                  <Input
+                    value={businessNames}
+                    onChange={(event) => setBusinessNames(event.target.value)}
+                    placeholder='Names that are outbound in the export'
+                    disabled={isImporting}
+                  />
+                </label>
+                <div className='flex justify-start gap-2'>
+                  <Button type='submit' disabled={isImporting || !exportFile}>
+                    {isImporting ? 'Importing…' : 'Import export'}
+                  </Button>
+                </div>
+              </form>
+            </AdminCollapsibleSection>
+            <div className='flex flex-wrap items-end gap-3'>
+              <label className='flex min-w-48 flex-1 flex-col gap-1 text-sm text-slate-700'>
+                Search
+                <Input
+                  type='search'
+                  value={list.filters.q}
+                  onChange={(event) => list.setFilter('q', event.target.value)}
+                  placeholder='Name or WhatsApp id'
+                />
+              </label>
+            </div>
           </div>
         }
       >
