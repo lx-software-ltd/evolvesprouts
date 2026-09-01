@@ -273,6 +273,10 @@ class InboxImportNestedStack extends cdk.NestedStack {
       handler: "lambda/inbox_import/handler.lambda_handler",
       timeout: cdk.Duration.seconds(600),
       manageLogGroup: false,
+      // Do not carve out reserved concurrency (PythonLambda default is 25).
+      // Accounts with many reserved functions can dip below AWS's minimum 100
+      // unreserved executions and fail CREATE.
+      reservedConcurrentExecutions: -1,
       environment: {
         INBOX_IMPORT_LAMBDA_TIMEOUT_SECONDS: "600",
         DATABASE_SECRET_ARN: props.databaseSecretArn,

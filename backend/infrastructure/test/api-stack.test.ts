@@ -200,6 +200,31 @@ function assertCognitoClientAllowlistWiring(template: Template): void {
   }
 }
 
+function assertInboxImportHasNoReservedConcurrency(stack: cdk.Stack): void {
+  const nested = stack.node.tryFindChild("InboxImport");
+  if (!(nested instanceof cdk.NestedStack)) {
+    throw new Error("Expected InboxImport nested stack on ApiStack");
+  }
+  const template = Template.fromStack(nested);
+  const functions = template.findResources("AWS::Lambda::Function");
+  const match = Object.entries(functions).find(([, resource]) => {
+    const name = (resource.Properties ?? {}).FunctionName;
+    return name === "evolvesprouts-InboxImportFunction";
+  });
+  if (!match) {
+    throw new Error(
+      "Expected Lambda FunctionName evolvesprouts-InboxImportFunction",
+    );
+  }
+  const [logicalId, resource] = match;
+  const reserved = (resource.Properties ?? {}).ReservedConcurrentExecutions;
+  if (reserved !== undefined) {
+    throw new Error(
+      `InboxImportFunction ${logicalId} must omit ReservedConcurrentExecutions so the account unreserved pool stays above 100; found ${JSON.stringify(reserved)}`,
+    );
+  }
+}
+
 function assertApiTokenAuthorizerHasNoReservedConcurrency(template: Template): void {
   const functions = template.findResources("AWS::Lambda::Function");
   const match = Object.entries(functions).find(([, resource]) => {
@@ -221,7 +246,11 @@ function assertApiTokenAuthorizerHasNoReservedConcurrency(template: Template): v
 }
 
 function main(): void {
-  const template = synthApiTemplate();
+  const app = new cdk.App();
+  const stack = new ApiStack(app, "TestApi", {
+    env: { account: "111111111111", region: "ap-southeast-1" },
+  });
+  const template = Template.fromStack(stack);
   assertStageHasNoApiGatewayCacheCluster(template);
   assertGatewayResponsesHaveNoBodyTemplates(template);
   assertStageHasCheckovCkv120Suppression(template);
@@ -229,6 +258,7 @@ function main(): void {
   assertPollResponsesTableHasExpiresAtTtl(template);
   assertCognitoClientAllowlistWiring(template);
   assertApiTokenAuthorizerHasNoReservedConcurrency(template);
+  assertInboxImportHasNoReservedConcurrency(stack);
 
   console.log("api-stack API Gateway stage cache assertions passed.");
 }

@@ -2,9 +2,11 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import type { SalesView } from '@/hooks/use-sales-page';
+
 const { mockUseSalesPage, state } = vi.hoisted(() => {
   const state = {
-    activeView: 'pipeline' as const,
+    activeView: 'pipeline' as SalesView,
     setActiveView: vi.fn(),
     selectedLeadId: null as string | null,
     setSelectedLeadId: vi.fn(),
