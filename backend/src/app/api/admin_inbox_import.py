@@ -84,11 +84,11 @@ def _create_meta_job(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, A
 def _create_whatsapp_job(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, Any]:
     body = parse_body(event)
     attachment_id = _parse_required_uuid(
-        body.get("attachment_asset_id") or body.get("attachmentAssetId"),
+        body.get("attachment_asset_id"),
         field="attachment_asset_id",
     )
-    counterparty = body.get("counterparty_wa_id") or body.get("counterpartyWaId")
-    names_raw = body.get("business_display_names") or body.get("businessDisplayNames")
+    counterparty = body.get("counterparty_wa_id")
+    names_raw = body.get("business_display_names")
     names: list[str] = []
     if names_raw is not None:
         if not isinstance(names_raw, list):

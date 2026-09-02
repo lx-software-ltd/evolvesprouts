@@ -96,8 +96,8 @@ def resolve_bill_to_primary_contacts(
     if not isinstance(body, Mapping):
         raise ValidationError("Request body must be a JSON object", field="body")
 
-    raw_families = body.get("familyIds") or body.get("family_ids")
-    raw_orgs = body.get("organizationIds") or body.get("organization_ids")
+    raw_families = body.get("familyIds")
+    raw_orgs = body.get("organizationIds")
 
     family_ids = _dedupe_uuid_list(parse_uuid_list(raw_families, "familyIds"))
     organization_ids = _dedupe_uuid_list(parse_uuid_list(raw_orgs, "organizationIds"))

@@ -88,12 +88,7 @@ def _apply_succeeded_manual_patch(
             field="method",
         )
     p.method = new_method
-    ext_ref = (
-        str(
-            body.get("externalReference") or body.get("external_reference") or ""
-        ).strip()
-        or None
-    )
+    ext_ref = str(body.get("externalReference") or "").strip() or None
     p.external_reference = ext_ref
     try:
         session.flush()
@@ -151,12 +146,7 @@ def _apply_pending_manual_patch(
     if status_raw not in ("pending", "succeeded"):
         raise ValidationError("status must be pending or succeeded", field="status")
 
-    ext_ref = (
-        str(
-            body.get("externalReference") or body.get("external_reference") or ""
-        ).strip()
-        or None
-    )
+    ext_ref = str(body.get("externalReference") or "").strip() or None
 
     is_free_zero = amount == Decimal("0") or method == "free"
     if is_free_zero:

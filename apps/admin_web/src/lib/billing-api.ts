@@ -447,7 +447,7 @@ export async function exportBillingCsv(
 ): Promise<string> {
   const payload = await adminApiRequest<{ csv?: string }>({
     endpointPath: buildAdminListPath('/v1/admin/billing/export', {
-      filters: { exportVersion },
+      filters: { export_version: exportVersion },
     }),
     method: 'GET',
     signal,

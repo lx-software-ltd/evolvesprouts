@@ -55,17 +55,9 @@ def _parse_export_cursor(raw: str | None) -> tuple[datetime, UUID] | None:
 def _export_csv(
     event: Mapping[str, Any], *, user_sub: str, request_id: str | None
 ) -> dict[str, Any]:
-    raw_ver = (
-        (
-            query_param(event, "exportVersion")
-            or query_param(event, "export_version")
-            or "2"
-        )
-        .strip()
-        .lower()
-    )
+    raw_ver = (query_param(event, "export_version") or "2").strip().lower()
     if raw_ver not in ("1", "2"):
-        raise ValidationError("exportVersion must be 1 or 2", field="exportVersion")
+        raise ValidationError("export_version must be 1 or 2", field="export_version")
 
     row_limit = parse_limit(
         event, default=_DEFAULT_EXPORT_LIMIT, max_limit=_MAX_EXPORT_LIMIT

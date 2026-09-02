@@ -36,10 +36,10 @@ def test_export_csv_rejects_invalid_export_version(
     ev = api_gateway_event(
         method="GET",
         path="/v1/admin/billing/export",
-        query_params={"exportVersion": "9"},
+        query_params={"export_version": "9"},
         authorizer_context=admin_identity,
     )
-    with pytest.raises(ValidationError, match="exportVersion"):
+    with pytest.raises(ValidationError, match="export_version"):
         admin_billing.handle_admin_billing_request(
             ev, "GET", "/v1/admin/billing/export"
         )
@@ -92,7 +92,7 @@ def test_export_csv_returns_next_cursor_when_payment_page_is_full(
     ev = api_gateway_event(
         method="GET",
         path="/v1/admin/billing/export",
-        query_params={"exportVersion": "1", "limit": "1"},
+        query_params={"export_version": "1", "limit": "1"},
         authorizer_context=admin_identity,
     )
     response = admin_billing.handle_admin_billing_request(
@@ -192,7 +192,7 @@ def test_export_csv_includes_auxiliary_rows_only_on_first_page(
     first_ev = api_gateway_event(
         method="GET",
         path="/v1/admin/billing/export",
-        query_params={"exportVersion": "2", "limit": "1"},
+        query_params={"export_version": "2", "limit": "1"},
         authorizer_context=admin_identity,
     )
     first = admin_billing.handle_admin_billing_request(
@@ -277,7 +277,7 @@ def test_export_csv_paged_response_omits_auxiliary_rows(
     first_ev = api_gateway_event(
         method="GET",
         path="/v1/admin/billing/export",
-        query_params={"exportVersion": "1", "limit": "1"},
+        query_params={"export_version": "1", "limit": "1"},
         authorizer_context=admin_identity,
     )
     first = admin_billing.handle_admin_billing_request(
@@ -292,7 +292,7 @@ def test_export_csv_paged_response_omits_auxiliary_rows(
         method="GET",
         path="/v1/admin/billing/export",
         query_params={
-            "exportVersion": "1",
+            "export_version": "1",
             "limit": "1",
             "cursor": first_body["next_cursor"],
         },

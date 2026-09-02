@@ -267,7 +267,7 @@ def _email_invoice(
     request_id: str | None,
 ) -> dict[str, Any]:
     body = parse_body(event)
-    to_raw = str(body.get("toEmail") or body.get("to_email") or "").strip()
+    to_raw = str(body.get("toEmail") or "").strip()
     if not to_raw:
         raise ValidationError("toEmail is required", field="toEmail")
     to_addresses = _parse_to_email_list(to_raw)

@@ -4902,13 +4902,13 @@ export interface paths {
         };
         /**
          * Export billing CSV (default export v2)
-         * @description Default `export_version` is **2** (`?exportVersion=2` or omit). v2 rows include `document_type` in `payment`, `refund`, `invoice`, `invoice_line`, `receipt`, and `allocation` with columns for `payment_method`, `bank_reference` (payment `external_reference`), `counterparty_name_snapshot` (invoice line description or invoice snapshot display name), `tax_amount`, `created_by` (payment `confirmed_by`), bill-to fields on invoice rows, and Stripe / linkage ids. Pass `exportVersion=1` for the legacy payments+allocations-only shape. Payment rows are paginated via `limit` and `cursor`; allocations, invoices, invoice lines, and receipts are included only on the first page (`cursor` omitted) up to fixed per-entity caps (10,000 allocations; 5,000 invoices and receipts).
+         * @description Default `export_version` is **2** (`?export_version=2` or omit). v2 rows include `document_type` in `payment`, `refund`, `invoice`, `invoice_line`, `receipt`, and `allocation` with columns for `payment_method`, `bank_reference` (payment `external_reference`), `counterparty_name_snapshot` (invoice line description or invoice snapshot display name), `tax_amount`, `created_by` (payment `confirmed_by`), bill-to fields on invoice rows, and Stripe / linkage ids. Pass `export_version=1` for the legacy payments+allocations-only shape. Payment rows are paginated via `limit` and `cursor`; allocations, invoices, invoice lines, and receipts are included only on the first page (`cursor` omitted) up to fixed per-entity caps (10,000 allocations; 5,000 invoices and receipts).
          */
         get: {
             parameters: {
                 query?: {
                     /** @description `1` (legacy) or `2` (default). */
-                    exportVersion?: "1" | "2";
+                    export_version?: "1" | "2";
                     /** @description Maximum payment rows per page (default 1000, max 5000). */
                     limit?: number;
                     /** @description Opaque pagination cursor from a prior export response `next_cursor`. */

@@ -206,7 +206,7 @@ def _list_payments(
 ) -> dict[str, Any]:
     limit = parse_limit(event)
     cursor_ts, cursor_id = parse_created_cursor(query_param(event, "cursor"))
-    invoice_raw = query_param(event, "invoice_id") or query_param(event, "invoiceId")
+    invoice_raw = query_param(event, "invoice_id")
     inv_filter: UUID | None = None
     if invoice_raw and str(invoice_raw).strip():
         try:
@@ -339,12 +339,7 @@ def _confirm_payment(
         p.status = BillingPaymentStatus.SUCCEEDED
         p.succeeded_at = datetime.now(UTC)
         p.confirmed_by = user_sub
-        p.external_reference = (
-            str(
-                body.get("externalReference") or body.get("external_reference") or ""
-            ).strip()
-            or None
-        )
+        p.external_reference = str(body.get("externalReference") or "").strip() or None
         session.flush()
         existing_receipt = session.execute(
             select(CustomerReceipt).where(CustomerReceipt.customer_payment_id == p.id)

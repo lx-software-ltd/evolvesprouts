@@ -30,15 +30,15 @@ def _create_allocation(
 ) -> dict[str, Any]:
     body = parse_body(event)
     try:
-        payment_id = UUID(str(body.get("paymentId") or body.get("payment_id")))
+        payment_id = UUID(str(body.get("paymentId")))
     except (ValueError, TypeError) as exc:
         raise ValidationError("paymentId must be a UUID", field="paymentId") from exc
     try:
-        invoice_id = UUID(str(body.get("invoiceId") or body.get("invoice_id")))
+        invoice_id = UUID(str(body.get("invoiceId")))
     except (ValueError, TypeError) as exc:
         raise ValidationError("invoiceId must be a UUID", field="invoiceId") from exc
     try:
-        amt = Decimal(str(body.get("allocatedAmount") or body.get("allocated_amount")))
+        amt = Decimal(str(body.get("allocatedAmount")))
     except (InvalidOperation, TypeError, ValueError) as exc:
         raise ValidationError(
             "allocatedAmount must be a decimal number", field="allocatedAmount"
@@ -49,7 +49,7 @@ def _create_allocation(
             field="allocatedAmount",
         )
     currency = str(body.get("currency") or "").upper()[:3]
-    line_id_raw = body.get("invoiceLineId") or body.get("invoice_line_id")
+    line_id_raw = body.get("invoiceLineId")
     line_id: UUID | None = None
     if line_id_raw:
         try:

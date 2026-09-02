@@ -208,12 +208,7 @@ def create_manual_inbound_payment(
     if status_raw not in ("pending", "succeeded"):
         raise ValidationError("status must be pending or succeeded", field="status")
 
-    ext_ref = (
-        str(
-            body.get("externalReference") or body.get("external_reference") or ""
-        ).strip()
-        or None
-    )
+    ext_ref = str(body.get("externalReference") or "").strip() or None
 
     is_free_zero = amount == Decimal("0") or method == "free"
     if is_free_zero:
@@ -356,7 +351,7 @@ def create_refund_payment(
     request_id: str | None,
 ) -> dict[str, Any]:
     """Create an outbound refund customer payment row."""
-    oid = body.get("originalPaymentId") or body.get("original_payment_id")
+    oid = body.get("originalPaymentId")
     if not oid:
         raise ValidationError(
             "originalPaymentId is required", field="originalPaymentId"

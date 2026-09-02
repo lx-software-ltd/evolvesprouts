@@ -533,7 +533,7 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | `/v1/admin/expenses/{id}/mark-paid` | POST | Admin Group | `EvolvesproutsAdminFunction` | Mark expense paid |
 | `/v1/admin/expenses/{id}/reparse` | POST | Admin Group | `EvolvesproutsAdminFunction` | Requeue parse |
 | `/v1/admin/expenses/{id}/amend` | POST | Admin Group | `EvolvesproutsAdminFunction` | Create amendment |
-| `/v1/admin/billing/export` | GET | Admin Group | `EvolvesproutsAdminFunction` | Customer AR CSV export (`exportVersion=2` default: payments, refunds, invoices, lines, receipts, allocations; `exportVersion=1` legacy) |
+| `/v1/admin/billing/export` | GET | Admin Group | `EvolvesproutsAdminFunction` | Customer AR CSV export (`export_version=2` default: payments, refunds, invoices, lines, receipts, allocations; `export_version=1` legacy) |
 | `/v1/admin/billing/payments` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | List payments; record refund |
 | `/v1/admin/billing/payments/{id}` | GET, PATCH, DELETE | Admin Group | `EvolvesproutsAdminFunction` | Payment detail (includes `unappliedAmount`); manual inbound update; orphan delete |
 | `/v1/admin/billing/payments/{id}/confirm` | POST | Admin Group | `EvolvesproutsAdminFunction` | Confirm pending payment |

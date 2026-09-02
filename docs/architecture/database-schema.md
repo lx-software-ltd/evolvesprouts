@@ -802,9 +802,9 @@ Migration `0055_customer_billing_ar` introduces:
 **Migration `0058_inv_line_null_enrollment`:** `customer_invoice_lines.enrollment_id` is nullable so customized (non-enrollment) invoice lines can omit the enrollment foreign key.
 
 **CSV export (admin):** `GET /v1/admin/billing/export` defaults to **`export_version=2`**
-(query `exportVersion`, default `2`). v2 emits `payment`, `refund`, `invoice`,
+(query `export_version`, default `2`). v2 emits `payment`, `refund`, `invoice`,
 `invoice_line`, `receipt`, and `allocation` rows with bill-to, tax, and linkage columns;
-`exportVersion=1` retains the legacy payments+allocations-only columns.
+`export_version=1` retains the legacy payments+allocations-only columns.
 
 **Invoice reads (admin):** `GET /v1/admin/billing/invoices` lists invoice summaries with optional
 `status`, optional `settlement` (`open` / `partially_paid` / `paid` / `no_charge`, issued rows only; AND-combined with `status`),

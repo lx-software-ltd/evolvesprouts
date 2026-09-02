@@ -153,7 +153,7 @@ def _create_block(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, Any]
             f"purpose must be one of: {allowed}",
             field="purpose",
         )
-    block_date = _parse_block_date(body.get("blockDate") or body.get("block_date"))
+    block_date = _parse_block_date(body.get("blockDate"))
     period = _parse_period(body.get("period"))
     note = _optional_note(body.get("note"))
 
@@ -239,10 +239,8 @@ def _update_block(
             "note": row.note,
         }
 
-        if "blockDate" in body or "block_date" in body:
-            row.block_date = _parse_block_date(
-                body.get("blockDate") or body.get("block_date")
-            )
+        if "blockDate" in body:
+            row.block_date = _parse_block_date(body.get("blockDate"))
         if "period" in body:
             row.period = _parse_period(body.get("period"))
         if "note" in body:
