@@ -280,13 +280,55 @@ repo root
 
 ### Admin Web CRUD UX pattern (MANDATORY for `apps/admin_web/**`)
 
-- For admin CRUD screens with list/table views (for example leads, services,
-  enrollments, and discount codes), create and edit flows must use an inline
-  editor panel placed above the list/table.
-- Do not implement create/edit flows for these admin CRUD screens with modal,
-  dialog, sheet, or drawer patterns.
-- "New" and row selection actions must switch the same inline panel between
-  create and edit modes.
+The admin product standard is **table-first, expand-in-place**. Every admin
+CRUD screen with a list/table view (contacts, families, organisations, leads,
+services, enrollments, invoices, payments, discount codes, assets, tags, and
+so on) follows the same shape, built from the shared primitives in
+`apps/admin_web/src/components/ui/`:
+
+- **Page order:** filters, then the table. The table is the top of the page
+  and has **no card title**; the section name already appears in the nav and
+  page header. Do not render a listing card title or description.
+- **Filters** (`AdminFilterBar` + `AdminFilterField` from
+  `admin-filter-bar.tsx`) sit directly above the table with their labels above
+  the controls. The **create** control (`AdminCreateButton`, a `+` icon button
+  from `admin-create-button.tsx`) lives in the filter bar's trailing slot.
+- **Rows expand in place** (`AdminRecordTable` + `AdminExpandableRow` from
+  `admin-record-table.tsx` / `admin-expandable-row.tsx`). Clicking a row opens
+  an animated detail region directly beneath that row containing the editor.
+  Exactly one row is open at a time, driven by `useExpandedRecord`
+  (`apps/admin_web/src/hooks/use-expanded-record.ts`), which syncs the open
+  record id to a URL query parameter and prompts before discarding unsaved
+  edits when switching rows.
+- **Create** inserts a draft row (`DRAFT_RECORD_ID`) at the top of the table
+  with its editor already open; saving replaces the draft with the created
+  record, cancelling removes it.
+- **Editors** (`AdminEditorPanel` + `AdminEditorActions` from
+  `admin-editor-panel.tsx`) have **no title or subtitle**: field labels and
+  fields only, then one action row (`justify-start`, `gap-2`). **Create** shows
+  only the primary button. **Update** shows **Cancel** (secondary) to the
+  **left** of the primary save action. When the field area is a `<form>`, give
+  it a stable `id` and attach the submit control with `type='submit'` and
+  `form='<id>'` so the primary button can live in the actions row without
+  nesting forms invalidly.
+- **Field layout** uses `AdminFieldGrid` + `AdminField` from
+  `admin-field-grid.tsx` with `columns` of **1, 2, or 4** per row. Other
+  column counts are not allowed; use `span` on an `AdminField` for a wider
+  control inside a 2- or 4-column grid.
+- **Sub-accordions** inside an editor (for example Location, Tags, Address)
+  use `AdminDisclosure` from `admin-disclosure.tsx`.
+- **Loading** renders `AdminSkeletonRows` (`admin-skeleton.tsx`) in the table
+  body rather than a spinner or a blank card.
+- Do not implement create/edit flows with modal, dialog, sheet, drawer, or a
+  separate editor card above the table. `AdminDialog` remains for read-only
+  detail viewers; `ConfirmDialog` remains for confirm/cancel decisions.
+- **Exceptions** are allowed only where the data model forces them and must be
+  documented in a code comment at the exception site (for example the contact
+  phone number is a region + national number pair rendered as two controls
+  inside one `AdminField`).
+- Legacy screens that still render `AdminEditorCard` above `PaginatedTableCard`
+  are migration debt; when touching such a screen for a behaviour change,
+  migrate it to the primitives above instead of extending the legacy layout.
 
 ### Admin Web shell and layout standard (MANDATORY for `apps/admin_web/**`)
 
@@ -302,35 +344,48 @@ should extend the shared primitives rather than reintroducing one-off layouts.
   `aria-pressed` on the active control), not ARIA tabs; do not add `role="tablist"` /
   `role="tab"` without the full tabpanel pattern (panels, `aria-controls`, roving tabindex,
   arrow keys).
-- **Listing blocks** use `PaginatedTableCard` plus `AdminDataTable`,
-  `AdminDataTableHead`, and `AdminDataTableBody` from
-  `apps/admin_web/src/components/ui/admin-data-table.tsx`. Structure: card
-  **title** (and optional **description**), a **single toolbar row** with
-  **search and filters** (labels + controls, one horizontal band on desktop),
-  then the **table** with a trailing **Operations** column (right-aligned
-  header) for row actions. The toolbar row is `AdminTableToolbar` from
-  `apps/admin_web/src/components/ui/admin-table-toolbar.tsx`, not an ad-hoc
-  flex `<div>`.
+- **Listing blocks** follow the table-first CRUD pattern above
+  (`AdminRecordTable` with `AdminFilterBar`). Table markup inside it uses
+  `AdminDataTable`, `AdminDataTableHead`, and `AdminDataTableBody` from
+  `apps/admin_web/src/components/ui/admin-data-table.tsx`, with a trailing
+  **Operations** column (right-aligned header) for row actions.
+  `PaginatedTableCard` and `AdminTableToolbar` are retained only for screens
+  not yet migrated; do not introduce them on new screens.
+- **Operations column controls** are rendered by `AdminRowActions`
+  (`apps/admin_web/src/components/ui/admin-row-actions.tsx`) and are
+  **icon-only**: every control is an `AdminIconButton` / `AdminIconLink`
+  (`admin-icon-button.tsx`) of the **same size**, with a **border**, a
+  **white background**, and a **tooltip** (`title` plus visually hidden label)
+  naming the action. Never render text buttons, mixed sizes, or filled
+  backgrounds in the Operations column. When a row has **more than two**
+  actions, `AdminRowActions` keeps the first action inline and moves the rest
+  into an overflow menu opened by a **three-dots** `AdminIconButton`; the menu
+  is an anchored popover with keyboard navigation, not a full-screen modal.
+  Destructive actions use the `danger` tone inside the menu and still confirm
+  through `ConfirmDialog`.
 - **Detail viewers and other non-confirm modals** use `AdminDialog` from
   `apps/admin_web/src/components/ui/admin-dialog.tsx`. `ConfirmDialog` is only
   for confirm/cancel decisions.
+- **Server state is TanStack Query.** The single `QueryClient` comes from
+  `getAdminQueryClient()` in `apps/admin_web/src/lib/admin-query-client.ts`
+  (provided by `AdminQueryProvider` in the root layout) and every key is built
+  from `adminQueryKeys` in `apps/admin_web/src/lib/admin-query-keys.ts`. Do
+  not hand-roll `useEffect` + `useState` fetch loops, module-level caches, or
+  ad-hoc key arrays in feature code. Tests call
+  `resetAdminQueryClientForTests()` (already wired in `tests/setup.ts`).
 - **Cursor-paginated lists** are driven by `usePaginatedList`
-  (`apps/admin_web/src/hooks/use-paginated-list.ts`); do not hand-roll cursor,
-  debounce, or abort state in feature hooks.
+  (`apps/admin_web/src/hooks/use-paginated-list.ts`, an `useInfiniteQuery`
+  wrapper); do not hand-roll cursor, debounce, or abort state in feature hooks.
+  Fetchers used by a list must be exported module-level functions (for example
+  `fetchAdminContactsPage`) so `prefetchPaginatedList` and the nav-intent
+  prefetcher (`apps/admin_web/src/hooks/use-prefetch-admin-section.ts`) can
+  reuse them.
 - **Shared reference data** (entity tags, admin users, instructors, geographic
   areas, locations) is read through the `useShared*` hooks in
-  `apps/admin_web/src/hooks/use-admin-catalog.ts`, which cache in
-  `lib/admin-catalog-store.ts`; invalidate through the exported
-  `invalidateShared*` helpers after mutations instead of ad-hoc refetches.
+  `apps/admin_web/src/hooks/use-admin-catalog.ts` (backed by `useQuery`);
+  invalidate through the exported `invalidateShared*` helpers after mutations
+  instead of ad-hoc refetches.
 - **Hooks live under `apps/admin_web/src/hooks/`**, not beside components.
-- **Inline editor blocks** use `AdminEditorCard` from
-  `apps/admin_web/src/components/ui/admin-editor-card.tsx`: **title**,
-  optional **description**, field area, then **actions** in a single row with
-  `justify-start` and `gap-2`. **Create** shows only the primary button.
-  **Update** shows **Cancel** (secondary) to the **left** of the primary save
-  action. When the field area is a `<form>`, give it a stable `id` and attach
-  the submit control with `type='submit'` and `form='<id>'` so the primary
-  button can live in the card actions row without nesting forms invalidly.
 - **Delete, void, and other row-scoped destructive or state-changing actions**
   belong in the table **Operations** column (with `ConfirmDialog` where
   appropriate), not in the editor footer. `ConfirmDialog` may render optional
@@ -340,6 +395,10 @@ should extend the shared primitives rather than reintroducing one-off layouts.
   the **inline editor** field area, not the list **Operations** column, because
   it depends on editor context (metadata, PDF validation, and the two-step
   presigned flow) rather than being a row-only table action.
+- **Motion** uses the tokens in `apps/admin_web/src/app/globals.css`
+  (`--duration-admin-expand`, `--ease-admin-expand`) through
+  `AdminExpandRegion`; do not add per-component JS animation libraries or
+  bespoke keyframes for expand/collapse.
 
 ### Public WWW XSS policy (MANDATORY for `apps/public_www/**`)
 

@@ -42,6 +42,9 @@ require_literal ".cursorrules" "## Documentation freshness (MANDATORY after code
 require_literal ".cursorrules" "Asset API module layout is mandatory:" "Missing asset API modularity convention"
 require_literal ".cursorrules" "### SVG icons (MANDATORY for \`apps/admin_web/**\` and \`apps/public_www/**\`)" "Missing SVG icons convention for web apps"
 require_literal ".cursorrules" '### Admin Web OpenAPI typing contract (MANDATORY for `apps/admin_web/**`)' "Missing admin web OpenAPI typing contract"
+require_literal ".cursorrules" '### Admin Web CRUD UX pattern (MANDATORY for `apps/admin_web/**`)' "Missing admin web CRUD UX pattern section"
+require_literal ".cursorrules" "table-first, expand-in-place" "Missing admin web table-first layout standard"
+require_literal ".cursorrules" "**Operations column controls** are rendered by \`AdminRowActions\`" "Missing admin web Operations column control standard"
 
 require_literal "AGENTS.md" 'Read `@.cursorrules` before any analysis, plan, command, or code edit.' "Missing AGENTS bootstrap requirement"
 require_literal "AGENTS.md" 'Treat the rules in `.cursorrules` as mandatory for the full session.' "Missing AGENTS mandatory-application requirement"

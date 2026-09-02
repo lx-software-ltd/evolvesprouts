@@ -130,6 +130,13 @@ defense-in-depth for data at rest and does not replace standard XSS
 protections (CSP, input sanitization), since any in-page script can still ask
 the browser to decrypt.
 
+After the first decrypt, `auth.ts` keeps the decrypted bundle in a module-level
+in-memory cache for the page session so concurrent API calls do not each hit
+IndexedDB and Web Crypto; the cache is dropped on sign-out and whenever another
+tab changes the storage key (`storage` event). Token refresh is single-flight:
+overlapping calls to `ensureFreshTokens()` share one refresh request so a burst
+of queries on page load cannot race multiple refresh-token exchanges.
+
 ### JWT audience / client verification
 
 Cognito ID tokens carry the app client id in the `aud` claim; access tokens use

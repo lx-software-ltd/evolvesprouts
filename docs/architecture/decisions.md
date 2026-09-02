@@ -353,22 +353,107 @@ share URLs as database-backed bearer tokens.
 - CloudFront public key material is configured in infrastructure; matching
   private key material is stored in AWS Secrets Manager and loaded by Lambda.
 
-## 12) Admin Web Section Ordering
+## 12) Admin Web Section Ordering (superseded)
 
-**Decision:** In admin web screens, edit/create sections must appear above list
-sections.
+**Status:** Superseded by "Admin web table-first, expand-in-place layout"
+below. Kept for history because several screens still render the older
+editor-above-list layout until they are migrated.
+
+**Original decision:** In admin web screens, edit/create sections appeared above
+list sections so the edit context was visible before browsing/filtering lists.
+
+## Admin web table-first, expand-in-place layout
+
+**Decision:** Every admin CRUD screen renders filters, then the table, with no
+listing title. Selecting a row expands an editor directly beneath that row
+(one open at a time, animated, URL-synced); creating a record inserts a draft
+row with its editor open. Editors have no title or subtitle, fields are laid
+out 1, 2, or 4 per row, and Operations-column controls are icon-only buttons of
+one size with a border, white background, and tooltip, collapsing to a
+three-dots overflow menu beyond two actions.
+
+Shared primitives in `apps/admin_web/src/components/ui/`:
+
+| Concern | Primitive |
+|---------|-----------|
+| Filters above the table, trailing `+` create control | `AdminFilterBar`, `AdminFilterField`, `AdminCreateButton` |
+| Table shell with skeleton, empty, and load-more states | `AdminRecordTable` |
+| Row that expands into an editor | `AdminExpandableRow` (+ `useExpandedRecord` hook) |
+| Editor body and single action row | `AdminEditorPanel`, `AdminEditorActions` |
+| 1 / 2 / 4 fields per row | `AdminFieldGrid`, `AdminField` |
+| Sub-accordions inside an editor | `AdminDisclosure` |
+| Operations column | `AdminRowActions`, `AdminIconButton`, `AdminIconLink` |
+| Animated show/hide | `AdminExpandRegion` + motion tokens in `globals.css` |
 
 **Why:**
-- Keeps primary task flow consistent with the established Siutindei admin
-  interaction pattern.
-- Makes the edit context visible before browsing/filtering lists.
-- Reduces visual jumps when switching selected items.
+- The editor-above-list layout pushed the data the operator came for below the
+  fold and forced a scroll on every row selection. Opening the editor in place
+  keeps the surrounding rows visible for context and removes the jump.
+- Titles on listing cards and editors duplicated the nav label and cost
+  vertical space on every screen.
+- Operations columns had drifted across screens (text buttons, mixed sizes,
+  filled backgrounds). One icon-only control size with a tooltip and an
+  overflow menu beyond two actions keeps rows scannable and stops the column
+  widening as actions are added.
+- One open row plus URL sync gives deep-linkable edit state (`?record=<id>`)
+  and a single place to guard unsaved changes.
 
 **Notes:**
-- Apply this ordering to newly built admin pages and when refactoring existing
-  screens.
-- Service management follows this pattern by rendering Service detail before the
-  Services list.
+- The overflow control is an anchored popover menu, not a full-screen modal,
+  so the operator keeps the row in view; it traps focus and closes on `Escape`
+  and outside click.
+- Exceptions to the field grid or editor shape are allowed only where the data
+  model forces them and must be commented at the site (for example the contact
+  phone number renders region + national number as two controls in one field).
+- Legacy screens still on `AdminEditorCard` + `PaginatedTableCard` are
+  migrated screen by screen; new screens must not use them.
+
+## Admin web server state on TanStack Query
+
+**Decision:** `@tanstack/react-query` v5 owns all admin web server state. A
+single `QueryClient` (`getAdminQueryClient()` in
+`src/lib/admin-query-client.ts`, provided by `AdminQueryProvider` in the root
+layout) is configured with `staleTime` 30 s, `gcTime` 10 min, no automatic
+retries, and no refetch on window focus. All keys come from the
+`adminQueryKeys` factory in `src/lib/admin-query-keys.ts`. `usePaginatedList`
+wraps `useInfiniteQuery`; the `useShared*` catalog hooks wrap `useQuery`; the
+former module-level `admin-catalog-store` is removed.
+
+**Why:**
+- Each page previously refetched its list and reference data on every mount,
+  and the Lambda round trip (VPC + RDS Proxy, ~300-900 ms warm, several seconds
+  cold) made section switches feel slow. Cached queries render the last known
+  page immediately and revalidate in the background.
+- The hand-rolled list hook and catalog store re-implemented request
+  de-duplication, abort, and invalidation with subtle differences. One library
+  gives the same semantics everywhere and a standard devtools surface.
+- List fetchers are exported module-level functions so the sidebar can
+  `prefetchInfiniteQuery` a section on hover/focus
+  (`usePrefetchAdminSection`), warming the cache before navigation.
+- Decrypted Cognito tokens are cached in memory with a single-flight refresh
+  (`src/lib/auth.ts`), so concurrent queries on a page share one refresh
+  instead of racing.
+
+**Notes:**
+- No retries: the admin API surfaces validation and auth errors as final; a
+  retry would only delay the message.
+- Mutations invalidate by key prefix (`adminQueryKeys.<resource>.lists()`)
+  rather than refetching a specific page.
+- Tests reset the client per test via `resetAdminQueryClientForTests()` in
+  `tests/setup.ts`.
+
+## Admin Lambda `Server-Timing`
+
+**Decision:** The admin Lambda emits a `Server-Timing` header on every
+response with `app;dur=<handler ms>` and, on the first invocation of a
+container, `cold;dur=<ms since module import>`. CORS exposes the header
+(`Access-Control-Expose-Headers`), and the admin web API client logs
+browser-measured duration next to the server value in non-production builds.
+
+**Why:** Slow-page reports could not distinguish network/CDN, cold start,
+handler time, and client rendering. The header separates the server share so
+performance work can be aimed at the right layer without adding tracing
+infrastructure.
 
 ## CI/CD Variables and Secrets
 
