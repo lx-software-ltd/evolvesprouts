@@ -3424,7 +3424,11 @@ export class ApiStack extends cdk.Stack {
       authorizer: adminAuthorizer,
     });
 
-    const adminAssetGrantById = adminAssetGrants.addResource("{grant_id}");
+    // Keep `{grantId}`: API Gateway allows only one variable sibling under
+    // `/grants`. Renaming to `{grant_id}` creates a new resource while
+    // `{grantId}` is still live, which fails with
+    // "A sibling ({grantId}) of this resource already has a variable path part".
+    const adminAssetGrantById = adminAssetGrants.addResource("{grantId}");
     adminAssetGrantById.addMethod("DELETE", adminIntegration, {
       authorizationType: apigateway.AuthorizationType.CUSTOM,
       authorizer: adminAuthorizer,
