@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
-import type { ClientInvoicesSelectionState } from "@/hooks/client-invoices-panel-types";
-import { useClientInvoicesAllocateRefund } from "@/hooks/use-client-invoices-allocate-refund";
-import { useClientInvoicesBillingRefresh } from "@/hooks/use-client-invoices-billing-refresh";
-import { useClientInvoicesDraft } from "@/hooks/use-client-invoices-draft";
-import { useClientInvoicesInvoiceList } from "@/hooks/use-client-invoices-invoice-list";
-import { useClientInvoicesPayments } from "@/hooks/use-client-invoices-payments";
-import { useClientInvoicesPanelShared } from "@/hooks/use-client-invoices-panel-shared";
+import type { ClientInvoicesSelectionState } from '@/hooks/client-invoices-panel-types';
+import { useClientInvoicesAllocateRefund } from '@/hooks/use-client-invoices-allocate-refund';
+import { useClientInvoicesBillingRefresh } from '@/hooks/use-client-invoices-billing-refresh';
+import { useClientInvoicesDraft } from '@/hooks/use-client-invoices-draft';
+import { useClientInvoicesInvoiceList } from '@/hooks/use-client-invoices-invoice-list';
+import { useClientInvoicesPayments } from '@/hooks/use-client-invoices-payments';
+import { useClientInvoicesPanelShared } from '@/hooks/use-client-invoices-panel-shared';
 
 export function useClientInvoicesPanel() {
   const shared = useClientInvoicesPanelShared();
@@ -16,8 +16,8 @@ export function useClientInvoicesPanel() {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(
     null,
   );
-  const [allocateInvoiceId, setAllocateInvoiceId] = useState("");
-  const [allocateLineId, setAllocateLineId] = useState("");
+  const [allocateInvoiceId, setAllocateInvoiceId] = useState('');
+  const [allocateLineId, setAllocateLineId] = useState('');
 
   const selection: ClientInvoicesSelectionState = {
     selectedInvoiceId,

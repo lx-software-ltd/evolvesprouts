@@ -1,27 +1,22 @@
-"use client";
+'use client';
 
-import type { FormEvent } from "react";
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import type { FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
-import type { ClientInvoicesAllocateRefundInput } from "@/hooks/client-invoices-panel-types";
-import { toErrorMessage } from "@/hooks/hook-errors";
+import type { ClientInvoicesAllocateRefundInput } from '@/hooks/client-invoices-panel-types';
+import { toErrorMessage } from '@/hooks/hook-errors';
 import {
   createCustomerRefund,
   createPaymentAllocation,
   getCustomerInvoice,
   listCustomerPayments,
   type CustomerPaymentSummary,
-} from "@/lib/billing-api";
+} from '@/lib/billing-api';
 import {
   currencySelectValue,
   invoiceLineSortKey,
   type CustomerInvoiceLineRow,
-} from "@/components/admin/finance/client-invoices-utils";
+} from '@/components/admin/finance/client-invoices-utils';
 
 export function useClientInvoicesAllocateRefund({
   shared,
@@ -32,8 +27,13 @@ export function useClientInvoicesAllocateRefund({
   billingRefresh,
   loadDetail,
 }: ClientInvoicesAllocateRefundInput) {
-  const { currencyOptions, defaultCurrency, setActionMessage, setActionError, setBusy } =
-    shared;
+  const {
+    currencyOptions,
+    defaultCurrency,
+    setActionMessage,
+    setActionError,
+    setBusy,
+  } = shared;
   const {
     selectedInvoiceId,
     allocateInvoiceId,
@@ -42,7 +42,7 @@ export function useClientInvoicesAllocateRefund({
     setAllocateLineId,
   } = selection;
 
-  const [allocateAmount, setAllocateAmount] = useState("");
+  const [allocateAmount, setAllocateAmount] = useState('');
   const [allocateCurrency, setAllocateCurrency] = useState(defaultCurrency);
   const [allocateInvoiceLines, setAllocateInvoiceLines] = useState<
     CustomerInvoiceLineRow[]
@@ -50,21 +50,21 @@ export function useClientInvoicesAllocateRefund({
   const [allocateInvoiceLinesLoading, setAllocateInvoiceLinesLoading] =
     useState(false);
   const [allocateInvoiceLinesError, setAllocateInvoiceLinesError] =
-    useState("");
+    useState('');
 
-  const [refundInvoiceId, setRefundInvoiceId] = useState("");
-  const [refundPaymentSelectId, setRefundPaymentSelectId] = useState("");
+  const [refundInvoiceId, setRefundInvoiceId] = useState('');
+  const [refundPaymentSelectId, setRefundPaymentSelectId] = useState('');
   const [refundPaymentsForInvoice, setRefundPaymentsForInvoice] = useState<
     CustomerPaymentSummary[]
   >([]);
   const [refundPaymentsLoading, setRefundPaymentsLoading] = useState(false);
-  const [refundPaymentsError, setRefundPaymentsError] = useState("");
+  const [refundPaymentsError, setRefundPaymentsError] = useState('');
   const [refundInvoicePaymentsRefresh, setRefundInvoicePaymentsRefresh] =
     useState(0);
-  const [refundAmount, setRefundAmount] = useState("");
+  const [refundAmount, setRefundAmount] = useState('');
   const [refundCurrency, setRefundCurrency] = useState(defaultCurrency);
-  const [refundMethod, setRefundMethod] = useState("");
-  const [refundStripeId, setRefundStripeId] = useState("");
+  const [refundMethod, setRefundMethod] = useState('');
+  const [refundStripeId, setRefundStripeId] = useState('');
 
   const lastPaymentSeedIdRef = useRef<string | null>(null);
 
@@ -73,7 +73,7 @@ export function useClientInvoicesAllocateRefund({
       return;
     }
     const inv = invoices.find((i) => i.id === selectedInvoiceId);
-    if (inv?.status === "issued") {
+    if (inv?.status === 'issued') {
       setRefundInvoiceId(selectedInvoiceId);
     }
   }, [selectedInvoiceId, invoices]);
@@ -89,8 +89,8 @@ export function useClientInvoicesAllocateRefund({
   const allocateLineDescriptionCounts = useMemo(() => {
     const counts = new Map<string, number>();
     for (const line of allocateLinesOrdered) {
-      const d = line.description?.trim() ?? "";
-      if (d !== "") {
+      const d = line.description?.trim() ?? '';
+      if (d !== '') {
         counts.set(d, (counts.get(d) ?? 0) + 1);
       }
     }
@@ -100,52 +100,54 @@ export function useClientInvoicesAllocateRefund({
   const refundEligiblePayments = useMemo(
     () =>
       refundPaymentsForInvoice.filter(
-        (p) => p.direction === "inbound" && p.status === "succeeded",
+        (p) => p.direction === 'inbound' && p.status === 'succeeded',
       ),
     [refundPaymentsForInvoice],
   );
 
   useEffect(() => {
     const trimmed = allocateInvoiceId.trim();
-    if (trimmed === "") {
+    if (trimmed === '') {
       setAllocateInvoiceLines([]);
-      setAllocateInvoiceLinesError("");
+      setAllocateInvoiceLinesError('');
       setAllocateInvoiceLinesLoading(false);
-      setAllocateLineId("");
+      setAllocateLineId('');
       return;
     }
     const invRow = invoices.find((i) => i.id === trimmed);
-    if (invRow?.status !== "issued") {
+    if (invRow?.status !== 'issued') {
       setAllocateInvoiceLines([]);
-      setAllocateInvoiceLinesError("");
+      setAllocateInvoiceLinesError('');
       setAllocateInvoiceLinesLoading(false);
-      setAllocateLineId("");
+      setAllocateLineId('');
       return;
     }
     const ac = new AbortController();
     setAllocateInvoiceLinesLoading(true);
-    setAllocateInvoiceLinesError("");
+    setAllocateInvoiceLinesError('');
     void (async () => {
       try {
         const invoiceDetail = await getCustomerInvoice(trimmed, ac.signal);
         if (ac.signal.aborted) {
           return;
         }
-        const lines = Array.isArray(invoiceDetail.lines) ? invoiceDetail.lines : [];
+        const lines = Array.isArray(invoiceDetail.lines)
+          ? invoiceDetail.lines
+          : [];
         setAllocateInvoiceLines(lines);
         setAllocateLineId((prev) => {
           const ok = lines.some((l) => l.id === prev);
-          return ok ? prev : "";
+          return ok ? prev : '';
         });
       } catch (caught) {
-        if (caught instanceof Error && caught.name === "AbortError") {
+        if (caught instanceof Error && caught.name === 'AbortError') {
           return;
         }
         if (!ac.signal.aborted) {
           setAllocateInvoiceLines([]);
-          setAllocateLineId("");
+          setAllocateLineId('');
           setAllocateInvoiceLinesError(
-            toErrorMessage(caught, "Failed to load invoice lines.", {
+            toErrorMessage(caught, 'Failed to load invoice lines.', {
               honorBackendMessage: true,
             }),
           );
@@ -175,7 +177,7 @@ export function useClientInvoicesAllocateRefund({
     setAllocateCurrency(
       currencySelectValue(cur, currencyOptions, defaultCurrency),
     );
-    setRefundPaymentSelectId(detail.id ?? "");
+    setRefundPaymentSelectId(detail.id ?? '');
     setRefundCurrency(
       currencySelectValue(cur, currencyOptions, defaultCurrency),
     );
@@ -198,21 +200,21 @@ export function useClientInvoicesAllocateRefund({
       if (preferred && ids.has(preferred)) {
         return preferred;
       }
-      return refs[0]?.invoiceId ?? "";
+      return refs[0]?.invoiceId ?? '';
     });
   }, [selectedId, detail, allocateInvoiceId]);
 
   useEffect(() => {
     const trimmed = refundInvoiceId.trim();
-    if (trimmed === "") {
+    if (trimmed === '') {
       setRefundPaymentsForInvoice([]);
       setRefundPaymentsLoading(false);
-      setRefundPaymentsError("");
+      setRefundPaymentsError('');
       return;
     }
     const ac = new AbortController();
     setRefundPaymentsLoading(true);
-    setRefundPaymentsError("");
+    setRefundPaymentsError('');
     void (async () => {
       try {
         const items = await listCustomerPayments(
@@ -227,8 +229,8 @@ export function useClientInvoicesAllocateRefund({
           const inboundMatch = items.find(
             (p) =>
               p.id === prev &&
-              p.direction === "inbound" &&
-              p.status === "succeeded",
+              p.direction === 'inbound' &&
+              p.status === 'succeeded',
           );
           if (inboundMatch) {
             return prev;
@@ -238,27 +240,27 @@ export function useClientInvoicesAllocateRefund({
             items.find(
               (p) =>
                 p.id === selectedId &&
-                p.direction === "inbound" &&
-                p.status === "succeeded",
+                p.direction === 'inbound' &&
+                p.status === 'succeeded',
             );
           if (selectedMatch) {
             return selectedId;
           }
           return (
             items.find(
-              (p) => p.direction === "inbound" && p.status === "succeeded",
-            )?.id ?? ""
+              (p) => p.direction === 'inbound' && p.status === 'succeeded',
+            )?.id ?? ''
           );
         });
       } catch (caught) {
-        if (caught instanceof Error && caught.name === "AbortError") {
+        if (caught instanceof Error && caught.name === 'AbortError') {
           return;
         }
         if (!ac.signal.aborted) {
           setRefundPaymentsForInvoice([]);
-          setRefundPaymentSelectId("");
+          setRefundPaymentSelectId('');
           setRefundPaymentsError(
-            toErrorMessage(caught, "Failed to load payments for invoice.", {
+            toErrorMessage(caught, 'Failed to load payments for invoice.', {
               honorBackendMessage: true,
             }),
           );
@@ -274,34 +276,34 @@ export function useClientInvoicesAllocateRefund({
 
   const handleAllocate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setActionError("");
-    setActionMessage("");
+    setActionError('');
+    setActionMessage('');
     if (!selectedId) {
-      setActionError("Select a payment row first.");
+      setActionError('Select a payment row first.');
       return;
     }
     const invId = allocateInvoiceId.trim();
     if (!invId) {
-      setActionError("Select an issued invoice for allocation.");
+      setActionError('Select an issued invoice for allocation.');
       return;
     }
     const allocateTarget = invoices.find((i) => i.id === invId);
-    if (!allocateTarget || allocateTarget.status !== "issued") {
-      setActionError("Select an issued invoice for allocation.");
+    if (!allocateTarget || allocateTarget.status !== 'issued') {
+      setActionError('Select an issued invoice for allocation.');
       return;
     }
     const amt = allocateAmount.trim();
     if (!amt) {
-      setActionError("Allocated amount is required.");
+      setActionError('Allocated amount is required.');
       return;
     }
-    setBusy("allocate");
+    setBusy('allocate');
     try {
       const out = await createPaymentAllocation({
         paymentId: selectedId,
         invoiceId: invId,
         invoiceLineId:
-          allocateLineId.trim() === "" ? null : allocateLineId.trim(),
+          allocateLineId.trim() === '' ? null : allocateLineId.trim(),
         allocatedAmount: amt,
         currency: allocateCurrency.trim().toUpperCase() || defaultCurrency,
       });
@@ -312,7 +314,7 @@ export function useClientInvoicesAllocateRefund({
       await billingRefresh.refreshInvoices();
     } catch (caught) {
       setActionError(
-        toErrorMessage(caught, "Allocation failed.", {
+        toErrorMessage(caught, 'Allocation failed.', {
           honorBackendMessage: true,
         }),
       );
@@ -323,35 +325,35 @@ export function useClientInvoicesAllocateRefund({
 
   const handleRefund = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setActionError("");
-    setActionMessage("");
+    setActionError('');
+    setActionMessage('');
     const orig = refundPaymentSelectId.trim();
     if (!orig) {
-      setActionError("Select an inbound payment allocated to the invoice.");
+      setActionError('Select an inbound payment allocated to the invoice.');
       return;
     }
     const amt = refundAmount.trim();
     if (!amt) {
-      setActionError("Refund amount is required.");
+      setActionError('Refund amount is required.');
       return;
     }
-    setBusy("refund");
+    setBusy('refund');
     try {
       await createCustomerRefund({
-        direction: "refund",
+        direction: 'refund',
         originalPaymentId: orig,
         amount: amt,
         currency: refundCurrency.trim().toUpperCase() || defaultCurrency,
-        method: refundMethod.trim() === "" ? undefined : refundMethod.trim(),
+        method: refundMethod.trim() === '' ? undefined : refundMethod.trim(),
         stripeRefundId:
-          refundStripeId.trim() === "" ? null : refundStripeId.trim(),
+          refundStripeId.trim() === '' ? null : refundStripeId.trim(),
       });
-      setActionMessage("Refund payment row recorded.");
+      setActionMessage('Refund payment row recorded.');
       await billingRefresh.refreshPayments();
       setRefundInvoicePaymentsRefresh((n) => n + 1);
     } catch (caught) {
       setActionError(
-        toErrorMessage(caught, "Refund failed.", { honorBackendMessage: true }),
+        toErrorMessage(caught, 'Refund failed.', { honorBackendMessage: true }),
       );
     } finally {
       setBusy(null);

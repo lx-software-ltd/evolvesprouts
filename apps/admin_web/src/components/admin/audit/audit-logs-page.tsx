@@ -1,21 +1,21 @@
 'use client';
 
-import { useState } from 'react';
-
 import { ApiKeysPanel } from '@/components/admin/audit/api-keys-panel';
 import { AuditLogsPanel } from '@/components/admin/audit/audit-logs-panel';
 import { AdminTabStrip } from '@/components/ui/admin-tab-strip';
+import { useQueryTabState } from '@/hooks/use-query-tab-state';
 import { AUDITABLE_AUDIT_LOG_TABLES } from '@/types/audit-log';
 
 type AuditView = 'logs' | 'api-keys';
 
+const AUDIT_VIEW_KEYS: readonly AuditView[] = ['logs', 'api-keys'];
 const AUDIT_TAB_ITEMS: { key: AuditView; label: string }[] = [
   { key: 'logs', label: 'Logs' },
   { key: 'api-keys', label: 'API keys' },
 ];
 
 export function AuditLogsPage() {
-  const [activeView, setActiveView] = useState<AuditView>('logs');
+  const [activeView, setActiveView] = useQueryTabState<AuditView>(AUDIT_VIEW_KEYS, 'logs');
 
   return (
     <div className='space-y-6'>

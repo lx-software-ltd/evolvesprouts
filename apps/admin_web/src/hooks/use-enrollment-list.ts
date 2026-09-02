@@ -1,130 +1,81 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 
-import { clampAdminListLimit } from '@/lib/admin-list-limit';
 import { listEnrollments } from '@/lib/services-api';
 import { DEFAULT_ENROLLMENT_LIST_FILTERS } from '@/types/services';
 import type { Enrollment, EnrollmentListFilters } from '@/types/services';
 
-import { toErrorMessage } from './hook-errors';
+import { usePaginatedList } from './use-paginated-list';
 
 export function useEnrollmentList(serviceId: string | null, instanceId: string | null) {
-  const [filters, setFilters] = useState<EnrollmentListFilters>(DEFAULT_ENROLLMENT_LIST_FILTERS);
-  const filtersRef = useRef<EnrollmentListFilters>(DEFAULT_ENROLLMENT_LIST_FILTERS);
-
-  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [totalCount, setTotalCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    filtersRef.current = filters;
-  }, [filters]);
-
-  const refetch = useCallback(async () => {
-    if (!serviceId || !instanceId) {
-      setEnrollments([]);
-      setNextCursor(null);
-      setTotalCount(0);
-      setError('');
-      return;
-    }
-    setIsLoading(true);
-    setError('');
-    try {
-      const response = await listEnrollments(
+  const fetcher = useCallback(
+    async (
+      params: EnrollmentListFilters & { cursor: string | null; limit: number; signal: AbortSignal }
+    ) => {
+      if (!serviceId || !instanceId) {
+        return { items: [] as Enrollment[], nextCursor: null, totalCount: 0 };
+      }
+      return listEnrollments(
         serviceId,
         instanceId,
         {
-          status: filtersRef.current.status || undefined,
-          cursor: null,
-          limit: clampAdminListLimit(50),
+          status: params.status || undefined,
+          cursor: params.cursor,
+          limit: params.limit,
         },
-        undefined
+        params.signal
       );
-      setEnrollments(response.items);
-      setNextCursor(response.nextCursor);
-      setTotalCount(response.totalCount);
-    } catch (err) {
-      setError(toErrorMessage(err, 'Failed to load enrollments.'));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [instanceId, serviceId]);
-
-  useEffect(() => {
-    void refetch();
-  }, [refetch]);
-
-  const loadMore = useCallback(async () => {
-    if (!serviceId || !instanceId || !nextCursor) {
-      return;
-    }
-    setIsLoadingMore(true);
-    setError('');
-    try {
-      const response = await listEnrollments(serviceId, instanceId, {
-        status: filtersRef.current.status || undefined,
-        cursor: nextCursor,
-        limit: clampAdminListLimit(50),
-      });
-      setEnrollments((current) => [...current, ...response.items]);
-      setNextCursor(response.nextCursor);
-      setTotalCount(response.totalCount);
-    } catch (err) {
-      setError(toErrorMessage(err, 'Failed to load more enrollments.'));
-    } finally {
-      setIsLoadingMore(false);
-    }
-  }, [instanceId, nextCursor, serviceId]);
-
-  const setFilter = useCallback(
-    <TKey extends keyof EnrollmentListFilters>(
-      key: TKey,
-      value: EnrollmentListFilters[TKey]
-    ) => {
-      const nextFilters = {
-        ...filtersRef.current,
-        [key]: value,
-      };
-      filtersRef.current = nextFilters;
-      setFilters(nextFilters);
-      void refetch();
     },
-    [refetch]
+    [instanceId, serviceId]
   );
 
-  /** Merges a row from a mutation response so the table updates before refetch finishes. */
-  const upsertEnrollmentInList = useCallback((enrollment: Enrollment) => {
-    setEnrollments((current) => {
-      const index = current.findIndex((row) => row.id === enrollment.id);
-      if (index === -1) {
-        return [enrollment, ...current];
-      }
-      const next = [...current];
-      next[index] = enrollment;
-      return next;
-    });
-  }, []);
+  const list = usePaginatedList<Enrollment, EnrollmentListFilters>({
+    fetcher,
+    defaultFilters: DEFAULT_ENROLLMENT_LIST_FILTERS,
+    errorPrefix: 'Failed to load enrollments',
+    fetchOnMount: Boolean(serviceId && instanceId),
+  });
 
-  const removeEnrollmentFromList = useCallback((enrollmentId: string) => {
-    setEnrollments((current) => current.filter((row) => row.id !== enrollmentId));
-  }, []);
+  useEffect(() => {
+    if (!serviceId || !instanceId) {
+      list.setItems([]);
+    }
+  }, [instanceId, list.setItems, serviceId]);
+
+  const upsertEnrollmentInList = useCallback(
+    (enrollment: Enrollment) => {
+      list.setItems((current) => {
+        const index = current.findIndex((row) => row.id === enrollment.id);
+        if (index === -1) {
+          return [enrollment, ...current];
+        }
+        const next = [...current];
+        next[index] = enrollment;
+        return next;
+      });
+    },
+    [list.setItems]
+  );
+
+  const removeEnrollmentFromList = useCallback(
+    (enrollmentId: string) => {
+      list.setItems((current) => current.filter((row) => row.id !== enrollmentId));
+    },
+    [list.setItems]
+  );
 
   return {
-    enrollments,
-    filters,
-    setFilter,
-    isLoading,
-    isLoadingMore,
-    error,
-    refetch,
-    loadMore,
-    hasMore: Boolean(nextCursor),
-    totalCount,
+    enrollments: list.items,
+    filters: list.filters,
+    setFilter: list.setFilter,
+    isLoading: list.isLoading,
+    isLoadingMore: list.isLoadingMore,
+    error: list.error,
+    refetch: list.refetch,
+    loadMore: list.loadMore,
+    hasMore: list.hasMore,
+    totalCount: list.totalCount ?? 0,
     upsertEnrollmentInList,
     removeEnrollmentFromList,
   };

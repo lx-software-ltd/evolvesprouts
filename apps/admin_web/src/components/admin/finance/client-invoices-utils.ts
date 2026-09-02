@@ -18,10 +18,12 @@ export const MANUAL_PAYMENT_FORM_ID = 'client-billing-manual-payment-form';
 export const NO_ENROLLMENT_OPTION_VALUE = '__none__';
 export const INVOICE_LIST_SEARCH_DEBOUNCE_MS = 350;
 
-export type CustomerInvoiceLineRow = NonNullable<CustomerInvoiceDetail['lines']>[number];
+export type CustomerInvoiceLineRow = NonNullable<
+  CustomerInvoiceDetail['lines']
+>[number];
 
 export function isManualInboundPaymentEditable(
-  payment: CustomerPaymentSummary | CustomerPaymentDetail | null | undefined
+  payment: CustomerPaymentSummary | CustomerPaymentDetail | null | undefined,
 ): boolean {
   if (!payment?.id) {
     return false;
@@ -47,7 +49,7 @@ export function invoiceLineSortKey(line: CustomerInvoiceLineRow): number {
 export function formatAllocateLineOptionLabel(
   line: CustomerInvoiceLineRow,
   index: number,
-  descriptionCounts: Map<string, number>
+  descriptionCounts: Map<string, number>,
 ): string {
   const desc = line.description?.trim() ?? '';
   const base = desc !== '' ? desc : `Line ${String(index + 1)}`;
@@ -58,7 +60,9 @@ export function formatAllocateLineOptionLabel(
   return base;
 }
 
-export function formatRecentEnrollmentPaymentSelectLabel(row: BillingEnrollmentPickerRow): string {
+export function formatRecentEnrollmentPaymentSelectLabel(
+  row: BillingEnrollmentPickerRow,
+): string {
   const party = formatBillingEnrollmentPartyCell(row).trim();
   const inst = formatEnrollmentPickerInstanceServiceDisplay(row).trim();
   if (party !== '' && inst !== '') {
@@ -75,11 +79,15 @@ export function formatRecentEnrollmentPaymentSelectLabel(row: BillingEnrollmentP
 
 export function formatManualPaymentEnrollmentEditLabel(
   row: BillingEnrollmentPickerRow | undefined,
-  partyFallback: string
+  partyFallback: string,
 ): string {
   const party = row ? formatBillingEnrollmentPartyCell(row).trim() : '';
-  const inst = row ? formatEnrollmentPickerInstanceServiceDisplay(row).trim() : '';
-  const tierCohort = row ? formatTierCohortDisplay(row.serviceTierName, row.instanceCohort).trim() : '';
+  const inst = row
+    ? formatEnrollmentPickerInstanceServiceDisplay(row).trim()
+    : '';
+  const tierCohort = row
+    ? formatTierCohortDisplay(row.serviceTierName, row.instanceCohort).trim()
+    : '';
   const parts: string[] = [];
   if (party !== '') {
     parts.push(party);
@@ -112,13 +120,17 @@ export function formatAmountSeedTwoDecimals(raw: string): string {
 export function currencySelectValue(
   code: string,
   options: readonly { value: string }[],
-  fallback: string
+  fallback: string,
 ): string {
   const normalized = code.trim().toUpperCase() || fallback;
-  return options.some((option) => option.value === normalized) ? normalized : fallback;
+  return options.some((option) => option.value === normalized)
+    ? normalized
+    : fallback;
 }
 
-export function enrollmentNeedsAmountConfirmation(row: BillingEnrollmentPickerRow): boolean {
+export function enrollmentNeedsAmountConfirmation(
+  row: BillingEnrollmentPickerRow,
+): boolean {
   const amountPaid = row.amountPaid?.trim() ?? '';
   if (amountPaid === '') {
     return true;
@@ -137,10 +149,15 @@ export function parseAmountInput(raw: string): number | null {
 }
 
 export function defaultLineAmount(row: BillingEnrollmentPickerRow): string {
-  return row.amountPaid != null && row.amountPaid.trim() !== '' ? row.amountPaid.trim() : '0';
+  return row.amountPaid != null && row.amountPaid.trim() !== ''
+    ? row.amountPaid.trim()
+    : '0';
 }
 
-export function lineAmountsDiffer(input: string, row: BillingEnrollmentPickerRow): boolean {
+export function lineAmountsDiffer(
+  input: string,
+  row: BillingEnrollmentPickerRow,
+): boolean {
   const trimmed = input.trim();
   const baseline = defaultLineAmount(row);
   const a = Number.parseFloat(trimmed === '' ? baseline : trimmed);

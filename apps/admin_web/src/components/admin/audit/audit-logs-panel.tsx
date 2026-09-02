@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { AuditLogDetailDialog } from '@/components/admin/audit/audit-log-detail-dialog';
 import { ActionBadge } from '@/components/admin/audit/audit-log-badges';
@@ -13,13 +13,13 @@ import {
   AdminDataTableHeadCell,
   AdminDataTableOperationsHeadCell,
 } from '@/components/ui/admin-data-table';
+import { AdminTableToolbar } from '@/components/ui/admin-table-toolbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
 import { Select } from '@/components/ui/select';
-import { AdminApiError } from '@/lib/api-admin-client';
-import { listAuditLogs, type AuditLogsFilters } from '@/lib/audit-logs-api';
+import { useAuditLogsList, type AuditActionFilter } from '@/hooks/use-audit-logs-list';
 import { formatDate } from '@/lib/format';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -30,8 +30,6 @@ export interface AuditLogsPanelProps {
   auditableTables: readonly string[];
 }
 
-type ActionFilter = 'all' | 'INSERT' | 'UPDATE' | 'DELETE';
-
 const TIME_RANGES = [
   { value: '', label: 'All time' },
   { value: '1h', label: 'Last hour' },
@@ -39,25 +37,6 @@ const TIME_RANGES = [
   { value: '7d', label: 'Last 7 days' },
   { value: '30d', label: 'Last 30 days' },
 ] as const;
-
-function getTimestamp(range: string): string | undefined {
-  if (!range) {
-    return undefined;
-  }
-  const now = new Date();
-  switch (range) {
-    case '1h':
-      return new Date(now.getTime() - 60 * 60 * 1000).toISOString();
-    case '24h':
-      return new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
-    case '7d':
-      return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    case '30d':
-      return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    default:
-      return undefined;
-  }
-}
 
 function formatGmtOffset(date: Date = new Date()) {
   const offsetMinutes = -date.getTimezoneOffset();
@@ -70,104 +49,8 @@ function formatGmtOffset(date: Date = new Date()) {
 }
 
 export function AuditLogsPanel({ auditableTables }: AuditLogsPanelProps) {
-  const [items, setItems] = useState<AuditLog[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [error, setError] = useState('');
+  const list = useAuditLogsList();
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
-
-  const [actionFilter, setActionFilter] = useState<ActionFilter>('all');
-  const [tableFilter, setTableFilter] = useState<string>('all');
-  const [userEmailFilter, setUserEmailFilter] = useState('');
-  const [recordIdFilter, setRecordIdFilter] = useState('');
-  const [timeRange, setTimeRange] = useState('24h');
-
-  const filtersInvalid = Boolean(recordIdFilter.trim() && tableFilter === 'all');
-
-  const buildFilters = useCallback((): AuditLogsFilters => {
-    const filters: AuditLogsFilters = {};
-    if (actionFilter !== 'all') {
-      filters.action = actionFilter;
-    }
-    if (tableFilter !== 'all') {
-      filters.table = tableFilter;
-    }
-    const email = userEmailFilter.trim();
-    if (email) {
-      filters.email = email;
-    }
-    if (recordIdFilter.trim()) {
-      filters.record_id = recordIdFilter.trim();
-    }
-    const since = getTimestamp(timeRange);
-    if (since) {
-      filters.since = since;
-    }
-    return filters;
-  }, [actionFilter, tableFilter, userEmailFilter, recordIdFilter, timeRange]);
-
-  const fetchWithFilters = useCallback(
-    async (filters: AuditLogsFilters, cursor?: string, reset = false) => {
-      if (filtersInvalid && filters.record_id) {
-        return;
-      }
-      if (reset || !cursor) {
-        setIsLoading(true);
-      } else {
-        setIsLoadingMore(true);
-      }
-      setError('');
-      try {
-        const response = await listAuditLogs(filters, cursor, 50);
-        setItems((prev) =>
-          reset || !cursor ? response.items : [...prev, ...response.items]
-        );
-        setNextCursor(response.next_cursor ?? null);
-      } catch (err) {
-        const message =
-          err instanceof AdminApiError ? err.message : 'Failed to load audit logs.';
-        setError(message);
-      } finally {
-        setIsLoading(false);
-        setIsLoadingMore(false);
-      }
-    },
-    [filtersInvalid]
-  );
-
-  const loadItems = useCallback(
-    async (cursor?: string, reset = false) => {
-      if (filtersInvalid) {
-        setIsLoading(false);
-        setIsLoadingMore(false);
-        setItems([]);
-        setNextCursor(null);
-        return;
-      }
-      await fetchWithFilters(buildFilters(), cursor, reset);
-    },
-    [buildFilters, fetchWithFilters, filtersInvalid]
-  );
-
-  useEffect(() => {
-    void loadItems(undefined, true);
-  }, [loadItems]);
-
-  const handleApplyFilters = () => {
-    void loadItems(undefined, true);
-  };
-
-  const handleClearFilters = () => {
-    setActionFilter('all');
-    setTableFilter('all');
-    setUserEmailFilter('');
-    setRecordIdFilter('');
-    setTimeRange('24h');
-    const since = getTimestamp('24h');
-    void fetchWithFilters(since ? { since } : {}, undefined, true);
-  };
-
   const timestampHeader = useMemo(() => `Timestamp (${formatGmtOffset()})`, []);
 
   return (
@@ -175,15 +58,15 @@ export function AuditLogsPanel({ auditableTables }: AuditLogsPanelProps) {
       <PaginatedTableCard
         title='Audit logs'
         description='Database change history for application tables. API-key writes show the key name as the actor. Webhook and other system writes show a generic actor label.'
-        isLoading={isLoading && items.length === 0}
-        isLoadingMore={isLoadingMore}
-        hasMore={Boolean(nextCursor)}
-        error={error}
+        isLoading={list.isLoading && list.items.length === 0}
+        isLoadingMore={list.isLoadingMore}
+        hasMore={list.hasMore}
+        error={list.error}
         loadingLabel='Loading audit logs...'
-        onLoadMore={() => loadItems(nextCursor ?? undefined, false)}
+        onLoadMore={() => void list.loadMore()}
         toolbar={
-          <div className='mb-6 space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4'>
-            {filtersInvalid ? (
+          <AdminTableToolbar className='mb-6 w-full flex-col items-stretch rounded-lg border border-slate-200 bg-slate-50 p-4'>
+            {list.filtersInvalid ? (
               <p className='mb-2 text-sm text-amber-800' role='alert'>
                 Select a table before filtering by record ID.
               </p>
@@ -193,8 +76,8 @@ export function AuditLogsPanel({ auditableTables }: AuditLogsPanelProps) {
                 <Label htmlFor='audit-action-filter'>Action</Label>
                 <Select
                   id='audit-action-filter'
-                  value={actionFilter}
-                  onChange={(e) => setActionFilter(e.target.value as ActionFilter)}
+                  value={list.draft.action}
+                  onChange={(e) => list.setDraftField('action', e.target.value as AuditActionFilter)}
                 >
                   <option value='all'>All actions</option>
                   <option value='INSERT'>Insert</option>
@@ -206,8 +89,8 @@ export function AuditLogsPanel({ auditableTables }: AuditLogsPanelProps) {
                 <Label htmlFor='audit-table-filter'>Table</Label>
                 <Select
                   id='audit-table-filter'
-                  value={tableFilter}
-                  onChange={(e) => setTableFilter(e.target.value)}
+                  value={list.draft.table}
+                  onChange={(e) => list.setDraftField('table', e.target.value)}
                 >
                   <option value='all'>All tables</option>
                   {auditableTables.map((table) => (
@@ -221,8 +104,8 @@ export function AuditLogsPanel({ auditableTables }: AuditLogsPanelProps) {
                 <Label htmlFor='audit-time-range'>Time range</Label>
                 <Select
                   id='audit-time-range'
-                  value={timeRange}
-                  onChange={(e) => setTimeRange(e.target.value)}
+                  value={list.draft.timeRange}
+                  onChange={(e) => list.setDraftField('timeRange', e.target.value)}
                 >
                   {TIME_RANGES.map((range) => (
                     <option key={range.value || 'all'} value={range.value}>
@@ -238,8 +121,8 @@ export function AuditLogsPanel({ auditableTables }: AuditLogsPanelProps) {
                   type='text'
                   autoComplete='off'
                   placeholder='Email, API key, or webhook…'
-                  value={userEmailFilter}
-                  onChange={(e) => setUserEmailFilter(e.target.value)}
+                  value={list.draft.email}
+                  onChange={(e) => list.setDraftField('email', e.target.value)}
                 />
               </div>
             </div>
@@ -251,16 +134,16 @@ export function AuditLogsPanel({ auditableTables }: AuditLogsPanelProps) {
                   type='text'
                   autoComplete='off'
                   placeholder='Filter by record ID…'
-                  value={recordIdFilter}
-                  onChange={(e) => setRecordIdFilter(e.target.value)}
+                  value={list.draft.recordId}
+                  onChange={(e) => list.setDraftField('recordId', e.target.value)}
                 />
               </div>
               <div className='flex items-end gap-2 lg:col-span-2'>
                 <Button
                   type='button'
                   variant='primary'
-                  onClick={handleApplyFilters}
-                  disabled={filtersInvalid}
+                  onClick={list.applyFilters}
+                  disabled={list.filtersInvalid}
                   className='flex-1 sm:flex-initial'
                 >
                   Apply filters
@@ -268,17 +151,17 @@ export function AuditLogsPanel({ auditableTables }: AuditLogsPanelProps) {
                 <Button
                   type='button'
                   variant='secondary'
-                  onClick={handleClearFilters}
+                  onClick={list.clearFilters}
                   className='flex-1 sm:flex-initial'
                 >
                   Clear
                 </Button>
               </div>
             </div>
-          </div>
+          </AdminTableToolbar>
         }
       >
-        {items.length === 0 && !isLoading ? (
+        {list.items.length === 0 && !list.isLoading ? (
           <p className='text-sm text-slate-600'>No audit logs match the current filters.</p>
         ) : (
           <AdminDataTable>
@@ -294,7 +177,7 @@ export function AuditLogsPanel({ auditableTables }: AuditLogsPanelProps) {
               </tr>
             </AdminDataTableHead>
             <AdminDataTableBody>
-              {items.map((item) => (
+              {list.items.map((item) => (
                 <tr key={item.id} className='hover:bg-slate-50'>
                   <AdminDataTableCell className='text-slate-600'>{formatDate(item.timestamp)}</AdminDataTableCell>
                   <AdminDataTableCell>

@@ -5,6 +5,7 @@ import { AssetGrantsPanel } from './asset-grants-panel';
 import { AssetListPanel } from './asset-list-panel';
 
 import { StatusBanner } from '@/components/status-banner';
+import { AdminCollapsibleSection } from '@/components/ui/admin-collapsible-section';
 import { useAdminAssets } from '@/hooks/use-admin-assets';
 import { getApiConfigError } from '@/lib/config';
 
@@ -60,42 +61,42 @@ export function AssetsPage() {
         </StatusBanner>
       ) : null}
 
-      <div className='grid grid-cols-1 gap-6 xl:grid-cols-2'>
-        <AssetEditorPanel
-          key={`${selectedAsset?.id ?? 'new-asset'}-${replaceSuccessNonce}`}
-          selectedAsset={selectedAsset}
-          isSavingAsset={isSavingAsset}
-          isDeletingCurrentAsset={Boolean(selectedAssetId) && isDeletingAssetId === selectedAssetId}
-          assetMutationError={assetMutationError}
-          uploadState={uploadState}
-          uploadPhase={uploadPhase}
-          uploadError={uploadError}
-          hasPendingUpload={hasPendingUpload}
-          onRetryUpload={retryPendingUpload}
-          onReplaceFile={async (file) => {
-            if (!selectedAssetId) {
-              return false;
-            }
-            return replaceAssetFileEntry(selectedAssetId, file, DEFAULT_CONTENT_TYPE);
-          }}
-          onCreate={async (payload, file) => {
-            try {
-              await createAssetEntry(
-                {
-                  ...payload,
-                  assetType: DEFAULT_ASSET_TYPE,
-                  contentType: DEFAULT_CONTENT_TYPE,
-                },
-                file
-              );
-            } catch {
-              // The hook stores the actionable error state for UI display.
-            }
-          }}
-          onUpdate={async (assetId, payload) => updateAssetEntry(assetId, payload)}
-          onStartCreate={clearSelectedAsset}
-        />
+      <AssetEditorPanel
+        key={`${selectedAsset?.id ?? 'new-asset'}-${replaceSuccessNonce}`}
+        selectedAsset={selectedAsset}
+        isSavingAsset={isSavingAsset}
+        isDeletingCurrentAsset={Boolean(selectedAssetId) && isDeletingAssetId === selectedAssetId}
+        assetMutationError={assetMutationError}
+        uploadState={uploadState}
+        uploadPhase={uploadPhase}
+        uploadError={uploadError}
+        hasPendingUpload={hasPendingUpload}
+        onRetryUpload={retryPendingUpload}
+        onReplaceFile={async (file) => {
+          if (!selectedAssetId) {
+            return false;
+          }
+          return replaceAssetFileEntry(selectedAssetId, file, DEFAULT_CONTENT_TYPE);
+        }}
+        onCreate={async (payload, file) => {
+          try {
+            await createAssetEntry(
+              {
+                ...payload,
+                assetType: DEFAULT_ASSET_TYPE,
+                contentType: DEFAULT_CONTENT_TYPE,
+              },
+              file
+            );
+          } catch {
+            // The hook stores the actionable error state for UI display.
+          }
+        }}
+        onUpdate={async (assetId, payload) => updateAssetEntry(assetId, payload)}
+        onStartCreate={clearSelectedAsset}
+      />
 
+      <AdminCollapsibleSection id='asset-access-grants' title='Access grants'>
         <AssetGrantsPanel
           selectedAsset={selectedAsset}
           grants={grants}
@@ -119,7 +120,7 @@ export function AssetsPage() {
             }
           }}
         />
-      </div>
+      </AdminCollapsibleSection>
 
       <AssetListPanel
         assets={assets}

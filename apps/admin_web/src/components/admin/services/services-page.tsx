@@ -5,6 +5,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { AdminPageErrorBanner } from '@/components/admin/admin-page-error-banner';
 import { StatusBanner } from '@/components/status-banner';
 
+import { useCompletionCertificates } from '@/hooks/use-completion-certificates';
+import { usePartners } from '@/hooks/use-partners';
 import { useServicesPage, type ServicesView } from '@/hooks/use-services-page';
 import {
   compareInstancesByFirstSlotStartsDesc,
@@ -13,18 +15,24 @@ import {
   formatServiceTitleWithTier,
 } from '@/lib/format';
 import { getInstance, getService } from '@/lib/services-api';
-import type { ServiceDetail, ServiceInstance } from '@/types/services';
+import type {
+  GeographicAreaSummary,
+  LocationSummary,
+  ServiceDetail,
+  ServiceInstance,
+  ServiceSummary,
+} from '@/types/services';
 
+import { CertificatesPanel } from './certificates-panel';
 import { DiscountCodesPanel } from './discount-codes-panel';
-import { VenuesPanel } from './venues-panel';
 import { EnrollmentListPanel } from './enrollment-list-panel';
 import { InstanceDetailPanel } from './instance-detail-panel';
 import { InstanceListPanel } from './instance-list-panel';
+import { PartnersPanel } from './partners-panel';
 import { ServiceDetailPanel } from './service-detail-panel';
 import { ServiceListPanel } from './service-list-panel';
-import { CertificatesTab } from './certificates-tab';
-import { PartnersTab } from './partners-tab';
 import { ServicesHeader } from './services-header';
+import { VenuesPanel } from './venues-panel';
 
 export function ServicesPage() {
   const state = useServicesPage();
@@ -423,9 +431,9 @@ export function ServicesPage() {
           onDelete={state.venues.deleteVenue}
         />
       ) : state.activeView === 'certificates' ? (
-        <CertificatesTab serviceOptions={allServiceOptionsIncludingArchived} />
+        <CertificatesView serviceOptions={allServiceOptionsIncludingArchived} />
       ) : (
-        <PartnersTab
+        <PartnersView
           locations={state.locationList.locations}
           geographicAreas={state.venues.geographicAreas}
           areasLoading={state.venues.areasLoading}
@@ -435,5 +443,33 @@ export function ServicesPage() {
         />
       )}
     </div>
+  );
+}
+
+function CertificatesView({ serviceOptions }: { serviceOptions: ServiceSummary[] }) {
+  const certificates = useCompletionCertificates();
+  return <CertificatesPanel certificates={certificates} serviceOptions={serviceOptions} />;
+}
+
+function PartnersView({
+  locations,
+  geographicAreas,
+  areasLoading,
+  refreshLocations,
+}: {
+  locations: LocationSummary[];
+  geographicAreas: GeographicAreaSummary[];
+  areasLoading: boolean;
+  refreshLocations: () => Promise<void> | void;
+}) {
+  const partners = usePartners();
+  return (
+    <PartnersPanel
+      partners={partners}
+      locations={locations}
+      geographicAreas={geographicAreas}
+      areasLoading={areasLoading}
+      refreshLocations={refreshLocations}
+    />
   );
 }

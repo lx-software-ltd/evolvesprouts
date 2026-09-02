@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef } from 'react';
 
-import type { ClientInvoicesBillingRefresh } from "@/hooks/client-invoices-panel-types";
+import type { ClientInvoicesBillingRefresh } from '@/hooks/client-invoices-panel-types';
 
 type PaymentsLoader = (signal?: AbortSignal) => Promise<void>;
 type InvoicesLoader = (signal?: AbortSignal) => Promise<void>;
@@ -14,7 +14,9 @@ type EnrollmentPickerLoader = (
 export function useClientInvoicesBillingRefresh() {
   const paymentsLoaderRef = useRef<PaymentsLoader>(async () => {});
   const invoicesLoaderRef = useRef<InvoicesLoader>(async () => {});
-  const enrollmentPickerLoaderRef = useRef<EnrollmentPickerLoader>(async () => {});
+  const enrollmentPickerLoaderRef = useRef<EnrollmentPickerLoader>(
+    async () => {},
+  );
 
   const refreshPayments = useCallback(
     (signal?: AbortSignal) => paymentsLoaderRef.current(signal),
