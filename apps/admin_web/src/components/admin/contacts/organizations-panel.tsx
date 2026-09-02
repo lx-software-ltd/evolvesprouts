@@ -2,9 +2,10 @@
 
 import type { useAdminEntityOrganizations } from '@/hooks/use-admin-entity-organizations';
 import { useOrganizationPanelEditor } from '@/hooks/use-organization-panel-editor';
-import { OrganizationEditorCard } from '@/components/admin/contacts/organization-editor-card';
-import { OrganizationsListTable } from '@/components/admin/contacts/organizations-list-table';
+import { OrganizationEditorPanel } from '@/components/admin/contacts/organization-editor-panel';
+import { OrganizationsRecordTable } from '@/components/admin/contacts/organizations-record-table';
 import { EntityRemoveMemberDialog } from '@/components/admin/contacts/shared/entity-remove-member-dialog';
+import { AdminDiscardChangesDialog } from '@/components/ui/admin-discard-changes-dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { EntityTagRef } from '@/lib/entity-api';
 import type { GeographicAreaSummary, LocationSummary } from '@/types/services';
@@ -59,15 +60,10 @@ export function OrganizationsPanel({
   });
 
   return (
-    <div className='space-y-6'>
+    <>
       <ConfirmDialog {...editor.confirmDialogProps} />
-      <OrganizationEditorCard
-        editor={editor}
-        tags={tags}
-        geographicAreas={geographicAreas}
-        areasLoading={areasLoading}
-      />
-      <OrganizationsListTable
+      <AdminDiscardChangesDialog prompt={editor.expanded.discardPrompt} />
+      <OrganizationsRecordTable
         rows={rows}
         filters={filters}
         setFilter={setFilter}
@@ -77,11 +73,18 @@ export function OrganizationsPanel({
         error={error}
         loadMore={loadMore}
         isSaving={editor.isSaving}
-        selectedId={editor.selectedId}
         deleteActionError={editor.deleteActionError}
         onClearDeleteError={() => editor.setDeleteActionError('')}
-        onSelectRow={editor.selectRow}
-        onDeleteOrganization={editor.handleDeleteOrganization}
+        expanded={editor.expanded}
+        detail={
+          <OrganizationEditorPanel
+            editor={editor}
+            tags={tags}
+            geographicAreas={geographicAreas}
+            areasLoading={areasLoading}
+          />
+        }
+        onDeleteOrganization={(row) => void editor.handleDeleteOrganization(row)}
       />
       <EntityRemoveMemberDialog
         open={editor.removeTarget !== null}
@@ -91,6 +94,6 @@ export function OrganizationsPanel({
         onCancel={() => editor.setRemoveTarget(null)}
         onConfirm={() => void editor.confirmRemoveMember()}
       />
-    </div>
+    </>
   );
 }

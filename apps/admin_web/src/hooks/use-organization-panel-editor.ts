@@ -1,12 +1,14 @@
 'use client';
 
-import { useCallback, useMemo, useState, type MouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { useAdminEntityOrganizations } from '@/hooks/use-admin-entity-organizations';
 import { useEntityPanelEditorShell } from '@/hooks/use-entity-panel-editor-shell';
 import { useEntityInlineLocation } from '@/hooks/use-entity-inline-location';
 import { useEntityServiceLabels } from '@/hooks/use-entity-service-labels';
+import { useExpandedRecordForm } from '@/hooks/use-expanded-record-form';
 import type { InlineLocationEmbeddedSummary } from '@/components/admin/locations/inline-location-editor';
+import { ADMIN_ORGANIZATION_QUERY_PARAM } from '@/lib/contact-related-links';
 import { listAdminOrganizationServices } from '@/lib/entity-api';
 import { contactEligibleForEntityMembership } from '@/lib/entity-contact-eligibility';
 import {
@@ -17,6 +19,7 @@ import type { GeographicAreaSummary, LocationSummary } from '@/types/services';
 import type { components } from '@/types/generated/admin-api.generated';
 
 type ApiSchemas = components['schemas'];
+type AdminOrganization = ApiSchemas['AdminOrganization'];
 
 export interface UseOrganizationPanelEditorInput {
   organizations: ReturnType<typeof useAdminEntityOrganizations>;
@@ -42,6 +45,7 @@ export function useOrganizationPanelEditor({
 }: UseOrganizationPanelEditorInput) {
   const {
     organizations: rows,
+    isLoading,
     isSaving,
     createOrganization,
     updateOrganization,
@@ -58,10 +62,13 @@ export function useOrganizationPanelEditor({
     deleteActionError,
     setDeleteActionError,
     editorMode,
-    setEditorMode,
     selectedId,
-    setSelectedId,
-  } = useEntityPanelEditorShell();
+    expanded,
+    externalDirtyRef,
+    clearDirty,
+    markDirty,
+    track,
+  } = useEntityPanelEditorShell({ paramName: ADMIN_ORGANIZATION_QUERY_PARAM });
   const [name, setName] = useState('');
   const [organizationType, setOrganizationType] =
     useState<ApiSchemas['EntityOrganizationType']>('company');
@@ -103,7 +110,55 @@ export function useOrganizationPanelEditor({
     refreshLocations,
   });
 
+  const locationDraftDirty = location.locationDraftDirty;
+  useEffect(() => {
+    externalDirtyRef.current = () => locationDraftDirty;
+  }, [externalDirtyRef, locationDraftDirty]);
+
   const locationLockedReadOnly = Boolean(location.resolvedLocation?.lockedFromPartnerOrg);
+  const resetLocationDraft = location.resetLocationDraft;
+
+  const clearForm = useCallback(() => {
+    setName('');
+    setOrganizationType('company');
+    setRelationshipType('prospect');
+    setWebsite('');
+    setPendingLocationId(null);
+    setOptimisticLocationSummary(null);
+    resetLocationDraft();
+    setTagIds([]);
+    setActive(true);
+    setMemberContactId('');
+    clearDirty();
+  }, [clearDirty, resetLocationDraft]);
+
+  const applyRow = useCallback(
+    (row: AdminOrganization) => {
+      setName(row.name);
+      setOrganizationType(row.organization_type);
+      setRelationshipType(
+        relationshipTypeForEditor(row.relationship_type, ORGANIZATION_RELATIONSHIP_TYPES)
+      );
+      setWebsite(row.website ?? '');
+      setPendingLocationId(row.location_id ?? null);
+      setOptimisticLocationSummary(null);
+      resetLocationDraft();
+      setTagIds([...row.tag_ids]);
+      setActive(row.active);
+      setMemberContactId('');
+      clearDirty();
+    },
+    [clearDirty, resetLocationDraft]
+  );
+
+  useExpandedRecordForm<AdminOrganization>({
+    expandedId: expanded.expandedId,
+    rows,
+    isLoading,
+    applyRow,
+    reset: clearForm,
+    collapse: expanded.collapse,
+  });
 
   const memberContactOptions = useMemo(() => {
     return contactOptions.filter((c) => {
@@ -126,21 +181,6 @@ export function useOrganizationPanelEditor({
     }
   }
 
-  async function resetCreateForm() {
-    setEditorMode('create');
-    setSelectedId(null);
-    setName('');
-    setOrganizationType('company');
-    setRelationshipType('prospect');
-    setWebsite('');
-    setPendingLocationId(null);
-    setOptimisticLocationSummary(null);
-    location.resetLocationDraft();
-    setTagIds([]);
-    setActive(true);
-    setMemberContactId('');
-  }
-
   async function handleSubmit(): Promise<void> {
     try {
       const resolved = await location.commitLocationForSubmit();
@@ -157,7 +197,8 @@ export function useOrganizationPanelEditor({
           location_id: loc,
           tag_ids: tagIds,
         });
-        await resetCreateForm();
+        clearDirty();
+        expanded.collapse();
         return;
       }
       if (!selected) {
@@ -172,6 +213,7 @@ export function useOrganizationPanelEditor({
         active,
         tag_ids: tagIds,
       });
+      clearDirty();
     } catch {
       // Retry preserved.
     }
@@ -192,11 +234,7 @@ export function useOrganizationPanelEditor({
     }
   }
 
-  async function handleDeleteOrganization(
-    row: ApiSchemas['AdminOrganization'],
-    clickEvent: MouseEvent<HTMLButtonElement>
-  ): Promise<void> {
-    clickEvent.stopPropagation();
+  async function handleDeleteOrganization(row: AdminOrganization): Promise<void> {
     const confirmed = await requestConfirm({
       title: 'Delete organisation',
       description: `Permanently delete "${row.name}"? This removes the organisation from the database and cannot be undone.`,
@@ -211,33 +249,14 @@ export function useOrganizationPanelEditor({
     try {
       await deleteOrganization(row.id);
       if (selectedId === row.id) {
-        await resetCreateForm();
+        clearDirty();
+        expanded.collapse();
       }
     } catch (err) {
       setDeleteActionError(
         err instanceof Error ? err.message : 'Failed to delete organisation'
       );
     }
-  }
-
-  function selectRow(id: string) {
-    const row = rows.find((o) => o.id === id);
-    if (!row) {
-      return;
-    }
-    setSelectedId(id);
-    setEditorMode('edit');
-    setName(row.name);
-    setOrganizationType(row.organization_type);
-    setRelationshipType(
-      relationshipTypeForEditor(row.relationship_type, ORGANIZATION_RELATIONSHIP_TYPES)
-    );
-    setWebsite(row.website ?? '');
-    setPendingLocationId(row.location_id ?? null);
-    setOptimisticLocationSummary(null);
-    location.resetLocationDraft();
-    setTagIds([...row.tag_ids]);
-    setActive(row.active);
   }
 
   async function confirmRemoveMember() {
@@ -256,22 +275,23 @@ export function useOrganizationPanelEditor({
     confirmDialogProps,
     deleteActionError,
     setDeleteActionError,
+    expanded,
     editorMode,
     selectedId,
     selected,
     name,
-    setName,
+    setName: track(setName),
     organizationType,
-    setOrganizationType,
+    setOrganizationType: track(setOrganizationType),
     relationshipType,
-    setRelationshipType,
+    setRelationshipType: track(setRelationshipType),
     relationshipOptions,
     website,
-    setWebsite,
+    setWebsite: track(setWebsite),
     tagIds,
-    setTagIds,
+    setTagIds: track(setTagIds),
     active,
-    setActive,
+    setActive: track(setActive),
     isSaving,
     serviceLabels,
     memberContactId,
@@ -279,14 +299,18 @@ export function useOrganizationPanelEditor({
     memberContactOptions,
     removeTarget,
     setRemoveTarget,
-    location,
+    location: {
+      ...location,
+      clearPendingLocation: () => {
+        markDirty();
+        location.clearPendingLocation();
+      },
+    },
     locationLockedReadOnly,
-    resetCreateForm,
     handleSubmit,
     handleAddMember,
     handleDeleteOrganization,
     handlePrimaryMemberChange,
-    selectRow,
     confirmRemoveMember,
   };
 }

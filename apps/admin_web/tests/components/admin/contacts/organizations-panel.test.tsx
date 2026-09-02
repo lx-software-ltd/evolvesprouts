@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const { createLocation, geocodeVenueAddress, updateLocationPartial } = vi.hoisted(() => ({
   createLocation: vi.fn(),
@@ -73,7 +73,11 @@ function buildOrgsHook(
 }
 
 describe('OrganizationsPanel', () => {
-  it('creates an organisation with default type', async () => {
+  afterEach(() => {
+    window.history.replaceState(null, '', '/contacts');
+  });
+
+  it('creates an organisation with default type from the draft row', async () => {
     const user = userEvent.setup();
     const createOrganization = vi.fn().mockResolvedValue(null);
     const organizations = buildOrgsHook({ createOrganization });
@@ -91,6 +95,14 @@ describe('OrganizationsPanel', () => {
       />
     );
 
+    expect(screen.getByRole('region', { name: 'Organisations' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Name')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'New organisation' }));
+
+    expect(window.location.search).toBe('?organization=new');
+    expect(screen.getByTestId('admin-row-new')).toHaveAttribute('data-draft', 'true');
+
     await user.type(screen.getByLabelText('Name'), 'Acme');
     await user.click(screen.getByRole('button', { name: 'Create organisation' }));
 
@@ -103,7 +115,8 @@ describe('OrganizationsPanel', () => {
     );
   });
 
-  it('lists CRM relationship options without partner', () => {
+  it('lists CRM relationship options without partner and explains where vendors and partners live', async () => {
+    const user = userEvent.setup();
     render(
       <OrganizationsPanel
         organizations={buildOrgsHook()}
@@ -116,27 +129,12 @@ describe('OrganizationsPanel', () => {
         contactsForMembership={[]}
       />
     );
+
+    await user.click(screen.getByRole('button', { name: 'New organisation' }));
 
     const rel = screen.getByLabelText('Relationship');
-    expect(rel).toBeInTheDocument();
     const options = Array.from(rel.querySelectorAll('option')).map((o) => o.value);
     expect(options).toEqual(['prospect', 'client', 'other']);
-  });
-
-  it('shows CRM organisations description including Services partners path', () => {
-    render(
-      <OrganizationsPanel
-        organizations={buildOrgsHook()}
-        tags={[]}
-        locations={[]}
-        geographicAreas={[]}
-        areasLoading={false}
-        refreshLocations={noopRefresh}
-        contactOptions={[]}
-        contactsForMembership={[]}
-      />
-    );
-
     expect(
       screen.getByText(/CRM organisations only\. Vendors are managed under Finance → Vendors; partners under Services → Partners\./)
     ).toBeInTheDocument();
@@ -201,6 +199,7 @@ describe('OrganizationsPanel', () => {
     );
 
     await user.click(screen.getByText('Venue Org'));
+    await user.click(screen.getByRole('button', { name: /^Location/ }));
 
     expect(screen.queryByRole('button', { name: 'Change' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Clear' })).toBeInTheDocument();
@@ -271,6 +270,10 @@ describe('OrganizationsPanel', () => {
     );
 
     await user.click(screen.getByText('School Co'));
+    expect(window.location.search).toBe('?organization=org-2');
+    expect(screen.getByLabelText('Name')).toHaveValue('School Co');
+
+    await user.click(screen.getByRole('button', { name: /^Location/ }));
     await user.click(screen.getByRole('button', { name: 'Change' }));
     await user.clear(screen.getByLabelText('Address'));
     await user.type(screen.getByLabelText('Address'), 'New Addr');
@@ -339,7 +342,8 @@ describe('OrganizationsPanel', () => {
     });
   });
 
-  it('shows related-record operation links only when those records exist', () => {
+  it('shows related-record operation links only when those records exist', async () => {
+    const user = userEvent.setup();
     const withLinks: components['schemas']['AdminOrganization'] = {
       id: 'org-linked',
       name: 'Linked Org',
@@ -383,19 +387,28 @@ describe('OrganizationsPanel', () => {
       />
     );
 
-    const salesLink = screen.getByRole('link', { name: 'Sales conversations' });
+    const linkedRow = screen.getByTestId('admin-row-org-linked');
+    const salesLink = within(linkedRow).getByRole('link', { name: 'Sales conversations' });
     expect(salesLink).toHaveAttribute('href', '/sales?tab=messenger&organization=org-linked');
-    expect(salesLink).toHaveClass('h-8', 'px-3');
-    expect(screen.getByRole('link', { name: 'Service instances' })).toHaveAttribute(
+    expect(salesLink).toHaveClass('h-8', 'w-8', 'bg-white', 'border');
+    expect(within(linkedRow).queryByRole('link', { name: 'Service instances' })).not.toBeInTheDocument();
+
+    await user.click(within(linkedRow).getByRole('button', { name: 'More actions' }));
+    const menu = screen.getByRole('menu', { name: 'More actions' });
+    expect(within(menu).getByRole('menuitem', { name: 'Service instances' })).toHaveAttribute(
       'href',
       '/services?organization=org-linked'
     );
-    expect(screen.getByRole('link', { name: 'Invoices' })).toHaveAttribute(
+    expect(within(menu).getByRole('menuitem', { name: 'Invoices' })).toHaveAttribute(
       'href',
       '/assets?tag=customer_invoice&query=Linked+Org'
     );
-    expect(screen.getAllByRole('link', { name: 'Sales conversations' })).toHaveLength(1);
-    expect(screen.getAllByRole('link', { name: 'Service instances' })).toHaveLength(1);
-    expect(screen.getAllByRole('link', { name: 'Invoices' })).toHaveLength(1);
+    expect(within(menu).getByRole('menuitem', { name: 'Delete organisation' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+
+    const plainRow = screen.getByTestId('admin-row-org-plain');
+    expect(within(plainRow).queryByRole('link')).not.toBeInTheDocument();
+    expect(within(plainRow).queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
+    expect(within(plainRow).getByRole('button', { name: 'Delete organisation' })).toBeInTheDocument();
   });
 });
