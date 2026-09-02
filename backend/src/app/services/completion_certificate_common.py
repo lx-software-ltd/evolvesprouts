@@ -19,8 +19,9 @@ from app.db.models import (
     OrganizationMember,
     ServiceInstance,
 )
-from app.db.models.service_instance import ServiceInstancePartnerOrganization
+from app.db.models.contact import contact_full_name
 from app.db.models.enums import CompletionCertificateStatus, EnrollmentStatus
+from app.db.models.service_instance import ServiceInstancePartnerOrganization
 from app.exceptions import NotFoundError, ValidationError
 from app.services.completion_certificate_pdf import (
     COMPLETION_CERTIFICATE_PDF_TEMPLATE_VERSION,
@@ -63,9 +64,7 @@ class ResolvedCertificateDraft:
 
 
 def _contact_display_name(contact: Contact) -> str:
-    parts = [contact.first_name or "", contact.last_name or ""]
-    label = " ".join(p for p in parts if p).strip()
-    return label or (contact.email or "Recipient")
+    return contact_full_name(contact) or contact.email or "Recipient"
 
 
 def _partner_signer_name(session: Session, organization_id: UUID) -> str | None:

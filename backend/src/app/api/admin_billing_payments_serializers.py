@@ -11,11 +11,10 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.api.admin_billing_common import (
     batch_enrollment_party_display_names,
-    contact_display_name,
 )
+from app.db.models.contact import Contact, contact_full_name
 from app.db.models.customer_invoice import CustomerInvoice
 from app.db.models.customer_payment import CustomerPayment
-from app.db.models.contact import Contact
 from app.db.models.enrollment import Enrollment
 from app.db.models.payment_allocation import PaymentAllocation
 from app.db.models.service_instance import ServiceInstance
@@ -136,7 +135,7 @@ def _batch_party_label_by_payment(
     cids = {p.contact_id for p in payments if p.contact_id is not None}
     if cids:
         for c in session.execute(select(Contact).where(Contact.id.in_(cids))).scalars():
-            nm = contact_display_name(c)
+            nm = contact_full_name(c)
             contact_by_id[c.id] = (nm or "").strip() or "—"
 
     for p in payments:
