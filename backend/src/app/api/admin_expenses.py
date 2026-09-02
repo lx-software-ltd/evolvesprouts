@@ -44,10 +44,10 @@ from app.services.expense_events import enqueue_expense_parse
 from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger
 from app.api.admin_expenses_bulk_import import (
-    _delete_bulk_expense_import_job,
-    _get_bulk_expense_import_job,
-    _import_expenses_from_bulk_pdf,
-    _list_bulk_expense_import_jobs,
+    delete_bulk_expense_import_job,
+    get_bulk_expense_import_job,
+    import_expenses_from_bulk_pdf,
+    list_bulk_expense_import_jobs,
 )
 
 logger = get_logger(__name__)
@@ -75,21 +75,21 @@ def handle_admin_expenses_request(
     if len(parts) == 3 and parts[2] == "import-from-bulk-pdf":
         if method != "POST":
             return method_not_allowed(event)
-        return _import_expenses_from_bulk_pdf(event, actor_sub=identity.user_sub)
+        return import_expenses_from_bulk_pdf(event, actor_sub=identity.user_sub)
 
     if len(parts) == 3 and parts[2] == "bulk-import-jobs":
         if method != "GET":
             return method_not_allowed(event)
-        return _list_bulk_expense_import_jobs(event, actor_sub=identity.user_sub)
+        return list_bulk_expense_import_jobs(event, actor_sub=identity.user_sub)
 
     if len(parts) == 4 and parts[2] == "bulk-import-jobs":
         job_id = parse_uuid(parts[3])
         if method == "GET":
-            return _get_bulk_expense_import_job(
+            return get_bulk_expense_import_job(
                 event, job_id=job_id, actor_sub=identity.user_sub
             )
         if method == "DELETE":
-            return _delete_bulk_expense_import_job(
+            return delete_bulk_expense_import_job(
                 event, job_id=job_id, actor_sub=identity.user_sub
             )
         return method_not_allowed(event)

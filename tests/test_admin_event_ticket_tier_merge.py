@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.api import admin_service_instances
+from app.api import admin_service_instances_details
 from app.api.admin_services_payload_utils import parse_uuid_list
 from app.api.admin_services_payloads import parse_update_instance_payload
 from app.db.models import EventCategory, ServiceType
@@ -45,7 +45,7 @@ def test_merge_single_tier_patch_preserves_extra_tier_rows() -> None:
     )
     instance = SimpleNamespace(ticket_tiers=[tier_cat, tier_other])
     resolved = [{"name": "workshop", "price": Decimal("25.00"), "currency": "EUR"}]
-    merged = admin_service_instances._merge_event_ticket_tiers_with_existing(
+    merged = admin_service_instances_details.merge_event_ticket_tiers_with_existing(
         service,
         instance,
         resolved,  # type: ignore[arg-type]
@@ -87,7 +87,7 @@ def test_merge_multi_tier_requires_category_match() -> None:
         ]
     )
     with pytest.raises(ValidationError) as exc:
-        admin_service_instances._merge_event_ticket_tiers_with_existing(
+        admin_service_instances_details.merge_event_ticket_tiers_with_existing(
             service, instance, [{"name": "workshop", "price": Decimal("5")}]
         )
     assert "event_ticket_tiers" in (exc.value.field or "")

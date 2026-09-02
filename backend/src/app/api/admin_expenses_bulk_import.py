@@ -63,7 +63,7 @@ def _serialize_bulk_import_job_summary(job: BulkExpenseImportJob) -> dict[str, A
     }
 
 
-def _list_bulk_expense_import_jobs(
+def list_bulk_expense_import_jobs(
     event: Mapping[str, Any], *, actor_sub: str
 ) -> dict[str, Any]:
     limit = parse_limit(event)
@@ -94,7 +94,7 @@ def _list_bulk_expense_import_jobs(
         )
 
 
-def _import_expenses_from_bulk_pdf(
+def import_expenses_from_bulk_pdf(
     event: Mapping[str, Any], *, actor_sub: str
 ) -> dict[str, Any]:
     """Queue a combined PDF for async OpenRouter bulk parse (returns job id)."""
@@ -181,7 +181,7 @@ def _import_expenses_from_bulk_pdf(
     )
 
 
-def _delete_bulk_expense_import_job(
+def delete_bulk_expense_import_job(
     event: Mapping[str, Any], *, job_id: UUID, actor_sub: str
 ) -> dict[str, Any]:
     logger.info(
@@ -200,7 +200,7 @@ def _delete_bulk_expense_import_job(
     return json_response(204, {}, event=event)
 
 
-def _get_bulk_expense_import_job(
+def get_bulk_expense_import_job(
     event: Mapping[str, Any], *, job_id: UUID, actor_sub: str
 ) -> dict[str, Any]:
     with Session(get_engine()) as session:
