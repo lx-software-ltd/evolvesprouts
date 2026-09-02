@@ -3,9 +3,15 @@
 import { useEffect, useId, useState } from 'react';
 
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
+import {
+  ContactNotesRecordTable,
+  NOTE_DRAFT_ID,
+} from '@/components/admin/contacts/contact-notes-record-table';
 import { ContactNotesTable } from '@/components/admin/contacts/contact-notes-table';
 import { Button } from '@/components/ui/button';
 import { AdminEditorCard } from '@/components/ui/admin-editor-card';
+import { AdminEditorActions, AdminEditorPanel } from '@/components/ui/admin-editor-panel';
+import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Label } from '@/components/ui/label';
 import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
@@ -62,9 +68,11 @@ export function ContactNotesPanel({
   const [actionError, setActionError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isMutating, setIsMutating] = useState(false);
-  const [editorMode, setEditorMode] = useState<'create' | 'edit'>('create');
-  const [editingId, setEditingId] = useState<string | null>(null);
+  /** `NOTE_DRAFT_ID`, a note id, or `null`; drives both layouts' editor state. */
+  const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
   const [contentDraft, setContentDraft] = useState('');
+  const editingId = expandedNoteId && expandedNoteId !== NOTE_DRAFT_ID ? expandedNoteId : null;
+  const editorMode: 'create' | 'edit' = editingId ? 'edit' : 'create';
   const [confirmDialogProps, requestConfirm] = useConfirmDialog();
 
   const contactId = contact?.id ?? null;
@@ -83,8 +91,7 @@ export function ContactNotesPanel({
     const controller = new AbortController();
     setLoadError('');
     setActionError('');
-    setEditorMode('create');
-    setEditingId(null);
+    setExpandedNoteId(null);
     setContentDraft('');
     if (!contactId) {
       setNotes([]);
@@ -119,9 +126,29 @@ export function ContactNotesPanel({
   }, [contactId, onStandaloneNoteCountChange]);
 
   function resetEditor() {
-    setEditorMode('create');
-    setEditingId(null);
+    setExpandedNoteId(null);
     setContentDraft('');
+  }
+
+  function openDraft() {
+    setExpandedNoteId(NOTE_DRAFT_ID);
+    setContentDraft('');
+  }
+
+  /** Row click: open the note's editor, or collapse it when already open. */
+  function toggleNoteRow(id: string) {
+    if (expandedNoteId === id) {
+      resetEditor();
+      return;
+    }
+    if (id === NOTE_DRAFT_ID) {
+      openDraft();
+      return;
+    }
+    const note = notes.find((entry) => entry.id === id);
+    if (note) {
+      startEdit(note);
+    }
   }
 
   async function handleSaveNote() {
@@ -191,8 +218,7 @@ export function ContactNotesPanel({
   }
 
   function startEdit(note: NoteRow) {
-    setEditorMode('edit');
-    setEditingId(note.id);
+    setExpandedNoteId(note.id);
     setContentDraft(note.content);
   }
 
@@ -215,55 +241,57 @@ export function ContactNotesPanel({
   );
 
   if (layout === 'embedded') {
-    // Compact composer: one textarea row with the action beside it, then the
-    // notes table at the same density as the contacts table above.
-    return (
-      <>
-        <div className='space-y-3'>
-          <form
-            id={formId}
-            className='flex flex-wrap items-end gap-2'
-            onSubmit={(event) => {
-              event.preventDefault();
-              void handleSaveNote();
-            }}
-          >
-            <div className='min-w-0 flex-1'>
-              <Label htmlFor={contentFieldId}>{fieldLabel}</Label>
+    // Nested table-first list: `+` opens a draft row, clicking a note opens
+    // its editor beneath it, Delete stays in the Operations column.
+    const noteEditor = (
+      <AdminEditorPanel
+        actions={
+          <AdminEditorActions
+            mode={editorMode}
+            formId={formId}
+            isSaving={isMutating}
+            submitDisabled={submitDisabled}
+            submitLabel={submitLabel}
+          />
+        }
+      >
+        <form
+          id={formId}
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleSaveNote();
+          }}
+        >
+          <AdminFieldGrid columns={1}>
+            <AdminField label={fieldLabel} htmlFor={contentFieldId}>
               <Textarea
                 id={contentFieldId}
                 value={contentDraft}
                 onChange={(event) => setContentDraft(event.target.value)}
-                rows={2}
+                rows={3}
                 disabled={composerDisabled}
                 placeholder='Add a note about this contact…'
               />
-            </div>
-            <div className='flex shrink-0 items-center gap-2'>
-              {editorMode === 'edit' ? (
-                <Button type='button' variant='secondary' disabled={isMutating} onClick={resetEditor}>
-                  Cancel edit
-                </Button>
-              ) : null}
-              <Button type='submit' disabled={submitDisabled}>
-                {isMutating ? 'Saving...' : submitLabel}
-              </Button>
-            </div>
-          </form>
-          {actionError ? (
-            <StatusBanner variant='error' title='Note action failed'>
-              {actionError}
-            </StatusBanner>
-          ) : null}
-          {loadError ? (
-            <StatusBanner variant='error' title='Could not load notes'>
-              {loadError}
-            </StatusBanner>
-          ) : null}
-          <div className='overflow-x-auto' aria-busy={isLoading}>
-            {table}
-          </div>
-        </div>
+            </AdminField>
+          </AdminFieldGrid>
+        </form>
+      </AdminEditorPanel>
+    );
+    return (
+      <>
+        <ContactNotesRecordTable
+          notes={notes}
+          adminUsers={adminUsers}
+          isLoading={isLoading}
+          isMutating={isMutating}
+          error={loadError || actionError}
+          emptyLabel={emptyLabel}
+          expandedId={expandedNoteId}
+          detail={noteEditor}
+          createDisabled={!contactId || isMutating}
+          onToggle={toggleNoteRow}
+          onDelete={(note) => void handleDeleteNote(note)}
+        />
         <ConfirmDialog {...confirmDialogProps} />
       </>
     );
