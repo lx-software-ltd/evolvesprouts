@@ -186,6 +186,58 @@ describe('auth helpers', () => {
     expect(stored.refreshToken).toBe('new-refresh');
   });
 
+  it('shares one Cognito refresh across concurrent callers', async () => {
+    const { auth, seedStoredTokens } = await loadAuthWithStorage();
+    vi.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000);
+    const fetchMock = vi.mocked(fetch);
+
+    await seedStoredTokens({
+      accessToken: 'old-access',
+      idToken: 'old-id',
+      refreshToken: 'old-refresh',
+      expiresAt: 1_700_000_010_000,
+    });
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access_token: 'new-access', id_token: 'new-id', expires_in: 600 }),
+    } as Response);
+
+    const [first, second, third] = await Promise.all([
+      auth.ensureFreshTokens(),
+      auth.ensureFreshTokens(),
+      auth.ensureFreshTokens(),
+    ]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(first?.idToken).toBe('new-id');
+    expect(second).toEqual(first);
+    expect(third).toEqual(first);
+  });
+
+  it('reads decrypted tokens from memory after the first load', async () => {
+    const { auth, seedStoredTokens } = await loadAuthWithStorage();
+    const secureStorage = await import('@/lib/secure-storage');
+    vi.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000);
+    const decryptSpy = vi.spyOn(secureStorage, 'decryptFromBase64');
+
+    await seedStoredTokens({
+      accessToken: 'access',
+      idToken: 'id',
+      refreshToken: 'refresh',
+      expiresAt: 1_700_000_200_000,
+    });
+
+    await auth.ensureFreshTokens();
+    await auth.ensureFreshTokens();
+    expect(decryptSpy).not.toHaveBeenCalled();
+
+    window.dispatchEvent(new StorageEvent('storage', { key: TOKEN_STORAGE_KEY }));
+    const reloaded = await auth.ensureFreshTokens();
+    expect(decryptSpy).toHaveBeenCalledTimes(1);
+    expect(reloaded?.idToken).toBe('id');
+  });
+
   it('stores tokens from passwordless flow', async () => {
     const { seedStoredTokens, readStoredTokens } = await loadAuthWithStorage();
 

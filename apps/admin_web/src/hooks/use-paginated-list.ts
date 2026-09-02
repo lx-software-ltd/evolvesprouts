@@ -99,6 +99,43 @@ function isAbortError(error: unknown): boolean {
 
 const EMPTY_ITEMS: never[] = [];
 
+/**
+ * Warm the cache for a list's first page with the exact key and page shape
+ * `usePaginatedList` will read, so the section renders instantly when the
+ * user navigates there. No-op when a fresh page is already cached.
+ */
+export async function prefetchPaginatedList<TItem, TFilters extends object>({
+  queryKey,
+  filters,
+  fetcher,
+  limit = ADMIN_LIST_PAGE_SIZE,
+}: {
+  queryKey: readonly unknown[];
+  filters: TFilters;
+  fetcher: UsePaginatedListOptions<TItem, TFilters>['fetcher'];
+  limit?: number;
+}): Promise<void> {
+  const pageSize = clampAdminListLimit(limit);
+  try {
+    await getAdminQueryClient().prefetchInfiniteQuery<
+      PaginatedResponse<TItem>,
+      unknown,
+      PaginatedResponse<TItem>,
+      readonly unknown[],
+      PageParam
+    >({
+      queryKey: [...queryKey, filters],
+      queryFn: ({ pageParam, signal }) =>
+        fetcher({ ...filters, cursor: pageParam, limit: pageSize, signal }),
+      initialPageParam: null,
+      getNextPageParam,
+      pages: 1,
+    });
+  } catch {
+    // Prefetch is best-effort; the page surfaces errors on its own fetch.
+  }
+}
+
 export function usePaginatedList<TItem, TFilters extends object>({
   fetcher,
   defaultFilters,

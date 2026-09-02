@@ -24,16 +24,21 @@ function SidebarNavLink({
   item,
   activeKey,
   onNavigate,
+  onIntent,
 }: {
   item: AppShellNavItem;
   activeKey: string;
   onNavigate: () => void;
+  onIntent?: (key: string) => void;
 }) {
   const isActive = item.key === activeKey;
+  const handleIntent = onIntent && !isActive ? () => onIntent(item.key) : undefined;
   return (
     <Link
       href={item.href}
       onClick={onNavigate}
+      onMouseEnter={handleIntent}
+      onFocus={handleIntent}
       aria-current={isActive ? 'page' : undefined}
       className={`block w-full rounded-md px-3 py-2 text-left text-sm font-medium transition ${
         isActive
@@ -51,6 +56,8 @@ export interface AppShellProps {
   navItems: AppShellNavItem[];
   activeKey: string;
   onLogout: () => void;
+  /** Hover/focus on a nav link; used to prefetch that section's data. */
+  onNavItemIntent?: (key: string) => void;
   userEmail?: string;
   lastAuthTime?: string;
   children: ReactNode;
@@ -87,6 +94,7 @@ export function AppShell({
   navItems,
   activeKey,
   onLogout,
+  onNavItemIntent,
   userEmail,
   lastAuthTime,
   children,
@@ -239,6 +247,7 @@ export function AppShell({
                       onNavigate={() => {
                         setIsMobileMenuOpen(false);
                       }}
+                      onIntent={onNavItemIntent}
                     />
                   ))}
                 </div>
@@ -257,6 +266,7 @@ export function AppShell({
                       onNavigate={() => {
                         setIsMobileMenuOpen(false);
                       }}
+                      onIntent={onNavItemIntent}
                     />
                   ))}
                 </div>
@@ -271,6 +281,7 @@ export function AppShell({
                     onNavigate={() => {
                       setIsMobileMenuOpen(false);
                     }}
+                    onIntent={onNavItemIntent}
                   />
                 ))}
               </div>

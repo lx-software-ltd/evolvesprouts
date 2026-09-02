@@ -9,6 +9,7 @@ import { AppShell } from '@/components/app-shell';
 import { useAuth } from '@/components/auth-provider';
 import { LoginScreen } from '@/components/login-screen';
 import { StatusBanner } from '@/components/status-banner';
+import { usePrefetchAdminSection } from '@/hooks/use-prefetch-admin-section';
 import {
   ADMIN_NAV_DASHBOARD,
   ADMIN_NAV_ITEMS,
@@ -19,6 +20,7 @@ export function AdminAuthenticatedShell({ children }: { children: ReactNode }) {
   const { status, user, logout } = useAuth();
   const pathname = usePathname();
   const activeSectionKey = adminSectionKeyFromPathname(pathname);
+  const prefetchSection = usePrefetchAdminSection();
 
   if (status === 'loading') {
     return (
@@ -41,6 +43,7 @@ export function AdminAuthenticatedShell({ children }: { children: ReactNode }) {
         navItems={ADMIN_NAV_ITEMS.map((item) => ({ ...item }))}
         activeKey={activeSectionKey}
         onLogout={logout}
+        onNavItemIntent={prefetchSection}
         userEmail={user?.email}
         lastAuthTime={user?.lastAuthTime}
       >
