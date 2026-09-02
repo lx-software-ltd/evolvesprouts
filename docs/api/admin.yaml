@@ -114,7 +114,7 @@ info:
     - `POST /v1/admin/assets/{id}/content/init`
     - `POST /v1/admin/assets/{id}/content/complete`
     - `GET|POST /v1/admin/assets/{id}/grants`
-    - `DELETE /v1/admin/assets/{id}/grants/{grant_id}`
+    - `DELETE /v1/admin/assets/{id}/grants/{grantId}`
     - `GET|POST|DELETE /v1/admin/assets/{id}/share-link`
     - `POST /v1/admin/assets/{id}/share-link/rotate`
     - `GET /v1/user/assets`
@@ -439,7 +439,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /v1/admin/assets/{id}/grants/{grant_id}:
+  /v1/admin/assets/{id}/grants/{grantId}:
     parameters:
       - $ref: "#/components/parameters/AssetId"
       - $ref: "#/components/parameters/GrantId"
@@ -5267,7 +5267,7 @@ components:
         type: string
       description: Asset identifier.
     GrantId:
-      name: grant_id
+      name: grantId
       in: path
       required: true
       schema:

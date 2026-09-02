@@ -444,7 +444,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/admin/assets/{id}/grants/{grant_id}": {
+    "/v1/admin/assets/{id}/grants/{grantId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -452,7 +452,7 @@ export interface paths {
                 /** @description Asset identifier. */
                 id: components["parameters"]["AssetId"];
                 /** @description Asset grant identifier. */
-                grant_id: components["parameters"]["GrantId"];
+                grantId: components["parameters"]["GrantId"];
             };
             cookie?: never;
         };
@@ -468,7 +468,7 @@ export interface paths {
                     /** @description Asset identifier. */
                     id: components["parameters"]["AssetId"];
                     /** @description Asset grant identifier. */
-                    grant_id: components["parameters"]["GrantId"];
+                    grantId: components["parameters"]["GrantId"];
                 };
                 cookie?: never;
             };
