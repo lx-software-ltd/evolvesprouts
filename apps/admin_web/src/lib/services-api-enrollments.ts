@@ -1,7 +1,7 @@
 import { clampAdminListLimit } from '@/lib/admin-list-limit';
 
 import { adminApiRequest } from './api-admin-client';
-import { asNullableString, asNumber, unwrapPayload } from './api-payload';
+import { asNullableString, asNumber } from './api-payload';
 import { parseEnrollment } from './services-api-parse';
 import { listDiscountCodes } from './services-api-discounts';
 
@@ -34,11 +34,10 @@ export async function listEnrollments(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
   return {
-    items: Array.isArray(root.items) ? root.items.map((entry) => parseEnrollment(entry)) : [],
-    nextCursor: asNullableString(root.next_cursor),
-    totalCount: asNumber(root.total_count, 0),
+    items: Array.isArray(payload.items) ? payload.items.map((entry) => parseEnrollment(entry)) : [],
+    nextCursor: asNullableString(payload.next_cursor),
+    totalCount: asNumber(payload.total_count, 0),
   };
 }
 
@@ -53,8 +52,7 @@ export async function createEnrollment(
     body,
     expectedSuccessStatuses: [200, 201],
   });
-  const root = unwrapPayload(payload);
-  return root.enrollment ? parseEnrollment(root.enrollment) : null;
+  return payload.enrollment ? parseEnrollment(payload.enrollment) : null;
 }
 
 export async function updateEnrollment(
@@ -68,8 +66,7 @@ export async function updateEnrollment(
     method: 'PATCH',
     body,
   });
-  const root = unwrapPayload(payload);
-  return root.enrollment ? parseEnrollment(root.enrollment) : null;
+  return payload.enrollment ? parseEnrollment(payload.enrollment) : null;
 }
 
 export async function deleteEnrollment(

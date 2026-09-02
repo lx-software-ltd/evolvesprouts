@@ -1,7 +1,6 @@
 import { clampAdminListLimit } from './admin-list-limit';
 import { ensureFreshTokens } from './auth';
 import { adminApiRequest } from './api-admin-client';
-import { unwrapPayload } from './api-payload';
 import { getApiBaseUrl } from './config';
 import { isRecord } from './type-guards';
 
@@ -66,8 +65,7 @@ export async function listAdminForms(signal?: AbortSignal): Promise<AdminFormSum
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  return Array.isArray(root.items) ? root.items.map((item) => parseFormSummary(item)) : [];
+  return Array.isArray(payload.items) ? payload.items.map((item) => parseFormSummary(item)) : [];
 }
 
 export async function listAdminFormAnswers(
@@ -87,10 +85,9 @@ export async function listAdminFormAnswers(
     method: 'GET',
     signal: params.signal,
   });
-  const root = unwrapPayload(payload);
   return {
-    items: Array.isArray(root.items) ? root.items.map((item) => parseFormAnswerRow(item)) : [],
-    nextCursor: typeof root.next_cursor === 'string' ? root.next_cursor : null,
+    items: Array.isArray(payload.items) ? payload.items.map((item) => parseFormAnswerRow(item)) : [],
+    nextCursor: typeof payload.next_cursor === 'string' ? payload.next_cursor : null,
   };
 }
 
@@ -101,10 +98,9 @@ export async function clearAdminFormAnswers(
     endpointPath: `/v1/admin/forms/${encodeURIComponent(formSlug)}/answers`,
     method: 'DELETE',
   });
-  const root = unwrapPayload(payload);
   return {
-    formSlug: typeof root.formSlug === 'string' ? root.formSlug : formSlug,
-    deletedCount: typeof root.deletedCount === 'number' ? root.deletedCount : 0,
+    formSlug: typeof payload.formSlug === 'string' ? payload.formSlug : formSlug,
+    deletedCount: typeof payload.deletedCount === 'number' ? payload.deletedCount : 0,
   };
 }
 

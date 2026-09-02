@@ -1,7 +1,7 @@
 import { clampAdminListLimit } from '@/lib/admin-list-limit';
 
 import { adminApiRequest } from './api-admin-client';
-import { asNullableString, asNumber, unwrapPayload } from './api-payload';
+import { asNullableString, asNumber } from './api-payload';
 import { parseDiscountCode } from './services-api-parse';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -36,11 +36,10 @@ export async function listDiscountCodes(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
   return {
-    items: Array.isArray(root.items) ? root.items.map((entry) => parseDiscountCode(entry)) : [],
-    nextCursor: asNullableString(root.next_cursor),
-    totalCount: asNumber(root.total_count, 0),
+    items: Array.isArray(payload.items) ? payload.items.map((entry) => parseDiscountCode(entry)) : [],
+    nextCursor: asNullableString(payload.next_cursor),
+    totalCount: asNumber(payload.total_count, 0),
   };
 }
 
@@ -53,8 +52,7 @@ export async function createDiscountCode(
     body,
     expectedSuccessStatuses: [200, 201],
   });
-  const root = unwrapPayload(payload);
-  return root.discount_code ? parseDiscountCode(root.discount_code) : null;
+  return payload.discount_code ? parseDiscountCode(payload.discount_code) : null;
 }
 
 export async function updateDiscountCode(
@@ -66,8 +64,7 @@ export async function updateDiscountCode(
     method: 'PUT',
     body,
   });
-  const root = unwrapPayload(payload);
-  return root.discount_code ? parseDiscountCode(root.discount_code) : null;
+  return payload.discount_code ? parseDiscountCode(payload.discount_code) : null;
 }
 
 export async function deleteDiscountCode(codeId: string): Promise<void> {

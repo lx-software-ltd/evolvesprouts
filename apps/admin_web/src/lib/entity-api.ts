@@ -1,7 +1,7 @@
 import { clampAdminListLimit } from '@/lib/admin-list-limit';
 
 import { adminApiRequest } from './api-admin-client';
-import { asNullableString, asNumber, unwrapPayload } from './api-payload';
+import { asNullableString, asNumber } from './api-payload';
 import { isRecord } from './type-guards';
 
 import type { EntityListFilters } from '@/types/entity-list';
@@ -66,8 +66,7 @@ export async function listEntityTags(signal?: AbortSignal): Promise<EntityTagRef
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  return Array.isArray(root.items) ? root.items.map((t) => parseTag(t)) : [];
+  return Array.isArray(payload.items) ? payload.items.map((t) => parseTag(t)) : [];
 }
 
 export async function listEntityFamilyPicker(
@@ -78,8 +77,7 @@ export async function listEntityFamilyPicker(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  return Array.isArray(root.items) ? root.items.map((e) => parsePickerItem(e)) : [];
+  return Array.isArray(payload.items) ? payload.items.map((e) => parsePickerItem(e)) : [];
 }
 
 export async function listEntityOrganizationPicker(
@@ -96,8 +94,7 @@ export async function listEntityOrganizationPicker(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  return Array.isArray(root.items) ? root.items.map((e) => parsePickerItem(e)) : [];
+  return Array.isArray(payload.items) ? payload.items.map((e) => parsePickerItem(e)) : [];
 }
 
 export async function listEntityPartnerOrganizationPicker(
@@ -123,8 +120,7 @@ export async function searchEntityContactsForPicker(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  return Array.isArray(root.items) ? root.items.map((e) => parsePickerItem(e)) : [];
+  return Array.isArray(payload.items) ? payload.items.map((e) => parsePickerItem(e)) : [];
 }
 
 export async function getAdminContact(
@@ -136,8 +132,7 @@ export async function getAdminContact(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  return root.contact ? parseContact(root.contact) : null;
+  return payload.contact ? parseContact(payload.contact) : null;
 }
 
 export async function listAdminContacts(
@@ -156,11 +151,10 @@ export async function listAdminContacts(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
   return {
-    items: Array.isArray(root.items) ? root.items.map((e) => parseContact(e)) : [],
-    nextCursor: asNullableString(root.next_cursor),
-    totalCount: asNumber(root.total_count, 0),
+    items: Array.isArray(payload.items) ? payload.items.map((e) => parseContact(e)) : [],
+    nextCursor: asNullableString(payload.next_cursor),
+    totalCount: asNumber(payload.total_count, 0),
   };
 }
 
@@ -173,8 +167,7 @@ export async function createAdminContact(
     body,
     expectedSuccessStatuses: [200, 201],
   });
-  const root = unwrapPayload(payload);
-  return root.contact ?? null;
+  return payload.contact ?? null;
 }
 
 export async function updateAdminContact(
@@ -186,8 +179,7 @@ export async function updateAdminContact(
     method: 'PATCH',
     body,
   });
-  const root = unwrapPayload(payload);
-  return root.contact ?? null;
+  return payload.contact ?? null;
 }
 
 export async function deleteAdminContact(contactId: string): Promise<void> {
@@ -207,8 +199,7 @@ export async function listAdminContactNotes(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  return Array.isArray(root.items) ? root.items.map((n) => parseNote(n)) : [];
+  return Array.isArray(payload.items) ? payload.items.map((n) => parseNote(n)) : [];
 }
 
 export async function listAdminContactServices(
@@ -220,11 +211,10 @@ export async function listAdminContactServices(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  if (!Array.isArray(root.items)) {
+  if (!Array.isArray(payload.items)) {
     return [];
   }
-  return root.items
+  return payload.items
     .map((item) => (typeof item?.label === 'string' ? item.label : null))
     .filter((label): label is string => label !== null);
 }
@@ -238,11 +228,10 @@ export async function listAdminFamilyServices(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  if (!Array.isArray(root.items)) {
+  if (!Array.isArray(payload.items)) {
     return [];
   }
-  return root.items
+  return payload.items
     .map((item) => (typeof item?.label === 'string' ? item.label : null))
     .filter((label): label is string => label !== null);
 }
@@ -256,11 +245,10 @@ export async function listAdminOrganizationServices(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  if (!Array.isArray(root.items)) {
+  if (!Array.isArray(payload.items)) {
     return [];
   }
-  return root.items
+  return payload.items
     .map((item) => (typeof item?.label === 'string' ? item.label : null))
     .filter((label): label is string => label !== null);
 }
@@ -275,8 +263,7 @@ export async function createAdminContactNote(
     body,
     expectedSuccessStatuses: [200, 201],
   });
-  const root = unwrapPayload(payload);
-  return root.note ? parseNote(root.note) : null;
+  return payload.note ? parseNote(payload.note) : null;
 }
 
 export async function updateAdminContactNote(
@@ -289,8 +276,7 @@ export async function updateAdminContactNote(
     method: 'PATCH',
     body,
   });
-  const root = unwrapPayload(payload);
-  return root.note ? parseNote(root.note) : null;
+  return payload.note ? parseNote(payload.note) : null;
 }
 
 export async function deleteAdminContactNote(contactId: string, noteId: string): Promise<void> {
@@ -316,11 +302,10 @@ export async function listAdminFamilies(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
   return {
-    items: Array.isArray(root.items) ? root.items.map((e) => parseFamily(e)) : [],
-    nextCursor: asNullableString(root.next_cursor),
-    totalCount: asNumber(root.total_count, 0),
+    items: Array.isArray(payload.items) ? payload.items.map((e) => parseFamily(e)) : [],
+    nextCursor: asNullableString(payload.next_cursor),
+    totalCount: asNumber(payload.total_count, 0),
   };
 }
 
@@ -333,8 +318,7 @@ export async function createAdminFamily(
     body,
     expectedSuccessStatuses: [200, 201],
   });
-  const root = unwrapPayload(payload);
-  return root.family ?? null;
+  return payload.family ?? null;
 }
 
 export async function updateAdminFamily(
@@ -346,8 +330,7 @@ export async function updateAdminFamily(
     method: 'PATCH',
     body,
   });
-  const root = unwrapPayload(payload);
-  return root.family ?? null;
+  return payload.family ?? null;
 }
 
 export async function deleteAdminFamily(familyId: string): Promise<void> {
@@ -368,8 +351,7 @@ export async function addAdminFamilyMember(
     body,
     expectedSuccessStatuses: [200, 201],
   });
-  const root = unwrapPayload(payload);
-  return root.family ?? null;
+  return payload.family ?? null;
 }
 
 export async function removeAdminFamilyMember(
@@ -380,8 +362,7 @@ export async function removeAdminFamilyMember(
     endpointPath: `/v1/admin/families/${familyId}/members/${memberId}`,
     method: 'DELETE',
   });
-  const root = unwrapPayload(payload);
-  return root.family ?? null;
+  return payload.family ?? null;
 }
 
 export async function patchAdminFamilyMember(
@@ -394,8 +375,7 @@ export async function patchAdminFamilyMember(
     method: 'PATCH',
     body,
   });
-  const root = unwrapPayload(payload);
-  return root.family ?? null;
+  return payload.family ?? null;
 }
 
 export async function listAdminOrganizations(
@@ -413,11 +393,10 @@ export async function listAdminOrganizations(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
   return {
-    items: Array.isArray(root.items) ? root.items.map((e) => parseAdminOrganization(e)) : [],
-    nextCursor: asNullableString(root.next_cursor),
-    totalCount: asNumber(root.total_count, 0),
+    items: Array.isArray(payload.items) ? payload.items.map((e) => parseAdminOrganization(e)) : [],
+    nextCursor: asNullableString(payload.next_cursor),
+    totalCount: asNumber(payload.total_count, 0),
   };
 }
 
@@ -430,8 +409,7 @@ export async function createAdminOrganization(
     body,
     expectedSuccessStatuses: [200, 201],
   });
-  const root = unwrapPayload(payload);
-  return root.organization ? parseAdminOrganization(root.organization) : null;
+  return payload.organization ? parseAdminOrganization(payload.organization) : null;
 }
 
 export async function updateAdminOrganization(
@@ -443,8 +421,7 @@ export async function updateAdminOrganization(
     method: 'PATCH',
     body,
   });
-  const root = unwrapPayload(payload);
-  return root.organization ? parseAdminOrganization(root.organization) : null;
+  return payload.organization ? parseAdminOrganization(payload.organization) : null;
 }
 
 export async function deleteAdminOrganization(organizationId: string): Promise<void> {
@@ -465,8 +442,7 @@ export async function addAdminOrganizationMember(
     body,
     expectedSuccessStatuses: [200, 201],
   });
-  const root = unwrapPayload(payload);
-  return root.organization ? parseAdminOrganization(root.organization) : null;
+  return payload.organization ? parseAdminOrganization(payload.organization) : null;
 }
 
 export async function removeAdminOrganizationMember(
@@ -477,8 +453,7 @@ export async function removeAdminOrganizationMember(
     endpointPath: `/v1/admin/organizations/${organizationId}/members/${memberId}`,
     method: 'DELETE',
   });
-  const root = unwrapPayload(payload);
-  return root.organization ? parseAdminOrganization(root.organization) : null;
+  return payload.organization ? parseAdminOrganization(payload.organization) : null;
 }
 
 export async function patchAdminOrganizationMember(
@@ -491,6 +466,5 @@ export async function patchAdminOrganizationMember(
     method: 'PATCH',
     body,
   });
-  const root = unwrapPayload(payload);
-  return root.organization ? parseAdminOrganization(root.organization) : null;
+  return payload.organization ? parseAdminOrganization(payload.organization) : null;
 }

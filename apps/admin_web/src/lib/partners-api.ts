@@ -1,7 +1,7 @@
 import { clampAdminListLimit } from '@/lib/admin-list-limit';
 
 import { adminApiRequest } from './api-admin-client';
-import { asNullableString, asNumber, unwrapPayload } from './api-payload';
+import { asNullableString, asNumber } from './api-payload';
 import {
   parseAdminOrganization,
   type AdminOrganizationRow,
@@ -32,11 +32,10 @@ export async function listAdminPartners(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
   return {
-    items: Array.isArray(root.items) ? root.items.map((e) => parseAdminOrganization(e)) : [],
-    nextCursor: asNullableString(root.next_cursor),
-    totalCount: asNumber(root.total_count, 0),
+    items: Array.isArray(payload.items) ? payload.items.map((e) => parseAdminOrganization(e)) : [],
+    nextCursor: asNullableString(payload.next_cursor),
+    totalCount: asNumber(payload.total_count, 0),
   };
 }
 
@@ -49,8 +48,7 @@ export async function createAdminPartner(
     body,
     expectedSuccessStatuses: [200, 201],
   });
-  const root = unwrapPayload(payload);
-  return root.organization ? parseAdminOrganization(root.organization) : null;
+  return payload.organization ? parseAdminOrganization(payload.organization) : null;
 }
 
 export async function updateAdminPartner(
@@ -62,8 +60,7 @@ export async function updateAdminPartner(
     method: 'PATCH',
     body,
   });
-  const root = unwrapPayload(payload);
-  return root.organization ? parseAdminOrganization(root.organization) : null;
+  return payload.organization ? parseAdminOrganization(payload.organization) : null;
 }
 
 export async function deleteAdminPartner(organizationId: string): Promise<void> {
@@ -84,8 +81,7 @@ export async function addPartnerMember(
     body,
     expectedSuccessStatuses: [200, 201],
   });
-  const root = unwrapPayload(payload);
-  return root.organization ? parseAdminOrganization(root.organization) : null;
+  return payload.organization ? parseAdminOrganization(payload.organization) : null;
 }
 
 export async function removePartnerMember(
@@ -96,8 +92,7 @@ export async function removePartnerMember(
     endpointPath: `/v1/admin/organizations/${organizationId}/members/${memberId}`,
     method: 'DELETE',
   });
-  const root = unwrapPayload(payload);
-  return root.organization ? parseAdminOrganization(root.organization) : null;
+  return payload.organization ? parseAdminOrganization(payload.organization) : null;
 }
 
 export async function patchPartnerMember(
@@ -110,6 +105,5 @@ export async function patchPartnerMember(
     method: 'PATCH',
     body,
   });
-  const root = unwrapPayload(payload);
-  return root.organization ? parseAdminOrganization(root.organization) : null;
+  return payload.organization ? parseAdminOrganization(payload.organization) : null;
 }

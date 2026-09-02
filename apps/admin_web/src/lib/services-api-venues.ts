@@ -1,7 +1,7 @@
 import { clampAdminListLimit } from '@/lib/admin-list-limit';
 
 import { adminApiRequest } from './api-admin-client';
-import { asNullableString, asNumber, unwrapPayload } from './api-payload';
+import { asNullableString, asNumber } from './api-payload';
 import { parseGeographicAreaSummary, parseLocationSummary } from './services-api-parse';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -34,8 +34,7 @@ export async function listGeographicAreas(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  return Array.isArray(root.items) ? root.items.map((entry) => parseGeographicAreaSummary(entry)) : [];
+  return Array.isArray(payload.items) ? payload.items.map((entry) => parseGeographicAreaSummary(entry)) : [];
 }
 
 export async function listLocations(
@@ -60,11 +59,10 @@ export async function listLocations(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
   return {
-    items: Array.isArray(root.items) ? root.items.map((entry) => parseLocationSummary(entry)) : [],
-    nextCursor: asNullableString(root.next_cursor),
-    totalCount: asNumber(root.total_count, 0),
+    items: Array.isArray(payload.items) ? payload.items.map((entry) => parseLocationSummary(entry)) : [],
+    nextCursor: asNullableString(payload.next_cursor),
+    totalCount: asNumber(payload.total_count, 0),
   };
 }
 
@@ -145,16 +143,15 @@ export async function geocodeVenueAddress(
     body,
     signal,
   });
-  const root = unwrapPayload(payload);
-  const lat = typeof root.lat === 'number' ? root.lat : NaN;
-  const lng = typeof root.lng === 'number' ? root.lng : NaN;
+  const lat = typeof payload.lat === 'number' ? payload.lat : NaN;
+  const lng = typeof payload.lng === 'number' ? payload.lng : NaN;
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     throw new Error('Geocoding response was invalid.');
   }
   return {
     lat,
     lng,
-    displayName: asNullableString(root.display_name),
+    displayName: asNullableString(payload.display_name),
   };
 }
 
@@ -165,8 +162,7 @@ export async function createLocation(body: ApiCreateLocationRequest): Promise<Lo
     body,
     expectedSuccessStatuses: [200, 201],
   });
-  const root = unwrapPayload(payload);
-  return root.location ? parseLocationSummary(root.location) : null;
+  return payload.location ? parseLocationSummary(payload.location) : null;
 }
 
 export async function updateLocation(
@@ -178,8 +174,7 @@ export async function updateLocation(
     method: 'PUT',
     body,
   });
-  const root = unwrapPayload(payload);
-  return root.location ? parseLocationSummary(root.location) : null;
+  return payload.location ? parseLocationSummary(payload.location) : null;
 }
 
 export async function updateLocationPartial(
@@ -191,8 +186,7 @@ export async function updateLocationPartial(
     method: 'PATCH',
     body,
   });
-  const root = unwrapPayload(payload);
-  return root.location ? parseLocationSummary(root.location) : null;
+  return payload.location ? parseLocationSummary(payload.location) : null;
 }
 
 export async function deleteLocation(id: string): Promise<void> {

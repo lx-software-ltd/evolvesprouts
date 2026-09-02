@@ -1,5 +1,5 @@
 import { adminApiRequest } from './api-admin-client';
-import { asNullableString, asNumber, unwrapPayload } from './api-payload';
+import { asNullableString, asNumber } from './api-payload';
 import { isRecord } from './type-guards';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -193,11 +193,10 @@ export async function listLeads(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
   return {
-    items: Array.isArray(root.items) ? root.items.map((entry) => parseLeadSummary(entry)) : [],
-    nextCursor: asNullableString(root.next_cursor),
-    totalCount: asNumber(root.total_count, 0),
+    items: Array.isArray(payload.items) ? payload.items.map((entry) => parseLeadSummary(entry)) : [],
+    nextCursor: asNullableString(payload.next_cursor),
+    totalCount: asNumber(payload.total_count, 0),
   };
 }
 
@@ -206,8 +205,7 @@ export async function getLead(id: string): Promise<LeadDetail | null> {
     endpointPath: `/v1/admin/leads/${id}`,
     method: 'GET',
   });
-  const root = unwrapPayload(payload);
-  return root.lead ? parseLeadDetail(root.lead) : null;
+  return payload.lead ? parseLeadDetail(payload.lead) : null;
 }
 
 export async function createLead(body: ApiCreateLeadRequest): Promise<LeadDetail | null> {
@@ -217,8 +215,7 @@ export async function createLead(body: ApiCreateLeadRequest): Promise<LeadDetail
     body,
     expectedSuccessStatuses: [200, 201],
   });
-  const root = unwrapPayload(payload);
-  return root.lead ? parseLeadDetail(root.lead) : null;
+  return payload.lead ? parseLeadDetail(payload.lead) : null;
 }
 
 export async function updateLead(id: string, body: ApiUpdateLeadRequest): Promise<LeadDetail | null> {
@@ -227,8 +224,7 @@ export async function updateLead(id: string, body: ApiUpdateLeadRequest): Promis
     method: 'PATCH',
     body,
   });
-  const root = unwrapPayload(payload);
-  return root.lead ? parseLeadDetail(root.lead) : null;
+  return payload.lead ? parseLeadDetail(payload.lead) : null;
 }
 
 export async function createLeadNote(
@@ -241,8 +237,7 @@ export async function createLeadNote(
     body,
     expectedSuccessStatuses: [200, 201],
   });
-  const root = unwrapPayload(payload);
-  return root.note ? parseLeadNote(root.note) : null;
+  return payload.note ? parseLeadNote(payload.note) : null;
 }
 
 function parseLeadAiSuggestion(value: unknown): LeadAiSuggestion | null {
@@ -312,8 +307,7 @@ export async function fetchLeadAiSuggestion(leadId: string): Promise<LeadAiSugge
     endpointPath: `/v1/admin/leads/${leadId}/ai-suggestion`,
     method: 'GET',
   });
-  const root = unwrapPayload(payload);
-  return parseLeadAiSuggestion(root.suggestion);
+  return parseLeadAiSuggestion(payload.suggestion);
 }
 
 export async function enqueueLeadAiSuggestionJob(
@@ -324,8 +318,7 @@ export async function enqueueLeadAiSuggestionJob(
     method: 'POST',
     expectedSuccessStatuses: [202],
   });
-  const root = unwrapPayload(payload);
-  const job = parseLeadAiSuggestionJob(root.job);
+  const job = parseLeadAiSuggestionJob(payload.job);
   if (!job) {
     throw new Error('AI suggestion job response was empty.');
   }
@@ -343,8 +336,7 @@ export async function fetchLeadAiSuggestionJob(
     expectedSuccessStatuses: [200],
     signal,
   });
-  const root = unwrapPayload(payload);
-  const job = parseLeadAiSuggestionJob(root.job);
+  const job = parseLeadAiSuggestionJob(payload.job);
   if (!job) {
     throw new Error('AI suggestion job response was empty.');
   }
@@ -404,17 +396,16 @@ export async function getLeadAnalytics(params: AnalyticsParams): Promise<LeadAna
     endpointPath,
     method: 'GET',
   });
-  const root = unwrapPayload(payload);
-  const assigneeStats = Array.isArray(root.assignee_stats)
-    ? root.assignee_stats.map((entry) => ({
+  const assigneeStats = Array.isArray(payload.assignee_stats)
+    ? payload.assignee_stats.map((entry) => ({
         assignedTo: asNullableString(isRecord(entry) ? entry.assigned_to : null),
         total: asNumber(isRecord(entry) ? entry.total : null, 0),
         converted: asNumber(isRecord(entry) ? entry.converted : null, 0),
         conversionRate: asNumber(isRecord(entry) ? entry.conversion_rate : null, 0),
       }))
     : [];
-  const leadsOverTime = Array.isArray(root.leads_over_time)
-    ? root.leads_over_time
+  const leadsOverTime = Array.isArray(payload.leads_over_time)
+    ? payload.leads_over_time
         .filter((entry) => isRecord(entry))
         .map((entry) => ({
           period: asNullableString(entry.period) ?? '',
@@ -422,15 +413,15 @@ export async function getLeadAnalytics(params: AnalyticsParams): Promise<LeadAna
         }))
     : [];
   return {
-    funnel: asRecordNumber(root.funnel),
-    conversionRate: asNumber(root.conversion_rate, 0),
+    funnel: asRecordNumber(payload.funnel),
+    conversionRate: asNumber(payload.conversion_rate, 0),
     avgDaysToConvert:
-      typeof root.avg_days_to_convert === 'number' ? root.avg_days_to_convert : null,
-    leadsThisWeek: asNumber(root.leads_this_week, 0),
-    leadsThisMonth: asNumber(root.leads_this_month, 0),
-    sourceBreakdown: asRecordNumber(root.source_breakdown),
-    stageConversionRates: asRecordNumber(root.stage_conversion_rates),
-    avgDaysInStage: asRecordNumber(root.avg_days_in_stage),
+      typeof payload.avg_days_to_convert === 'number' ? payload.avg_days_to_convert : null,
+    leadsThisWeek: asNumber(payload.leads_this_week, 0),
+    leadsThisMonth: asNumber(payload.leads_this_month, 0),
+    sourceBreakdown: asRecordNumber(payload.source_breakdown),
+    stageConversionRates: asRecordNumber(payload.stage_conversion_rates),
+    avgDaysInStage: asRecordNumber(payload.avg_days_in_stage),
     leadsOverTime,
     assigneeStats,
   };

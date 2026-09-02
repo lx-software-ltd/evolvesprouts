@@ -1,5 +1,5 @@
 import { adminApiRequest } from './api-admin-client';
-import { asNumber, asNullableString, unwrapPayload } from './api-payload';
+import { asNumber, asNullableString } from './api-payload';
 import { isRecord } from './type-guards';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -71,12 +71,10 @@ export async function listInboxImportJobs(
   endpointPath: '/v1/admin/meta/import-jobs' | '/v1/admin/whatsapp/import-jobs',
   signal?: AbortSignal
 ): Promise<InboxImportJobSummary[]> {
-  const payload = unwrapPayload(
-    await adminApiRequest<ApiJobList>({
-      endpointPath,
-      signal,
-    })
-  );
+  const payload = await adminApiRequest<ApiJobList>({
+    endpointPath,
+    signal,
+  });
   const items = Array.isArray(payload.items) ? payload.items : [];
   return items.map(parseInboxImportJob);
 }
@@ -85,15 +83,13 @@ export async function createMetaImportJob(
   channel: 'facebook' | 'instagram',
   signal?: AbortSignal
 ): Promise<InboxImportJobSummary> {
-  const payload = unwrapPayload(
-    await adminApiRequest<ApiJobResponse>({
-      endpointPath: '/v1/admin/meta/import-jobs',
-      method: 'POST',
-      body: { channel },
-      expectedSuccessStatuses: [202],
-      signal,
-    })
-  );
+  const payload = await adminApiRequest<ApiJobResponse>({
+    endpointPath: '/v1/admin/meta/import-jobs',
+    method: 'POST',
+    body: { channel },
+    expectedSuccessStatuses: [202],
+    signal,
+  });
   return parseInboxImportJob(payload.inbox_import_job);
 }
 
@@ -105,21 +101,19 @@ export async function createWhatsAppExportImportJob(
   },
   signal?: AbortSignal
 ): Promise<InboxImportJobSummary> {
-  const payload = unwrapPayload(
-    await adminApiRequest<ApiJobResponse>({
-      endpointPath: '/v1/admin/whatsapp/import-jobs',
-      method: 'POST',
-      body: {
-        attachment_asset_id: input.attachmentAssetId,
-        counterparty_wa_id: input.counterpartyWaId || undefined,
-        business_display_names: input.businessDisplayNames?.length
-          ? input.businessDisplayNames
-          : undefined,
-      },
-      expectedSuccessStatuses: [202],
-      signal,
-    })
-  );
+  const payload = await adminApiRequest<ApiJobResponse>({
+    endpointPath: '/v1/admin/whatsapp/import-jobs',
+    method: 'POST',
+    body: {
+      attachment_asset_id: input.attachmentAssetId,
+      counterparty_wa_id: input.counterpartyWaId || undefined,
+      business_display_names: input.businessDisplayNames?.length
+        ? input.businessDisplayNames
+        : undefined,
+    },
+    expectedSuccessStatuses: [202],
+    signal,
+  });
   return parseInboxImportJob(payload.inbox_import_job);
 }
 

@@ -1,5 +1,4 @@
 import { adminApiRequest } from '@/lib/api-admin-client';
-import { unwrapPayload } from '@/lib/api-payload';
 
 import type { components } from '@/types/generated/admin-api.generated';
 
@@ -70,10 +69,9 @@ export async function listCompletionCertificates(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
   return {
-    items: Array.isArray(root.items) ? root.items : [],
-    nextCursor: root.next_cursor ?? null,
+    items: Array.isArray(payload.items) ? payload.items : [],
+    nextCursor: payload.next_cursor ?? null,
   };
 }
 
@@ -87,11 +85,10 @@ export async function previewCompletionCertificatePdf(
     body: toIssueBody(payload),
     signal,
   });
-  const root = unwrapPayload(body);
-  if (!root.downloadUrl || !root.expiresAt) {
+  if (!body.downloadUrl || !body.expiresAt) {
     throw new Error('Preview response missing download URL.');
   }
-  return { downloadUrl: root.downloadUrl, expiresAt: root.expiresAt };
+  return { downloadUrl: body.downloadUrl, expiresAt: body.expiresAt };
 }
 
 export async function issueCompletionCertificate(
@@ -104,11 +101,10 @@ export async function issueCompletionCertificate(
     body: toIssueBody(payload),
     signal,
   });
-  const root = unwrapPayload(body);
-  if (!root.certificate) {
+  if (!body.certificate) {
     throw new Error('Issue response missing certificate.');
   }
-  return root.certificate;
+  return body.certificate;
 }
 
 export async function getCompletionCertificatePdfDownload(
@@ -120,11 +116,10 @@ export async function getCompletionCertificatePdfDownload(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(body);
-  if (!root.downloadUrl || !root.expiresAt) {
+  if (!body.downloadUrl || !body.expiresAt) {
     throw new Error('PDF response missing download URL.');
   }
-  return { downloadUrl: root.downloadUrl, expiresAt: root.expiresAt };
+  return { downloadUrl: body.downloadUrl, expiresAt: body.expiresAt };
 }
 
 export async function voidCompletionCertificate(
@@ -136,11 +131,10 @@ export async function voidCompletionCertificate(
     method: 'POST',
     signal,
   });
-  const root = unwrapPayload(body);
-  if (!root.certificate) {
+  if (!body.certificate) {
     throw new Error('Void response missing certificate.');
   }
-  return root.certificate;
+  return body.certificate;
 }
 
 export async function deleteCompletionCertificate(

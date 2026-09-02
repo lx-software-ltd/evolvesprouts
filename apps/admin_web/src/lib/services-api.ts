@@ -4,8 +4,7 @@ import { adminApiRequest, isAbortRequestError } from './api-admin-client';
 import {
   asNullableString,
   asNumber,
-  unwrapPayload,
-} from './api-payload';
+  } from './api-payload';
 import { isRecord } from './type-guards';
 import { parseServiceDetail, parseServiceSummary } from './services-api-parse';
 
@@ -82,11 +81,10 @@ export async function listServices(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
   return {
-    items: Array.isArray(root.items) ? root.items.map((entry) => parseServiceSummary(entry)) : [],
-    nextCursor: asNullableString(root.next_cursor),
-    totalCount: asNumber(root.total_count, 0),
+    items: Array.isArray(payload.items) ? payload.items.map((entry) => parseServiceSummary(entry)) : [],
+    nextCursor: asNullableString(payload.next_cursor),
+    totalCount: asNumber(payload.total_count, 0),
   };
 }
 
@@ -118,8 +116,7 @@ export async function getServiceDiscountCodeUsageSummary(
       method: 'GET',
       signal,
     });
-    const root = unwrapPayload(payload);
-    return { summary: parseDiscountCodeUsageSummary(root), error: null };
+    return { summary: parseDiscountCodeUsageSummary(payload), error: null };
   } catch (caught) {
     if (isAbortRequestError(caught)) {
       throw caught;
@@ -135,8 +132,7 @@ export async function getService(id: string, signal?: AbortSignal): Promise<Serv
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  return root.service ? parseServiceDetail(root.service) : null;
+  return payload.service ? parseServiceDetail(payload.service) : null;
 }
 
 export async function createService(body: ApiCreateServiceRequest): Promise<ServiceDetail | null> {
@@ -146,8 +142,7 @@ export async function createService(body: ApiCreateServiceRequest): Promise<Serv
     body,
     expectedSuccessStatuses: [200, 201],
   });
-  const root = unwrapPayload(payload);
-  return root.service ? parseServiceDetail(root.service) : null;
+  return payload.service ? parseServiceDetail(payload.service) : null;
 }
 
 export async function updateService(
@@ -160,8 +155,7 @@ export async function updateService(
     method: partial ? 'PATCH' : 'PUT',
     body,
   });
-  const root = unwrapPayload(payload);
-  return root.service ? parseServiceDetail(root.service) : null;
+  return payload.service ? parseServiceDetail(payload.service) : null;
 }
 
 export async function deleteService(id: string): Promise<void> {
@@ -188,18 +182,17 @@ export async function createServiceCoverImageUpload(
     method: 'POST',
     body,
   });
-  const root = unwrapPayload(payload);
-  const service = isRecord(root.service) ? root.service : {};
+  const service = isRecord(payload.service) ? payload.service : {};
   return {
-    uploadUrl: asNullableString(root.upload_url),
-    uploadMethod: asNullableString(root.upload_method) ?? 'PUT',
-    uploadHeaders: isRecord(root.upload_headers)
+    uploadUrl: asNullableString(payload.upload_url),
+    uploadMethod: asNullableString(payload.upload_method) ?? 'PUT',
+    uploadHeaders: isRecord(payload.upload_headers)
       ? Object.fromEntries(
-          Object.entries(root.upload_headers).filter((entry): entry is [string, string] => typeof entry[1] === 'string')
+          Object.entries(payload.upload_headers).filter((entry): entry is [string, string] => typeof entry[1] === 'string')
         )
       : {},
-    s3Key: asNullableString(root.s3_key),
-    expiresAt: asNullableString(root.expires_at),
+    s3Key: asNullableString(payload.s3_key),
+    expiresAt: asNullableString(payload.expires_at),
     service: {
       id: asNullableString(service.id),
       coverImageS3Key: asNullableString(service.cover_image_s3_key),

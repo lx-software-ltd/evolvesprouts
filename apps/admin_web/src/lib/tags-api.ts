@@ -1,5 +1,4 @@
 import { adminApiRequest } from './api-admin-client';
-import { unwrapPayload } from './api-payload';
 import { isRecord } from './type-guards';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -34,8 +33,7 @@ export async function listAdminTags(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  return Array.isArray(root.items) ? root.items.map((t) => parseAdminTag(t)) : [];
+  return Array.isArray(payload.items) ? payload.items.map((t) => parseAdminTag(t)) : [];
 }
 
 export async function createAdminTag(
@@ -47,8 +45,7 @@ export async function createAdminTag(
     body,
     expectedSuccessStatuses: [200, 201],
   });
-  const root = unwrapPayload(payload);
-  return root.tag ? parseAdminTag(root.tag) : null;
+  return payload.tag ? parseAdminTag(payload.tag) : null;
 }
 
 export async function updateAdminTag(
@@ -60,8 +57,7 @@ export async function updateAdminTag(
     method: 'PATCH',
     body,
   });
-  const root = unwrapPayload(payload);
-  return root.tag ? parseAdminTag(root.tag) : null;
+  return payload.tag ? parseAdminTag(payload.tag) : null;
 }
 
 export async function deleteOrArchiveAdminTag(tagId: string): Promise<AdminTagDeleteOutcome> {
@@ -69,13 +65,12 @@ export async function deleteOrArchiveAdminTag(tagId: string): Promise<AdminTagDe
     endpointPath: `/v1/admin/tags/${tagId}`,
     method: 'DELETE',
   });
-  const root = unwrapPayload(payload);
-  if (!isRecord(root)) {
+  if (!isRecord(payload)) {
     return { deleted: true, usage_count: 0 };
   }
   return {
-    deleted: Boolean(root.deleted),
-    usage_count: typeof root.usage_count === 'number' ? root.usage_count : 0,
-    tag: root.tag ? parseAdminTag(root.tag) : undefined,
+    deleted: Boolean(payload.deleted),
+    usage_count: typeof payload.usage_count === 'number' ? payload.usage_count : 0,
+    tag: payload.tag ? parseAdminTag(payload.tag) : undefined,
   };
 }

@@ -1,5 +1,5 @@
 import { adminApiRequest } from './api-admin-client';
-import { asNullableString, unwrapPayload } from './api-payload';
+import { asNullableString } from './api-payload';
 import { isRecord } from './type-guards';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -9,7 +9,7 @@ type ApiSchemas = components['schemas'];
 type ApiAdminUserListResponse = ApiSchemas['AdminUserListResponse'];
 
 function mapAdminUserItems(raw: unknown): AdminUser[] {
-  const root = unwrapPayload(raw as ApiAdminUserListResponse);
+  const root = raw as ApiAdminUserListResponse;
   return Array.isArray(root.items)
     ? root.items
         .filter((entry) => isRecord(entry))

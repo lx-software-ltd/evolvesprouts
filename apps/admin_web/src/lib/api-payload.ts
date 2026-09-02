@@ -1,7 +1,3 @@
-export function unwrapPayload<TPayload>(payload: TPayload): TPayload {
-  return payload;
-}
-
 export function asNullableString(value: unknown): string | null {
   return typeof value === 'string' ? value : null;
 }

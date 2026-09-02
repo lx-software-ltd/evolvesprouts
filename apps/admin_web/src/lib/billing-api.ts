@@ -1,6 +1,5 @@
 import { appendRelatedPartyQuery, type RelatedPartyQuery } from '@/lib/contact-related-links';
 import { adminApiRequest } from '@/lib/api-admin-client';
-import { unwrapPayload } from '@/lib/api-payload';
 import { getAdminDefaultCurrencyCode } from '@/lib/config';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -64,10 +63,9 @@ export async function listCustomerInvoices(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
   return {
-    items: Array.isArray(root.items) ? root.items : [],
-    next_cursor: root.next_cursor ?? null,
+    items: Array.isArray(payload.items) ? payload.items : [],
+    next_cursor: payload.next_cursor ?? null,
   };
 }
 
@@ -102,11 +100,10 @@ export async function getCustomerInvoice(id: string, signal?: AbortSignal): Prom
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  if (!root.invoice) {
+  if (!payload.invoice) {
     throw new Error('Invoice response missing invoice.');
   }
-  return root.invoice;
+  return payload.invoice;
 }
 
 export async function getCustomerInvoicePdfDownload(
@@ -118,9 +115,8 @@ export async function getCustomerInvoicePdfDownload(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  const downloadUrl = root.downloadUrl;
-  const expiresAt = root.expiresAt;
+  const downloadUrl = payload.downloadUrl;
+  const expiresAt = payload.expiresAt;
   if (!downloadUrl || !expiresAt) {
     throw new Error('Invoice PDF response missing download URL.');
   }
@@ -142,8 +138,7 @@ export async function listCustomerPayments(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  return Array.isArray(root.items) ? root.items : [];
+  return Array.isArray(payload.items) ? payload.items : [];
 }
 
 export async function getCustomerPayment(id: string, signal?: AbortSignal): Promise<CustomerPaymentDetail> {
@@ -152,7 +147,7 @@ export async function getCustomerPayment(id: string, signal?: AbortSignal): Prom
     method: 'GET',
     signal,
   });
-  return unwrapPayload(payload);
+  return payload;
 }
 
 export async function confirmCustomerPayment(
@@ -164,11 +159,10 @@ export async function confirmCustomerPayment(
     method: 'POST',
     body: body && Object.keys(body).length > 0 ? body : undefined,
   });
-  const root = unwrapPayload(payload);
-  if (!root.payment) {
+  if (!payload.payment) {
     throw new Error('Confirm payment response missing payment.');
   }
-  return root.payment;
+  return payload.payment;
 }
 
 export async function deleteCustomerPayment(id: string): Promise<void> {
@@ -187,11 +181,10 @@ export async function createCustomerRefund(
     body,
     expectedSuccessStatuses: [201],
   });
-  const root = unwrapPayload(payload);
-  if (!root.payment) {
+  if (!payload.payment) {
     throw new Error('Refund response missing payment.');
   }
-  return root.payment;
+  return payload.payment;
 }
 
 export async function createManualInboundCustomerPayment(
@@ -203,11 +196,10 @@ export async function createManualInboundCustomerPayment(
     body,
     expectedSuccessStatuses: [201],
   });
-  const root = unwrapPayload(payload);
-  if (!root.payment) {
+  if (!payload.payment) {
     throw new Error('Create payment response missing payment.');
   }
-  return root.payment;
+  return payload.payment;
 }
 
 export async function updateManualInboundCustomerPayment(
@@ -219,11 +211,10 @@ export async function updateManualInboundCustomerPayment(
     method: 'PATCH',
     body,
   });
-  const root = unwrapPayload(payload);
-  if (!root.payment) {
+  if (!payload.payment) {
     throw new Error('Update payment response missing payment.');
   }
-  return root.payment;
+  return payload.payment;
 }
 
 /**
@@ -335,15 +326,14 @@ export async function listRecentEnrollmentsForInvoicing(
       }
       throw caught;
     }
-    const root = unwrapPayload(payload);
-    const page = Array.isArray(root.items) ? root.items : [];
+    const page = Array.isArray(payload.items) ? payload.items : [];
     merged.push(...page);
-    if (root.truncated) {
+    if (payload.truncated) {
       truncatedOverall = true;
     }
     const next =
-      typeof root.next_cursor === 'string' && root.next_cursor.trim() !== ''
-        ? root.next_cursor.trim()
+      typeof payload.next_cursor === 'string' && payload.next_cursor.trim() !== ''
+        ? payload.next_cursor.trim()
         : null;
     if (!next) {
       break;
@@ -369,12 +359,11 @@ export async function createDraftInvoice(
     body,
     expectedSuccessStatuses: [201],
   });
-  const root = unwrapPayload(payload);
-  const invoiceId = typeof root.invoiceId === 'string' ? root.invoiceId : '';
+  const invoiceId = typeof payload.invoiceId === 'string' ? payload.invoiceId : '';
   if (!invoiceId) {
     throw new Error('Create invoice response missing invoiceId.');
   }
-  return { invoiceId, status: typeof root.status === 'string' ? root.status : 'draft' };
+  return { invoiceId, status: typeof payload.status === 'string' ? payload.status : 'draft' };
 }
 
 export async function issueInvoice(invoiceId: string): Promise<{
@@ -392,17 +381,16 @@ export async function issueInvoice(invoiceId: string): Promise<{
     endpointPath: `/v1/admin/billing/invoices/${invoiceId}/issue`,
     method: 'POST',
   });
-  const root = unwrapPayload(payload);
   const id =
-    typeof root.invoiceId === 'string' && root.invoiceId.trim() !== '' ? root.invoiceId : invoiceId;
+    typeof payload.invoiceId === 'string' && payload.invoiceId.trim() !== '' ? payload.invoiceId : invoiceId;
   if (!id) {
     throw new Error('Issue invoice response missing invoiceId.');
   }
   return {
     invoiceId: id,
-    invoiceNumber: root.invoiceNumber,
-    issuedPdfSha256: root.issuedPdfSha256,
-    paymentId: root.paymentId,
+    invoiceNumber: payload.invoiceNumber,
+    issuedPdfSha256: payload.issuedPdfSha256,
+    paymentId: payload.paymentId,
   };
 }
 
@@ -422,9 +410,8 @@ export async function voidInvoice(invoiceId: string, reason: string): Promise<{ 
     method: 'POST',
     body: { reason },
   });
-  const root = unwrapPayload(payload);
-  const id = typeof root.invoiceId === 'string' ? root.invoiceId : invoiceId;
-  return { invoiceId: id, status: typeof root.status === 'string' ? root.status : 'void' };
+  const id = typeof payload.invoiceId === 'string' ? payload.invoiceId : invoiceId;
+  return { invoiceId: id, status: typeof payload.status === 'string' ? payload.status : 'void' };
 }
 
 export async function emailInvoice(invoiceId: string, toEmail: string): Promise<{ sent: boolean }> {
@@ -433,8 +420,7 @@ export async function emailInvoice(invoiceId: string, toEmail: string): Promise<
     method: 'POST',
     body: { toEmail },
   });
-  const root = unwrapPayload(payload);
-  return { sent: Boolean(root.sent) };
+  return { sent: Boolean(payload.sent) };
 }
 
 export async function createPaymentAllocation(
@@ -446,8 +432,7 @@ export async function createPaymentAllocation(
     body,
     expectedSuccessStatuses: [201],
   });
-  const root = unwrapPayload(payload);
-  const allocationId = typeof root.allocationId === 'string' ? root.allocationId : '';
+  const allocationId = typeof payload.allocationId === 'string' ? payload.allocationId : '';
   if (!allocationId) {
     throw new Error('Allocation response missing allocationId.');
   }
@@ -464,11 +449,10 @@ export async function resolveBillToPrimaryContacts(
     body,
     signal,
   });
-  const root = unwrapPayload(payload);
-  if (!root.familyPrimaryContactById || !root.organizationPrimaryContactById) {
+  if (!payload.familyPrimaryContactById || !payload.organizationPrimaryContactById) {
     throw new Error('Resolve bill-to primary contacts response missing maps.');
   }
-  return root;
+  return payload;
 }
 
 export async function exportBillingCsv(
@@ -482,9 +466,8 @@ export async function exportBillingCsv(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  if (typeof root.csv !== 'string') {
+  if (typeof payload.csv !== 'string') {
     throw new Error('Export response missing csv.');
   }
-  return root.csv;
+  return payload.csv;
 }

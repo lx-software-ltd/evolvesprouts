@@ -1,5 +1,5 @@
 import { adminApiRequest } from './api-admin-client';
-import { asBoolean, asNullableString, asNumber, unwrapPayload } from './api-payload';
+import { asBoolean, asNullableString, asNumber } from './api-payload';
 import { isRecord } from './type-guards';
 
 import type { Vendor, VendorFilters } from '@/types/vendors';
@@ -49,13 +49,12 @@ export async function listAdminVendors(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
   return {
-    items: Array.isArray(root.items)
-      ? root.items.map((entry) => parseVendorFromOrganization(entry))
+    items: Array.isArray(payload.items)
+      ? payload.items.map((entry) => parseVendorFromOrganization(entry))
       : [],
-    nextCursor: asNullableString(root.next_cursor),
-    totalCount: asNumber(root.total_count, 0),
+    nextCursor: asNullableString(payload.next_cursor),
+    totalCount: asNumber(payload.total_count, 0),
   };
 }
 
@@ -66,8 +65,7 @@ export async function createAdminVendor(body: ApiCreateOrganizationRequest): Pro
     body,
     expectedSuccessStatuses: [200, 201],
   });
-  const root = unwrapPayload(payload);
-  return root.organization ? parseVendorFromOrganization(root.organization) : null;
+  return payload.organization ? parseVendorFromOrganization(payload.organization) : null;
 }
 
 export async function updateAdminVendor(
@@ -79,6 +77,5 @@ export async function updateAdminVendor(
     method: 'PATCH',
     body,
   });
-  const root = unwrapPayload(payload);
-  return root.organization ? parseVendorFromOrganization(root.organization) : null;
+  return payload.organization ? parseVendorFromOrganization(payload.organization) : null;
 }

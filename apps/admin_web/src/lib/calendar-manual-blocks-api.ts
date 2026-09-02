@@ -1,5 +1,4 @@
 import { adminApiRequest } from '@/lib/api-admin-client';
-import { unwrapPayload } from '@/lib/api-payload';
 import { isRecord } from '@/lib/type-guards';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -27,8 +26,7 @@ export async function listCalendarManualBlocks(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  return Array.isArray(root.items) ? root.items.map((row) => parseBlock(row)) : [];
+  return Array.isArray(payload.items) ? payload.items.map((row) => parseBlock(row)) : [];
 }
 
 export async function createCalendarManualBlock(
@@ -40,8 +38,7 @@ export async function createCalendarManualBlock(
     body,
     expectedSuccessStatuses: [200, 201],
   });
-  const root = unwrapPayload(payload);
-  return root.block ? parseBlock(root.block) : null;
+  return payload.block ? parseBlock(payload.block) : null;
 }
 
 export async function updateCalendarManualBlock(
@@ -53,8 +50,7 @@ export async function updateCalendarManualBlock(
     method: 'PATCH',
     body,
   });
-  const root = unwrapPayload(payload);
-  return root.block ? parseBlock(root.block) : null;
+  return payload.block ? parseBlock(payload.block) : null;
 }
 
 export async function deleteCalendarManualBlock(id: string): Promise<boolean> {
@@ -62,6 +58,5 @@ export async function deleteCalendarManualBlock(id: string): Promise<boolean> {
     endpointPath: `/v1/admin/calendar/manual-blocks/${id}`,
     method: 'DELETE',
   });
-  const root = unwrapPayload(payload);
-  return Boolean(isRecord(root) && root.deleted);
+  return Boolean(isRecord(payload) && payload.deleted);
 }

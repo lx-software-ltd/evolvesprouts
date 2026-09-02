@@ -1,7 +1,7 @@
 import { clampAdminListLimit } from '@/lib/admin-list-limit';
 
 import { adminApiRequest } from './api-admin-client';
-import { asNullableString, asNumber, unwrapPayload } from './api-payload';
+import { asNullableString, asNumber } from './api-payload';
 import { parseInstance } from './services-api-parse';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -55,11 +55,10 @@ export async function listInstances(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
   return {
-    items: Array.isArray(root.items) ? root.items.map((entry) => parseInstance(entry)) : [],
-    nextCursor: asNullableString(root.next_cursor),
-    totalCount: asNumber(root.total_count, 0),
+    items: Array.isArray(payload.items) ? payload.items.map((entry) => parseInstance(entry)) : [],
+    nextCursor: asNullableString(payload.next_cursor),
+    totalCount: asNumber(payload.total_count, 0),
   };
 }
 
@@ -81,11 +80,10 @@ export async function listAllInstances(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
   return {
-    items: Array.isArray(root.items) ? root.items.map((entry) => parseInstance(entry)) : [],
-    nextCursor: asNullableString(root.next_cursor),
-    totalCount: asNumber(root.total_count, 0),
+    items: Array.isArray(payload.items) ? payload.items.map((entry) => parseInstance(entry)) : [],
+    nextCursor: asNullableString(payload.next_cursor),
+    totalCount: asNumber(payload.total_count, 0),
   };
 }
 
@@ -99,8 +97,7 @@ export async function getInstance(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  return root.instance ? parseInstance(root.instance) : null;
+  return payload.instance ? parseInstance(payload.instance) : null;
 }
 
 export async function createInstance(
@@ -113,8 +110,7 @@ export async function createInstance(
     body,
     expectedSuccessStatuses: [200, 201],
   });
-  const root = unwrapPayload(payload);
-  return root.instance ? parseInstance(root.instance) : null;
+  return payload.instance ? parseInstance(payload.instance) : null;
 }
 
 export async function updateInstance(
@@ -127,8 +123,7 @@ export async function updateInstance(
     method: 'PUT',
     body,
   });
-  const root = unwrapPayload(payload);
-  return root.instance ? parseInstance(root.instance) : null;
+  return payload.instance ? parseInstance(payload.instance) : null;
 }
 
 export async function deleteInstance(serviceId: string, instanceId: string): Promise<void> {

@@ -1,5 +1,5 @@
 import { AdminApiError, adminApiRequest } from './api-admin-client';
-import { asNullableString, asTrimmedString, unwrapPayload } from './api-payload';
+import { asNullableString, asTrimmedString } from './api-payload';
 import { isRecord } from './type-guards';
 
 import type {
@@ -147,12 +147,11 @@ function normalizeExpenseUpdateInput(input: UpsertExpenseInput): ApiUpdateExpens
 }
 
 function extractExpense(payload: ApiExpensePayload): Expense | null {
-  const root = unwrapPayload(payload);
-  if (isApiExpense(root)) {
-    return parseExpense(root);
+  if (isApiExpense(payload)) {
+    return parseExpense(payload);
   }
-  if (isApiExpenseResponse(root)) {
-    return parseExpense(root.expense);
+  if (isApiExpenseResponse(payload)) {
+    return parseExpense(payload.expense);
   }
   return null;
 }
@@ -186,7 +185,7 @@ function parseBulkImportJobEnvelope(payload: unknown): {
     expenses: Expense[] | null;
   };
 } {
-  const root = unwrapPayload(payload) as Record<string, unknown>;
+  const root = payload as Record<string, unknown>;
   const raw = root.bulk_import_job;
   if (!isRecord(raw) || !isApiBulkImportJob(raw)) {
     throw new Error('Invalid bulk import job response.');
@@ -257,7 +256,7 @@ export async function listAdminBulkExpenseImportJobs(input: {
     endpointPath,
     method: 'GET',
   });
-  const root = unwrapPayload(payload) as Record<string, unknown>;
+  const root = payload as Record<string, unknown>;
   const rawItems = root.items;
   const items = Array.isArray(rawItems)
     ? rawItems
@@ -298,13 +297,12 @@ export async function listAdminExpenses(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
   return {
-    items: Array.isArray(root.items)
-      ? root.items.filter((entry): entry is ApiExpense => isApiExpense(entry)).map((entry) => parseExpense(entry))
+    items: Array.isArray(payload.items)
+      ? payload.items.filter((entry): entry is ApiExpense => isApiExpense(entry)).map((entry) => parseExpense(entry))
       : [],
-    nextCursor: asNullableString(root.next_cursor ?? null),
-    totalCount: typeof root.total_count === 'number' ? root.total_count : 0,
+    nextCursor: asNullableString(payload.next_cursor ?? null),
+    totalCount: typeof payload.total_count === 'number' ? payload.total_count : 0,
   };
 }
 

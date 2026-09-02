@@ -1,7 +1,7 @@
 import { appendRelatedPartyQuery, type RelatedPartyQuery } from '@/lib/contact-related-links';
 
 import { adminApiRequest } from './api-admin-client';
-import { asNumber, asNullableString, unwrapPayload } from './api-payload';
+import { asNumber, asNullableString } from './api-payload';
 import { isRecord } from './type-guards';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -89,12 +89,10 @@ export async function listWhatsAppConversations(
   }
   appendRelatedPartyQuery(query, params);
   const suffix = query.toString() ? `?${query.toString()}` : '';
-  const payload = unwrapPayload(
-    await adminApiRequest<ApiConversationList>({
-      endpointPath: `/v1/admin/whatsapp/conversations${suffix}`,
-      signal,
-    })
-  );
+  const payload = await adminApiRequest<ApiConversationList>({
+    endpointPath: `/v1/admin/whatsapp/conversations${suffix}`,
+    signal,
+  });
   const items = Array.isArray(payload.items) ? payload.items.map(parseConversation) : [];
   return {
     items,
@@ -110,12 +108,10 @@ export async function listWhatsAppMessages(
   conversation: WhatsAppConversationSummary;
   items: WhatsAppMessageSummary[];
 }> {
-  const payload = unwrapPayload(
-    await adminApiRequest<ApiMessageList>({
-      endpointPath: `/v1/admin/whatsapp/conversations/${conversationId}/messages`,
-      signal,
-    })
-  );
+  const payload = await adminApiRequest<ApiMessageList>({
+    endpointPath: `/v1/admin/whatsapp/conversations/${conversationId}/messages`,
+    signal,
+  });
   return {
     conversation: parseConversation(payload.conversation),
     items: Array.isArray(payload.items) ? payload.items.map(parseMessage) : [],
