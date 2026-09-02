@@ -1,13 +1,4 @@
-import { isRecord } from './type-guards';
-
-export type ApiDataWrapper<TPayload> = {
-  data: TPayload;
-};
-
-export function unwrapPayload<TPayload>(payload: TPayload | ApiDataWrapper<TPayload>): TPayload {
-  if (isRecord(payload) && 'data' in payload) {
-    return payload.data as TPayload;
-  }
+export function unwrapPayload<TPayload>(payload: TPayload): TPayload {
   return payload;
 }
 

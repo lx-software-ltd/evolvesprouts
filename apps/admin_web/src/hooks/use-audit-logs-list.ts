@@ -94,7 +94,7 @@ export function useAuditLogsList() {
   const list = usePaginatedList({
     fetcher,
     defaultFilters: {},
-    limit: 50,
+    limit: 25,
     errorPrefix: 'Failed to load audit logs',
   });
   const { items, isLoading, isLoadingMore, hasMore, error, loadMore, refetch } = list;

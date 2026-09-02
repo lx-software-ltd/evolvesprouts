@@ -60,7 +60,7 @@ _AUDIT_PII_SUBSTRINGS: tuple[str, ...] = ("email", "phone", "address", "name")
 
 _REDACTED_MARKER = "***REDACTED***"
 
-_DEFAULT_LIMIT = 50
+_DEFAULT_LIMIT = 25
 _MAX_LIMIT = 100
 
 

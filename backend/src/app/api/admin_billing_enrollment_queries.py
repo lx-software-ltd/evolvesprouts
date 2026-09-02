@@ -252,8 +252,9 @@ def list_recent_enrollments_for_invoicing(
         blocked_eids: set[UUID] = set()
         cand_ids = {en.id for en in page_rows}
         if cand_ids:
-            blocked_eids = set(
-                session.execute(
+            blocked_eids = {
+                enrollment_id
+                for enrollment_id in session.execute(
                     select(CustomerInvoiceLine.enrollment_id)
                     .join(
                         CustomerInvoice,
@@ -271,7 +272,8 @@ def list_recent_enrollments_for_invoicing(
                 )
                 .scalars()
                 .all()
-            )
+                if enrollment_id is not None
+            }
 
         fam_ids, org_ids = collect_enrollment_family_org_ids(page_rows)
         fam_emails = primary_family_emails(session, fam_ids)

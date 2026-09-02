@@ -97,7 +97,7 @@ def _export_csv(
             has_more = len(payments) > row_limit
             payments_page = list(payments[:row_limit])
             if cursor is None:
-                allocs = (
+                allocs = list(
                     session.execute(
                         select(PaymentAllocation).limit(_MAX_ALLOCATION_EXPORT_ROWS)
                     )
@@ -175,14 +175,14 @@ def _export_csv(
         has_more = len(payments) > row_limit
         payments_page = list(payments[:row_limit])
         if cursor is None:
-            allocs = (
+            allocs = list(
                 session.execute(
                     select(PaymentAllocation).limit(_MAX_ALLOCATION_EXPORT_ROWS)
                 )
                 .scalars()
                 .all()
             )
-            invoices = (
+            invoices = list(
                 session.execute(
                     select(CustomerInvoice)
                     .order_by(CustomerInvoice.created_at.desc())
@@ -207,7 +207,7 @@ def _export_csv(
                 )
                 for ln in line_rows:
                     lines_by_invoice.setdefault(ln.invoice_id, []).append(ln)
-            receipts = (
+            receipts = list(
                 session.execute(
                     select(CustomerReceipt)
                     .order_by(CustomerReceipt.created_at.desc())

@@ -24,9 +24,9 @@ info:
     - `GET /v1/admin/services/{id}/discount-code-usage-summary`
     - `POST /v1/admin/services/{id}/cover-image`
     - `GET|POST /v1/admin/services/{id}/instances`
-    - `GET|PUT|DELETE /v1/admin/services/{id}/instances/{instanceId}`
-    - `GET|POST /v1/admin/services/{id}/instances/{instanceId}/enrollments`
-    - `PATCH|DELETE /v1/admin/services/{id}/instances/{instanceId}/enrollments/{enrollmentId}`
+    - `GET|PUT|DELETE /v1/admin/services/{id}/instances/{instance_id}`
+    - `GET|POST /v1/admin/services/{id}/instances/{instance_id}/enrollments`
+    - `PATCH|DELETE /v1/admin/services/{id}/instances/{instance_id}/enrollments/{enrollment_id}`
     - `GET|POST /v1/admin/discount-codes`
     - `PUT|DELETE /v1/admin/discount-codes/{id}`
     - `GET|POST /v1/admin/completion-certificates`
@@ -46,21 +46,21 @@ info:
     - `GET|POST /v1/admin/contacts`
     - `GET|PATCH|DELETE /v1/admin/contacts/{id}`
     - `GET|POST /v1/admin/contacts/{id}/notes`
-    - `PATCH|DELETE /v1/admin/contacts/{id}/notes/{noteId}`
+    - `PATCH|DELETE /v1/admin/contacts/{id}/notes/{note_id}`
     - `GET /v1/admin/contacts/{id}/services`
     - `GET /v1/admin/families/picker`
     - `GET|POST /v1/admin/families`
     - `GET|PATCH|DELETE /v1/admin/families/{id}`
     - `GET /v1/admin/families/{id}/services`
     - `POST /v1/admin/families/{id}/members`
-    - `PATCH|DELETE /v1/admin/families/{id}/members/{memberId}`
+    - `PATCH|DELETE /v1/admin/families/{id}/members/{member_id}`
     - `GET /v1/admin/organizations/picker`
     - `GET|POST /v1/admin/organizations`
     - `GET|PATCH|DELETE /v1/admin/organizations/{id}`
     - `GET /v1/admin/organizations/{id}/services`
     - `POST /v1/admin/organizations/{id}/members`
-    - `PATCH /v1/admin/organizations/{id}/members/{memberId}`
-    - `DELETE /v1/admin/organizations/{id}/members/{memberId}`
+    - `PATCH /v1/admin/organizations/{id}/members/{member_id}`
+    - `DELETE /v1/admin/organizations/{id}/members/{member_id}`
     - `GET /v1/admin/forms` (lists form slugs with answer counts from DynamoDB)
     - `GET|DELETE /v1/admin/forms/{form_slug}/answers` (`DELETE` removes all stored answers for the form)
     - `GET /v1/admin/forms/{form_slug}/answers/export` (CSV export of all answers for the form)
@@ -114,7 +114,7 @@ info:
     - `POST /v1/admin/assets/{id}/content/init`
     - `POST /v1/admin/assets/{id}/content/complete`
     - `GET|POST /v1/admin/assets/{id}/grants`
-    - `DELETE /v1/admin/assets/{id}/grants/{grantId}`
+    - `DELETE /v1/admin/assets/{id}/grants/{grant_id}`
     - `GET|POST|DELETE /v1/admin/assets/{id}/share-link`
     - `POST /v1/admin/assets/{id}/share-link/rotate`
     - `GET /v1/user/assets`
@@ -439,7 +439,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /v1/admin/assets/{id}/grants/{grantId}:
+  /v1/admin/assets/{id}/grants/{grant_id}:
     parameters:
       - $ref: "#/components/parameters/AssetId"
       - $ref: "#/components/parameters/GrantId"
@@ -862,7 +862,7 @@ paths:
             type: integer
             minimum: 1
             maximum: 100
-            default: 50
+            default: 25
         - name: cursor
           in: query
           required: false
@@ -2205,7 +2205,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /v1/admin/services/{id}/instances/{instanceId}:
+  /v1/admin/services/{id}/instances/{instance_id}:
     parameters:
       - $ref: "#/components/parameters/ServiceId"
       - $ref: "#/components/parameters/InstanceId"
@@ -2267,7 +2267,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /v1/admin/services/{id}/instances/{instanceId}/enrollments:
+  /v1/admin/services/{id}/instances/{instance_id}/enrollments:
     parameters:
       - $ref: "#/components/parameters/ServiceId"
       - $ref: "#/components/parameters/InstanceId"
@@ -2312,7 +2312,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /v1/admin/services/{id}/instances/{instanceId}/enrollments/{enrollmentId}:
+  /v1/admin/services/{id}/instances/{instance_id}/enrollments/{enrollment_id}:
     parameters:
       - $ref: "#/components/parameters/ServiceId"
       - $ref: "#/components/parameters/InstanceId"
@@ -3266,7 +3266,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /v1/admin/contacts/{id}/notes/{noteId}:
+  /v1/admin/contacts/{id}/notes/{note_id}:
     parameters:
       - $ref: "#/components/parameters/AdminContactId"
       - $ref: "#/components/parameters/NoteId"
@@ -3515,7 +3515,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /v1/admin/families/{id}/members/{memberId}:
+  /v1/admin/families/{id}/members/{member_id}:
     parameters:
       - $ref: "#/components/parameters/AdminFamilyId"
       - $ref: "#/components/parameters/AdminFamilyMemberId"
@@ -3800,7 +3800,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /v1/admin/organizations/{id}/members/{memberId}:
+  /v1/admin/organizations/{id}/members/{member_id}:
     parameters:
       - $ref: "#/components/parameters/AdminOrganizationId"
       - $ref: "#/components/parameters/AdminOrganizationMemberId"
@@ -4308,7 +4308,7 @@ paths:
             type: integer
             minimum: 1
             maximum: 100
-            default: 50
+            default: 25
       responses:
         "200":
           description: Invoice summaries.
@@ -5038,9 +5038,28 @@ paths:
     parameters:
       - $ref: "#/components/parameters/FormSlug"
     get:
-      summary: List all stored answers for a form
+      summary: List stored answers for a form
+      description: >
+        Returns answer rows newest first. Pass `next_cursor` from the prior response
+        as `cursor`. Default and maximum page size follow the standard admin list
+        limit (25 / 100).
       security:
         - AdminBearerAuth: []
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          description: Opaque continuation token from `next_cursor`.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
       responses:
         "200":
           description: Form answer rows for the selected form.
@@ -5110,9 +5129,28 @@ paths:
     parameters:
       - $ref: "#/components/parameters/PollSlug"
     get:
-      summary: List all stored answers for a poll
+      summary: List stored answers for a poll
+      description: >
+        Returns answer rows newest first. Pass `next_cursor` from the prior response
+        as `cursor`. Default and maximum page size follow the standard admin list
+        limit (25 / 100).
       security:
         - AdminBearerAuth: []
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          description: Opaque continuation token from `next_cursor`.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
       responses:
         "200":
           description: Poll answer rows for the selected poll.
@@ -5229,7 +5267,7 @@ components:
         type: string
       description: Asset identifier.
     GrantId:
-      name: grantId
+      name: grant_id
       in: path
       required: true
       schema:
@@ -5276,7 +5314,7 @@ components:
         format: uuid
       description: Service identifier.
     InstanceId:
-      name: instanceId
+      name: instance_id
       in: path
       required: true
       schema:
@@ -5284,7 +5322,7 @@ components:
         format: uuid
       description: Service instance identifier.
     EnrollmentId:
-      name: enrollmentId
+      name: enrollment_id
       in: path
       required: true
       schema:
@@ -5316,7 +5354,7 @@ components:
         format: uuid
       description: CRM contact identifier.
     NoteId:
-      name: noteId
+      name: note_id
       in: path
       required: true
       schema:
@@ -5332,7 +5370,7 @@ components:
         format: uuid
       description: CRM family identifier.
     AdminFamilyMemberId:
-      name: memberId
+      name: member_id
       in: path
       required: true
       schema:
@@ -5348,7 +5386,7 @@ components:
         format: uuid
       description: CRM organization identifier.
     AdminOrganizationMemberId:
-      name: memberId
+      name: member_id
       in: path
       required: true
       schema:
@@ -9522,6 +9560,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AdminFormAnswerRow"
+        next_cursor:
+          type: string
+          nullable: true
+          description: Opaque cursor for the next page, or null when no further rows remain.
     AdminFormClearAnswersResponse:
       type: object
       required:
@@ -9606,6 +9648,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AdminPollAnswerRow"
+        next_cursor:
+          type: string
+          nullable: true
+          description: Opaque cursor for the next page, or null when no further rows remain.
     AdminPollClearAnswersResponse:
       type: object
       required:

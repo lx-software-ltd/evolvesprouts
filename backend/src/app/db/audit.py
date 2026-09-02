@@ -11,31 +11,26 @@ SECURITY NOTES:
 - Old/new values may contain business data - apply retention policies
 
 Usage:
-    # In your Lambda handler or repository:
-    with Session(get_engine()) as session:
-        # Set context for trigger-based auditing
-        set_audit_context(session, user_id="cognito-sub", request_id="req-123")
-
-        # Perform database operations - triggers will capture changes
+    # Trigger-backed CRUD (preferred helper):
+    with session_with_audit("cognito-sub", "req-123") as session:
         repo = AssetRepository(session)
         repo.create(asset)
 
-        # Or use application-level auditing for more control
-        audit = AuditService(session)
-        audit.log_create("assets", asset.id, new_values={...})
-
-        session.commit()
+    # Custom application events on the same session:
+    audit = AuditService(session)
+    audit.log_custom("customer_invoices", invoice.id, action="DRAFT_CREATED")
 """
 
 from __future__ import annotations
 
 import enum
 import os
+from contextlib import contextmanager
 from decimal import Decimal
 from datetime import datetime
 from datetime import timezone
 from typing import Any
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from uuid import UUID
 
 from sqlalchemy import literal
@@ -44,6 +39,7 @@ from sqlalchemy import text
 from sqlalchemy import tuple_
 from sqlalchemy.orm import Session
 
+from app.db.engine import get_engine
 from app.db.models import AuditLog
 from app.utils.logging import get_logger
 
@@ -147,6 +143,23 @@ def set_audit_context(
     # that properly accepts bind parameters, and is_local=true makes the
     # setting transaction-scoped (equivalent to SET LOCAL).
     set_connection_audit_context(session, user_id=user_id, request_id=request_id)
+
+
+@contextmanager
+def session_with_audit(
+    user_id: str,
+    request_id: str | None = None,
+) -> Iterator[Session]:
+    """Open a session, begin a transaction, and stamp trigger audit context.
+
+    Use this for mutating admin handlers. Keep ``AuditService`` for custom
+    application actions and trigger-exempt tables such as
+    ``calendar_manual_blocks``.
+    """
+    with Session(get_engine()) as session:
+        with session.begin():
+            set_audit_context(session, user_id=user_id, request_id=request_id)
+            yield session
 
 
 def clear_audit_context(session: Session) -> None:

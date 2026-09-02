@@ -113,7 +113,7 @@ export function useClientInvoicesInvoiceList({
             familyId: familyFilterId === '' ? undefined : familyFilterId,
             organizationId:
               organizationFilterId === '' ? undefined : organizationFilterId,
-            limit: 50,
+            limit: 25,
           },
           signal,
         );
@@ -168,7 +168,7 @@ export function useClientInvoicesInvoiceList({
         organizationId:
           organizationFilterId === '' ? undefined : organizationFilterId,
         cursor: invoiceListCursor,
-        limit: 50,
+        limit: 25,
       });
       setInvoices((prev) => [...prev, ...items]);
       setInvoiceListCursor(next_cursor);

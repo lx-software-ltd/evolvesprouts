@@ -8,7 +8,13 @@ from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any
 
-from app.api.admin_request import require_admin_identity, split_route_parts
+from app.api.admin_request import (
+    paginate_after_key,
+    parse_limit,
+    query_param,
+    require_admin_identity,
+    split_route_parts,
+)
 from app.exceptions import ValidationError
 from app.services.form_responses_store import (
     clear_form_answers,
@@ -21,6 +27,8 @@ from app.utils.public_slug import PUBLIC_INSTANCE_SLUG_PATTERN
 from app.utils.responses import get_cors_headers, get_security_headers
 
 logger = get_logger(__name__)
+
+_ANSWER_CURSOR_FIELDS = ("updatedAt", "sessionId", "questionId")
 
 
 def handle_admin_forms_request(
@@ -77,7 +85,17 @@ def _list_form_answers(
     form_slug: str,
 ) -> dict[str, Any]:
     items = list_form_answers(form_slug=form_slug)
-    return json_response(200, {"items": items}, event=event)
+    page, next_cursor = paginate_after_key(
+        items,
+        limit=parse_limit(event),
+        cursor=query_param(event, "cursor"),
+        key_fields=_ANSWER_CURSOR_FIELDS,
+    )
+    return json_response(
+        200,
+        {"items": page, "next_cursor": next_cursor},
+        event=event,
+    )
 
 
 def _clear_form_answers(

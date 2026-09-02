@@ -1,5 +1,5 @@
 import { AdminApiError, adminApiRequest } from './api-admin-client';
-import { asNullableString, asTrimmedString, type ApiDataWrapper, unwrapPayload } from './api-payload';
+import { asNullableString, asTrimmedString, unwrapPayload } from './api-payload';
 import { isRecord } from './type-guards';
 
 import type {
@@ -29,8 +29,8 @@ type ApiBulkImportJobListResponse = ApiSchemas['BulkImportJobListResponse'];
 
 const EXPENSE_LIST_PAGE_LIMIT = 100;
 
-type ApiExpensePayload = ApiExpenseResponse | ApiExpense | ApiDataWrapper<ApiExpenseResponse | ApiExpense>;
-type ApiExpenseListPayload = ApiExpenseListResponse | ApiDataWrapper<ApiExpenseListResponse>;
+type ApiExpensePayload = ApiExpenseResponse | ApiExpense;
+type ApiExpenseListPayload = ApiExpenseListResponse;
 function isApiExpenseLineItem(value: unknown): value is ApiExpenseLineItem {
   return isRecord(value);
 }
@@ -253,7 +253,7 @@ export async function listAdminBulkExpenseImportJobs(input: {
   const endpointPath = queryString
     ? `/v1/admin/expenses/bulk-import-jobs?${queryString}`
     : '/v1/admin/expenses/bulk-import-jobs';
-  const payload = await adminApiRequest<ApiBulkImportJobListResponse | ApiDataWrapper<ApiBulkImportJobListResponse>>({
+  const payload = await adminApiRequest<ApiBulkImportJobListResponse>({
     endpointPath,
     method: 'GET',
   });
@@ -406,7 +406,7 @@ export async function queueAdminBulkExpenseImportJob(input: {
   if (input.status) {
     body.status = input.status;
   }
-  const payload = await adminApiRequest<ApiBulkImportJobResponse | ApiDataWrapper<ApiBulkImportJobResponse>>({
+  const payload = await adminApiRequest<ApiBulkImportJobResponse>({
     endpointPath: '/v1/admin/expenses/import-from-bulk-pdf',
     method: 'POST',
     body,
@@ -436,7 +436,7 @@ export async function getAdminBulkExpenseImportJob(
     expenses: Expense[] | null;
   };
 }> {
-  const payload = await adminApiRequest<ApiBulkImportJobResponse | ApiDataWrapper<ApiBulkImportJobResponse>>({
+  const payload = await adminApiRequest<ApiBulkImportJobResponse>({
     endpointPath: `/v1/admin/expenses/bulk-import-jobs/${jobId.trim()}`,
     method: 'GET',
     expectedSuccessStatuses: [200],

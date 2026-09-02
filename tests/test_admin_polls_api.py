@@ -160,6 +160,7 @@ def test_list_poll_answers_returns_rows(
     body = json.loads(response["body"])
     assert len(body["items"]) == 1
     assert body["items"][0]["selectedOption"] == "Parent"
+    assert body["next_cursor"] is None
 
 
 def test_clear_poll_answers_preserves_control_row(

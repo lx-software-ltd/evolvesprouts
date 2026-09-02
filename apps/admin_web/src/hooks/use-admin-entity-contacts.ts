@@ -49,7 +49,7 @@ export function useAdminEntityContacts() {
     defaultFilters: DEFAULT_CONTACT_LIST_FILTERS,
     errorPrefix: 'Failed to load contacts',
     debounceKeys: ['query'],
-    limit: 50,
+    limit: 25,
   });
 
   const { isSaving, mutate } = useListMutate(refetchContacts);

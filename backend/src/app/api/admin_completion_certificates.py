@@ -44,7 +44,7 @@ from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
-_DEFAULT_LIMIT = 50
+_DEFAULT_LIMIT = 25
 _CERTIFICATE_DOWNLOAD_LINK_EXPIRY = timedelta(hours=1)
 
 

@@ -111,7 +111,7 @@ their primary responsibilities.
   in the current release; merged into public availability busy intervals via `GET /v1/calendar/availability`),
   `GET /v1/admin/contacts/tags` for tag pickers (active tags only),
   `GET /v1/admin/contacts/search` for contact picker search,
-  `GET|POST /v1/admin/contacts/{id}/notes` and `PATCH|DELETE /v1/admin/contacts/{id}/notes/{noteId}`
+  `GET|POST /v1/admin/contacts/{id}/notes` and `PATCH|DELETE /v1/admin/contacts/{id}/notes/{note_id}`
   for standalone CRM notes on a contact (not tied to a sales lead), `GET /v1/admin/contacts/{id}/services`
   for read-only purchased-service labels on a contact (including services purchased by any family or
   organisation the contact belongs to), and `DELETE /v1/admin/contacts/{id}`
@@ -124,7 +124,7 @@ their primary responsibilities.
   `relationship_type` updates that field on the family and on every member contact; including `DELETE /v1/admin/families/{id}`
   for hard-deleting a family after clearing blocking CRM rows; `GET /v1/admin/families/{id}/services`
   for read-only purchased-service labels on a family (including member contacts); `POST /v1/admin/families/{id}/members`
-  derives each member's role from the linked contact's `contact_type`; `PATCH /v1/admin/families/{id}/members/{memberId}`
+  derives each member's role from the linked contact's `contact_type`; `PATCH /v1/admin/families/{id}/members/{member_id}`
   updates membership fields such as primary contact),
   `/v1/admin/organizations/picker` (optional `relationship_type` query mirrors organisation list
   semantics; default excludes both vendors and partners; pass `relationship_type=partner` for
@@ -137,17 +137,17 @@ their primary responsibilities.
   alphabetical order by trimmed name); includes `DELETE /v1/admin/organizations/{id}`
   for non-vendor orgs; `GET /v1/admin/organizations/{id}/services` for read-only purchased-service
   labels on an organisation (including member contacts); `POST /v1/admin/organizations/{id}/members` derives each member's role from the
-  linked contact's `contact_type`; `PATCH /v1/admin/organizations/{id}/members/{memberId}` updates
+  linked contact's `contact_type`; `PATCH /v1/admin/organizations/{id}/members/{member_id}` updates
   membership fields such as primary contact; partner rows accept optional `legal_name` for AR
   invoice Bill To entity lines—resolved as `legal_name` or `name` at issue time; pickers and
   structured bill-to snapshots keep the trade `name` by design),
   `/v1/admin/forms` (lists form slugs with answer counts from DynamoDB
   `evolvesprouts-poll-responses`), `/v1/admin/forms/{form_slug}/answers`
-  (`GET` lists all stored answer rows; `DELETE` clears all rows for the form),
+  (`GET` lists stored answer rows with cursor pagination; `DELETE` clears all rows for the form),
   `/v1/admin/forms/{form_slug}/answers/export` (`GET`; CSV export),
   `/v1/admin/polls` (lists poll slugs with answer counts from DynamoDB
   `evolvesprouts-poll-responses`), `/v1/admin/polls/{poll_slug}/answers`
-  (`GET` lists all stored answer rows; `DELETE` clears all rows for the poll),
+  (`GET` lists stored answer rows with cursor pagination; `DELETE` clears all rows for the poll),
   `/v1/admin/polls/{poll_slug}/answers/export` (`GET`; CSV export),
   `/v1/admin/leads/*` (including `GET|PATCH /v1/admin/leads/settings` for the
   default new-lead assignee, assignee-notification toggle, and Helper Detector

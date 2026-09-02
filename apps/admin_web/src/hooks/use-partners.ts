@@ -41,7 +41,6 @@ export function usePartners() {
     defaultFilters: DEFAULT_PARTNER_FILTERS,
     errorPrefix: 'Failed to load partners',
     debounceKeys: ['query'],
-    limit: 50,
   });
 
   const { isSaving, mutate } = useListMutate(list.refetch);
