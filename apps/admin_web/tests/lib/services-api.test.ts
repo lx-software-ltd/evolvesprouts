@@ -30,29 +30,27 @@ describe('services-api', () => {
 
   it('lists services and maps snake_case payload', async () => {
     mockAdminApiRequest.mockResolvedValueOnce({
-      data: {
-        items: [
-          {
-            id: 'service-1',
-            service_type: 'training_course',
-            title: 'Sleep workshop',
-            description: null,
-            cover_image_s3_key: null,
-            delivery_mode: 'online',
-            status: 'draft',
-            created_by: 'admin-1',
-            created_at: '2026-03-01T00:00:00.000Z',
-            updated_at: '2026-03-01T00:00:00.000Z',
-            training_details: {
-              pricing_unit: 'per_family',
-              default_price: '120.50',
-              default_currency: 'HKD',
-            },
+      items: [
+        {
+          id: 'service-1',
+          service_type: 'training_course',
+          title: 'Sleep workshop',
+          description: null,
+          cover_image_s3_key: null,
+          delivery_mode: 'online',
+          status: 'draft',
+          created_by: 'admin-1',
+          created_at: '2026-03-01T00:00:00.000Z',
+          updated_at: '2026-03-01T00:00:00.000Z',
+          training_details: {
+            pricing_unit: 'per_family',
+            default_price: '120.50',
+            default_currency: 'HKD',
           },
-        ],
-        next_cursor: 'cursor-1',
-        total_count: 1,
-      },
+        },
+      ],
+      next_cursor: 'cursor-1',
+      total_count: 1,
     });
 
     const result = await listServices({
@@ -93,30 +91,28 @@ describe('services-api', () => {
 
   it('maps event_details on service list rows when present', async () => {
     mockAdminApiRequest.mockResolvedValueOnce({
-      data: {
-        items: [
-          {
-            id: 'service-event-1',
-            service_type: 'event',
-            title: 'Open day',
-            description: null,
-            cover_image_s3_key: null,
-            delivery_mode: 'in_person',
-            status: 'published',
-            created_by: 'admin-1',
-            created_at: '2026-03-01T00:00:00.000Z',
-            updated_at: '2026-03-01T00:00:00.000Z',
-            training_details: null,
-            event_details: {
-              event_category: 'open_house',
-              default_price: '25.00',
-              default_currency: 'USD',
-            },
+      items: [
+        {
+          id: 'service-event-1',
+          service_type: 'event',
+          title: 'Open day',
+          description: null,
+          cover_image_s3_key: null,
+          delivery_mode: 'in_person',
+          status: 'published',
+          created_by: 'admin-1',
+          created_at: '2026-03-01T00:00:00.000Z',
+          updated_at: '2026-03-01T00:00:00.000Z',
+          training_details: null,
+          event_details: {
+            event_category: 'open_house',
+            default_price: '25.00',
+            default_currency: 'USD',
           },
-        ],
-        next_cursor: null,
-        total_count: 1,
-      },
+        },
+      ],
+      next_cursor: null,
+      total_count: 1,
     });
 
     const result = await listServices({
@@ -140,36 +136,34 @@ describe('services-api', () => {
 
   it('maps consultation_details on service list rows when present', async () => {
     mockAdminApiRequest.mockResolvedValueOnce({
-      data: {
-        items: [
-          {
-            id: 'service-consult-1',
-            service_type: 'consultation',
-            title: 'Coaching',
-            description: null,
-            cover_image_s3_key: null,
-            delivery_mode: 'hybrid',
-            status: 'published',
-            created_by: 'admin-1',
-            created_at: '2026-03-01T00:00:00.000Z',
-            updated_at: '2026-03-01T00:00:00.000Z',
-            training_details: null,
-            event_details: null,
-            consultation_details: {
-              consultation_format: 'one_on_one',
-              max_group_size: null,
-              duration_minutes: 45,
-              pricing_model: 'hourly',
-              default_hourly_rate: '350',
-              default_package_price: null,
-              default_package_sessions: null,
-              default_currency: 'HKD',
-            },
+      items: [
+        {
+          id: 'service-consult-1',
+          service_type: 'consultation',
+          title: 'Coaching',
+          description: null,
+          cover_image_s3_key: null,
+          delivery_mode: 'hybrid',
+          status: 'published',
+          created_by: 'admin-1',
+          created_at: '2026-03-01T00:00:00.000Z',
+          updated_at: '2026-03-01T00:00:00.000Z',
+          training_details: null,
+          event_details: null,
+          consultation_details: {
+            consultation_format: 'one_on_one',
+            max_group_size: null,
+            duration_minutes: 45,
+            pricing_model: 'hourly',
+            default_hourly_rate: '350',
+            default_package_price: null,
+            default_package_sessions: null,
+            default_currency: 'HKD',
           },
-        ],
-        next_cursor: null,
-        total_count: 1,
-      },
+        },
+      ],
+      next_cursor: null,
+      total_count: 1,
     });
 
     const result = await listServices({
@@ -194,18 +188,16 @@ describe('services-api', () => {
 
   it('creates cover-image upload URL and maps response', async () => {
     mockAdminApiRequest.mockResolvedValueOnce({
-      data: {
-        upload_url: 'https://uploads.example.com/path',
-        upload_method: 'PUT',
-        upload_headers: {
-          'Content-Type': 'image/jpeg',
-        },
-        s3_key: 'media/services/service-1/cover/file.jpg',
-        expires_at: '2026-03-02T00:00:00.000Z',
-        service: {
-          id: 'service-1',
-          cover_image_s3_key: 'media/services/service-1/cover/file.jpg',
-        },
+      upload_url: 'https://uploads.example.com/path',
+      upload_method: 'PUT',
+      upload_headers: {
+        'Content-Type': 'image/jpeg',
+      },
+      s3_key: 'media/services/service-1/cover/file.jpg',
+      expires_at: '2026-03-02T00:00:00.000Z',
+      service: {
+        id: 'service-1',
+        cover_image_s3_key: 'media/services/service-1/cover/file.jpg',
       },
     });
 
@@ -233,48 +225,46 @@ describe('services-api', () => {
 
   it('normalizes discount_type from listDiscountCodes (string casing and non-string)', async () => {
     mockAdminApiRequest.mockResolvedValueOnce({
-      data: {
-        items: [
-          {
-            id: 'dc-1',
-            code: 'A',
-            description: null,
-            discount_type: 'REFERRAL',
-            discount_value: '0',
-            currency: 'HKD',
-            valid_from: null,
-            valid_until: null,
-            service_id: null,
-            instance_id: null,
-            max_uses: null,
-            current_uses: 0,
-            active: true,
-            created_by: 'u',
-            created_at: null,
-            updated_at: null,
-          },
-          {
-            id: 'dc-2',
-            code: 'B',
-            description: null,
-            discount_type: 'unknown_kind',
-            discount_value: '10',
-            currency: 'HKD',
-            valid_from: null,
-            valid_until: null,
-            service_id: null,
-            instance_id: null,
-            max_uses: null,
-            current_uses: 0,
-            active: true,
-            created_by: 'u',
-            created_at: null,
-            updated_at: null,
-          },
-        ],
-        next_cursor: null,
-        total_count: 2,
-      },
+      items: [
+        {
+          id: 'dc-1',
+          code: 'A',
+          description: null,
+          discount_type: 'REFERRAL',
+          discount_value: '0',
+          currency: 'HKD',
+          valid_from: null,
+          valid_until: null,
+          service_id: null,
+          instance_id: null,
+          max_uses: null,
+          current_uses: 0,
+          active: true,
+          created_by: 'u',
+          created_at: null,
+          updated_at: null,
+        },
+        {
+          id: 'dc-2',
+          code: 'B',
+          description: null,
+          discount_type: 'unknown_kind',
+          discount_value: '10',
+          currency: 'HKD',
+          valid_from: null,
+          valid_until: null,
+          service_id: null,
+          instance_id: null,
+          max_uses: null,
+          current_uses: 0,
+          active: true,
+          created_by: 'u',
+          created_at: null,
+          updated_at: null,
+        },
+      ],
+      next_cursor: null,
+      total_count: 2,
     });
 
     const result = await listDiscountCodes({ limit: 50 });
@@ -285,32 +275,30 @@ describe('services-api', () => {
 
   it('parses venue coordinates from number or string response', async () => {
     mockAdminApiRequest.mockResolvedValueOnce({
-      data: {
-        items: [
-          {
-            id: 'loc-1',
-            name: 'A',
-            area_id: '00000000-0000-0000-0000-000000000001',
-            address: '1 Rd',
-            lat: 22.3193,
-            lng: 114.1694,
-            created_at: null,
-            updated_at: null,
-          },
-          {
-            id: 'loc-2',
-            name: 'B',
-            area_id: '00000000-0000-0000-0000-000000000002',
-            address: '2 Rd',
-            lat: '33.3',
-            lng: '55.5',
-            created_at: null,
-            updated_at: null,
-          },
-        ],
-        next_cursor: null,
-        total_count: 2,
-      },
+      items: [
+        {
+          id: 'loc-1',
+          name: 'A',
+          area_id: '00000000-0000-0000-0000-000000000001',
+          address: '1 Rd',
+          lat: 22.3193,
+          lng: 114.1694,
+          created_at: null,
+          updated_at: null,
+        },
+        {
+          id: 'loc-2',
+          name: 'B',
+          area_id: '00000000-0000-0000-0000-000000000002',
+          address: '2 Rd',
+          lat: '33.3',
+          lng: '55.5',
+          created_at: null,
+          updated_at: null,
+        },
+      ],
+      next_cursor: null,
+      total_count: 2,
     });
 
     const result = await listLocations({ limit: 50 });
@@ -323,25 +311,23 @@ describe('services-api', () => {
 
   it('maps partner_organization_ids on location list items', async () => {
     mockAdminApiRequest.mockResolvedValueOnce({
-      data: {
-        items: [
-          {
-            id: 'loc-ids',
-            name: null,
-            area_id: '00000000-0000-0000-0000-000000000001',
-            address: '1 Rd',
-            lat: null,
-            lng: null,
-            created_at: null,
-            updated_at: null,
-            locked_from_partner_org: true,
-            partner_organization_labels: ['Alpha'],
-            partner_organization_ids: ['aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'],
-          },
-        ],
-        next_cursor: null,
-        total_count: 1,
-      },
+      items: [
+        {
+          id: 'loc-ids',
+          name: null,
+          area_id: '00000000-0000-0000-0000-000000000001',
+          address: '1 Rd',
+          lat: null,
+          lng: null,
+          created_at: null,
+          updated_at: null,
+          locked_from_partner_org: true,
+          partner_organization_labels: ['Alpha'],
+          partner_organization_ids: ['aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'],
+        },
+      ],
+      next_cursor: null,
+      total_count: 1,
     });
 
     const result = await listLocations({ limit: 50 });
@@ -351,11 +337,9 @@ describe('services-api', () => {
 
   it('adds exclude_addresses when listLocations requests family/org address exclusion', async () => {
     mockAdminApiRequest.mockResolvedValueOnce({
-      data: {
-        items: [],
-        next_cursor: null,
-        total_count: 0,
-      },
+      items: [],
+      next_cursor: null,
+      total_count: 0,
     });
 
     await listLocations({ limit: 50, excludeAddresses: true });
@@ -398,18 +382,14 @@ describe('services-api', () => {
 
     mockAdminApiRequest
       .mockResolvedValueOnce({
-        data: {
-          items: [venueRow],
-          next_cursor: null,
-          total_count: 1,
-        },
+        items: [venueRow],
+        next_cursor: null,
+        total_count: 1,
       })
       .mockResolvedValueOnce({
-        data: {
-          items: [partnerOnlyRow, venueRow],
-          next_cursor: null,
-          total_count: 2,
-        },
+        items: [partnerOnlyRow, venueRow],
+        next_cursor: null,
+        total_count: 2,
       });
 
     const merged = await listAllVenueAndPartnerLocations();

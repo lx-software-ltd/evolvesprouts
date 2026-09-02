@@ -33,27 +33,25 @@ describe('assets-api', () => {
 
   it('lists assets using snake_case payload and query params', async () => {
     mockAdminApiRequest.mockResolvedValueOnce({
-      data: {
-        items: [
-          {
-            id: 'asset-1',
-            title: 'Infant guide',
-            description: null,
-            asset_type: 'document',
-            s3_key: 'assets/infant-guide.pdf',
-            file_name: 'infant-guide.pdf',
-            content_type: 'application/pdf',
-            content_language: null,
-            visibility: 'restricted',
-            created_by: 'admin@example.com',
-            created_at: '2026-02-27T00:00:00.000Z',
-            updated_at: '2026-02-27T00:00:00.000Z',
-            tags: [],
-          },
-        ],
-        next_cursor: 'cursor-1',
-        linked_tag_names: ['expense_attachment', 'custom_tag'],
-      },
+      items: [
+        {
+          id: 'asset-1',
+          title: 'Infant guide',
+          description: null,
+          asset_type: 'document',
+          s3_key: 'assets/infant-guide.pdf',
+          file_name: 'infant-guide.pdf',
+          content_type: 'application/pdf',
+          content_language: null,
+          visibility: 'restricted',
+          created_by: 'admin@example.com',
+          created_at: '2026-02-27T00:00:00.000Z',
+          updated_at: '2026-02-27T00:00:00.000Z',
+          tags: [],
+        },
+      ],
+      next_cursor: 'cursor-1',
+      linked_tag_names: ['expense_attachment', 'custom_tag'],
     });
 
     const result = await listAdminAssets({
@@ -93,10 +91,8 @@ describe('assets-api', () => {
 
   it('includes tag_name query param when filtering by tag', async () => {
     mockAdminApiRequest.mockResolvedValueOnce({
-      data: {
-        items: [],
-        next_cursor: null,
-      },
+      items: [],
+      next_cursor: null,
     });
 
     await listAdminAssets({ tagName: 'expense_attachment' });
@@ -107,10 +103,8 @@ describe('assets-api', () => {
 
   it('includes tag_name for arbitrary linked tag filters', async () => {
     mockAdminApiRequest.mockResolvedValueOnce({
-      data: {
-        items: [],
-        next_cursor: null,
-      },
+      items: [],
+      next_cursor: null,
     });
 
     await listAdminAssets({ tagName: 'custom_tag' });
@@ -121,28 +115,26 @@ describe('assets-api', () => {
 
   it('creates asset with snake_case request body and parses upload details', async () => {
     mockAdminApiRequest.mockResolvedValueOnce({
-      data: {
-        asset: {
-          id: 'asset-2',
-          title: 'Nutrition PDF',
-          description: null,
-          asset_type: 'document',
-          s3_key: 'assets/nutrition.pdf',
-          file_name: 'nutrition.pdf',
-          content_type: 'application/pdf',
-          visibility: 'public',
-          created_by: null,
-          created_at: null,
-          updated_at: null,
-          tags: [],
-        },
-        upload_url: 'https://uploads.example.com/asset-2',
-        upload_method: 'PUT',
-        upload_headers: {
-          'x-amz-acl': 'private',
-        },
-        expires_at: '2026-02-28T00:00:00.000Z',
+      asset: {
+        id: 'asset-2',
+        title: 'Nutrition PDF',
+        description: null,
+        asset_type: 'document',
+        s3_key: 'assets/nutrition.pdf',
+        file_name: 'nutrition.pdf',
+        content_type: 'application/pdf',
+        visibility: 'public',
+        created_by: null,
+        created_at: null,
+        updated_at: null,
+        tags: [],
       },
+      upload_url: 'https://uploads.example.com/asset-2',
+      upload_method: 'PUT',
+      upload_headers: {
+        'x-amz-acl': 'private',
+      },
+      expires_at: '2026-02-28T00:00:00.000Z',
     });
 
     const result = await createAdminAsset({
@@ -187,27 +179,25 @@ describe('assets-api', () => {
 
   it('creates asset with content_language when provided', async () => {
     mockAdminApiRequest.mockResolvedValueOnce({
-      data: {
-        asset: {
-          id: 'asset-3',
-          title: 'Guide',
-          description: null,
-          asset_type: 'document',
-          s3_key: 'assets/guide.pdf',
-          file_name: 'guide.pdf',
-          content_type: 'application/pdf',
-          content_language: 'zh-HK',
-          visibility: 'public',
-          created_by: null,
-          created_at: null,
-          updated_at: null,
-          tags: [],
-        },
-        upload_url: null,
-        upload_method: 'PUT',
-        upload_headers: {},
-        expires_at: null,
+      asset: {
+        id: 'asset-3',
+        title: 'Guide',
+        description: null,
+        asset_type: 'document',
+        s3_key: 'assets/guide.pdf',
+        file_name: 'guide.pdf',
+        content_type: 'application/pdf',
+        content_language: 'zh-HK',
+        visibility: 'public',
+        created_by: null,
+        created_at: null,
+        updated_at: null,
+        tags: [],
       },
+      upload_url: null,
+      upload_method: 'PUT',
+      upload_headers: {},
+      expires_at: null,
     });
 
     await createAdminAsset({
@@ -229,22 +219,20 @@ describe('assets-api', () => {
 
   it('updates asset with PATCH sending only keys present on the patch input', async () => {
     mockAdminApiRequest.mockResolvedValueOnce({
-      data: {
-        asset: {
-          id: 'asset-1',
-          title: 'Infant guide',
-          description: null,
-          asset_type: 'document',
-          s3_key: 'assets/infant-guide.pdf',
-          file_name: 'infant-guide.pdf',
-          content_type: 'application/pdf',
-          content_language: 'en',
-          visibility: 'restricted',
-          created_by: null,
-          created_at: null,
-          updated_at: null,
-          tags: [],
-        },
+      asset: {
+        id: 'asset-1',
+        title: 'Infant guide',
+        description: null,
+        asset_type: 'document',
+        s3_key: 'assets/infant-guide.pdf',
+        file_name: 'infant-guide.pdf',
+        content_type: 'application/pdf',
+        content_language: 'en',
+        visibility: 'restricted',
+        created_by: null,
+        created_at: null,
+        updated_at: null,
+        tags: [],
       },
     });
 
@@ -262,22 +250,20 @@ describe('assets-api', () => {
 
   it('skips PATCH when update patch is empty and returns current asset from GET', async () => {
     mockAdminApiRequest.mockResolvedValueOnce({
-      data: {
-        asset: {
-          id: 'asset-1',
-          title: 'Same',
-          description: null,
-          asset_type: 'document',
-          s3_key: 'assets/same.pdf',
-          file_name: 'same.pdf',
-          content_type: 'application/pdf',
-          content_language: null,
-          visibility: 'restricted',
-          created_by: null,
-          created_at: null,
-          updated_at: null,
-          tags: [],
-        },
+      asset: {
+        id: 'asset-1',
+        title: 'Same',
+        description: null,
+        asset_type: 'document',
+        s3_key: 'assets/same.pdf',
+        file_name: 'same.pdf',
+        content_type: 'application/pdf',
+        content_language: null,
+        visibility: 'restricted',
+        created_by: null,
+        created_at: null,
+        updated_at: null,
+        tags: [],
       },
     });
 
@@ -381,13 +367,11 @@ describe('assets-api', () => {
 
   it('initiates content replace with file_name and content_type', async () => {
     mockAdminApiRequest.mockResolvedValueOnce({
-      data: {
-        pending_s3_key: 'assets/asset-1/u1-new.pdf',
-        upload_url: 'https://uploads.example.com/replace',
-        upload_method: 'PUT',
-        upload_headers: { 'Content-Type': 'application/pdf' },
-        expires_at: '2026-02-28T00:00:00.000Z',
-      },
+      pending_s3_key: 'assets/asset-1/u1-new.pdf',
+      upload_url: 'https://uploads.example.com/replace',
+      upload_method: 'PUT',
+      upload_headers: { 'Content-Type': 'application/pdf' },
+      expires_at: '2026-02-28T00:00:00.000Z',
     });
 
     const result = await initAdminAssetContentReplace('asset-1', {
@@ -416,22 +400,20 @@ describe('assets-api', () => {
 
   it('completes content replace with pending_s3_key', async () => {
     mockAdminApiRequest.mockResolvedValueOnce({
-      data: {
-        asset: {
-          id: 'asset-1',
-          title: 'Guide',
-          description: null,
-          asset_type: 'document',
-          s3_key: 'assets/asset-1/u1-new.pdf',
-          file_name: 'new.pdf',
-          content_type: 'application/pdf',
-          content_language: null,
-          visibility: 'restricted',
-          created_by: null,
-          created_at: null,
-          updated_at: null,
-          tags: [],
-        },
+      asset: {
+        id: 'asset-1',
+        title: 'Guide',
+        description: null,
+        asset_type: 'document',
+        s3_key: 'assets/asset-1/u1-new.pdf',
+        file_name: 'new.pdf',
+        content_type: 'application/pdf',
+        content_language: null,
+        visibility: 'restricted',
+        created_by: null,
+        created_at: null,
+        updated_at: null,
+        tags: [],
       },
     });
 

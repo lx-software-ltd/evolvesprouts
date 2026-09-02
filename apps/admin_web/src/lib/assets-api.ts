@@ -1,5 +1,5 @@
 import { AdminApiError, adminApiRequest } from './api-admin-client';
-import { type ApiDataWrapper, asNullableString, asTrimmedString, asStringArray } from './api-payload';
+import { asNullableString, asTrimmedString, asStringArray } from './api-payload';
 import { isRecord } from './type-guards';
 
 import type {
@@ -34,31 +34,16 @@ type ApiCreateAssetGrantRequest = ApiSchemas['CreateAssetGrantRequest'];
 type ApiAssetShareLinkResponse = ApiSchemas['AssetShareLinkResponse'];
 type ApiAssetShareLinkPolicyRequest = ApiSchemas['AssetShareLinkPolicyRequest'];
 
-type ApiAssetListPayload =
-  | ApiAssetListResponse
-  | ApiAsset[]
-  | ApiDataWrapper<ApiAssetListResponse | ApiAsset[]>;
-type ApiAssetPayload = ApiAssetResponse | ApiAsset | ApiDataWrapper<ApiAssetResponse | ApiAsset>;
-type ApiAssetGrantListPayload =
-  | ApiAssetGrantListResponse
-  | ApiAssetGrant[]
-  | ApiDataWrapper<ApiAssetGrantListResponse | ApiAssetGrant[]>;
-type ApiAssetGrantPayload =
-  | ApiAssetGrantResponse
-  | ApiAssetGrant
-  | ApiDataWrapper<ApiAssetGrantResponse | ApiAssetGrant>;
-type ApiCreateAssetPayload = ApiCreateAssetResponse | ApiDataWrapper<ApiCreateAssetResponse>;
+type ApiAssetListPayload = ApiAssetListResponse | ApiAsset[];
+type ApiAssetPayload = ApiAssetResponse | ApiAsset;
+type ApiAssetGrantListPayload = ApiAssetGrantListResponse | ApiAssetGrant[];
+type ApiAssetGrantPayload = ApiAssetGrantResponse | ApiAssetGrant;
+type ApiCreateAssetPayload = ApiCreateAssetResponse;
 type ApiInitAssetContentReplaceResponse = ApiSchemas['InitAssetContentReplaceResponse'];
-type ApiInitAssetContentReplacePayload =
-  | ApiInitAssetContentReplaceResponse
-  | ApiDataWrapper<ApiInitAssetContentReplaceResponse>;
-type ApiAssetShareLinkPayload =
-  | ApiAssetShareLinkResponse
-  | ApiDataWrapper<ApiAssetShareLinkResponse>;
+type ApiInitAssetContentReplacePayload = ApiInitAssetContentReplaceResponse;
+type ApiAssetShareLinkPayload = ApiAssetShareLinkResponse;
 type ApiAssetDownloadResponse = ApiSchemas['AssetDownloadResponse'];
-type ApiAssetDownloadPayload =
-  | ApiAssetDownloadResponse
-  | ApiDataWrapper<ApiAssetDownloadResponse>;
+type ApiAssetDownloadPayload = ApiAssetDownloadResponse;
 
 export interface CreateAdminAssetResult {
   asset: AdminAsset | null;
@@ -75,10 +60,7 @@ export interface AssetShareLinkPolicyInput {
   allowedDomains: string[];
 }
 
-function unwrapPayload<T>(payload: T | { data: T }): T {
-  if (isRecord(payload) && 'data' in payload) {
-    return payload.data as T;
-  }
+function unwrapPayload<T>(payload: T): T {
   return payload;
 }
 
