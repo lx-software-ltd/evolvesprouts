@@ -1,37 +1,35 @@
 'use client';
 
-import { useCallback } from 'react';
+import type { ReactNode } from 'react';
 
-import { RelatedRecordOpsLinks } from '@/components/admin/contacts/related-record-ops-links';
+import { relatedRecordActions } from '@/components/admin/contacts/related-record-actions';
 import { DeleteIcon } from '@/components/icons/action-icons';
-import { Button } from '@/components/ui/button';
+import { AdminCreateButton } from '@/components/ui/admin-create-button';
+import { AdminDataTableCell, AdminDataTableHeadCell, AdminDataTableOperationsHeadCell } from '@/components/ui/admin-data-table';
+import { AdminExpandableRow } from '@/components/ui/admin-expandable-row';
+import { AdminFilterBar, AdminFilterField } from '@/components/ui/admin-filter-bar';
+import { AdminRecordTable } from '@/components/ui/admin-record-table';
+import { AdminRowActions } from '@/components/ui/admin-row-actions';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { DRAFT_RECORD_ID, type UseExpandedRecordReturn } from '@/hooks/use-expanded-record';
 import {
   adminPartyInvoicesDeepLink,
   adminPartySalesConversationsDeepLink,
   adminPartyServiceInstancesDeepLink,
 } from '@/lib/contact-related-links';
-import {
-  AdminDataTable,
-  AdminDataTableBody,
-  AdminDataTableCell,
-  AdminDataTableHead,
-  AdminDataTableHeadCell,
-  AdminDataTableOperationsHeadCell,
-} from '@/components/ui/admin-data-table';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
-import { AdminTableToolbar } from '@/components/ui/admin-table-toolbar';
-import { Select } from '@/components/ui/select';
+import { primaryMemberLabel } from '@/lib/contacts/contacts-panel-helpers';
 import { formatFamilyOrOrganizationPartyLabel } from '@/lib/format';
 import type { EntityListFilters } from '@/types/entity-list';
 import type { components } from '@/types/generated/admin-api.generated';
-import type { MouseEvent } from 'react';
 
 type ApiSchemas = components['schemas'];
+type AdminFamily = ApiSchemas['AdminFamily'];
 
-export interface FamiliesListTableProps {
-  rows: ApiSchemas['AdminFamily'][];
+const COLUMN_COUNT = 5;
+
+export interface FamiliesRecordTableProps {
+  rows: AdminFamily[];
   filters: EntityListFilters;
   setFilter: (key: keyof EntityListFilters, value: EntityListFilters[keyof EntityListFilters]) => void;
   isLoading: boolean;
@@ -40,14 +38,14 @@ export interface FamiliesListTableProps {
   error: string;
   loadMore: () => void;
   isSaving: boolean;
-  selectedId: string | null;
   deleteActionError: string;
   onClearDeleteError: () => void;
-  onSelectRow: (id: string) => void;
-  onDeleteFamily: (row: ApiSchemas['AdminFamily'], event: MouseEvent<HTMLButtonElement>) => void;
+  expanded: UseExpandedRecordReturn;
+  detail: ReactNode;
+  onDeleteFamily: (row: AdminFamily) => void;
 }
 
-export function FamiliesListTable({
+export function FamiliesRecordTable({
   rows,
   filters,
   setFilter,
@@ -57,30 +55,36 @@ export function FamiliesListTable({
   error,
   loadMore,
   isSaving,
-  selectedId,
   deleteActionError,
   onClearDeleteError,
-  onSelectRow,
+  expanded,
+  detail,
   onDeleteFamily,
-}: FamiliesListTableProps) {
-  const primaryMemberLabel = useCallback((members: ApiSchemas['AdminFamilyMember'][]) => {
-    const primary = members.find((m) => m.is_primary_contact);
-    return primary?.contact_label?.trim() || null;
-  }, []);
-
+}: FamiliesRecordTableProps) {
   return (
-    <PaginatedTableCard
-      title='Families'
+    <AdminRecordTable
+      aria-label='Families'
+      columnCount={COLUMN_COUNT}
+      rowCount={rows.length}
       isLoading={isLoading}
       isLoadingMore={isLoadingMore}
       hasMore={hasMore}
-      error={error || deleteActionError}
-      loadingLabel='Loading families...'
       onLoadMore={loadMore}
-      toolbar={
-        <AdminTableToolbar>
-          <div className='min-w-[200px] flex-1'>
-            <Label htmlFor='crm-families-search'>Search</Label>
+      error={error || deleteActionError}
+      errorTitle='Families'
+      emptyLabel='No families match the current filters.'
+      tableClassName='min-w-[720px]'
+      filters={
+        <AdminFilterBar
+          trailing={
+            <AdminCreateButton
+              label='New family'
+              active={expanded.isDraftOpen}
+              onClick={() => (expanded.isDraftOpen ? expanded.collapse() : expanded.openDraft())}
+            />
+          }
+        >
+          <AdminFilterField label='Search' htmlFor='crm-families-search' className='sm:basis-72'>
             <Input
               id='crm-families-search'
               value={filters.query}
@@ -90,9 +94,8 @@ export function FamiliesListTable({
               }}
               placeholder='Family name or member name / email'
             />
-          </div>
-          <div className='min-w-[140px]'>
-            <Label htmlFor='crm-families-active'>Status</Label>
+          </AdminFilterField>
+          <AdminFilterField label='Status' htmlFor='crm-families-active'>
             <Select
               id='crm-families-active'
               value={filters.active}
@@ -105,69 +108,87 @@ export function FamiliesListTable({
               <option value='true'>Active</option>
               <option value='false'>Archived</option>
             </Select>
-          </div>
-        </AdminTableToolbar>
+          </AdminFilterField>
+        </AdminFilterBar>
+      }
+      head={
+        <tr>
+          <AdminDataTableHeadCell className='w-10' />
+          <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
+          <AdminDataTableHeadCell>Members</AdminDataTableHeadCell>
+          <AdminDataTableHeadCell>Status</AdminDataTableHeadCell>
+          <AdminDataTableOperationsHeadCell />
+        </tr>
       }
     >
-      <AdminDataTable tableClassName='min-w-[720px]'>
-        <AdminDataTableHead>
-          <tr>
-            <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell>Members</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell>Status</AdminDataTableHeadCell>
-            <AdminDataTableOperationsHeadCell />
-          </tr>
-        </AdminDataTableHead>
-        <AdminDataTableBody>
-          {rows.map((row) => {
-            const primaryLabel = primaryMemberLabel(row.members);
-            const nameCell = formatFamilyOrOrganizationPartyLabel(row.family_name, primaryLabel);
-            return (
-              <tr
-                key={row.id}
-                className={`cursor-pointer transition ${
-                  selectedId === row.id ? 'bg-slate-100' : 'hover:bg-slate-50'
-                }`}
-                onClick={() => onSelectRow(row.id)}
-              >
-                <AdminDataTableCell>{nameCell || '—'}</AdminDataTableCell>
+      {expanded.isDraftOpen ? (
+        <AdminExpandableRow
+          id={DRAFT_RECORD_ID}
+          label='new family'
+          expanded
+          isDraft
+          onToggle={expanded.collapse}
+          columnCount={COLUMN_COUNT}
+          cells={
+            <>
+              <AdminDataTableCell className='font-medium text-slate-900'>New family</AdminDataTableCell>
+              <AdminDataTableCell className='text-slate-400'>—</AdminDataTableCell>
+              <AdminDataTableCell className='text-slate-400'>—</AdminDataTableCell>
+            </>
+          }
+          actions={null}
+          detail={detail}
+        />
+      ) : null}
+      {rows.map((row) => {
+        const primaryLabel = primaryMemberLabel(row.members);
+        const nameCell = formatFamilyOrOrganizationPartyLabel(row.family_name, primaryLabel) || '—';
+        const isOpen = expanded.isExpanded(row.id);
+        return (
+          <AdminExpandableRow
+            key={row.id}
+            id={row.id}
+            label={nameCell}
+            expanded={isOpen}
+            onToggle={() => expanded.toggle(row.id)}
+            columnCount={COLUMN_COUNT}
+            cells={
+              <>
+                <AdminDataTableCell>{nameCell}</AdminDataTableCell>
                 <AdminDataTableCell>{row.members.length}</AdminDataTableCell>
                 <AdminDataTableCell>{row.active ? 'Active' : 'Archived'}</AdminDataTableCell>
-                <AdminDataTableCell className='text-right'>
-                  <div className='flex flex-wrap justify-end gap-2'>
-                    <RelatedRecordOpsLinks
-                      salesHref={adminPartySalesConversationsDeepLink(
-                        'family',
-                        row.id,
-                        row.sales_conversation_channel
-                      )}
-                      instancesHref={adminPartyServiceInstancesDeepLink('family', row.id)}
-                      invoicesHref={adminPartyInvoicesDeepLink(primaryLabel ?? '')}
-                      hasSalesConversation={row.has_sales_conversation}
-                      hasServiceInstance={row.has_service_instance}
-                      hasInvoice={row.has_invoice}
-                    />
-                    <Button
-                      type='button'
-                      size='sm'
-                      variant='danger'
-                      className='h-8 min-w-8 px-0'
-                      onClick={(e) => {
-                        void onDeleteFamily(row, e);
-                      }}
-                      disabled={isSaving}
-                      aria-label='Delete family'
-                      title='Delete family'
-                    >
-                      <DeleteIcon className='h-4 w-4 shrink-0' aria-hidden />
-                    </Button>
-                  </div>
-                </AdminDataTableCell>
-              </tr>
-            );
-          })}
-        </AdminDataTableBody>
-      </AdminDataTable>
-    </PaginatedTableCard>
+              </>
+            }
+            actions={
+              <AdminRowActions
+                actions={[
+                  ...relatedRecordActions({
+                    salesHref: adminPartySalesConversationsDeepLink(
+                      'family',
+                      row.id,
+                      row.sales_conversation_channel
+                    ),
+                    instancesHref: adminPartyServiceInstancesDeepLink('family', row.id),
+                    invoicesHref: adminPartyInvoicesDeepLink(primaryLabel ?? ''),
+                    hasSalesConversation: row.has_sales_conversation,
+                    hasServiceInstance: row.has_service_instance,
+                    hasInvoice: row.has_invoice,
+                  }),
+                  {
+                    key: 'delete',
+                    label: 'Delete family',
+                    icon: <DeleteIcon className='h-4 w-4' />,
+                    tone: 'danger',
+                    disabled: isSaving,
+                    onClick: () => onDeleteFamily(row),
+                  },
+                ]}
+              />
+            }
+            detail={isOpen ? detail : null}
+          />
+        );
+      })}
+    </AdminRecordTable>
   );
 }
