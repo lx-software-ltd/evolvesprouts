@@ -33,7 +33,7 @@ from app.api.admin_services_integrity import (
     is_services_service_key_tier_unique_violation,
     service_key_tier_uniqueness_validation_error,
 )
-from app.api.admin_services_payload_utils import parse_service_type_details
+from app.api.admin_services_type_details import parse_service_type_details
 from app.api.admin_entities_helpers import require_assignable_tag
 from app.db.audit import set_audit_context
 from app.db.engine import get_engine

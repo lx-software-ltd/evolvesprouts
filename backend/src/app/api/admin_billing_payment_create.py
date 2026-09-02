@@ -15,7 +15,7 @@ from app.api.admin_billing_common import (
     _session_with_audit,
     effective_enrollment_bill_to_kind,
 )
-from app.api.admin_billing_payments import _serialize_payment_for_response
+from app.api.admin_billing_payments_serializers import serialize_payment_for_response
 from app.db.audit import AuditService
 from app.db.engine import get_engine
 from app.db.models.contact import Contact
@@ -331,7 +331,7 @@ def create_manual_inbound_payment(
                 )
                 receipt_id_for_upload = rcpt.id
         deletable = batch_orphan_payment_deletable(session, [pay]).get(pay.id, False)
-        payload = _serialize_payment_for_response(
+        payload = serialize_payment_for_response(
             session, pay, orphan_payment_deletable=deletable
         )
     if receipt_id_for_upload is not None:
@@ -422,7 +422,7 @@ def create_refund_payment(
                 "succeeded_at": succeeded_at.isoformat(),
             },
         )
-        payload = _serialize_payment_for_response(
+        payload = serialize_payment_for_response(
             session, refund, orphan_payment_deletable=False
         )
     return json_response(201, {"payment": payload}, event=event)

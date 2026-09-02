@@ -15,9 +15,9 @@ from sqlalchemy.orm import Session
 
 from app.api.admin_contacts_mutations import (
     create_contact,
-    delete_contact,
     update_contact,
 )
+from app.api.admin_contacts_delete import delete_contact
 from app.api.admin_contacts_related import related_flags_for_contacts
 from app.api.admin_entities_helpers import (
     parse_active_filter,

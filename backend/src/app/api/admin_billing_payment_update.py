@@ -20,7 +20,7 @@ from app.api.admin_billing_payment_create import (
     contact_id_for_enrollment_payment,
     normalize_manual_payment_method,
 )
-from app.api.admin_billing_payments import _serialize_payment_for_response
+from app.api.admin_billing_payments_serializers import serialize_payment_for_response
 from app.api.admin_request import parse_body
 from app.db.audit import AuditService
 from app.db.engine import get_engine
@@ -290,7 +290,7 @@ def update_manual_inbound_customer_payment(
             new_values=p.to_audit_dict(),
         )
         deletable = batch_orphan_payment_deletable(session, [p]).get(p.id, False)
-        payload = _serialize_payment_for_response(
+        payload = serialize_payment_for_response(
             session, p, orphan_payment_deletable=deletable
         )
 

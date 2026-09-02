@@ -17,6 +17,9 @@ from app.api import admin_billing
 from app.api import admin_billing_payment_create as admin_billing_payment_create_mod
 from app.api import admin_billing_payment_update as admin_billing_payment_update_mod
 from app.api import admin_billing_payments as admin_billing_payments_mod
+from app.api import (
+    admin_billing_payments_serializers as admin_billing_payments_serializers_mod,
+)
 from app.db.models import Enrollment
 from app.db.models.customer_payment import CustomerPayment
 from app.db.models.enums import (
@@ -67,11 +70,12 @@ def test_handle_admin_billing_get_payment_and_unapplied_no_name_error(
         "_batch_orphan_payment_deletable",
         lambda _session, rows: {r.id: False for r in rows},
     )
-    monkeypatch.setattr(
-        admin_billing_payments_mod,
-        "payment_unapplied_amount",
-        lambda _s, _pid: Decimal("3"),
-    )
+    for _mod in (admin_billing_payments_mod, admin_billing_payments_serializers_mod):
+        monkeypatch.setattr(
+            _mod,
+            "payment_unapplied_amount",
+            lambda _s, _pid: Decimal("3"),
+        )
 
     ev = api_gateway_event(
         method="GET",
@@ -183,11 +187,12 @@ def test_confirm_payment_creates_receipt_for_pending_inbound(
         return MagicMock()
 
     patch_billing_sessions(monkeypatch, _fake_session)
-    monkeypatch.setattr(
-        admin_billing_payments_mod,
-        "payment_unapplied_amount",
-        lambda _s, _pid: Decimal("50"),
-    )
+    for _mod in (admin_billing_payments_mod, admin_billing_payments_serializers_mod):
+        monkeypatch.setattr(
+            _mod,
+            "payment_unapplied_amount",
+            lambda _s, _pid: Decimal("50"),
+        )
     monkeypatch.setattr(
         admin_billing_payments_mod,
         "_batch_orphan_payment_deletable",
@@ -796,18 +801,19 @@ def test_patch_manual_inbound_payment_no_enrollment_succeeds(
         "payment_unapplied_amount",
         lambda _s, _pid: Decimal("10"),
     )
-    monkeypatch.setattr(
-        admin_billing_payments_mod,
-        "payment_unapplied_amount",
-        lambda _s, _pid: Decimal("10"),
-    )
+    for _mod in (admin_billing_payments_mod, admin_billing_payments_serializers_mod):
+        monkeypatch.setattr(
+            _mod,
+            "payment_unapplied_amount",
+            lambda _s, _pid: Decimal("10"),
+        )
     monkeypatch.setattr(
         admin_billing_payments_mod,
         "_batch_orphan_payment_deletable",
         lambda _session, rows: {rows[0].id: False},
     )
     monkeypatch.setattr(
-        admin_billing_payments_mod,
+        admin_billing_payments_serializers_mod,
         "_batch_party_label_by_payment",
         lambda _session, rows: {rows[0].id: "Pat"},
     )
@@ -877,18 +883,19 @@ def test_patch_manual_inbound_payment_no_enrollment_transitions_to_succeeded(
         "payment_unapplied_amount",
         lambda _s, _pid: Decimal("10"),
     )
-    monkeypatch.setattr(
-        admin_billing_payments_mod,
-        "payment_unapplied_amount",
-        lambda _s, _pid: Decimal("10"),
-    )
+    for _mod in (admin_billing_payments_mod, admin_billing_payments_serializers_mod):
+        monkeypatch.setattr(
+            _mod,
+            "payment_unapplied_amount",
+            lambda _s, _pid: Decimal("10"),
+        )
     monkeypatch.setattr(
         admin_billing_payments_mod,
         "_batch_orphan_payment_deletable",
         lambda _session, rows: {rows[0].id: False},
     )
     monkeypatch.setattr(
-        admin_billing_payments_mod,
+        admin_billing_payments_serializers_mod,
         "_batch_party_label_by_payment",
         lambda _session, rows: {rows[0].id: "Pat"},
     )
@@ -1160,11 +1167,12 @@ def test_patch_manual_inbound_payment_pending_free_zero_coerces(
         yield s
 
     patch_billing_sessions(monkeypatch, _fake_session)
-    monkeypatch.setattr(
-        admin_billing_payments_mod,
-        "payment_unapplied_amount",
-        lambda _s, _pid: Decimal("10"),
-    )
+    for _mod in (admin_billing_payments_mod, admin_billing_payments_serializers_mod):
+        monkeypatch.setattr(
+            _mod,
+            "payment_unapplied_amount",
+            lambda _s, _pid: Decimal("10"),
+        )
     monkeypatch.setattr(
         admin_billing_payment_update_mod,
         "payment_unapplied_amount",
@@ -1176,7 +1184,7 @@ def test_patch_manual_inbound_payment_pending_free_zero_coerces(
         lambda _session, rows: {rows[0].id: False},
     )
     monkeypatch.setattr(
-        admin_billing_payments_mod,
+        admin_billing_payments_serializers_mod,
         "_batch_party_label_by_payment",
         lambda _session, rows: {rows[0].id: "Pat"},
     )
@@ -1277,11 +1285,12 @@ def test_patch_manual_inbound_payment_pending_to_succeeded_creates_receipt(
         return MagicMock(id=uuid4())
 
     patch_billing_sessions(monkeypatch, _fake_session)
-    monkeypatch.setattr(
-        admin_billing_payments_mod,
-        "payment_unapplied_amount",
-        lambda _s, _pid: Decimal("10"),
-    )
+    for _mod in (admin_billing_payments_mod, admin_billing_payments_serializers_mod):
+        monkeypatch.setattr(
+            _mod,
+            "payment_unapplied_amount",
+            lambda _s, _pid: Decimal("10"),
+        )
     monkeypatch.setattr(
         admin_billing_payment_update_mod,
         "payment_unapplied_amount",
@@ -1293,7 +1302,7 @@ def test_patch_manual_inbound_payment_pending_to_succeeded_creates_receipt(
         lambda _session, rows: {rows[0].id: False},
     )
     monkeypatch.setattr(
-        admin_billing_payments_mod,
+        admin_billing_payments_serializers_mod,
         "_batch_party_label_by_payment",
         lambda _session, rows: {rows[0].id: "Pat"},
     )
@@ -1506,11 +1515,12 @@ def test_patch_manual_inbound_payment_succeeded_allows_external_reference_update
         yield s
 
     patch_billing_sessions(monkeypatch, _fake_session)
-    monkeypatch.setattr(
-        admin_billing_payments_mod,
-        "payment_unapplied_amount",
-        lambda _s, _pid: Decimal("100"),
-    )
+    for _mod in (admin_billing_payments_mod, admin_billing_payments_serializers_mod):
+        monkeypatch.setattr(
+            _mod,
+            "payment_unapplied_amount",
+            lambda _s, _pid: Decimal("100"),
+        )
     monkeypatch.setattr(
         admin_billing_payment_update_mod,
         "payment_unapplied_amount",
@@ -1522,7 +1532,7 @@ def test_patch_manual_inbound_payment_succeeded_allows_external_reference_update
         lambda _session, rows: {rows[0].id: False},
     )
     monkeypatch.setattr(
-        admin_billing_payments_mod,
+        admin_billing_payments_serializers_mod,
         "_batch_party_label_by_payment",
         lambda _session, rows: {rows[0].id: "Pat"},
     )

@@ -40,9 +40,9 @@ from app.api.admin_services_payload_utils import (
     parse_optional_uuid,
     parse_required_enum,
     parse_required_text,
-    parse_service_type_details,
     parse_uuid_list,
 )
+from app.api.admin_services_type_details import parse_service_type_details
 from app.db.models import ServiceDeliveryMode, ServiceStatus, ServiceType
 from app.exceptions import ValidationError
 
