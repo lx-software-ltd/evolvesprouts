@@ -6,8 +6,10 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from uuid import uuid4
 
+from app.services.aws_proxy import AwsProxyError
 from app.services.lead_close_suggestion import (
     SUGGESTION_STALE_AFTER,
+    _format_openrouter_failure,
     _normalize_payload,
     _parse_json_object,
     evaluate_staleness,
@@ -78,3 +80,20 @@ def test_evaluate_staleness_age_and_new_conversation(monkeypatch: object) -> Non
     assert result["is_stale"] is True
     assert result["stale_reasons"] == ["age", "new_conversation"]
     assert result["latest_message_at"] is not None
+
+
+def test_format_openrouter_failure_maps_timeouts_to_user_message() -> None:
+    assert (
+        _format_openrouter_failure(AwsProxyError("TimeoutError", "timed out"))
+        == "The AI model took too long to respond. Please try again in a moment."
+    )
+    assert (
+        _format_openrouter_failure(
+            RuntimeError("OpenRouter request failed with status 504")
+        )
+        == "The AI model took too long to respond. Please try again in a moment."
+    )
+    assert (
+        _format_openrouter_failure(RuntimeError("Model response was not valid JSON"))
+        == "Model response was not valid JSON"
+    )
