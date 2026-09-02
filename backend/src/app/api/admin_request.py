@@ -37,6 +37,13 @@ class RequestIdentity:
         return "admin" in normalized or "manager" in normalized
 
 
+@dataclass(frozen=True)
+class AuthenticatedIdentity(RequestIdentity):
+    """Identity after ``require_admin_identity``; ``user_sub`` is always set."""
+
+    user_sub: str
+
+
 def parse_body(event: Mapping[str, Any]) -> dict[str, Any]:
     """Parse JSON request body."""
     raw = event.get("body") or ""
@@ -89,12 +96,16 @@ def request_id(event: Mapping[str, Any]) -> str:
     return ""
 
 
-def require_admin_identity(event: Mapping[str, Any]) -> RequestIdentity:
+def require_admin_identity(event: Mapping[str, Any]) -> AuthenticatedIdentity:
     """Return the caller identity or raise if the authorizer omitted ``user_sub``."""
     identity = extract_identity(event)
     if not identity.user_sub:
         raise AuthorizationError("Authenticated user is required")
-    return identity
+    return AuthenticatedIdentity(
+        user_sub=identity.user_sub,
+        groups=identity.groups,
+        organization_ids=identity.organization_ids,
+    )
 
 
 def extract_identity(event: Mapping[str, Any]) -> RequestIdentity:

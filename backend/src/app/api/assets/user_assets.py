@@ -9,7 +9,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.api.admin_request import (
-    RequestIdentity,
+    AuthenticatedIdentity,
     parse_uuid,
     require_admin_identity,
     split_route_parts,
@@ -51,7 +51,7 @@ def handle_user_assets_request(
 
 
 def _list_accessible_assets(
-    event: Mapping[str, Any], identity: RequestIdentity
+    event: Mapping[str, Any], identity: AuthenticatedIdentity
 ) -> dict[str, Any]:
     limit = parse_limit(event)
     cursor = parse_cursor(event)
@@ -76,7 +76,7 @@ def _list_accessible_assets(
 def _download_asset(
     event: Mapping[str, Any],
     asset_id: UUID,
-    identity: RequestIdentity,
+    identity: AuthenticatedIdentity,
 ) -> dict[str, Any]:
     with Session(get_engine()) as session:
         repository = AssetRepository(session)

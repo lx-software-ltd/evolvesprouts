@@ -78,23 +78,31 @@ export function useAssetList(): UseAssetListReturn {
     debounceMs: 350,
   });
 
+  const {
+    items,
+    filters,
+    setFilter,
+    setItems,
+    refetch,
+    hasMore,
+    isLoading,
+    isLoadingMore,
+    error,
+    loadMore,
+  } = list;
+
+  const resolvedSelectedAssetId =
+    selectedAssetId && items.some((item) => item.id === selectedAssetId)
+      ? selectedAssetId
+      : (items[0]?.id ?? null);
+
   const selectedAsset = useMemo(
-    () => list.items.find((asset) => asset.id === selectedAssetId) ?? null,
-    [list.items, selectedAssetId]
+    () => items.find((asset) => asset.id === resolvedSelectedAssetId) ?? null,
+    [items, resolvedSelectedAssetId]
   );
 
-  useEffect(() => {
-    setSelectedAssetId((currentId) => {
-      if (!currentId) {
-        return list.items[0]?.id ?? null;
-      }
-      return list.items.some((item) => item.id === currentId) ? currentId : (list.items[0]?.id ?? null);
-    });
-  }, [list.items]);
-
-  const currentQuery = list.filters.query;
-  const currentTagName = list.filters.tagName;
-  const setFilter = list.setFilter;
+  const currentQuery = filters.query;
+  const currentTagName = filters.tagName;
 
   useEffect(() => {
     const nextQuery = urlQuery;
@@ -109,30 +117,30 @@ export function useAssetList(): UseAssetListReturn {
 
   const refreshAssets = useCallback(
     async (nextFilters?: Partial<Filters>) => {
-      await list.refetch(nextFilters);
+      await refetch(nextFilters);
     },
-    [list.refetch]
+    [refetch]
   );
 
   const setQueryFilter = useCallback(
     (query: string) => {
-      list.setFilter('query', query);
+      setFilter('query', query);
     },
-    [list.setFilter]
+    [setFilter]
   );
 
   const setVisibilityFilter = useCallback(
     (visibility: AssetVisibility | '') => {
-      list.setFilter('visibility', visibility);
+      setFilter('visibility', visibility);
     },
-    [list.setFilter]
+    [setFilter]
   );
 
   const setTagNameFilter = useCallback(
     (tagName: ListAdminAssetsInput['tagName']) => {
-      list.setFilter('tagName', tagName ?? '');
+      setFilter('tagName', tagName ?? '');
     },
-    [list.setFilter]
+    [setFilter]
   );
 
   const selectAsset = useCallback((assetId: string) => {
@@ -145,14 +153,14 @@ export function useAssetList(): UseAssetListReturn {
 
   const applyCreatedAsset = useCallback(
     async (createdAsset: AdminAsset | null) => {
-      if (!createdAsset || list.filters.tagName) {
+      if (!createdAsset || filters.tagName) {
         await refreshAssets();
         return;
       }
-      list.setItems((previous) => [createdAsset, ...previous]);
+      setItems((previous) => [createdAsset, ...previous]);
       setSelectedAssetId(createdAsset.id);
     },
-    [list.filters.tagName, list.setItems, refreshAssets]
+    [filters.tagName, refreshAssets, setItems]
   );
 
   const applyUpdatedAsset = useCallback(
@@ -161,34 +169,34 @@ export function useAssetList(): UseAssetListReturn {
         await refreshAssets();
         return;
       }
-      list.setItems((previous) => previous.map((asset) => (asset.id === assetId ? updatedAsset : asset)));
+      setItems((previous) => previous.map((asset) => (asset.id === assetId ? updatedAsset : asset)));
     },
-    [list.setItems, refreshAssets]
+    [refreshAssets, setItems]
   );
 
   const applyDeletedAsset = useCallback(
     (assetId: string) => {
-      list.setItems((previous) => previous.filter((asset) => asset.id !== assetId));
+      setItems((previous) => previous.filter((asset) => asset.id !== assetId));
       setSelectedAssetId((currentId) => (currentId === assetId ? null : currentId));
     },
-    [list.setItems]
+    [setItems]
   );
 
   return {
-    filters: list.filters,
-    assets: list.items,
+    filters,
+    assets: items,
     linkedTagNames,
-    nextCursor: list.hasMore ? 'more' : null,
-    isLoadingAssets: list.isLoading,
-    isLoadingMoreAssets: list.isLoadingMore,
-    assetsError: list.error,
-    selectedAssetId,
+    nextCursor: hasMore ? 'more' : null,
+    isLoadingAssets: isLoading,
+    isLoadingMoreAssets: isLoadingMore,
+    assetsError: error,
+    selectedAssetId: resolvedSelectedAssetId,
     selectedAsset,
     setQueryFilter,
     setVisibilityFilter,
     setTagNameFilter,
     refreshAssets,
-    loadMoreAssets: list.loadMore,
+    loadMoreAssets: loadMore,
     selectAsset,
     clearSelectedAsset,
     applyCreatedAsset,

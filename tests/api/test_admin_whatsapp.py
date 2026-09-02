@@ -12,7 +12,7 @@ import pytest
 
 from app.api import admin_whatsapp as aw
 from app.db.models.enums import WhatsAppMessageDirection
-from app.exceptions import AuthorizationError, ValidationError
+from app.exceptions import AuthorizationError
 
 
 def _identity_event(

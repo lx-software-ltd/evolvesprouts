@@ -12,7 +12,7 @@ import pytest
 
 from app.api import admin_meta as am
 from app.db.models.enums import MetaChannel, MetaMessageDirection
-from app.exceptions import AuthorizationError, ValidationError
+from app.exceptions import AuthorizationError
 
 
 def _identity_event(

@@ -40,7 +40,6 @@ from app.api.admin_request import (
     require_admin_identity,
     split_route_parts,
 )
-from app.exceptions import ValidationError
 from app.utils import json_response
 
 __all__ = [

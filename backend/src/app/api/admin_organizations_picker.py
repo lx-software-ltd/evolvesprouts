@@ -16,7 +16,6 @@ from app.api.admin_entities_helpers import parse_limit, parse_relationship_type
 from app.api.admin_request import query_param, require_admin_identity, split_route_parts
 from app.db.engine import get_engine
 from app.db.models import Organization, RelationshipType
-from app.exceptions import ValidationError
 from app.utils import json_response
 from app.utils.logging import get_logger
 
@@ -39,7 +38,7 @@ def handle_admin_organizations_picker_request(
     if len(parts) < 3 or parts[0] != "admin":
         return json_response(404, {"error": "Not found"}, event=event)
 
-    identity = require_admin_identity(event)
+    require_admin_identity(event)
 
     if method != "GET":
         return json_response(405, {"error": "Method not allowed"}, event=event)

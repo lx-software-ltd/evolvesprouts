@@ -33,7 +33,7 @@ def handle_admin_polls_request(
     if len(parts) < 2 or parts[0] != "admin" or parts[1] != "polls":
         return json_response(404, {"error": "Not found"}, event=event)
 
-    identity = require_admin_identity(event)
+    require_admin_identity(event)
 
     if len(parts) == 2:
         if method != "GET":

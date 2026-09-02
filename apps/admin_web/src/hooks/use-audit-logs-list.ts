@@ -97,20 +97,21 @@ export function useAuditLogsList() {
     limit: 50,
     errorPrefix: 'Failed to load audit logs',
   });
+  const { items, isLoading, isLoadingMore, hasMore, error, loadMore, refetch } = list;
 
   const applyFilters = useCallback(() => {
     if (filtersInvalid) {
       return;
     }
     appliedRef.current = draft;
-    void list.refetch();
-  }, [draft, filtersInvalid, list.refetch]);
+    void refetch();
+  }, [draft, filtersInvalid, refetch]);
 
   const clearFilters = useCallback(() => {
     setDraft(DEFAULT_DRAFT);
     appliedRef.current = DEFAULT_DRAFT;
-    void list.refetch();
-  }, [list.refetch]);
+    void refetch();
+  }, [refetch]);
 
   const setDraftField = useCallback(
     <TKey extends keyof AuditLogsDraftFilters>(key: TKey, value: AuditLogsDraftFilters[TKey]) => {
@@ -121,12 +122,12 @@ export function useAuditLogsList() {
 
   return useMemo(
     () => ({
-      items: list.items,
-      isLoading: list.isLoading,
-      isLoadingMore: list.isLoadingMore,
-      hasMore: list.hasMore,
-      error: list.error,
-      loadMore: list.loadMore,
+      items,
+      isLoading,
+      isLoadingMore,
+      hasMore,
+      error,
+      loadMore,
       draft,
       setDraftField,
       filtersInvalid,
@@ -137,13 +138,13 @@ export function useAuditLogsList() {
       applyFilters,
       clearFilters,
       draft,
+      error,
       filtersInvalid,
-      list.error,
-      list.hasMore,
-      list.isLoading,
-      list.isLoadingMore,
-      list.items,
-      list.loadMore,
+      hasMore,
+      isLoading,
+      isLoadingMore,
+      items,
+      loadMore,
       setDraftField,
     ]
   );

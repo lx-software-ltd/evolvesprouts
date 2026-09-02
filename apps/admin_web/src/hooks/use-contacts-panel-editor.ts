@@ -287,7 +287,7 @@ export function useContactsPanelEditor({
     setOrganizationSelectId(row.organization_ids[0] ?? '');
     setTagIds([...row.tag_ids]);
     setActive(row.active);
-  }, [resetLocationDraft]);
+  }, [resetLocationDraft, setEditorMode, setSelectedId]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {

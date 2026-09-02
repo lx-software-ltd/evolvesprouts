@@ -16,7 +16,6 @@ from app.api.admin_billing_common import (
 from app.api.admin_entities_helpers import parse_limit
 from app.db.engine import get_engine
 from app.db.models import Family
-from app.exceptions import ValidationError
 from app.utils import json_response
 from app.utils.logging import get_logger
 
@@ -39,7 +38,7 @@ def handle_admin_families_picker_request(
     if len(parts) < 3 or parts[0] != "admin":
         return json_response(404, {"error": "Not found"}, event=event)
 
-    identity = require_admin_identity(event)
+    require_admin_identity(event)
 
     if method != "GET":
         return json_response(405, {"error": "Method not allowed"}, event=event)

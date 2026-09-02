@@ -36,16 +36,29 @@ export function useEnrollmentList(serviceId: string | null, instanceId: string |
     errorPrefix: 'Failed to load enrollments',
     fetchOnMount: Boolean(serviceId && instanceId),
   });
+  const {
+    items,
+    filters,
+    setFilter,
+    setItems,
+    isLoading,
+    isLoadingMore,
+    error,
+    refetch,
+    loadMore,
+    hasMore,
+    totalCount,
+  } = list;
 
   useEffect(() => {
     if (!serviceId || !instanceId) {
-      list.setItems([]);
+      setItems([]);
     }
-  }, [instanceId, list.setItems, serviceId]);
+  }, [instanceId, serviceId, setItems]);
 
   const upsertEnrollmentInList = useCallback(
     (enrollment: Enrollment) => {
-      list.setItems((current) => {
+      setItems((current) => {
         const index = current.findIndex((row) => row.id === enrollment.id);
         if (index === -1) {
           return [enrollment, ...current];
@@ -55,27 +68,27 @@ export function useEnrollmentList(serviceId: string | null, instanceId: string |
         return next;
       });
     },
-    [list.setItems]
+    [setItems]
   );
 
   const removeEnrollmentFromList = useCallback(
     (enrollmentId: string) => {
-      list.setItems((current) => current.filter((row) => row.id !== enrollmentId));
+      setItems((current) => current.filter((row) => row.id !== enrollmentId));
     },
-    [list.setItems]
+    [setItems]
   );
 
   return {
-    enrollments: list.items,
-    filters: list.filters,
-    setFilter: list.setFilter,
-    isLoading: list.isLoading,
-    isLoadingMore: list.isLoadingMore,
-    error: list.error,
-    refetch: list.refetch,
-    loadMore: list.loadMore,
-    hasMore: list.hasMore,
-    totalCount: list.totalCount ?? 0,
+    enrollments: items,
+    filters,
+    setFilter,
+    isLoading,
+    isLoadingMore,
+    error,
+    refetch,
+    loadMore,
+    hasMore,
+    totalCount: totalCount ?? 0,
     upsertEnrollmentInList,
     removeEnrollmentFromList,
   };
