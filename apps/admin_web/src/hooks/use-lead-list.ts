@@ -3,24 +3,25 @@
 import { useCallback } from 'react';
 
 import { listLeads } from '@/lib/leads-api';
+import { adminQueryKeys } from '@/lib/admin-query-keys';
 import { DEFAULT_LEAD_LIST_FILTERS } from '@/types/leads';
 import type { LeadListFilters, LeadSummary } from '@/types/leads';
 
-import { usePaginatedList } from './use-paginated-list';
+import { usePaginatedList, type PaginatedFetcherParams } from './use-paginated-list';
 
 const DEBOUNCE_KEYS: (keyof LeadListFilters)[] = ['search'];
 
-export function useLeadList() {
-  const fetcher = useCallback(
-    (params: LeadListFilters & { cursor: string | null; limit: number; signal: AbortSignal }) =>
-      listLeads(params, params.signal),
-    []
-  );
+/** One page of the leads list; shared by the hook and section prefetch. */
+export function fetchLeadsPage(params: PaginatedFetcherParams<LeadListFilters>) {
+  return listLeads(params, params.signal);
+}
 
+export function useLeadList() {
   const list = usePaginatedList<LeadSummary, LeadListFilters>({
-    fetcher,
+    fetcher: fetchLeadsPage,
     defaultFilters: DEFAULT_LEAD_LIST_FILTERS,
     errorPrefix: 'Failed to load leads',
+    queryKey: adminQueryKeys.leads.lists(),
     debounceKeys: DEBOUNCE_KEYS,
   });
 

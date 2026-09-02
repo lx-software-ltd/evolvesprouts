@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from typing import Any
 from collections.abc import Callable, Mapping
 
@@ -71,6 +72,33 @@ configure_logging()
 logger = get_logger(__name__)
 
 __all__ = ["lambda_handler"]
+
+# Cold-start bookkeeping for the Server-Timing header: the first invocation of
+# a container reports how long after module import it arrived so cold starts
+# are visible in the browser's network timing panel without CloudWatch access.
+_MODULE_LOADED_AT = time.monotonic()
+_first_invocation_pending = True
+
+
+def _server_timing_header(started_at: float, *, cold: bool) -> str:
+    handler_ms = (time.monotonic() - started_at) * 1000
+    parts = [f"app;dur={handler_ms:.1f}"]
+    if cold:
+        since_import_ms = (started_at - _MODULE_LOADED_AT) * 1000
+        parts.append(f"cold;dur={since_import_ms:.1f}")
+    return ", ".join(parts)
+
+
+def _with_server_timing(
+    response: dict[str, Any], started_at: float, *, cold: bool
+) -> dict[str, Any]:
+    headers = response.get("headers")
+    if not isinstance(headers, dict):
+        headers = {}
+        response["headers"] = headers
+    headers["Server-Timing"] = _server_timing_header(started_at, cold=cold)
+    return response
+
 
 _ROUTES: tuple[
     tuple[str, bool, Callable[[Mapping[str, Any], str, str], dict[str, Any]]],
@@ -339,6 +367,10 @@ _ROUTES: tuple[
 
 def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
     """Handle requests routed to the admin Lambda."""
+    global _first_invocation_pending
+    started_at = time.monotonic()
+    cold = _first_invocation_pending
+    _first_invocation_pending = False
     request_id = event.get("requestContext", {}).get("requestId", "")
     set_request_context(req_id=request_id)
     try:
@@ -350,21 +382,27 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
                 validate_content_type(event)
         except ValidationError as exc:
             logger.warning(f"Content-Type validation failed: {exc.message}")
-            return json_response(exc.status_code, exc.to_dict(), event=event)
+            return _with_server_timing(
+                json_response(exc.status_code, exc.to_dict(), event=event),
+                started_at,
+                cold=cold,
+            )
 
         logger.info(
             f"Admin request: {method} {path}",
             extra={
                 "path": path,
                 "method": method,
+                "cold_start": cold,
             },
         )
 
         handler = _match_handler(event=event, method=method, path=path)
         if handler is not None:
-            return _safe_handler(handler, event)
-
-        return not_found(event)
+            response = _safe_handler(handler, event)
+        else:
+            response = not_found(event)
+        return _with_server_timing(response, started_at, cold=cold)
     finally:
         clear_request_context()
 

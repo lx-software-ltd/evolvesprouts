@@ -16,6 +16,7 @@ import {
   type EntityListFilters,
 } from '@/types/entity-list';
 import { ADMIN_LIST_PAGE_SIZE } from '@/lib/admin-list-query';
+import { adminQueryKeys } from '@/lib/admin-query-keys';
 import { ORGANIZATION_RELATIONSHIP_TYPES } from '@/types/entity-relationship';
 import type { components } from '@/types/generated/admin-api.generated';
 
@@ -43,6 +44,7 @@ export function useAdminEntityOrganizations() {
     fetcher,
     defaultFilters: DEFAULT_FAMILY_ORG_LIST_FILTERS,
     errorPrefix: 'Failed to load organizations',
+    queryKey: adminQueryKeys.organizations.lists(),
     debounceKeys: ['query'],
     limit: ADMIN_LIST_PAGE_SIZE,
   });

@@ -42,9 +42,35 @@ export interface LoginOptions {
   returnTo?: string;
 }
 
+/**
+ * Decrypted tokens for this tab. Every admin API call needs the id token, so
+ * decrypting the localStorage blob per request would put AES-GCM work in front
+ * of each fetch; the plaintext copy lives only in module memory. A `storage`
+ * event from another tab drops the cache so the next read re-syncs.
+ */
+let cachedTokens: StoredTokens | null = null;
+let storageListenerAttached = false;
+let refreshInFlight: Promise<StoredTokens | null> | null = null;
+
+function attachStorageListener() {
+  if (storageListenerAttached || typeof window === 'undefined') {
+    return;
+  }
+  storageListenerAttached = true;
+  window.addEventListener('storage', (event) => {
+    if (event.key === null || event.key === tokenStorageKey) {
+      cachedTokens = null;
+    }
+  });
+}
+
 async function loadTokens(): Promise<StoredTokens | null> {
   if (typeof window === 'undefined') {
     return null;
+  }
+  attachStorageListener();
+  if (cachedTokens) {
+    return cachedTokens;
   }
   const raw = window.localStorage.getItem(tokenStorageKey);
   if (!raw) {
@@ -56,7 +82,8 @@ async function loadTokens(): Promise<StoredTokens | null> {
     return null;
   }
   try {
-    return JSON.parse(decrypted) as StoredTokens;
+    cachedTokens = JSON.parse(decrypted) as StoredTokens;
+    return cachedTokens;
   } catch {
     return null;
   }
@@ -66,6 +93,7 @@ async function storeTokens(tokens: StoredTokens): Promise<void> {
   if (typeof window === 'undefined') {
     return;
   }
+  cachedTokens = tokens;
   const encrypted = await encryptToBase64(JSON.stringify(tokens));
   window.localStorage.setItem(tokenStorageKey, encrypted);
 }
@@ -85,6 +113,7 @@ export async function storeTokensFromPasswordless(tokens: {
 }
 
 function clearTokens() {
+  cachedTokens = null;
   if (typeof window === 'undefined') {
     return;
   }
@@ -279,6 +308,21 @@ export async function ensureFreshTokens() {
   if (tokens.expiresAt > now + 60_000) {
     return tokens;
   }
+  if (!tokens.refreshToken) {
+    clearTokens();
+    return null;
+  }
+  // Parallel API calls near expiry share one refresh instead of racing
+  // Cognito with the same refresh token.
+  if (!refreshInFlight) {
+    refreshInFlight = refreshTokens(tokens).finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
+async function refreshTokens(tokens: StoredTokens): Promise<StoredTokens | null> {
   if (!tokens.refreshToken) {
     clearTokens();
     return null;

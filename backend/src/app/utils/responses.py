@@ -168,6 +168,9 @@ def get_cors_headers(
         # Access-Control-Request-Private-Network on preflight; without this
         # allow header, requests fail with "local address space" CORS errors.
         "Access-Control-Allow-Private-Network": "true",
+        # Lets the admin web client read handler timing from cross-origin
+        # responses (see Server-Timing in app.api.admin).
+        "Access-Control-Expose-Headers": "Server-Timing",
     }
     if allow_origin:
         headers["Access-Control-Allow-Origin"] = allow_origin

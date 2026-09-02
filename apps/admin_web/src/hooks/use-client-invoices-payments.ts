@@ -20,6 +20,7 @@ import {
   type CustomerPaymentDetail,
   type CustomerPaymentSummary,
 } from '@/lib/billing-api';
+import { adminQueryKeys } from '@/lib/admin-query-keys';
 import {
   currencySelectValue,
   formatAmountSeedTwoDecimals,
@@ -69,6 +70,7 @@ export function useClientInvoicesPayments({
     fetcher: fetchPayments,
     defaultFilters: {},
     errorPrefix: 'Failed to load payments',
+    queryKey: adminQueryKeys.customerPayments.lists(),
   });
   // The billing-refresh registry passes an AbortSignal; usePaginatedList owns
   // its own abort controller, so the loader deliberately ignores that argument.

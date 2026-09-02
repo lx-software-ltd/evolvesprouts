@@ -9,29 +9,31 @@ import {
   updateAdminContact,
 } from '@/lib/entity-api';
 import { ADMIN_LIST_PAGE_SIZE } from '@/lib/admin-list-query';
+import { adminQueryKeys } from '@/lib/admin-query-keys';
 import { DEFAULT_CONTACT_LIST_FILTERS, type EntityListFilters } from '@/types/entity-list';
 import type { components } from '@/types/generated/admin-api.generated';
 
 import { useListMutate } from './use-list-mutate';
-import { usePaginatedList } from './use-paginated-list';
+import { usePaginatedList, type PaginatedFetcherParams } from './use-paginated-list';
 
 type ApiSchemas = components['schemas'];
 
-export function useAdminEntityContacts() {
-  const fetcher = useCallback(
-    (params: EntityListFilters & { cursor: string | null; limit: number; signal: AbortSignal }) =>
-      listAdminContacts(
-        {
-          query: params.query,
-          active: params.active || undefined,
-          contact_type: params.contact_type || undefined,
-          cursor: params.cursor,
-          limit: params.limit,
-        },
-        params.signal
-      ),
-    []
+/** One page of the admin contacts list; shared by the hook and section prefetch. */
+export function fetchAdminContactsPage(params: PaginatedFetcherParams<EntityListFilters>) {
+  return listAdminContacts(
+    {
+      query: params.query,
+      active: params.active || undefined,
+      contact_type: params.contact_type || undefined,
+      cursor: params.cursor,
+      limit: params.limit,
+    },
+    params.signal
   );
+}
+
+export function useAdminEntityContacts() {
+  const fetcher = fetchAdminContactsPage;
 
   const {
     items: contacts,
@@ -49,6 +51,7 @@ export function useAdminEntityContacts() {
     fetcher,
     defaultFilters: DEFAULT_CONTACT_LIST_FILTERS,
     errorPrefix: 'Failed to load contacts',
+    queryKey: adminQueryKeys.contacts.lists(),
     debounceKeys: ['query'],
     limit: ADMIN_LIST_PAGE_SIZE,
   });

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import type { ReactNode } from 'react';
 
+import { AdminQueryProvider } from '@/components/admin-query-provider';
 import { AuthProvider } from '@/components/auth-provider';
 
 import './globals.css';
@@ -40,7 +41,9 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 })(window,document,'script','dataLayer',${adminGtmContainerIdJson});`}
           </Script>
         ) : null}
-        <AuthProvider>{children}</AuthProvider>
+        <AdminQueryProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </AdminQueryProvider>
       </body>
     </html>
   );

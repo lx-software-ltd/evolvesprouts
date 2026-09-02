@@ -11,6 +11,7 @@ import {
   removeAdminOrganizationMember,
   updateAdminOrganization,
 } from '@/lib/entity-api';
+import { adminQueryKeys } from '@/lib/admin-query-keys';
 import { DEFAULT_PARTNER_FILTERS, type PartnerFilters } from '@/types/partners';
 import type { components } from '@/types/generated/admin-api.generated';
 
@@ -41,6 +42,7 @@ export function usePartners() {
     fetcher,
     defaultFilters: DEFAULT_PARTNER_FILTERS,
     errorPrefix: 'Failed to load partners',
+    queryKey: adminQueryKeys.partners.lists(),
     debounceKeys: ['query'],
   });
 

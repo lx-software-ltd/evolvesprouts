@@ -1,14 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import { useCallback } from 'react';
 
-import {
-  ensureAdminCatalog,
-  getAdminCatalogEntry,
-  invalidateAdminCatalog,
-  subscribeAdminCatalog,
-  type AdminCatalogKey,
-} from '@/lib/admin-catalog-store';
+import { hashKey, useQuery } from '@tanstack/react-query';
+
+import { getAdminQueryClient } from '@/lib/admin-query-client';
+import { adminQueryKeys } from '@/lib/admin-query-keys';
 import { listEntityTags, type EntityTagRef } from '@/lib/entity-api';
 import { listAdminUsers, listInstructorUsers } from '@/lib/users-api';
 import {
@@ -19,35 +16,43 @@ import {
 import type { GeographicAreaSummary, LocationSummary } from '@/types/services';
 import type { AdminUser } from '@/types/leads';
 
+import { toErrorMessage } from './hook-errors';
+
+/** Reference data changes rarely; keep it fresh for the whole session. */
+const CATALOG_STALE_TIME_MS = 10 * 60_000;
+const EMPTY_ITEMS: never[] = [];
+
 function useCatalog<TItem>(
-  key: AdminCatalogKey,
+  queryKey: readonly unknown[],
   fetcher: () => Promise<TItem[]>,
   options: { enabled?: boolean } = {}
 ) {
   const enabled = options.enabled ?? true;
-  const entry = useSyncExternalStore(
-    subscribeAdminCatalog,
-    () => getAdminCatalogEntry<TItem>(key),
-    () => getAdminCatalogEntry<TItem>(key)
+  const queryClient = getAdminQueryClient();
+  const query = useQuery<TItem[], unknown>(
+    {
+      queryKey,
+      queryFn: fetcher,
+      enabled,
+      staleTime: CATALOG_STALE_TIME_MS,
+    },
+    queryClient
   );
 
-  useEffect(() => {
-    if (!enabled) {
-      return;
-    }
-    if (entry.status === 'idle') {
-      void ensureAdminCatalog(key, fetcher);
-    }
-  }, [key, fetcher, entry.status, enabled]);
-
+  const keyHash = hashKey(queryKey);
   const refetch = useCallback(async () => {
-    await ensureAdminCatalog(key, fetcher, { force: true });
-  }, [key, fetcher]);
+    try {
+      await queryClient.fetchQuery({ queryKey, queryFn: fetcher, staleTime: 0, retry: false });
+    } catch {
+      // Surfaced through `error` below.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- key factories return fresh arrays; compare by hash
+  }, [queryClient, fetcher, keyHash]);
 
   return {
-    items: entry.items,
-    isLoading: entry.status === 'idle' || entry.status === 'loading',
-    error: entry.error,
+    items: (query.data ?? EMPTY_ITEMS) as TItem[],
+    isLoading: enabled && query.isPending,
+    error: query.error ? toErrorMessage(query.error, 'Failed to load catalog.') : '',
     refetch,
   };
 }
@@ -77,37 +82,48 @@ function fetchVenueLocations() {
 }
 
 export function useSharedEntityTags(options: { enabled?: boolean } = {}) {
-  return useCatalog<EntityTagRef>('entityTags', fetchEntityTags, options);
+  return useCatalog<EntityTagRef>(adminQueryKeys.catalog.entityTags(), fetchEntityTags, options);
 }
 
 export function useSharedAdminUsers() {
-  return useCatalog<AdminUser>('adminUsers', fetchAdminUsers);
+  return useCatalog<AdminUser>(adminQueryKeys.catalog.adminUsers(), fetchAdminUsers);
 }
 
 export function useSharedInstructorUsers(options: { enabled?: boolean } = {}) {
-  return useCatalog<AdminUser>('instructorUsers', fetchInstructorUsers, options);
+  return useCatalog<AdminUser>(
+    adminQueryKeys.catalog.instructorUsers(),
+    fetchInstructorUsers,
+    options
+  );
 }
 
 export function useSharedGeographicAreas() {
-  return useCatalog<GeographicAreaSummary>('geographicAreas', fetchGeographicAreas);
+  return useCatalog<GeographicAreaSummary>(
+    adminQueryKeys.catalog.geographicAreas(),
+    fetchGeographicAreas
+  );
 }
 
 /** Every location (venues plus family / organisation addresses) for address pickers. */
 export function useSharedPickerLocations() {
-  return useCatalog<LocationSummary>('pickerLocations', fetchPickerLocations);
+  return useCatalog<LocationSummary>(
+    adminQueryKeys.catalog.pickerLocations(),
+    fetchPickerLocations
+  );
 }
 
 /** Standalone venues plus active partner locations, for service instance venues. */
 export function useSharedVenueLocations() {
-  return useCatalog<LocationSummary>('venueLocations', fetchVenueLocations);
+  return useCatalog<LocationSummary>(adminQueryKeys.catalog.venueLocations(), fetchVenueLocations);
 }
 
 export function invalidateSharedEntityTags() {
-  invalidateAdminCatalog('entityTags');
+  void getAdminQueryClient().invalidateQueries({ queryKey: adminQueryKeys.catalog.entityTags() });
 }
 
 /** Location mutations affect both location catalogs. */
 export function invalidateSharedLocations() {
-  invalidateAdminCatalog('pickerLocations');
-  invalidateAdminCatalog('venueLocations');
+  const queryClient = getAdminQueryClient();
+  void queryClient.invalidateQueries({ queryKey: adminQueryKeys.catalog.pickerLocations() });
+  void queryClient.invalidateQueries({ queryKey: adminQueryKeys.catalog.venueLocations() });
 }

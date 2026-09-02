@@ -8,6 +8,7 @@ import {
   listDiscountCodes,
   updateDiscountCode,
 } from '@/lib/services-api';
+import { adminQueryKeys } from '@/lib/admin-query-keys';
 import { DEFAULT_DISCOUNT_CODE_FILTERS } from '@/types/services';
 import type { DiscountCode, DiscountCodeFilters } from '@/types/services';
 
@@ -31,6 +32,7 @@ export function useDiscountCodes() {
     fetcher,
     defaultFilters: DEFAULT_DISCOUNT_CODE_FILTERS,
     errorPrefix: 'Failed to load discount codes',
+    queryKey: adminQueryKeys.discountCodes.lists(),
     debounceKeys: DEBOUNCE_KEYS,
   });
 
