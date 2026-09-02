@@ -6,8 +6,6 @@ import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { ContactNotesTable } from '@/components/admin/contacts/contact-notes-table';
 import { Button } from '@/components/ui/button';
 import { AdminEditorCard } from '@/components/ui/admin-editor-card';
-import { AdminEditorActions, AdminEditorPanel } from '@/components/ui/admin-editor-panel';
-import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Label } from '@/components/ui/label';
 import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
@@ -217,55 +215,52 @@ export function ContactNotesPanel({
   );
 
   if (layout === 'embedded') {
+    // Compact composer: one textarea row with the action beside it, then the
+    // notes table at the same density as the contacts table above.
     return (
       <>
-        <div className='space-y-4'>
-          <AdminEditorPanel
-            status={
-              actionError ? (
-                <StatusBanner variant='error' title='Note action failed'>
-                  {actionError}
-                </StatusBanner>
-              ) : null
-            }
-            actions={
-              <AdminEditorActions
-                mode={editorMode}
-                formId={formId}
-                onCancel={resetEditor}
-                isSaving={isMutating}
-                submitDisabled={submitDisabled}
-                submitLabel={submitLabel}
-              />
-            }
+        <div className='space-y-3'>
+          <form
+            id={formId}
+            className='flex flex-wrap items-end gap-2'
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleSaveNote();
+            }}
           >
-            <form
-              id={formId}
-              onSubmit={(event) => {
-                event.preventDefault();
-                void handleSaveNote();
-              }}
-            >
-              <AdminFieldGrid columns={1}>
-                <AdminField label={fieldLabel} htmlFor={contentFieldId}>
-                  <Textarea
-                    id={contentFieldId}
-                    value={contentDraft}
-                    onChange={(event) => setContentDraft(event.target.value)}
-                    rows={editorMode === 'create' ? 3 : 4}
-                    disabled={composerDisabled}
-                    placeholder='Add a note about this contact…'
-                  />
-                </AdminField>
-              </AdminFieldGrid>
-            </form>
-          </AdminEditorPanel>
+            <div className='min-w-0 flex-1'>
+              <Label htmlFor={contentFieldId}>{fieldLabel}</Label>
+              <Textarea
+                id={contentFieldId}
+                value={contentDraft}
+                onChange={(event) => setContentDraft(event.target.value)}
+                rows={2}
+                disabled={composerDisabled}
+                placeholder='Add a note about this contact…'
+              />
+            </div>
+            <div className='flex shrink-0 items-center gap-2'>
+              {editorMode === 'edit' ? (
+                <Button type='button' variant='secondary' disabled={isMutating} onClick={resetEditor}>
+                  Cancel edit
+                </Button>
+              ) : null}
+              <Button type='submit' disabled={submitDisabled}>
+                {isMutating ? 'Saving...' : submitLabel}
+              </Button>
+            </div>
+          </form>
+          {actionError ? (
+            <StatusBanner variant='error' title='Note action failed'>
+              {actionError}
+            </StatusBanner>
+          ) : null}
           {loadError ? (
             <StatusBanner variant='error' title='Could not load notes'>
               {loadError}
             </StatusBanner>
           ) : null}
-          <div className='overflow-x-auto rounded-md border border-slate-200 bg-white' aria-busy={isLoading}>
+          <div className='overflow-x-auto' aria-busy={isLoading}>
             {table}
           </div>
         </div>

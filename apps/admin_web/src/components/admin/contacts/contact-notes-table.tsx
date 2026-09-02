@@ -71,7 +71,7 @@ export function ContactNotesTable({
               <AdminDataTableCell className='whitespace-pre-wrap text-sm text-slate-900'>
                 {note.content}
               </AdminDataTableCell>
-              <AdminDataTableCell className='text-xs text-slate-500'>
+              <AdminDataTableCell className='whitespace-nowrap text-xs text-slate-500'>
                 {noteMetaLine(note, adminUsers)}
               </AdminDataTableCell>
               <AdminDataTableCell className='text-right'>
