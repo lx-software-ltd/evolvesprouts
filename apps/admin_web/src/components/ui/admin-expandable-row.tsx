@@ -107,6 +107,8 @@ export function AdminExpandableRow({
         className={clsx(
           'cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400',
           isDraft ? 'bg-amber-50' : expanded ? 'bg-slate-100' : 'hover:bg-slate-50',
+          // Continue the detail frame up the sides of the selected summary row.
+          expanded && 'border-x-2 border-x-slate-300',
           className
         )}
       >
@@ -154,9 +156,9 @@ export function AdminExpandableRow({
             <div
               ref={detailRef}
               className={clsx(
-                // The strong bottom rule marks where the open editor ends and
-                // the next record begins.
-                'admin-row-detail border-t border-slate-200 border-b-2 border-b-slate-300 px-4 py-4 sm:px-6',
+                // The 2px frame on the left, right, and bottom marks where the
+                // open editor ends and the next record begins.
+                'admin-row-detail border-t border-slate-200 border-x-2 border-b-2 border-x-slate-300 border-b-slate-300 px-4 py-4 sm:px-6',
                 isDraft ? 'bg-amber-50/40' : 'bg-white'
               )}
             >

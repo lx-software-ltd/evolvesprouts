@@ -33,6 +33,11 @@ export interface AdminRecordTableProps {
   footer?: ReactNode;
   /** Applied to the `<table>`; use it for the minimum width. */
   tableClassName?: string;
+  /**
+   * Render without the white card. For nested record tables inside an open
+   * editor (notes, members), whose parent already provides the card.
+   */
+  embedded?: boolean;
   'aria-label': string;
 }
 
@@ -56,6 +61,7 @@ export function AdminRecordTable({
   emptyLabel = 'No records match the current filters.',
   footer,
   tableClassName,
+  embedded = false,
   'aria-label': ariaLabel,
 }: AdminRecordTableProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -80,8 +86,10 @@ export function AdminRecordTable({
   const showSkeleton = isLoading && rowCount === 0;
   const showEmpty = !isLoading && !error && rowCount === 0;
 
+  const Shell = embedded ? 'section' : Card;
+
   return (
-    <Card aria-label={ariaLabel} data-testid='admin-record-table'>
+    <Shell aria-label={ariaLabel} data-testid='admin-record-table' data-embedded={embedded ? 'true' : undefined}>
       {filters}
       {error ? (
         <div className='mb-3'>
@@ -123,6 +131,6 @@ export function AdminRecordTable({
         </div>
       ) : null}
       {footer ? <div className='mt-2 text-xs text-slate-500'>{footer}</div> : null}
-    </Card>
+    </Shell>
   );
 }
