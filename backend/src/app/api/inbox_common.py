@@ -1,4 +1,4 @@
-"""Shared inbox conversation list helpers (WhatsApp and Meta)."""
+"""Shared inbox conversation helpers for admin and public WhatsApp/Meta routes."""
 
 from __future__ import annotations
 
@@ -7,25 +7,10 @@ import json
 from datetime import datetime, timezone
 from uuid import UUID
 
+from app.db.models.enums import MetaChannel
 from app.exceptions import ValidationError
 
-DEFAULT_INBOX_LIST_LIMIT = 25
-MAX_INBOX_LIST_LIMIT = 100
 MAX_INBOX_SEARCH_LENGTH = 120
-
-
-def parse_inbox_limit(raw_value: str | None) -> int:
-    if raw_value is None or not raw_value.strip():
-        return DEFAULT_INBOX_LIST_LIMIT
-    try:
-        limit = int(raw_value)
-    except ValueError as exc:
-        raise ValidationError("limit must be an integer", field="limit") from exc
-    if limit < 1 or limit > MAX_INBOX_LIST_LIMIT:
-        raise ValidationError(
-            f"limit must be between 1 and {MAX_INBOX_LIST_LIMIT}", field="limit"
-        )
-    return limit
 
 
 def parse_inbox_search(raw_value: str | None) -> str | None:
@@ -37,6 +22,18 @@ def parse_inbox_search(raw_value: str | None) -> str | None:
     if len(normalized) > MAX_INBOX_SEARCH_LENGTH:
         raise ValidationError("q is too long", field="q")
     return normalized
+
+
+def parse_meta_channel(raw_value: str | None) -> MetaChannel | None:
+    if raw_value is None or not raw_value.strip():
+        return None
+    normalized = raw_value.strip().lower()
+    try:
+        return MetaChannel(normalized)
+    except ValueError as exc:
+        raise ValidationError(
+            "channel must be facebook or instagram", field="channel"
+        ) from exc
 
 
 def normalize_inbox_datetime(value: datetime) -> datetime:

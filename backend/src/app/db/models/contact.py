@@ -202,3 +202,15 @@ class Contact(Base):
     def phone_e164(cls) -> object:  # noqa: N805
         """Always NULL in SQL — do not use in SELECT; use Python ``phone_e164`` or serializers."""
         return null().label("phone_e164")
+
+
+def contact_full_name(contact: Contact | None) -> str | None:
+    """``first_name last_name`` for display, or ``None`` when both are blank.
+
+    Accepts any object exposing ``first_name`` / ``last_name`` so serializers can
+    share one implementation for ORM rows and lightweight test doubles.
+    """
+    if contact is None:
+        return None
+    parts = [contact.first_name, contact.last_name]
+    return " ".join(p for p in parts if p).strip() or None
