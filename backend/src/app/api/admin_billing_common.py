@@ -2,29 +2,20 @@
 
 from __future__ import annotations
 
-from contextlib import contextmanager
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.audit import set_audit_context
-from app.db.engine import get_engine
+from app.api.admin_request import DEFAULT_LIST_LIMIT
+from app.db.audit import session_with_audit
 from app.db.models import Contact, Enrollment
 from app.db.models.enums import BillingBillToKind
 from app.db.models.family import FamilyMember
 from app.db.models.organization import OrganizationMember
 
-DEFAULT_BILLING_LIST_LIMIT = 50
-
-
-@contextmanager
-def _session_with_audit(user_sub: str, request_id_val: str | None):
-    """Open a session + transaction and set audit context inside the transaction."""
-    with Session(get_engine()) as session:
-        with session.begin():
-            set_audit_context(session, user_id=user_sub, request_id=request_id_val)
-            yield session
+DEFAULT_BILLING_LIST_LIMIT = DEFAULT_LIST_LIMIT
+_session_with_audit = session_with_audit
 
 
 def contact_display_name(c: Contact | None) -> str | None:

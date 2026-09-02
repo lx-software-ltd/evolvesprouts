@@ -2,6 +2,15 @@
 
 This document describes the audit logging implementation for tracking all data changes in the database.
 
+## Writer rule
+
+Admin mutations use two complementary writers:
+
+1. **`set_audit_context` / `session_with_audit`** — stamps PostgreSQL session variables so table triggers write `source=trigger` rows with an actor and request id. Prefer `session_with_audit(user_id, request_id)` for new mutating handlers that need a session plus transaction. Call `set_audit_context` when a session already exists.
+2. **`AuditService`** — writes `source=application` rows for custom actions (invoice draft/issue markers, payment events) and for trigger-exempt tables (`calendar_manual_blocks`). Do not also `AuditService.log_create` / `log_update` / `log_delete` for ordinary trigger-covered CRUD; that duplicates rows.
+
+These writers are not interchangeable. A typical billing mutation uses `session_with_audit` (or `set_audit_context`) so row changes are trigger-audited, then `AuditService.log_custom` for the extra business event.
+
 ## Overview
 
 The system uses a **hybrid audit logging approach** combining:
@@ -81,25 +90,17 @@ This ensures:
 All CRUD operations are automatically audited via database triggers. To include user context:
 
 ```python
-from sqlalchemy.orm import Session
-from app.db.engine import get_engine
-from app.db.audit import set_audit_context
+from app.db.audit import session_with_audit
+from app.db.repositories import AssetRepository
 
-with Session(get_engine()) as session:
-    # Set context for trigger-based auditing
-    set_audit_context(
-        session,
-        user_id="cognito-user-sub",
-        request_id="lambda-request-id"
-    )
-
-    # All changes in this transaction will be audited with this context
+with session_with_audit("cognito-user-sub", "lambda-request-id") as session:
     repo = AssetRepository(session)
     asset = repo.get_by_id(asset_id)
     asset.title = "Updated Title"
     repo.update(asset)
-    session.commit()
 ```
+
+When a session is already open, call `set_audit_context(session, user_id=..., request_id=...)` instead.
 
 ### Application-Level Auditing
 
