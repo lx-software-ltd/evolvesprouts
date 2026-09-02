@@ -52,7 +52,7 @@ export function ClientInvoicesInvoicesTable({
     invoiceListLoading,
     invoiceListLoadingMore,
     invoiceListError,
-    invoiceListCursor,
+    invoiceListHasMore,
     invoiceStatusFilter,
     setInvoiceStatusFilter,
     invoiceSettlementFilter,
@@ -87,7 +87,7 @@ export function ClientInvoicesInvoicesTable({
       description='Cursor-paginated invoices, ordered by record creation time (most recent first); the displayed Invoice date may differ from creation order when drafts are backdated. Use Operations to preview, issue, void, or permanently delete **draft** rows. Select an issued row to pre-fill allocation; when the selection is issued, use Email recipients and Send email below.'
       isLoading={invoiceListLoading}
       isLoadingMore={invoiceListLoadingMore}
-      hasMore={Boolean(invoiceListCursor)}
+      hasMore={invoiceListHasMore}
       error={invoiceListError}
       onLoadMore={() => void loadMoreInvoices()}
       toolbar={

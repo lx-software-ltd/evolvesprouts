@@ -3,15 +3,19 @@ import type {
   FormEvent,
   MutableRefObject,
   SetStateAction,
-} from 'react';
+} from "react";
 
 import type {
   BillingEnrollmentPickerRow,
   CustomerInvoiceSummary,
   CustomerPaymentDetail,
   CustomerPaymentSummary,
-} from '@/lib/billing-api';
-import type { CustomerInvoiceLineRow } from '@/components/admin/finance/client-invoices-utils';
+} from "@/lib/billing-api";
+import type { CustomerInvoiceLineRow } from "@/components/admin/finance/client-invoices-utils";
+import type {
+  InvoiceSettlementFilter,
+  InvoiceStatusFilter,
+} from "@/hooks/use-client-invoices-invoice-list";
 
 export interface ClientInvoicesPanelShared {
   draftFilterId: string;
@@ -19,7 +23,7 @@ export interface ClientInvoicesPanelShared {
   invoiceSearchFilterId: string;
   invoiceSettlementFilterId: string;
   draftInvoiceDateId: string;
-  currencyOptions: ReturnType<typeof import('@/lib/format').getCurrencyOptions>;
+  currencyOptions: ReturnType<typeof import("@/lib/format").getCurrencyOptions>;
   defaultCurrency: string;
   actionMessage: string;
   setActionMessage: Dispatch<SetStateAction<string>>;
@@ -92,7 +96,7 @@ export interface ClientInvoicesPanelIds {
 }
 
 export interface ClientInvoicesPanelCurrency {
-  currencyOptions: ClientInvoicesPanelShared['currencyOptions'];
+  currencyOptions: ClientInvoicesPanelShared["currencyOptions"];
   defaultCurrency: string;
 }
 
@@ -103,8 +107,8 @@ export interface ClientInvoicesPanelBusy {
 }
 
 export interface ClientInvoicesDraftEditorSlice {
-  draftCreationMode: 'enrollment' | 'customized';
-  setDraftCreationMode: Dispatch<SetStateAction<'enrollment' | 'customized'>>;
+  draftCreationMode: "enrollment" | "customized";
+  setDraftCreationMode: Dispatch<SetStateAction<"enrollment" | "customized">>;
   customizedFormSubmitEnabled: boolean;
   setCustomizedFormSubmitEnabled: Dispatch<SetStateAction<boolean>>;
   enrollmentFilter: string;
@@ -142,27 +146,15 @@ export interface ClientInvoicesInvoicesTableSlice {
   invoiceListLoading: boolean;
   invoiceListLoadingMore: boolean;
   invoiceListError: string;
-  invoiceListCursor: string | null;
-  invoiceStatusFilter: 'draft' | 'issued' | 'void' | '';
-  setInvoiceStatusFilter: Dispatch<
-    SetStateAction<'draft' | 'issued' | 'void' | ''>
-  >;
-  invoiceSettlementFilter:
-    | 'not_completed'
-    | 'open'
-    | 'partially_paid'
-    | 'paid'
-    | 'no_charge'
-    | '';
-  setInvoiceSettlementFilter: Dispatch<
-    SetStateAction<
-      'not_completed' | 'open' | 'partially_paid' | 'paid' | 'no_charge' | ''
-    >
-  >;
+  invoiceListHasMore: boolean;
+  invoiceStatusFilter: InvoiceStatusFilter;
+  setInvoiceStatusFilter: (value: InvoiceStatusFilter) => void;
+  invoiceSettlementFilter: InvoiceSettlementFilter;
+  setInvoiceSettlementFilter: (value: InvoiceSettlementFilter) => void;
   invoiceCurrencyFilter: string;
-  setInvoiceCurrencyFilter: Dispatch<SetStateAction<string>>;
+  setInvoiceCurrencyFilter: (value: string) => void;
   invoiceSearchInput: string;
-  setInvoiceSearchInput: Dispatch<SetStateAction<string>>;
+  setInvoiceSearchInput: (value: string) => void;
   selectedInvoiceId: string | null;
   setSelectedInvoiceId: Dispatch<SetStateAction<string | null>>;
   selectedIssuedInvoice: CustomerInvoiceSummary | null;
@@ -193,8 +185,8 @@ export interface ClientInvoicesManualPaymentEditorSlice {
   setCreatePaymentCurrency: Dispatch<SetStateAction<string>>;
   createPaymentMethod: string;
   setCreatePaymentMethod: Dispatch<SetStateAction<string>>;
-  createPaymentStatus: 'pending' | 'succeeded';
-  setCreatePaymentStatus: Dispatch<SetStateAction<'pending' | 'succeeded'>>;
+  createPaymentStatus: "pending" | "succeeded";
+  setCreatePaymentStatus: Dispatch<SetStateAction<"pending" | "succeeded">>;
   createPaymentExternalRef: string;
   setCreatePaymentExternalRef: Dispatch<SetStateAction<string>>;
   manualPaymentIsUpdate: boolean;
