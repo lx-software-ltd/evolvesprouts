@@ -62,8 +62,6 @@ def handle_admin_locations_request(
 
     location_id = parse_uuid(parts[2])
     if len(parts) == 3:
-        if method == "GET":
-            return _get_location(event, location_id)
         if method == "PUT":
             return _update_location(event, location_id, partial=False)
         if method == "PATCH":
@@ -225,29 +223,6 @@ def _create_location(event: Mapping[str, Any]) -> dict[str, Any]:
                     partner_organization_id_label_pairs=partner_by_loc.get(
                         cast(UUID, location.id)
                     ),
-                )
-            },
-            event=event,
-        )
-
-
-def _get_location(event: Mapping[str, Any], location_id: UUID) -> dict[str, Any]:
-    with Session(get_engine()) as session:
-        location_repo = LocationRepository(session)
-        location = location_repo.get_by_id(location_id)
-        if location is None:
-            raise NotFoundError("Location", str(location_id))
-        partner_by_loc = (
-            location_repo.active_partner_organization_id_label_pairs_by_location_ids(
-                [location_id]
-            )
-        )
-        return json_response(
-            200,
-            {
-                "location": _serialize_location(
-                    location,
-                    partner_organization_id_label_pairs=partner_by_loc.get(location_id),
                 )
             },
             event=event,

@@ -86,8 +86,6 @@ def handle_admin_completion_certificates_request(
 
     certificate_id = parse_uuid(parts[2])
     if len(parts) == 3:
-        if method == "GET":
-            return _get_certificate(event, certificate_id=certificate_id)
         if method == "DELETE":
             return _delete_certificate(
                 event, certificate_id=certificate_id, actor_sub=identity.user_sub
@@ -247,20 +245,6 @@ def _list_certificates(event: Mapping[str, Any]) -> dict[str, Any]:
                 "items": items,
                 "next_cursor": next_cursor,
             },
-            event=event,
-        )
-
-
-def _get_certificate(
-    event: Mapping[str, Any], *, certificate_id: UUID
-) -> dict[str, Any]:
-    with Session(get_engine()) as session:
-        cert = session.get(CompletionCertificate, certificate_id)
-        if cert is None:
-            raise NotFoundError("CompletionCertificate", str(certificate_id))
-        return json_response(
-            200,
-            {"certificate": serialize_completion_certificate(session, cert)},
             event=event,
         )
 

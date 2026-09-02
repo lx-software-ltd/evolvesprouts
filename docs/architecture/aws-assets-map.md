@@ -497,18 +497,16 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | `/v1/polls/{poll_slug}/questions/{question_id}/results` | GET | None + API key | `EvolvesproutsAdminFunction` | Live aggregate counts for one poll question (`select` / `truefalse`) |
 | `/v1/admin/geographic-areas` | GET | Admin Group | `EvolvesproutsAdminFunction` | Geographic area lookup for address selection |
 | `/v1/admin/locations` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | |
-| `/v1/admin/locations/{id}` | GET, PUT, PATCH, DELETE | Admin Group | `EvolvesproutsAdminFunction` | |
+| `/v1/admin/locations/{id}` | PUT, PATCH, DELETE | Admin Group | `EvolvesproutsAdminFunction` | |
 | `/v1/admin/users` | GET | Admin Group | `EvolvesproutsAdminFunction` | Assignee lookup for sales lead workflows |
 | `/v1/admin/instructors` | GET | Admin Group | `EvolvesproutsAdminFunction` | Instructor Cognito group listing for service instance assignment |
 | `/v1/admin/audit-logs` | GET | Admin Group | `EvolvesproutsAdminFunction` | Paginated `audit_log` listing (filters: `table`, `record_id`, `user_id`, `email`, `action`, `since`, `cursor`, `limit`); `email` resolves to a Cognito sub via proxy `list_users`, a known system actor (`system`, `webhook:whatsapp`, `webhook:meta`, `alembic`), or `api-key:<id>` via `api_keys.name`; optional `user_email` is a Cognito email, API key name, or system-actor label |
-| `/v1/admin/audit-logs/{id}` | GET | Admin Group | `EvolvesproutsAdminFunction` | Single `audit_log` row by UUID |
 | `/v1/admin/tags` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | CRM tag catalog; GET supports `include_archived` and `archived_only` (mutually exclusive) |
 | `/v1/admin/calendar/manual-blocks` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | Manual blocks; GET requires `purpose`, `from`, `to`; writes append `audit_log` rows |
-| `/v1/admin/calendar/manual-blocks/{id}` | GET, PATCH, DELETE | Admin Group | `EvolvesproutsAdminFunction` | Manual block read/update/delete; PATCH/DELETE append `audit_log` rows |
-| `/v1/admin/tags/{id}` | GET, PATCH, DELETE | Admin Group | `EvolvesproutsAdminFunction` | Tag detail/update; DELETE returns JSON with `deleted` and `usage_count` |
+| `/v1/admin/calendar/manual-blocks/{id}` | PATCH, DELETE | Admin Group | `EvolvesproutsAdminFunction` | Manual block update/delete; PATCH/DELETE append `audit_log` rows |
+| `/v1/admin/tags/{id}` | PATCH, DELETE | Admin Group | `EvolvesproutsAdminFunction` | Tag update; DELETE returns JSON with `deleted` and `usage_count` |
 | `/v1/admin/leads` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | Lead list/create |
 | `/v1/admin/leads/analytics` | GET | Admin Group | `EvolvesproutsAdminFunction` | Funnel analytics and KPI summary |
-| `/v1/admin/leads/export` | GET | Admin Group | `EvolvesproutsAdminFunction` | CSV lead export |
 | `/v1/admin/leads/{id}` | GET, PATCH | Admin Group | `EvolvesproutsAdminFunction` | Lead detail/stage+assignee updates |
 | `/v1/admin/leads/{id}/notes` | POST | Admin Group | `EvolvesproutsAdminFunction` | Immutable note append |
 | `/v1/whatsapp/webhook` | GET, POST | None (HMAC + verify token) | `EvolvesproutsAdminFunction` | Meta WhatsApp Cloud API webhook; inbound + coexistence echoes |
@@ -516,11 +514,9 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | `/v1/admin/whatsapp/conversations` | GET | Admin Group | `EvolvesproutsAdminFunction` | Paginated captured WhatsApp threads |
 | `/v1/admin/whatsapp/conversations/{id}/messages` | GET | Admin Group | `EvolvesproutsAdminFunction` | Messages for one thread |
 | `/v1/admin/whatsapp/import-jobs` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | Queue/list WhatsApp export import jobs |
-| `/v1/admin/whatsapp/import-jobs/{id}` | GET | Admin Group | `EvolvesproutsAdminFunction` | WhatsApp export import job detail |
 | `/v1/admin/meta/conversations` | GET | Admin Group | `EvolvesproutsAdminFunction` | Paginated captured Messenger/Instagram threads |
 | `/v1/admin/meta/conversations/{id}/messages` | GET | Admin Group | `EvolvesproutsAdminFunction` | Messages for one Meta thread |
 | `/v1/admin/meta/import-jobs` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | Queue/list Instagram/Messenger Graph import jobs |
-| `/v1/admin/meta/import-jobs/{id}` | GET | Admin Group | `EvolvesproutsAdminFunction` | Meta Graph import job detail |
 | `/v1/public/meta/conversations` | GET | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token reads; name/dates only |
 | `/v1/public/meta/conversations/{id}/messages` | GET | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token message reads without scoped ids |
 | `/v1/public/contacts` | GET, POST | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token contact list/create; `user` GET only |
@@ -532,15 +528,14 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | `/v1/admin/assets/{id}/share-link` | GET, POST, DELETE | Admin Group | `EvolvesproutsAdminFunction` | Stable bearer link read/create/revoke |
 | `/v1/admin/assets/{id}/share-link/rotate` | POST | Admin Group | `EvolvesproutsAdminFunction` | Rotate bearer token and invalidate prior link |
 | `/v1/admin/expenses` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | Expense list/create |
-| `/v1/admin/expenses/{id}` | GET, PATCH | Admin Group | `EvolvesproutsAdminFunction` | Expense detail/update |
+| `/v1/admin/expenses/{id}` | PATCH, DELETE | Admin Group | `EvolvesproutsAdminFunction` | Expense update; DELETE removes draft rows only |
 | `/v1/admin/expenses/{id}/cancel` | POST | Admin Group | `EvolvesproutsAdminFunction` | Void expense |
 | `/v1/admin/expenses/{id}/mark-paid` | POST | Admin Group | `EvolvesproutsAdminFunction` | Mark expense paid |
 | `/v1/admin/expenses/{id}/reparse` | POST | Admin Group | `EvolvesproutsAdminFunction` | Requeue parse |
 | `/v1/admin/expenses/{id}/amend` | POST | Admin Group | `EvolvesproutsAdminFunction` | Create amendment |
 | `/v1/admin/billing/export` | GET | Admin Group | `EvolvesproutsAdminFunction` | Customer AR CSV export (`exportVersion=2` default: payments, refunds, invoices, lines, receipts, allocations; `exportVersion=1` legacy) |
 | `/v1/admin/billing/payments` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | List payments; record refund |
-| `/v1/admin/billing/payments/{id}` | GET | Admin Group | `EvolvesproutsAdminFunction` | Payment detail + unapplied |
-| `/v1/admin/billing/payments/{id}/unapplied` | GET | Admin Group | `EvolvesproutsAdminFunction` | Unapplied amount |
+| `/v1/admin/billing/payments/{id}` | GET, PATCH, DELETE | Admin Group | `EvolvesproutsAdminFunction` | Payment detail (includes `unappliedAmount`); manual inbound update; orphan delete |
 | `/v1/admin/billing/payments/{id}/confirm` | POST | Admin Group | `EvolvesproutsAdminFunction` | Confirm pending payment |
 | `/v1/admin/billing/invoices` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | List invoices (cursor) or create draft |
 | `/v1/admin/billing/invoices/{id}` | GET | Admin Group | `EvolvesproutsAdminFunction` | Get invoice with lines |

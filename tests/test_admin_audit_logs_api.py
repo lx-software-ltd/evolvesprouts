@@ -10,7 +10,7 @@ import pytest
 from app.api import admin_audit_actors, admin_audit_logs
 from app.api.admin_request import encode_created_cursor, parse_created_cursor
 from app.db.auditable_tables import AUDITABLE_TABLES
-from app.exceptions import AuthorizationError, NotFoundError, ValidationError
+from app.exceptions import AuthorizationError, ValidationError
 from app.db.models import AuditLog
 
 
@@ -59,51 +59,6 @@ def test_audit_logs_rejects_unknown_table(
             ),
             "GET",
             "/v1/admin/audit-logs",
-        )
-
-
-def test_audit_logs_get_by_id_not_found(
-    api_gateway_event: Any,
-    admin_identity: dict[str, str],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    class _Session:
-        def __init__(self, *_args: object, **_kwargs: object) -> None:
-            pass
-
-        def __enter__(self) -> "_Session":
-            return self
-
-        def __exit__(self, *args: object) -> None:
-            return None
-
-        def execute(self, *_args: object, **_kwargs: object) -> None:
-            return None
-
-    class _Repo:
-        def __init__(self, _session: Any) -> None:
-            pass
-
-        def get_by_id(self, _audit_id: Any) -> None:
-            return None
-
-    monkeypatch.setattr(admin_audit_logs, "Session", _Session)
-    monkeypatch.setattr(admin_audit_logs, "get_engine", lambda: object())
-    monkeypatch.setattr(admin_audit_logs, "AuditLogRepository", _Repo)
-    monkeypatch.setattr(
-        admin_audit_logs, "_actor_labels_for_user_ids", lambda *_a, **_: {}
-    )
-
-    missing = str(uuid4())
-    with pytest.raises(NotFoundError):
-        admin_audit_logs.handle_admin_audit_logs_request(
-            api_gateway_event(
-                method="GET",
-                path=f"/v1/admin/audit-logs/{missing}",
-                authorizer_context=admin_identity,
-            ),
-            "GET",
-            f"/v1/admin/audit-logs/{missing}",
         )
 
 

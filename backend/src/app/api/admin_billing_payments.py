@@ -36,7 +36,6 @@ from app.exceptions import NotFoundError, ValidationError
 from app.services.customer_billing import (
     create_receipt_for_succeeded_inbound_payment,
     finalize_receipt_pdf_upload,
-    payment_unapplied_amount,
 )
 from app.utils import json_response
 from app.utils.logging import get_logger
@@ -267,25 +266,6 @@ def _get_payment(
                 ),
                 "allocationInvoices": allocation_invoices,
             },
-            event=event,
-        )
-
-
-def _unapplied(
-    event: Mapping[str, Any],
-    payment_id: UUID,
-    *,
-    user_sub: str,
-    request_id: str | None,
-) -> dict[str, Any]:
-    with _session_with_audit(user_sub, request_id) as session:
-        p = session.get(CustomerPayment, payment_id)
-        if p is None:
-            raise NotFoundError("CustomerPayment", str(payment_id))
-        u = payment_unapplied_amount(session, payment_id)
-        return json_response(
-            200,
-            {"paymentId": str(payment_id), "unappliedAmount": str(u)},
             event=event,
         )
 

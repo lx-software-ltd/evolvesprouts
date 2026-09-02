@@ -38,7 +38,7 @@ def handle_admin_api_keys_request(
     method: str,
     path: str,
 ) -> dict[str, Any]:
-    """Handle /v1/admin/api-keys routes (list, create, get, revoke)."""
+    """Handle /v1/admin/api-keys routes (list, create, revoke)."""
     parts = split_route_parts(path)
     if not route_has_prefix(parts, "admin", "api-keys"):
         return not_found(event)
@@ -51,8 +51,6 @@ def handle_admin_api_keys_request(
 
     if method == "GET" and resource_id is None:
         return _list_api_keys(event)
-    if method == "GET" and resource_id is not None:
-        return _get_api_key(event, resource_id)
     if method == "POST" and resource_id is None:
         return _create_api_key(event, actor_sub=identity.user_sub)
     if method == "DELETE" and resource_id is not None:
@@ -88,16 +86,6 @@ def _list_api_keys(event: Mapping[str, Any]) -> dict[str, Any]:
         },
         event=event,
     )
-
-
-def _get_api_key(event: Mapping[str, Any], resource_id: str) -> dict[str, Any]:
-    """Get a single API token by id."""
-    with Session(get_engine()) as session:
-        repo = ApiKeyRepository(session)
-        entity = repo.get_by_id(parse_uuid(resource_id))
-        if entity is None:
-            raise NotFoundError("api-keys", resource_id)
-        return json_response(200, _serialize_api_key(entity), event=event)
 
 
 def _create_api_key(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, Any]:

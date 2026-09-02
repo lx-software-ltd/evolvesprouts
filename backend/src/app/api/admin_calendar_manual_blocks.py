@@ -60,8 +60,6 @@ def handle_admin_calendar_manual_blocks_request(
 
     block_id = parse_uuid(parts[3])
     if len(parts) == 4:
-        if method == "GET":
-            return _get_block(event, block_id=block_id)
         if method == "PATCH":
             return _update_block(event, block_id=block_id, actor_sub=identity.user_sub)
         if method == "DELETE":
@@ -144,17 +142,6 @@ def _list_blocks(event: Mapping[str, Any]) -> dict[str, Any]:
         items = [_serialize_block(r) for r in rows]
 
     return json_response(200, {"items": items}, event=event)
-
-
-def _get_block(event: Mapping[str, Any], *, block_id: UUID) -> dict[str, Any]:
-    with Session(get_engine()) as session:
-        repo = CalendarManualBlockRepository(session)
-        row = repo.get_by_id(block_id)
-        if row is None:
-            raise NotFoundError("Calendar manual block", str(block_id))
-        payload = _serialize_block(row)
-
-    return json_response(200, {"block": payload}, event=event)
 
 
 def _create_block(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, Any]:

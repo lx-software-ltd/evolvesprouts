@@ -90,8 +90,6 @@ def handle_admin_organizations_request(
 
     organization_id = parse_uuid(parts[2])
     if len(parts) == 3:
-        if method == "GET":
-            return _get_organization(event, organization_id=organization_id)
         if method == "PATCH":
             return _update_organization(
                 event, organization_id=organization_id, actor_sub=identity.user_sub
@@ -298,25 +296,6 @@ def _list_organizations(event: Mapping[str, Any]) -> dict[str, Any]:
                 ],
                 "next_cursor": next_cursor,
                 "total_count": total_count,
-            },
-            event=event,
-        )
-
-
-def _get_organization(
-    event: Mapping[str, Any], *, organization_id: UUID
-) -> dict[str, Any]:
-    with Session(get_engine()) as session:
-        repository = OrganizationRepository(session)
-        org = repository.get_non_vendor_organization_by_id(organization_id)
-        if org is None:
-            raise NotFoundError("Organization", str(organization_id))
-        return json_response(
-            200,
-            {
-                "organization": serialize_organization_summary(
-                    org, **organization_related_serializer_kwargs(session, org.id)
-                )
             },
             event=event,
         )

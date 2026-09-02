@@ -77,8 +77,6 @@ def handle_admin_families_request(
 
     family_id = parse_uuid(parts[2])
     if len(parts) == 3:
-        if method == "GET":
-            return _get_family(event, family_id=family_id)
         if method == "PATCH":
             return _update_family(
                 event, family_id=family_id, actor_sub=identity.user_sub
@@ -159,23 +157,6 @@ def _list_families(event: Mapping[str, Any]) -> dict[str, Any]:
                 ],
                 "next_cursor": next_cursor,
                 "total_count": total_count,
-            },
-            event=event,
-        )
-
-
-def _get_family(event: Mapping[str, Any], *, family_id: UUID) -> dict[str, Any]:
-    with Session(get_engine()) as session:
-        repository = FamilyRepository(session)
-        family = repository.get_by_id_for_admin(family_id)
-        if family is None:
-            raise NotFoundError("Family", str(family_id))
-        return json_response(
-            200,
-            {
-                "family": serialize_family_summary(
-                    family, **family_related_serializer_kwargs(session, family.id)
-                )
             },
             event=event,
         )

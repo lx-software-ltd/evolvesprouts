@@ -97,8 +97,6 @@ def handle_admin_expenses_request(
 
     expense_id = parse_uuid(parts[2])
     if len(parts) == 3:
-        if method == "GET":
-            return _get_expense(event, expense_id=expense_id)
         if method == "PATCH":
             return _update_expense(
                 event, expense_id=expense_id, actor_sub=identity.user_sub
@@ -222,15 +220,6 @@ def _create_expense(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, An
         return json_response(
             201, {"expense": serialize_expense(refreshed)}, event=event
         )
-
-
-def _get_expense(event: Mapping[str, Any], *, expense_id: UUID) -> dict[str, Any]:
-    with Session(get_engine()) as session:
-        repository = ExpenseRepository(session)
-        expense = repository.get_with_attachments(expense_id)
-        if expense is None:
-            raise NotFoundError("Expense", str(expense_id))
-        return json_response(200, {"expense": serialize_expense(expense)}, event=event)
 
 
 def _delete_draft_expense(

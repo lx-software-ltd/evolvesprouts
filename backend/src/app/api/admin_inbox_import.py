@@ -19,15 +19,13 @@ from app.db.models.inbox_import_job import (
 )
 from app.db.repositories.asset import AssetRepository
 from app.db.repositories.inbox_import_job import InboxImportJobRepository
-from app.exceptions import NotFoundError, ValidationError
+from app.exceptions import ValidationError
 from app.services.inbox_import_events import enqueue_inbox_import_job
 from app.utils import json_response, method_not_allowed
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
-_DEFAULT_LIMIT = 25
-_MAX_LIMIT = 100
 _EXPORT_CONTENT_TYPES = frozenset(
     {
         "text/plain",
@@ -52,14 +50,6 @@ def handle_meta_import_jobs(
         if method == "POST":
             return _create_meta_job(event, actor_sub=actor_sub)
         return method_not_allowed(event)
-    if len(parts) == 4 and parts[2] == "import-jobs":
-        if method != "GET":
-            return method_not_allowed(event)
-        return _get_job(
-            event,
-            job_id=parse_uuid(parts[3]),
-            kind=InboxImportKind.META_GRAPH,
-        )
     return None
 
 
@@ -77,14 +67,6 @@ def handle_whatsapp_import_jobs(
         if method == "POST":
             return _create_whatsapp_job(event, actor_sub=actor_sub)
         return method_not_allowed(event)
-    if len(parts) == 4 and parts[2] == "import-jobs":
-        if method != "GET":
-            return method_not_allowed(event)
-        return _get_job(
-            event,
-            job_id=parse_uuid(parts[3]),
-            kind=InboxImportKind.WHATSAPP_EXPORT,
-        )
     return None
 
 
@@ -178,7 +160,7 @@ def _enqueue_job(
 
 
 def _list_jobs(event: Mapping[str, Any], *, kind: InboxImportKind) -> dict[str, Any]:
-    limit = parse_limit(event, default=_DEFAULT_LIMIT, max_limit=_MAX_LIMIT)
+    limit = parse_limit(event)
     cursor_raw = query_param(event, "cursor")
     cursor = parse_uuid(cursor_raw) if cursor_raw else None
     with Session(get_engine()) as session:
@@ -194,18 +176,6 @@ def _list_jobs(event: Mapping[str, Any], *, kind: InboxImportKind) -> dict[str, 
                 "total_count": repo.count_for_kind(kind=kind),
             },
             event=event,
-        )
-
-
-def _get_job(
-    event: Mapping[str, Any], *, job_id: UUID, kind: InboxImportKind
-) -> dict[str, Any]:
-    with Session(get_engine()) as session:
-        job = InboxImportJobRepository(session).get_by_id(job_id)
-        if job is None or job.kind is not kind:
-            raise NotFoundError("InboxImportJob", str(job_id))
-        return json_response(
-            200, {"inbox_import_job": _serialize_job(job)}, event=event
         )
 
 

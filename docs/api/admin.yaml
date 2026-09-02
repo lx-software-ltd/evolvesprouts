@@ -718,23 +718,6 @@ paths:
   /v1/admin/locations/{id}:
     parameters:
       - $ref: "#/components/parameters/LocationId"
-    get:
-      summary: Get location
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "200":
-          description: Location response.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LocationResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
     put:
       summary: Update location
       security:
@@ -976,32 +959,6 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /v1/admin/audit-logs/{id}:
-    get:
-      summary: Get audit log entry by id
-      security:
-        - AdminBearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Audit log entry.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AuditLog"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
   /v1/admin/api-keys:
     get:
       summary: List API tokens
@@ -1069,24 +1026,6 @@ paths:
         schema:
           type: string
           format: uuid
-    get:
-      summary: Get an API token
-      description: Returns token metadata without the plaintext or hash.
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "200":
-          description: API token metadata.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiKeySummary"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
     delete:
       summary: Revoke an API token
       description: Soft-revokes the token. Idempotent if already revoked.
@@ -1245,25 +1184,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/LeadAnalyticsResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /v1/admin/leads/export:
-    get:
-      summary: Export leads as CSV
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "200":
-          description: CSV export generated.
-          content:
-            text/csv:
-              schema:
-                type: string
         "400":
           $ref: "#/components/responses/BadRequest"
         "403":
@@ -1470,30 +1390,6 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
-  /v1/admin/whatsapp/import-jobs/{id}:
-    parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-    get:
-      summary: Get a WhatsApp export import job
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "200":
-          description: Job detail.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InboxImportJobResponse"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
   /v1/admin/meta/conversations:
     get:
       summary: List captured Messenger and Instagram conversations
@@ -1657,30 +1553,6 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
-
-  /v1/admin/meta/import-jobs/{id}:
-    parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-    get:
-      summary: Get a Messenger or Instagram Graph import job
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "200":
-          description: Job detail.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InboxImportJobResponse"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
 
   /v1/admin/leads/{id}:
     parameters:
@@ -2550,21 +2422,6 @@ paths:
   /v1/admin/completion-certificates/{id}:
     parameters:
       - $ref: "#/components/parameters/CompletionCertificateId"
-    get:
-      summary: Get completion certificate
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "200":
-          description: Certificate detail.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CompletionCertificateResponse"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
     delete:
       summary: Delete completion certificate
       description: Permanently removes the certificate row and best-effort deletes the stored PDF.
@@ -2703,21 +2560,6 @@ paths:
         schema:
           type: string
           format: uuid
-    get:
-      summary: Get manual calendar block by id
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "200":
-          description: Block detail.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdminCalendarManualBlockResponse"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
     patch:
       summary: Update manual calendar block
       security:
@@ -2834,21 +2676,6 @@ paths:
         schema:
           type: string
           format: uuid
-    get:
-      summary: Get CRM tag by id
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "200":
-          description: Tag detail.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdminTagResponse"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
     patch:
       summary: Update CRM tag
       description: |
@@ -3402,23 +3229,6 @@ paths:
   /v1/admin/families/{id}:
     parameters:
       - $ref: "#/components/parameters/AdminFamilyId"
-    get:
-      summary: Get CRM family
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "200":
-          description: Family response.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdminFamilyResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
     patch:
       summary: Update CRM family
       description: |
@@ -3690,23 +3500,6 @@ paths:
   /v1/admin/organizations/{id}:
     parameters:
       - $ref: "#/components/parameters/AdminOrganizationId"
-    get:
-      summary: Get CRM organization
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "200":
-          description: Organization response.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdminOrganizationResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
     patch:
       summary: Update CRM organization
       security:
@@ -4079,36 +3872,6 @@ paths:
           description: Payment deleted.
         "400":
           $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /v1/admin/billing/payments/{id}/unapplied:
-    get:
-      summary: Unapplied amount for a payment
-      security:
-        - AdminBearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Unapplied remainder.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  paymentId:
-                    type: string
-                    format: uuid
-                  unappliedAmount:
-                    type: string
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -4860,23 +4623,6 @@ paths:
   /v1/admin/expenses/{id}:
     parameters:
       - $ref: "#/components/parameters/ExpenseId"
-    get:
-      summary: Get expense
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "200":
-          description: Expense response.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ExpenseResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
     patch:
       summary: Update expense
       security:
