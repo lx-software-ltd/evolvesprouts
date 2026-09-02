@@ -1,6 +1,6 @@
-import { appendRelatedPartyQuery, type RelatedPartyQuery } from '@/lib/contact-related-links';
 import { adminApiRequest } from '@/lib/api-admin-client';
-import { unwrapPayload } from '@/lib/api-payload';
+import { ADMIN_API_MAX_LIST_LIMIT, buildAdminListPath } from '@/lib/admin-list-query';
+import { relatedPartyApiFilters, type RelatedPartyQuery } from '@/lib/contact-related-links';
 import { getAdminDefaultCurrencyCode } from '@/lib/config';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -17,8 +17,6 @@ export type CustomerInvoiceSummary = ApiSchemas['CustomerInvoiceSummary'];
 
 export type CustomerInvoiceDetail = ApiSchemas['CustomerInvoiceDetail'];
 
-const CUSTOMER_INVOICE_LIST_PAGE_LIMIT = 100;
-
 export async function listCustomerInvoices(
   params: {
     status?: 'draft' | 'issued' | 'void';
@@ -31,43 +29,27 @@ export async function listCustomerInvoices(
   } & RelatedPartyQuery = {},
   signal?: AbortSignal,
 ): Promise<{ items: CustomerInvoiceSummary[]; next_cursor: string | null }> {
-  const query = new URLSearchParams();
-  if (params.status) {
-    query.set('status', params.status);
-  }
-  if (params.settlement) {
-    query.set('settlement', params.settlement);
-  }
-  if (params.currency && params.currency.trim() !== '') {
-    query.set('currency', params.currency.trim().toUpperCase());
-  }
-  const qTrimmed = params.q?.trim() ?? '';
-  if (qTrimmed !== '') {
-    query.set('q', qTrimmed);
-  }
-  appendRelatedPartyQuery(query, params);
-  if (params.cursor) {
-    query.set('cursor', params.cursor);
-  }
-  if (params.limit != null) {
-    query.set(
-      'limit',
-      String(Math.min(Math.floor(params.limit), CUSTOMER_INVOICE_LIST_PAGE_LIMIT)),
-    );
-  }
-  const qs = query.toString();
   const payload = await adminApiRequest<{
     items?: CustomerInvoiceSummary[];
     next_cursor?: string | null;
   }>({
-    endpointPath: qs ? `/v1/admin/billing/invoices?${qs}` : '/v1/admin/billing/invoices',
+    endpointPath: buildAdminListPath('/v1/admin/billing/invoices', {
+      filters: {
+        status: params.status,
+        settlement: params.settlement,
+        currency: params.currency?.trim().toUpperCase(),
+        q: params.q,
+        ...relatedPartyApiFilters(params),
+      },
+      cursor: params.cursor,
+      limit: params.limit,
+    }),
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
   return {
-    items: Array.isArray(root.items) ? root.items : [],
-    next_cursor: root.next_cursor ?? null,
+    items: Array.isArray(payload.items) ? payload.items : [],
+    next_cursor: payload.next_cursor ?? null,
   };
 }
 
@@ -86,7 +68,7 @@ export async function listAllCustomerInvoices(
       {
         ...params,
         cursor,
-        limit: CUSTOMER_INVOICE_LIST_PAGE_LIMIT,
+        limit: ADMIN_API_MAX_LIST_LIMIT,
       },
       signal,
     );
@@ -102,11 +84,10 @@ export async function getCustomerInvoice(id: string, signal?: AbortSignal): Prom
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  if (!root.invoice) {
+  if (!payload.invoice) {
     throw new Error('Invoice response missing invoice.');
   }
-  return root.invoice;
+  return payload.invoice;
 }
 
 export async function getCustomerInvoicePdfDownload(
@@ -118,9 +99,8 @@ export async function getCustomerInvoicePdfDownload(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  const downloadUrl = root.downloadUrl;
-  const expiresAt = root.expiresAt;
+  const downloadUrl = payload.downloadUrl;
+  const expiresAt = payload.expiresAt;
   if (!downloadUrl || !expiresAt) {
     throw new Error('Invoice PDF response missing download URL.');
   }
@@ -131,19 +111,14 @@ export async function listCustomerPayments(
   params: { invoiceId?: string } = {},
   signal?: AbortSignal,
 ): Promise<CustomerPaymentSummary[]> {
-  const query = new URLSearchParams();
-  const inv = params.invoiceId?.trim();
-  if (inv) {
-    query.set('invoice_id', inv);
-  }
-  const qs = query.toString();
   const payload = await adminApiRequest<{ items?: CustomerPaymentSummary[] }>({
-    endpointPath: qs ? `/v1/admin/billing/payments?${qs}` : '/v1/admin/billing/payments',
+    endpointPath: buildAdminListPath('/v1/admin/billing/payments', {
+      filters: { invoice_id: params.invoiceId },
+    }),
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  return Array.isArray(root.items) ? root.items : [];
+  return Array.isArray(payload.items) ? payload.items : [];
 }
 
 export async function getCustomerPayment(id: string, signal?: AbortSignal): Promise<CustomerPaymentDetail> {
@@ -152,7 +127,7 @@ export async function getCustomerPayment(id: string, signal?: AbortSignal): Prom
     method: 'GET',
     signal,
   });
-  return unwrapPayload(payload);
+  return payload;
 }
 
 export async function confirmCustomerPayment(
@@ -164,11 +139,10 @@ export async function confirmCustomerPayment(
     method: 'POST',
     body: body && Object.keys(body).length > 0 ? body : undefined,
   });
-  const root = unwrapPayload(payload);
-  if (!root.payment) {
+  if (!payload.payment) {
     throw new Error('Confirm payment response missing payment.');
   }
-  return root.payment;
+  return payload.payment;
 }
 
 export async function deleteCustomerPayment(id: string): Promise<void> {
@@ -187,11 +161,10 @@ export async function createCustomerRefund(
     body,
     expectedSuccessStatuses: [201],
   });
-  const root = unwrapPayload(payload);
-  if (!root.payment) {
+  if (!payload.payment) {
     throw new Error('Refund response missing payment.');
   }
-  return root.payment;
+  return payload.payment;
 }
 
 export async function createManualInboundCustomerPayment(
@@ -203,11 +176,10 @@ export async function createManualInboundCustomerPayment(
     body,
     expectedSuccessStatuses: [201],
   });
-  const root = unwrapPayload(payload);
-  if (!root.payment) {
+  if (!payload.payment) {
     throw new Error('Create payment response missing payment.');
   }
-  return root.payment;
+  return payload.payment;
 }
 
 export async function updateManualInboundCustomerPayment(
@@ -219,11 +191,10 @@ export async function updateManualInboundCustomerPayment(
     method: 'PATCH',
     body,
   });
-  const root = unwrapPayload(payload);
-  if (!root.payment) {
+  if (!payload.payment) {
     throw new Error('Update payment response missing payment.');
   }
-  return root.payment;
+  return payload.payment;
 }
 
 /**
@@ -292,6 +263,8 @@ export function compareBillingEnrollmentPickerRowsByEnrolledAtDesc(
   return String(b.enrollmentId).localeCompare(String(a.enrollmentId));
 }
 
+const RECENT_ENROLLMENTS_PAGE_LIMIT = 500;
+
 export async function listRecentEnrollmentsForInvoicing(
   signal?: AbortSignal,
   params?: { q?: string },
@@ -302,14 +275,6 @@ export async function listRecentEnrollmentsForInvoicing(
   let guard = 0;
   while (guard < 200) {
     guard += 1;
-    const query = new URLSearchParams();
-    query.set('limit', '500');
-    if (params?.q != null && params.q.trim() !== '') {
-      query.set('q', params.q.trim());
-    }
-    if (cursor) {
-      query.set('cursor', cursor);
-    }
     let payload: {
       items?: BillingEnrollmentPickerRow[];
       truncated?: boolean;
@@ -321,7 +286,11 @@ export async function listRecentEnrollmentsForInvoicing(
         truncated?: boolean;
         next_cursor?: string | null;
       }>({
-        endpointPath: `/v1/admin/billing/enrollments/recent-for-invoicing?${query.toString()}`,
+        endpointPath: buildAdminListPath('/v1/admin/billing/enrollments/recent-for-invoicing', {
+          // This endpoint allows up to 500 rows per page, above the general admin list cap.
+          filters: { limit: RECENT_ENROLLMENTS_PAGE_LIMIT, q: params?.q },
+          cursor,
+        }),
         method: 'GET',
         signal,
       });
@@ -335,15 +304,14 @@ export async function listRecentEnrollmentsForInvoicing(
       }
       throw caught;
     }
-    const root = unwrapPayload(payload);
-    const page = Array.isArray(root.items) ? root.items : [];
+    const page = Array.isArray(payload.items) ? payload.items : [];
     merged.push(...page);
-    if (root.truncated) {
+    if (payload.truncated) {
       truncatedOverall = true;
     }
     const next =
-      typeof root.next_cursor === 'string' && root.next_cursor.trim() !== ''
-        ? root.next_cursor.trim()
+      typeof payload.next_cursor === 'string' && payload.next_cursor.trim() !== ''
+        ? payload.next_cursor.trim()
         : null;
     if (!next) {
       break;
@@ -369,12 +337,11 @@ export async function createDraftInvoice(
     body,
     expectedSuccessStatuses: [201],
   });
-  const root = unwrapPayload(payload);
-  const invoiceId = typeof root.invoiceId === 'string' ? root.invoiceId : '';
+  const invoiceId = typeof payload.invoiceId === 'string' ? payload.invoiceId : '';
   if (!invoiceId) {
     throw new Error('Create invoice response missing invoiceId.');
   }
-  return { invoiceId, status: typeof root.status === 'string' ? root.status : 'draft' };
+  return { invoiceId, status: typeof payload.status === 'string' ? payload.status : 'draft' };
 }
 
 export async function issueInvoice(invoiceId: string): Promise<{
@@ -392,17 +359,16 @@ export async function issueInvoice(invoiceId: string): Promise<{
     endpointPath: `/v1/admin/billing/invoices/${invoiceId}/issue`,
     method: 'POST',
   });
-  const root = unwrapPayload(payload);
   const id =
-    typeof root.invoiceId === 'string' && root.invoiceId.trim() !== '' ? root.invoiceId : invoiceId;
+    typeof payload.invoiceId === 'string' && payload.invoiceId.trim() !== '' ? payload.invoiceId : invoiceId;
   if (!id) {
     throw new Error('Issue invoice response missing invoiceId.');
   }
   return {
     invoiceId: id,
-    invoiceNumber: root.invoiceNumber,
-    issuedPdfSha256: root.issuedPdfSha256,
-    paymentId: root.paymentId,
+    invoiceNumber: payload.invoiceNumber,
+    issuedPdfSha256: payload.issuedPdfSha256,
+    paymentId: payload.paymentId,
   };
 }
 
@@ -422,9 +388,8 @@ export async function voidInvoice(invoiceId: string, reason: string): Promise<{ 
     method: 'POST',
     body: { reason },
   });
-  const root = unwrapPayload(payload);
-  const id = typeof root.invoiceId === 'string' ? root.invoiceId : invoiceId;
-  return { invoiceId: id, status: typeof root.status === 'string' ? root.status : 'void' };
+  const id = typeof payload.invoiceId === 'string' ? payload.invoiceId : invoiceId;
+  return { invoiceId: id, status: typeof payload.status === 'string' ? payload.status : 'void' };
 }
 
 export async function emailInvoice(invoiceId: string, toEmail: string): Promise<{ sent: boolean }> {
@@ -433,8 +398,7 @@ export async function emailInvoice(invoiceId: string, toEmail: string): Promise<
     method: 'POST',
     body: { toEmail },
   });
-  const root = unwrapPayload(payload);
-  return { sent: Boolean(root.sent) };
+  return { sent: Boolean(payload.sent) };
 }
 
 export async function createPaymentAllocation(
@@ -446,8 +410,7 @@ export async function createPaymentAllocation(
     body,
     expectedSuccessStatuses: [201],
   });
-  const root = unwrapPayload(payload);
-  const allocationId = typeof root.allocationId === 'string' ? root.allocationId : '';
+  const allocationId = typeof payload.allocationId === 'string' ? payload.allocationId : '';
   if (!allocationId) {
     throw new Error('Allocation response missing allocationId.');
   }
@@ -464,27 +427,25 @@ export async function resolveBillToPrimaryContacts(
     body,
     signal,
   });
-  const root = unwrapPayload(payload);
-  if (!root.familyPrimaryContactById || !root.organizationPrimaryContactById) {
+  if (!payload.familyPrimaryContactById || !payload.organizationPrimaryContactById) {
     throw new Error('Resolve bill-to primary contacts response missing maps.');
   }
-  return root;
+  return payload;
 }
 
 export async function exportBillingCsv(
   exportVersion: '1' | '2' = '2',
   signal?: AbortSignal,
 ): Promise<string> {
-  const query = new URLSearchParams();
-  query.set('exportVersion', exportVersion);
   const payload = await adminApiRequest<{ csv?: string }>({
-    endpointPath: `/v1/admin/billing/export?${query.toString()}`,
+    endpointPath: buildAdminListPath('/v1/admin/billing/export', {
+      filters: { exportVersion },
+    }),
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  if (typeof root.csv !== 'string') {
+  if (typeof payload.csv !== 'string') {
     throw new Error('Export response missing csv.');
   }
-  return root.csv;
+  return payload.csv;
 }

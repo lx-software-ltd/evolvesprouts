@@ -15,6 +15,7 @@ import {
   DEFAULT_FAMILY_ORG_LIST_FILTERS,
   type EntityListFilters,
 } from '@/types/entity-list';
+import { ADMIN_LIST_PAGE_SIZE } from '@/lib/admin-list-query';
 import type { components } from '@/types/generated/admin-api.generated';
 
 import { useListMutate } from './use-list-mutate';
@@ -42,7 +43,7 @@ export function useAdminEntityFamilies() {
     defaultFilters: DEFAULT_FAMILY_ORG_LIST_FILTERS,
     errorPrefix: 'Failed to load families',
     debounceKeys: ['query'],
-    limit: 25,
+    limit: ADMIN_LIST_PAGE_SIZE,
   });
 
   const { isSaving, mutate } = useListMutate(list.refetch);

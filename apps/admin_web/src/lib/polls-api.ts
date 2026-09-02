@@ -1,7 +1,6 @@
-import { clampAdminListLimit } from './admin-list-limit';
+import { buildAdminListPath } from './admin-list-query';
 import { ensureFreshTokens } from './auth';
 import { adminApiRequest } from './api-admin-client';
-import { unwrapPayload } from './api-payload';
 import { getApiBaseUrl } from './config';
 import { isRecord } from './type-guards';
 
@@ -61,31 +60,24 @@ export async function listAdminPolls(signal?: AbortSignal): Promise<AdminPollSum
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  return Array.isArray(root.items) ? root.items.map((item) => parsePollSummary(item)) : [];
+  return Array.isArray(payload.items) ? payload.items.map((item) => parsePollSummary(item)) : [];
 }
 
 export async function listAdminPollAnswers(
   pollSlug: string,
   params: { cursor?: string | null; limit?: number; signal?: AbortSignal } = {}
 ): Promise<{ items: AdminPollAnswerRow[]; nextCursor: string | null }> {
-  const query = new URLSearchParams();
-  if (params.cursor) {
-    query.set('cursor', params.cursor);
-  }
-  if (typeof params.limit === 'number') {
-    query.set('limit', `${clampAdminListLimit(params.limit)}`);
-  }
-  const queryString = query.toString();
   const payload = await adminApiRequest<ApiSchemas['AdminPollAnswerListResponse']>({
-    endpointPath: `/v1/admin/polls/${encodeURIComponent(pollSlug)}/answers${queryString ? `?${queryString}` : ''}`,
+    endpointPath: buildAdminListPath(`/v1/admin/polls/${encodeURIComponent(pollSlug)}/answers`, {
+      cursor: params.cursor,
+      limit: params.limit,
+    }),
     method: 'GET',
     signal: params.signal,
   });
-  const root = unwrapPayload(payload);
   return {
-    items: Array.isArray(root.items) ? root.items.map((item) => parsePollAnswerRow(item)) : [],
-    nextCursor: typeof root.next_cursor === 'string' ? root.next_cursor : null,
+    items: Array.isArray(payload.items) ? payload.items.map((item) => parsePollAnswerRow(item)) : [],
+    nextCursor: typeof payload.next_cursor === 'string' ? payload.next_cursor : null,
   };
 }
 
@@ -94,10 +86,9 @@ export async function clearAdminPollAnswers(pollSlug: string): Promise<AdminPoll
     endpointPath: `/v1/admin/polls/${encodeURIComponent(pollSlug)}/answers`,
     method: 'DELETE',
   });
-  const root = unwrapPayload(payload);
   return {
-    pollSlug: typeof root.pollSlug === 'string' ? root.pollSlug : pollSlug,
-    deletedCount: typeof root.deletedCount === 'number' ? root.deletedCount : 0,
+    pollSlug: typeof payload.pollSlug === 'string' ? payload.pollSlug : pollSlug,
+    deletedCount: typeof payload.deletedCount === 'number' ? payload.deletedCount : 0,
   };
 }
 

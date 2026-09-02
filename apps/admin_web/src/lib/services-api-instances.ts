@@ -1,7 +1,7 @@
-import { clampAdminListLimit } from '@/lib/admin-list-limit';
+import { buildAdminListPath } from '@/lib/admin-list-query';
 
 import { adminApiRequest } from './api-admin-client';
-import { asNullableString, asNumber, unwrapPayload } from './api-payload';
+import { asNullableString, asNumber } from './api-payload';
 import { parseInstance } from './services-api-parse';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -13,53 +13,24 @@ type ApiUpdateInstanceRequest = ApiSchemas['UpdateInstanceRequest'];
 type ApiInstanceListResponse = ApiSchemas['InstanceListResponse'];
 type ApiInstanceResponse = ApiSchemas['InstanceResponse'];
 
-function buildInstanceListQuery(params: { status?: string; cursor?: string | null; limit?: number }) {
-  const query = new URLSearchParams();
-  if (params.cursor) query.set('cursor', params.cursor);
-  if (typeof params.limit === 'number') query.set('limit', `${clampAdminListLimit(params.limit)}`);
-  if (params.status) query.set('status', params.status);
-  const queryString = query.toString();
-  return queryString ? `?${queryString}` : '';
-}
-
-function buildGlobalInstanceListQuery(params: {
-  status?: string;
-  cursor?: string | null;
-  limit?: number;
-  serviceId?: string | null;
-  serviceType?: string | null;
-  contactId?: string | null;
-  familyId?: string | null;
-  organizationId?: string | null;
-}) {
-  const query = new URLSearchParams();
-  if (params.cursor) query.set('cursor', params.cursor);
-  if (typeof params.limit === 'number') query.set('limit', `${clampAdminListLimit(params.limit)}`);
-  if (params.status) query.set('status', params.status);
-  if (params.serviceId?.trim()) query.set('service_id', params.serviceId.trim());
-  if (params.serviceType?.trim()) query.set('service_type', params.serviceType.trim());
-  if (params.contactId?.trim()) query.set('contact_id', params.contactId.trim());
-  if (params.familyId?.trim()) query.set('family_id', params.familyId.trim());
-  if (params.organizationId?.trim()) query.set('organization_id', params.organizationId.trim());
-  const queryString = query.toString();
-  return queryString ? `?${queryString}` : '';
-}
-
 export async function listInstances(
   serviceId: string,
   params: { status?: string; cursor?: string | null; limit?: number },
   signal?: AbortSignal
 ): Promise<{ items: ServiceInstance[]; nextCursor: string | null; totalCount: number }> {
   const payload = await adminApiRequest<ApiInstanceListResponse>({
-    endpointPath: `/v1/admin/services/${serviceId}/instances${buildInstanceListQuery(params)}`,
+    endpointPath: buildAdminListPath(`/v1/admin/services/${serviceId}/instances`, {
+      filters: { status: params.status },
+      cursor: params.cursor,
+      limit: params.limit,
+    }),
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
   return {
-    items: Array.isArray(root.items) ? root.items.map((entry) => parseInstance(entry)) : [],
-    nextCursor: asNullableString(root.next_cursor),
-    totalCount: asNumber(root.total_count, 0),
+    items: Array.isArray(payload.items) ? payload.items.map((entry) => parseInstance(entry)) : [],
+    nextCursor: asNullableString(payload.next_cursor),
+    totalCount: asNumber(payload.total_count, 0),
   };
 }
 
@@ -77,15 +48,25 @@ export async function listAllInstances(
   signal?: AbortSignal
 ): Promise<{ items: ServiceInstance[]; nextCursor: string | null; totalCount: number }> {
   const payload = await adminApiRequest<ApiInstanceListResponse>({
-    endpointPath: `/v1/admin/services/instances${buildGlobalInstanceListQuery(params)}`,
+    endpointPath: buildAdminListPath('/v1/admin/services/instances', {
+      filters: {
+        status: params.status,
+        service_id: params.serviceId,
+        service_type: params.serviceType,
+        contact_id: params.contactId,
+        family_id: params.familyId,
+        organization_id: params.organizationId,
+      },
+      cursor: params.cursor,
+      limit: params.limit,
+    }),
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
   return {
-    items: Array.isArray(root.items) ? root.items.map((entry) => parseInstance(entry)) : [],
-    nextCursor: asNullableString(root.next_cursor),
-    totalCount: asNumber(root.total_count, 0),
+    items: Array.isArray(payload.items) ? payload.items.map((entry) => parseInstance(entry)) : [],
+    nextCursor: asNullableString(payload.next_cursor),
+    totalCount: asNumber(payload.total_count, 0),
   };
 }
 
@@ -99,8 +80,7 @@ export async function getInstance(
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  return root.instance ? parseInstance(root.instance) : null;
+  return payload.instance ? parseInstance(payload.instance) : null;
 }
 
 export async function createInstance(
@@ -113,8 +93,7 @@ export async function createInstance(
     body,
     expectedSuccessStatuses: [200, 201],
   });
-  const root = unwrapPayload(payload);
-  return root.instance ? parseInstance(root.instance) : null;
+  return payload.instance ? parseInstance(payload.instance) : null;
 }
 
 export async function updateInstance(
@@ -127,8 +106,7 @@ export async function updateInstance(
     method: 'PUT',
     body,
   });
-  const root = unwrapPayload(payload);
-  return root.instance ? parseInstance(root.instance) : null;
+  return payload.instance ? parseInstance(payload.instance) : null;
 }
 
 export async function deleteInstance(serviceId: string, instanceId: string): Promise<void> {

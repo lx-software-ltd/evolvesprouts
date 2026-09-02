@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 
+import { ADMIN_LIST_PAGE_SIZE } from '@/lib/admin-list-query';
 import { AdminApiError } from '@/lib/api-admin-client';
 import { listAuditLogs, type AuditLogsFilters } from '@/lib/audit-logs-api';
 
@@ -94,7 +95,7 @@ export function useAuditLogsList() {
   const list = usePaginatedList({
     fetcher,
     defaultFilters: {},
-    limit: 25,
+    limit: ADMIN_LIST_PAGE_SIZE,
     errorPrefix: 'Failed to load audit logs',
   });
   const { items, isLoading, isLoadingMore, hasMore, error, loadMore, refetch } = list;

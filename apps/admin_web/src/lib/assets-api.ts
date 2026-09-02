@@ -1,4 +1,5 @@
 import { AdminApiError, adminApiRequest } from './api-admin-client';
+import { buildAdminListPath } from './admin-list-query';
 import { asNullableString, asTrimmedString, asStringArray } from './api-payload';
 import { isRecord } from './type-guards';
 
@@ -58,10 +59,6 @@ export interface AssetShareLink {
 
 export interface AssetShareLinkPolicyInput {
   allowedDomains: string[];
-}
-
-function unwrapPayload<T>(payload: T): T {
-  return payload;
 }
 
 function isApiAsset(value: unknown): value is ApiAsset {
@@ -166,24 +163,23 @@ function extractAssetList(payload: ApiAssetListPayload): {
   nextCursor: string | null;
   linkedTagNames: string[];
 } {
-  const root = unwrapPayload(payload);
-  if (Array.isArray(root)) {
+  if (Array.isArray(payload)) {
     return {
-      items: root.filter(isApiAsset).map((entry) => parseAsset(entry)),
+      items: payload.filter(isApiAsset).map((entry) => parseAsset(entry)),
       nextCursor: null,
       linkedTagNames: [],
     };
   }
 
-  if (!isRecord(root)) {
+  if (!isRecord(payload)) {
     return { items: [], nextCursor: null, linkedTagNames: [] };
   }
 
-  const items = Array.isArray(root.items)
-    ? root.items.filter((entry): entry is ApiAsset => isApiAsset(entry)).map((entry) => parseAsset(entry))
+  const items = Array.isArray(payload.items)
+    ? payload.items.filter((entry): entry is ApiAsset => isApiAsset(entry)).map((entry) => parseAsset(entry))
     : [];
 
-  const asList = root as ApiAssetListResponse;
+  const asList = payload as ApiAssetListResponse;
 
   return {
     items,
@@ -193,44 +189,41 @@ function extractAssetList(payload: ApiAssetListPayload): {
 }
 
 function extractAsset(payload: ApiAssetPayload): AdminAsset | null {
-  const root = unwrapPayload(payload);
 
-  if (isApiAsset(root)) {
-    return parseAsset(root);
+  if (isApiAsset(payload)) {
+    return parseAsset(payload);
   }
 
-  if (isApiAssetResponse(root)) {
-    return parseAsset(root.asset);
+  if (isApiAssetResponse(payload)) {
+    return parseAsset(payload.asset);
   }
 
   return null;
 }
 
 function extractGrantList(payload: ApiAssetGrantListPayload): AssetGrant[] {
-  const root = unwrapPayload(payload);
-  if (Array.isArray(root)) {
-    return root
+  if (Array.isArray(payload)) {
+    return payload
       .filter((entry): entry is ApiAssetGrant => isApiAssetGrant(entry))
       .map((entry) => parseGrant(entry));
   }
 
-  if (!isRecord(root) || !Array.isArray(root.items)) {
+  if (!isRecord(payload) || !Array.isArray(payload.items)) {
     return [];
   }
 
-  return root.items
+  return payload.items
     .filter((entry): entry is ApiAssetGrant => isApiAssetGrant(entry))
     .map((entry) => parseGrant(entry));
 }
 
 function extractGrant(payload: ApiAssetGrantPayload): AssetGrant | null {
-  const root = unwrapPayload(payload);
-  if (isApiAssetGrant(root)) {
-    return parseGrant(root);
+  if (isApiAssetGrant(payload)) {
+    return parseGrant(payload);
   }
 
-  if (isApiAssetGrantResponse(root)) {
-    return parseGrant(root.grant);
+  if (isApiAssetGrantResponse(payload)) {
+    return parseGrant(payload.grant);
   }
 
   return null;
@@ -313,31 +306,17 @@ function buildAdminAssetPatchBody(input: UpdateAdminAssetPatchInput): ApiPartial
 export async function listAdminAssets(
   input: ListAdminAssetsInput = {}
 ): Promise<AdminAssetListResult> {
-  const params = new URLSearchParams();
-  if (input.query?.trim()) {
-    params.set('query', input.query.trim());
-  }
-  if (input.visibility?.trim()) {
-    params.set('visibility', input.visibility);
-  }
-  if (input.assetType?.trim()) {
-    params.set('asset_type', input.assetType);
-  }
-  const tagFilter = input.tagName?.trim();
-  if (tagFilter) {
-    params.set('tag_name', tagFilter);
-  }
-  if (input.cursor?.trim()) {
-    params.set('cursor', input.cursor);
-  }
-  if (typeof input.limit === 'number' && Number.isFinite(input.limit) && input.limit > 0) {
-    params.set('limit', `${Math.floor(input.limit)}`);
-  }
-
-  const queryString = params.toString();
-  const endpointPath = queryString ? `/v1/admin/assets?${queryString}` : '/v1/admin/assets';
   const payload = await adminApiRequest<ApiAssetListPayload>({
-    endpointPath,
+    endpointPath: buildAdminListPath('/v1/admin/assets', {
+      filters: {
+        query: input.query,
+        visibility: input.visibility,
+        asset_type: input.assetType,
+        tag_name: input.tagName,
+      },
+      cursor: input.cursor,
+      limit: input.limit,
+    }),
     method: 'GET',
   });
   const list = extractAssetList(payload);
@@ -360,20 +339,19 @@ export async function getAdminAsset(assetId: string): Promise<AdminAsset | null>
 function extractInitContentReplaceUpload(
   payload: ApiInitAssetContentReplacePayload
 ): InitAdminAssetContentReplaceUpload {
-  const root = unwrapPayload(payload);
-  if (!isApiInitAssetContentReplaceResponse(root)) {
+  if (!isApiInitAssetContentReplaceResponse(payload)) {
     throw new Error('Replace upload init response was missing pending_s3_key.');
   }
-  const pendingS3Key = asTrimmedString(root.pending_s3_key) ?? '';
+  const pendingS3Key = asTrimmedString(payload.pending_s3_key) ?? '';
   if (!pendingS3Key) {
     throw new Error('Replace upload init response was missing pending_s3_key.');
   }
   return {
     pendingS3Key,
-    uploadUrl: asTrimmedString(root.upload_url) ?? null,
-    uploadMethod: asTrimmedString(root.upload_method) ?? 'PUT',
-    uploadHeaders: extractHeaders(root.upload_headers),
-    expiresAt: asNullableString(root.expires_at ?? null),
+    uploadUrl: asTrimmedString(payload.upload_url) ?? null,
+    uploadMethod: asTrimmedString(payload.upload_method) ?? 'PUT',
+    uploadHeaders: extractHeaders(payload.upload_headers),
+    expiresAt: asNullableString(payload.expires_at ?? null),
   };
 }
 
@@ -387,16 +365,15 @@ export async function createAdminAsset(
     expectedSuccessStatuses: [200, 201],
   });
 
-  const root = unwrapPayload(payload);
   const upload: CreatedAssetUpload = {
-    uploadUrl: asTrimmedString(root.upload_url) ?? null,
-    uploadMethod: asTrimmedString(root.upload_method) ?? 'PUT',
-    uploadHeaders: extractHeaders(root.upload_headers),
-    expiresAt: asNullableString(root.expires_at ?? null),
+    uploadUrl: asTrimmedString(payload.upload_url) ?? null,
+    uploadMethod: asTrimmedString(payload.upload_method) ?? 'PUT',
+    uploadHeaders: extractHeaders(payload.upload_headers),
+    expiresAt: asNullableString(payload.expires_at ?? null),
   };
 
   return {
-    asset: isApiAsset(root.asset) ? parseAsset(root.asset) : null,
+    asset: isApiAsset(payload.asset) ? parseAsset(payload.asset) : null,
     upload,
   };
 }
@@ -477,11 +454,10 @@ export async function getUserAssetDownloadUrl(assetId: string): Promise<string> 
     endpointPath: `/v1/user/assets/${assetId}/download`,
     method: 'GET',
   });
-  const root = unwrapPayload(payload);
-  if (!isApiAssetDownloadResponse(root)) {
+  if (!isApiAssetDownloadResponse(payload)) {
     throw new Error('Download URL was not returned by the API.');
   }
-  const url = asTrimmedString(root.download_url);
+  const url = asTrimmedString(payload.download_url);
   if (!url) {
     throw new Error('Download URL was not returned by the API.');
   }
@@ -525,21 +501,20 @@ export async function deleteAdminAssetGrant(assetId: string, grantId: string): P
 }
 
 function parseAssetShareLink(payload: ApiAssetShareLinkPayload, fallbackAssetId: string): AssetShareLink {
-  const root = unwrapPayload(payload);
 
-  if (!isApiAssetShareLinkResponse(root)) {
+  if (!isApiAssetShareLinkResponse(payload)) {
     throw new Error('Share URL was not returned by the API.');
   }
 
-  const shareUrl = asTrimmedString(root.share_url);
+  const shareUrl = asTrimmedString(payload.share_url);
   if (!shareUrl) {
     throw new Error('Share URL was not returned by the API.');
   }
 
   return {
-    assetId: asTrimmedString(root.asset_id) ?? fallbackAssetId,
+    assetId: asTrimmedString(payload.asset_id) ?? fallbackAssetId,
     shareUrl,
-    allowedDomains: asStringArray(root.allowed_domains),
+    allowedDomains: asStringArray(payload.allowed_domains),
   };
 }
 

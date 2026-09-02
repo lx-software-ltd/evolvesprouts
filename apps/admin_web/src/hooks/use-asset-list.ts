@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { ADMIN_LIST_PAGE_SIZE } from '@/lib/admin-list-query';
 import { listAdminAssets } from '@/lib/assets-api';
 import {
   CLIENT_DOCUMENT_ASSET_TAG,
@@ -72,7 +73,7 @@ export function useAssetList(): UseAssetListReturn {
   const list = usePaginatedList<AdminAsset, Filters>({
     fetcher,
     defaultFilters: filtersFromLocation(urlQuery, urlTag),
-    limit: 25,
+    limit: ADMIN_LIST_PAGE_SIZE,
     errorPrefix: 'Failed to load assets',
     debounceKeys: ['query'],
     debounceMs: 350,

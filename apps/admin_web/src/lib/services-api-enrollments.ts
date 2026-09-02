@@ -1,7 +1,7 @@
-import { clampAdminListLimit } from '@/lib/admin-list-limit';
+import { buildAdminListPath } from '@/lib/admin-list-query';
 
 import { adminApiRequest } from './api-admin-client';
-import { asNullableString, asNumber, unwrapPayload } from './api-payload';
+import { asNullableString, asNumber } from './api-payload';
 import { parseEnrollment } from './services-api-parse';
 import { listDiscountCodes } from './services-api-discounts';
 
@@ -24,21 +24,19 @@ export async function listEnrollments(
   params: Partial<EnrollmentListFilters> & { cursor?: string | null; limit?: number },
   signal?: AbortSignal
 ): Promise<{ items: Enrollment[]; nextCursor: string | null; totalCount: number }> {
-  const query = new URLSearchParams();
-  if (params.cursor) query.set('cursor', params.cursor);
-  if (typeof params.limit === 'number') query.set('limit', `${clampAdminListLimit(params.limit)}`);
-  if (params.status) query.set('status', params.status);
-  const queryString = query.toString();
   const payload = await adminApiRequest<ApiEnrollmentListResponse>({
-    endpointPath: `/v1/admin/services/${serviceId}/instances/${instanceId}/enrollments${queryString ? `?${queryString}` : ''}`,
+    endpointPath: buildAdminListPath(`/v1/admin/services/${serviceId}/instances/${instanceId}/enrollments`, {
+      filters: { status: params.status },
+      cursor: params.cursor,
+      limit: params.limit,
+    }),
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
   return {
-    items: Array.isArray(root.items) ? root.items.map((entry) => parseEnrollment(entry)) : [],
-    nextCursor: asNullableString(root.next_cursor),
-    totalCount: asNumber(root.total_count, 0),
+    items: Array.isArray(payload.items) ? payload.items.map((entry) => parseEnrollment(entry)) : [],
+    nextCursor: asNullableString(payload.next_cursor),
+    totalCount: asNumber(payload.total_count, 0),
   };
 }
 
@@ -53,8 +51,7 @@ export async function createEnrollment(
     body,
     expectedSuccessStatuses: [200, 201],
   });
-  const root = unwrapPayload(payload);
-  return root.enrollment ? parseEnrollment(root.enrollment) : null;
+  return payload.enrollment ? parseEnrollment(payload.enrollment) : null;
 }
 
 export async function updateEnrollment(
@@ -68,8 +65,7 @@ export async function updateEnrollment(
     method: 'PATCH',
     body,
   });
-  const root = unwrapPayload(payload);
-  return root.enrollment ? parseEnrollment(root.enrollment) : null;
+  return payload.enrollment ? parseEnrollment(payload.enrollment) : null;
 }
 
 export async function deleteEnrollment(

@@ -1,5 +1,5 @@
 import { adminApiRequest } from '@/lib/api-admin-client';
-import { asBoolean, asNullableString, unwrapPayload } from '@/lib/api-payload';
+import { asBoolean, asNullableString } from '@/lib/api-payload';
 import { isRecord } from '@/lib/type-guards';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -26,8 +26,7 @@ export async function getSalesSettings(signal?: AbortSignal): Promise<SalesSetti
     method: 'GET',
     signal,
   });
-  const root = unwrapPayload(payload);
-  return parseSalesSettings(root.settings);
+  return parseSalesSettings(payload.settings);
 }
 
 export async function updateSalesSettings(
@@ -38,6 +37,5 @@ export async function updateSalesSettings(
     method: 'PATCH',
     body,
   });
-  const root = unwrapPayload(payload);
-  return parseSalesSettings(root.settings);
+  return parseSalesSettings(payload.settings);
 }

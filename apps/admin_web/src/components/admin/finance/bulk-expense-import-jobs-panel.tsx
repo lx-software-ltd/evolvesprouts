@@ -23,9 +23,9 @@ import {
   queueAdminBulkExpenseImportJob,
   type BulkImportJobSummary,
 } from '@/lib/expenses-api';
+import { ADMIN_LIST_PAGE_SIZE } from '@/lib/admin-list-query';
 import { formatEnumLabel } from '@/lib/format';
 
-const PAGE_LIMIT = 25;
 
 function formatWhen(iso: string): string {
   const trimmed = iso.trim();
@@ -68,7 +68,7 @@ export function BulkExpenseImportJobsPanel({ onAfterMutation }: BulkExpenseImpor
     setIsLoading(true);
     setLoadError('');
     try {
-      const page = await listAdminBulkExpenseImportJobs({ limit: PAGE_LIMIT });
+      const page = await listAdminBulkExpenseImportJobs({ limit: ADMIN_LIST_PAGE_SIZE });
       setItems(page.items);
       setNextCursor(page.nextCursor);
       setTotalCount(page.totalCount);
@@ -95,7 +95,7 @@ export function BulkExpenseImportJobsPanel({ onAfterMutation }: BulkExpenseImpor
     try {
       const page = await listAdminBulkExpenseImportJobs({
         cursor: nextCursor,
-        limit: PAGE_LIMIT,
+        limit: ADMIN_LIST_PAGE_SIZE,
       });
       setItems((prev) => [...prev, ...page.items]);
       setNextCursor(page.nextCursor);

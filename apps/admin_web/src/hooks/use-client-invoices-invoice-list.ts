@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { ADMIN_LIST_PAGE_SIZE } from '@/lib/admin-list-query';
 import type { ClientInvoicesInvoiceListInput } from '@/hooks/client-invoices-panel-types';
 import { toErrorMessage } from '@/hooks/hook-errors';
 import {
@@ -113,7 +114,7 @@ export function useClientInvoicesInvoiceList({
             familyId: familyFilterId === '' ? undefined : familyFilterId,
             organizationId:
               organizationFilterId === '' ? undefined : organizationFilterId,
-            limit: 25,
+            limit: ADMIN_LIST_PAGE_SIZE,
           },
           signal,
         );
@@ -168,7 +169,7 @@ export function useClientInvoicesInvoiceList({
         organizationId:
           organizationFilterId === '' ? undefined : organizationFilterId,
         cursor: invoiceListCursor,
-        limit: 25,
+        limit: ADMIN_LIST_PAGE_SIZE,
       });
       setInvoices((prev) => [...prev, ...items]);
       setInvoiceListCursor(next_cursor);

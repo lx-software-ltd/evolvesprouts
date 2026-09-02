@@ -1,7 +1,8 @@
-import { appendRelatedPartyQuery, type RelatedPartyQuery } from '@/lib/contact-related-links';
+import { relatedPartyApiFilters, type RelatedPartyQuery } from '@/lib/contact-related-links';
 
 import { adminApiRequest } from './api-admin-client';
-import { asNumber, asNullableString, unwrapPayload } from './api-payload';
+import { buildAdminListPath } from './admin-list-query';
+import { asNumber, asNullableString } from './api-payload';
 import { isRecord } from './type-guards';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -77,24 +78,14 @@ export async function listWhatsAppConversations(
   nextCursor: string | null;
   totalCount: number;
 }> {
-  const query = new URLSearchParams();
-  if (params.cursor) {
-    query.set('cursor', params.cursor);
-  }
-  if (typeof params.limit === 'number' && Number.isFinite(params.limit) && params.limit > 0) {
-    query.set('limit', String(params.limit));
-  }
-  if (params.q?.trim()) {
-    query.set('q', params.q.trim());
-  }
-  appendRelatedPartyQuery(query, params);
-  const suffix = query.toString() ? `?${query.toString()}` : '';
-  const payload = unwrapPayload(
-    await adminApiRequest<ApiConversationList>({
-      endpointPath: `/v1/admin/whatsapp/conversations${suffix}`,
-      signal,
-    })
-  );
+  const payload = await adminApiRequest<ApiConversationList>({
+    endpointPath: buildAdminListPath('/v1/admin/whatsapp/conversations', {
+      filters: { q: params.q, ...relatedPartyApiFilters(params) },
+      cursor: params.cursor,
+      limit: params.limit,
+    }),
+    signal,
+  });
   const items = Array.isArray(payload.items) ? payload.items.map(parseConversation) : [];
   return {
     items,
@@ -110,12 +101,10 @@ export async function listWhatsAppMessages(
   conversation: WhatsAppConversationSummary;
   items: WhatsAppMessageSummary[];
 }> {
-  const payload = unwrapPayload(
-    await adminApiRequest<ApiMessageList>({
-      endpointPath: `/v1/admin/whatsapp/conversations/${conversationId}/messages`,
-      signal,
-    })
-  );
+  const payload = await adminApiRequest<ApiMessageList>({
+    endpointPath: `/v1/admin/whatsapp/conversations/${conversationId}/messages`,
+    signal,
+  });
   return {
     conversation: parseConversation(payload.conversation),
     items: Array.isArray(payload.items) ? payload.items.map(parseMessage) : [],

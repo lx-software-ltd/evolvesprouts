@@ -135,11 +135,6 @@ function base64ToBytes(value: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
-/** Returns true when the browser exposes the crypto primitives we depend on. */
-export function isSecureStorageSupported(): boolean {
-  return getCryptoSubtle() !== null;
-}
-
 /** Encrypts a UTF-8 string, returning a base64 payload that bundles the IV. */
 export async function encryptToBase64(plaintext: string): Promise<string> {
   const subtle = getCryptoSubtle();

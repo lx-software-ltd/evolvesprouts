@@ -263,6 +263,20 @@ repo root
   - `npm run check:admin-api-types`
 - Keep `npm run lint` enforcing the admin API type drift check.
 
+### Admin Web API client modules (MANDATORY for `apps/admin_web/**`)
+
+- All admin API calls go through `adminApiRequest` in
+  `apps/admin_web/src/lib/api-admin-client.ts`; responses are read directly
+  (the backend emits no `{ data }` envelope).
+- Build list endpoint paths with `buildAdminListPath` from
+  `apps/admin_web/src/lib/admin-list-query.ts`; do not hand-roll
+  `URLSearchParams` builders in `lib/*-api.ts`. The shared page size is
+  `ADMIN_LIST_PAGE_SIZE` (mirrors backend `DEFAULT_LIST_LIMIT`) and the cap is
+  `ADMIN_API_MAX_LIST_LIMIT` (mirrors `MAX_LIST_LIMIT`); keep them in sync.
+- One `lib/<resource>-api.ts` module per backend resource. View-model adapters
+  (for example vendors over organisations) wrap the resource module instead of
+  duplicating request code.
+
 ### Admin Web CRUD UX pattern (MANDATORY for `apps/admin_web/**`)
 
 - For admin CRUD screens with list/table views (for example leads, services,
