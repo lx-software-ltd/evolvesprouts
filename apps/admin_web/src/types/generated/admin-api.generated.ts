@@ -444,7 +444,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/admin/assets/{id}/grants/{grantId}": {
+    "/v1/admin/assets/{id}/grants/{grant_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -452,7 +452,7 @@ export interface paths {
                 /** @description Asset identifier. */
                 id: components["parameters"]["AssetId"];
                 /** @description Asset grant identifier. */
-                grantId: components["parameters"]["GrantId"];
+                grant_id: components["parameters"]["GrantId"];
             };
             cookie?: never;
         };
@@ -468,7 +468,7 @@ export interface paths {
                     /** @description Asset identifier. */
                     id: components["parameters"]["AssetId"];
                     /** @description Asset grant identifier. */
-                    grantId: components["parameters"]["GrantId"];
+                    grant_id: components["parameters"]["GrantId"];
                 };
                 cookie?: never;
             };
@@ -2690,7 +2690,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/admin/services/{id}/instances/{instanceId}": {
+    "/v1/admin/services/{id}/instances/{instance_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -2698,7 +2698,7 @@ export interface paths {
                 /** @description Service identifier. */
                 id: components["parameters"]["ServiceId"];
                 /** @description Service instance identifier. */
-                instanceId: components["parameters"]["InstanceId"];
+                instance_id: components["parameters"]["InstanceId"];
             };
             cookie?: never;
         };
@@ -2711,7 +2711,7 @@ export interface paths {
                     /** @description Service identifier. */
                     id: components["parameters"]["ServiceId"];
                     /** @description Service instance identifier. */
-                    instanceId: components["parameters"]["InstanceId"];
+                    instance_id: components["parameters"]["InstanceId"];
                 };
                 cookie?: never;
             };
@@ -2743,7 +2743,7 @@ export interface paths {
                     /** @description Service identifier. */
                     id: components["parameters"]["ServiceId"];
                     /** @description Service instance identifier. */
-                    instanceId: components["parameters"]["InstanceId"];
+                    instance_id: components["parameters"]["InstanceId"];
                 };
                 cookie?: never;
             };
@@ -2777,7 +2777,7 @@ export interface paths {
                     /** @description Service identifier. */
                     id: components["parameters"]["ServiceId"];
                     /** @description Service instance identifier. */
-                    instanceId: components["parameters"]["InstanceId"];
+                    instance_id: components["parameters"]["InstanceId"];
                 };
                 cookie?: never;
             };
@@ -2800,7 +2800,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/admin/services/{id}/instances/{instanceId}/enrollments": {
+    "/v1/admin/services/{id}/instances/{instance_id}/enrollments": {
         parameters: {
             query?: never;
             header?: never;
@@ -2808,7 +2808,7 @@ export interface paths {
                 /** @description Service identifier. */
                 id: components["parameters"]["ServiceId"];
                 /** @description Service instance identifier. */
-                instanceId: components["parameters"]["InstanceId"];
+                instance_id: components["parameters"]["InstanceId"];
             };
             cookie?: never;
         };
@@ -2821,7 +2821,7 @@ export interface paths {
                     /** @description Service identifier. */
                     id: components["parameters"]["ServiceId"];
                     /** @description Service instance identifier. */
-                    instanceId: components["parameters"]["InstanceId"];
+                    instance_id: components["parameters"]["InstanceId"];
                 };
                 cookie?: never;
             };
@@ -2851,7 +2851,7 @@ export interface paths {
                     /** @description Service identifier. */
                     id: components["parameters"]["ServiceId"];
                     /** @description Service instance identifier. */
-                    instanceId: components["parameters"]["InstanceId"];
+                    instance_id: components["parameters"]["InstanceId"];
                 };
                 cookie?: never;
             };
@@ -2881,7 +2881,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/admin/services/{id}/instances/{instanceId}/enrollments/{enrollmentId}": {
+    "/v1/admin/services/{id}/instances/{instance_id}/enrollments/{enrollment_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -2889,9 +2889,9 @@ export interface paths {
                 /** @description Service identifier. */
                 id: components["parameters"]["ServiceId"];
                 /** @description Service instance identifier. */
-                instanceId: components["parameters"]["InstanceId"];
+                instance_id: components["parameters"]["InstanceId"];
                 /** @description Enrollment identifier. */
-                enrollmentId: components["parameters"]["EnrollmentId"];
+                enrollment_id: components["parameters"]["EnrollmentId"];
             };
             cookie?: never;
         };
@@ -2907,9 +2907,9 @@ export interface paths {
                     /** @description Service identifier. */
                     id: components["parameters"]["ServiceId"];
                     /** @description Service instance identifier. */
-                    instanceId: components["parameters"]["InstanceId"];
+                    instance_id: components["parameters"]["InstanceId"];
                     /** @description Enrollment identifier. */
-                    enrollmentId: components["parameters"]["EnrollmentId"];
+                    enrollment_id: components["parameters"]["EnrollmentId"];
                 };
                 cookie?: never;
             };
@@ -2938,9 +2938,9 @@ export interface paths {
                     /** @description Service identifier. */
                     id: components["parameters"]["ServiceId"];
                     /** @description Service instance identifier. */
-                    instanceId: components["parameters"]["InstanceId"];
+                    instance_id: components["parameters"]["InstanceId"];
                     /** @description Enrollment identifier. */
-                    enrollmentId: components["parameters"]["EnrollmentId"];
+                    enrollment_id: components["parameters"]["EnrollmentId"];
                 };
                 cookie?: never;
             };
@@ -4327,7 +4327,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/admin/contacts/{id}/notes/{noteId}": {
+    "/v1/admin/contacts/{id}/notes/{note_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -4335,7 +4335,7 @@ export interface paths {
                 /** @description CRM contact identifier. */
                 id: components["parameters"]["AdminContactId"];
                 /** @description CRM note identifier. */
-                noteId: components["parameters"]["NoteId"];
+                note_id: components["parameters"]["NoteId"];
             };
             cookie?: never;
         };
@@ -4351,7 +4351,7 @@ export interface paths {
                     /** @description CRM contact identifier. */
                     id: components["parameters"]["AdminContactId"];
                     /** @description CRM note identifier. */
-                    noteId: components["parameters"]["NoteId"];
+                    note_id: components["parameters"]["NoteId"];
                 };
                 cookie?: never;
             };
@@ -4380,7 +4380,7 @@ export interface paths {
                     /** @description CRM contact identifier. */
                     id: components["parameters"]["AdminContactId"];
                     /** @description CRM note identifier. */
-                    noteId: components["parameters"]["NoteId"];
+                    note_id: components["parameters"]["NoteId"];
                 };
                 cookie?: never;
             };
@@ -4729,7 +4729,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/admin/families/{id}/members/{memberId}": {
+    "/v1/admin/families/{id}/members/{member_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -4737,7 +4737,7 @@ export interface paths {
                 /** @description CRM family identifier. */
                 id: components["parameters"]["AdminFamilyId"];
                 /** @description Family membership row identifier. */
-                memberId: components["parameters"]["AdminFamilyMemberId"];
+                member_id: components["parameters"]["AdminFamilyMemberId"];
             };
             cookie?: never;
         };
@@ -4753,7 +4753,7 @@ export interface paths {
                     /** @description CRM family identifier. */
                     id: components["parameters"]["AdminFamilyId"];
                     /** @description Family membership row identifier. */
-                    memberId: components["parameters"]["AdminFamilyMemberId"];
+                    member_id: components["parameters"]["AdminFamilyMemberId"];
                 };
                 cookie?: never;
             };
@@ -4789,7 +4789,7 @@ export interface paths {
                     /** @description CRM family identifier. */
                     id: components["parameters"]["AdminFamilyId"];
                     /** @description Family membership row identifier. */
-                    memberId: components["parameters"]["AdminFamilyMemberId"];
+                    member_id: components["parameters"]["AdminFamilyMemberId"];
                 };
                 cookie?: never;
             };
@@ -5151,7 +5151,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/admin/organizations/{id}/members/{memberId}": {
+    "/v1/admin/organizations/{id}/members/{member_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -5159,7 +5159,7 @@ export interface paths {
                 /** @description CRM organization identifier. */
                 id: components["parameters"]["AdminOrganizationId"];
                 /** @description Organization membership row identifier. */
-                memberId: components["parameters"]["AdminOrganizationMemberId"];
+                member_id: components["parameters"]["AdminOrganizationMemberId"];
             };
             cookie?: never;
         };
@@ -5175,7 +5175,7 @@ export interface paths {
                     /** @description CRM organization identifier. */
                     id: components["parameters"]["AdminOrganizationId"];
                     /** @description Organization membership row identifier. */
-                    memberId: components["parameters"]["AdminOrganizationMemberId"];
+                    member_id: components["parameters"]["AdminOrganizationMemberId"];
                 };
                 cookie?: never;
             };
@@ -5210,7 +5210,7 @@ export interface paths {
                     /** @description CRM organization identifier. */
                     id: components["parameters"]["AdminOrganizationId"];
                     /** @description Organization membership row identifier. */
-                    memberId: components["parameters"]["AdminOrganizationMemberId"];
+                    member_id: components["parameters"]["AdminOrganizationMemberId"];
                 };
                 cookie?: never;
             };
@@ -6687,10 +6687,17 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** List all stored answers for a form */
+        /**
+         * List stored answers for a form
+         * @description Returns answer rows newest first. Pass `next_cursor` from the prior response as `cursor`. Default and maximum page size follow the standard admin list limit (25 / 100).
+         */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Opaque continuation token from `next_cursor`. */
+                    cursor?: string;
+                    limit?: number;
+                };
                 header?: never;
                 path: {
                     /** @description Training form slug (kebab-case). */
@@ -6844,10 +6851,17 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** List all stored answers for a poll */
+        /**
+         * List stored answers for a poll
+         * @description Returns answer rows newest first. Pass `next_cursor` from the prior response as `cursor`. Default and maximum page size follow the standard admin list limit (25 / 100).
+         */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Opaque continuation token from `next_cursor`. */
+                    cursor?: string;
+                    limit?: number;
+                };
                 header?: never;
                 path: {
                     /** @description Training poll slug (kebab-case). */
@@ -8853,6 +8867,8 @@ export interface components {
         };
         AdminFormAnswerListResponse: {
             items: components["schemas"]["AdminFormAnswerRow"][];
+            /** @description Opaque cursor for the next page, or null when no further rows remain. */
+            next_cursor?: string | null;
         };
         AdminFormClearAnswersResponse: {
             formSlug: string;
@@ -8883,6 +8899,8 @@ export interface components {
         };
         AdminPollAnswerListResponse: {
             items: components["schemas"]["AdminPollAnswerRow"][];
+            /** @description Opaque cursor for the next page, or null when no further rows remain. */
+            next_cursor?: string | null;
         };
         AdminPollClearAnswersResponse: {
             pollSlug: string;

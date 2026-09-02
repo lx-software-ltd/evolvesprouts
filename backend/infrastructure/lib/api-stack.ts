@@ -3424,7 +3424,7 @@ export class ApiStack extends cdk.Stack {
       authorizer: adminAuthorizer,
     });
 
-    const adminAssetGrantById = adminAssetGrants.addResource("{grantId}");
+    const adminAssetGrantById = adminAssetGrants.addResource("{grant_id}");
     adminAssetGrantById.addMethod("DELETE", adminIntegration, {
       authorizationType: apigateway.AuthorizationType.CUSTOM,
       authorizer: adminAuthorizer,
