@@ -11,7 +11,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import String, and_, cast, exists, or_, select
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.api.admin_billing_common import (
     batch_enrollment_party_display_names,
@@ -35,6 +35,7 @@ from app.db.models.family import Family
 from app.db.models.organization import Organization
 from app.db.models.service import Service
 from app.db.models.service_instance import EventTicketTier, ServiceInstance
+from app.db.repositories.enrollment import billing_party_load_options
 from app.exceptions import ValidationError
 from app.utils import json_response
 
@@ -231,16 +232,7 @@ def list_recent_enrollments_for_invoicing(
             )
 
         stmt = (
-            stmt.options(
-                joinedload(Enrollment.instance).joinedload(ServiceInstance.service),
-                joinedload(Enrollment.contact),
-                joinedload(Enrollment.family),
-                joinedload(Enrollment.organization),
-                joinedload(Enrollment.bill_to_contact),
-                joinedload(Enrollment.bill_to_family),
-                joinedload(Enrollment.bill_to_organization),
-                joinedload(Enrollment.ticket_tier),
-            )
+            stmt.options(*billing_party_load_options())
             .order_by(Enrollment.enrolled_at.desc(), Enrollment.id.desc())
             .limit(limit + 1)
         )

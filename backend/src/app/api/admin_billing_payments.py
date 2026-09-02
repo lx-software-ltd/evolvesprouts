@@ -13,7 +13,6 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, exists, or_, select
 from sqlalchemy.orm import Session
 
 from app.api.admin_billing_payments_serializers import (
@@ -30,14 +29,13 @@ from app.api.admin_request import (
 from app.db.audit import AuditService, session_with_audit
 from app.db.engine import get_engine
 from app.db.models.customer_payment import CustomerPayment
-from app.db.models.customer_receipt import CustomerReceipt
 from app.db.models.enrollment import Enrollment
 from app.db.models.enums import (
     BillingPaymentDirection,
     BillingPaymentStatus,
     EnrollmentStatus,
 )
-from app.db.models.payment_allocation import PaymentAllocation
+from app.db.repositories.customer_payment import CustomerPaymentRepository
 from app.exceptions import NotFoundError, ValidationError
 from app.services.customer_billing import (
     create_receipt_for_succeeded_inbound_payment,
@@ -77,41 +75,14 @@ def _batch_orphan_payment_deletable(
     """Server-side eligibility for DELETE (matches single-payment validation)."""
     if not rows:
         return {}
+    repository = CustomerPaymentRepository(session)
     pay_ids = [p.id for p in rows]
-    allocation_pay_ids = {
-        row[0]
-        for row in session.execute(
-            select(PaymentAllocation.payment_id).where(
-                PaymentAllocation.payment_id.in_(pay_ids)
-            )
-        ).all()
-    }
-    receipt_pay_ids = {
-        row[0]
-        for row in session.execute(
-            select(CustomerReceipt.customer_payment_id).where(
-                CustomerReceipt.customer_payment_id.in_(pay_ids)
-            )
-        ).all()
-    }
-    refund_parent_ids: set[UUID] = set()
-    for (orig_id,) in session.execute(
-        select(CustomerPayment.original_payment_id).where(
-            CustomerPayment.original_payment_id.in_(pay_ids),
-            CustomerPayment.direction == BillingPaymentDirection.REFUND,
-        )
-    ).all():
-        if orig_id is not None:
-            refund_parent_ids.add(orig_id)
-    enrollment_ids = [p.enrollment_id for p in rows if p.enrollment_id is not None]
-    enrollment_status_by_id: dict[UUID, EnrollmentStatus] = {}
-    if enrollment_ids:
-        for eid, st in session.execute(
-            select(Enrollment.id, Enrollment.status).where(
-                Enrollment.id.in_(enrollment_ids)
-            )
-        ):
-            enrollment_status_by_id[eid] = st
+    allocation_pay_ids = repository.payment_ids_with_allocations(pay_ids)
+    receipt_pay_ids = repository.payment_ids_with_receipts(pay_ids)
+    refund_parent_ids = repository.refunded_payment_ids(pay_ids)
+    enrollment_status_by_id = repository.enrollment_status_by_id(
+        [p.enrollment_id for p in rows if p.enrollment_id is not None]
+    )
 
     out: dict[UUID, bool] = {}
     for p in rows:
@@ -144,32 +115,17 @@ def _validate_orphan_delete(session: Session, p: CustomerPayment) -> None:
                 "Payment is still linked to an enrollment that is not cancelled",
                 field="enrollmentId",
             )
-    has_alloc = session.execute(
-        select(
-            exists().where(PaymentAllocation.payment_id == p.id),
-        )
-    ).scalar_one()
-    if has_alloc:
+    repository = CustomerPaymentRepository(session)
+    if repository.has_allocations(p.id):
         raise ValidationError(
             "Payment has invoice allocations and cannot be deleted",
             field="paymentId",
         )
-    has_rcpt = session.execute(
-        select(exists().where(CustomerReceipt.customer_payment_id == p.id))
-    ).scalar_one()
-    if has_rcpt:
+    if repository.has_receipt(p.id):
         raise ValidationError(
             "Payment has a receipt row and cannot be deleted", field="paymentId"
         )
-    has_refund = session.execute(
-        select(
-            exists().where(
-                CustomerPayment.original_payment_id == p.id,
-                CustomerPayment.direction == BillingPaymentDirection.REFUND,
-            )
-        )
-    ).scalar_one()
-    if has_refund:
+    if repository.has_refunds(p.id):
         raise ValidationError(
             "Payment has linked refund rows and cannot be deleted",
             field="paymentId",
@@ -217,29 +173,12 @@ def _list_payments(
             ) from exc
 
     with session_with_audit(user_sub, request_id) as session:
-        stmt = select(CustomerPayment)
-        if inv_filter is not None:
-            subq = (
-                select(PaymentAllocation.payment_id)
-                .where(PaymentAllocation.invoice_id == inv_filter)
-                .distinct()
-                .subquery()
-            )
-            stmt = stmt.join(subq, CustomerPayment.id == subq.c.payment_id)
-        if cursor_ts is not None and cursor_id is not None:
-            stmt = stmt.where(
-                or_(
-                    CustomerPayment.created_at < cursor_ts,
-                    and_(
-                        CustomerPayment.created_at == cursor_ts,
-                        CustomerPayment.id < cursor_id,
-                    ),
-                )
-            )
-        stmt = stmt.order_by(
-            CustomerPayment.created_at.desc(), CustomerPayment.id.desc()
-        ).limit(limit + 1)
-        rows = list(session.execute(stmt).scalars().all())
+        rows = CustomerPaymentRepository(session).list_newest(
+            limit=limit + 1,
+            cursor_created_at=cursor_ts,
+            cursor_id=cursor_id,
+            invoice_id=inv_filter,
+        )
         has_more = len(rows) > limit
         page = rows[:limit]
         deletable_by_id = _batch_orphan_payment_deletable(session, page)
@@ -341,10 +280,7 @@ def _confirm_payment(
         p.confirmed_by = user_sub
         p.external_reference = str(body.get("externalReference") or "").strip() or None
         session.flush()
-        existing_receipt = session.execute(
-            select(CustomerReceipt).where(CustomerReceipt.customer_payment_id == p.id)
-        ).scalar_one_or_none()
-        if existing_receipt is None:
+        if CustomerPaymentRepository(session).get_receipt(p.id) is None:
             rcpt = create_receipt_for_succeeded_inbound_payment(session, payment=p)
             receipt_id_for_upload = rcpt.id
         deletable = _batch_orphan_payment_deletable(session, [p]).get(p.id, False)

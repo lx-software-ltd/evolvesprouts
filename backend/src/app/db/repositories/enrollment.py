@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import and_, func, or_, select, update
@@ -18,11 +19,38 @@ from app.db.models.enums import CAPACITY_ENROLLMENT_STATUSES
 from app.db.repositories.base import BaseRepository
 
 
+def billing_party_load_options() -> tuple[Any, ...]:
+    """Eager loads needed to label an enrollment's party for billing screens."""
+    return (
+        joinedload(Enrollment.instance).joinedload(ServiceInstance.service),
+        joinedload(Enrollment.contact),
+        joinedload(Enrollment.family),
+        joinedload(Enrollment.organization),
+        joinedload(Enrollment.bill_to_contact),
+        joinedload(Enrollment.bill_to_family),
+        joinedload(Enrollment.bill_to_organization),
+        joinedload(Enrollment.ticket_tier),
+    )
+
+
 class EnrollmentRepository(BaseRepository[Enrollment]):
     """Repository for enrollment CRUD and list methods."""
 
     def __init__(self, session: Session):
         super().__init__(session, Enrollment)
+
+    def get_many_with_billing_parties(
+        self, enrollment_ids: set[UUID]
+    ) -> list[Enrollment]:
+        """Enrollments by id with every party relation loaded for display labels."""
+        if not enrollment_ids:
+            return []
+        statement = (
+            select(Enrollment)
+            .where(Enrollment.id.in_(enrollment_ids))
+            .options(*billing_party_load_options())
+        )
+        return list(self._session.execute(statement).unique().scalars().all())
 
     def list_enrollments(
         self,

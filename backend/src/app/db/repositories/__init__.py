@@ -9,6 +9,8 @@ from app.db.repositories.asset import AssetRepository
 from app.db.repositories.base import BaseRepository
 from app.db.repositories.bulk_expense_import_job import BulkExpenseImportJobRepository
 from app.db.repositories.contact import ContactRepository
+from app.db.repositories.customer_invoice import CustomerInvoiceRepository
+from app.db.repositories.customer_payment import CustomerPaymentRepository
 from app.db.repositories.discount_code import DiscountCodeRepository
 from app.db.repositories.enrollment import EnrollmentRepository
 from app.db.repositories.expense import ExpenseRepository
@@ -35,6 +37,8 @@ __all__ = [
     "BulkExpenseImportJobRepository",
     "SalesLeadAiSuggestionJobRepository",
     "ContactRepository",
+    "CustomerInvoiceRepository",
+    "CustomerPaymentRepository",
     "NoteRepository",
     "DiscountCodeRepository",
     "EnrollmentRepository",

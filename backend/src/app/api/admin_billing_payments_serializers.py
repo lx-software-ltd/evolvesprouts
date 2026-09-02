@@ -6,18 +6,17 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.api.admin_billing_common import (
     batch_enrollment_party_display_names,
 )
-from app.db.models.contact import Contact, contact_full_name
-from app.db.models.customer_invoice import CustomerInvoice
+from app.db.models.contact import contact_full_name
 from app.db.models.customer_payment import CustomerPayment
-from app.db.models.enrollment import Enrollment
-from app.db.models.payment_allocation import PaymentAllocation
-from app.db.models.service_instance import ServiceInstance
+from app.db.repositories.contact import ContactRepository
+from app.db.repositories.customer_invoice import CustomerInvoiceRepository
+from app.db.repositories.customer_payment import CustomerPaymentRepository
+from app.db.repositories.enrollment import EnrollmentRepository
 from app.services.customer_billing import (
     payment_unapplied_amount,
 )
@@ -30,25 +29,10 @@ def payment_allocation_invoice_refs(
     session: Session, payment_id: UUID
 ) -> list[dict[str, str | None]]:
     """Distinct invoices this payment is allocated to (for admin UI pickers)."""
-    inv_ids = list(
-        session.execute(
-            select(PaymentAllocation.invoice_id)
-            .where(PaymentAllocation.payment_id == payment_id)
-            .distinct()
-        )
-        .scalars()
-        .all()
-    )
+    inv_ids = CustomerPaymentRepository(session).allocated_invoice_ids(payment_id)
     if not inv_ids:
         return []
-    rows = session.execute(
-        select(
-            CustomerInvoice.id,
-            CustomerInvoice.invoice_number,
-            CustomerInvoice.created_at,
-        ).where(CustomerInvoice.id.in_(inv_ids))
-    ).all()
-    by_id = {r[0]: (r[1], r[2]) for r in rows}
+    by_id = CustomerInvoiceRepository(session).number_and_created_at_by_id(inv_ids)
     ordered = sorted(
         inv_ids,
         key=lambda i: (
@@ -113,30 +97,15 @@ def _batch_party_label_by_payment(
     unique_eids = {p.enrollment_id for p in payments if p.enrollment_id is not None}
     party_by_eid: dict[UUID, str] = {}
     if unique_eids:
-        stmt = (
-            select(Enrollment)
-            .where(Enrollment.id.in_(unique_eids))
-            .options(
-                joinedload(Enrollment.instance).joinedload(ServiceInstance.service),
-                joinedload(Enrollment.contact),
-                joinedload(Enrollment.family),
-                joinedload(Enrollment.organization),
-                joinedload(Enrollment.bill_to_contact),
-                joinedload(Enrollment.bill_to_family),
-                joinedload(Enrollment.bill_to_organization),
-                joinedload(Enrollment.ticket_tier),
-            )
-        )
-        ens = list(session.execute(stmt).unique().scalars().all())
+        ens = EnrollmentRepository(session).get_many_with_billing_parties(unique_eids)
         labels = batch_enrollment_party_display_names(session, ens)
         party_by_eid = {en.id: lab for en, lab in zip(ens, labels, strict=True)}
 
     contact_by_id: dict[UUID, str] = {}
     cids = {p.contact_id for p in payments if p.contact_id is not None}
     if cids:
-        for c in session.execute(select(Contact).where(Contact.id.in_(cids))).scalars():
-            nm = contact_full_name(c)
-            contact_by_id[c.id] = (nm or "").strip() or "—"
+        for c in ContactRepository(session).get_many(cids):
+            contact_by_id[c.id] = contact_full_name(c) or "—"
 
     for p in payments:
         eid = p.enrollment_id
