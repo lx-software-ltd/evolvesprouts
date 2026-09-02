@@ -411,8 +411,21 @@ a pinned row, and collapses unresolvable ids.
   row click, other row) and, on the draft row, implied a second way to lose
   work; the unsaved-edit guard already covers every exit path.
 - The white card around filters and table restores a clear content boundary
-  on the grey page background; the `border-b-2` rule under an open editor
-  makes the end of the record legible when the next row follows immediately.
+  on the grey page background; the 2px `slate-300` frame on the left, right,
+  and bottom of an open record (summary row plus detail region) makes its
+  extent legible when the next row follows immediately.
+- Tables must read on a phone without horizontal scrolling. Columns carry a
+  priority (`primary` always, `secondary` from `md`, `tertiary` from `lg`) and
+  the identifying cell surfaces the most useful hidden value as a meta line
+  while its column is hidden, so no `min-w-*` is set on record tables.
+- The create control is square and matches the filter input height so the
+  toolbar reads as one band; on phones it takes its own full-width line with
+  its label spelled out because a bare `+` at the end of a wrapped filter row
+  was easy to miss.
+- `AdminTabStrip` uses a white active control with a uniform 1px border inside
+  a `slate-100` tray (hover previews the same surface) and lays the controls
+  out two per row on phones; the earlier ghost/secondary button pair had too
+  little contrast to show which view was active.
 
 **Notes:**
 - The overflow control is an anchored popover menu, not a full-screen modal,
@@ -429,9 +442,16 @@ a pinned row, and collapses unresolvable ids.
   run).
 - Read-only editor values (for example the contact's Mailchimp sync status)
   render as a `readOnly` `Input` so the field grid keeps one control shape.
-- Embedded notes inside an expanded contact use a compact composer (one
-  textarea row with the action beside it) above a notes table at the same
-  density as the contacts table.
+- Nested record lists inside an open editor (contact notes, family and
+  organisation members) reuse the same table-first pattern through
+  `AdminRecordTable embedded` (no inner card): a `+` control opens a draft row
+  with the composer or picker, clicking a row opens its editor beneath it, and
+  Delete / Remove stay in Operations. There is no always-on composer and no
+  edit icon.
+- Contact editor field exceptions: the phone number renders as a 40/60
+  prefix / national number split inside one field; the Source row is
+  Source (1/4), Source detail (1/4), with the remaining half reserved for a
+  Job title field once the contact model carries one.
 
 ## Admin web server state on TanStack Query
 
