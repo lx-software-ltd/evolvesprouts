@@ -3,6 +3,7 @@
 import { useCallback, useEffect } from 'react';
 
 import { listEnrollments } from '@/lib/services-api';
+import { adminQueryKeys } from '@/lib/admin-query-keys';
 import { DEFAULT_ENROLLMENT_LIST_FILTERS } from '@/types/services';
 import type { Enrollment, EnrollmentListFilters } from '@/types/services';
 
@@ -34,6 +35,7 @@ export function useEnrollmentList(serviceId: string | null, instanceId: string |
     fetcher,
     defaultFilters: DEFAULT_ENROLLMENT_LIST_FILTERS,
     errorPrefix: 'Failed to load enrollments',
+    queryKey: [...adminQueryKeys.enrollments.lists(), serviceId, instanceId],
     fetchOnMount: Boolean(serviceId && instanceId),
   });
   const {

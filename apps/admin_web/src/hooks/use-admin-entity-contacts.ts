@@ -9,6 +9,7 @@ import {
   updateAdminContact,
 } from '@/lib/entity-api';
 import { ADMIN_LIST_PAGE_SIZE } from '@/lib/admin-list-query';
+import { adminQueryKeys } from '@/lib/admin-query-keys';
 import { DEFAULT_CONTACT_LIST_FILTERS, type EntityListFilters } from '@/types/entity-list';
 import type { components } from '@/types/generated/admin-api.generated';
 
@@ -49,6 +50,7 @@ export function useAdminEntityContacts() {
     fetcher,
     defaultFilters: DEFAULT_CONTACT_LIST_FILTERS,
     errorPrefix: 'Failed to load contacts',
+    queryKey: adminQueryKeys.contacts.lists(),
     debounceKeys: ['query'],
     limit: ADMIN_LIST_PAGE_SIZE,
   });

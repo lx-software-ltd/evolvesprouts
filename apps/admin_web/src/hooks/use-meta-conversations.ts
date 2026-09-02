@@ -8,6 +8,7 @@ import {
   type MetaChannel,
   type MetaConversationSummary,
 } from '@/lib/meta-api';
+import { adminQueryKeys } from '@/lib/admin-query-keys';
 
 import { usePaginatedList } from './use-paginated-list';
 
@@ -46,6 +47,7 @@ export function useMetaConversations(channel: MetaChannel, party: RelatedPartyQu
     fetcher,
     defaultFilters: DEFAULT_FILTERS,
     errorPrefix: 'Failed to load conversations',
+    queryKey: [...adminQueryKeys.conversations.lists(), channel, contactId, familyId, organizationId],
     debounceKeys: ['q'],
   });
 

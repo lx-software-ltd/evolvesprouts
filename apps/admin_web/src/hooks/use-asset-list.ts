@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ADMIN_LIST_PAGE_SIZE } from '@/lib/admin-list-query';
 import { listAdminAssets } from '@/lib/assets-api';
+import { adminQueryKeys } from '@/lib/admin-query-keys';
 import {
   CLIENT_DOCUMENT_ASSET_TAG,
   type AdminAsset,
@@ -75,6 +76,7 @@ export function useAssetList(): UseAssetListReturn {
     defaultFilters: filtersFromLocation(urlQuery, urlTag),
     limit: ADMIN_LIST_PAGE_SIZE,
     errorPrefix: 'Failed to load assets',
+    queryKey: adminQueryKeys.assets.lists(),
     debounceKeys: ['query'],
     debounceMs: 350,
   });

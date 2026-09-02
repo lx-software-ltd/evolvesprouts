@@ -9,6 +9,7 @@ import {
   updateLocation,
   updateLocationPartial,
 } from '@/lib/services-api';
+import { adminQueryKeys } from '@/lib/admin-query-keys';
 import { DEFAULT_VENUE_FILTERS } from '@/types/services';
 import type { LocationSummary, VenueFilters } from '@/types/services';
 
@@ -47,6 +48,7 @@ export function useVenues() {
     fetcher,
     defaultFilters: DEFAULT_VENUE_FILTERS,
     errorPrefix: 'Failed to load venues',
+    queryKey: adminQueryKeys.venues.lists(),
     debounceKeys: DEBOUNCE_KEYS,
   });
 

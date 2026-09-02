@@ -1,7 +1,7 @@
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { resetAdminCatalogStoreForTests } from '@/lib/admin-catalog-store';
+import { resetAdminQueryClientForTests } from '@/lib/admin-query-client';
 
 const listInstructorUsers = vi.fn();
 const listAllLocations = vi.fn();
@@ -39,7 +39,7 @@ describe('shared admin catalogs', () => {
     // Unmount before resetting so a still-mounted hook cannot refetch into the
     // fresh store and leak state into the next test.
     cleanup();
-    resetAdminCatalogStoreForTests();
+    resetAdminQueryClientForTests();
     vi.clearAllMocks();
   });
 

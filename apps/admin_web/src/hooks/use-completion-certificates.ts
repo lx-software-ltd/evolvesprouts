@@ -10,6 +10,7 @@ import {
   type CompletionCertificateDraftPayload,
   type CompletionCertificateListParams,
 } from '@/lib/completion-certificates-api';
+import { adminQueryKeys } from '@/lib/admin-query-keys';
 
 import type { components } from '@/types/generated/admin-api.generated';
 
@@ -60,6 +61,7 @@ export function useCompletionCertificates() {
     fetcher,
     defaultFilters: DEFAULT_COMPLETION_CERTIFICATE_FILTERS,
     errorPrefix: 'Failed to load certificates',
+    queryKey: adminQueryKeys.certificates.lists(),
   });
 
   const { refetch } = list;

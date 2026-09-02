@@ -5,6 +5,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { ADMIN_LIST_PAGE_SIZE } from '@/lib/admin-list-query';
 import { AdminApiError } from '@/lib/api-admin-client';
 import { listAuditLogs, type AuditLogsFilters } from '@/lib/audit-logs-api';
+import { adminQueryKeys } from '@/lib/admin-query-keys';
 
 import { usePaginatedList } from './use-paginated-list';
 
@@ -97,6 +98,7 @@ export function useAuditLogsList() {
     defaultFilters: {},
     limit: ADMIN_LIST_PAGE_SIZE,
     errorPrefix: 'Failed to load audit logs',
+    queryKey: adminQueryKeys.auditLogs.lists(),
   });
   const { items, isLoading, isLoadingMore, hasMore, error, loadMore, refetch } = list;
 

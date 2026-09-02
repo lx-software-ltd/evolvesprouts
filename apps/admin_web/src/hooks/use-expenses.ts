@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 
+import { adminQueryKeys } from '@/lib/admin-query-keys';
 import { createAdminAsset, deleteAdminAsset, uploadFileToPresignedUrl } from '@/lib/assets-api';
 import {
   amendAdminExpense,
@@ -82,6 +83,7 @@ export function useExpenses() {
     debounceMs: 350,
     fetcher: fetchExpenses,
     errorPrefix: 'Failed to load expenses',
+    queryKey: adminQueryKeys.expenses.lists(),
   });
 
   const selectedExpense = useMemo(

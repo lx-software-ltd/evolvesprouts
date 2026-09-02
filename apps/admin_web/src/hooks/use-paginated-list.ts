@@ -1,8 +1,25 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import {
+  useCallback,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from 'react';
+
+import {
+  hashKey,
+  keepPreviousData,
+  useInfiniteQuery,
+  type InfiniteData,
+  type QueryFunctionContext,
+} from '@tanstack/react-query';
 
 import { ADMIN_LIST_PAGE_SIZE, clampAdminListLimit } from '@/lib/admin-list-query';
+import { getAdminQueryClient } from '@/lib/admin-query-client';
 
 import { toErrorMessage } from './hook-errors';
 import { useDebouncedCallback } from './use-debounced-callback';
@@ -28,6 +45,13 @@ export interface UsePaginatedListOptions<TItem, TFilters extends object> {
   debounceKeys?: (keyof TFilters)[];
   debounceMs?: number;
   fetchOnMount?: boolean;
+  /**
+   * Cache key prefix (see `adminQueryKeys.<resource>.lists()`). The active
+   * filters are appended, so every hook instance with the same prefix and
+   * filters shares one cached list across mounts. When omitted the list is
+   * cached for this hook instance only.
+   */
+  queryKey?: readonly unknown[];
 }
 
 export interface UsePaginatedListReturn<TItem, TFilters extends object> {
@@ -46,11 +70,34 @@ export interface UsePaginatedListReturn<TItem, TFilters extends object> {
   totalCount: number | null;
 }
 
+type PageParam = string | null;
+type ListData<TItem> = InfiniteData<PaginatedResponse<TItem>, PageParam>;
+
+function getNextPageParam<TItem>(lastPage: PaginatedResponse<TItem>): PageParam | undefined {
+  return lastPage.nextCursor ?? undefined;
+}
+
+function flattenPages<TItem>(data: ListData<TItem> | undefined): TItem[] {
+  if (!data) {
+    return [];
+  }
+  return data.pages.flatMap((page) => page.items);
+}
+
+function trimToFirstPage<TItem>(data: ListData<TItem> | undefined): ListData<TItem> | undefined {
+  if (!data || data.pages.length <= 1) {
+    return data;
+  }
+  return { pages: data.pages.slice(0, 1), pageParams: data.pageParams.slice(0, 1) };
+}
+
 function isAbortError(error: unknown): boolean {
   return error instanceof DOMException
     ? error.name === 'AbortError'
     : error instanceof Error && error.name === 'AbortError';
 }
+
+const EMPTY_ITEMS: never[] = [];
 
 export function usePaginatedList<TItem, TFilters extends object>({
   fetcher,
@@ -60,146 +107,185 @@ export function usePaginatedList<TItem, TFilters extends object>({
   debounceKeys = [],
   debounceMs = 300,
   fetchOnMount = true,
+  queryKey,
 }: UsePaginatedListOptions<TItem, TFilters>): UsePaginatedListReturn<TItem, TFilters> {
+  const queryClient = getAdminQueryClient();
   const pageSize = clampAdminListLimit(limit);
+  const instanceId = useId();
+  // Without an explicit key the cache is private to this hook instance and a
+  // new fetcher identity (closure params changed) starts a fresh list, which
+  // is what the pre-cache implementation did by refetching on fetcher change.
+  const fetcherIdentityRef = useRef<{ fetcher: typeof fetcher; version: number }>({
+    fetcher,
+    version: 0,
+  });
+  if (fetcherIdentityRef.current.fetcher !== fetcher) {
+    fetcherIdentityRef.current = { fetcher, version: fetcherIdentityRef.current.version + 1 };
+  }
+  const fetcherVersion = fetcherIdentityRef.current.version;
+  const baseKey = useMemo<readonly unknown[]>(
+    () => queryKey ?? ['admin', 'list', instanceId, fetcherVersion],
+    // Callers may pass a fresh array each render; compare by hash instead.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [queryKey ? hashKey(queryKey) : `${instanceId}:${fetcherVersion}`]
+  );
+
   const [filters, setFilters] = useState<TFilters>(defaultFilters);
+  const [committedFilters, setCommittedFilters] = useState<TFilters>(defaultFilters);
+  const [armed, setArmed] = useState(fetchOnMount);
+  // `fetchOnMount` may flip from false to true later (for example once a parent
+  // record is selected); that must start fetching like a mount would.
+  const enabled = armed || fetchOnMount;
   const filtersRef = useRef<TFilters>(defaultFilters);
-  const latestRequestIdRef = useRef(0);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const explicitRefetchRef = useRef(false);
 
-  const [items, setItems] = useState<TItem[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [totalCount, setTotalCount] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(fetchOnMount);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [error, setError] = useState('');
+  const buildKey = useCallback(
+    (activeFilters: TFilters) => [...baseKey, activeFilters] as const,
+    [baseKey]
+  );
 
-  useEffect(() => {
-    filtersRef.current = filters;
-  }, [filters]);
+  const makeQueryFn = useCallback(
+    (activeFilters: TFilters) =>
+      ({ pageParam, signal }: QueryFunctionContext<readonly unknown[], PageParam>) =>
+        fetcher({
+          ...activeFilters,
+          cursor: pageParam,
+          limit: pageSize,
+          signal,
+        }),
+    [fetcher, pageSize]
+  );
 
-  useEffect(() => {
-    return () => {
-      abortControllerRef.current?.abort();
-    };
+  const activeKey = useMemo(() => buildKey(committedFilters), [buildKey, committedFilters]);
+  const activeKeyRef = useRef(activeKey);
+  activeKeyRef.current = activeKey;
+
+  const query = useInfiniteQuery<
+    PaginatedResponse<TItem>,
+    unknown,
+    ListData<TItem>,
+    readonly unknown[],
+    PageParam
+  >(
+    {
+      queryKey: activeKey,
+      queryFn: makeQueryFn(committedFilters),
+      initialPageParam: null,
+      getNextPageParam,
+      enabled,
+      placeholderData: keepPreviousData,
+    },
+    queryClient
+  );
+
+  const commitFilters = useCallback((nextFilters: TFilters) => {
+    filtersRef.current = nextFilters;
+    setFilters(nextFilters);
+    setCommittedFilters(nextFilters);
+    setArmed(true);
   }, []);
 
   const refetch = useCallback(
     async (nextFilters?: Partial<TFilters>) => {
-      abortControllerRef.current?.abort();
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-
-      const requestId = latestRequestIdRef.current + 1;
-      latestRequestIdRef.current = requestId;
       const effectiveFilters = { ...filtersRef.current, ...(nextFilters ?? {}) };
-
-      setIsLoading(true);
-      setError('');
+      commitFilters(effectiveFilters);
+      const key = buildKey(effectiveFilters);
+      explicitRefetchRef.current = true;
+      // Only page one is reloaded; "Load more" pages are dropped like before.
+      queryClient.setQueryData<ListData<TItem>>(key, trimToFirstPage);
       try {
-        const response = await fetcher({
-          ...effectiveFilters,
-          cursor: null,
-          limit: pageSize,
-          signal: controller.signal,
+        await queryClient.fetchInfiniteQuery<
+          PaginatedResponse<TItem>,
+          unknown,
+          PaginatedResponse<TItem>,
+          readonly unknown[],
+          PageParam
+        >({
+          queryKey: key,
+          queryFn: makeQueryFn(effectiveFilters),
+          initialPageParam: null,
+          getNextPageParam,
+          staleTime: 0,
+          retry: false,
         });
-        if (latestRequestIdRef.current !== requestId) {
-          return;
-        }
-        setItems(response.items);
-        setNextCursor(response.nextCursor);
-        setTotalCount(response.totalCount === undefined ? null : response.totalCount);
-      } catch (err) {
-        if (isAbortError(err)) {
-          return;
-        }
-        if (latestRequestIdRef.current !== requestId) {
-          return;
-        }
-        setError(toErrorMessage(err, `${errorPrefix}.`));
+      } catch {
+        // The observer exposes the failure through `error`.
       } finally {
-        if (latestRequestIdRef.current === requestId) {
-          setIsLoading(false);
-        }
+        explicitRefetchRef.current = false;
       }
     },
-    [fetcher, pageSize, errorPrefix]
+    [buildKey, commitFilters, makeQueryFn, queryClient]
   );
 
+  const { fetchNextPage, hasNextPage, isFetchingNextPage } = query;
   const loadMore = useCallback(async () => {
-    if (!nextCursor) {
+    if (!hasNextPage || isFetchingNextPage) {
       return;
     }
+    await fetchNextPage();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
-    abortControllerRef.current?.abort();
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    const requestId = latestRequestIdRef.current + 1;
-    latestRequestIdRef.current = requestId;
-
-    setIsLoadingMore(true);
-    setError('');
-    try {
-      const response = await fetcher({
-        ...filtersRef.current,
-        cursor: nextCursor,
-        limit: pageSize,
-        signal: controller.signal,
-      });
-      if (latestRequestIdRef.current !== requestId) {
-        return;
-      }
-      setItems((current) => [...current, ...response.items]);
-      setNextCursor(response.nextCursor);
-      setTotalCount(response.totalCount === undefined ? null : response.totalCount);
-    } catch (err) {
-      if (isAbortError(err)) {
-        return;
-      }
-      if (latestRequestIdRef.current !== requestId) {
-        return;
-      }
-      setError(toErrorMessage(err, `${errorPrefix} more.`));
-    } finally {
-      if (latestRequestIdRef.current === requestId) {
-        setIsLoadingMore(false);
-      }
-    }
-  }, [nextCursor, fetcher, pageSize, errorPrefix]);
-
-  useEffect(() => {
-    if (fetchOnMount) {
-      void refetch();
-    }
-  }, [refetch, fetchOnMount]);
-
-  const debouncedRefresh = useDebouncedCallback((nextFilters: Partial<TFilters>) => {
-    void refetch(nextFilters);
+  const debouncedCommit = useDebouncedCallback((nextFilters: TFilters) => {
+    commitFilters(nextFilters);
   }, debounceMs);
 
   const setFilter = useCallback(
     <TKey extends keyof TFilters>(key: TKey, value: TFilters[TKey]) => {
-      const nextFilters = {
-        ...filtersRef.current,
-        [key]: value,
-      };
+      const nextFilters = { ...filtersRef.current, [key]: value };
       filtersRef.current = nextFilters;
       setFilters(nextFilters);
       if (debounceKeys.includes(key)) {
-        debouncedRefresh(nextFilters);
+        debouncedCommit(nextFilters);
       } else {
-        void refetch(nextFilters);
+        commitFilters(nextFilters);
       }
     },
-    [debouncedRefresh, refetch, debounceKeys]
+    [commitFilters, debouncedCommit, debounceKeys]
   );
 
   const clearFilters = useCallback(() => {
-    filtersRef.current = defaultFilters;
-    setFilters(defaultFilters);
     void refetch(defaultFilters);
   }, [refetch, defaultFilters]);
+
+  const setItems = useCallback<Dispatch<SetStateAction<TItem[]>>>(
+    (update) => {
+      queryClient.setQueryData<ListData<TItem>>(activeKeyRef.current, (data) => {
+        if (!data) {
+          return data;
+        }
+        const currentItems = flattenPages(data);
+        const nextItems = typeof update === 'function' ? update(currentItems) : update;
+        const lastPage = data.pages[data.pages.length - 1];
+        return {
+          pages: [{ ...lastPage, items: nextItems }],
+          pageParams: [null],
+        };
+      });
+    },
+    [queryClient]
+  );
+
+  const items = useMemo(
+    () => (query.data ? flattenPages(query.data) : (EMPTY_ITEMS as TItem[])),
+    [query.data]
+  );
+  const lastPage = query.data?.pages[query.data.pages.length - 1];
+  const totalCount = lastPage?.totalCount === undefined ? null : lastPage.totalCount;
+
+  const isFetchingFirstPage = query.isFetching && !isFetchingNextPage;
+  const isLoading =
+    enabled &&
+    (query.isPending ||
+      query.isPlaceholderData ||
+      (isFetchingFirstPage && explicitRefetchRef.current));
+
+  let error = '';
+  if (query.error && !query.isFetching && !isAbortError(query.error)) {
+    error = toErrorMessage(
+      query.error,
+      query.isFetchNextPageError ? `${errorPrefix} more.` : `${errorPrefix}.`
+    );
+  }
 
   return {
     items,
@@ -208,11 +294,11 @@ export function usePaginatedList<TItem, TFilters extends object>({
     setFilter,
     clearFilters,
     isLoading,
-    isLoadingMore,
+    isLoadingMore: isFetchingNextPage,
     error,
     refetch,
     loadMore,
-    hasMore: Boolean(nextCursor),
+    hasMore: Boolean(hasNextPage),
     totalCount,
   };
 }

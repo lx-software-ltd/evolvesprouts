@@ -18,6 +18,7 @@ import {
   voidInvoice,
   type CustomerInvoiceSummary,
 } from '@/lib/billing-api';
+import { adminQueryKeys } from '@/lib/admin-query-keys';
 import {
   INVOICE_LIST_SEARCH_DEBOUNCE_MS,
   normalizeInvoiceRecipientList,
@@ -98,6 +99,7 @@ export function useClientInvoicesInvoiceList({
     fetcher: fetchInvoices,
     defaultFilters: DEFAULT_INVOICE_LIST_FILTERS,
     errorPrefix: 'Failed to load invoices',
+    queryKey: [...adminQueryKeys.customerInvoices.lists(), contactFilterId, familyFilterId, organizationFilterId],
     debounceKeys: ['search'],
     debounceMs: INVOICE_LIST_SEARCH_DEBOUNCE_MS,
   });

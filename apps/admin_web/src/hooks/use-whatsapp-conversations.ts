@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 
 import type { RelatedPartyQuery } from '@/lib/contact-related-links';
 import { listWhatsAppConversations, type WhatsAppConversationSummary } from '@/lib/whatsapp-api';
+import { adminQueryKeys } from '@/lib/admin-query-keys';
 
 import { usePaginatedList } from './use-paginated-list';
 
@@ -41,6 +42,7 @@ export function useWhatsAppConversations(party: RelatedPartyQuery = {}) {
     fetcher,
     defaultFilters: DEFAULT_FILTERS,
     errorPrefix: 'Failed to load WhatsApp conversations',
+    queryKey: [...adminQueryKeys.conversations.lists(), 'whatsapp', contactId, familyId, organizationId],
     debounceKeys: ['q'],
   });
 

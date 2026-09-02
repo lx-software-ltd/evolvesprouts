@@ -3,6 +3,7 @@
 import { useCallback } from 'react';
 
 import { listServices } from '@/lib/services-api';
+import { adminQueryKeys } from '@/lib/admin-query-keys';
 import { DEFAULT_SERVICE_LIST_FILTERS } from '@/types/services';
 import type { ServiceListFilters, ServiceSummary } from '@/types/services';
 
@@ -21,6 +22,7 @@ export function useServiceList() {
     fetcher,
     defaultFilters: DEFAULT_SERVICE_LIST_FILTERS,
     errorPrefix: 'Failed to load services',
+    queryKey: adminQueryKeys.services.lists(),
     debounceKeys: DEBOUNCE_KEYS,
   });
 

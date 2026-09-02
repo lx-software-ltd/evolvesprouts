@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ContactsPage } from '@/components/admin/contacts/contacts-page';
-import { resetAdminCatalogStoreForTests } from '@/lib/admin-catalog-store';
+import { resetAdminQueryClientForTests } from '@/lib/admin-query-client';
 
 const listEntityTags = vi.fn();
 const listAllLocations = vi.fn();
@@ -114,7 +114,7 @@ describe('ContactsPage', () => {
 
   afterEach(() => {
     window.history.replaceState(null, '', '/contacts');
-    resetAdminCatalogStoreForTests();
+    resetAdminQueryClientForTests();
     vi.clearAllMocks();
   });
 

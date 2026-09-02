@@ -3,6 +3,7 @@
 import { useCallback } from 'react';
 
 import { listLeads } from '@/lib/leads-api';
+import { adminQueryKeys } from '@/lib/admin-query-keys';
 import { DEFAULT_LEAD_LIST_FILTERS } from '@/types/leads';
 import type { LeadListFilters, LeadSummary } from '@/types/leads';
 
@@ -21,6 +22,7 @@ export function useLeadList() {
     fetcher,
     defaultFilters: DEFAULT_LEAD_LIST_FILTERS,
     errorPrefix: 'Failed to load leads',
+    queryKey: adminQueryKeys.leads.lists(),
     debounceKeys: DEBOUNCE_KEYS,
   });
 

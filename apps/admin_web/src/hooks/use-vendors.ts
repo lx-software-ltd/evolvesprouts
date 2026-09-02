@@ -3,6 +3,7 @@
 import { useCallback } from 'react';
 
 import { createAdminVendor, listAdminVendors, updateAdminVendor } from '@/lib/vendors-api';
+import { adminQueryKeys } from '@/lib/admin-query-keys';
 import { DEFAULT_VENDOR_FILTERS } from '@/types/vendors';
 import type { Vendor, VendorFilters } from '@/types/vendors';
 import type { components } from '@/types/generated/admin-api.generated';
@@ -23,6 +24,7 @@ export function useVendors() {
     fetcher,
     defaultFilters: DEFAULT_VENDOR_FILTERS,
     errorPrefix: 'Failed to load vendors',
+    queryKey: adminQueryKeys.vendors.lists(),
     debounceKeys: ['query'],
   });
 
