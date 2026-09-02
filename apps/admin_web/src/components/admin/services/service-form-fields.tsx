@@ -1,14 +1,8 @@
 'use client';
 
-import { WarningTriangleIcon } from '@/components/icons/action-icons';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { formatEnumLabel } from '@/lib/format';
-
 import { SERVICE_KEY_PATTERN } from '@/lib/service-key-utils';
-import { SERVICE_DELIVERY_MODES, SERVICE_STATUSES } from '@/types/services';
 import type { ServiceDeliveryMode, ServiceStatus } from '@/types/services';
 
 export interface ServiceKeyFieldProps {
@@ -59,101 +53,4 @@ export interface ServiceFormState {
   serviceKey: string;
   deliveryMode: ServiceDeliveryMode;
   status: ServiceStatus;
-}
-
-export interface ServiceFormFieldsProps {
-  value: ServiceFormState;
-  onChange: (value: ServiceFormState) => void;
-  hideTitle?: boolean;
-  serviceKeyUsageLoadError?: string;
-  serviceKeyConflictError?: string;
-  publishedBookableKeyWarning?: string;
-}
-
-export function ServiceFormFields({
-  value,
-  onChange,
-  hideTitle = false,
-  serviceKeyUsageLoadError,
-  serviceKeyConflictError,
-  publishedBookableKeyWarning,
-}: ServiceFormFieldsProps) {
-  return (
-    <div className='space-y-3'>
-      {!hideTitle ? (
-        <div>
-          <Label htmlFor='service-title'>Title</Label>
-          <Input
-            id='service-title'
-            value={value.title}
-            onChange={(event) => onChange({ ...value, title: event.target.value })}
-            placeholder='Service title'
-          />
-        </div>
-      ) : null}
-      <div>
-        <Label htmlFor='service-description'>Description</Label>
-        <Textarea
-          id='service-description'
-          value={value.description}
-          onChange={(event) => onChange({ ...value, description: event.target.value })}
-          rows={3}
-          placeholder='Optional description'
-        />
-      </div>
-      <ServiceKeyField
-        value={value.serviceKey}
-        onChange={(next) => onChange({ ...value, serviceKey: next })}
-        serviceKeyUsageLoadError={serviceKeyUsageLoadError}
-        serviceKeyConflictError={serviceKeyConflictError}
-        publishedBookableKeyWarning={publishedBookableKeyWarning}
-      />
-      <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
-        <div>
-          <Label htmlFor='service-delivery-mode'>Delivery mode</Label>
-          <Select
-            id='service-delivery-mode'
-            value={value.deliveryMode}
-            onChange={(event) =>
-              onChange({ ...value, deliveryMode: event.target.value as ServiceDeliveryMode })
-            }
-          >
-            {SERVICE_DELIVERY_MODES.map((entry) => (
-              <option key={entry} value={entry}>
-                {formatEnumLabel(entry)}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div>
-          <div className='relative mb-1'>
-            <Label htmlFor='service-status' className='mb-0 block pr-7'>
-              Status
-            </Label>
-            {value.status === 'draft' ? (
-              <span
-                className='absolute right-0 top-1/2 inline-flex -translate-y-1/2 text-amber-600'
-                role='img'
-                aria-label='Draft — not published to the website'
-                title='Draft — not published to the website'
-              >
-                <WarningTriangleIcon className='h-4 w-4' aria-hidden />
-              </span>
-            ) : null}
-          </div>
-          <Select
-            id='service-status'
-            value={value.status}
-            onChange={(event) => onChange({ ...value, status: event.target.value as ServiceStatus })}
-          >
-            {SERVICE_STATUSES.map((entry) => (
-              <option key={entry} value={entry}>
-                {formatEnumLabel(entry)}
-              </option>
-            ))}
-          </Select>
-        </div>
-      </div>
-    </div>
-  );
 }

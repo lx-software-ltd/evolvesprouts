@@ -90,13 +90,3 @@ export function TrainingCurrencyControl({
     </div>
   );
 }
-
-export function TrainingFormFields({ value, disabled = false, onChange }: TrainingFormFieldsProps) {
-  return (
-    <div className='grid grid-cols-1 gap-3 sm:grid-cols-3'>
-      <TrainingPricingUnitControl value={value} disabled={disabled} onChange={onChange} />
-      <TrainingPriceControl value={value} disabled={disabled} onChange={onChange} />
-      <TrainingCurrencyControl value={value} disabled={disabled} onChange={onChange} />
-    </div>
-  );
-}

@@ -5,7 +5,7 @@
 
 const DEFAULT_FRANKFURTER_API_ORIGIN = 'https://api.frankfurter.dev';
 
-export function getFrankfurterApiOrigin(): string {
+function getFrankfurterApiOrigin(): string {
   const fromEnv = process.env.NEXT_PUBLIC_FRANKFURTER_API_ORIGIN?.trim();
   if (fromEnv) {
     try {

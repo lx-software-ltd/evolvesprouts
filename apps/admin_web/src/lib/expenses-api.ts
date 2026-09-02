@@ -1,4 +1,4 @@
-import { AdminApiError, adminApiRequest } from './api-admin-client';
+import { adminApiRequest } from './api-admin-client';
 import { ADMIN_API_MAX_LIST_LIMIT, buildAdminListPath } from './admin-list-query';
 import { asNullableString, asTrimmedString } from './api-payload';
 import { isRecord } from './type-guards';
@@ -27,7 +27,6 @@ type ApiBulkImportJobResponse = ApiSchemas['BulkImportJobResponse'];
 type ApiBulkImportJob = ApiSchemas['BulkImportJob'];
 type ApiBulkImportJobSummary = ApiSchemas['BulkImportJobSummary'];
 type ApiBulkImportJobListResponse = ApiSchemas['BulkImportJobListResponse'];
-
 
 type ApiExpensePayload = ApiExpenseResponse | ApiExpense;
 type ApiExpenseListPayload = ApiExpenseListResponse;
@@ -302,14 +301,6 @@ export async function listAllAdminExpenses(): Promise<Expense[]> {
   return all;
 }
 
-export async function getAdminExpense(expenseId: string): Promise<Expense | null> {
-  const payload = await adminApiRequest<ApiExpensePayload>({
-    endpointPath: `/v1/admin/expenses/${expenseId}`,
-    method: 'GET',
-  });
-  return extractExpense(payload);
-}
-
 export async function createAdminExpense(input: UpsertExpenseInput): Promise<Expense | null> {
   const payload = await adminApiRequest<ApiExpensePayload>({
     endpointPath: '/v1/admin/expenses',
@@ -457,15 +448,4 @@ export async function deleteAdminDraftExpense(expenseId: string): Promise<void> 
     method: 'DELETE',
     expectedSuccessStatuses: [204],
   });
-}
-
-export async function safeGetAdminExpense(expenseId: string): Promise<Expense | null> {
-  try {
-    return await getAdminExpense(expenseId);
-  } catch (error) {
-    if (error instanceof AdminApiError && error.statusCode === 404) {
-      return null;
-    }
-    throw error;
-  }
 }

@@ -1,4 +1,4 @@
-import { adminApiRequest, AdminApiError } from './api-admin-client';
+import { adminApiRequest } from './api-admin-client';
 import { ADMIN_LIST_PAGE_SIZE, buildAdminListPath } from './admin-list-query';
 import { isRecord } from './type-guards';
 
@@ -108,20 +108,4 @@ export async function listAuditLogs(
     method: 'GET',
   });
   return parseListPayload(payload);
-}
-
-export async function getAuditLog(id: string): Promise<AuditLog> {
-  const payload = await adminApiRequest<unknown>({
-    endpointPath: `/v1/admin/audit-logs/${encodeURIComponent(id)}`,
-    method: 'GET',
-  });
-  const row = parseAuditLog(payload);
-  if (!row) {
-    throw new AdminApiError({
-      statusCode: 500,
-      payload,
-      message: 'Invalid audit log response',
-    });
-  }
-  return row;
 }

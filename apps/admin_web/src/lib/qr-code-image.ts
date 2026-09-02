@@ -2,7 +2,7 @@ import QRCode from 'qrcode';
 import type { QRCode as QrModel } from 'qrcode';
 
 /** Matches public site `--es-color-brand-orange` (`shared/styles/base.css`). */
-export const PUBLIC_SITE_PRIMARY_ORANGE = '#C84A16';
+const PUBLIC_SITE_PRIMARY_ORANGE = '#C84A16';
 
 /** Input for branded public-site QR PNG generation (referral links, marketing page URLs, etc.). */
 export interface GeneratePublicSiteQrPngDataUrlInput {
@@ -15,7 +15,6 @@ export interface GeneratePublicSiteQrPngDataUrlInput {
 }
 
 /** @deprecated Use `GeneratePublicSiteQrPngDataUrlInput`. */
-export type GenerateReferralQrPngDataUrlInput = GeneratePublicSiteQrPngDataUrlInput;
 
 function parseHexRgb(hex: string): { r: number; g: number; b: number } {
   const normalized = hex.trim().replace(/^#/, '');
@@ -412,11 +411,4 @@ export async function generatePublicSiteQrPngDataUrl(
   drawLogoTrimmedToCanvas(ctx, image, naturalW, naturalH, centerX, centerY, logoSize);
 
   return canvasToPngDataUrl(canvas);
-}
-
-/** @deprecated Use `generatePublicSiteQrPngDataUrl`. */
-export async function generateReferralQrPngDataUrl(
-  input: GenerateReferralQrPngDataUrlInput,
-): Promise<string> {
-  return generatePublicSiteQrPngDataUrl(input);
 }

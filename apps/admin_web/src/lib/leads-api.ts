@@ -256,7 +256,6 @@ function parseLeadAiSuggestion(value: unknown): LeadAiSuggestion | null {
   };
 }
 
-
 function parseLeadAiSuggestionJob(value: unknown): LeadAiSuggestionJob | null {
   if (!isRecord(value)) {
     return null;
@@ -348,16 +347,6 @@ export async function pollLeadAiSuggestionJob(
   throw new Error(
     'AI suggestion is taking longer than expected; refresh the lead to check again.',
   );
-}
-
-/** @deprecated Prefer enqueue + poll; kept for callers that want the final suggestion. */
-export async function generateLeadAiSuggestion(leadId: string): Promise<LeadAiSuggestion> {
-  const queued = await enqueueLeadAiSuggestionJob(leadId);
-  const finished = await pollLeadAiSuggestionJob(leadId, queued.id);
-  if (!finished.suggestion) {
-    throw new Error('AI suggestion job completed without a suggestion.');
-  }
-  return finished.suggestion;
 }
 
 export async function getLeadAnalytics(params: AnalyticsParams): Promise<LeadAnalytics> {

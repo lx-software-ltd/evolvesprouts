@@ -107,28 +107,3 @@ export function EventDefaultCurrencyControl({
     </div>
   );
 }
-
-/** Stacked layout for dialogs and non-detail flows. */
-export function EventFormFields({
-  value,
-  disabled = false,
-  onChange,
-  categoryReadOnly = false,
-  categoryFieldId = 'event-category',
-}: EventFormFieldsProps) {
-  return (
-    <div className='space-y-3'>
-      <EventCategoryControl
-        value={value}
-        disabled={disabled}
-        onChange={onChange}
-        categoryReadOnly={categoryReadOnly}
-        categoryFieldId={categoryFieldId}
-      />
-      <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
-        <EventDefaultPriceControl value={value} disabled={disabled} onChange={onChange} />
-        <EventDefaultCurrencyControl value={value} disabled={disabled} onChange={onChange} />
-      </div>
-    </div>
-  );
-}
