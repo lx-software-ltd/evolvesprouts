@@ -1,3 +1,4 @@
+import { reportAdminApiTiming } from './admin-api-timing';
 import { ensureFreshTokens } from './auth';
 import { getApiBaseUrl } from './config';
 import { isRecord } from './type-guards';
@@ -112,8 +113,16 @@ export async function adminApiRequest<TPayload = unknown>({
     requestHeaders['Content-Type'] = 'application/json';
   }
 
+  const startedAt = typeof performance !== 'undefined' ? performance.now() : Date.now();
   const response = await fetch(`${getApiBaseUrl()}${normalizedEndpointPath}`, requestInit);
   const payload = await parseResponsePayload(response);
+  reportAdminApiTiming({
+    method,
+    endpointPath: normalizedEndpointPath,
+    status: response.status,
+    totalMs: (typeof performance !== 'undefined' ? performance.now() : Date.now()) - startedAt,
+    serverTiming: response.headers?.get?.('Server-Timing') ?? null,
+  });
 
   if (!response.ok) {
     throw new AdminApiError({

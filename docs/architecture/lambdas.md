@@ -300,6 +300,10 @@ their primary responsibilities.
 - **Invoice currency display:** `HKD` amounts render with the `HK$` prefix in AR invoice PDFs.
 - **AR invoice footer (Option B):** when both legal/trading and registration are set, the centered footer is `{legal_name} | Proudly registered in Hong Kong | BR: {reg}` with `legal_name` = `PUBLIC_WWW_BUSINESS_LEGAL_NAME` or `PUBLIC_WWW_BUSINESS_NAME` (resolved from `PUBLIC_WWW_CONFIG_SECRET_ARN`), and with fallbacks: legal only → legal; registration only → `BR: {reg}`; both empty → no footer. The **"Proudly registered in Hong Kong"** fragment is fixed product copy (see `.cursorrules` exception).
 - **Snapshot dates:** on issue, `customer_invoices.invoice_date` and `customer_invoices.due_date` are persisted (see `docs/architecture/database-schema.md`); the PDF uses these when present; draft previews compute dates in **UTC** when columns are null.
+- **Server-Timing:** every response carries `Server-Timing: app;dur=<handler ms>`; the first
+  invocation of a container appends `cold;dur=<ms since module import>` so cold starts show up
+  in browser network timing. CORS exposes the header (`Access-Control-Expose-Headers`); the
+  admin web dev build logs it per request (`lib/admin-api-timing.ts`).
 - Purpose:   asset metadata CRUD (admin asset list returns `linked_tag_names` for tag
   filters and accepts `tag_name` for any tag linked to assets in the requested
   `asset_type` scope; create/update accept optional `client_tag` for the

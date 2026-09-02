@@ -2,7 +2,31 @@ from __future__ import annotations
 
 import json
 
-from app.api.admin import _match_handler, _requires_json_content_type, _safe_handler
+import app.api.admin as admin_module
+from app.api.admin import (
+    _match_handler,
+    _requires_json_content_type,
+    _safe_handler,
+    lambda_handler,
+)
+
+
+def test_lambda_handler_reports_server_timing_and_cold_start_once(monkeypatch) -> None:
+    monkeypatch.setattr(admin_module, "_first_invocation_pending", True)
+    event = {"httpMethod": "GET", "path": "/v1/does-not-exist", "headers": {}}
+
+    first = lambda_handler(event, None)
+    second = lambda_handler(event, None)
+
+    assert first["statusCode"] == 404
+    first_timing = first["headers"]["Server-Timing"]
+    assert first_timing.startswith("app;dur=")
+    assert "cold;dur=" in first_timing
+    assert first["headers"]["Access-Control-Expose-Headers"] == "Server-Timing"
+
+    second_timing = second["headers"]["Server-Timing"]
+    assert second_timing.startswith("app;dur=")
+    assert "cold" not in second_timing
 
 
 def test_safe_handler_hides_internal_exception_details() -> None:
