@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import time
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import selectinload
 
-from app.api.admin_billing_common import _session_with_audit
 from app.api.admin_billing_invoice_serializers import (
     parse_optional_invoice_settlement,
     parse_optional_invoice_status,
@@ -33,6 +32,7 @@ from app.api.assets.assets_storage import (
     generate_download_url,
     signed_link_no_cache_headers,
 )
+from app.db.audit import session_with_audit
 from app.db.models.customer_invoice import CustomerInvoice, CustomerInvoiceLine
 from app.db.models.enums import BillingInvoiceStatus
 from app.exceptions import NotFoundError, ValidationError
@@ -75,7 +75,7 @@ def list_invoices(
 
     cursor_ts, cursor_id = parse_created_cursor(query_param(event, "cursor"))
 
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         stmt = select(CustomerInvoice)
         if contact_id is not None:
             stmt = stmt.where(invoice_party_filter(session, contact_id))
@@ -187,7 +187,7 @@ def get_invoice(
     user_sub: str,
     request_id: str | None,
 ) -> dict[str, Any]:
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         stmt = (
             select(CustomerInvoice)
             .where(CustomerInvoice.id == invoice_id)
@@ -211,7 +211,7 @@ def get_invoice_pdf_download(
     request_id: str | None,
 ) -> dict[str, Any]:
     """Return a time-limited CloudFront-signed URL to open the invoice PDF in a browser."""
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         stmt = (
             select(CustomerInvoice)
             .where(CustomerInvoice.id == invoice_id)

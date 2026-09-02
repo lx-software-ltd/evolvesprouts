@@ -2,22 +2,22 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from decimal import Decimal, InvalidOperation
 from typing import Any
-from collections.abc import Mapping
 from uuid import UUID
 
 from sqlalchemy import select
 
-from app.api.admin_billing_common import _session_with_audit
 from app.api.admin_request import parse_body
+from app.db.audit import session_with_audit
 from app.db.models.customer_invoice import CustomerInvoice
 from app.db.models.customer_payment import CustomerPayment
 from app.db.models.payment_allocation import PaymentAllocation
+from app.exceptions import NotFoundError, ValidationError
 from app.services.billing_enrollment_confirmation import (
     maybe_confirm_enrollments_on_positive_invoice_payment_allocation,
 )
-from app.exceptions import NotFoundError, ValidationError
 from app.services.customer_billing import (
     payment_unapplied_amount,
     recompute_invoice_settlement,
@@ -59,7 +59,7 @@ def _create_allocation(
                 "invoiceLineId must be a UUID", field="invoiceLineId"
             ) from exc
 
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         pay = session.execute(
             select(CustomerPayment)
             .where(CustomerPayment.id == payment_id)

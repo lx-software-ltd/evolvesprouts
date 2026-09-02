@@ -164,7 +164,7 @@ def test_list_recent_enrollments_orders_and_filters(
         yield s
 
     monkeypatch.setattr(
-        admin_billing_enrollment_queries_mod, "_session_with_audit", _fake_session
+        admin_billing_enrollment_queries_mod, "session_with_audit", _fake_session
     )
 
     ev = api_gateway_event(
@@ -261,7 +261,7 @@ def test_list_recent_enrollments_infers_family_when_bill_to_kind_null(
         yield s
 
     monkeypatch.setattr(
-        admin_billing_enrollment_queries_mod, "_session_with_audit", _fake_session
+        admin_billing_enrollment_queries_mod, "session_with_audit", _fake_session
     )
 
     ev = api_gateway_event(
@@ -373,7 +373,7 @@ def test_list_recent_enrollments_void_invoice_does_not_block_linked_flag(
         yield s
 
     monkeypatch.setattr(
-        admin_billing_enrollment_queries_mod, "_session_with_audit", _fake_session
+        admin_billing_enrollment_queries_mod, "session_with_audit", _fake_session
     )
 
     ev = api_gateway_event(
@@ -459,7 +459,7 @@ def test_list_recent_enrollments_org_bill_to_primary_email(
         yield s
 
     monkeypatch.setattr(
-        admin_billing_enrollment_queries_mod, "_session_with_audit", _fake_session
+        admin_billing_enrollment_queries_mod, "session_with_audit", _fake_session
     )
 
     ev = api_gateway_event(
@@ -547,7 +547,7 @@ def test_list_recent_enrollments_parent_service_title_and_service_tier_fallback(
         yield s
 
     monkeypatch.setattr(
-        admin_billing_enrollment_queries_mod, "_session_with_audit", _fake_session
+        admin_billing_enrollment_queries_mod, "session_with_audit", _fake_session
     )
 
     ev = api_gateway_event(

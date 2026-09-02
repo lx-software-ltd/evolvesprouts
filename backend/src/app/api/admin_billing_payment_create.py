@@ -11,12 +11,9 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.admin_billing_common import (
-    _session_with_audit,
-    effective_enrollment_bill_to_kind,
-)
+from app.api.admin_billing_common import effective_enrollment_bill_to_kind
 from app.api.admin_billing_payments_serializers import serialize_payment_for_response
-from app.db.audit import AuditService
+from app.db.audit import AuditService, session_with_audit
 from app.db.engine import get_engine
 from app.db.models.contact import Contact
 from app.db.models.customer_invoice import CustomerInvoice
@@ -226,7 +223,7 @@ def create_manual_inbound_payment(
         effective_status = status_raw
 
     receipt_id_for_upload: UUID | None = None
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         contact_id: UUID | None
         if enrollment_id is not None:
             en = session.get(Enrollment, enrollment_id)
@@ -383,7 +380,7 @@ def create_refund_payment(
     stripe_refund_id = str(body.get("stripeRefundId") or "").strip() or None
     method_stored = str(body.get("method") or "refund")[:64]
 
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         orig = session.get(CustomerPayment, orig_id)
         if orig is None:
             raise NotFoundError("CustomerPayment", str(orig_id))

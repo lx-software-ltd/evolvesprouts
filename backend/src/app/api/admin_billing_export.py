@@ -6,15 +6,15 @@ import base64
 import csv
 import io
 import json
+from collections.abc import Mapping
 from datetime import datetime
 from typing import Any
-from collections.abc import Mapping
 from uuid import UUID
 
 from sqlalchemy import select
 
-from app.api.admin_billing_common import _session_with_audit
 from app.api.admin_request import parse_limit, query_param
+from app.db.audit import session_with_audit
 from app.db.models.customer_invoice import CustomerInvoice, CustomerInvoiceLine
 from app.db.models.customer_payment import CustomerPayment
 from app.db.models.customer_receipt import CustomerReceipt
@@ -73,7 +73,7 @@ def _export_csv(
     cursor_raw = query_param(event, "cursor")
     cursor = _parse_export_cursor(cursor_raw)
 
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         allocs: list[PaymentAllocation] = []
         invoices: list[CustomerInvoice] = []
         lines_by_invoice: dict[UUID, list[CustomerInvoiceLine]] = {}

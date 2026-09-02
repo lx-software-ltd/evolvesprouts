@@ -833,9 +833,7 @@ def test_void_invoice_calls_recompute_invoice_settlement(
         s.get.side_effect = _get
         yield s
 
-    monkeypatch.setattr(
-        admin_billing_invoices_mod, "_session_with_audit", _fake_session
-    )
+    monkeypatch.setattr(admin_billing_invoices_mod, "session_with_audit", _fake_session)
 
     ev = api_gateway_event(
         method="POST",
@@ -927,9 +925,7 @@ def test_issue_invoice_calls_recompute_invoice_settlement(
         s.flush = MagicMock()
         yield s
 
-    monkeypatch.setattr(
-        admin_billing_invoices_mod, "_session_with_audit", _fake_session
-    )
+    monkeypatch.setattr(admin_billing_invoices_mod, "session_with_audit", _fake_session)
 
     ev = api_gateway_event(
         method="POST",
@@ -1172,9 +1168,7 @@ def test_issue_invoice_returns_created_payment_id(
         s.flush = MagicMock()
         yield s
 
-    monkeypatch.setattr(
-        admin_billing_invoices_mod, "_session_with_audit", _fake_session
-    )
+    monkeypatch.setattr(admin_billing_invoices_mod, "session_with_audit", _fake_session)
 
     ev = api_gateway_event(
         method="POST",

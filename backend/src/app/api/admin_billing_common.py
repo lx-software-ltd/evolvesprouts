@@ -7,13 +7,10 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.audit import session_with_audit
 from app.db.models import Contact, Enrollment
 from app.db.models.enums import BillingBillToKind
 from app.db.models.family import FamilyMember
 from app.db.models.organization import OrganizationMember
-
-_session_with_audit = session_with_audit
 
 
 def contact_display_name(c: Contact | None) -> str | None:

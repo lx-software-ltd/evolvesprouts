@@ -7,16 +7,19 @@ mutate allocation rows (orphan payment delete is blocked when allocations exist)
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
-from collections.abc import Mapping
 from uuid import UUID
 
 from sqlalchemy import and_, exists, or_, select
 from sqlalchemy.orm import Session
 
-from app.api.admin_billing_common import _session_with_audit
+from app.api.admin_billing_payments_serializers import (
+    payment_allocation_invoice_refs,
+    serialize_payment_for_response,
+)
 from app.api.admin_request import (
     encode_created_cursor,
     parse_body,
@@ -24,7 +27,7 @@ from app.api.admin_request import (
     parse_limit,
     query_param,
 )
-from app.db.audit import AuditService
+from app.db.audit import AuditService, session_with_audit
 from app.db.engine import get_engine
 from app.db.models.customer_payment import CustomerPayment
 from app.db.models.customer_receipt import CustomerReceipt
@@ -42,10 +45,6 @@ from app.services.customer_billing import (
 )
 from app.utils import json_response
 from app.utils.logging import get_logger
-from app.api.admin_billing_payments_serializers import (
-    payment_allocation_invoice_refs,
-    serialize_payment_for_response,
-)
 
 logger = get_logger(__name__)
 
@@ -184,7 +183,7 @@ def _delete_payment(
     user_sub: str,
     request_id: str | None,
 ) -> dict[str, Any]:
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         p = session.get(CustomerPayment, payment_id)
         if p is None:
             raise NotFoundError("CustomerPayment", str(payment_id))
@@ -217,7 +216,7 @@ def _list_payments(
                 "invoice_id must be a UUID", field="invoice_id"
             ) from exc
 
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         stmt = select(CustomerPayment)
         if inv_filter is not None:
             subq = (
@@ -273,7 +272,7 @@ def _get_payment(
     user_sub: str,
     request_id: str | None,
 ) -> dict[str, Any]:
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         p = session.get(CustomerPayment, payment_id)
         if p is None:
             raise NotFoundError("CustomerPayment", str(payment_id))
@@ -331,7 +330,7 @@ def _confirm_payment(
 ) -> dict[str, Any]:
     body = parse_body(event) if event.get("body") else {}
     receipt_id_for_upload: UUID | None = None
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         p = session.get(CustomerPayment, payment_id)
         if p is None:
             raise NotFoundError("CustomerPayment", str(payment_id))

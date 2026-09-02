@@ -67,7 +67,7 @@ def test_create_allocation_calls_recompute_invoice_settlement(
         yield s
 
     monkeypatch.setattr(
-        admin_billing_allocations_mod, "_session_with_audit", _fake_session
+        admin_billing_allocations_mod, "session_with_audit", _fake_session
     )
 
     body = {
@@ -138,7 +138,7 @@ def test_allocate_no_enrollment_payment_to_customized_invoice(
         yield s
 
     monkeypatch.setattr(
-        admin_billing_allocations_mod, "_session_with_audit", _fake_session
+        admin_billing_allocations_mod, "session_with_audit", _fake_session
     )
 
     body = {
@@ -232,7 +232,7 @@ def test_create_allocation_triggers_refresh_invoice_pdf_when_invoice_becomes_pai
         yield s
 
     monkeypatch.setattr(
-        admin_billing_allocations_mod, "_session_with_audit", _fake_session
+        admin_billing_allocations_mod, "session_with_audit", _fake_session
     )
 
     body = {

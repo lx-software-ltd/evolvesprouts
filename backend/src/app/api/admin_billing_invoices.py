@@ -10,7 +10,6 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.admin_billing_common import _session_with_audit
 from app.api.admin_billing_invoice_draft_helpers import (
     _resolve_bill_to_party_from_invoice_fks,
 )
@@ -18,7 +17,7 @@ from app.api.admin_billing_payment_create import (
     create_pending_payment_for_issued_invoice,
 )
 from app.api.admin_request import parse_body
-from app.db.audit import AuditService
+from app.db.audit import AuditService, session_with_audit
 from app.db.models import Contact, Family, Organization
 from app.db.models.customer_invoice import CustomerInvoice
 from app.db.models.enums import BillingBillToKind, BillingInvoiceStatus
@@ -29,8 +28,8 @@ from app.services.billing_enrollment_confirmation import (
 )
 from app.services.customer_billing import (
     next_invoice_number,
-    refresh_invoice_pdf,
     recompute_invoice_settlement,
+    refresh_invoice_pdf,
     send_invoice_email,
 )
 from app.services.customer_invoice_pdf import (
@@ -119,7 +118,7 @@ def _issue_invoice(
     user_sub: str,
     request_id: str | None,
 ) -> dict[str, Any]:
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         inv = session.get(CustomerInvoice, invoice_id)
         if inv is None:
             raise NotFoundError("CustomerInvoice", str(invoice_id))
@@ -172,7 +171,7 @@ def _void_invoice(
     reason = str(body.get("reason") or "").strip()
     if not reason:
         raise ValidationError("reason is required", field="reason")
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         inv = session.get(CustomerInvoice, invoice_id)
         if inv is None:
             raise NotFoundError("CustomerInvoice", str(invoice_id))
@@ -207,7 +206,7 @@ def _delete_draft_invoice(
     request_id: str | None,
 ) -> dict[str, Any]:
     """Permanently remove a draft invoice and its lines (no issued number)."""
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         inv = session.get(CustomerInvoice, invoice_id)
         if inv is None:
             raise NotFoundError("CustomerInvoice", str(invoice_id))
@@ -272,6 +271,6 @@ def _email_invoice(
     if not to_raw:
         raise ValidationError("toEmail is required", field="toEmail")
     to_addresses = _parse_to_email_list(to_raw)
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         send_invoice_email(session, invoice_id=invoice_id, to_addresses=to_addresses)
         return json_response(200, {"sent": True}, event=event)

@@ -197,7 +197,7 @@ def test_create_invoice_draft_derives_currency_when_omitted(
         return (yield s)
 
     monkeypatch.setattr(
-        admin_billing_invoice_drafts_mod, "_session_with_audit", _fake_session
+        admin_billing_invoice_drafts_mod, "session_with_audit", _fake_session
     )
     monkeypatch.setattr(
         admin_billing_invoice_drafts_mod,
@@ -254,7 +254,7 @@ def test_create_invoice_draft_rejects_invalid_currency_length(
         yield s
 
     monkeypatch.setattr(
-        admin_billing_invoice_drafts_mod, "_session_with_audit", _fake_session
+        admin_billing_invoice_drafts_mod, "session_with_audit", _fake_session
     )
 
     body = {
@@ -317,7 +317,7 @@ def test_create_invoice_draft_currency_empty_string_derives(
         return (yield s)
 
     monkeypatch.setattr(
-        admin_billing_invoice_drafts_mod, "_session_with_audit", _fake_session
+        admin_billing_invoice_drafts_mod, "session_with_audit", _fake_session
     )
     monkeypatch.setattr(
         admin_billing_invoice_drafts_mod,
@@ -386,7 +386,7 @@ def test_create_customized_invoice_draft_rejects_contact_not_found(
         yield s
 
     monkeypatch.setattr(
-        admin_billing_invoice_drafts_mod, "_session_with_audit", _fake_session
+        admin_billing_invoice_drafts_mod, "session_with_audit", _fake_session
     )
 
     body = {
@@ -468,7 +468,7 @@ def test_create_customized_invoice_draft_rejects_description_over_500(
         yield s
 
     monkeypatch.setattr(
-        admin_billing_invoice_drafts_mod, "_session_with_audit", _fake_session
+        admin_billing_invoice_drafts_mod, "session_with_audit", _fake_session
     )
 
     body = {
@@ -511,7 +511,7 @@ def test_create_customized_invoice_draft_rejects_both_tax_amount_and_rate(
         yield s
 
     monkeypatch.setattr(
-        admin_billing_invoice_drafts_mod, "_session_with_audit", _fake_session
+        admin_billing_invoice_drafts_mod, "session_with_audit", _fake_session
     )
 
     body = {
@@ -599,7 +599,7 @@ def test_create_customized_invoice_draft_rejects_discount_exceeding_extended(
         yield s
 
     monkeypatch.setattr(
-        admin_billing_invoice_drafts_mod, "_session_with_audit", _fake_session
+        admin_billing_invoice_drafts_mod, "session_with_audit", _fake_session
     )
 
     body = {
@@ -666,7 +666,7 @@ def test_create_customized_invoice_draft_tax_rate_rounds_half_up(
         yield s
 
     monkeypatch.setattr(
-        admin_billing_invoice_drafts_mod, "_session_with_audit", _fake_session
+        admin_billing_invoice_drafts_mod, "session_with_audit", _fake_session
     )
     monkeypatch.setattr(
         admin_billing_invoice_drafts_mod,
@@ -758,7 +758,7 @@ def test_create_invoice_draft_accepts_invoice_date(
         yield s
 
     monkeypatch.setattr(
-        admin_billing_invoice_drafts_mod, "_session_with_audit", _fake_session
+        admin_billing_invoice_drafts_mod, "session_with_audit", _fake_session
     )
     monkeypatch.setattr(
         admin_billing_invoice_drafts_mod,
@@ -835,7 +835,7 @@ def test_create_invoice_draft_accepts_invoice_date_at_upper_bound_in_display_tz(
         yield s
 
     monkeypatch.setattr(
-        admin_billing_invoice_drafts_mod, "_session_with_audit", _fake_session
+        admin_billing_invoice_drafts_mod, "session_with_audit", _fake_session
     )
     monkeypatch.setattr(
         admin_billing_invoice_drafts_mod,
@@ -906,7 +906,7 @@ def test_create_invoice_draft_defaults_invoice_date_to_today(
         yield s
 
     monkeypatch.setattr(
-        admin_billing_invoice_drafts_mod, "_session_with_audit", _fake_session
+        admin_billing_invoice_drafts_mod, "session_with_audit", _fake_session
     )
     monkeypatch.setattr(
         admin_billing_invoice_drafts_mod,
@@ -961,7 +961,7 @@ def test_create_customized_invoice_draft_accepts_invoice_date(
         yield s
 
     monkeypatch.setattr(
-        admin_billing_invoice_drafts_mod, "_session_with_audit", _fake_session
+        admin_billing_invoice_drafts_mod, "session_with_audit", _fake_session
     )
     monkeypatch.setattr(
         admin_billing_invoice_drafts_mod,
@@ -1023,7 +1023,7 @@ def test_create_invoice_draft_rejects_invalid_invoice_date(
         yield s
 
     monkeypatch.setattr(
-        admin_billing_invoice_drafts_mod, "_session_with_audit", _fake_session
+        admin_billing_invoice_drafts_mod, "session_with_audit", _fake_session
     )
 
     body = {
