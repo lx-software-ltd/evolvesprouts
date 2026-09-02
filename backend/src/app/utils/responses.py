@@ -258,27 +258,3 @@ def method_not_allowed(
     return json_response(
         405, {"error": "Method not allowed"}, headers=headers, event=event
     )
-
-
-def error_response(
-    status_code: int,
-    message: str,
-    detail: str | None = None,
-    event: Mapping[str, Any] | None = None,
-) -> dict[str, Any]:
-    """Create an error response.
-
-    Args:
-        status_code: HTTP status code.
-        message: Error message.
-        detail: Optional additional detail.
-        event: Optional Lambda event for CORS origin detection.
-
-    Returns:
-        API Gateway response dictionary.
-    """
-    body: dict[str, Any] = {"error": message}
-    if detail:
-        body["detail"] = detail
-
-    return json_response(status_code, body, event=event)

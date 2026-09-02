@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import base64
 import json
-import os
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -291,21 +290,6 @@ def _to_uuid(value: UUID | str) -> UUID:
     if isinstance(value, UUID):
         return value
     return parse_uuid(value)
-
-
-def _parse_group_name(event: Mapping[str, Any]) -> str:
-    """Parse the group name from the request."""
-    raw = event.get("body") or ""
-    if not raw:
-        return os.getenv("ADMIN_GROUP") or "admin"
-    if event.get("isBase64Encoded"):
-        raw = base64.b64decode(raw).decode("utf-8")
-    try:
-        body = json.loads(raw)
-    except json.JSONDecodeError:
-        body = {}
-    group = body.get("group") if isinstance(body, dict) else None
-    return group or os.getenv("ADMIN_GROUP") or "admin"
 
 
 def parse_cursor(value: str | None) -> UUID | None:

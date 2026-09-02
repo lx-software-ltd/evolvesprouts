@@ -96,14 +96,6 @@ def handle_public_events(
     )
 
 
-def handle_public_calendar_events_request(
-    event: Mapping[str, Any],
-    method: str,
-) -> dict[str, Any]:
-    """Backward-compatible entrypoint for public calendar events."""
-    return handle_public_events(event, method)
-
-
 def _parse_public_instance_slug(raw: str | None) -> str | None:
     if raw is None:
         return None
