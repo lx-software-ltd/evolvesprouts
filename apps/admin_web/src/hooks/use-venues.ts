@@ -14,7 +14,7 @@ import type { LocationSummary, VenueFilters } from '@/types/services';
 
 import type { components } from '@/types/generated/admin-api.generated';
 
-import { invalidateSharedPickerLocations, useSharedGeographicAreas } from './use-admin-catalog';
+import { invalidateSharedLocations, useSharedGeographicAreas } from './use-admin-catalog';
 import { useListMutate } from './use-list-mutate';
 import { usePaginatedList } from './use-paginated-list';
 
@@ -22,8 +22,7 @@ type ApiSchemas = components['schemas'];
 
 const DEBOUNCE_KEYS: (keyof VenueFilters)[] = ['search'];
 
-export function useVenues(options: { onMutationSuccess?: () => void | Promise<void> } = {}) {
-  const { onMutationSuccess } = options;
+export function useVenues() {
   const areasCatalog = useSharedGeographicAreas();
   const geographicAreas = areasCatalog.items;
   const areasLoading = areasCatalog.isLoading;
@@ -53,10 +52,7 @@ export function useVenues(options: { onMutationSuccess?: () => void | Promise<vo
 
   const { refetch } = list;
   const { isSaving, mutate } = useListMutate(refetch, {
-    onAfterSuccess: async () => {
-      invalidateSharedPickerLocations();
-      await onMutationSuccess?.();
-    },
+    onAfterSuccess: invalidateSharedLocations,
   });
 
   const createVenue = useCallback(

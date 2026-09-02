@@ -2,7 +2,9 @@ export type AdminCatalogKey =
   | 'entityTags'
   | 'adminUsers'
   | 'geographicAreas'
-  | 'pickerLocations';
+  | 'instructorUsers'
+  | 'pickerLocations'
+  | 'venueLocations';
 
 export interface AdminCatalogEntry<TItem> {
   items: TItem[];

@@ -139,11 +139,7 @@ export function useServicesPage() {
   const enrollmentList = useEnrollmentList(enrollmentServiceId, selectedInstanceId);
   const locationList = useLocationList();
   const discountCodes = useDiscountCodes();
-  const venues = useVenues({
-    onMutationSuccess: async () => {
-      await locationList.refetch();
-    },
-  });
+  const venues = useVenues();
 
   const serviceMutations = useServiceMutations({
     onSuccess: async (serviceId) => {
