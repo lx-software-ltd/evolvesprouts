@@ -5015,19 +5015,6 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
-    delete:
-      summary: Delete discount code
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "204":
-          description: Discount code deleted.
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
 
   /v1/admin/forms:
     get:
