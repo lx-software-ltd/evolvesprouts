@@ -41,7 +41,6 @@ export function FamilyEditorPanel({ editor, tags, geographicAreas, areasLoading 
     memberContactOptions,
     setRemoveTarget,
     location,
-    expanded,
     handleSubmit,
     handleAddMember,
     handlePrimaryMemberChange,
@@ -53,7 +52,6 @@ export function FamilyEditorPanel({ editor, tags, geographicAreas, areasLoading 
         <AdminEditorActions
           mode={editorMode}
           onSubmit={() => void handleSubmit()}
-          onCancel={expanded.collapse}
           isSaving={isSaving}
           submitDisabled={!familyName.trim() || location.locationDraftInvalid}
           submitLabel={editorMode === 'create' ? 'Create family' : 'Update family'}

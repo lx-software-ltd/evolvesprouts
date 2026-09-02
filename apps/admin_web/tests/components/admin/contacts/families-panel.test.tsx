@@ -194,7 +194,7 @@ describe('FamiliesPanel', () => {
     await user.click(screen.getByText('Smith'));
     expect(window.location.search).toBe('?family=fam-1');
     expect(screen.getByLabelText('Family name')).toHaveValue('Smith');
-    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /^Location/ }));
     await user.click(screen.getByRole('button', { name: 'Change' }));
