@@ -29,7 +29,7 @@ from app.api.admin_request import (
     parse_limit,
     query_param,
 )
-from app.api.assets.assets_common import (
+from app.api.assets.assets_storage import (
     generate_download_url,
     signed_link_no_cache_headers,
 )

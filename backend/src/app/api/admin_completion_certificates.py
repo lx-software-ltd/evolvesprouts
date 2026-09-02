@@ -22,7 +22,7 @@ from app.api.admin_request import (
     split_route_parts,
 )
 from app.api.admin_services_payload_utils import parse_optional_uuid
-from app.api.assets.assets_common import (
+from app.api.assets.assets_storage import (
     delete_s3_object,
     generate_download_url,
     signed_link_no_cache_headers,

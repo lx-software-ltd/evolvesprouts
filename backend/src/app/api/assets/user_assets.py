@@ -15,12 +15,14 @@ from app.api.admin_request import (
     split_route_parts,
 )
 from app.api.assets.assets_common import (
-    generate_download_url,
     paginate_response,
     parse_cursor,
     parse_limit,
+)
+from app.api.assets.assets_serializers import serialize_asset
+from app.api.assets.assets_storage import (
+    generate_download_url,
     signed_link_no_cache_headers,
-    serialize_asset,
 )
 from app.db.engine import get_engine
 from app.db.repositories.asset import AssetRepository

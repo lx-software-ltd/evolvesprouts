@@ -21,8 +21,8 @@ from app.api.assets.assets_common import (
     parse_content_language_query_param,
     parse_cursor,
     parse_limit,
-    serialize_public_free_asset,
 )
+from app.api.assets.assets_serializers import serialize_public_free_asset
 from app.db.engine import get_engine
 from app.db.repositories.asset import AssetRepository
 from app.utils import (
