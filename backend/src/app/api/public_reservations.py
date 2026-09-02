@@ -13,12 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.api.admin_request import parse_body
 from app.api.discount_enrollment_scope import ensure_discount_code_eligible_for_instance
-from app.api.public_form_hooks import (
-    first_name_from_full_name,
-    mailchimp_booking_tag_from_payload,  # noqa: F401
-    maybe_subscribe_booking_marketing,  # noqa: F401
-    send_booking_confirmation_email,  # noqa: F401
-)
+from app.api.public_form_hooks import first_name_from_full_name
 from app.api.public_reservations_intro_call import (
     _enforce_intro_call_invariants,
     _resolve_booking_identity,
@@ -63,11 +58,6 @@ from app.exceptions import ConflictError, ValidationError
 from app.services.customer_billing import record_reservation_customer_payment
 from app.services import sales_assignment
 from app.services.helper_detector import maybe_apply_helper_detector
-from app.services.intro_call_slots import is_intro_call_slot_available  # noqa: F401
-from app.services.public_form_internal_notifications import (
-    build_reservation_recap_lines,  # noqa: F401
-    send_sales_form_recap_email,  # noqa: F401
-)
 from app.services.turnstile import (
     extract_client_ip,
     extract_turnstile_token,

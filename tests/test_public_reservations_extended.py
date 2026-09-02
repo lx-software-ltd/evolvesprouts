@@ -1325,10 +1325,6 @@ def test_intro_call_new_enrollment_persists_slot_before_free_payment_record(
         lambda *a, **k: None,
     )
     monkeypatch.setattr(
-        "app.api.public_reservations.is_intro_call_slot_available",
-        lambda *_a, **_k: True,
-    )
-    monkeypatch.setattr(
         "app.api.public_reservations._create_booking_instance_for_service",
         lambda *_a, **_k: SimpleNamespace(
             id=uuid4(), slug="intro-call-free-15min-20360616030000-deadbeef"
