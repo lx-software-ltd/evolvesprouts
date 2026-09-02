@@ -75,7 +75,7 @@ def test_delete_draft_expense_removes_row_and_syncs_tags(
     monkeypatch.setattr(admin_expenses, "request_id", lambda _e: "req-1")
     monkeypatch.setattr(
         admin_expenses,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -126,7 +126,7 @@ def test_delete_draft_expense_rejects_non_draft(
     monkeypatch.setattr(admin_expenses, "request_id", lambda _e: "req-1")
     monkeypatch.setattr(
         admin_expenses,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -185,7 +185,7 @@ def test_delete_draft_expense_rejects_when_amendments_exist(
     monkeypatch.setattr(admin_expenses, "request_id", lambda _e: "req-1")
     monkeypatch.setattr(
         admin_expenses,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 

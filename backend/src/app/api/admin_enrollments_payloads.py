@@ -51,6 +51,7 @@ def parse_create_enrollment_payload(body: Mapping[str, Any]) -> dict[str, Any]:
         )
     return payload
 
+
 def parse_update_enrollment_payload(body: Mapping[str, Any]) -> dict[str, Any]:
     """Parse and validate enrollment update payload."""
     if not body:

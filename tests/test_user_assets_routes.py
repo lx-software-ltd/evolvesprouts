@@ -20,7 +20,9 @@ def test_handle_user_assets_dispatches_list_route(
     api_gateway_event: Any,
 ) -> None:
     marker = {"statusCode": 200, "body": "{}"}
-    monkeypatch.setattr(user_assets, "extract_identity", lambda _: _user_identity())
+    monkeypatch.setattr(
+        user_assets, "require_admin_identity", lambda _: _user_identity()
+    )
     monkeypatch.setattr(user_assets, "_list_accessible_assets", lambda *_: marker)
 
     response = user_assets.handle_user_assets_request(
@@ -36,7 +38,9 @@ def test_handle_user_assets_dispatches_download_route(
     api_gateway_event: Any,
 ) -> None:
     marker = {"statusCode": 200, "body": "{}"}
-    monkeypatch.setattr(user_assets, "extract_identity", lambda _: _user_identity())
+    monkeypatch.setattr(
+        user_assets, "require_admin_identity", lambda _: _user_identity()
+    )
     monkeypatch.setattr(user_assets, "_download_asset", lambda *_: marker)
     asset_id = str(uuid4())
 
@@ -52,7 +56,9 @@ def test_handle_user_assets_returns_405_for_unsupported_method(
     monkeypatch: Any,
     api_gateway_event: Any,
 ) -> None:
-    monkeypatch.setattr(user_assets, "extract_identity", lambda _: _user_identity())
+    monkeypatch.setattr(
+        user_assets, "require_admin_identity", lambda _: _user_identity()
+    )
     response = user_assets.handle_user_assets_request(
         api_gateway_event(method="POST", path="/v1/user/assets"),
         "POST",

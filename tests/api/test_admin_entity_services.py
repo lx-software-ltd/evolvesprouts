@@ -435,7 +435,7 @@ def test_handle_admin_contacts_services_get(
     monkeypatch.setattr(admin_contacts, "list_contact_services", _fake_list)
     monkeypatch.setattr(
         admin_contacts,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -464,7 +464,7 @@ def test_handle_admin_families_services_get(
     monkeypatch.setattr(admin_families, "list_family_services", _fake_list)
     monkeypatch.setattr(
         admin_families,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -493,7 +493,7 @@ def test_handle_admin_organizations_services_get(
     monkeypatch.setattr(admin_organizations, "list_organization_services", _fake_list)
     monkeypatch.setattr(
         admin_organizations,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 

@@ -87,7 +87,7 @@ def _install_organizations_persistence_fakes(
     )
     monkeypatch.setattr(
         admin_organizations,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -297,7 +297,7 @@ def test_list_organizations_default_excludes_vendors_from_repository_filter(
     monkeypatch.setattr(admin_organizations, "get_engine", lambda: object())
     monkeypatch.setattr(
         admin_organizations,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -347,7 +347,7 @@ def test_list_organizations_vendor_query_sets_vendor_filter_and_skips_relationsh
     monkeypatch.setattr(admin_organizations, "get_engine", lambda: object())
     monkeypatch.setattr(
         admin_organizations,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -399,7 +399,7 @@ def test_list_organizations_sort_name_sets_name_asc_list_order(
     monkeypatch.setattr(admin_organizations, "get_engine", lambda: object())
     monkeypatch.setattr(
         admin_organizations,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -445,7 +445,7 @@ def test_get_organization_returns_partner_row_via_non_vendor_loader(
     monkeypatch.setattr(admin_organizations, "get_engine", lambda: object())
     monkeypatch.setattr(
         admin_organizations,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
     monkeypatch.setattr(
@@ -508,7 +508,7 @@ def test_get_organization_returns_404_when_crm_loader_finds_nothing(
     monkeypatch.setattr(admin_organizations, "get_engine", lambda: object())
     monkeypatch.setattr(
         admin_organizations,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 

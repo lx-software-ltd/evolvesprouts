@@ -37,7 +37,7 @@ def picker_session(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     monkeypatch.setattr(admin_families_picker, "get_engine", lambda: object())
     monkeypatch.setattr(
         admin_families_picker,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: _admin_identity(),
     )
     return session

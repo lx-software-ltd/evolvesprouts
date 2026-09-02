@@ -24,7 +24,7 @@ def test_handle_admin_service_instances_rejects_patch(
 ) -> None:
     monkeypatch.setattr(
         admin_service_instances,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: _admin_request_identity(),
     )
 

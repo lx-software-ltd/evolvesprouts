@@ -42,6 +42,7 @@ def ensure_discount_validity_window(
                 field="valid_until",
             )
 
+
 def parse_create_discount_code_payload(body: Mapping[str, Any]) -> dict[str, Any]:
     """Parse and validate discount-code create payload."""
     discount_type = parse_required_enum(
@@ -82,6 +83,7 @@ def parse_create_discount_code_payload(body: Mapping[str, Any]) -> dict[str, Any
         )
     ensure_discount_validity_window(valid_from, valid_until)
     return payload
+
 
 def parse_update_discount_code_payload(body: Mapping[str, Any]) -> dict[str, Any]:
     """Parse and validate discount-code update payload."""

@@ -55,7 +55,7 @@ def test_list_polls_returns_summaries(
     mock_env(POLL_RESPONSES_TABLE_NAME="evolvesprouts-poll-responses")
     monkeypatch.setattr(
         admin_polls,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -99,7 +99,7 @@ def test_list_poll_answers_excludes_control_row(
     mock_env(POLL_RESPONSES_TABLE_NAME="evolvesprouts-poll-responses")
     monkeypatch.setattr(
         admin_polls,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -143,7 +143,7 @@ def test_list_poll_answers_returns_rows(
     mock_env(POLL_RESPONSES_TABLE_NAME="evolvesprouts-poll-responses")
     monkeypatch.setattr(
         admin_polls,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -188,7 +188,7 @@ def test_clear_poll_answers_preserves_control_row(
     mock_env(POLL_RESPONSES_TABLE_NAME="evolvesprouts-poll-responses")
     monkeypatch.setattr(
         admin_polls,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -230,7 +230,7 @@ def test_clear_poll_answers_deletes_rows(
     mock_env(POLL_RESPONSES_TABLE_NAME="evolvesprouts-poll-responses")
     monkeypatch.setattr(
         admin_polls,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -260,7 +260,7 @@ def test_export_poll_answers_returns_csv(
     mock_env(POLL_RESPONSES_TABLE_NAME="evolvesprouts-poll-responses")
     monkeypatch.setattr(
         admin_polls,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 

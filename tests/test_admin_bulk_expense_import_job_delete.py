@@ -53,7 +53,7 @@ def test_delete_bulk_import_job_removes_row_for_creator(
     monkeypatch.setattr(admin_expenses, "request_id", lambda _e: "req-1")
     monkeypatch.setattr(
         admin_expenses,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -100,7 +100,7 @@ def test_delete_bulk_import_job_returns_404_when_missing(
     monkeypatch.setattr(admin_expenses, "request_id", lambda _e: "req-1")
     monkeypatch.setattr(
         admin_expenses,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 

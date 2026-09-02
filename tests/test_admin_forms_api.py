@@ -63,7 +63,7 @@ def test_list_forms_returns_summaries(
     mock_env(POLL_RESPONSES_TABLE_NAME="evolvesprouts-poll-responses")
     monkeypatch.setattr(
         admin_forms,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 

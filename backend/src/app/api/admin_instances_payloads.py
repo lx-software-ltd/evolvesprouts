@@ -40,6 +40,7 @@ def _reject_deprecated_instance_age_group(body: Mapping[str, Any]) -> None:
             field="age_group",
         )
 
+
 def parse_create_instance_payload(
     body: Mapping[str, Any], service: Service
 ) -> dict[str, Any]:
@@ -90,6 +91,7 @@ def parse_create_instance_payload(
         "tag_ids": parse_uuid_list(body.get("tag_ids"), "tag_ids"),
         "type_details": parse_instance_type_details(service.service_type, body),
     }
+
 
 def parse_update_instance_payload(
     body: Mapping[str, Any],

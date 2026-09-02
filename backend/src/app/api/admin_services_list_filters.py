@@ -51,6 +51,7 @@ def parse_service_filters(event: Mapping[str, Any]) -> dict[str, Any]:
         "search": parse_optional_text(query_param(event, "search")),
     }
 
+
 def parse_instance_filters(event: Mapping[str, Any]) -> dict[str, Any]:
     """Parse query filters for service instance list endpoint."""
     logger.debug("Parsing service instance list filters")
@@ -66,6 +67,7 @@ def parse_instance_filters(event: Mapping[str, Any]) -> dict[str, Any]:
             "status",
         ),
     }
+
 
 def parse_global_instance_list_filters(event: Mapping[str, Any]) -> dict[str, Any]:
     """Parse query filters for cross-service instance list endpoint."""
@@ -95,6 +97,7 @@ def parse_global_instance_list_filters(event: Mapping[str, Any]) -> dict[str, An
         "organization_id": organization_id,
     }
 
+
 def parse_enrollment_filters(event: Mapping[str, Any]) -> dict[str, Any]:
     """Parse query filters for enrollment list endpoint."""
     logger.debug("Parsing enrollment list filters")
@@ -110,6 +113,7 @@ def parse_enrollment_filters(event: Mapping[str, Any]) -> dict[str, Any]:
             "status",
         ),
     }
+
 
 def parse_discount_code_filters(event: Mapping[str, Any]) -> dict[str, Any]:
     """Parse query filters for discount-code list endpoint."""

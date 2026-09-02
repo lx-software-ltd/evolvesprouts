@@ -21,6 +21,7 @@ import { AuditLogsPage } from '@/components/admin/audit/audit-logs-page';
 
 describe('AuditLogsPage', () => {
   beforeEach(() => {
+    window.history.replaceState(null, '', '/audit');
     mockListAuditLogs.mockResolvedValue({ items: [], next_cursor: null });
     mockListApiKeys.mockResolvedValue([]);
   });

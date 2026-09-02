@@ -45,7 +45,9 @@ def normalize_inbox_datetime(value: datetime) -> datetime:
     return value.astimezone(timezone.utc)
 
 
-def encode_last_message_cursor(last_message_at: datetime | None, row_id: UUID) -> str | None:
+def encode_last_message_cursor(
+    last_message_at: datetime | None, row_id: UUID
+) -> str | None:
     if last_message_at is None:
         return None
     payload = json.dumps(
@@ -57,7 +59,9 @@ def encode_last_message_cursor(last_message_at: datetime | None, row_id: UUID) -
     return base64.urlsafe_b64encode(payload).decode("utf-8").rstrip("=")
 
 
-def parse_last_message_cursor(cursor: str | None) -> tuple[datetime | None, UUID | None]:
+def parse_last_message_cursor(
+    cursor: str | None,
+) -> tuple[datetime | None, UUID | None]:
     if not cursor:
         return None, None
     try:

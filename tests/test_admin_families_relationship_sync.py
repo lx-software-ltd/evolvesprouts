@@ -40,7 +40,7 @@ def families_session(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     monkeypatch.setattr(admin_families, "get_engine", lambda: object())
     monkeypatch.setattr(
         admin_families,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: _admin_identity(),
     )
     monkeypatch.setattr(admin_families, "set_audit_context", lambda *_a, **_k: None)

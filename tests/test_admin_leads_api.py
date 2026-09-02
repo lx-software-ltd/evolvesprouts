@@ -27,7 +27,7 @@ def test_handle_admin_leads_dispatches_collection_get(
     marker = {"statusCode": 200, "body": "{}"}
     monkeypatch.setattr(
         admin_leads,
-        "extract_identity",
+        "require_admin_identity",
         lambda _: _build_admin_identity(admin_identity),
     )
     monkeypatch.setattr(admin_leads, "_list_leads", lambda _: marker)
@@ -50,7 +50,7 @@ def test_handle_admin_leads_dispatches_settings(
     captured: dict[str, Any] = {}
     monkeypatch.setattr(
         admin_leads,
-        "extract_identity",
+        "require_admin_identity",
         lambda _: _build_admin_identity(admin_identity),
     )
 
@@ -81,7 +81,7 @@ def test_handle_admin_leads_dispatches_analytics_before_uuid_parsing(
     marker = {"statusCode": 200, "body": "{}"}
     monkeypatch.setattr(
         admin_leads,
-        "extract_identity",
+        "require_admin_identity",
         lambda _: _build_admin_identity(admin_identity),
     )
     monkeypatch.setattr(admin_leads, "_get_analytics", lambda _: marker)
@@ -104,7 +104,7 @@ def test_handle_admin_leads_dispatches_resource_patch(
     captured: dict[str, Any] = {}
     monkeypatch.setattr(
         admin_leads,
-        "extract_identity",
+        "require_admin_identity",
         lambda _: _build_admin_identity(admin_identity),
     )
 
@@ -135,7 +135,7 @@ def test_handle_admin_leads_dispatches_note_creation(
     marker = {"statusCode": 201, "body": "{}"}
     monkeypatch.setattr(
         admin_leads,
-        "extract_identity",
+        "require_admin_identity",
         lambda _: _build_admin_identity(admin_identity),
     )
     monkeypatch.setattr(
@@ -160,7 +160,7 @@ def test_handle_admin_leads_dispatches_ai_suggestion_get(
     marker = {"statusCode": 200, "body": "{}"}
     monkeypatch.setattr(
         admin_leads,
-        "extract_identity",
+        "require_admin_identity",
         lambda _: _build_admin_identity(admin_identity),
     )
     monkeypatch.setattr(
@@ -188,7 +188,7 @@ def test_handle_admin_leads_dispatches_ai_suggestion_post(
     captured: dict[str, Any] = {}
     monkeypatch.setattr(
         admin_leads,
-        "extract_identity",
+        "require_admin_identity",
         lambda _: _build_admin_identity(admin_identity),
     )
 
@@ -222,7 +222,7 @@ def test_handle_admin_leads_dispatches_ai_suggestion_job_get(
     marker = {"statusCode": 200, "body": "{}"}
     monkeypatch.setattr(
         admin_leads,
-        "extract_identity",
+        "require_admin_identity",
         lambda _: _build_admin_identity(admin_identity),
     )
     monkeypatch.setattr(

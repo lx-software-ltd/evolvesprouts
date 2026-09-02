@@ -10,7 +10,7 @@ import pytest
 from app.api import admin_audit_actors, admin_audit_logs
 from app.api.admin_request import encode_created_cursor, parse_created_cursor
 from app.db.auditable_tables import AUDITABLE_TABLES
-from app.exceptions import NotFoundError, ValidationError
+from app.exceptions import AuthorizationError, NotFoundError, ValidationError
 from app.db.models import AuditLog
 
 
@@ -38,7 +38,7 @@ def _row(
 
 
 def test_audit_logs_list_requires_identity(api_gateway_event: Any) -> None:
-    with pytest.raises(ValidationError):
+    with pytest.raises(AuthorizationError, match="Authenticated user is required"):
         admin_audit_logs.handle_admin_audit_logs_request(
             api_gateway_event(method="GET", path="/v1/admin/audit-logs"),
             "GET",

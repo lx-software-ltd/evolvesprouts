@@ -98,6 +98,7 @@ export function getFirstSessionSlotForDisplay(slots: SessionSlot[]): SessionSlot
     }
   }
   return null;
+}
 
 /** Timestamp of the earliest slot with a valid `startsAt`, or `null` if none. */
 export function getFirstSessionSlotStartTimeMs(slots: SessionSlot[]): number | null {

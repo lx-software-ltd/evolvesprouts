@@ -1,5 +1,3 @@
-from app.api.admin_request import require_admin_identity, split_route_parts
-
 """Lightweight family picker list for admin UI."""
 
 from __future__ import annotations
@@ -10,6 +8,7 @@ from collections.abc import Mapping
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api.admin_request import require_admin_identity, split_route_parts
 from app.api.admin_billing_common import (
     family_or_organization_bill_to_display_label,
     primary_family_contact_names,
