@@ -384,6 +384,14 @@ Shared primitives in `apps/admin_web/src/components/ui/`:
 | Sub-accordions inside an editor | `AdminDisclosure` |
 | Operations column | `AdminRowActions`, `AdminIconButton`, `AdminIconLink` |
 | Animated show/hide | `AdminExpandRegion` + motion tokens in `globals.css` |
+| Unsaved-edit guard when switching rows | `AdminDiscardChangesDialog` |
+
+Editor hooks in `apps/admin_web/src/hooks/` shared by the migrated screens:
+`useEntityPanelEditorShell` owns the expanded row, dirty flag, and confirm
+dialog (`editorMode` and `selectedId` derive from the expanded id);
+`useExpandedRecordForm` applies the row to field state once per expansion,
+fetches deep-linked records missing from the loaded pages and returns them as
+a pinned row, and collapses unresolvable ids.
 
 **Why:**
 - The editor-above-list layout pushed the data the operator came for below the
@@ -406,7 +414,8 @@ Shared primitives in `apps/admin_web/src/components/ui/`:
   model forces them and must be commented at the site (for example the contact
   phone number renders region + national number as two controls in one field).
 - Legacy screens still on `AdminEditorCard` + `PaginatedTableCard` are
-  migrated screen by screen; new screens must not use them.
+  migrated screen by screen; new screens must not use them. Migrated so far:
+  Contacts (contacts, families, organisations tabs).
 
 ## Admin web server state on TanStack Query
 
