@@ -1,21 +1,24 @@
-import type { ReactNode } from 'react';
+import type { HTMLAttributes, ReactNode } from 'react';
 import { clsx } from 'clsx';
 
-export interface CardProps {
+export interface CardProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
   title?: string;
   description?: string;
   children: ReactNode;
   className?: string;
 }
 
+/** White bordered box used for every admin content block (with or without a title). */
 export function Card({
   title,
   description,
   children,
   className,
+  ...rest
 }: CardProps) {
   return (
     <section
+      {...rest}
       className={clsx(
         'rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:rounded-xl sm:p-6',
         className

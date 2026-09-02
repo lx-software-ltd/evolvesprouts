@@ -289,34 +289,53 @@ so on) follows the same shape, built from the shared primitives in
 - **Page order:** filters, then the table. The table is the top of the page
   and has **no card title**; the section name already appears in the nav and
   page header. Do not render a listing card title or description.
+- **White box:** `AdminRecordTable` renders the filters and the table inside
+  one untitled `Card` (white background, `border-slate-200`, rounded, shadow).
+  Every current and future table block sits in this white box; do not render
+  a table directly on the page background.
 - **Filters** (`AdminFilterBar` + `AdminFilterField` from
   `admin-filter-bar.tsx`) sit directly above the table with their labels above
   the controls. The **create** control (`AdminCreateButton`, a `+` icon button
   from `admin-create-button.tsx`) lives in the filter bar's trailing slot.
+  Filter controls, like every `Input`, `Select`, and `Textarea`, have a
+  **white background** (`bg-white` is part of the shared control primitives;
+  do not override it with tinted backgrounds).
 - **Rows expand in place** (`AdminRecordTable` + `AdminExpandableRow` from
   `admin-record-table.tsx` / `admin-expandable-row.tsx`). Clicking a row opens
   an animated detail region directly beneath that row containing the editor.
+  The detail region ends with a **strong bottom rule** (`border-b-2
+  border-b-slate-300`, built into `AdminExpandableRow`) so the operator can see
+  where the open record ends and the next row begins.
   Exactly one row is open at a time, driven by `useExpandedRecord`
   (`apps/admin_web/src/hooks/use-expanded-record.ts`), which syncs the open
   record id to a URL query parameter and prompts before discarding unsaved
   edits when switching rows.
 - **Create** inserts a draft row (`DRAFT_RECORD_ID`) at the top of the table
   with its editor already open; saving replaces the draft with the created
-  record, cancelling removes it.
+  record, collapsing the draft row removes it.
 - **Editors** (`AdminEditorPanel` + `AdminEditorActions` from
   `admin-editor-panel.tsx`) have **no title or subtitle**: field labels and
-  fields only, then one action row (`justify-start`, `gap-2`). **Create** shows
-  only the primary button. **Update** shows **Cancel** (secondary) to the
-  **left** of the primary save action. When the field area is a `<form>`, give
-  it a stable `id` and attach the submit control with `type='submit'` and
-  `form='<id>'` so the primary button can live in the actions row without
-  nesting forms invalidly.
+  fields only, then one action row (`justify-start`, `gap-2`) with **one
+  primary button** (`Create` / `Update`). There is **no Cancel button** in
+  either mode: the operator leaves an editor by collapsing the row (chevron,
+  row click, or opening another row), and `useExpandedRecord` guards unsaved
+  edits. When the field area is a `<form>`, give it a stable `id` and attach
+  the submit control with `type='submit'` and `form='<id>'` so the primary
+  button can live in the actions row without nesting forms invalidly.
+- **Read-only values** inside an editor (for example a sync status owned by an
+  integration) render as a `readOnly` `Input` in the field grid, not as plain
+  text, so every field in the grid has the same control shape.
 - **Field layout** uses `AdminFieldGrid` + `AdminField` from
   `admin-field-grid.tsx` with `columns` of **1, 2, or 4** per row. Other
   column counts are not allowed; use `span` on an `AdminField` for a wider
   control inside a 2- or 4-column grid.
 - **Sub-accordions** inside an editor (for example Location, Tags, Address)
-  use `AdminDisclosure` from `admin-disclosure.tsx`.
+  use `AdminDisclosure` from `admin-disclosure.tsx`. The disclosure title is
+  the only heading for that block: do not repeat it as a label inside (pass
+  `hideLabel` to `InlineLocationEditor` when it sits in a Location disclosure).
+  Standalone tool panels without a table (for example the Contacts →
+  Mailchimp tab) use the same shape: an untitled `Card` with `AdminDisclosure`
+  sections, no `AdminCollapsibleSection`, and no manual refresh button.
 - **Loading** renders `AdminSkeletonRows` (`admin-skeleton.tsx`) in the table
   body rather than a spinner or a blank card.
 - Do not implement create/edit flows with modal, dialog, sheet, drawer, or a

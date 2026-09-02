@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { MAILCHIMP_PRODUCTION_GATE_MESSAGE, useMailchimpSync } from '@/hooks/use-mailchimp-sync';
-import { AdminCollapsibleSection } from '@/components/ui/admin-collapsible-section';
+import { AdminDisclosure } from '@/components/ui/admin-disclosure';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -17,9 +17,6 @@ const MIN_MAX_CONTACTS = 1;
 const MAX_MAX_CONTACTS = 200;
 const MIN_MAX_MEMBERS = 1;
 const MAX_MAX_MEMBERS = 1000;
-
-const CARD_DESCRIPTION =
-  'Production-only. Push CRM contacts to the Mailchimp audience and reconcile orphans. Counters above are read-only in non-production environments.';
 
 function formatRelativeAgo(fromMs: number, nowMs: number): string {
   const sec = Math.max(0, Math.floor((nowMs - fromMs) / 1000));
@@ -206,21 +203,9 @@ export function MailchimpSyncCard() {
   const showOrphanProgress = orphanRun.state !== 'idle';
 
   return (
-    <Card title='Mailchimp sync' description={CARD_DESCRIPTION}>
-      <div className='space-y-6'>
+    <Card aria-label='Mailchimp sync' data-testid='mailchimp-sync-card'>
+      <div className='space-y-4'>
         <div className='space-y-3'>
-          <div className='flex flex-wrap items-center justify-between gap-2'>
-            <h3 className='text-sm font-semibold text-slate-900'>Status snapshot</h3>
-            <Button
-              type='button'
-              variant='secondary'
-              size='sm'
-              disabled={statusLoading}
-              onClick={() => void refetchStatus()}
-            >
-              Refresh
-            </Button>
-          </div>
           {statusError ? (
             <div className='flex flex-wrap items-start justify-between gap-2' role='alert'>
               <p className='text-sm text-red-800'>{statusError}</p>
@@ -267,7 +252,7 @@ export function MailchimpSyncCard() {
           </div>
         </div>
 
-        <AdminCollapsibleSection id='mailchimp-sync-push' title='Push CRM contacts to Mailchimp'>
+        <AdminDisclosure id='mailchimp-sync-push' title='Push CRM contacts to Mailchimp'>
           {productionGated ? (
             gateNotice
           ) : (
@@ -400,9 +385,9 @@ export function MailchimpSyncCard() {
               ) : null}
             </div>
           )}
-        </AdminCollapsibleSection>
+        </AdminDisclosure>
 
-        <AdminCollapsibleSection id='mailchimp-sync-orphans' title='Reconcile Mailchimp orphans'>
+        <AdminDisclosure id='mailchimp-sync-orphans' title='Reconcile Mailchimp orphans'>
           {productionGated ? (
             gateNotice
           ) : (
@@ -496,7 +481,7 @@ export function MailchimpSyncCard() {
               ) : null}
             </div>
           )}
-        </AdminCollapsibleSection>
+        </AdminDisclosure>
       </div>
 
       <ConfirmDialog

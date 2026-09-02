@@ -62,36 +62,31 @@ describe('AdminEditorPanel / AdminEditorActions', () => {
     expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
   });
 
-  it('shows Cancel left of Update in edit mode and submits through the form id', () => {
-    const onCancel = vi.fn();
+  it('shows only Update in edit mode (no Cancel) and submits through the form id', () => {
     const onSubmit = vi.fn((event: React.FormEvent) => event.preventDefault());
     render(
-      <AdminEditorPanel
-        actions={<AdminEditorActions mode='edit' formId='editor-form' onCancel={onCancel} isSaving={false} />}
-      >
+      <AdminEditorPanel actions={<AdminEditorActions mode='edit' formId='editor-form' isSaving={false} />}>
         <form id='editor-form' onSubmit={onSubmit}>
           <input aria-label='Name' />
         </form>
       </AdminEditorPanel>
     );
     const buttons = screen.getAllByRole('button');
-    expect(buttons.map((button) => button.textContent)).toEqual(['Cancel', 'Update']);
-    expect(buttons[1]).toHaveAttribute('type', 'submit');
-    expect(buttons[1]).toHaveAttribute('form', 'editor-form');
-    fireEvent.click(buttons[1]);
-    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(buttons.map((button) => button.textContent)).toEqual(['Update']);
+    expect(buttons[0]).toHaveAttribute('type', 'submit');
+    expect(buttons[0]).toHaveAttribute('form', 'editor-form');
     fireEvent.click(buttons[0]);
-    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
   it('disables and relabels the primary action while saving', () => {
     render(
-      <AdminEditorPanel actions={<AdminEditorActions mode='edit' onCancel={() => undefined} isSaving />}>
+      <AdminEditorPanel actions={<AdminEditorActions mode='edit' isSaving />}>
         <p>body</p>
       </AdminEditorPanel>
     );
     expect(screen.getByRole('button', { name: 'Saving...' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    expect(screen.getAllByRole('button')).toHaveLength(1);
   });
 });
 

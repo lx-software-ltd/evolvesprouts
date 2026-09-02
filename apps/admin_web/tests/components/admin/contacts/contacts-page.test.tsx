@@ -156,13 +156,13 @@ describe('ContactsPage', () => {
     expect(window.location.search).toBe('?tab=organizations');
 
     await user.click(screen.getByRole('button', { name: 'Mailchimp' }));
-    expect(screen.getByRole('heading', { name: 'Mailchimp sync' })).toBeInTheDocument();
+    expect(screen.getByTestId('mailchimp-sync-card')).toBeInTheDocument();
     expect(window.location.search).toBe('?tab=mailchimp');
     expect(screen.queryByRole('region', { name: 'Contacts' })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Contacts' }));
     expect(window.location.search).toBe('');
-    expect(screen.queryByRole('heading', { name: 'Mailchimp sync' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('mailchimp-sync-card')).not.toBeInTheDocument();
   });
 
   it('seeds the active sub-view from the URL query parameter on mount', async () => {
@@ -187,7 +187,7 @@ describe('ContactsPage', () => {
     render(<ContactsPage />);
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Mailchimp sync' })).toBeInTheDocument();
+      expect(screen.getByTestId('mailchimp-sync-card')).toBeInTheDocument();
     });
     expect(screen.queryByRole('region', { name: 'Contacts' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Mailchimp' })).toHaveAttribute(

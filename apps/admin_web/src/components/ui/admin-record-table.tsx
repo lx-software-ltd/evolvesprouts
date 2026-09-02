@@ -9,6 +9,7 @@ import { StatusBanner } from '@/components/status-banner';
 import { AdminDataTableBody, AdminDataTableCell, AdminDataTableHead } from './admin-data-table';
 import { AdminSkeletonRows } from './admin-skeleton';
 import { Button } from './button';
+import { Card } from './card';
 
 export interface AdminRecordTableProps {
   /** `AdminFilterBar` (with the create button in its trailing slot). */
@@ -36,8 +37,8 @@ export interface AdminRecordTableProps {
 }
 
 /**
- * Table-first listing: filters, then the table at the top of the page with
- * no card title. Shows skeleton rows while the first page loads and keeps
+ * Table-first listing: a white card (no title) holding the filters and then
+ * the table. Shows skeleton rows while the first page loads and keeps
  * existing rows visible while a refetch is in flight.
  */
 export function AdminRecordTable({
@@ -80,7 +81,7 @@ export function AdminRecordTable({
   const showEmpty = !isLoading && !error && rowCount === 0;
 
   return (
-    <section aria-label={ariaLabel} data-testid='admin-record-table'>
+    <Card aria-label={ariaLabel} data-testid='admin-record-table'>
       {filters}
       {error ? (
         <div className='mb-3'>
@@ -122,6 +123,6 @@ export function AdminRecordTable({
         </div>
       ) : null}
       {footer ? <div className='mt-2 text-xs text-slate-500'>{footer}</div> : null}
-    </section>
+    </Card>
   );
 }

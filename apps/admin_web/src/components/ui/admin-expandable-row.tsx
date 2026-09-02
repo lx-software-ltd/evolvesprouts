@@ -154,7 +154,9 @@ export function AdminExpandableRow({
             <div
               ref={detailRef}
               className={clsx(
-                'admin-row-detail border-t border-slate-200 px-4 py-4 sm:px-6',
+                // The strong bottom rule marks where the open editor ends and
+                // the next record begins.
+                'admin-row-detail border-t border-slate-200 border-b-2 border-b-slate-300 px-4 py-4 sm:px-6',
                 isDraft ? 'bg-amber-50/40' : 'bg-white'
               )}
             >
