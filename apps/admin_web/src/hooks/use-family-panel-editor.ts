@@ -1,12 +1,14 @@
 'use client';
 
-import { useCallback, useMemo, useState, type MouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { useAdminEntityFamilies } from '@/hooks/use-admin-entity-families';
 import { useEntityPanelEditorShell } from '@/hooks/use-entity-panel-editor-shell';
 import { useEntityInlineLocation } from '@/hooks/use-entity-inline-location';
 import { useEntityServiceLabels } from '@/hooks/use-entity-service-labels';
+import { useExpandedRecordForm } from '@/hooks/use-expanded-record-form';
 import type { InlineLocationEmbeddedSummary } from '@/components/admin/locations/inline-location-editor';
+import { ADMIN_FAMILY_QUERY_PARAM } from '@/lib/contact-related-links';
 import { listAdminFamilyServices } from '@/lib/entity-api';
 import { contactEligibleForEntityMembership } from '@/lib/entity-contact-eligibility';
 import {
@@ -17,6 +19,7 @@ import type { GeographicAreaSummary, LocationSummary } from '@/types/services';
 import type { components } from '@/types/generated/admin-api.generated';
 
 type ApiSchemas = components['schemas'];
+type AdminFamily = ApiSchemas['AdminFamily'];
 
 export interface UseFamilyPanelEditorInput {
   families: ReturnType<typeof useAdminEntityFamilies>;
@@ -42,6 +45,7 @@ export function useFamilyPanelEditor({
 }: UseFamilyPanelEditorInput) {
   const {
     families: rows,
+    isLoading,
     isSaving,
     createFamily,
     updateFamily,
@@ -57,10 +61,13 @@ export function useFamilyPanelEditor({
     deleteActionError,
     setDeleteActionError,
     editorMode,
-    setEditorMode,
     selectedId,
-    setSelectedId,
-  } = useEntityPanelEditorShell();
+    expanded,
+    externalDirtyRef,
+    clearDirty,
+    markDirty,
+    track,
+  } = useEntityPanelEditorShell({ paramName: ADMIN_FAMILY_QUERY_PARAM });
   const [familyName, setFamilyName] = useState('');
   const [relationshipType, setRelationshipType] =
     useState<(typeof FAMILY_RELATIONSHIP_TYPES)[number]>('prospect');
@@ -99,6 +106,51 @@ export function useFamilyPanelEditor({
     refreshLocations,
   });
 
+  const locationDraftDirty = location.locationDraftDirty;
+  useEffect(() => {
+    externalDirtyRef.current = () => locationDraftDirty;
+  }, [externalDirtyRef, locationDraftDirty]);
+
+  const resetLocationDraft = location.resetLocationDraft;
+
+  const clearForm = useCallback(() => {
+    setFamilyName('');
+    setRelationshipType('prospect');
+    setPendingLocationId(null);
+    setOptimisticLocationSummary(null);
+    resetLocationDraft();
+    setTagIds([]);
+    setActive(true);
+    setMemberContactId('');
+    clearDirty();
+  }, [clearDirty, resetLocationDraft]);
+
+  const applyRow = useCallback(
+    (row: AdminFamily) => {
+      setFamilyName(row.family_name);
+      setRelationshipType(
+        relationshipTypeForEditor(row.relationship_type, FAMILY_RELATIONSHIP_TYPES)
+      );
+      setPendingLocationId(row.location_id ?? null);
+      setOptimisticLocationSummary(null);
+      resetLocationDraft();
+      setTagIds([...row.tag_ids]);
+      setActive(row.active);
+      setMemberContactId('');
+      clearDirty();
+    },
+    [clearDirty, resetLocationDraft]
+  );
+
+  useExpandedRecordForm<AdminFamily>({
+    expandedId: expanded.expandedId,
+    rows,
+    isLoading,
+    applyRow,
+    reset: clearForm,
+    collapse: expanded.collapse,
+  });
+
   const memberContactOptions = useMemo(() => {
     return contactOptions.filter((c) => {
       const row = contactsForMembership.find((x) => x.id === c.id);
@@ -120,19 +172,6 @@ export function useFamilyPanelEditor({
     }
   }
 
-  async function resetCreateForm() {
-    setEditorMode('create');
-    setSelectedId(null);
-    setFamilyName('');
-    setRelationshipType('prospect');
-    setPendingLocationId(null);
-    setOptimisticLocationSummary(null);
-    location.resetLocationDraft();
-    setTagIds([]);
-    setActive(true);
-    setMemberContactId('');
-  }
-
   async function handleSubmit(): Promise<void> {
     try {
       const resolved = await location.commitLocationForSubmit();
@@ -147,7 +186,8 @@ export function useFamilyPanelEditor({
           location_id: loc,
           tag_ids: tagIds,
         });
-        await resetCreateForm();
+        clearDirty();
+        expanded.collapse();
         return;
       }
       if (!selected) {
@@ -160,6 +200,7 @@ export function useFamilyPanelEditor({
         active,
         tag_ids: tagIds,
       });
+      clearDirty();
     } catch {
       // Keep form state for retry.
     }
@@ -180,11 +221,7 @@ export function useFamilyPanelEditor({
     }
   }
 
-  async function handleDeleteFamily(
-    row: ApiSchemas['AdminFamily'],
-    clickEvent: MouseEvent<HTMLButtonElement>
-  ): Promise<void> {
-    clickEvent.stopPropagation();
+  async function handleDeleteFamily(row: AdminFamily): Promise<void> {
     const confirmed = await requestConfirm({
       title: 'Delete family',
       description: `Permanently delete "${row.family_name}"? This removes the family from the database and cannot be undone.`,
@@ -199,29 +236,12 @@ export function useFamilyPanelEditor({
     try {
       await deleteFamily(row.id);
       if (selectedId === row.id) {
-        await resetCreateForm();
+        clearDirty();
+        expanded.collapse();
       }
     } catch (err) {
       setDeleteActionError(err instanceof Error ? err.message : 'Failed to delete family');
     }
-  }
-
-  function selectRow(id: string) {
-    const row = rows.find((f) => f.id === id);
-    if (!row) {
-      return;
-    }
-    setSelectedId(id);
-    setEditorMode('edit');
-    setFamilyName(row.family_name);
-    setRelationshipType(
-      relationshipTypeForEditor(row.relationship_type, FAMILY_RELATIONSHIP_TYPES)
-    );
-    setPendingLocationId(row.location_id ?? null);
-    setOptimisticLocationSummary(null);
-    location.resetLocationDraft();
-    setTagIds([...row.tag_ids]);
-    setActive(row.active);
   }
 
   async function confirmRemoveMember() {
@@ -240,17 +260,18 @@ export function useFamilyPanelEditor({
     confirmDialogProps,
     deleteActionError,
     setDeleteActionError,
+    expanded,
     editorMode,
     selectedId,
     selected,
     familyName,
-    setFamilyName,
+    setFamilyName: track(setFamilyName),
     relationshipType,
-    setRelationshipType,
+    setRelationshipType: track(setRelationshipType),
     tagIds,
-    setTagIds,
+    setTagIds: track(setTagIds),
     active,
-    setActive,
+    setActive: track(setActive),
     isSaving,
     serviceLabels,
     memberContactId,
@@ -258,13 +279,17 @@ export function useFamilyPanelEditor({
     memberContactOptions,
     removeTarget,
     setRemoveTarget,
-    location,
-    resetCreateForm,
+    location: {
+      ...location,
+      clearPendingLocation: () => {
+        markDirty();
+        location.clearPendingLocation();
+      },
+    },
     handleSubmit,
     handleAddMember,
     handleDeleteFamily,
     handlePrimaryMemberChange,
-    selectRow,
     confirmRemoveMember,
   };
 }

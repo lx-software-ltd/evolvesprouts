@@ -2,9 +2,10 @@
 
 import type { useAdminEntityFamilies } from '@/hooks/use-admin-entity-families';
 import { useFamilyPanelEditor } from '@/hooks/use-family-panel-editor';
-import { FamilyEditorCard } from '@/components/admin/contacts/family-editor-card';
-import { FamiliesListTable } from '@/components/admin/contacts/families-list-table';
+import { FamilyEditorPanel } from '@/components/admin/contacts/family-editor-panel';
+import { FamiliesRecordTable } from '@/components/admin/contacts/families-record-table';
 import { EntityRemoveMemberDialog } from '@/components/admin/contacts/shared/entity-remove-member-dialog';
+import { AdminDiscardChangesDialog } from '@/components/ui/admin-discard-changes-dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { EntityTagRef } from '@/lib/entity-api';
 import type { GeographicAreaSummary, LocationSummary } from '@/types/services';
@@ -38,16 +39,8 @@ export function FamiliesPanel({
   contactOptions,
   contactsForMembership,
 }: FamiliesPanelProps) {
-  const {
-    families: rows,
-    filters,
-    setFilter,
-    isLoading,
-    isLoadingMore,
-    hasMore,
-    error,
-    loadMore,
-  } = families;
+  const { families: rows, filters, setFilter, isLoading, isLoadingMore, hasMore, error, loadMore } =
+    families;
 
   const editor = useFamilyPanelEditor({
     families,
@@ -59,15 +52,10 @@ export function FamiliesPanel({
   });
 
   return (
-    <div className='space-y-6'>
+    <>
       <ConfirmDialog {...editor.confirmDialogProps} />
-      <FamilyEditorCard
-        editor={editor}
-        tags={tags}
-        geographicAreas={geographicAreas}
-        areasLoading={areasLoading}
-      />
-      <FamiliesListTable
+      <AdminDiscardChangesDialog prompt={editor.expanded.discardPrompt} />
+      <FamiliesRecordTable
         rows={rows}
         filters={filters}
         setFilter={setFilter}
@@ -77,11 +65,18 @@ export function FamiliesPanel({
         error={error}
         loadMore={loadMore}
         isSaving={editor.isSaving}
-        selectedId={editor.selectedId}
         deleteActionError={editor.deleteActionError}
         onClearDeleteError={() => editor.setDeleteActionError('')}
-        onSelectRow={editor.selectRow}
-        onDeleteFamily={editor.handleDeleteFamily}
+        expanded={editor.expanded}
+        detail={
+          <FamilyEditorPanel
+            editor={editor}
+            tags={tags}
+            geographicAreas={geographicAreas}
+            areasLoading={areasLoading}
+          />
+        }
+        onDeleteFamily={(row) => void editor.handleDeleteFamily(row)}
       />
       <EntityRemoveMemberDialog
         open={editor.removeTarget !== null}
@@ -91,6 +86,6 @@ export function FamiliesPanel({
         onCancel={() => editor.setRemoveTarget(null)}
         onConfirm={() => void editor.confirmRemoveMember()}
       />
-    </div>
+    </>
   );
 }

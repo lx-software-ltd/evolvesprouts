@@ -53,9 +53,15 @@ export function useEntityInlineLocation({
   refreshLocations,
 }: UseEntityInlineLocationOptions) {
   const [locationDraft, setLocationDraft] = useState<InlineLocationDraft>(EMPTY_INLINE_LOCATION_DRAFT);
+  // Bumped by `resetLocationDraft` so the inline editor remounts in the same
+  // render that applies a record's `location_id`. Editors that load the row in
+  // an effect would otherwise mount the draft one render early, while the
+  // location is still unresolved, and stay in "editing" mode.
+  const [draftRevision, setDraftRevision] = useState(0);
 
-  const inlineLocationStateKey =
-    editorMode === 'create' ? `${stateKeyPrefix}-new` : `${stateKeyPrefix}:${selectedId ?? 'none'}`;
+  const inlineLocationStateKey = `${
+    editorMode === 'create' ? `${stateKeyPrefix}-new` : `${stateKeyPrefix}:${selectedId ?? 'none'}`
+  }#${draftRevision}`;
 
   const resolvedLocation = useMemo(() => {
     if (!pendingLocationId) {
@@ -115,6 +121,7 @@ export function useEntityInlineLocation({
 
   const resetLocationDraft = useCallback(() => {
     setLocationDraft(EMPTY_INLINE_LOCATION_DRAFT);
+    setDraftRevision((revision) => revision + 1);
     clearLocationSaveError();
   }, [clearLocationSaveError]);
 
@@ -150,6 +157,8 @@ export function useEntityInlineLocation({
   }
 
   const locationDraftInvalid = locationDraft.isInvalid || locationSaveStatus.isSaving;
+  /** True once the user has started editing the address (used by the unsaved-changes guard). */
+  const locationDraftDirty = locationDraft.isEditing && !locationDraft.isEmpty;
 
   return {
     inlineLocationStateKey,
@@ -164,6 +173,7 @@ export function useEntityInlineLocation({
     onLocationDraftChange,
     commitLocationForSubmit,
     locationDraftInvalid,
+    locationDraftDirty,
     summaryFromLocationRow,
   };
 }

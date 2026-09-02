@@ -1,14 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { useAdminEntityContacts } from '@/hooks/use-admin-entity-contacts';
 import { useFamilyOrgPickers } from '@/hooks/use-family-org-pickers';
 import { useEntityInlineLocation } from '@/hooks/use-entity-inline-location';
 import { useEntityPanelEditorShell } from '@/hooks/use-entity-panel-editor-shell';
+import { useExpandedRecordForm } from '@/hooks/use-expanded-record-form';
 import type { InlineLocationEmbeddedSummary } from '@/components/admin/locations/inline-location-editor';
 import { getAdminContact, type EntityPickerListItem } from '@/lib/entity-api';
-import { readAdminContactQueryId } from '@/lib/inbox-conversation-name';
+import { ADMIN_CONTACT_QUERY_PARAM } from '@/lib/inbox-conversation-name';
 import { contactPhoneRequestFields } from '@/lib/phone-request';
 import {
   contactRowLabel,
@@ -22,6 +23,7 @@ import type { GeographicAreaSummary, LocationSummary } from '@/types/services';
 import type { components } from '@/types/generated/admin-api.generated';
 
 type ApiSchemas = components['schemas'];
+type AdminContact = ApiSchemas['AdminContact'];
 
 export interface UseContactsPanelEditorInput {
   contacts: ReturnType<typeof useAdminEntityContacts>;
@@ -31,6 +33,10 @@ export interface UseContactsPanelEditorInput {
   refreshFamilyOrgLists?: () => void | Promise<void>;
 }
 
+async function fetchMissingContact(id: string): Promise<AdminContact | null> {
+  return getAdminContact(id);
+}
+
 export function useContactsPanelEditor({
   contacts,
   locations,
@@ -38,7 +44,7 @@ export function useContactsPanelEditor({
   refreshLocations,
   refreshFamilyOrgLists,
 }: UseContactsPanelEditorInput) {
-  const { isSaving, createContact, updateContact, deleteContact, contacts: rows } = contacts;
+  const { isSaving, isLoading, createContact, updateContact, deleteContact, contacts: rows } = contacts;
 
   const {
     confirmDialogProps,
@@ -46,13 +52,16 @@ export function useContactsPanelEditor({
     deleteActionError,
     setDeleteActionError,
     editorMode,
-    setEditorMode,
     selectedId,
-    setSelectedId,
-  } = useEntityPanelEditorShell();
-  const [notesTarget, setNotesTarget] = useState<ApiSchemas['AdminContact'] | null>(null);
+    expanded,
+    externalDirtyRef,
+    clearDirty,
+    markDirty,
+    track,
+  } = useEntityPanelEditorShell({ paramName: ADMIN_CONTACT_QUERY_PARAM });
+  const [notesOpen, setNotesOpen] = useState(false);
+  const openNotesOnApplyRef = useRef(false);
   const { familyPicker, organizationPicker } = useFamilyOrgPickers();
-  const appliedContactQueryIdRef = useRef<string | null>(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -81,11 +90,6 @@ export function useContactsPanelEditor({
   } | null>(null);
   const [active, setActive] = useState(true);
 
-  const selected = useMemo(
-    () => rows.find((c) => c.id === selectedId) ?? null,
-    [rows, selectedId]
-  );
-
   const linkedToFamilyOrOrg = Boolean(familySelectId.trim() || organizationSelectId.trim());
   const locationFieldLocked = linkedToFamilyOrOrg;
 
@@ -93,6 +97,87 @@ export function useContactsPanelEditor({
     editorMode === 'edit' && selectedId && serviceLabelsState?.entityId === selectedId
       ? serviceLabelsState.labels
       : [];
+
+  function clearForm() {
+    setFirstName('');
+    setLastName('');
+    setEmail('');
+    setInstagramHandle('');
+    setPhoneRegion('HK');
+    setPhoneNational('');
+    setContactType('parent');
+    setRelationshipType('prospect');
+    setSource('manual');
+    setSourceDetail('');
+    setReferralContactId('');
+    setReferralSearchInput('');
+    setReferralSearchResults([]);
+    setReferralPinnedLabel('');
+    setDateOfBirth('');
+    setPendingLocationId(null);
+    setOptimisticLocationSummary(null);
+    setFamilySelectId('');
+    setOrganizationSelectId('');
+    setTagIds([]);
+    setActive(true);
+    setNotesOpen(false);
+    clearDirty();
+  }
+
+  const applyRow = useCallback(
+    (row: AdminContact) => {
+      setFirstName(row.first_name);
+      setLastName(row.last_name ?? '');
+      setEmail(row.email ?? '');
+      setInstagramHandle(instagramHandleForStorage(row.instagram_handle) ?? '');
+      setPhoneRegion(row.phone_region ?? 'HK');
+      setPhoneNational(row.phone_national_number ?? '');
+      setContactType(row.contact_type);
+      setRelationshipType(relationshipTypeForEditor(row.relationship_type));
+      setSource(row.source);
+      setSourceDetail(row.source_detail ?? '');
+      setReferralContactId(row.referral_contact_id ?? '');
+      setReferralSearchInput('');
+      setReferralSearchResults([]);
+      setReferralPinnedLabel('');
+      setDateOfBirth(row.date_of_birth ?? '');
+      setPendingLocationId(row.location_id ?? null);
+      setOptimisticLocationSummary(null);
+      setFamilySelectId(row.family_ids[0] ?? '');
+      setOrganizationSelectId(row.organization_ids[0] ?? '');
+      setTagIds([...row.tag_ids]);
+      setActive(row.active);
+      setNotesOpen(openNotesOnApplyRef.current);
+      openNotesOnApplyRef.current = false;
+      clearDirty();
+    },
+    [clearDirty]
+  );
+
+  // `location` is declared below because it depends on the pinned row this
+  // hook returns; the callbacks only run from effects, after both exist.
+  const { pinnedRow } = useExpandedRecordForm<AdminContact>({
+    expandedId: expanded.expandedId,
+    rows,
+    isLoading,
+    applyRow: (row) => {
+      applyRow(row);
+      location.resetLocationDraft();
+    },
+    reset: () => {
+      clearForm();
+      location.resetLocationDraft();
+    },
+    collapse: expanded.collapse,
+    fetchMissing: fetchMissingContact,
+  });
+
+  const selected = useMemo(
+    () =>
+      rows.find((c) => c.id === selectedId) ??
+      (pinnedRow && pinnedRow.id === selectedId ? pinnedRow : null),
+    [rows, pinnedRow, selectedId]
+  );
 
   const readOnlyLockedLinesForEditor = useMemo(() => {
     if (!linkedToFamilyOrOrg || !selected) {
@@ -119,6 +204,11 @@ export function useContactsPanelEditor({
     refreshLocations,
   });
 
+  const locationDraftDirty = location.locationDraftDirty;
+  useEffect(() => {
+    externalDirtyRef.current = () => locationDraftDirty;
+  }, [externalDirtyRef, locationDraftDirty]);
+
   const referralSelectOptions = useContactReferralSearch({
     source,
     editorMode,
@@ -132,33 +222,6 @@ export function useContactsPanelEditor({
   });
 
   useContactServiceLabels(editorMode, selectedId, setServiceLabelsState);
-
-  async function resetCreateForm() {
-    setEditorMode('create');
-    setSelectedId(null);
-    setFirstName('');
-    setLastName('');
-    setEmail('');
-    setInstagramHandle('');
-    setPhoneRegion('HK');
-    setPhoneNational('');
-    setContactType('parent');
-    setRelationshipType('prospect');
-    setSource('manual');
-    setSourceDetail('');
-    setReferralContactId('');
-    setReferralSearchInput('');
-    setReferralSearchResults([]);
-    setReferralPinnedLabel('');
-    setDateOfBirth('');
-    setPendingLocationId(null);
-    setOptimisticLocationSummary(null);
-    location.resetLocationDraft();
-    setFamilySelectId('');
-    setOrganizationSelectId('');
-    setTagIds([]);
-    setActive(true);
-  }
 
   async function handleSubmit(): Promise<void> {
     try {
@@ -199,7 +262,8 @@ export function useContactsPanelEditor({
           referral_contact_id: source === 'referral' ? referralContactId.trim() : null,
         });
         await refreshFamilyOrgLists?.();
-        await resetCreateForm();
+        clearDirty();
+        expanded.collapse();
         return;
       }
       if (!selected) {
@@ -229,16 +293,13 @@ export function useContactsPanelEditor({
       }
       await updateContact(selected.id, body);
       await refreshFamilyOrgLists?.();
+      clearDirty();
     } catch {
       // Retry with form state preserved.
     }
   }
 
-  async function handleDeleteContact(
-    row: ApiSchemas['AdminContact'],
-    clickEvent: MouseEvent<HTMLButtonElement>
-  ): Promise<void> {
-    clickEvent.stopPropagation();
+  async function handleDeleteContact(row: AdminContact): Promise<void> {
     const confirmed = await requestConfirm({
       title: 'Delete contact',
       description: `Permanently delete "${contactRowLabel(row)}"? This removes the contact from the database and cannot be undone.`,
@@ -254,75 +315,26 @@ export function useContactsPanelEditor({
       await deleteContact(row.id);
       await refreshFamilyOrgLists?.();
       if (selectedId === row.id) {
-        await resetCreateForm();
+        clearDirty();
+        expanded.collapse();
       }
     } catch (err) {
       setDeleteActionError(err instanceof Error ? err.message : 'Failed to delete contact');
     }
   }
 
-  const resetLocationDraft = location.resetLocationDraft;
-  const selectRow = useCallback((row: ApiSchemas['AdminContact']) => {
-    setSelectedId(row.id);
-    setEditorMode('edit');
-    setFirstName(row.first_name);
-    setLastName(row.last_name ?? '');
-    setEmail(row.email ?? '');
-    setInstagramHandle(instagramHandleForStorage(row.instagram_handle) ?? '');
-    setPhoneRegion(row.phone_region ?? 'HK');
-    setPhoneNational(row.phone_national_number ?? '');
-    setContactType(row.contact_type);
-    setRelationshipType(relationshipTypeForEditor(row.relationship_type));
-    setSource(row.source);
-    setSourceDetail(row.source_detail ?? '');
-    setReferralContactId(row.referral_contact_id ?? '');
-    setReferralSearchInput('');
-    setReferralSearchResults([]);
-    setReferralPinnedLabel('');
-    setDateOfBirth(row.date_of_birth ?? '');
-    setPendingLocationId(row.location_id ?? null);
-    setOptimisticLocationSummary(null);
-    resetLocationDraft();
-    setFamilySelectId(row.family_ids[0] ?? '');
-    setOrganizationSelectId(row.organization_ids[0] ?? '');
-    setTagIds([...row.tag_ids]);
-    setActive(row.active);
-  }, [resetLocationDraft, setEditorMode, setSelectedId]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
+  /** Expand the row (if needed) with its Notes disclosure open. */
+  function openNotes(row: AdminContact) {
+    if (selectedId === row.id) {
+      setNotesOpen((current) => !current);
       return;
     }
-    const requestedId = readAdminContactQueryId(window.location.search);
-    if (!requestedId || appliedContactQueryIdRef.current === requestedId) {
-      return;
-    }
-    const row = rows.find((contact) => contact.id === requestedId) ?? null;
-    let cancelled = false;
-    const source = row
-      ? Promise.resolve(row)
-      : getAdminContact(requestedId);
-    void source
-      .then((contact) => {
-        if (cancelled) {
-          return;
-        }
-        appliedContactQueryIdRef.current = requestedId;
-        if (contact) {
-          selectRow(contact);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          appliedContactQueryIdRef.current = requestedId;
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [rows, selectRow]);
+    openNotesOnApplyRef.current = true;
+    expanded.expand(row.id);
+  }
 
   function handleSourceChange(v: ApiSchemas['EntityContactSource']) {
+    markDirty();
     setSource(v);
     if (v !== 'referral') {
       setReferralContactId('');
@@ -344,60 +356,61 @@ export function useContactsPanelEditor({
     confirmDialogProps,
     deleteActionError,
     setDeleteActionError,
-    notesTarget,
-    setNotesTarget,
+    expanded,
+    pinnedRow,
+    notesOpen,
+    setNotesOpen,
+    openNotes,
     editorMode,
     selected,
     firstName,
-    setFirstName,
+    setFirstName: track(setFirstName),
     lastName,
-    setLastName,
+    setLastName: track(setLastName),
     contactType,
-    setContactType,
+    setContactType: track(setContactType),
     relationshipType,
-    setRelationshipType,
+    setRelationshipType: track(setRelationshipType),
     email,
-    setEmail,
+    setEmail: track(setEmail),
     phoneRegion,
-    setPhoneRegion,
+    setPhoneRegion: track(setPhoneRegion),
     phoneNational,
-    setPhoneNational,
+    setPhoneNational: track(setPhoneNational),
     instagramHandle,
-    setInstagramHandle,
+    setInstagramHandle: track(setInstagramHandle),
     dateOfBirth,
-    setDateOfBirth,
+    setDateOfBirth: track(setDateOfBirth),
     source,
     sourceDetail,
-    setSourceDetail,
+    setSourceDetail: track(setSourceDetail),
     referralContactId,
     referralSearchInput,
     setReferralSearchInput,
     referralSelectOptions,
     handleSourceChange,
-    setReferralContactId,
+    setReferralContactId: track(setReferralContactId),
     setReferralPinnedLabel,
     familyPicker,
     organizationPicker,
     familySelectId,
-    setFamilySelectId,
+    setFamilySelectId: track(setFamilySelectId),
     organizationSelectId,
-    setOrganizationSelectId,
+    setOrganizationSelectId: track(setOrganizationSelectId),
     tagIds,
-    setTagIds,
+    setTagIds: track(setTagIds),
     active,
-    setActive,
+    setActive: track(setActive),
     isSaving,
     serviceLabels,
     linkedToFamilyOrOrg,
     location,
     readOnlyLockedLinesForEditor,
-    setPendingLocationId,
+    setPendingLocationId: track(setPendingLocationId),
     setOptimisticLocationSummary,
     saveDisabled,
-    resetCreateForm,
     handleSubmit,
     handleDeleteContact,
-    selectRow,
     selectedId,
     updateContact,
     refreshFamilyOrgLists,

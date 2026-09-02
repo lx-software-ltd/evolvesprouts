@@ -1,7 +1,7 @@
 'use client';
 
+import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { PhoneField } from '@/components/ui/phone-field';
 import { Select } from '@/components/ui/select';
 import { CONTACT_TYPES } from '@/lib/contacts/contacts-panel-constants';
@@ -55,27 +55,24 @@ export function ContactEditorIdentityFields({
 }: ContactEditorIdentityFieldsProps) {
   return (
     <>
-      <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4'>
-        <div>
-          <Label htmlFor='crm-contact-first'>First name</Label>
+      <AdminFieldGrid columns={4}>
+        <AdminField label='First name' htmlFor='crm-contact-first'>
           <Input
             id='crm-contact-first'
             value={firstName}
             onChange={(e) => onFirstNameChange(e.target.value)}
             autoComplete='off'
           />
-        </div>
-        <div>
-          <Label htmlFor='crm-contact-last'>Last name</Label>
+        </AdminField>
+        <AdminField label='Last name' htmlFor='crm-contact-last'>
           <Input
             id='crm-contact-last'
             value={lastName}
             onChange={(e) => onLastNameChange(e.target.value)}
             autoComplete='off'
           />
-        </div>
-        <div>
-          <Label htmlFor='crm-contact-type'>Contact type</Label>
+        </AdminField>
+        <AdminField label='Contact type' htmlFor='crm-contact-type'>
           <Select
             id='crm-contact-type'
             value={contactType}
@@ -87,9 +84,8 @@ export function ContactEditorIdentityFields({
               </option>
             ))}
           </Select>
-        </div>
-        <div>
-          <Label htmlFor='crm-contact-rel'>Relationship</Label>
+        </AdminField>
+        <AdminField label='Relationship' htmlFor='crm-contact-rel'>
           <Select
             id='crm-contact-rel'
             value={relationshipType}
@@ -103,12 +99,11 @@ export function ContactEditorIdentityFields({
               </option>
             ))}
           </Select>
-        </div>
-      </div>
+        </AdminField>
+      </AdminFieldGrid>
 
-      <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4'>
-        <div>
-          <Label htmlFor='crm-contact-email'>Email</Label>
+      <AdminFieldGrid columns={4}>
+        <AdminField label='Email' htmlFor='crm-contact-email'>
           <Input
             id='crm-contact-email'
             type='email'
@@ -116,8 +111,10 @@ export function ContactEditorIdentityFields({
             onChange={(e) => onEmailChange(e.target.value)}
             autoComplete='off'
           />
-        </div>
-        <div>
+        </AdminField>
+        {/* Exception to one-control-per-field: the phone number is stored as a
+            region + national number pair, so both controls share one field. */}
+        <AdminField>
           <PhoneField
             variant='compact'
             combinedLabel='Phone number'
@@ -129,9 +126,8 @@ export function ContactEditorIdentityFields({
             onNationalChange={onPhoneNationalChange}
             nationalInputId='crm-contact-phone-national'
           />
-        </div>
-        <div>
-          <Label htmlFor='crm-contact-ig'>Instagram</Label>
+        </AdminField>
+        <AdminField label='Instagram' htmlFor='crm-contact-ig'>
           <div className='relative'>
             <span
               className='pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-slate-500 sm:text-sm'
@@ -150,17 +146,16 @@ export function ContactEditorIdentityFields({
               placeholder='username'
             />
           </div>
-        </div>
-        <div>
-          <Label htmlFor='crm-contact-dob'>Date of birth</Label>
+        </AdminField>
+        <AdminField label='Date of birth' htmlFor='crm-contact-dob'>
           <Input
             id='crm-contact-dob'
             type='date'
             value={dateOfBirth}
             onChange={(e) => onDateOfBirthChange(e.target.value)}
           />
-        </div>
-      </div>
+        </AdminField>
+      </AdminFieldGrid>
     </>
   );
 }

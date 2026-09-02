@@ -1,7 +1,7 @@
 'use client';
 
 import { Label } from '@/components/ui/label';
-import { AdminCollapsibleSection } from '@/components/ui/admin-collapsible-section';
+import { AdminDisclosure } from '@/components/ui/admin-disclosure';
 
 import type { EntityTagRef } from '@/lib/entity-api';
 
@@ -40,11 +40,11 @@ export function EntityTagPicker({
   if (tags.length === 0) {
     if (variant === 'collapsible') {
       return (
-        <AdminCollapsibleSection id={id} title={label} disabled={disabled}>
+        <AdminDisclosure id={id} title={label} disabled={disabled}>
           <p id={id} className='text-sm text-slate-500'>
             No tags in the database yet.
           </p>
-        </AdminCollapsibleSection>
+        </AdminDisclosure>
       );
     }
     return (
@@ -81,9 +81,14 @@ export function EntityTagPicker({
 
   if (variant === 'collapsible') {
     return (
-      <AdminCollapsibleSection id={id} title={label} disabled={disabled}>
+      <AdminDisclosure
+        id={id}
+        title={label}
+        summary={selectedIds.length > 0 ? `${selectedIds.length} selected` : undefined}
+        disabled={disabled}
+      >
         {list}
-      </AdminCollapsibleSection>
+      </AdminDisclosure>
     );
   }
 

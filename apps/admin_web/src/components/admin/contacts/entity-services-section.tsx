@@ -1,6 +1,6 @@
 'use client';
 
-import { AdminCollapsibleSection } from '@/components/ui/admin-collapsible-section';
+import { AdminDisclosure } from '@/components/ui/admin-disclosure';
 
 export interface EntityServicesSectionProps {
   id: string;
@@ -13,12 +13,12 @@ export function EntityServicesSection({ id, labels }: EntityServicesSectionProps
   }
 
   return (
-    <AdminCollapsibleSection id={id} title='Services'>
+    <AdminDisclosure id={id} title='Services' summary={labels.length}>
       <ul className='space-y-1 pt-1 text-sm text-slate-700'>
         {labels.map((label) => (
           <li key={label}>{label}</li>
         ))}
       </ul>
-    </AdminCollapsibleSection>
+    </AdminDisclosure>
   );
 }

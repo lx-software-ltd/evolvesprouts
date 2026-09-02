@@ -96,3 +96,11 @@ export function contactRowLabel(row: ApiSchemas['AdminContact']): string {
   }
   return row.id;
 }
+
+/** Label of the member flagged as primary contact, or `null` when none is set. */
+export function primaryMemberLabel(
+  members: { is_primary_contact: boolean; contact_label?: string | null }[]
+): string | null {
+  const primary = members.find((member) => member.is_primary_contact);
+  return primary?.contact_label?.trim() || null;
+}

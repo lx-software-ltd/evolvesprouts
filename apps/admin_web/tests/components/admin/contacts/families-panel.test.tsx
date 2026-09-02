@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const { createLocation, geocodeVenueAddress, updateLocationPartial } = vi.hoisted(() => ({
   createLocation: vi.fn(),
@@ -68,7 +68,11 @@ function buildFamiliesHook(
 }
 
 describe('FamiliesPanel', () => {
-  it('creates a family with non-vendor relationship default', async () => {
+  afterEach(() => {
+    window.history.replaceState(null, '', '/contacts');
+  });
+
+  it('creates a family with non-vendor relationship default from the draft row', async () => {
     const user = userEvent.setup();
     const createFamily = vi.fn().mockResolvedValue(null);
     const families = buildFamiliesHook({ createFamily });
@@ -85,6 +89,15 @@ describe('FamiliesPanel', () => {
         contactsForMembership={[]}
       />
     );
+
+    expect(screen.getByRole('region', { name: 'Families' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Family name')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'New family' }));
+
+    expect(window.location.search).toBe('?family=new');
+    expect(screen.getByTestId('admin-row-new')).toHaveAttribute('data-draft', 'true');
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
 
     await user.type(screen.getByLabelText('Family name'), 'The Smiths');
     await user.click(screen.getByRole('button', { name: 'Create family' }));
@@ -179,6 +192,11 @@ describe('FamiliesPanel', () => {
     );
 
     await user.click(screen.getByText('Smith'));
+    expect(window.location.search).toBe('?family=fam-1');
+    expect(screen.getByLabelText('Family name')).toHaveValue('Smith');
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /^Location/ }));
     await user.click(screen.getByRole('button', { name: 'Change' }));
     await user.clear(screen.getByLabelText('Address'));
     await user.type(screen.getByLabelText('Address'), '2 New St');
@@ -246,6 +264,9 @@ describe('FamiliesPanel', () => {
     );
 
     await user.click(screen.getByText('Smith'));
+    const membersTrigger = screen.getByRole('button', { name: /^Members/ });
+    expect(membersTrigger).toHaveTextContent('1');
+    await user.click(membersTrigger);
     const primaryCheckbox = screen.getByRole('checkbox', {
       name: 'Primary contact for Alex Smith',
     });
@@ -302,7 +323,8 @@ describe('FamiliesPanel', () => {
     });
   });
 
-  it('shows related-record operation links only when those records exist', () => {
+  it('shows related-record operation links only when those records exist', async () => {
+    const user = userEvent.setup();
     const families = buildFamiliesHook({
       families: [
         {
@@ -360,19 +382,28 @@ describe('FamiliesPanel', () => {
       />
     );
 
-    const salesLink = screen.getByRole('link', { name: 'Sales conversations' });
+    const linkedRow = screen.getByTestId('admin-row-fam-linked');
+    const salesLink = within(linkedRow).getByRole('link', { name: 'Sales conversations' });
     expect(salesLink).toHaveAttribute('href', '/sales?tab=instagram&family=fam-linked');
-    expect(salesLink).toHaveClass('h-8', 'px-3');
-    expect(screen.getByRole('link', { name: 'Service instances' })).toHaveAttribute(
+    expect(salesLink).toHaveClass('h-8', 'w-8', 'bg-white', 'border');
+    expect(within(linkedRow).queryByRole('link', { name: 'Service instances' })).not.toBeInTheDocument();
+
+    await user.click(within(linkedRow).getByRole('button', { name: 'More actions' }));
+    const menu = screen.getByRole('menu', { name: 'More actions' });
+    expect(within(menu).getByRole('menuitem', { name: 'Service instances' })).toHaveAttribute(
       'href',
       '/services?family=fam-linked'
     );
-    expect(screen.getByRole('link', { name: 'Invoices' })).toHaveAttribute(
+    expect(within(menu).getByRole('menuitem', { name: 'Invoices' })).toHaveAttribute(
       'href',
       '/assets?tag=customer_invoice&query=Alex+Smith'
     );
-    expect(screen.getAllByRole('link', { name: 'Sales conversations' })).toHaveLength(1);
-    expect(screen.getAllByRole('link', { name: 'Service instances' })).toHaveLength(1);
-    expect(screen.getAllByRole('link', { name: 'Invoices' })).toHaveLength(1);
+    expect(within(menu).getByRole('menuitem', { name: 'Delete family' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+
+    const plainRow = screen.getByTestId('admin-row-fam-plain');
+    expect(within(plainRow).queryByRole('link')).not.toBeInTheDocument();
+    expect(within(plainRow).queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
+    expect(within(plainRow).getByRole('button', { name: 'Delete family' })).toBeInTheDocument();
   });
 });

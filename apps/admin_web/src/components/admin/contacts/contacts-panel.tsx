@@ -2,9 +2,9 @@
 
 import type { useAdminEntityContacts } from '@/hooks/use-admin-entity-contacts';
 import { useContactsPanelEditor } from '@/hooks/use-contacts-panel-editor';
-import { ContactEditorCard } from '@/components/admin/contacts/contact-editor-card';
-import { ContactNotesPanel } from '@/components/admin/contacts/contact-notes-panel';
-import { ContactsListTable } from '@/components/admin/contacts/contacts-list-table';
+import { ContactEditorPanel } from '@/components/admin/contacts/contact-editor-panel';
+import { ContactsRecordTable } from '@/components/admin/contacts/contacts-record-table';
+import { AdminDiscardChangesDialog } from '@/components/ui/admin-discard-changes-dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { EntityTagRef } from '@/lib/entity-api';
 import type { AdminUser } from '@/types/leads';
@@ -33,16 +33,8 @@ export function ContactsPanel({
   refreshLocations,
   refreshFamilyOrgLists,
 }: ContactsPanelProps) {
-  const {
-    contacts: rows,
-    filters,
-    setFilter,
-    isLoading,
-    isLoadingMore,
-    hasMore,
-    error,
-    loadMore,
-  } = contacts;
+  const { contacts: rows, filters, setFilter, isLoading, isLoadingMore, hasMore, error, loadMore } =
+    contacts;
 
   const editor = useContactsPanelEditor({
     contacts,
@@ -53,24 +45,12 @@ export function ContactsPanel({
   });
 
   return (
-    <div className='space-y-6'>
+    <>
       <ConfirmDialog {...editor.confirmDialogProps} />
-      <ContactEditorCard
-        editor={editor}
-        tags={tags}
-        geographicAreas={geographicAreas}
-        areasLoading={areasLoading}
-      />
-      {editor.notesTarget ? (
-        <ContactNotesPanel
-          contact={editor.notesTarget}
-          adminUsers={adminUsers}
-          onClose={() => editor.setNotesTarget(null)}
-          onStandaloneNoteCountChange={onPatchStandaloneNoteCount}
-        />
-      ) : null}
-      <ContactsListTable
+      <AdminDiscardChangesDialog prompt={editor.expanded.discardPrompt} />
+      <ContactsRecordTable
         rows={rows}
+        pinnedRow={editor.pinnedRow}
         filters={filters}
         setFilter={setFilter}
         isLoading={isLoading}
@@ -79,20 +59,27 @@ export function ContactsPanel({
         error={error}
         loadMore={loadMore}
         isSaving={editor.isSaving}
-        selectedId={editor.selectedId}
         deleteActionError={editor.deleteActionError}
         onClearDeleteError={() => editor.setDeleteActionError('')}
-        onSelectRow={editor.selectRow}
-        onToggleNotes={(row) => {
-          editor.setNotesTarget((current) => (current?.id === row.id ? null : row));
-        }}
+        expanded={editor.expanded}
+        detail={
+          <ContactEditorPanel
+            editor={editor}
+            tags={tags}
+            geographicAreas={geographicAreas}
+            areasLoading={areasLoading}
+            adminUsers={adminUsers}
+            onPatchStandaloneNoteCount={onPatchStandaloneNoteCount}
+          />
+        }
+        onOpenNotes={editor.openNotes}
         onToggleActive={(row) => {
           void editor.updateContact(row.id, { active: !row.active }).then(() =>
             editor.refreshFamilyOrgLists?.()
           );
         }}
-        onDeleteContact={editor.handleDeleteContact}
+        onDeleteContact={(row) => void editor.handleDeleteContact(row)}
       />
-    </div>
+    </>
   );
 }
