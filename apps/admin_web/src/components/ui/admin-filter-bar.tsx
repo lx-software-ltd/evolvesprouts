@@ -19,14 +19,20 @@ export interface AdminFilterBarProps {
 /**
  * Filter row that sits directly above a record table. Titles live on the
  * filters themselves (labels), not on the table, so the table can start at
- * the top of the page.
+ * the top of the page. The trailing slot (create button) sits at the right
+ * end of the row on desktop and on its own full-width line above the
+ * filters on phones.
  */
 export function AdminFilterBar({ children, trailing, summary, className }: AdminFilterBarProps) {
   return (
     <div className={clsx('mb-3 space-y-2', className)} data-testid='admin-filter-bar'>
-      <div className='flex flex-wrap items-end gap-3'>
+      <div className='flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end'>
         {children ? <div className='flex min-w-0 flex-1 flex-wrap items-end gap-3'>{children}</div> : null}
-        {trailing ? <div className='ml-auto flex shrink-0 items-end gap-2'>{trailing}</div> : null}
+        {trailing ? (
+          <div className='order-first flex w-full shrink-0 items-end gap-2 sm:order-none sm:ml-auto sm:w-auto'>
+            {trailing}
+          </div>
+        ) : null}
       </div>
       {summary ? <p className='text-xs text-slate-500'>{summary}</p> : null}
     </div>
