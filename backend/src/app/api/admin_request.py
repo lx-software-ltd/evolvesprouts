@@ -180,6 +180,74 @@ def paginate_items(
     return page_items, next_cursor
 
 
+def encode_tuple_cursor(fields: Mapping[str, str]) -> str:
+    """Encode an opaque cursor from named string fields."""
+    payload = json.dumps(dict(fields), separators=(",", ":")).encode("utf-8")
+    return base64.urlsafe_b64encode(payload).decode("utf-8").rstrip("=")
+
+
+def parse_tuple_cursor(
+    cursor: str | None,
+    *,
+    required_keys: Sequence[str],
+) -> dict[str, str] | None:
+    """Parse an opaque tuple cursor and require the given string keys."""
+    if not cursor:
+        return None
+    try:
+        payload = _decode_cursor(cursor)
+    except (ValueError, TypeError, json.JSONDecodeError) as exc:
+        raise ValidationError("Invalid cursor", field="cursor") from exc
+    if not isinstance(payload, dict):
+        raise ValidationError("Invalid cursor", field="cursor")
+    parsed: dict[str, str] = {}
+    for key in required_keys:
+        value = payload.get(key)
+        if not isinstance(value, str):
+            raise ValidationError("Invalid cursor", field="cursor")
+        parsed[key] = value
+    return parsed
+
+
+def paginate_after_key(
+    items: Sequence[Mapping[str, Any]],
+    *,
+    limit: int,
+    cursor: str | None,
+    key_fields: Sequence[str],
+) -> tuple[list[Mapping[str, Any]], str | None]:
+    """Page a pre-sorted in-memory list using an opaque keyset cursor."""
+    start = 0
+    if cursor:
+        cursor_key = parse_tuple_cursor(cursor, required_keys=key_fields)
+        if cursor_key is None:
+            raise ValidationError("Invalid cursor", field="cursor")
+        start_index = next(
+            (
+                index + 1
+                for index, row in enumerate(items)
+                if all(
+                    str(row.get(field) or "") == cursor_key[field]
+                    for field in key_fields
+                )
+            ),
+            None,
+        )
+        if start_index is None:
+            raise ValidationError("Invalid cursor", field="cursor")
+        start = start_index
+    page = list(items[start : start + limit])
+    has_more = start + len(page) < len(items)
+    next_cursor = (
+        encode_tuple_cursor(
+            {field: str(page[-1].get(field) or "") for field in key_fields}
+        )
+        if has_more and page
+        else None
+    )
+    return page, next_cursor
+
+
 def paginated_json_response(
     *,
     items: Sequence[Any],

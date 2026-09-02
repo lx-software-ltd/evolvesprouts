@@ -24,24 +24,31 @@ describe('WebsiteFormsPanel', () => {
 
   it('loads forms and answers for the selected form', async () => {
     listAdminForms.mockResolvedValue([{ formSlug: 'workshop-feedback', answerCount: 1 }]);
-    listAdminFormAnswers.mockResolvedValue([
-      {
-        formSlug: 'workshop-feedback',
-        sessionId: '550e8400-e29b-41d4-a716-446655440000',
-        questionId: 'name',
-        questionType: 'text',
-        freeText: 'Alex',
-        createdAt: '2026-06-26T10:00:00Z',
-        updatedAt: '2026-06-26T10:00:00Z',
-      },
-    ]);
+    listAdminFormAnswers.mockResolvedValue({
+      items: [
+        {
+          formSlug: 'workshop-feedback',
+          sessionId: '550e8400-e29b-41d4-a716-446655440000',
+          questionId: 'name',
+          questionType: 'text',
+          freeText: 'Alex',
+          createdAt: '2026-06-26T10:00:00Z',
+          updatedAt: '2026-06-26T10:00:00Z',
+        },
+      ],
+      nextCursor: null,
+    });
 
     render(<WebsiteFormsPanel />);
 
     await waitFor(() => {
       expect(listAdminFormAnswers).toHaveBeenCalledWith(
         'workshop-feedback',
-        expect.any(AbortSignal)
+        expect.objectContaining({
+          cursor: null,
+          limit: 25,
+          signal: expect.any(AbortSignal),
+        })
       );
     });
 

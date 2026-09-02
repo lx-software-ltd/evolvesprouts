@@ -1,3 +1,4 @@
+import { clampAdminListLimit } from './admin-list-limit';
 import { ensureFreshTokens } from './auth';
 import { adminApiRequest } from './api-admin-client';
 import { unwrapPayload } from './api-payload';
@@ -66,15 +67,26 @@ export async function listAdminPolls(signal?: AbortSignal): Promise<AdminPollSum
 
 export async function listAdminPollAnswers(
   pollSlug: string,
-  signal?: AbortSignal
-): Promise<AdminPollAnswerRow[]> {
+  params: { cursor?: string | null; limit?: number; signal?: AbortSignal } = {}
+): Promise<{ items: AdminPollAnswerRow[]; nextCursor: string | null }> {
+  const query = new URLSearchParams();
+  if (params.cursor) {
+    query.set('cursor', params.cursor);
+  }
+  if (typeof params.limit === 'number') {
+    query.set('limit', `${clampAdminListLimit(params.limit)}`);
+  }
+  const queryString = query.toString();
   const payload = await adminApiRequest<ApiSchemas['AdminPollAnswerListResponse']>({
-    endpointPath: `/v1/admin/polls/${encodeURIComponent(pollSlug)}/answers`,
+    endpointPath: `/v1/admin/polls/${encodeURIComponent(pollSlug)}/answers${queryString ? `?${queryString}` : ''}`,
     method: 'GET',
-    signal,
+    signal: params.signal,
   });
   const root = unwrapPayload(payload);
-  return Array.isArray(root.items) ? root.items.map((item) => parsePollAnswerRow(item)) : [];
+  return {
+    items: Array.isArray(root.items) ? root.items.map((item) => parsePollAnswerRow(item)) : [],
+    nextCursor: typeof root.next_cursor === 'string' ? root.next_cursor : null,
+  };
 }
 
 export async function clearAdminPollAnswers(pollSlug: string): Promise<AdminPollClearAnswersResponse> {

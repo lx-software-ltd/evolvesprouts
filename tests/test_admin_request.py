@@ -4,7 +4,13 @@ import base64
 
 import pytest
 
-from app.api.admin_request import parse_body, parse_limit, require_admin_identity
+from app.api.admin_request import (
+    encode_tuple_cursor,
+    paginate_after_key,
+    parse_body,
+    parse_limit,
+    require_admin_identity,
+)
 from app.exceptions import AuthorizationError, ValidationError
 
 
@@ -58,3 +64,34 @@ def test_parse_limit_defaults_to_standard_admin_page_size() -> None:
 def test_parse_limit_rejects_values_above_standard_max() -> None:
     with pytest.raises(ValidationError, match="limit must be between 1 and 100"):
         parse_limit({"queryStringParameters": {"limit": "101"}})
+
+
+def test_paginate_after_key_returns_next_cursor_and_resumes() -> None:
+    items = [
+        {"updatedAt": "2026-01-03", "sessionId": "s-3", "questionId": "q"},
+        {"updatedAt": "2026-01-02", "sessionId": "s-2", "questionId": "q"},
+        {"updatedAt": "2026-01-01", "sessionId": "s-1", "questionId": "q"},
+    ]
+    key_fields = ("updatedAt", "sessionId", "questionId")
+    first_page, cursor = paginate_after_key(
+        items, limit=2, cursor=None, key_fields=key_fields
+    )
+    assert [row["sessionId"] for row in first_page] == ["s-3", "s-2"]
+    assert cursor is not None
+    second_page, next_cursor = paginate_after_key(
+        items, limit=2, cursor=cursor, key_fields=key_fields
+    )
+    assert [row["sessionId"] for row in second_page] == ["s-1"]
+    assert next_cursor is None
+
+
+def test_paginate_after_key_rejects_unknown_cursor() -> None:
+    with pytest.raises(ValidationError, match="Invalid cursor"):
+        paginate_after_key(
+            [{"updatedAt": "2026-01-01", "sessionId": "s-1", "questionId": "q"}],
+            limit=25,
+            cursor=encode_tuple_cursor(
+                {"updatedAt": "missing", "sessionId": "s", "questionId": "q"}
+            ),
+            key_fields=("updatedAt", "sessionId", "questionId"),
+        )

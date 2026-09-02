@@ -1,3 +1,4 @@
+import { clampAdminListLimit } from './admin-list-limit';
 import { ensureFreshTokens } from './auth';
 import { adminApiRequest } from './api-admin-client';
 import { unwrapPayload } from './api-payload';
@@ -71,15 +72,26 @@ export async function listAdminForms(signal?: AbortSignal): Promise<AdminFormSum
 
 export async function listAdminFormAnswers(
   formSlug: string,
-  signal?: AbortSignal
-): Promise<AdminFormAnswerRow[]> {
+  params: { cursor?: string | null; limit?: number; signal?: AbortSignal } = {}
+): Promise<{ items: AdminFormAnswerRow[]; nextCursor: string | null }> {
+  const query = new URLSearchParams();
+  if (params.cursor) {
+    query.set('cursor', params.cursor);
+  }
+  if (typeof params.limit === 'number') {
+    query.set('limit', `${clampAdminListLimit(params.limit)}`);
+  }
+  const queryString = query.toString();
   const payload = await adminApiRequest<ApiSchemas['AdminFormAnswerListResponse']>({
-    endpointPath: `/v1/admin/forms/${encodeURIComponent(formSlug)}/answers`,
+    endpointPath: `/v1/admin/forms/${encodeURIComponent(formSlug)}/answers${queryString ? `?${queryString}` : ''}`,
     method: 'GET',
-    signal,
+    signal: params.signal,
   });
   const root = unwrapPayload(payload);
-  return Array.isArray(root.items) ? root.items.map((item) => parseFormAnswerRow(item)) : [];
+  return {
+    items: Array.isArray(root.items) ? root.items.map((item) => parseFormAnswerRow(item)) : [],
+    nextCursor: typeof root.next_cursor === 'string' ? root.next_cursor : null,
+  };
 }
 
 export async function clearAdminFormAnswers(

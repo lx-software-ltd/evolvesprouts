@@ -55,7 +55,7 @@ function isAbortError(error: unknown): boolean {
 export function usePaginatedList<TItem, TFilters extends object>({
   fetcher,
   defaultFilters,
-  limit = 50,
+  limit = 25,
   errorPrefix = 'Failed to load',
   debounceKeys = [],
   debounceMs = 300,

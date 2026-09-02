@@ -114,7 +114,7 @@ function parseListPayload(raw: unknown): AuditLogsResponse {
 export async function listAuditLogs(
   filters?: AuditLogsFilters,
   cursor?: string,
-  limit = 50
+  limit = 25
 ): Promise<AuditLogsResponse> {
   const endpointPath = buildAuditLogsPath(filters, cursor, limit);
   const payload = await adminApiRequest<unknown>({

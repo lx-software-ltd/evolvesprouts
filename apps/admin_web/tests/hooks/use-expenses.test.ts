@@ -146,7 +146,7 @@ describe('useExpenses', () => {
       status: '',
       parseStatus: '',
       cursor: null,
-      limit: 50,
+      limit: 25,
       signal: controller.signal,
     };
     await firstCallArgs!.fetcher(fetcherParams);
@@ -157,7 +157,7 @@ describe('useExpenses', () => {
         status: '',
         parseStatus: '',
         cursor: null,
-        limit: 50,
+        limit: 25,
       },
       controller.signal
     );

@@ -26,22 +26,32 @@ describe('WebsitePollsPanel', () => {
     listAdminPolls.mockResolvedValue([
       { pollSlug: 'workshop-food-jun-26', answerCount: 1 },
     ]);
-    listAdminPollAnswers.mockResolvedValue([
-      {
-        pollSlug: 'workshop-food-jun-26',
-        sessionId: '550e8400-e29b-41d4-a716-446655440000',
-        questionId: 'role',
-        questionType: 'select',
-        selectedOption: 'Parent',
-        createdAt: '2026-06-26T10:00:00Z',
-        updatedAt: '2026-06-26T10:00:00Z',
-      },
-    ]);
+    listAdminPollAnswers.mockResolvedValue({
+      items: [
+        {
+          pollSlug: 'workshop-food-jun-26',
+          sessionId: '550e8400-e29b-41d4-a716-446655440000',
+          questionId: 'role',
+          questionType: 'select',
+          selectedOption: 'Parent',
+          createdAt: '2026-06-26T10:00:00Z',
+          updatedAt: '2026-06-26T10:00:00Z',
+        },
+      ],
+      nextCursor: null,
+    });
 
     render(<WebsitePollsPanel />);
 
     await waitFor(() => {
-      expect(listAdminPollAnswers).toHaveBeenCalledWith('workshop-food-jun-26', expect.any(AbortSignal));
+      expect(listAdminPollAnswers).toHaveBeenCalledWith(
+        'workshop-food-jun-26',
+        expect.objectContaining({
+          cursor: null,
+          limit: 25,
+          signal: expect.any(AbortSignal),
+        })
+      );
     });
 
     expect(screen.getByText('Parent')).toBeInTheDocument();
@@ -52,7 +62,7 @@ describe('WebsitePollsPanel', () => {
     listAdminPolls.mockResolvedValue([
       { pollSlug: 'workshop-food-jun-26', answerCount: 1 },
     ]);
-    listAdminPollAnswers.mockResolvedValue([]);
+    listAdminPollAnswers.mockResolvedValue({ items: [], nextCursor: null });
     exportAdminPollAnswersCsv.mockResolvedValue(new Blob(['csv'], { type: 'text/csv' }));
     const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock');
     const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
@@ -77,17 +87,20 @@ describe('WebsitePollsPanel', () => {
     listAdminPolls.mockResolvedValue([
       { pollSlug: 'workshop-food-jun-26', answerCount: 1 },
     ]);
-    listAdminPollAnswers.mockResolvedValue([
-      {
-        pollSlug: 'workshop-food-jun-26',
-        sessionId: '550e8400-e29b-41d4-a716-446655440000',
-        questionId: 'role',
-        questionType: 'select',
-        selectedOption: 'Parent',
-        createdAt: '2026-06-26T10:00:00Z',
-        updatedAt: '2026-06-26T10:00:00Z',
-      },
-    ]);
+    listAdminPollAnswers.mockResolvedValue({
+      items: [
+        {
+          pollSlug: 'workshop-food-jun-26',
+          sessionId: '550e8400-e29b-41d4-a716-446655440000',
+          questionId: 'role',
+          questionType: 'select',
+          selectedOption: 'Parent',
+          createdAt: '2026-06-26T10:00:00Z',
+          updatedAt: '2026-06-26T10:00:00Z',
+        },
+      ],
+      nextCursor: null,
+    });
     clearAdminPollAnswers.mockResolvedValue({ pollSlug: 'workshop-food-jun-26', deletedCount: 1 });
 
     render(<WebsitePollsPanel />);

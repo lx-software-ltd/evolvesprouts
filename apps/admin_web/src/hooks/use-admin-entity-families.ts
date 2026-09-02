@@ -42,7 +42,7 @@ export function useAdminEntityFamilies() {
     defaultFilters: DEFAULT_FAMILY_ORG_LIST_FILTERS,
     errorPrefix: 'Failed to load families',
     debounceKeys: ['query'],
-    limit: 50,
+    limit: 25,
   });
 
   const { isSaving, mutate } = useListMutate(list.refetch);

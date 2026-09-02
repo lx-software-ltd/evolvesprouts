@@ -129,7 +129,7 @@ describe('AuditLogsPage', () => {
       expect(mockListAuditLogs).toHaveBeenCalledWith(
         expect.objectContaining({ email: 'ops@example.com' }),
         undefined,
-        50
+        25
       );
     });
   });
@@ -166,7 +166,7 @@ describe('AuditLogsPage', () => {
 
     await user.click(screen.getByRole('button', { name: /load more/i }));
     await waitFor(() => {
-      expect(mockListAuditLogs).toHaveBeenNthCalledWith(2, expect.anything(), 'cursor-token', 50);
+      expect(mockListAuditLogs).toHaveBeenNthCalledWith(2, expect.anything(), 'cursor-token', 25);
       const table = screen.getByRole('table');
       expect(within(table).getByText('asset_access_grants')).toBeInTheDocument();
     });

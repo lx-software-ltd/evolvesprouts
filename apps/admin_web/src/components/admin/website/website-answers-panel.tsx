@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
 import { Select } from '@/components/ui/select';
 import { toErrorMessage } from '@/hooks/hook-errors';
+import { usePaginatedList } from '@/hooks/use-paginated-list';
 import { formatDate } from '@/lib/format';
 
 export interface WebsiteAnswersSummary {
@@ -30,14 +31,27 @@ export interface WebsiteAnswersRow {
   updatedAt: string;
 }
 
+export interface WebsiteAnswersPageParams {
+  cursor: string | null;
+  limit: number;
+  signal: AbortSignal;
+}
+
 export interface WebsiteAnswersPanelProps<TRow extends WebsiteAnswersRow> {
   noun: 'form' | 'poll';
   listSummaries: (signal?: AbortSignal) => Promise<WebsiteAnswersSummary[]>;
-  listAnswers: (slug: string, signal?: AbortSignal) => Promise<TRow[]>;
+  listAnswers: (
+    slug: string,
+    params: WebsiteAnswersPageParams
+  ) => Promise<{ items: TRow[]; nextCursor: string | null }>;
   exportCsv: (slug: string) => Promise<Blob>;
   clearAnswers: (slug: string) => Promise<void>;
   formatAnswer: (row: TRow) => string;
 }
+
+type AnswerFilters = {
+  slug: string;
+};
 
 export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
   noun,
@@ -51,11 +65,8 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
   const lowerNoun = noun;
   const [summaries, setSummaries] = useState<WebsiteAnswersSummary[]>([]);
   const [selectedSlug, setSelectedSlug] = useState('');
-  const [answers, setAnswers] = useState<TRow[]>([]);
   const [summariesLoading, setSummariesLoading] = useState(true);
-  const [answersLoading, setAnswersLoading] = useState(false);
   const [summariesError, setSummariesError] = useState('');
-  const [answersError, setAnswersError] = useState('');
   const [actionError, setActionError] = useState('');
   const [exporting, setExporting] = useState(false);
   const [clearing, setClearing] = useState(false);
@@ -65,6 +76,35 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
     () => summaries.find((item) => item.slug === selectedSlug) ?? null,
     [summaries, selectedSlug]
   );
+
+  const fetcher = useCallback(
+    async (params: AnswerFilters & WebsiteAnswersPageParams) => {
+      if (!params.slug) {
+        return { items: [] as TRow[], nextCursor: null };
+      }
+      return listAnswers(params.slug, {
+        cursor: params.cursor,
+        limit: params.limit,
+        signal: params.signal,
+      });
+    },
+    [listAnswers]
+  );
+
+  const {
+    items: answers,
+    isLoading: answersLoading,
+    isLoadingMore,
+    hasMore,
+    error: answersError,
+    loadMore,
+    refetch,
+  } = usePaginatedList<TRow, AnswerFilters>({
+    fetcher,
+    defaultFilters: { slug: '' },
+    errorPrefix: `Failed to load ${lowerNoun} answers`,
+    fetchOnMount: false,
+  });
 
   const loadSummaries = useCallback(
     async (signal?: AbortSignal) => {
@@ -93,32 +133,6 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
     [listSummaries, lowerNoun]
   );
 
-  const loadAnswers = useCallback(
-    async (slug: string, signal?: AbortSignal) => {
-      if (!slug) {
-        setAnswers([]);
-        setAnswersError('');
-        return;
-      }
-      setAnswersLoading(true);
-      setAnswersError('');
-      try {
-        const items = await listAnswers(slug, signal);
-        setAnswers(items);
-      } catch (error) {
-        if (signal?.aborted) {
-          return;
-        }
-        setAnswersError(toErrorMessage(error, `Failed to load ${lowerNoun} answers.`));
-      } finally {
-        if (!signal?.aborted) {
-          setAnswersLoading(false);
-        }
-      }
-    },
-    [listAnswers, lowerNoun]
-  );
-
   useEffect(() => {
     const controller = new AbortController();
     void loadSummaries(controller.signal);
@@ -126,10 +140,8 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
   }, [loadSummaries]);
 
   useEffect(() => {
-    const controller = new AbortController();
-    void loadAnswers(selectedSlug, controller.signal);
-    return () => controller.abort();
-  }, [loadAnswers, selectedSlug]);
+    void refetch({ slug: selectedSlug });
+  }, [refetch, selectedSlug]);
 
   const handleExport = async () => {
     if (!selectedSlug) {
@@ -161,13 +173,16 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
     try {
       await clearAnswers(selectedSlug);
       setClearDialogOpen(false);
-      await Promise.all([loadSummaries(), loadAnswers(selectedSlug)]);
+      await loadSummaries();
+      await refetch({ slug: selectedSlug });
     } catch (error) {
       setActionError(toErrorMessage(error, `Failed to clear ${lowerNoun} answers.`));
     } finally {
       setClearing(false);
     }
   };
+
+  const storedCount = selectedSummary?.answerCount ?? 0;
 
   const toolbar = (
     <div className='mb-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between'>
@@ -203,7 +218,7 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
           type='button'
           variant='outline'
           onClick={() => setClearDialogOpen(true)}
-          disabled={!selectedSlug || clearing || answersLoading || answers.length === 0}
+          disabled={!selectedSlug || clearing || answersLoading || storedCount === 0}
         >
           Clear answers
         </Button>
@@ -226,11 +241,11 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
             : `Choose a ${lowerNoun} to view stored answers from DynamoDB.`
         }
         isLoading={answersLoading}
-        isLoadingMore={false}
-        hasMore={false}
+        isLoadingMore={isLoadingMore}
+        hasMore={hasMore}
         error={answersError}
         loadingLabel='Loading answers…'
-        onLoadMore={() => {}}
+        onLoadMore={loadMore}
         toolbar={toolbar}
       >
         <AdminDataTable tableClassName='min-w-[960px]'>
@@ -272,7 +287,7 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
         title={`Clear ${lowerNoun} answers`}
         description={
           selectedSlug
-            ? `Permanently delete all ${answers.length} stored answer rows for "${selectedSlug}"? This cannot be undone.`
+            ? `Permanently delete all ${storedCount} stored answer rows for "${selectedSlug}"? This cannot be undone.`
             : `Permanently delete all stored answer rows for this ${lowerNoun}? This cannot be undone.`
         }
         confirmLabel={clearing ? 'Clearing…' : 'Clear answers'}
