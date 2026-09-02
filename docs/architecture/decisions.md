@@ -365,12 +365,14 @@ list sections so the edit context was visible before browsing/filtering lists.
 ## Admin web table-first, expand-in-place layout
 
 **Decision:** Every admin CRUD screen renders filters, then the table, with no
-listing title. Selecting a row expands an editor directly beneath that row
-(one open at a time, animated, URL-synced); creating a record inserts a draft
-row with its editor open. Editors have no title or subtitle, fields are laid
-out 1, 2, or 4 per row, and Operations-column controls are icon-only buttons of
-one size with a border, white background, and tooltip, collapsing to a
-three-dots overflow menu beyond two actions.
+listing title, inside one untitled white card. Selecting a row expands an
+editor directly beneath that row (one open at a time, animated, URL-synced,
+closed off by a strong bottom rule); creating a record inserts a draft row with
+its editor open. Editors have no title or subtitle and no Cancel button (one
+primary action; collapsing the row is how the operator leaves), fields are laid
+out 1, 2, or 4 per row with white-background controls, and Operations-column
+controls are icon-only buttons of one size with a border, white background, and
+tooltip, collapsing to a three-dots overflow menu beyond two actions.
 
 Shared primitives in `apps/admin_web/src/components/ui/`:
 
@@ -405,6 +407,12 @@ a pinned row, and collapses unresolvable ids.
   widening as actions are added.
 - One open row plus URL sync gives deep-linkable edit state (`?record=<id>`)
   and a single place to guard unsaved changes.
+- A Cancel button in the editor duplicated the collapse affordances (chevron,
+  row click, other row) and, on the draft row, implied a second way to lose
+  work; the unsaved-edit guard already covers every exit path.
+- The white card around filters and table restores a clear content boundary
+  on the grey page background; the `border-b-2` rule under an open editor
+  makes the end of the record legible when the next row follows immediately.
 
 **Notes:**
 - The overflow control is an anchored popover menu, not a full-screen modal,
@@ -415,7 +423,15 @@ a pinned row, and collapses unresolvable ids.
   phone number renders region + national number as two controls in one field).
 - Legacy screens still on `AdminEditorCard` + `PaginatedTableCard` are
   migrated screen by screen; new screens must not use them. Migrated so far:
-  Contacts (contacts, families, organisations tabs).
+  Contacts (contacts, families, organisations tabs). The Mailchimp tab, a tool
+  panel with no table, follows the same shape: untitled `Card`,
+  `AdminDisclosure` sections, no manual refresh (status refetches after each
+  run).
+- Read-only editor values (for example the contact's Mailchimp sync status)
+  render as a `readOnly` `Input` so the field grid keeps one control shape.
+- Embedded notes inside an expanded contact use a compact composer (one
+  textarea row with the action beside it) above a notes table at the same
+  density as the contacts table.
 
 ## Admin web server state on TanStack Query
 
