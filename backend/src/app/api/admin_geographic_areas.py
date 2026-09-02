@@ -8,8 +8,12 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.api.admin_request import parse_uuid, query_param
-from app.api.assets.assets_common import split_route_parts
+from app.api.admin_request import (
+    parse_uuid,
+    query_param,
+    require_admin_identity,
+    split_route_parts,
+)
 from app.db.engine import get_engine
 from app.db.models import GeographicArea
 from app.db.repositories import GeographicAreaRepository
@@ -26,6 +30,8 @@ def handle_admin_geographic_areas_request(
     parts = split_route_parts(path)
     if len(parts) != 2 or parts[0] != "admin" or parts[1] != "geographic-areas":
         return json_response(404, {"error": "Not found"}, event=event)
+
+    require_admin_identity(event)
 
     if method != "GET":
         return json_response(405, {"error": "Method not allowed"}, event=event)

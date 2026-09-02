@@ -17,7 +17,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.api.admin_request import parse_limit, parse_uuid, query_param
-from app.api.assets.assets_common import split_route_parts
+from app.api.shared_request import split_route_parts
 from app.api.public.token_auth import require_api_token
 from app.db.engine import get_engine
 from app.db.models.whatsapp import WhatsAppConversation, WhatsAppMessage

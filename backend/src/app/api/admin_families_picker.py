@@ -1,3 +1,5 @@
+from app.api.admin_request import require_admin_identity, split_route_parts
+
 """Lightweight family picker list for admin UI."""
 
 from __future__ import annotations
@@ -13,7 +15,6 @@ from app.api.admin_billing_common import (
     primary_family_contact_names,
 )
 from app.api.admin_entities_helpers import parse_limit
-from app.api.assets.assets_common import extract_identity, split_route_parts
 from app.db.engine import get_engine
 from app.db.models import Family
 from app.exceptions import ValidationError
@@ -39,9 +40,7 @@ def handle_admin_families_picker_request(
     if len(parts) < 3 or parts[0] != "admin":
         return json_response(404, {"error": "Not found"}, event=event)
 
-    identity = extract_identity(event)
-    if not identity.user_sub:
-        raise ValidationError("Authenticated user is required", field="authorization")
+    identity = require_admin_identity(event)
 
     if method != "GET":
         return json_response(405, {"error": "Method not allowed"}, event=event)

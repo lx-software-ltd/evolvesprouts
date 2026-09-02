@@ -12,7 +12,7 @@ import pytest
 
 from app.api import admin_meta as am
 from app.db.models.enums import MetaChannel, MetaMessageDirection
-from app.exceptions import ValidationError
+from app.exceptions import AuthorizationError, ValidationError
 
 
 def _identity_event(
@@ -28,7 +28,7 @@ def _identity_event(
 
 def test_admin_meta_requires_auth(api_gateway_event: Any) -> None:
     event = api_gateway_event(method="GET", path="/v1/admin/meta/conversations")
-    with pytest.raises(ValidationError):
+    with pytest.raises(AuthorizationError, match="Authenticated user is required"):
         am.handle_admin_meta_request(event, "GET", "/v1/admin/meta/conversations")
 
 

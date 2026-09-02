@@ -8,7 +8,7 @@ from uuid import uuid4
 import pytest
 
 from app.api import admin_families_picker
-from app.api.assets.assets_common import RequestIdentity
+from app.api.admin_request import RequestIdentity
 
 
 def _admin_identity() -> RequestIdentity:

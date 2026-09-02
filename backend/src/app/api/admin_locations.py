@@ -11,19 +11,21 @@ from sqlalchemy.orm import Session
 
 from app.api.admin_request import (
     encode_cursor,
+    extract_identity,
     parse_body,
     parse_cursor,
     parse_limit,
-    request_id,
     parse_uuid,
     query_param,
+    request_id,
+    require_admin_identity,
+    split_route_parts,
 )
 from app.api.admin_validators import (
     MAX_ADDRESS_LENGTH,
     MAX_NAME_LENGTH,
     validate_string_length,
 )
-from app.api.assets.assets_common import extract_identity, split_route_parts
 from app.db.audit import set_audit_context
 from app.db.engine import get_engine
 from app.db.models import Location
@@ -42,6 +44,8 @@ def handle_admin_locations_request(
     parts = split_route_parts(path)
     if len(parts) < 2 or parts[0] != "admin" or parts[1] != "locations":
         return json_response(404, {"error": "Not found"}, event=event)
+
+    require_admin_identity(event)
 
     if len(parts) == 3 and parts[2] == "geocode":
         if method == "POST":

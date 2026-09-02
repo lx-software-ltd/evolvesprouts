@@ -11,7 +11,7 @@ import pytest
 
 from app.api import admin_service_instances
 from app.api.admin_services_common import parse_update_instance_payload
-from app.api.assets.assets_common import RequestIdentity
+from app.api.admin_request import RequestIdentity
 from app.db.models.enums import (
     InstanceStatus,
     ServiceDeliveryMode,

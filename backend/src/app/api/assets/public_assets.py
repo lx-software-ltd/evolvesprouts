@@ -8,7 +8,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.api.admin_request import parse_uuid
+from app.api.admin_request import parse_uuid, split_route_parts
 from app.api.assets.assets_common import (
     generate_download_url,
     paginate_response,
@@ -16,7 +16,6 @@ from app.api.assets.assets_common import (
     parse_limit,
     signed_link_no_cache_headers,
     serialize_asset,
-    split_route_parts,
 )
 from app.db.engine import get_engine
 from app.db.models import AssetVisibility

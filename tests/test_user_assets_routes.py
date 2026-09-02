@@ -4,7 +4,7 @@ from typing import Any
 from uuid import uuid4
 
 from app.api.assets import user_assets
-from app.api.assets.assets_common import RequestIdentity
+from app.api.admin_request import RequestIdentity
 
 
 def _user_identity() -> RequestIdentity:

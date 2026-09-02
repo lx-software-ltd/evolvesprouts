@@ -8,21 +8,23 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.api.admin_request import parse_uuid
-from app.api.assets.assets_common import (
+from app.api.admin_request import (
     RequestIdentity,
-    extract_identity,
+    parse_uuid,
+    require_admin_identity,
+    split_route_parts,
+)
+from app.api.assets.assets_common import (
     generate_download_url,
     paginate_response,
     parse_cursor,
     parse_limit,
     signed_link_no_cache_headers,
     serialize_asset,
-    split_route_parts,
 )
 from app.db.engine import get_engine
 from app.db.repositories.asset import AssetRepository
-from app.exceptions import AuthorizationError, NotFoundError, ValidationError
+from app.exceptions import AuthorizationError, NotFoundError
 from app.utils import json_response
 
 
@@ -36,9 +38,7 @@ def handle_user_assets_request(
     if len(parts) < 2 or parts[0] != "user" or parts[1] != "assets":
         return json_response(404, {"error": "Not found"}, event=event)
 
-    identity = extract_identity(event)
-    if not identity.user_sub:
-        raise ValidationError("Authenticated user is required", field="authorization")
+    identity = require_admin_identity(event)
 
     if len(parts) == 2 and method == "GET":
         return _list_accessible_assets(event, identity)
@@ -53,9 +53,6 @@ def handle_user_assets_request(
 def _list_accessible_assets(
     event: Mapping[str, Any], identity: RequestIdentity
 ) -> dict[str, Any]:
-    if not identity.user_sub:
-        raise ValidationError("Authenticated user is required", field="authorization")
-
     limit = parse_limit(event)
     cursor = parse_cursor(event)
 

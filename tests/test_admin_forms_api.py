@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.api import admin_forms
-from app.exceptions import ValidationError
+from app.exceptions import AuthorizationError
 from app.services import form_responses_store as store
 
 
@@ -31,7 +31,7 @@ def _identity_event(
 
 
 def test_list_forms_requires_auth(api_gateway_event: Any) -> None:
-    with pytest.raises(ValidationError, match="Authenticated user is required"):
+    with pytest.raises(AuthorizationError, match="Authenticated user is required"):
         admin_forms.handle_admin_forms_request(
             api_gateway_event(method="GET", path="/v1/admin/forms"),
             "GET",

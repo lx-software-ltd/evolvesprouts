@@ -10,7 +10,7 @@ import pytest
 from unittest.mock import MagicMock
 
 from app.api import admin_families
-from app.api.assets.assets_common import RequestIdentity
+from app.api.admin_request import RequestIdentity
 from app.db.models import RelationshipType
 
 

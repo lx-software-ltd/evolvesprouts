@@ -13,8 +13,7 @@ from app.api.admin_billing_common import (
     primary_org_contact_names,
 )
 from app.api.admin_entities_helpers import parse_limit, parse_relationship_type
-from app.api.admin_request import query_param
-from app.api.assets.assets_common import extract_identity, split_route_parts
+from app.api.admin_request import query_param, require_admin_identity, split_route_parts
 from app.db.engine import get_engine
 from app.db.models import Organization, RelationshipType
 from app.exceptions import ValidationError
@@ -40,9 +39,7 @@ def handle_admin_organizations_picker_request(
     if len(parts) < 3 or parts[0] != "admin":
         return json_response(404, {"error": "Not found"}, event=event)
 
-    identity = extract_identity(event)
-    if not identity.user_sub:
-        raise ValidationError("Authenticated user is required", field="authorization")
+    identity = require_admin_identity(event)
 
     if method != "GET":
         return json_response(405, {"error": "Method not allowed"}, event=event)

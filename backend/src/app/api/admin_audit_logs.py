@@ -25,8 +25,9 @@ from app.api.admin_request import (
     parse_uuid,
     query_param,
     request_id,
+    require_admin_identity,
+    split_route_parts,
 )
-from app.api.assets.assets_common import extract_identity, split_route_parts
 from app.db.audit import AuditLogRepository, set_audit_context
 from app.db.auditable_tables import AUDITABLE_TABLES
 from app.db.engine import get_engine
@@ -100,9 +101,7 @@ def handle_admin_audit_logs_request(
     if len(parts) < 2 or parts[0] != "admin" or parts[1] != "audit-logs":
         return json_response(404, {"error": "Not found"}, event=event)
 
-    identity = extract_identity(event)
-    if not identity.user_sub:
-        raise ValidationError("Authenticated user is required", field="authorization")
+    identity = require_admin_identity(event)
 
     if len(parts) == 2:
         if method != "GET":

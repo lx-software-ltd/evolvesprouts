@@ -8,6 +8,7 @@ from app.api import admin_geographic_areas
 def test_handle_admin_geographic_areas_dispatches_list_route(
     monkeypatch: Any,
     api_gateway_event: Any,
+    admin_identity: dict[str, str],
 ) -> None:
     marker = {"statusCode": 200, "body": "{}"}
     monkeypatch.setattr(
@@ -15,7 +16,11 @@ def test_handle_admin_geographic_areas_dispatches_list_route(
     )
 
     response = admin_geographic_areas.handle_admin_geographic_areas_request(
-        api_gateway_event(method="GET", path="/v1/admin/geographic-areas"),
+        api_gateway_event(
+            method="GET",
+            path="/v1/admin/geographic-areas",
+            authorizer_context=admin_identity,
+        ),
         "GET",
         "/v1/admin/geographic-areas",
     )
@@ -23,9 +28,16 @@ def test_handle_admin_geographic_areas_dispatches_list_route(
     assert response is marker
 
 
-def test_handle_admin_geographic_areas_rejects_non_get(api_gateway_event: Any) -> None:
+def test_handle_admin_geographic_areas_rejects_non_get(
+    api_gateway_event: Any,
+    admin_identity: dict[str, str],
+) -> None:
     response = admin_geographic_areas.handle_admin_geographic_areas_request(
-        api_gateway_event(method="POST", path="/v1/admin/geographic-areas"),
+        api_gateway_event(
+            method="POST",
+            path="/v1/admin/geographic-areas",
+            authorizer_context=admin_identity,
+        ),
         "POST",
         "/v1/admin/geographic-areas",
     )

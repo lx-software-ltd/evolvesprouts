@@ -7,7 +7,7 @@ import pytest
 
 from app.api import admin_leads
 from app.api.admin_leads_common import parse_lead_filters
-from app.api.assets.assets_common import RequestIdentity
+from app.api.admin_request import RequestIdentity
 from app.exceptions import ValidationError
 
 
