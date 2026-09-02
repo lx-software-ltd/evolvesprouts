@@ -1,7 +1,8 @@
 'use client';
 
 import { ActionBadge, SourceBadge } from '@/components/admin/audit/audit-log-badges';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { AdminDialog } from '@/components/ui/admin-dialog';
+import { Button } from '@/components/ui/button';
 import { formatDate } from '@/lib/format';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -24,15 +25,20 @@ export function AuditLogDetailDialog({ log, onClose }: AuditLogDetailDialogProps
   const actorLabel = log.user_email || log.user_id || null;
 
   return (
-    <ConfirmDialog
+    <AdminDialog
       open
       title='Audit log detail'
       description='Full row payload including old and new values when present.'
       dialogRole='dialog'
-      hideConfirm
-      cancelLabel='Close'
-      onCancel={onClose}
-      onConfirm={onClose}
+      contentClassName='w-full max-w-3xl'
+      onClose={onClose}
+      footer={
+        <div className='flex justify-end'>
+          <Button type='button' variant='primary' onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      }
     >
       <div className='max-h-[min(70vh,32rem)] space-y-4 overflow-y-auto pr-1'>
         <div className='grid grid-cols-2 gap-4 text-sm'>
@@ -120,6 +126,6 @@ export function AuditLogDetailDialog({ log, onClose }: AuditLogDetailDialogProps
           </div>
         ) : null}
       </div>
-    </ConfirmDialog>
+    </AdminDialog>
   );
 }
