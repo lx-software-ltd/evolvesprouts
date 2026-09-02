@@ -175,4 +175,70 @@ describe('ContactNotesPanel', () => {
       expect(screen.getByText('Failed to load notes')).toBeInTheDocument();
     });
   });
+
+  it('embedded layout: + opens a draft row, clicking a note opens its editor, Delete stays in Operations', async () => {
+    const user = userEvent.setup();
+    listAdminContactNotes.mockResolvedValue([
+      {
+        id: 'note-1',
+        content: 'Existing note',
+        created_by: 'user-1',
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: null,
+      },
+    ]);
+    createAdminContactNote.mockResolvedValue({
+      id: 'note-2',
+      content: 'Fresh note',
+      created_by: 'user-1',
+      created_at: '2026-01-02T00:00:00.000Z',
+      updated_at: null,
+    });
+    updateAdminContactNote.mockResolvedValue({
+      id: 'note-1',
+      content: 'Existing note edited',
+      created_by: 'user-1',
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-03T00:00:00.000Z',
+    });
+    deleteAdminContactNote.mockResolvedValue(undefined);
+
+    render(<ContactNotesPanel layout='embedded' contact={CONTACT} adminUsers={[]} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Existing note')).toBeInTheDocument();
+    });
+    expect(screen.getByRole('region', { name: 'Notes' })).toHaveAttribute('data-embedded', 'true');
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit note' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'New note' }));
+    expect(screen.getByTestId('admin-row-note-draft')).toHaveAttribute('data-draft', 'true');
+    await user.type(screen.getByRole('textbox', { name: 'New note' }), 'Fresh note');
+    await user.click(screen.getByRole('button', { name: 'Add note' }));
+    await waitFor(() => {
+      expect(createAdminContactNote).toHaveBeenCalledWith(CONTACT.id, { content: 'Fresh note' });
+    });
+    expect(screen.queryByTestId('admin-row-note-draft')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Fresh note').length).toBeGreaterThanOrEqual(1);
+
+    await user.click(screen.getByTestId('admin-row-note-1'));
+    const editor = screen.getByRole('textbox', { name: 'Edit note' });
+    expect(editor).toHaveValue('Existing note');
+    await user.type(editor, ' edited');
+    await user.click(screen.getByRole('button', { name: 'Update note' }));
+    await waitFor(() => {
+      expect(updateAdminContactNote).toHaveBeenCalledWith(CONTACT.id, 'note-1', {
+        content: 'Existing note edited',
+      });
+    });
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+
+    const deleteButtons = screen.getAllByRole('button', { name: 'Delete note' });
+    await user.click(deleteButtons[0]!);
+    await waitFor(() => {
+      expect(deleteAdminContactNote).toHaveBeenCalled();
+    });
+  });
 });

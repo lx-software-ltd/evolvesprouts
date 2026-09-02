@@ -399,7 +399,11 @@ describe('ContactsPanel', () => {
     await waitFor(() => {
       expect(listAdminContactNotes).toHaveBeenCalledWith(row.id, expect.any(AbortSignal));
     });
-    expect(screen.getByLabelText('New note')).toBeInTheDocument();
+    // Notes are a nested table-first list: `+` opens the draft row with the composer.
+    expect(screen.getByRole('region', { name: 'Notes' })).toHaveAttribute('data-embedded', 'true');
+    expect(screen.queryByRole('textbox', { name: 'New note' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'New note' }));
+    expect(screen.getByRole('textbox', { name: 'New note' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add note' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /Notes ·/ })).not.toBeInTheDocument();
   });
