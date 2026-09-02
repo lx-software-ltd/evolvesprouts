@@ -295,17 +295,37 @@ so on) follows the same shape, built from the shared primitives in
   a table directly on the page background.
 - **Filters** (`AdminFilterBar` + `AdminFilterField` from
   `admin-filter-bar.tsx`) sit directly above the table with their labels above
-  the controls. The **create** control (`AdminCreateButton`, a `+` icon button
-  from `admin-create-button.tsx`) lives in the filter bar's trailing slot.
+  the controls. The **create** control (`AdminCreateButton` from
+  `admin-create-button.tsx`) lives in the filter bar's trailing slot. It is a
+  **square** control the same height as the filter inputs (`sm:h-9 sm:w-9`,
+  `rounded-md`, `+` icon only) on desktop; on phones it moves to **its own
+  full-width line above the filters** and spells out its label (for example
+  `New contact`). Do not render the create control as a round or 32px button.
   Filter controls, like every `Input`, `Select`, and `Textarea`, have a
   **white background** (`bg-white` is part of the shared control primitives;
   do not override it with tinted backgrounds).
+- **Mobile-ready tables:** a record table must never need horizontal
+  scrolling on a phone to read the identifying column and Operations. Do not
+  set a `min-w-*` on the table. Mark non-essential columns with
+  `priority='secondary'` (shown from `md`) or `priority='tertiary'` (shown
+  from `lg`) on both `AdminDataTableHeadCell` and `AdminDataTableCell`, and
+  surface the most useful hidden value under the identifying cell with
+  `AdminDataTableCellMeta` (visible only while its column is hidden). The
+  Operations column is always `primary`; `AdminRowActions` already caps the
+  inline controls at two.
 - **Rows expand in place** (`AdminRecordTable` + `AdminExpandableRow` from
   `admin-record-table.tsx` / `admin-expandable-row.tsx`). Clicking a row opens
   an animated detail region directly beneath that row containing the editor.
-  The detail region ends with a **strong bottom rule** (`border-b-2
-  border-b-slate-300`, built into `AdminExpandableRow`) so the operator can see
-  where the open record ends and the next row begins.
+  The selected record is **framed** on its left, right, and bottom edges by
+  one rule of the same colour and weight (`border-2 border-slate-300`, built
+  into `AdminExpandableRow` on both the summary row and the detail region) so
+  the operator can see where the open record ends and the next row begins.
+- **Nested record lists** inside an open editor (contact notes, family and
+  organisation members) reuse the same pattern with
+  `AdminRecordTable embedded` (no inner card): a `+` `AdminCreateButton`
+  above the list opens a draft row, clicking a row opens its editor beneath
+  it, and destructive actions stay in Operations. Do not render an always-on
+  composer or an edit icon for these lists.
   Exactly one row is open at a time, driven by `useExpandedRecord`
   (`apps/admin_web/src/hooks/use-expanded-record.ts`), which syncs the open
   record id to a URL query parameter and prompts before discarding unsaved
@@ -362,7 +382,11 @@ should extend the shared primitives rather than reintroducing one-off layouts.
   instead of ad-hoc button rows. It is implemented as a **button group** (`role="group"`,
   `aria-pressed` on the active control), not ARIA tabs; do not add `role="tablist"` /
   `role="tab"` without the full tabpanel pattern (panels, `aria-controls`, roving tabindex,
-  arrow keys).
+  arrow keys). The strip is a `slate-100` tray; the **active** control is a
+  **white** card with a uniform 1px `slate-300` border on all four sides and
+  hover previews the same white surface. On phones the controls fill the row
+  **two per line** (`grid grid-cols-2`) so every view stays visible without
+  horizontal scrolling.
 - **Listing blocks** follow the table-first CRUD pattern above
   (`AdminRecordTable` with `AdminFilterBar`). Table markup inside it uses
   `AdminDataTable`, `AdminDataTableHead`, and `AdminDataTableBody` from
