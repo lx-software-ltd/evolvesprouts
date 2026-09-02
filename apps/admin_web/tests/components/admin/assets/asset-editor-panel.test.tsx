@@ -144,6 +144,30 @@ describe('AssetEditorPanel', () => {
     });
   });
 
+  it('shows create mode when no asset is selected', () => {
+    renderEditor();
+
+    expect(screen.getByRole('heading', { name: 'Create Asset' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create asset' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Create a new PDF asset or select a row below to edit/)
+    ).toBeInTheDocument();
+  });
+
+  it('returns to create mode when Cancel is clicked in edit mode', async () => {
+    const user = userEvent.setup();
+    const { onStartCreate } = renderEditor({ selectedAsset: SELECTED_ASSET });
+
+    expect(screen.getByRole('heading', { name: 'Edit Asset' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeInTheDocument();
+    expect(screen.getByText(/Cancel to create a new asset/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onStartCreate).toHaveBeenCalledTimes(1);
+  });
+
   it('shows validation when save is clicked with no changes in edit mode', async () => {
     const user = userEvent.setup();
     renderEditor({ selectedAsset: SELECTED_ASSET });

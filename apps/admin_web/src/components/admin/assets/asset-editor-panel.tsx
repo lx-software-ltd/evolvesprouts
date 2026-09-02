@@ -226,8 +226,8 @@ export function AssetEditorPanel({
 
   const cardTitle = isEditMode ? 'Edit Asset' : 'Create Asset';
   const cardDescription = isEditMode
-    ? 'Update metadata and visibility, optionally replace the PDF file, and manage sharing.'
-    : 'Create a new PDF asset and upload content automatically with a presigned URL.';
+    ? 'Update metadata and visibility, optionally replace the PDF file, and manage sharing. Cancel to create a new asset.'
+    : 'Create a new PDF asset or select a row below to edit. Upload starts automatically with a presigned URL.';
 
   const submitLabel = useMemo(() => {
     if (isSavingAsset) {
