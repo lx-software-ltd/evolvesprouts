@@ -2,7 +2,7 @@
 
 import { DeleteIcon } from '@/components/icons/action-icons';
 import { Button } from '@/components/ui/button';
-import { AdminCollapsibleSection } from '@/components/ui/admin-collapsible-section';
+import { AdminDisclosure } from '@/components/ui/admin-disclosure';
 import {
   AdminDataTable,
   AdminDataTableBody,
@@ -11,8 +11,8 @@ import {
   AdminDataTableHeadCell,
   AdminDataTableOperationsHeadCell,
 } from '@/components/ui/admin-data-table';
+import { AdminRowActions } from '@/components/ui/admin-row-actions';
 import { Label } from '@/components/ui/label';
-import { AdminTableToolbar } from '@/components/ui/admin-table-toolbar';
 import { Select } from '@/components/ui/select';
 import { formatEnumLabel } from '@/lib/format';
 
@@ -54,9 +54,9 @@ export function EntityMembersSection({
   onRemoveRequest,
 }: EntityMembersSectionProps) {
   return (
-    <AdminCollapsibleSection id={sectionId} title='Members'>
+    <AdminDisclosure id={sectionId} title='Members' summary={members.length}>
       <div className='space-y-3 pt-1'>
-        <AdminTableToolbar marginBottom='none'>
+        <div className='flex flex-wrap items-end gap-3'>
           <div className='min-w-[200px] flex-1'>
             <Label htmlFor={contactSelectId}>Contact</Label>
             <Select
@@ -75,7 +75,7 @@ export function EntityMembersSection({
           <Button type='button' disabled={isSaving || !memberContactId} onClick={onAddMember}>
             Add member
           </Button>
-        </AdminTableToolbar>
+        </div>
         <p className='text-xs text-slate-600'>{helpText}</p>
         <AdminDataTable tableClassName='min-w-[520px]'>
           <AdminDataTableHead>
@@ -106,18 +106,18 @@ export function EntityMembersSection({
                     />
                   </AdminDataTableCell>
                   <AdminDataTableCell className='text-right'>
-                    <Button
-                      type='button'
-                      size='sm'
-                      variant='danger'
-                      className='h-8 min-w-8 px-0'
-                      disabled={isSaving}
-                      onClick={() => onRemoveRequest(member.id, label)}
-                      aria-label={`Remove ${label} from ${entityLabel}`}
-                      title='Remove member'
-                    >
-                      <DeleteIcon className='h-4 w-4 shrink-0' aria-hidden />
-                    </Button>
+                    <AdminRowActions
+                      actions={[
+                        {
+                          key: 'remove',
+                          label: `Remove ${label} from ${entityLabel}`,
+                          icon: <DeleteIcon className='h-4 w-4' />,
+                          tone: 'danger',
+                          disabled: isSaving,
+                          onClick: () => onRemoveRequest(member.id, label),
+                        },
+                      ]}
+                    />
                   </AdminDataTableCell>
                 </tr>
               );
@@ -125,6 +125,6 @@ export function EntityMembersSection({
           </AdminDataTableBody>
         </AdminDataTable>
       </div>
-    </AdminCollapsibleSection>
+    </AdminDisclosure>
   );
 }

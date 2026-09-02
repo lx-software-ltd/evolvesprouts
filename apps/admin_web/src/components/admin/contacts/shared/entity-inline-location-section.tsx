@@ -1,6 +1,6 @@
 'use client';
 
-import { AdminCollapsibleSection } from '@/components/ui/admin-collapsible-section';
+import { AdminDisclosure } from '@/components/ui/admin-disclosure';
 import {
   InlineLocationEditor,
   type InlineLocationEmbeddedSummary,
@@ -42,7 +42,7 @@ export function EntityInlineLocationSection({
   onGeocode,
 }: EntityInlineLocationSectionProps) {
   return (
-    <AdminCollapsibleSection id={sectionId} title='Location'>
+    <AdminDisclosure id={sectionId} title='Location'>
       <InlineLocationEditor
         stateKey={stateKey}
         location={location}
@@ -59,6 +59,6 @@ export function EntityInlineLocationSection({
         onClear={onClear}
         onGeocode={onGeocode}
       />
-    </AdminCollapsibleSection>
+    </AdminDisclosure>
   );
 }
