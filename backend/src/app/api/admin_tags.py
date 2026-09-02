@@ -8,7 +8,6 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, select, union_all
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -28,15 +27,8 @@ from app.api.admin_request import (
 from app.api.admin_validators import validate_string_length
 from app.db.audit import set_audit_context
 from app.db.engine import get_engine
-from app.db.models import (
-    AssetTag,
-    ContactTag,
-    FamilyTag,
-    OrganizationTag,
-    ServiceInstanceTag,
-    ServiceTag,
-    Tag,
-)
+from app.db.models import Tag
+from app.db.repositories.tag import TagRepository
 from app.exceptions import NotFoundError, ValidationError
 from app.services.asset_expense_tagging import (
     CLIENT_DOCUMENT_TAG_NAME,
@@ -102,62 +94,6 @@ def handle_admin_tags_request(
     return not_found(event)
 
 
-def _usage_counts_by_tag_id(session: Session, tag_ids: list[UUID]) -> dict[UUID, int]:
-    """Single aggregated query per list of tag ids (avoids N×6 counts per row)."""
-    if not tag_ids:
-        return {}
-    # Use mapped ``__table__`` columns so static type checkers accept ``tag_id``
-    # (ORM ``.tag_id`` attributes are not always inferred on declarative classes).
-    ct = ContactTag.__table__.c
-    ft = FamilyTag.__table__.c
-    ot = OrganizationTag.__table__.c
-    at = AssetTag.__table__.c
-    st = ServiceTag.__table__.c
-    sit = ServiceInstanceTag.__table__.c
-    s_contact = (
-        select(ct.tag_id, func.count().label("cnt"))
-        .where(ct.tag_id.in_(tag_ids))
-        .group_by(ct.tag_id)
-    )
-    s_family = (
-        select(ft.tag_id, func.count().label("cnt"))
-        .where(ft.tag_id.in_(tag_ids))
-        .group_by(ft.tag_id)
-    )
-    s_org = (
-        select(ot.tag_id, func.count().label("cnt"))
-        .where(ot.tag_id.in_(tag_ids))
-        .group_by(ot.tag_id)
-    )
-    s_asset = (
-        select(at.tag_id, func.count().label("cnt"))
-        .where(at.tag_id.in_(tag_ids))
-        .group_by(at.tag_id)
-    )
-    s_service = (
-        select(st.tag_id, func.count().label("cnt"))
-        .where(st.tag_id.in_(tag_ids))
-        .group_by(st.tag_id)
-    )
-    s_instance = (
-        select(sit.tag_id, func.count().label("cnt"))
-        .where(sit.tag_id.in_(tag_ids))
-        .group_by(sit.tag_id)
-    )
-    combined = union_all(
-        s_contact, s_family, s_org, s_asset, s_service, s_instance
-    ).subquery()
-    stmt = select(combined.c.tag_id, func.sum(combined.c.cnt)).group_by(
-        combined.c.tag_id
-    )
-    rows = session.execute(stmt).all()
-    return {row[0]: int(row[1] or 0) for row in rows}
-
-
-def _tag_usage_count(session: Session, tag_id: UUID) -> int:
-    return _usage_counts_by_tag_id(session, [tag_id]).get(tag_id, 0)
-
-
 def _serialize_admin_tag(
     session: Session,
     tag: Tag,
@@ -173,7 +109,7 @@ def _serialize_admin_tag(
     if usage_by_id is not None:
         data["usage_count"] = usage_by_id.get(tag.id, 0)
     else:
-        data["usage_count"] = _tag_usage_count(session, tag.id)
+        data["usage_count"] = TagRepository(session).usage_count(tag.id)
     return data
 
 
@@ -227,14 +163,11 @@ def _list_tags(event: Mapping[str, Any]) -> dict[str, Any]:
             field="archived_only",
         )
     with Session(get_engine()) as session:
-        stmt = select(Tag).order_by(func.lower(Tag.name))
-        if archived_only:
-            stmt = stmt.where(Tag.archived_at.is_not(None))
-        elif not include_archived:
-            stmt = stmt.where(Tag.archived_at.is_(None))
-        tags = list(session.execute(stmt).scalars().all())
-        tag_ids = [t.id for t in tags]
-        usage_map = _usage_counts_by_tag_id(session, tag_ids)
+        repository = TagRepository(session)
+        tags = repository.list_catalog(
+            include_archived=include_archived, archived_only=archived_only
+        )
+        usage_map = repository.usage_counts_by_tag_id([t.id for t in tags])
         return json_response(
             200,
             {
@@ -414,7 +347,7 @@ def _delete_tag(
                 status_code=400,
             )
 
-        usage = _tag_usage_count(session, tag_id)
+        usage = TagRepository(session).usage_count(tag_id)
         if usage > 0:
             if tag.archived_at is None:
                 tag.archived_at = datetime.now(tz=UTC)

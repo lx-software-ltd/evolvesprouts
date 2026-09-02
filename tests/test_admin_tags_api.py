@@ -6,8 +6,8 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-
 from app.api import admin_tags
+from app.db.repositories.tag import TagRepository
 from app.exceptions import ValidationError
 
 
@@ -69,7 +69,7 @@ def test_serialize_admin_tag_includes_usage(monkeypatch: Any) -> None:
         archived_at=None,
     )
     session = object()
-    monkeypatch.setattr(admin_tags, "_tag_usage_count", lambda _s, _tid: 3)
+    monkeypatch.setattr(TagRepository, "usage_count", lambda _self, _tid: 3)
 
     payload = admin_tags._serialize_admin_tag(session, tag)
     assert payload["id"] == str(tag_id)
