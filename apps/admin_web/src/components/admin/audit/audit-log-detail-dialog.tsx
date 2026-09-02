@@ -2,7 +2,6 @@
 
 import { ActionBadge, SourceBadge } from '@/components/admin/audit/audit-log-badges';
 import { AdminDialog } from '@/components/ui/admin-dialog';
-import { Button } from '@/components/ui/button';
 import { formatDate } from '@/lib/format';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -32,13 +31,6 @@ export function AuditLogDetailDialog({ log, onClose }: AuditLogDetailDialogProps
       dialogRole='dialog'
       contentClassName='w-full max-w-3xl'
       onClose={onClose}
-      footer={
-        <div className='flex justify-end'>
-          <Button type='button' variant='primary' onClick={onClose}>
-            Close
-          </Button>
-        </div>
-      }
     >
       <div className='max-h-[min(70vh,32rem)] space-y-4 overflow-y-auto pr-1'>
         <div className='grid grid-cols-2 gap-4 text-sm'>

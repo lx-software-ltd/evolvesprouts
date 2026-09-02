@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { PublicSiteQrExportPanel } from '@/components/admin/public-site-qr-export-panel';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { AdminDialog } from '@/components/ui/admin-dialog';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { trackAdminAnalyticsEvent } from '@/lib/admin-analytics';
@@ -69,16 +69,11 @@ export function ReferralLinkQrDialog({
     : 'Opens the public site home for the selected locale.';
 
   return (
-    <ConfirmDialog
+    <AdminDialog
       open={open}
       title='Link and QR'
       description={`Share this link or QR. ${destinationHint} Locale is included in the URL for consistent scanning.`}
-      cancelLabel='Close'
-      confirmLabel='Close'
-      hideConfirm
-      dialogRole='dialog'
-      onCancel={onClose}
-      onConfirm={onClose}
+      onClose={onClose}
     >
       <div className='space-y-4' aria-label='Referral link configuration and preview'>
         <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
@@ -115,6 +110,6 @@ export function ReferralLinkQrDialog({
           previewUrlPresentation='referral'
         />
       </div>
-    </ConfirmDialog>
+    </AdminDialog>
   );
 }
