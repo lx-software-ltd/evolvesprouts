@@ -123,7 +123,9 @@ export function PhoneField({
           aria-label={regionLabel}
           value={region}
           onChange={(event) => onRegionChange(event.target.value)}
-          className='basis-1/3 shrink-0 min-w-0'
+          // 40/60 split: the dial-code prefix needs room for "+852"-style
+          // labels; the national number rarely exceeds ten digits.
+          className='basis-2/5 shrink-0 min-w-0'
         >
           {compactSelectRows.map((row) => {
             const isDrift = row.dialCode === '' && !PHONE_COUNTRIES.some((p) => p.region === row.region);
@@ -137,7 +139,7 @@ export function PhoneField({
         </Select>
         <Input
           id={nationalId}
-          className='flex-1 min-w-0'
+          className='basis-3/5 min-w-0'
           type='tel'
           inputMode='numeric'
           autoComplete='tel-national'

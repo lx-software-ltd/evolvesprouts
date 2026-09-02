@@ -48,7 +48,7 @@ export function ContactEditorSourceFields({
           ))}
         </Select>
       </AdminField>
-      <AdminField label='Source detail' htmlFor='crm-contact-source-detail' span={isReferral ? 1 : 2}>
+      <AdminField label='Source detail' htmlFor='crm-contact-source-detail'>
         <Input
           id='crm-contact-source-detail'
           type='text'
