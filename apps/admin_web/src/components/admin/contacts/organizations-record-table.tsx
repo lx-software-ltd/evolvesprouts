@@ -5,7 +5,12 @@ import type { ReactNode } from 'react';
 import { relatedRecordActions } from '@/components/admin/contacts/related-record-actions';
 import { DeleteIcon } from '@/components/icons/action-icons';
 import { AdminCreateButton } from '@/components/ui/admin-create-button';
-import { AdminDataTableCell, AdminDataTableHeadCell, AdminDataTableOperationsHeadCell } from '@/components/ui/admin-data-table';
+import {
+  AdminDataTableCell,
+  AdminDataTableCellMeta,
+  AdminDataTableHeadCell,
+  AdminDataTableOperationsHeadCell,
+} from '@/components/ui/admin-data-table';
 import { AdminExpandableRow } from '@/components/ui/admin-expandable-row';
 import { AdminFilterBar, AdminFilterField } from '@/components/ui/admin-filter-bar';
 import { AdminRecordTable } from '@/components/ui/admin-record-table';
@@ -72,7 +77,6 @@ export function OrganizationsRecordTable({
       error={error || deleteActionError}
       errorTitle='Organisations'
       emptyLabel='No organisations match the current filters.'
-      tableClassName='min-w-[800px]'
       filters={
         <AdminFilterBar
           trailing={
@@ -114,9 +118,9 @@ export function OrganizationsRecordTable({
         <tr>
           <AdminDataTableHeadCell className='w-10' />
           <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
-          <AdminDataTableHeadCell>Type</AdminDataTableHeadCell>
-          <AdminDataTableHeadCell>Members</AdminDataTableHeadCell>
-          <AdminDataTableHeadCell>Status</AdminDataTableHeadCell>
+          <AdminDataTableHeadCell priority='secondary'>Type</AdminDataTableHeadCell>
+          <AdminDataTableHeadCell priority='secondary'>Members</AdminDataTableHeadCell>
+          <AdminDataTableHeadCell priority='tertiary'>Status</AdminDataTableHeadCell>
           <AdminDataTableOperationsHeadCell />
         </tr>
       }
@@ -132,9 +136,15 @@ export function OrganizationsRecordTable({
           cells={
             <>
               <AdminDataTableCell className='font-medium text-slate-900'>New organisation</AdminDataTableCell>
-              <AdminDataTableCell className='text-slate-400'>—</AdminDataTableCell>
-              <AdminDataTableCell className='text-slate-400'>—</AdminDataTableCell>
-              <AdminDataTableCell className='text-slate-400'>—</AdminDataTableCell>
+              <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                —
+              </AdminDataTableCell>
+              <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                —
+              </AdminDataTableCell>
+              <AdminDataTableCell priority='tertiary' className='text-slate-400'>
+                —
+              </AdminDataTableCell>
             </>
           }
           actions={null}
@@ -155,10 +165,13 @@ export function OrganizationsRecordTable({
             columnCount={COLUMN_COUNT}
             cells={
               <>
-                <AdminDataTableCell>{nameCell}</AdminDataTableCell>
-                <AdminDataTableCell>{formatEnumLabel(row.organization_type)}</AdminDataTableCell>
-                <AdminDataTableCell>{row.members.length}</AdminDataTableCell>
-                <AdminDataTableCell>{row.active ? 'Active' : 'Archived'}</AdminDataTableCell>
+                <AdminDataTableCell>
+                  {nameCell}
+                  <AdminDataTableCellMeta>{formatEnumLabel(row.organization_type)}</AdminDataTableCellMeta>
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='secondary'>{formatEnumLabel(row.organization_type)}</AdminDataTableCell>
+                <AdminDataTableCell priority='secondary'>{row.members.length}</AdminDataTableCell>
+                <AdminDataTableCell priority='tertiary'>{row.active ? 'Active' : 'Archived'}</AdminDataTableCell>
               </>
             }
             actions={
