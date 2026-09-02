@@ -6,10 +6,8 @@ for specific entity types.
 
 from __future__ import annotations
 
-from typing import Generic
-
-from collections.abc import Sequence
-from typing import TypeVar
+from collections.abc import Iterable, Sequence
+from typing import Generic, TypeVar
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -55,6 +53,14 @@ class BaseRepository(Generic[T]):
             The entity if found, None otherwise.
         """
         return self._session.get(self._model, entity_id)
+
+    def get_many(self, entity_ids: Iterable[UUID]) -> list[T]:
+        """Load entities whose primary keys are in ``entity_ids`` (no ordering guarantee)."""
+        ids = list(entity_ids)
+        if not ids:
+            return []
+        query = select(self._model).where(self._model.id.in_(ids))
+        return list(self._session.execute(query).scalars().all())
 
     def get_all(
         self,

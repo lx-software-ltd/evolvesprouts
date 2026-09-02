@@ -928,6 +928,42 @@ parameters, and detail endpoints with no caller. Standardising on one set of
 rules keeps the generated admin web types small, makes the console's list hooks
 interchangeable, and stops each new route from re-deciding these details.
 
+## Data access and serializer ownership
+
+**Decision:** Query construction lives in `backend/src/app/db/repositories/**`
+and response shaping lives in one serializer module per domain; API route
+modules orchestrate the two.
+
+- **Repositories own `select()`.** Each aggregate has a `BaseRepository`
+  subclass (`TagRepository`, `CustomerInvoiceRepository`,
+  `CustomerPaymentRepository`, `EnrollmentRepository`, ...). List methods take
+  `limit` plus cursor parts and return newest-first rows; callers over-fetch by
+  one to detect another page. Cross-entity lookups that support one handler
+  (for example allocation / receipt / refund linkage behind payment delete
+  eligibility, or the six-table tag usage union) are repository methods, not
+  inline statements in the handler. Filter clauses that need a session to
+  build (party filters) are passed in as a `ColumnElement`.
+- **Shared eager loads are named.** When several handlers need the same
+  relationship graph, the repository module exposes it once (for example
+  `billing_party_load_options()`), so the load set cannot drift between the
+  invoicing picker and payment labels.
+- **Contact naming.** `contact_full_name()` (in `app.db.models.contact`) is
+  the single implementation of "first + last, or `None`"; `contact_label()`
+  (in `app.api.admin_entities_serializers`) adds the email fallback used by
+  picker rows, membership rows, and certificate labels. Serializers do not
+  join name parts inline.
+- **Conversation routes share one helper module.** `app.api.inbox_common`
+  holds the WhatsApp/Meta search, `last_message_at` cursor, datetime, and
+  channel parsers for both admin and token-authenticated public routes; the
+  public serializers differ only in the fields they expose.
+
+**Why:** Billing and tag handlers had grown their own `select()` statements,
+the public conversation routes carried private copies of the admin cursor
+helpers, and contact names were joined in eight places with slightly different
+fallbacks. Putting each concern in one module keeps the handlers readable,
+lets repository tests assert the compiled SQL directly, and makes new routes
+extend an existing repository instead of re-deriving queries.
+
 ## Keeping Documentation Up to Date
 
 **Decision:** Architecture documentation in `docs/architecture/` describes

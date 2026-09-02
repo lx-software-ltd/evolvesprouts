@@ -11,6 +11,7 @@ from uuid import UUID
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
+from app.api.admin_entities_serializers import contact_label
 from app.api.admin_request import (
     encode_created_cursor,
     parse_body,
@@ -329,16 +330,13 @@ def serialize_completion_certificate(
     contact = session.get(Contact, cert.contact_id)
     instance = session.get(ServiceInstance, cert.instance_id)
     service = session.get(Service, cert.service_id)
-    contact_label = ""
-    if contact:
-        parts = [contact.first_name or "", contact.last_name or ""]
-        contact_label = " ".join(p for p in parts if p).strip() or (contact.email or "")
+    contact_label_value = contact_label(contact)
     instance_label = instance.slug if instance else ""
     service_label = service.title if service else ""
     return {
         "id": str(cert.id),
         "contact_id": str(cert.contact_id),
-        "contact_label": contact_label,
+        "contact_label": contact_label_value,
         "instance_id": str(cert.instance_id),
         "instance_label": instance_label,
         "service_id": str(cert.service_id),

@@ -7,6 +7,7 @@ from typing import Any
 
 from app.db.models.customer_invoice import CustomerInvoice, CustomerInvoiceLine
 from app.db.models.enums import BillingInvoiceStatus
+from app.db.repositories.customer_invoice import INVOICE_SETTLEMENT_FILTERS
 from app.exceptions import ValidationError
 
 
@@ -105,9 +106,9 @@ def parse_optional_invoice_settlement(raw: str | None) -> str | None:
     if raw is None or str(raw).strip() == "":
         return None
     key = str(raw).strip().lower()
-    if key in ("open", "partially_paid", "paid", "no_charge", "not_completed"):
+    if key in INVOICE_SETTLEMENT_FILTERS:
         return key
     raise ValidationError(
-        "settlement must be one of: open, partially_paid, paid, no_charge, not_completed",
+        "settlement must be one of: " + ", ".join(INVOICE_SETTLEMENT_FILTERS),
         field="settlement",
     )

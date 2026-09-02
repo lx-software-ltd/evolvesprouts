@@ -6,26 +6,29 @@ They never return WhatsApp numbers, ``wa_id``, or last-four fallback names.
 
 from __future__ import annotations
 
-import base64
-import json
 import re
-from datetime import datetime, timezone
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
 from app.api.admin_request import parse_limit, parse_uuid, query_param
-from app.api.shared_request import route_has_prefix, split_route_parts
+from app.api.inbox_common import (
+    encode_last_message_cursor,
+    isoformat_inbox_datetime,
+    parse_inbox_search,
+    parse_last_message_cursor,
+)
 from app.api.public.token_auth import require_api_token
+from app.api.shared_request import route_has_prefix, split_route_parts
 from app.db.engine import get_engine
+from app.db.models.contact import contact_full_name
 from app.db.models.whatsapp import WhatsAppConversation, WhatsAppMessage
 from app.db.repositories.whatsapp import WhatsAppRepository
-from app.exceptions import NotFoundError, ValidationError
+from app.exceptions import NotFoundError
 from app.utils import json_response, method_not_allowed, not_found
 
-_MAX_SEARCH_LENGTH = 120
 _ANONYMOUS_DISPLAY_NAME = "WhatsApp contact"
 _FALLBACK_NAME_RE = re.compile(r"^WhatsApp\s+\d{4}$", re.IGNORECASE)
 
@@ -57,12 +60,7 @@ def handle_public_whatsapp_request(
 
 def public_conversation_name(conversation: WhatsAppConversation) -> str:
     """Return a display name that never includes a WhatsApp number."""
-    contact = conversation.contact
-    contact_name = ""
-    if contact is not None:
-        contact_name = " ".join(
-            part for part in [contact.first_name, contact.last_name] if part
-        ).strip()
+    contact_name = contact_full_name(conversation.contact) or ""
     profile_name = (conversation.profile_name or "").strip()
     wa_id = conversation.wa_id or ""
     for candidate in (profile_name, contact_name):
@@ -84,8 +82,10 @@ def _exposes_phone(value: str, wa_id: str) -> bool:
 
 def _list_conversations(event: Mapping[str, Any]) -> dict[str, Any]:
     limit = parse_limit(event)
-    search = _parse_search(query_param(event, "q"))
-    cursor_last_message_at, cursor_id = _parse_cursor(query_param(event, "cursor"))
+    search = parse_inbox_search(query_param(event, "q"))
+    cursor_last_message_at, cursor_id = parse_last_message_cursor(
+        query_param(event, "cursor")
+    )
 
     with Session(get_engine()) as session:
         repository = WhatsAppRepository(session)
@@ -98,7 +98,11 @@ def _list_conversations(event: Mapping[str, Any]) -> dict[str, Any]:
         )
         has_more = len(rows) > limit
         page_rows = rows[:limit]
-        next_cursor = _encode_cursor(page_rows[-1]) if has_more and page_rows else None
+        next_cursor = (
+            encode_last_message_cursor(page_rows[-1].last_message_at, page_rows[-1].id)
+            if has_more and page_rows
+            else None
+        )
         return json_response(
             200,
             {
@@ -139,9 +143,9 @@ def _serialize_conversation(conversation: WhatsAppConversation) -> dict[str, Any
     return {
         "id": str(conversation.id),
         "name": public_conversation_name(conversation),
-        "first_inbound_at": _isoformat(conversation.first_inbound_at),
-        "last_message_at": _isoformat(conversation.last_message_at),
-        "created_at": _isoformat(conversation.created_at),
+        "first_inbound_at": isoformat_inbox_datetime(conversation.first_inbound_at),
+        "last_message_at": isoformat_inbox_datetime(conversation.last_message_at),
+        "created_at": isoformat_inbox_datetime(conversation.created_at),
     }
 
 
@@ -150,58 +154,5 @@ def _serialize_message(message: WhatsAppMessage) -> dict[str, Any]:
         "id": str(message.id),
         "direction": message.direction.value,
         "body": message.body,
-        "sent_at": _isoformat(message.sent_at),
+        "sent_at": isoformat_inbox_datetime(message.sent_at),
     }
-
-
-def _parse_search(raw_value: str | None) -> str | None:
-    if raw_value is None:
-        return None
-    normalized = raw_value.strip()
-    if not normalized:
-        return None
-    if len(normalized) > _MAX_SEARCH_LENGTH:
-        raise ValidationError("q is too long", field="q")
-    return normalized
-
-
-def _encode_cursor(conversation: WhatsAppConversation) -> str | None:
-    if conversation.last_message_at is None:
-        return None
-    payload = json.dumps(
-        {
-            "last_message_at": _normalize_datetime(
-                conversation.last_message_at
-            ).isoformat(),
-            "id": str(conversation.id),
-        }
-    ).encode("utf-8")
-    return base64.urlsafe_b64encode(payload).decode("utf-8").rstrip("=")
-
-
-def _parse_cursor(cursor: str | None) -> tuple[datetime | None, UUID | None]:
-    if not cursor:
-        return None, None
-    try:
-        padding = "=" * (-len(cursor) % 4)
-        payload = json.loads(base64.urlsafe_b64decode(cursor + padding))
-        last_message_at_raw = payload["last_message_at"]
-        if not isinstance(last_message_at_raw, str):
-            raise ValueError("last_message_at must be a string")
-        last_message_at = _normalize_datetime(
-            datetime.fromisoformat(last_message_at_raw.replace("Z", "+00:00"))
-        )
-        conversation_id = UUID(str(payload["id"]))
-        return last_message_at, conversation_id
-    except (ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
-        raise ValidationError("Invalid cursor", field="cursor") from exc
-
-
-def _normalize_datetime(value: datetime) -> datetime:
-    if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
-
-
-def _isoformat(value: datetime | None) -> str | None:
-    return _normalize_datetime(value).isoformat() if value is not None else None

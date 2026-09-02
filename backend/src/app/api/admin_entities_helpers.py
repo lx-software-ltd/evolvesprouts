@@ -5,12 +5,11 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.api.admin_request import parse_limit as parse_limit
 from app.api.admin_request import request_id as request_id
-from app.exceptions import ValidationError
 from app.db.models import (
     ContactTag,
     FamilyMember,
@@ -23,6 +22,7 @@ from app.db.models import (
     Tag,
 )
 from app.db.models.enums import ContactType
+from app.exceptions import ValidationError
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -197,13 +197,6 @@ def replace_service_instance_tags(
         require_assignable_tag(session, tag_id, field="tag_ids")
         session.add(ServiceInstanceTag(service_instance_id=instance_id, tag_id=tag_id))
     session.flush()
-
-
-def list_all_tags_for_picker(session: Session) -> list[Tag]:
-    statement = (
-        select(Tag).where(Tag.archived_at.is_(None)).order_by(func.lower(Tag.name))
-    )
-    return list(session.execute(statement).scalars().all())
 
 
 def parse_relationship_type(

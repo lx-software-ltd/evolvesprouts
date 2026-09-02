@@ -7,9 +7,6 @@ from collections.abc import Mapping
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, func, or_, select
-from sqlalchemy.orm import selectinload
-
 from app.api.admin_billing_invoice_serializers import (
     parse_optional_invoice_settlement,
     parse_optional_invoice_status,
@@ -33,22 +30,12 @@ from app.api.assets.assets_storage import (
     signed_link_no_cache_headers,
 )
 from app.db.audit import session_with_audit
-from app.db.models.customer_invoice import CustomerInvoice, CustomerInvoiceLine
-from app.db.models.enums import BillingInvoiceStatus
+from app.db.repositories.customer_invoice import CustomerInvoiceRepository
 from app.exceptions import NotFoundError, ValidationError
 from app.services.customer_billing import ensure_invoice_pdf_storage
 from app.utils import json_response
 
 _MAX_INVOICE_LIST_Q_LEN = 200
-
-
-def _invoice_list_ilike_pattern(q_raw: str) -> tuple[str, str]:
-    """Build a LIKE pattern and escape character so ``%`` / ``_`` in user input are literal."""
-    esc = "\\"
-    escaped = (
-        q_raw.replace(esc, esc + esc).replace("%", esc + "%").replace("_", esc + "_")
-    )
-    return f"%{escaped}%", esc
 
 
 def list_invoices(
@@ -76,94 +63,27 @@ def list_invoices(
     cursor_ts, cursor_id = parse_created_cursor(query_param(event, "cursor"))
 
     with session_with_audit(user_sub, request_id) as session:
-        stmt = select(CustomerInvoice)
+        party_clause = None
         if contact_id is not None:
-            stmt = stmt.where(invoice_party_filter(session, contact_id))
+            party_clause = invoice_party_filter(session, contact_id)
         elif family_id is not None:
-            stmt = stmt.where(invoice_family_filter(session, family_id))
+            party_clause = invoice_family_filter(session, family_id)
         elif organization_id is not None:
-            stmt = stmt.where(invoice_organization_filter(session, organization_id))
-        if status_filter is not None:
-            stmt = stmt.where(CustomerInvoice.status == status_filter)
-        if settlement_filter == "open":
-            stmt = stmt.where(
-                CustomerInvoice.status == BillingInvoiceStatus.ISSUED,
-                CustomerInvoice.balance_due > 0,
-            )
-        elif settlement_filter == "partially_paid":
-            stmt = stmt.where(
-                CustomerInvoice.status == BillingInvoiceStatus.ISSUED,
-                CustomerInvoice.amount_allocated > 0,
-                CustomerInvoice.balance_due > 0,
-            )
-        elif settlement_filter == "paid":
-            stmt = stmt.where(
-                CustomerInvoice.status == BillingInvoiceStatus.ISSUED,
-                CustomerInvoice.balance_due == 0,
-                CustomerInvoice.amount_allocated > 0,
-                CustomerInvoice.total > 0,
-            )
-        elif settlement_filter == "no_charge":
-            stmt = stmt.where(
-                CustomerInvoice.status == BillingInvoiceStatus.ISSUED,
-                CustomerInvoice.total == 0,
-            )
-        elif settlement_filter == "not_completed":
-            # Draft invoices are incomplete; issued with positive total excluding paid slice.
-            stmt = stmt.where(
-                or_(
-                    CustomerInvoice.status == BillingInvoiceStatus.DRAFT,
-                    and_(
-                        CustomerInvoice.status == BillingInvoiceStatus.ISSUED,
-                        CustomerInvoice.total > 0,
-                        ~and_(
-                            CustomerInvoice.balance_due == 0,
-                            CustomerInvoice.amount_allocated > 0,
-                        ),
-                    ),
-                ),
-            )
-        if currency is not None:
-            stmt = stmt.where(CustomerInvoice.currency == currency)
-        if q_raw:
-            q_pat, like_esc = _invoice_list_ilike_pattern(q_raw)
-            invoice_date_iso = func.to_char(CustomerInvoice.invoice_date, "YYYY-MM-DD")
-            stmt = stmt.where(
-                or_(
-                    CustomerInvoice.invoice_number.ilike(q_pat, escape=like_esc),
-                    CustomerInvoice.bill_to_display_name.ilike(q_pat, escape=like_esc),
-                    CustomerInvoice.bill_to_email.ilike(q_pat, escape=like_esc),
-                    CustomerInvoice.bill_to_location_text.ilike(q_pat, escape=like_esc),
-                    invoice_date_iso.ilike(q_pat, escape=like_esc),
-                )
-            )
-        if cursor_ts is not None and cursor_id is not None:
-            stmt = stmt.where(
-                or_(
-                    CustomerInvoice.created_at < cursor_ts,
-                    and_(
-                        CustomerInvoice.created_at == cursor_ts,
-                        CustomerInvoice.id < cursor_id,
-                    ),
-                )
-            )
-        stmt = stmt.order_by(
-            CustomerInvoice.created_at.desc(), CustomerInvoice.id.desc()
-        ).limit(limit + 1)
-        rows = list(session.execute(stmt).scalars().all())
+            party_clause = invoice_organization_filter(session, organization_id)
+        repository = CustomerInvoiceRepository(session)
+        rows = repository.list_newest(
+            limit=limit + 1,
+            cursor_created_at=cursor_ts,
+            cursor_id=cursor_id,
+            party_clause=party_clause,
+            status=status_filter,
+            settlement=settlement_filter,
+            currency=currency,
+            search=q_raw or None,
+        )
         has_more = len(rows) > limit
         page = rows[:limit]
-        ids = [r.id for r in page]
-        count_map: dict[UUID, int] = {}
-        if ids:
-            cnt_rows = session.execute(
-                select(
-                    CustomerInvoiceLine.invoice_id, func.count(CustomerInvoiceLine.id)
-                )
-                .where(CustomerInvoiceLine.invoice_id.in_(ids))
-                .group_by(CustomerInvoiceLine.invoice_id)
-            ).all()
-            count_map = {row[0]: int(row[1]) for row in cnt_rows}
+        count_map = repository.line_counts_by_invoice_id([r.id for r in page])
 
         items = [
             serialize_invoice_summary(inv, line_count=count_map.get(inv.id, 0))
@@ -188,12 +108,7 @@ def get_invoice(
     request_id: str | None,
 ) -> dict[str, Any]:
     with session_with_audit(user_sub, request_id) as session:
-        stmt = (
-            select(CustomerInvoice)
-            .where(CustomerInvoice.id == invoice_id)
-            .options(selectinload(CustomerInvoice.lines))
-        )
-        inv = session.execute(stmt).scalar_one_or_none()
+        inv = CustomerInvoiceRepository(session).get_with_lines(invoice_id)
         if inv is None:
             raise NotFoundError("CustomerInvoice", str(invoice_id))
         return json_response(
@@ -212,12 +127,7 @@ def get_invoice_pdf_download(
 ) -> dict[str, Any]:
     """Return a time-limited CloudFront-signed URL to open the invoice PDF in a browser."""
     with session_with_audit(user_sub, request_id) as session:
-        stmt = (
-            select(CustomerInvoice)
-            .where(CustomerInvoice.id == invoice_id)
-            .options(selectinload(CustomerInvoice.lines))
-        )
-        inv = session.execute(stmt).scalar_one_or_none()
+        inv = CustomerInvoiceRepository(session).get_with_lines(invoice_id)
         if inv is None:
             raise NotFoundError("CustomerInvoice", str(invoice_id))
         s3_key = ensure_invoice_pdf_storage(session, inv)

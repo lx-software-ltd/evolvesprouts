@@ -13,6 +13,7 @@ from app.db.models import (
     Organization,
     OrganizationMember,
 )
+from app.db.models.contact import contact_full_name
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -46,11 +47,16 @@ def serialize_location_venue(location: Location) -> dict[str, Any]:
     }
 
 
+def contact_label(contact: Contact | None) -> str:
+    """Full name, else email, else empty string (member rows and picker labels)."""
+    if contact is None:
+        return ""
+    return contact_full_name(contact) or contact.email or ""
+
+
 def serialize_contact_picker_row(contact: Contact) -> dict[str, Any]:
-    parts = [contact.first_name or "", contact.last_name or ""]
     label = (
-        " ".join(p for p in parts if p).strip()
-        or (contact.email or "")
+        contact_label(contact)
         or (f"@{contact.instagram_handle}" if contact.instagram_handle else "")
         or str(contact.id)
     )
@@ -153,16 +159,12 @@ def serialize_contact_summary(
     }
 
 
-def serialize_family_member_row(member: FamilyMember) -> dict[str, Any]:
-    c = member.contact
-    label = ""
-    if c:
-        parts = [c.first_name or "", c.last_name or ""]
-        label = " ".join(p for p in parts if p).strip() or (c.email or "")
+def serialize_member_row(member: FamilyMember | OrganizationMember) -> dict[str, Any]:
+    """Shared row shape for family and organization membership links."""
     return {
         "id": str(member.id),
         "contact_id": str(member.contact_id),
-        "contact_label": label,
+        "contact_label": contact_label(member.contact),
         "role": member.role.value,
         "is_primary_contact": member.is_primary_contact,
     }
@@ -181,7 +183,7 @@ def serialize_family_summary(
         key=lambda t: t["name"].lower(),
     )
     members = sorted(
-        (serialize_family_member_row(m) for m in family.family_members),
+        (serialize_member_row(m) for m in family.family_members),
         key=lambda m: m["contact_label"].lower(),
     )
     return {
@@ -206,21 +208,6 @@ def serialize_family_summary(
     }
 
 
-def serialize_organization_member_row(member: OrganizationMember) -> dict[str, Any]:
-    c = member.contact
-    label = ""
-    if c:
-        parts = [c.first_name or "", c.last_name or ""]
-        label = " ".join(p for p in parts if p).strip() or (c.email or "")
-    return {
-        "id": str(member.id),
-        "contact_id": str(member.contact_id),
-        "contact_label": label,
-        "role": member.role.value,
-        "is_primary_contact": member.is_primary_contact,
-    }
-
-
 def serialize_organization_summary(
     org: Organization,
     *,
@@ -234,7 +221,7 @@ def serialize_organization_summary(
         key=lambda t: t["name"].lower(),
     )
     members = sorted(
-        (serialize_organization_member_row(m) for m in org.organization_members),
+        (serialize_member_row(m) for m in org.organization_members),
         key=lambda m: m["contact_label"].lower(),
     )
     return {

@@ -2,36 +2,37 @@
 
 from __future__ import annotations
 
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.api.admin_inbox_cursors import (
-    encode_last_message_cursor,
-    isoformat_inbox_datetime,
-    parse_inbox_limit,
-    parse_inbox_search,
-    parse_last_message_cursor,
-)
 from app.api.admin_inbox_import import handle_meta_import_jobs
 from app.api.admin_party_related import (
     conversation_contact_ids_for_party,
     parse_related_party_ids,
 )
 from app.api.admin_request import (
+    parse_limit,
     parse_uuid,
     query_param,
     require_admin_identity,
     route_has_prefix,
     split_route_parts,
 )
+from app.api.inbox_common import (
+    encode_last_message_cursor,
+    isoformat_inbox_datetime,
+    parse_inbox_search,
+    parse_last_message_cursor,
+    parse_meta_channel,
+)
 from app.db.engine import get_engine
-from app.db.models.enums import MetaChannel
+from app.db.models.contact import contact_full_name
 from app.db.models.meta import MetaConversation, MetaMessage
 from app.db.repositories.meta import MetaRepository
-from app.exceptions import NotFoundError, ValidationError
+from app.exceptions import NotFoundError
 from app.utils import json_response, method_not_allowed, not_found
 
 
@@ -67,9 +68,9 @@ def handle_admin_meta_request(
 
 
 def _list_conversations(event: Mapping[str, Any]) -> dict[str, Any]:
-    limit = parse_inbox_limit(query_param(event, "limit"))
+    limit = parse_limit(event)
     search = parse_inbox_search(query_param(event, "q"))
-    channel = _parse_channel(query_param(event, "channel"))
+    channel = parse_meta_channel(query_param(event, "channel"))
     contact_id, family_id, organization_id = parse_related_party_ids(event)
     cursor_last_message_at, cursor_id = parse_last_message_cursor(
         query_param(event, "cursor")
@@ -118,7 +119,7 @@ def _list_messages(
     *,
     conversation_id: UUID,
 ) -> dict[str, Any]:
-    limit = parse_inbox_limit(query_param(event, "limit"))
+    limit = parse_limit(event)
 
     with Session(get_engine()) as session:
         repository = MetaRepository(session)
@@ -140,7 +141,6 @@ def _list_messages(
 
 
 def _serialize_conversation(conversation: MetaConversation) -> dict[str, Any]:
-    contact = conversation.contact
     return {
         "id": str(conversation.id),
         "channel": conversation.channel.value,
@@ -148,13 +148,7 @@ def _serialize_conversation(conversation: MetaConversation) -> dict[str, Any]:
         "page_id": conversation.page_id,
         "profile_name": conversation.profile_name,
         "contact_id": str(conversation.contact_id) if conversation.contact_id else None,
-        "contact_name": (
-            " ".join(
-                part for part in [contact.first_name, contact.last_name] if part
-            ).strip()
-            if contact is not None
-            else None
-        ),
+        "contact_name": contact_full_name(conversation.contact),
         "lead_id": str(conversation.lead_id) if conversation.lead_id else None,
         "first_inbound_at": isoformat_inbox_datetime(conversation.first_inbound_at),
         "last_message_at": isoformat_inbox_datetime(conversation.last_message_at),
@@ -173,15 +167,3 @@ def _serialize_message(message: MetaMessage) -> dict[str, Any]:
         "body": message.body,
         "sent_at": isoformat_inbox_datetime(message.sent_at),
     }
-
-
-def _parse_channel(raw_value: str | None) -> MetaChannel | None:
-    if raw_value is None or not raw_value.strip():
-        return None
-    normalized = raw_value.strip().lower()
-    try:
-        return MetaChannel(normalized)
-    except ValueError as exc:
-        raise ValidationError(
-            "channel must be facebook or instagram", field="channel"
-        ) from exc

@@ -14,7 +14,7 @@ from app.api.admin_contact_notes import (
     list_contact_notes,
     update_contact_note,
 )
-from app.api.admin_entity_services import list_contact_services
+from app.api.admin_contacts_delete import delete_contact
 from app.api.admin_contacts_mailchimp_sync import (
     get_mailchimp_sync_summary,
     run_mailchimp_orphan_cleanup,
@@ -24,10 +24,8 @@ from app.api.admin_contacts_mutations import (
     create_contact,
     update_contact,
 )
-from app.api.admin_contacts_delete import delete_contact
 from app.api.admin_contacts_related import related_flags_for_contacts
 from app.api.admin_entities_helpers import (
-    list_all_tags_for_picker,
     parse_active_filter,
     parse_contact_type_filter,
     parse_limit,
@@ -37,6 +35,7 @@ from app.api.admin_entities_serializers import (
     serialize_contact_picker_row,
     serialize_contact_summary,
 )
+from app.api.admin_entity_services import list_contact_services
 from app.api.admin_request import (
     encode_cursor,
     parse_cursor,
@@ -49,11 +48,11 @@ from app.api.admin_request import (
 from app.api.admin_services_payload_utils import parse_optional_uuid
 from app.api.admin_validators import validate_string_length
 from app.db.engine import get_engine
-from app.db.repositories import ContactRepository
+from app.db.repositories import ContactRepository, TagRepository
+from app.exceptions import NotFoundError, ValidationError
 from app.services.completion_certificate_common import (
     contact_ids_with_issued_certificates,
 )
-from app.exceptions import NotFoundError, ValidationError
 from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger
 
@@ -194,7 +193,7 @@ def _search_contacts_for_picker(event: Mapping[str, Any]) -> dict[str, Any]:
 
 def _list_contact_tags(event: Mapping[str, Any]) -> dict[str, Any]:
     with Session(get_engine()) as session:
-        tags = list_all_tags_for_picker(session)
+        tags = TagRepository(session).list_active()
         return json_response(
             200,
             {"items": [serialize_tag_ref(t) for t in tags]},

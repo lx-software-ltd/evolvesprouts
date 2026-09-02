@@ -8,16 +8,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Contact, Enrollment
+from app.db.models.contact import contact_full_name
 from app.db.models.enums import BillingBillToKind
 from app.db.models.family import FamilyMember
 from app.db.models.organization import OrganizationMember
-
-
-def contact_display_name(c: Contact | None) -> str | None:
-    """Given a contact row, return a display name or None."""
-    if c is None:
-        return None
-    return " ".join(x for x in [c.first_name, c.last_name] if x).strip() or None
 
 
 def _uuid_fk_or_none(value: object | None) -> UUID | None:
@@ -131,10 +125,10 @@ def compose_enrollment_party_display_name(
 ) -> str:
     """Party label: contact ``name · email`` when both known; family/org use ``entity · primary contact``."""
     bk = effective_enrollment_bill_to_kind(enrollment)
-    enrolled_nm = contact_display_name(enrollment.contact)
+    enrolled_nm = contact_full_name(enrollment.contact)
     if bk == BillingBillToKind.CONTACT:
         c = enrollment.bill_to_contact or enrollment.contact
-        name = (contact_display_name(c) or "").strip()
+        name = contact_full_name(c) or ""
         email = (c.email or "").strip() if c else ""
         if name and email:
             return f"{name} \u00b7 {email}"

@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from decimal import Decimal, InvalidOperation
 from typing import Any
-from collections.abc import Mapping
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.admin_billing_common import (
-    contact_display_name,
     effective_enrollment_bill_to_fks,
 )
 from app.db.models import Contact, Enrollment, Family, Organization
+from app.db.models.contact import contact_full_name
 from app.db.models.customer_invoice import CustomerInvoice
 from app.db.models.enums import BillingBillToKind, RelationshipType
 from app.db.models.family import FamilyMember
@@ -244,7 +244,7 @@ def _resolve_bill_to_party_from_invoice_fks(
         if cid:
             c = session.get(Contact, cid)
             if c:
-                name = (contact_display_name(c) or "").strip()
+                name = contact_full_name(c) or ""
                 if name:
                     inv.bill_to_display_name = name
                 em = (c.email or "").strip()
@@ -266,7 +266,7 @@ def _resolve_bill_to_party_from_invoice_fks(
             .limit(1)
         )
         primary = session.execute(stmt).scalar_one_or_none()
-        primary_nm = (contact_display_name(primary) or "").strip()
+        primary_nm = contact_full_name(primary) or ""
         if primary_nm:
             inv.bill_to_display_name = primary_nm
         else:
@@ -302,7 +302,7 @@ def _resolve_bill_to_party_from_invoice_fks(
             entity_nm = ((org.legal_name or org.name) or "").strip()
         else:
             entity_nm = (org.name or "").strip()
-        primary_nm = (contact_display_name(primary) or "").strip()
+        primary_nm = contact_full_name(primary) or ""
         if entity_nm and primary_nm:
             inv.bill_to_display_name = f"{entity_nm}\n{primary_nm}"
         elif entity_nm:

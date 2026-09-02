@@ -4,24 +4,23 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
-
-from app.api.admin_inbox_cursors import (
+from app.api.inbox_common import (
     encode_last_message_cursor,
     isoformat_inbox_datetime,
-    parse_inbox_limit,
     parse_inbox_search,
     parse_last_message_cursor,
+    parse_meta_channel,
 )
+from app.db.models.enums import MetaChannel
 from app.exceptions import ValidationError
 
 
-def test_parse_inbox_limit_defaults_and_rejects_out_of_range() -> None:
-    assert parse_inbox_limit(None) == 25
-    assert parse_inbox_limit("10") == 10
-    with pytest.raises(ValidationError, match="limit must be an integer"):
-        parse_inbox_limit("nope")
-    with pytest.raises(ValidationError, match="limit must be between 1 and 100"):
-        parse_inbox_limit("101")
+def test_parse_meta_channel_accepts_known_values_and_rejects_others() -> None:
+    assert parse_meta_channel(None) is None
+    assert parse_meta_channel("  ") is None
+    assert parse_meta_channel(" Instagram ") is MetaChannel.INSTAGRAM
+    with pytest.raises(ValidationError, match="channel must be facebook or instagram"):
+        parse_meta_channel("tiktok")
 
 
 def test_parse_inbox_search_normalizes_and_rejects_long_values() -> None:
