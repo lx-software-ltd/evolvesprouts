@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from app.db.audit import WEBHOOK_WHATSAPP_AUDIT_USER_ID, set_audit_context
 from app.db.engine import get_engine
 from app.services.whatsapp_ingest import ingest_webhook_payload
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed
 from app.utils.logging import get_logger
 from app.utils.responses import get_security_headers
 
@@ -37,7 +37,7 @@ def handle_whatsapp_webhook(
     if method == "GET":
         return _handle_verification(event)
     if method != "POST":
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     app_secret = os.getenv(_APP_SECRET_ENV_NAME, "").strip()
     if not app_secret:

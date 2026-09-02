@@ -19,7 +19,7 @@ from app.db.models.enums import DiscountType
 from app.db.repositories import DiscountCodeRepository
 from app.db.repositories.service import ServiceRepository
 from app.db.repositories.service_instance import ServiceInstanceRepository
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed
 from app.utils.logging import get_logger, hash_for_correlation, mask_pii
 from app.utils.public_slug import PUBLIC_INSTANCE_SLUG_PATTERN
 
@@ -71,7 +71,7 @@ def handle_public_discount_validate(
         extra={"method": method},
     )
     if method != "POST":
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     body = parse_body(event)
     code = validate_string_length(

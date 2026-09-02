@@ -51,7 +51,7 @@ from app.services.bulk_expense_import_common import assert_pdf_asset
 from app.services.bulk_expense_import_events import enqueue_bulk_expense_import_job
 from app.services.bulk_expense_import_runner import sanitize_bulk_import_error_message
 from app.services.expense_events import enqueue_expense_parse
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -68,7 +68,7 @@ def handle_admin_expenses_request(
     """Handle /v1/admin/expenses routes."""
     parts = split_route_parts(path)
     if len(parts) < 2 or parts[0] != "admin" or parts[1] != "expenses":
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
 
     identity = require_admin_identity(event)
 
@@ -77,16 +77,16 @@ def handle_admin_expenses_request(
             return _list_expenses(event)
         if method == "POST":
             return _create_expense(event, actor_sub=identity.user_sub)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 3 and parts[2] == "import-from-bulk-pdf":
         if method != "POST":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return _import_expenses_from_bulk_pdf(event, actor_sub=identity.user_sub)
 
     if len(parts) == 3 and parts[2] == "bulk-import-jobs":
         if method != "GET":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return _list_bulk_expense_import_jobs(event, actor_sub=identity.user_sub)
 
     if len(parts) == 4 and parts[2] == "bulk-import-jobs":
@@ -99,7 +99,7 @@ def handle_admin_expenses_request(
             return _delete_bulk_expense_import_job(
                 event, job_id=job_id, actor_sub=identity.user_sub
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     expense_id = parse_uuid(parts[2])
     if len(parts) == 3:
@@ -113,35 +113,35 @@ def handle_admin_expenses_request(
             return _delete_draft_expense(
                 event, expense_id=expense_id, actor_sub=identity.user_sub
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 4 and parts[3] == "cancel":
         if method != "POST":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return _cancel_expense(
             event, expense_id=expense_id, actor_sub=identity.user_sub
         )
 
     if len(parts) == 4 and parts[3] == "mark-paid":
         if method != "POST":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return _mark_expense_paid(
             event, expense_id=expense_id, actor_sub=identity.user_sub
         )
 
     if len(parts) == 4 and parts[3] == "reparse":
         if method != "POST":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return _reparse_expense(
             event, expense_id=expense_id, actor_sub=identity.user_sub
         )
 
     if len(parts) == 4 and parts[3] == "amend":
         if method != "POST":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return _amend_expense(event, expense_id=expense_id, actor_sub=identity.user_sub)
 
-    return json_response(404, {"error": "Not found"}, event=event)
+    return not_found(event)
 
 
 def _list_expenses(event: Mapping[str, Any]) -> dict[str, Any]:

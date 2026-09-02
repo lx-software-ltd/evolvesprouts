@@ -50,7 +50,7 @@ from app.db.repositories import (
 )
 from app.exceptions import NotFoundError, ValidationError
 from app.services.eventbrite_events import enqueue_eventbrite_instance_sync_by_id
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -241,9 +241,9 @@ def handle_admin_service_instances_request(
     )
     parts = split_route_parts(path)
     if len(parts) < 4 or parts[0] != "admin" or parts[1] != "services":
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
     if parts[3] != "instances":
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
 
     identity = require_admin_identity(event)
 
@@ -254,7 +254,7 @@ def handle_admin_service_instances_request(
             return _create_instance(
                 event, service_id=service_id, actor_sub=identity.user_sub
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     instance_id = parse_uuid(parts[4])
     if len(parts) == 5:
@@ -274,12 +274,12 @@ def handle_admin_service_instances_request(
                 instance_id=instance_id,
                 actor_sub=identity.user_sub,
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) >= 6 and parts[5] == "enrollments":
         return handle_admin_enrollments_request(event, method, path, instance_id)
 
-    return json_response(404, {"error": "Not found"}, event=event)
+    return not_found(event)
 
 
 def _list_instances(event: Mapping[str, Any], *, service_id: UUID) -> dict[str, Any]:

@@ -21,7 +21,7 @@ from app.db.repositories.asset import AssetRepository
 from app.db.repositories.inbox_import_job import InboxImportJobRepository
 from app.exceptions import NotFoundError, ValidationError
 from app.services.inbox_import_events import enqueue_inbox_import_job
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -51,10 +51,10 @@ def handle_meta_import_jobs(
             return _list_jobs(event, kind=InboxImportKind.META_GRAPH)
         if method == "POST":
             return _create_meta_job(event, actor_sub=actor_sub)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
     if len(parts) == 4 and parts[2] == "import-jobs":
         if method != "GET":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return _get_job(
             event,
             job_id=parse_uuid(parts[3]),
@@ -76,10 +76,10 @@ def handle_whatsapp_import_jobs(
             return _list_jobs(event, kind=InboxImportKind.WHATSAPP_EXPORT)
         if method == "POST":
             return _create_whatsapp_job(event, actor_sub=actor_sub)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
     if len(parts) == 4 and parts[2] == "import-jobs":
         if method != "GET":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return _get_job(
             event,
             job_id=parse_uuid(parts[3]),

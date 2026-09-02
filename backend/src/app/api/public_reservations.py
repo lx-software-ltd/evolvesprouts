@@ -73,7 +73,7 @@ from app.services.turnstile import (
     extract_turnstile_token,
     verify_turnstile_token,
 )
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed
 from app.utils.logging import get_logger, mask_email, mask_pii
 
 logger = get_logger(__name__)
@@ -85,7 +85,7 @@ def _handle_public_reservation(
 ) -> dict[str, Any]:
     """Handle public reservation submissions."""
     if method != "POST":
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     turnstile_token = extract_turnstile_token(event)
     if not turnstile_token:

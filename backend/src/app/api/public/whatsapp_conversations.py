@@ -23,7 +23,7 @@ from app.db.engine import get_engine
 from app.db.models.whatsapp import WhatsAppConversation, WhatsAppMessage
 from app.db.repositories.whatsapp import WhatsAppRepository
 from app.exceptions import NotFoundError, ValidationError
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 
 _MAX_SEARCH_LENGTH = 120
 _ANONYMOUS_DISPLAY_NAME = "WhatsApp contact"
@@ -38,21 +38,21 @@ def handle_public_whatsapp_request(
     """Handle /v1/public/whatsapp routes."""
     parts = split_route_parts(path)
     if len(parts) < 2 or parts[0] != "public" or parts[1] != "whatsapp":
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
 
     require_api_token(event, method)
 
     if len(parts) == 3 and parts[2] == "conversations":
         if method != "GET":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return _list_conversations(event)
 
     if len(parts) == 5 and parts[2] == "conversations" and parts[4] == "messages":
         if method != "GET":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return _list_messages(event, conversation_id=parse_uuid(parts[3]))
 
-    return json_response(404, {"error": "Not found"}, event=event)
+    return not_found(event)
 
 
 def public_conversation_name(conversation: WhatsAppConversation) -> str:

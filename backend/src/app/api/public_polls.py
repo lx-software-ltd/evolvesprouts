@@ -20,7 +20,7 @@ from app.services.poll_responses_store import (
     put_poll_control_state,
     upsert_poll_answer,
 )
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger
 from app.utils.public_slug import PUBLIC_INSTANCE_SLUG_PATTERN
 
@@ -66,7 +66,7 @@ def handle_public_polls_request(
             return _handle_put_poll_answer(event, poll_slug=poll_slug)
         if method == "GET":
             return _handle_get_poll_session_answers(event, poll_slug=poll_slug)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     results = _parse_poll_question_results_path(path)
     if results is not None:
@@ -77,7 +77,7 @@ def handle_public_polls_request(
                 poll_slug=poll_slug,
                 question_id=question_id,
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     control = _parse_poll_control_path(path)
     if control is not None:
@@ -86,9 +86,9 @@ def handle_public_polls_request(
             return _handle_get_poll_control(event, poll_slug=poll_slug)
         if method == "PUT":
             return _handle_put_poll_control(event, poll_slug=poll_slug)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
-    return json_response(404, {"error": "Not found"}, event=event)
+    return not_found(event)
 
 
 def _parse_poll_path_remainder(path: str) -> str | None:

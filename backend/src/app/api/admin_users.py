@@ -9,7 +9,7 @@ from typing import Any
 from app.api.admin_request import require_admin_identity, split_route_parts
 from app.exceptions import ValidationError
 from app.services import aws_proxy
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 
 
 def handle_admin_users_request(
@@ -20,10 +20,10 @@ def handle_admin_users_request(
     """Handle /v1/admin/users routes."""
     parts = split_route_parts(path)
     if len(parts) != 2 or parts[0] != "admin" or parts[1] != "users":
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
     require_admin_identity(event)
     if method != "GET":
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
     return _list_admin_users(event)
 
 
@@ -35,10 +35,10 @@ def handle_admin_instructors_request(
     """Handle /v1/admin/instructors routes."""
     parts = split_route_parts(path)
     if len(parts) != 2 or parts[0] != "admin" or parts[1] != "instructors":
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
     require_admin_identity(event)
     if method != "GET":
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
     group_name = os.getenv("INSTRUCTOR_GROUP", "instructor").strip() or "instructor"
     return _list_users_in_cognito_group(event, group_name)
 

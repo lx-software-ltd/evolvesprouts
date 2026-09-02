@@ -62,7 +62,7 @@ from app.services.sales_assignment import (
     record_new_lead_assignment_event,
     resolve_create_assignee,
 )
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 from app.utils.responses import get_cors_headers, get_security_headers
 
 
@@ -74,7 +74,7 @@ def handle_admin_leads_request(
     """Handle /v1/admin/leads routes."""
     parts = split_route_parts(path)
     if len(parts) < 2 or parts[0] != "admin" or parts[1] != "leads":
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
 
     identity = require_admin_identity(event)
 
@@ -83,16 +83,16 @@ def handle_admin_leads_request(
             return _list_leads(event)
         if method == "POST":
             return _create_lead(event, actor_sub=identity.user_sub)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 3 and parts[2] == "analytics":
         if method != "GET":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return _get_analytics(event)
 
     if len(parts) == 3 and parts[2] == "export":
         if method != "GET":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return _export_leads(event)
 
     if len(parts) == 3 and parts[2] == "settings":
@@ -104,11 +104,11 @@ def handle_admin_leads_request(
             return _get_lead(event, lead_id=lead_id)
         if method == "PATCH":
             return _update_lead(event, lead_id=lead_id, actor_sub=identity.user_sub)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 4 and parts[3] == "notes":
         if method != "POST":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return _create_lead_note(event, lead_id=lead_id, actor_sub=identity.user_sub)
 
     if len(parts) == 4 and parts[3] == "ai-suggestion":
@@ -118,15 +118,15 @@ def handle_admin_leads_request(
             return _create_lead_ai_suggestion(
                 event, lead_id=lead_id, actor_sub=identity.user_sub
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 6 and parts[3] == "ai-suggestion" and parts[4] == "jobs":
         job_id = parse_uuid(parts[5])
         if method == "GET":
             return _get_lead_ai_suggestion_job(event, lead_id=lead_id, job_id=job_id)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
-    return json_response(404, {"error": "Not found"}, event=event)
+    return not_found(event)
 
 
 def _list_leads(event: Mapping[str, Any]) -> dict[str, Any]:

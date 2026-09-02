@@ -57,7 +57,7 @@ from app.db.repositories.organization import (
     OrganizationRepository,
 )
 from app.exceptions import DatabaseError, NotFoundError, ValidationError
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger
 
 _DEFAULT_LIMIT = 25
@@ -76,7 +76,7 @@ def handle_admin_organizations_request(
     )
     parts = split_route_parts(path)
     if len(parts) < 2 or parts[0] != "admin" or parts[1] != "organizations":
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
 
     identity = require_admin_identity(event)
 
@@ -85,7 +85,7 @@ def handle_admin_organizations_request(
             return _list_organizations(event)
         if method == "POST":
             return _create_organization(event, actor_sub=identity.user_sub)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     organization_id = parse_uuid(parts[2])
     if len(parts) == 3:
@@ -101,19 +101,19 @@ def handle_admin_organizations_request(
                 organization_id=organization_id,
                 actor_sub=identity.user_sub,
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 4 and parts[3] == "services":
         if method == "GET":
             return list_organization_services(event, organization_id=organization_id)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 4 and parts[3] == "members":
         if method == "POST":
             return _add_organization_member(
                 event, organization_id=organization_id, actor_sub=identity.user_sub
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 5 and parts[3] == "members":
         member_id = parse_uuid(parts[4])
@@ -131,9 +131,9 @@ def handle_admin_organizations_request(
                 member_id=member_id,
                 actor_sub=identity.user_sub,
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
-    return json_response(404, {"error": "Not found"}, event=event)
+    return not_found(event)
 
 
 def _parse_organization_type(value: Any, *, field: str) -> OrganizationType:

@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.db.engine import get_engine
 from app.db.models import MailchimpSyncStatus
 from app.db.repositories.contact import ContactRepository
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed
 from app.utils.logging import get_logger, mask_email
 
 logger = get_logger(__name__)
@@ -37,7 +37,7 @@ def handle_mailchimp_webhook(
     if method in {"GET", "HEAD"}:
         return json_response(200, {"message": "ok"}, event=event)
     if method != "POST":
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     expected_secret = os.getenv(_WEBHOOK_SECRET_ENV_NAME, "").strip()
     if not expected_secret:

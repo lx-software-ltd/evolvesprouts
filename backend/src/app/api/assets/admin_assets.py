@@ -47,7 +47,7 @@ from app.db.models import Asset, AssetVisibility
 from app.db.repositories.asset import AssetRepository
 from app.exceptions import NotFoundError, ValidationError
 from app.services.asset_expense_tagging import CLIENT_DOCUMENT_TAG_NAME
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 
 
 def handle_admin_assets_request(
@@ -58,7 +58,7 @@ def handle_admin_assets_request(
     """Handle /v1/admin/assets* routes."""
     parts = split_route_parts(path)
     if len(parts) < 2 or parts[0] != "admin" or parts[1] != "assets":
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
 
     identity = require_admin_identity(event)
 
@@ -67,7 +67,7 @@ def handle_admin_assets_request(
             return _list_assets(event)
         if method == "POST":
             return _create_asset(event, identity.user_sub)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     asset_id = parse_uuid(parts[2])
     if len(parts) == 3:
@@ -79,14 +79,14 @@ def handle_admin_assets_request(
             return _update_asset(event, asset_id, partial=True)
         if method == "DELETE":
             return _delete_asset(event, asset_id)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 4 and parts[3] == "grants":
         if method == "GET":
             return _list_grants(event, asset_id)
         if method == "POST":
             return _create_grant(event, asset_id, identity.user_sub)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 5 and parts[3] == "grants" and method == "DELETE":
         grant_id = parse_uuid(parts[4])
@@ -107,7 +107,7 @@ def handle_admin_assets_request(
                 identity_user_sub=identity.user_sub,
                 request_id=_request_id(event),
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 4 and parts[3] == "share-link":
         if method == "GET":
@@ -126,7 +126,7 @@ def handle_admin_assets_request(
                 identity.user_sub,
                 request_id=_request_id(event),
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 5 and parts[3] == "share-link" and parts[4] == "rotate":
         if method == "POST":
@@ -136,9 +136,9 @@ def handle_admin_assets_request(
                 identity.user_sub,
                 request_id=_request_id(event),
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
-    return json_response(404, {"error": "Not found"}, event=event)
+    return not_found(event)
 
 
 def _list_assets(event: Mapping[str, Any]) -> dict[str, Any]:

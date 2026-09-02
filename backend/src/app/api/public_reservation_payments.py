@@ -25,7 +25,7 @@ from app.services.turnstile import (
     extract_turnstile_token,
     verify_turnstile_token,
 )
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -46,7 +46,7 @@ def handle_public_reservation_payment_intent(
 ) -> dict[str, Any]:
     """Create a Stripe PaymentIntent for the public reservation modal."""
     if method != "POST":
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     stripe_secret_key = resolve_public_www_stripe_secret_key(event)
     if not stripe_secret_key:

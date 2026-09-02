@@ -36,7 +36,7 @@ from app.db.models import DiscountCode
 from app.db.models.enums import DiscountType
 from app.db.repositories import DiscountCodeRepository
 from app.exceptions import NotFoundError, ValidationError
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -54,7 +54,7 @@ def handle_admin_discount_codes_request(
     )
     parts = split_route_parts(path)
     if len(parts) < 2 or parts[0] != "admin" or parts[1] != "discount-codes":
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
 
     identity = require_admin_identity(event)
 
@@ -63,7 +63,7 @@ def handle_admin_discount_codes_request(
             return _list_discount_codes(event)
         if method == "POST":
             return _create_discount_code(event, actor_sub=identity.user_sub)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     code_id = parse_uuid(parts[2])
     if len(parts) == 3:
@@ -75,9 +75,9 @@ def handle_admin_discount_codes_request(
             return _delete_discount_code(
                 event, code_id=code_id, actor_sub=identity.user_sub
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
-    return json_response(404, {"error": "Not found"}, event=event)
+    return not_found(event)
 
 
 def _list_discount_codes(event: Mapping[str, Any]) -> dict[str, Any]:

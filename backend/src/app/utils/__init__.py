@@ -18,6 +18,8 @@ from app.utils.responses import (
     get_cors_headers,
     get_security_headers,
     json_response,
+    method_not_allowed,
+    not_found,
     validate_content_type,
 )
 from app.utils.validators import (
@@ -58,6 +60,8 @@ __all__ = [
     "json_response",
     "mask_email",
     "mask_pii",
+    "method_not_allowed",
+    "not_found",
     "parse_datetime",
     "parse_decimal",
     "parse_enum",

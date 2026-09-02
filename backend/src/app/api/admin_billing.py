@@ -40,7 +40,7 @@ from app.api.admin_request import (
     require_admin_identity,
     split_route_parts,
 )
-from app.utils import json_response
+from app.utils import not_found
 
 __all__ = [
     "CustomerPayment",
@@ -57,14 +57,14 @@ def handle_admin_billing_request(
     """Route /v1/admin/billing/*."""
     parts = split_route_parts(path)
     if len(parts) < 2 or parts[0] != "admin" or parts[1] != "billing":
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
 
     identity = require_admin_identity(event)
 
     req = request_id(event)
 
     if len(parts) < 3:
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
 
     sub = parts[2]
 
@@ -164,4 +164,4 @@ def handle_admin_billing_request(
     if sub == "allocations" and len(parts) == 3 and method == "POST":
         return _create_allocation(event, user_sub=identity.user_sub, request_id=req)
 
-    return json_response(404, {"error": "Not found"}, event=event)
+    return not_found(event)

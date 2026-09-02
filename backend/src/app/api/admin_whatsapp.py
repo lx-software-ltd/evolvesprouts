@@ -30,7 +30,7 @@ from app.db.engine import get_engine
 from app.db.models.whatsapp import WhatsAppConversation, WhatsAppMessage
 from app.db.repositories.whatsapp import WhatsAppRepository
 from app.exceptions import NotFoundError
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 
 
 def handle_admin_whatsapp_request(
@@ -41,7 +41,7 @@ def handle_admin_whatsapp_request(
     """Handle /v1/admin/whatsapp routes."""
     parts = split_route_parts(path)
     if len(parts) < 2 or parts[0] != "admin" or parts[1] != "whatsapp":
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
 
     identity = require_admin_identity(event)
 
@@ -53,15 +53,15 @@ def handle_admin_whatsapp_request(
 
     if len(parts) == 3 and parts[2] == "conversations":
         if method != "GET":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return _list_conversations(event)
 
     if len(parts) == 5 and parts[2] == "conversations" and parts[4] == "messages":
         if method != "GET":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return _list_messages(event, conversation_id=parse_uuid(parts[3]))
 
-    return json_response(404, {"error": "Not found"}, event=event)
+    return not_found(event)
 
 
 def _list_conversations(event: Mapping[str, Any]) -> dict[str, Any]:

@@ -19,7 +19,7 @@ from app.db.models.calendar_manual_block import CalendarManualBlock
 from app.db.repositories.calendar_manual_block import CalendarManualBlockRepository
 from app.exceptions import NotFoundError, ValidationError
 from app.services.calendar_blockers import allowed_manual_block_creation_purposes
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger, mask_pii
 
 logger = get_logger(__name__)
@@ -41,9 +41,9 @@ def handle_admin_calendar_manual_blocks_request(
     )
     parts = split_route_parts(path)
     if len(parts) < 3 or parts[0] != "admin" or parts[1] != "calendar":
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
     if parts[2] != "manual-blocks":
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
 
     identity = require_admin_identity(event)
 
@@ -52,7 +52,7 @@ def handle_admin_calendar_manual_blocks_request(
             return _list_blocks(event)
         if method == "POST":
             return _create_block(event, actor_sub=identity.user_sub)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     block_id = parse_uuid(parts[3])
     if len(parts) == 4:
@@ -62,9 +62,9 @@ def handle_admin_calendar_manual_blocks_request(
             return _update_block(event, block_id=block_id, actor_sub=identity.user_sub)
         if method == "DELETE":
             return _delete_block(event, block_id=block_id, actor_sub=identity.user_sub)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
-    return json_response(404, {"error": "Not found"}, event=event)
+    return not_found(event)
 
 
 def _parse_purpose(raw: Any) -> str:

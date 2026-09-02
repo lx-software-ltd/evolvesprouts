@@ -18,7 +18,7 @@ from app.db.engine import get_engine
 from app.db.models import GeographicArea
 from app.db.repositories import GeographicAreaRepository
 from app.exceptions import ValidationError
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 
 
 def handle_admin_geographic_areas_request(
@@ -29,12 +29,12 @@ def handle_admin_geographic_areas_request(
     """Handle /v1/admin/geographic-areas routes."""
     parts = split_route_parts(path)
     if len(parts) != 2 or parts[0] != "admin" or parts[1] != "geographic-areas":
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
 
     require_admin_identity(event)
 
     if method != "GET":
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     return _list_geographic_areas(event)
 

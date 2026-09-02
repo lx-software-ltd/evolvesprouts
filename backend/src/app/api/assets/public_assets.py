@@ -21,7 +21,7 @@ from app.db.engine import get_engine
 from app.db.models import AssetVisibility
 from app.db.repositories.asset import AssetRepository
 from app.exceptions import NotFoundError
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 
 
 def handle_public_assets_request(
@@ -32,7 +32,7 @@ def handle_public_assets_request(
     """Handle /v1/assets/public* routes."""
     parts = split_route_parts(path)
     if len(parts) < 2 or parts[0] != "assets" or parts[1] != "public":
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
 
     if len(parts) == 2 and method == "GET":
         return _list_public_assets(event)
@@ -41,7 +41,7 @@ def handle_public_assets_request(
         asset_id = parse_uuid(parts[2])
         return _download_public_asset(event, asset_id)
 
-    return json_response(405, {"error": "Method not allowed"}, event=event)
+    return method_not_allowed(event)
 
 
 def _list_public_assets(event: Mapping[str, Any]) -> dict[str, Any]:

@@ -42,7 +42,7 @@ from app.services.asset_expense_tagging import (
     EXPENSE_ATTACHMENT_TAG_NAME,
 )
 from app.services.asset_invoice_tagging import CUSTOMER_INVOICE_TAG_NAME
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -79,7 +79,7 @@ def handle_admin_tags_request(
     )
     parts = split_route_parts(path)
     if len(parts) < 2 or parts[0] != "admin" or parts[1] != "tags":
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
 
     identity = require_admin_identity(event)
 
@@ -88,7 +88,7 @@ def handle_admin_tags_request(
             return _list_tags(event)
         if method == "POST":
             return _create_tag(event, actor_sub=identity.user_sub)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     tag_id = parse_uuid(parts[2])
     if len(parts) == 3:
@@ -98,9 +98,9 @@ def handle_admin_tags_request(
             return _update_tag(event, tag_id=tag_id, actor_sub=identity.user_sub)
         if method == "DELETE":
             return _delete_tag(event, tag_id=tag_id, actor_sub=identity.user_sub)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
-    return json_response(404, {"error": "Not found"}, event=event)
+    return not_found(event)
 
 
 def _usage_counts_by_tag_id(session: Session, tag_ids: list[UUID]) -> dict[UUID, int]:

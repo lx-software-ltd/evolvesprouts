@@ -21,7 +21,7 @@ from app.services.poll_responses_store import (
     list_poll_answers,
     list_poll_summaries,
 )
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger
 from app.utils.public_slug import PUBLIC_INSTANCE_SLUG_PATTERN
 from app.utils.responses import get_cors_headers, get_security_headers
@@ -39,32 +39,32 @@ def handle_admin_polls_request(
     """Handle /v1/admin/polls routes."""
     parts = split_route_parts(path)
     if len(parts) < 2 or parts[0] != "admin" or parts[1] != "polls":
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
 
     require_admin_identity(event)
 
     if len(parts) == 2:
         if method != "GET":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return _list_polls(event)
 
     poll_slug = _parse_poll_slug(parts[2])
     if len(parts) == 3:
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
 
     if len(parts) == 4 and parts[3] == "answers":
         if method == "GET":
             return _list_poll_answers(event, poll_slug=poll_slug)
         if method == "DELETE":
             return _clear_poll_answers(event, poll_slug=poll_slug)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 5 and parts[3] == "answers" and parts[4] == "export":
         if method != "GET":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return _export_poll_answers(event, poll_slug=poll_slug)
 
-    return json_response(404, {"error": "Not found"}, event=event)
+    return not_found(event)
 
 
 def _parse_poll_slug(value: str) -> str:
