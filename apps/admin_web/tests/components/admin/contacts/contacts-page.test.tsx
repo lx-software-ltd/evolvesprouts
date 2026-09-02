@@ -141,21 +141,24 @@ describe('ContactsPage', () => {
     render(<ContactsPage />);
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Contact' })).toBeInTheDocument();
+      expect(screen.getByRole('region', { name: 'Contacts' })).toBeInTheDocument();
     });
+    expect(screen.getByRole('button', { name: 'New contact' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Families' }));
-    expect(screen.getByRole('heading', { name: 'Families' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Families' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New family' })).toBeInTheDocument();
     expect(window.location.search).toBe('?tab=families');
 
     await user.click(screen.getByRole('button', { name: 'Organisations' }));
-    expect(screen.getByRole('heading', { name: 'Organisations' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Organisations' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New organisation' })).toBeInTheDocument();
     expect(window.location.search).toBe('?tab=organizations');
 
     await user.click(screen.getByRole('button', { name: 'Mailchimp' }));
     expect(screen.getByRole('heading', { name: 'Mailchimp sync' })).toBeInTheDocument();
     expect(window.location.search).toBe('?tab=mailchimp');
-    expect(screen.queryByRole('heading', { name: 'Contact' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Contacts' })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Contacts' }));
     expect(window.location.search).toBe('');
@@ -171,9 +174,7 @@ describe('ContactsPage', () => {
     render(<ContactsPage />);
 
     await waitFor(() => {
-      expect(
-        screen.getByRole('heading', { name: 'Organisations' })
-      ).toBeInTheDocument();
+      expect(screen.getByRole('region', { name: 'Organisations' })).toBeInTheDocument();
     });
   });
 
@@ -188,7 +189,7 @@ describe('ContactsPage', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Mailchimp sync' })).toBeInTheDocument();
     });
-    expect(screen.queryByRole('heading', { name: 'Contact' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Contacts' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Mailchimp' })).toHaveAttribute(
       'aria-pressed',
       'true'

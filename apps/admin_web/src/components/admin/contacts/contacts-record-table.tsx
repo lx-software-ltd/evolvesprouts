@@ -1,43 +1,37 @@
 'use client';
 
-import type { MouseEvent } from 'react';
+import type { ReactNode } from 'react';
 
-import { RelatedRecordOpsLinks } from '@/components/admin/contacts/related-record-ops-links';
-import {
-  ArchiveIcon,
-  DeleteIcon,
-  NoteIcon,
-  RestoreIcon,
-} from '@/components/icons/action-icons';
-import { Button } from '@/components/ui/button';
+import { relatedRecordActions } from '@/components/admin/contacts/related-record-actions';
+import { ArchiveIcon, DeleteIcon, NoteIcon, RestoreIcon } from '@/components/icons/action-icons';
+import { AdminCreateButton } from '@/components/ui/admin-create-button';
+import { AdminDataTableCell, AdminDataTableHeadCell, AdminDataTableOperationsHeadCell } from '@/components/ui/admin-data-table';
+import { AdminExpandableRow } from '@/components/ui/admin-expandable-row';
+import { AdminFilterBar, AdminFilterField } from '@/components/ui/admin-filter-bar';
+import { AdminRecordTable } from '@/components/ui/admin-record-table';
+import { AdminRowActions } from '@/components/ui/admin-row-actions';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { DRAFT_RECORD_ID, type UseExpandedRecordReturn } from '@/hooks/use-expanded-record';
 import {
   adminContactInvoicesDeepLink,
   adminSalesConversationsDeepLink,
   adminServiceInstancesDeepLink,
 } from '@/lib/contact-related-links';
-import {
-  AdminDataTable,
-  AdminDataTableBody,
-  AdminDataTableCell,
-  AdminDataTableHead,
-  AdminDataTableHeadCell,
-  AdminDataTableOperationsHeadCell,
-} from '@/components/ui/admin-data-table';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
-import { AdminTableToolbar } from '@/components/ui/admin-table-toolbar';
-import { Select } from '@/components/ui/select';
 import { CONTACT_TYPES } from '@/lib/contacts/contacts-panel-constants';
 import { contactNameListSuffix } from '@/lib/contacts/contacts-panel-helpers';
 import { formatEnumLabel } from '@/lib/format';
 import type { EntityListFilters } from '@/types/entity-list';
 import type { components } from '@/types/generated/admin-api.generated';
 
-type ApiSchemas = components['schemas'];
+type AdminContact = components['schemas']['AdminContact'];
 
-export interface ContactsListTableProps {
-  rows: ApiSchemas['AdminContact'][];
+const COLUMN_COUNT = 5;
+
+export interface ContactsRecordTableProps {
+  rows: AdminContact[];
+  /** Deep-linked contact outside the loaded pages; rendered first when not already listed. */
+  pinnedRow: AdminContact | null;
   filters: EntityListFilters;
   setFilter: (key: keyof EntityListFilters, value: EntityListFilters[keyof EntityListFilters]) => void;
   isLoading: boolean;
@@ -46,17 +40,23 @@ export interface ContactsListTableProps {
   error: string;
   loadMore: () => void;
   isSaving: boolean;
-  selectedId: string | null;
   deleteActionError: string;
   onClearDeleteError: () => void;
-  onSelectRow: (row: ApiSchemas['AdminContact']) => void;
-  onToggleNotes: (row: ApiSchemas['AdminContact']) => void;
-  onToggleActive: (row: ApiSchemas['AdminContact']) => void;
-  onDeleteContact: (row: ApiSchemas['AdminContact'], event: MouseEvent<HTMLButtonElement>) => void;
+  expanded: UseExpandedRecordReturn;
+  /** Editor for the open row (draft or record); rendered inside the expansion. */
+  detail: ReactNode;
+  onOpenNotes: (row: AdminContact) => void;
+  onToggleActive: (row: AdminContact) => void;
+  onDeleteContact: (row: AdminContact) => void;
 }
 
-export function ContactsListTable({
+function contactDisplayName(row: AdminContact): string {
+  return [row.first_name, row.last_name].filter(Boolean).join(' ') || '—';
+}
+
+export function ContactsRecordTable({
   rows,
+  pinnedRow,
   filters,
   setFilter,
   isLoading,
@@ -65,27 +65,41 @@ export function ContactsListTable({
   error,
   loadMore,
   isSaving,
-  selectedId,
   deleteActionError,
   onClearDeleteError,
-  onSelectRow,
-  onToggleNotes,
+  expanded,
+  detail,
+  onOpenNotes,
   onToggleActive,
   onDeleteContact,
-}: ContactsListTableProps) {
+}: ContactsRecordTableProps) {
+  const displayRows =
+    pinnedRow && !rows.some((row) => row.id === pinnedRow.id) ? [pinnedRow, ...rows] : rows;
+
   return (
-    <PaginatedTableCard
-      title='Contacts'
+    <AdminRecordTable
+      aria-label='Contacts'
+      columnCount={COLUMN_COUNT}
+      rowCount={displayRows.length}
       isLoading={isLoading}
       isLoadingMore={isLoadingMore}
       hasMore={hasMore}
-      error={error || deleteActionError}
-      loadingLabel='Loading contacts...'
       onLoadMore={loadMore}
-      toolbar={
-        <AdminTableToolbar>
-          <div className='min-w-[200px] flex-1'>
-            <Label htmlFor='crm-contacts-search'>Search</Label>
+      error={error || deleteActionError}
+      errorTitle='Contacts'
+      emptyLabel='No contacts match the current filters.'
+      tableClassName='min-w-[720px]'
+      filters={
+        <AdminFilterBar
+          trailing={
+            <AdminCreateButton
+              label='New contact'
+              active={expanded.isDraftOpen}
+              onClick={() => (expanded.isDraftOpen ? expanded.collapse() : expanded.openDraft())}
+            />
+          }
+        >
+          <AdminFilterField label='Search' htmlFor='crm-contacts-search' className='sm:basis-72'>
             <Input
               id='crm-contacts-search'
               value={filters.query}
@@ -95,9 +109,8 @@ export function ContactsListTable({
               }}
               placeholder='Name, email, phone, Instagram'
             />
-          </div>
-          <div className='min-w-[140px]'>
-            <Label htmlFor='crm-contacts-type'>Type</Label>
+          </AdminFilterField>
+          <AdminFilterField label='Type' htmlFor='crm-contacts-type'>
             <Select
               id='crm-contacts-type'
               value={filters.contact_type}
@@ -113,9 +126,8 @@ export function ContactsListTable({
                 </option>
               ))}
             </Select>
-          </div>
-          <div className='min-w-[140px]'>
-            <Label htmlFor='crm-contacts-active'>Status</Label>
+          </AdminFilterField>
+          <AdminFilterField label='Status' htmlFor='crm-contacts-active'>
             <Select
               id='crm-contacts-active'
               value={filters.active}
@@ -128,31 +140,52 @@ export function ContactsListTable({
               <option value='true'>Active</option>
               <option value='false'>Archived</option>
             </Select>
-          </div>
-        </AdminTableToolbar>
+          </AdminFilterField>
+        </AdminFilterBar>
+      }
+      head={
+        <tr>
+          <AdminDataTableHeadCell className='w-10' />
+          <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
+          <AdminDataTableHeadCell>Email</AdminDataTableHeadCell>
+          <AdminDataTableHeadCell>Type</AdminDataTableHeadCell>
+          <AdminDataTableOperationsHeadCell />
+        </tr>
       }
     >
-      <AdminDataTable tableClassName='min-w-[720px]'>
-        <AdminDataTableHead>
-          <tr>
-            <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell>Email</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell>Type</AdminDataTableHeadCell>
-            <AdminDataTableOperationsHeadCell />
-          </tr>
-        </AdminDataTableHead>
-        <AdminDataTableBody>
-          {rows.map((row) => {
-            const name = [row.first_name, row.last_name].filter(Boolean).join(' ') || '—';
-            const nameListSuffix = contactNameListSuffix(row);
-            return (
-              <tr
-                key={row.id}
-                className={`cursor-pointer transition ${
-                  selectedId === row.id ? 'bg-slate-100' : 'hover:bg-slate-50'
-                }`}
-                onClick={() => onSelectRow(row)}
-              >
+      {expanded.isDraftOpen ? (
+        <AdminExpandableRow
+          id={DRAFT_RECORD_ID}
+          label='new contact'
+          expanded
+          isDraft
+          onToggle={expanded.collapse}
+          columnCount={COLUMN_COUNT}
+          cells={
+            <>
+              <AdminDataTableCell className='font-medium text-slate-900'>New contact</AdminDataTableCell>
+              <AdminDataTableCell className='text-slate-400'>—</AdminDataTableCell>
+              <AdminDataTableCell className='text-slate-400'>—</AdminDataTableCell>
+            </>
+          }
+          actions={null}
+          detail={detail}
+        />
+      ) : null}
+      {displayRows.map((row) => {
+        const name = contactDisplayName(row);
+        const nameListSuffix = contactNameListSuffix(row);
+        const isOpen = expanded.isExpanded(row.id);
+        return (
+          <AdminExpandableRow
+            key={row.id}
+            id={row.id}
+            label={name}
+            expanded={isOpen}
+            onToggle={() => expanded.toggle(row.id)}
+            columnCount={COLUMN_COUNT}
+            cells={
+              <>
                 <AdminDataTableCell>
                   {name}
                   {nameListSuffix ? (
@@ -172,79 +205,53 @@ export function ContactsListTable({
                 </AdminDataTableCell>
                 <AdminDataTableCell>{row.email ?? '—'}</AdminDataTableCell>
                 <AdminDataTableCell>{formatEnumLabel(row.contact_type)}</AdminDataTableCell>
-                <AdminDataTableCell className='text-right'>
-                  <div className='flex flex-wrap justify-end gap-2'>
-                    <RelatedRecordOpsLinks
-                      salesHref={adminSalesConversationsDeepLink(
-                        row.id,
-                        row.sales_conversation_channel
-                      )}
-                      instancesHref={adminServiceInstancesDeepLink(row.id)}
-                      invoicesHref={adminContactInvoicesDeepLink(name === '—' ? '' : name)}
-                      hasSalesConversation={row.has_sales_conversation}
-                      hasServiceInstance={row.has_service_instance}
-                      hasInvoice={row.has_invoice}
-                    />
-                    <Button
-                      type='button'
-                      size='sm'
-                      variant='outline'
-                      className='relative h-8 min-w-8 overflow-visible px-0'
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onToggleNotes(row);
-                      }}
-                      disabled={isSaving}
-                      aria-label='Contact notes'
-                      title='Contact notes'
-                    >
-                      <NoteIcon className='h-4 w-4 shrink-0' aria-hidden />
-                      {row.standalone_note_count > 0 ? (
-                        <span className='absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-semibold leading-none text-white'>
-                          {row.standalone_note_count > 99 ? '99+' : row.standalone_note_count}
-                        </span>
-                      ) : null}
-                    </Button>
-                    <Button
-                      type='button'
-                      size='sm'
-                      variant='outline'
-                      className='h-8 min-w-8 px-0'
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onToggleActive(row);
-                      }}
-                      disabled={isSaving}
-                      aria-label={row.active ? 'Archive contact' : 'Restore contact'}
-                      title={row.active ? 'Archive' : 'Restore'}
-                    >
-                      {row.active ? (
-                        <ArchiveIcon className='h-4 w-4 shrink-0' aria-hidden />
-                      ) : (
-                        <RestoreIcon className='h-4 w-4 shrink-0' aria-hidden />
-                      )}
-                    </Button>
-                    <Button
-                      type='button'
-                      size='sm'
-                      variant='danger'
-                      className='h-8 min-w-8 px-0'
-                      onClick={(e) => {
-                        void onDeleteContact(row, e);
-                      }}
-                      disabled={isSaving}
-                      aria-label='Delete contact'
-                      title='Delete contact'
-                    >
-                      <DeleteIcon className='h-4 w-4 shrink-0' aria-hidden />
-                    </Button>
-                  </div>
-                </AdminDataTableCell>
-              </tr>
-            );
-          })}
-        </AdminDataTableBody>
-      </AdminDataTable>
-    </PaginatedTableCard>
+              </>
+            }
+            actions={
+              <AdminRowActions
+                actions={[
+                  {
+                    key: 'notes',
+                    label: 'Contact notes',
+                    icon: <NoteIcon className='h-4 w-4' />,
+                    badge: row.standalone_note_count,
+                    disabled: isSaving,
+                    onClick: () => onOpenNotes(row),
+                  },
+                  ...relatedRecordActions({
+                    salesHref: adminSalesConversationsDeepLink(row.id, row.sales_conversation_channel),
+                    instancesHref: adminServiceInstancesDeepLink(row.id),
+                    invoicesHref: adminContactInvoicesDeepLink(name === '—' ? '' : name),
+                    hasSalesConversation: row.has_sales_conversation,
+                    hasServiceInstance: row.has_service_instance,
+                    hasInvoice: row.has_invoice,
+                  }),
+                  {
+                    key: 'archive',
+                    label: row.active ? 'Archive contact' : 'Restore contact',
+                    icon: row.active ? (
+                      <ArchiveIcon className='h-4 w-4' />
+                    ) : (
+                      <RestoreIcon className='h-4 w-4' />
+                    ),
+                    disabled: isSaving,
+                    onClick: () => onToggleActive(row),
+                  },
+                  {
+                    key: 'delete',
+                    label: 'Delete contact',
+                    icon: <DeleteIcon className='h-4 w-4' />,
+                    tone: 'danger',
+                    disabled: isSaving,
+                    onClick: () => onDeleteContact(row),
+                  },
+                ]}
+              />
+            }
+            detail={isOpen ? detail : null}
+          />
+        );
+      })}
+    </AdminRecordTable>
   );
 }

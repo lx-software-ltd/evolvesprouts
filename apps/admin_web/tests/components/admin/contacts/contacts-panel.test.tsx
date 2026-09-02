@@ -1,12 +1,15 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { createLocation, geocodeVenueAddress, updateLocationPartial } = vi.hoisted(() => ({
-  createLocation: vi.fn(),
-  geocodeVenueAddress: vi.fn(),
-  updateLocationPartial: vi.fn().mockResolvedValue(null),
-}));
+const { createLocation, geocodeVenueAddress, updateLocationPartial, getAdminContact, listAdminContactNotes } =
+  vi.hoisted(() => ({
+    createLocation: vi.fn(),
+    geocodeVenueAddress: vi.fn(),
+    updateLocationPartial: vi.fn().mockResolvedValue(null),
+    getAdminContact: vi.fn(),
+    listAdminContactNotes: vi.fn().mockResolvedValue([]),
+  }));
 
 vi.mock('@/lib/services-api', async () => {
   const actual = await vi.importActual<typeof import('@/lib/services-api')>('@/lib/services-api');
@@ -42,8 +45,12 @@ vi.mock('@/lib/entity-api', async (importOriginal) => {
     ...actual,
     listEntityFamilyPicker: vi.fn().mockResolvedValue([]),
     listEntityOrganizationPicker: vi.fn().mockResolvedValue([]),
+    getAdminContact,
+    listAdminContactNotes,
   };
 });
+
+type AdminContact = components['schemas']['AdminContact'];
 
 const noopRefresh = vi.fn().mockResolvedValue(undefined);
 
@@ -70,6 +77,38 @@ function buildContactsHook(
   };
 }
 
+function buildContact(overrides: Partial<AdminContact> = {}): AdminContact {
+  return {
+    id: '11111111-1111-1111-1111-111111111111',
+    first_name: 'Ann',
+    last_name: 'Lee',
+    email: null,
+    instagram_handle: null,
+    phone_region: null,
+    phone_national_number: null,
+    phone_e164: null,
+    contact_type: 'parent',
+    relationship_type: 'prospect',
+    source: 'manual',
+    mailchimp_status: 'pending',
+    active: true,
+    created_at: '2020-01-01T00:00:00.000Z',
+    updated_at: '2020-01-01T00:00:00.000Z',
+    tag_ids: [],
+    tags: [],
+    family_ids: [],
+    organization_ids: [],
+    family_location_summary: null,
+    organization_location_summary: null,
+    standalone_note_count: 0,
+    has_completion_certificate: false,
+    has_sales_conversation: false,
+    has_service_instance: false,
+    has_invoice: false,
+    ...overrides,
+  };
+}
+
 const hkArea = {
   id: 'area-hk',
   parentId: null,
@@ -81,31 +120,72 @@ const hkArea = {
   displayOrder: 0,
 };
 
+type PanelProps = Partial<Parameters<typeof ContactsPanel>[0]>;
+
+function renderPanel(props: PanelProps = {}) {
+  return render(
+    <ContactsPanel
+      contacts={buildContactsHook()}
+      adminUsers={[]}
+      onPatchStandaloneNoteCount={vi.fn()}
+      tags={[]}
+      locations={[]}
+      geographicAreas={[]}
+      areasLoading={false}
+      refreshLocations={noopRefresh}
+      {...props}
+    />
+  );
+}
+
+async function openMoreActions(user: ReturnType<typeof userEvent.setup>, rowTestId: string) {
+  const row = screen.getByTestId(rowTestId);
+  await user.click(within(row).getByRole('button', { name: 'More actions' }));
+  return screen.getByRole('menu', { name: 'More actions' });
+}
+
 describe('ContactsPanel', () => {
   afterEach(() => {
     window.history.replaceState(null, '', '/contacts');
+    getAdminContact.mockReset();
+    listAdminContactNotes.mockClear();
   });
 
-  it('submits create with relationship types that exclude vendor', async () => {
+  it('starts with the table only and opens a draft row from the + button', async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    expect(screen.queryByLabelText('First name')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Contact' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Contacts' })).toBeInTheDocument();
+    expect(screen.getByText('No contacts match the current filters.')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'New contact' }));
+
+    expect(window.location.search).toBe('?contact=new');
+    const draftRow = screen.getByTestId('admin-row-new');
+    expect(draftRow).toHaveAttribute('data-draft', 'true');
+    expect(screen.getByLabelText('First name')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create contact' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New contact' })).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(screen.getByRole('button', { name: 'New contact' }));
+    expect(window.location.search).toBe('');
+    await waitFor(() => {
+      expect(screen.queryByLabelText('First name')).not.toBeInTheDocument();
+    });
+  });
+
+  it('submits create with relationship types that exclude vendor and collapses the draft', async () => {
     const user = userEvent.setup();
     const createContact = vi.fn().mockResolvedValue(null);
     const contacts = buildContactsHook({ createContact });
     const refreshFamilyOrgLists = vi.fn().mockResolvedValue(undefined);
 
-    render(
-      <ContactsPanel
-        contacts={contacts}
-        adminUsers={[]}
-        onPatchStandaloneNoteCount={vi.fn()}
-        tags={[]}
-        locations={[]}
-        geographicAreas={[]}
-        areasLoading={false}
-        refreshLocations={noopRefresh}
-        refreshFamilyOrgLists={refreshFamilyOrgLists}
-      />
-    );
+    renderPanel({ contacts, refreshFamilyOrgLists });
 
+    await user.click(screen.getByRole('button', { name: 'New contact' }));
     await user.type(screen.getByLabelText('First name'), 'Jane');
     await user.click(screen.getByRole('button', { name: 'Create contact' }));
 
@@ -119,25 +199,15 @@ describe('ContactsPanel', () => {
     await waitFor(() => {
       expect(refreshFamilyOrgLists).toHaveBeenCalledTimes(1);
     });
+    await waitFor(() => {
+      expect(window.location.search).toBe('');
+    });
   });
 
   it('loads the next page when Load more is available', async () => {
     const user = userEvent.setup();
     const loadMore = vi.fn().mockResolvedValue(undefined);
-    const contacts = buildContactsHook({ hasMore: true, loadMore });
-
-    render(
-      <ContactsPanel
-        contacts={contacts}
-        adminUsers={[]}
-        onPatchStandaloneNoteCount={vi.fn()}
-        tags={[]}
-        locations={[]}
-        geographicAreas={[]}
-        areasLoading={false}
-        refreshLocations={noopRefresh}
-      />
-    );
+    renderPanel({ contacts: buildContactsHook({ hasMore: true, loadMore }) });
 
     await user.click(screen.getByRole('button', { name: 'Load more' }));
 
@@ -145,72 +215,26 @@ describe('ContactsPanel', () => {
   });
 
   it('shows family and organisation emoji after the name when the contact is linked', () => {
-    const baseRow = {
-      id: '11111111-1111-1111-1111-111111111111',
-      email: null,
-      instagram_handle: null,
-      phone_region: null,
-      phone_national_number: null,
-      phone_e164: null,
-      contact_type: 'parent' as const,
-      relationship_type: 'prospect' as const,
-      source: 'manual' as const,
-      mailchimp_status: 'pending' as const,
-      active: true,
-      created_at: '2020-01-01T00:00:00.000Z',
-      updated_at: '2020-01-01T00:00:00.000Z',
-      tag_ids: [],
-      tags: [],
-      standalone_note_count: 0,
-      has_completion_certificate: false,
-      has_sales_conversation: false,
-      has_service_instance: false,
-      has_invoice: false,
-    };
-    const familyOnly: components['schemas']['AdminContact'] = {
-      ...baseRow,
+    const familyOnly = buildContact({
       id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
       first_name: 'Ann',
       last_name: 'Family',
       family_ids: ['fam-1'],
-      organization_ids: [],
-      family_location_summary: null,
-      organization_location_summary: null,
-    };
-    const orgOnly: components['schemas']['AdminContact'] = {
-      ...baseRow,
+    });
+    const orgOnly = buildContact({
       id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
       first_name: 'Bob',
       last_name: 'Org',
-      family_ids: [],
       organization_ids: ['org-1'],
-      family_location_summary: null,
-      organization_location_summary: null,
-    };
-    const both: components['schemas']['AdminContact'] = {
-      ...baseRow,
+    });
+    const both = buildContact({
       id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
       first_name: 'Pat',
       last_name: 'Both',
       family_ids: ['fam-2'],
       organization_ids: ['org-2'],
-      family_location_summary: null,
-      organization_location_summary: null,
-    };
-    const contacts = buildContactsHook({ contacts: [familyOnly, orgOnly, both] });
-
-    render(
-      <ContactsPanel
-        contacts={contacts}
-        adminUsers={[]}
-        onPatchStandaloneNoteCount={vi.fn()}
-        tags={[]}
-        locations={[]}
-        geographicAreas={[]}
-        areasLoading={false}
-        refreshLocations={noopRefresh}
-      />
-    );
+    });
+    renderPanel({ contacts: buildContactsHook({ contacts: [familyOnly, orgOnly, both] }) });
 
     expect(screen.getByText(/Ann Family/)).toHaveTextContent('Ann Family 👨‍👩‍👧');
     expect(screen.getByText(/Bob Org/)).toHaveTextContent('Bob Org 🏢');
@@ -218,64 +242,20 @@ describe('ContactsPanel', () => {
   });
 
   it('shows client emoji after the name when relationship_type is client', () => {
-    const baseRow = {
-      id: '11111111-1111-1111-1111-111111111111',
-      email: null,
-      instagram_handle: null,
-      phone_region: null,
-      phone_national_number: null,
-      phone_e164: null,
-      contact_type: 'parent' as const,
-      relationship_type: 'prospect' as const,
-      source: 'manual' as const,
-      mailchimp_status: 'pending' as const,
-      active: true,
-      created_at: '2020-01-01T00:00:00.000Z',
-      updated_at: '2020-01-01T00:00:00.000Z',
-      tag_ids: [],
-      tags: [],
-      standalone_note_count: 0,
-      has_completion_certificate: false,
-      has_sales_conversation: false,
-      has_service_instance: false,
-      has_invoice: false,
-    };
-    const clientOnly: components['schemas']['AdminContact'] = {
-      ...baseRow,
+    const clientOnly = buildContact({
       id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
       first_name: 'Cara',
       last_name: 'Client',
-      family_ids: [],
-      organization_ids: [],
-      family_location_summary: null,
-      organization_location_summary: null,
       relationship_type: 'client',
-    };
-    const clientInFamily: components['schemas']['AdminContact'] = {
-      ...baseRow,
+    });
+    const clientInFamily = buildContact({
       id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
       first_name: 'Finn',
       last_name: 'FamilyClient',
       family_ids: ['fam-1'],
-      organization_ids: [],
-      family_location_summary: null,
-      organization_location_summary: null,
       relationship_type: 'client',
-    };
-    const contacts = buildContactsHook({ contacts: [clientOnly, clientInFamily] });
-
-    render(
-      <ContactsPanel
-        contacts={contacts}
-        adminUsers={[]}
-        onPatchStandaloneNoteCount={vi.fn()}
-        tags={[]}
-        locations={[]}
-        geographicAreas={[]}
-        areasLoading={false}
-        refreshLocations={noopRefresh}
-      />
-    );
+    });
+    renderPanel({ contacts: buildContactsHook({ contacts: [clientOnly, clientInFamily] }) });
 
     expect(screen.getByText(/Cara Client/)).toHaveTextContent('Cara Client 🤝');
     expect(screen.getByText(/Finn FamilyClient/)).toHaveTextContent(
@@ -284,123 +264,147 @@ describe('ContactsPanel', () => {
   });
 
   it('shows certificate emoji when has_completion_certificate is true', () => {
-    const row: components['schemas']['AdminContact'] = {
+    const row = buildContact({
       id: 'ffffffff-ffff-ffff-ffff-ffffffffffff',
-      email: null,
-      instagram_handle: null,
-      phone_region: null,
-      phone_national_number: null,
-      phone_e164: null,
-      contact_type: 'parent',
-      relationship_type: 'prospect',
-      source: 'manual',
-      mailchimp_status: 'pending',
-      active: true,
-      created_at: '2020-01-01T00:00:00.000Z',
-      updated_at: '2020-01-01T00:00:00.000Z',
-      tag_ids: [],
-      tags: [],
-      standalone_note_count: 0,
-      has_completion_certificate: true,
-      has_sales_conversation: false,
-      has_service_instance: false,
-      has_invoice: false,
       first_name: 'Grad',
       last_name: 'uate',
-      family_ids: [],
-      organization_ids: [],
-      family_location_summary: null,
-      organization_location_summary: null,
-    };
-    render(
-      <ContactsPanel
-        contacts={buildContactsHook({ contacts: [row] })}
-        adminUsers={[]}
-        onPatchStandaloneNoteCount={vi.fn()}
-        tags={[]}
-        locations={[]}
-        geographicAreas={[]}
-        areasLoading={false}
-        refreshLocations={noopRefresh}
-      />
-    );
+      has_completion_certificate: true,
+    });
+    renderPanel({ contacts: buildContactsHook({ contacts: [row] }) });
     expect(screen.getByText(/Grad uate/)).toHaveTextContent('Grad uate 🎓');
   });
 
-  it('shows related-record operation links only when those records exist', () => {
-    const withLinks: components['schemas']['AdminContact'] = {
+  it('keeps Notes inline and moves related-record links into the More actions menu', async () => {
+    const user = userEvent.setup();
+    const withLinks = buildContact({
       id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
       first_name: 'Linked',
       last_name: 'Person',
-      email: null,
-      instagram_handle: null,
-      phone_region: null,
-      phone_national_number: null,
-      phone_e164: null,
-      contact_type: 'parent',
       relationship_type: 'client',
-      source: 'manual',
-      mailchimp_status: 'pending',
-      active: true,
-      created_at: '2020-01-01T00:00:00.000Z',
-      updated_at: '2020-01-01T00:00:00.000Z',
-      tag_ids: [],
-      tags: [],
-      family_ids: [],
-      organization_ids: [],
-      family_location_summary: null,
-      organization_location_summary: null,
-      standalone_note_count: 0,
-      has_completion_certificate: false,
       has_sales_conversation: true,
       sales_conversation_channel: 'instagram',
       has_service_instance: true,
       has_invoice: true,
-    };
-    const withoutLinks: components['schemas']['AdminContact'] = {
-      ...withLinks,
+      standalone_note_count: 3,
+    });
+    const withoutLinks = buildContact({
       id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
       first_name: 'Plain',
       last_name: 'Person',
-      has_sales_conversation: false,
       sales_conversation_channel: null,
-      has_service_instance: false,
-      has_invoice: false,
-    };
+    });
 
-    render(
-      <ContactsPanel
-        contacts={buildContactsHook({ contacts: [withLinks, withoutLinks] })}
-        adminUsers={[]}
-        onPatchStandaloneNoteCount={vi.fn()}
-        tags={[]}
-        locations={[]}
-        geographicAreas={[]}
-        areasLoading={false}
-        refreshLocations={noopRefresh}
-      />
-    );
+    renderPanel({ contacts: buildContactsHook({ contacts: [withLinks, withoutLinks] }) });
 
-    const salesLink = screen.getByRole('link', { name: 'Sales conversations' });
-    expect(salesLink).toHaveAttribute(
+    const linkedRow = screen.getByTestId(`admin-row-${withLinks.id}`);
+    const inlineButtons = within(linkedRow).getAllByRole('button');
+    expect(inlineButtons.map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Expand Linked Person',
+      'Contact notes',
+      'More actions',
+    ]);
+    expect(within(linkedRow).getByRole('button', { name: 'Contact notes' })).toHaveTextContent('3');
+
+    const menu = await openMoreActions(user, `admin-row-${withLinks.id}`);
+    expect(within(menu).getByRole('menuitem', { name: 'Sales conversations' })).toHaveAttribute(
       'href',
       '/sales?tab=instagram&contact=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
     );
-    expect(salesLink).toHaveClass('h-8', 'px-3');
-    expect(screen.getByRole('link', { name: 'Service instances' })).toHaveAttribute(
+    expect(within(menu).getByRole('menuitem', { name: 'Service instances' })).toHaveAttribute(
       'href',
       '/services?contact=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
     );
-    expect(screen.getByRole('link', { name: 'Invoices' })).toHaveAttribute(
+    expect(within(menu).getByRole('menuitem', { name: 'Invoices' })).toHaveAttribute(
       'href',
       '/assets?tag=customer_invoice&query=Linked+Person'
     );
-    expect(screen.getAllByRole('link', { name: 'Sales conversations' })).toHaveLength(1);
-    expect(screen.getAllByRole('link', { name: 'Service instances' })).toHaveLength(1);
-    expect(screen.getAllByRole('link', { name: 'Invoices' })).toHaveLength(1);
+    expect(within(menu).getByRole('menuitem', { name: 'Archive contact' })).toBeInTheDocument();
+    expect(within(menu).getByRole('menuitem', { name: 'Delete contact' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+
+    const plainMenu = await openMoreActions(user, `admin-row-${withoutLinks.id}`);
+    expect(within(plainMenu).queryByRole('menuitem', { name: 'Sales conversations' })).not.toBeInTheDocument();
+    expect(within(plainMenu).queryByRole('menuitem', { name: 'Service instances' })).not.toBeInTheDocument();
+    expect(within(plainMenu).queryByRole('menuitem', { name: 'Invoices' })).not.toBeInTheDocument();
+    expect(within(plainMenu).getAllByRole('menuitem')).toHaveLength(2);
   });
 
-  it('shows read-only family and organisation venue lines in the Location box when the row is selected', async () => {
+  it('expands a row into the editor and syncs the open record to the URL', async () => {
+    const user = userEvent.setup();
+    const ann = buildContact({ id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', first_name: 'Ann', last_name: 'Lee' });
+    const bob = buildContact({ id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', first_name: 'Bob', last_name: 'Ray', email: 'bob@example.com' });
+    renderPanel({ contacts: buildContactsHook({ contacts: [ann, bob] }) });
+
+    await user.click(screen.getByText('Ann Lee'));
+
+    expect(window.location.search).toBe(`?contact=${ann.id}`);
+    expect(screen.getByTestId(`admin-row-${ann.id}`)).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByLabelText('First name')).toHaveValue('Ann');
+    expect(screen.getByRole('button', { name: 'Update contact' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+
+    await user.click(screen.getByText('Bob Ray'));
+
+    expect(window.location.search).toBe(`?contact=${bob.id}`);
+    expect(screen.getByTestId(`admin-row-${ann.id}`)).toHaveAttribute('aria-expanded', 'false');
+    await waitFor(() => {
+      expect(screen.getByLabelText('First name')).toHaveValue('Bob');
+    });
+    expect(screen.getByLabelText('Email')).toHaveValue('bob@example.com');
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(window.location.search).toBe('');
+  });
+
+  it('asks before discarding unsaved edits when switching rows', async () => {
+    const user = userEvent.setup();
+    const ann = buildContact({ id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', first_name: 'Ann', last_name: 'Lee' });
+    const bob = buildContact({ id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', first_name: 'Bob', last_name: 'Ray' });
+    renderPanel({ contacts: buildContactsHook({ contacts: [ann, bob] }) });
+
+    await user.click(screen.getByText('Ann Lee'));
+    await user.type(screen.getByLabelText('Last name'), 'x');
+    await user.click(screen.getByText('Bob Ray'));
+
+    const dialog = screen.getByRole('alertdialog', { name: 'Discard unsaved changes?' });
+    expect(window.location.search).toBe(`?contact=${ann.id}`);
+
+    await user.click(within(dialog).getByRole('button', { name: 'Keep editing' }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Last name')).toHaveValue('Leex');
+
+    await user.click(screen.getByText('Bob Ray'));
+    await user.click(
+      within(screen.getByRole('alertdialog', { name: 'Discard unsaved changes?' })).getByRole('button', {
+        name: 'Discard changes',
+      })
+    );
+    expect(window.location.search).toBe(`?contact=${bob.id}`);
+    await waitFor(() => {
+      expect(screen.getByLabelText('Last name')).toHaveValue('Ray');
+    });
+  });
+
+  it('opens the row with the Notes disclosure from the notes action', async () => {
+    const user = userEvent.setup();
+    const row = buildContact({ standalone_note_count: 2 });
+    renderPanel({ contacts: buildContactsHook({ contacts: [row] }) });
+
+    await user.click(screen.getByRole('button', { name: 'Contact notes' }));
+
+    expect(screen.getByTestId(`admin-row-${row.id}`)).toHaveAttribute('aria-expanded', 'true');
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Notes/ })).toHaveAttribute('aria-expanded', 'true');
+    });
+    await waitFor(() => {
+      expect(listAdminContactNotes).toHaveBeenCalledWith(row.id, expect.any(AbortSignal));
+    });
+    expect(screen.getByLabelText('New note')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add note' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Notes ·/ })).not.toBeInTheDocument();
+  });
+
+  it('shows read-only family and organisation venue lines in the Location box when the row is expanded', async () => {
     const user = userEvent.setup();
     const summary = {
       id: 'loc-1',
@@ -411,133 +415,50 @@ describe('ContactsPanel', () => {
       lat: 22.1,
       lng: 114.2,
     };
-    const row: components['schemas']['AdminContact'] = {
-      id: '11111111-1111-1111-1111-111111111111',
+    const row = buildContact({
       first_name: 'Pat',
       last_name: 'Both',
-      email: null,
-      instagram_handle: null,
-      phone_region: null,
-      phone_national_number: null,
-      phone_e164: null,
-      contact_type: 'parent',
-      relationship_type: 'prospect',
-      source: 'manual',
-      mailchimp_status: 'pending',
-      active: true,
-      created_at: '2020-01-01T00:00:00.000Z',
-      updated_at: '2020-01-01T00:00:00.000Z',
-      tag_ids: [],
-      tags: [],
       family_ids: ['fam-1'],
       organization_ids: ['org-1'],
       family_location_summary: summary,
       organization_location_summary: summary,
-      standalone_note_count: 0,
-      has_completion_certificate: false,
-      has_sales_conversation: false,
-      has_service_instance: false,
-      has_invoice: false,
-    };
-    const contacts = buildContactsHook({ contacts: [row] });
-
-    render(
-      <ContactsPanel
-        contacts={contacts}
-        adminUsers={[]}
-        onPatchStandaloneNoteCount={vi.fn()}
-        tags={[]}
-        locations={[]}
-        geographicAreas={[]}
-        areasLoading={false}
-        refreshLocations={noopRefresh}
-      />
-    );
+    });
+    renderPanel({ contacts: buildContactsHook({ contacts: [row] }) });
 
     await user.click(screen.getByText('Pat Both'));
-    await user.click(screen.getByText('Location', { selector: 'summary' }));
+    await user.click(screen.getByRole('button', { name: /^Location/ }));
 
-    const familyLines = screen.getAllByText(/👨‍👩‍👧 1 Road · Hong Kong/);
-    expect(familyLines.length).toBeGreaterThanOrEqual(1);
-    const orgLines = screen.getAllByText(/🏢 1 Road · Hong Kong/);
-    expect(orgLines.length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/👨‍👩‍👧 1 Road · Hong Kong/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/🏢 1 Road · Hong Kong/).length).toBeGreaterThanOrEqual(1);
     expect(
       screen.getByText('Read-only. Edit addresses on the family and organisation records.')
     ).toBeInTheDocument();
   });
 
-  it('calls deleteContact when Delete is confirmed', async () => {
+  it('calls deleteContact from the More actions menu when Delete is confirmed', async () => {
     const user = userEvent.setup();
     const deleteContact = vi.fn().mockResolvedValue(undefined);
     const refreshFamilyOrgLists = vi.fn().mockResolvedValue(undefined);
-    const row: components['schemas']['AdminContact'] = {
-      id: '11111111-1111-1111-1111-111111111111',
-      first_name: 'Ann',
-      last_name: 'Lee',
-      email: null,
-      instagram_handle: null,
-      phone_region: null,
-      phone_national_number: null,
-      phone_e164: null,
-      contact_type: 'parent',
-      relationship_type: 'prospect',
-      source: 'manual',
-      mailchimp_status: 'pending',
-      active: true,
-      created_at: '2020-01-01T00:00:00.000Z',
-      updated_at: '2020-01-01T00:00:00.000Z',
-      tag_ids: [],
-      tags: [],
-      family_ids: [],
-      organization_ids: [],
-      standalone_note_count: 0,
-      has_completion_certificate: false,
-      has_sales_conversation: false,
-      has_service_instance: false,
-      has_invoice: false,
-    };
-    const contacts = buildContactsHook({
-      deleteContact,
-      contacts: [row],
+    const row = buildContact();
+    renderPanel({
+      contacts: buildContactsHook({ deleteContact, contacts: [row] }),
+      refreshFamilyOrgLists,
     });
 
-    render(
-      <ContactsPanel
-        contacts={contacts}
-        adminUsers={[]}
-        onPatchStandaloneNoteCount={vi.fn()}
-        tags={[]}
-        locations={[]}
-        geographicAreas={[]}
-        areasLoading={false}
-        refreshLocations={noopRefresh}
-        refreshFamilyOrgLists={refreshFamilyOrgLists}
-      />
-    );
+    const menu = await openMoreActions(user, `admin-row-${row.id}`);
+    await user.click(within(menu).getByRole('menuitem', { name: 'Delete contact' }));
 
-    await user.click(screen.getByRole('button', { name: 'Delete contact' }));
-
-    expect(deleteContact).toHaveBeenCalledWith(row.id);
+    await waitFor(() => {
+      expect(deleteContact).toHaveBeenCalledWith(row.id);
+    });
     await waitFor(() => {
       expect(refreshFamilyOrgLists).toHaveBeenCalledTimes(1);
     });
+    expect(screen.getByTestId(`admin-row-${row.id}`)).toHaveAttribute('aria-expanded', 'false');
   });
 
-  it('shows list error from the hook in the table card', async () => {
-    const contacts = buildContactsHook({ error: 'Failed to load contacts' });
-
-    render(
-      <ContactsPanel
-        contacts={contacts}
-        adminUsers={[]}
-        onPatchStandaloneNoteCount={vi.fn()}
-        tags={[]}
-        locations={[]}
-        geographicAreas={[]}
-        areasLoading={false}
-        refreshLocations={noopRefresh}
-      />
-    );
+  it('shows list error from the hook above the table', async () => {
+    renderPanel({ contacts: buildContactsHook({ error: 'Failed to load contacts' }) });
 
     await waitFor(() => {
       expect(screen.getByText('Failed to load contacts')).toBeInTheDocument();
@@ -546,26 +467,8 @@ describe('ContactsPanel', () => {
 
   it('shows read-only location summary when contact is linked to family', async () => {
     const user = userEvent.setup();
-    const row: components['schemas']['AdminContact'] = {
-      id: '11111111-1111-1111-1111-111111111111',
-      first_name: 'Ann',
-      last_name: 'Lee',
-      email: null,
-      instagram_handle: null,
-      phone_region: null,
-      phone_national_number: null,
-      phone_e164: null,
-      contact_type: 'parent',
-      relationship_type: 'prospect',
-      source: 'manual',
-      mailchimp_status: 'pending',
-      active: true,
-      created_at: '2020-01-01T00:00:00.000Z',
-      updated_at: '2020-01-01T00:00:00.000Z',
-      tag_ids: [],
-      tags: [],
+    const row = buildContact({
       family_ids: ['fam-1'],
-      organization_ids: [],
       location_id: 'loc-1',
       location_summary: {
         id: 'loc-1',
@@ -585,30 +488,11 @@ describe('ContactsPanel', () => {
         lat: 22.1,
         lng: 114.2,
       },
-      organization_location_summary: null,
-      standalone_note_count: 0,
-      has_completion_certificate: false,
-      has_sales_conversation: false,
-      has_service_instance: false,
-      has_invoice: false,
-    };
-    const contacts = buildContactsHook({ contacts: [row] });
-
-    render(
-      <ContactsPanel
-        contacts={contacts}
-        adminUsers={[]}
-        onPatchStandaloneNoteCount={vi.fn()}
-        tags={[]}
-        locations={[]}
-        geographicAreas={[hkArea]}
-        areasLoading={false}
-        refreshLocations={noopRefresh}
-      />
-    );
+    });
+    renderPanel({ contacts: buildContactsHook({ contacts: [row] }), geographicAreas: [hkArea] });
 
     await user.click(screen.getByText('Ann Lee'));
-    await user.click(screen.getByText('Location', { selector: 'summary' }));
+    await user.click(screen.getByRole('button', { name: /^Location/ }));
 
     expect(screen.getAllByText(/👨‍👩‍👧 1 Road · Hong Kong/).length).toBeGreaterThanOrEqual(1);
     expect(
@@ -621,7 +505,6 @@ describe('ContactsPanel', () => {
   it('includes location_id on create after filling location and creating the contact', async () => {
     const user = userEvent.setup();
     const createContact = vi.fn().mockResolvedValue(null);
-    const contacts = buildContactsHook({ createContact });
 
     createLocation.mockResolvedValue({
       id: 'loc-new',
@@ -642,20 +525,10 @@ describe('ContactsPanel', () => {
       displayName: null,
     });
 
-    render(
-      <ContactsPanel
-        contacts={contacts}
-        adminUsers={[]}
-        onPatchStandaloneNoteCount={vi.fn()}
-        tags={[]}
-        locations={[]}
-        geographicAreas={[hkArea]}
-        areasLoading={false}
-        refreshLocations={noopRefresh}
-      />
-    );
+    renderPanel({ contacts: buildContactsHook({ createContact }), geographicAreas: [hkArea] });
 
-    await user.click(screen.getByText('Location', { selector: 'summary' }));
+    await user.click(screen.getByRole('button', { name: 'New contact' }));
+    await user.click(screen.getByRole('button', { name: /^Location/ }));
     await user.type(screen.getByLabelText('First name'), 'Jane');
     await user.selectOptions(screen.getByLabelText('Geographic area'), 'area-hk');
     await user.type(screen.getByLabelText('Address'), '1 Test Road');
@@ -690,22 +563,10 @@ describe('ContactsPanel', () => {
   it('disables Create contact when the location draft is invalid', async () => {
     const user = userEvent.setup();
     const createContact = vi.fn().mockResolvedValue(null);
-    const contacts = buildContactsHook({ createContact });
+    renderPanel({ contacts: buildContactsHook({ createContact }), geographicAreas: [hkArea] });
 
-    render(
-      <ContactsPanel
-        contacts={contacts}
-        adminUsers={[]}
-        onPatchStandaloneNoteCount={vi.fn()}
-        tags={[]}
-        locations={[]}
-        geographicAreas={[hkArea]}
-        areasLoading={false}
-        refreshLocations={noopRefresh}
-      />
-    );
-
-    await user.click(screen.getByText('Location', { selector: 'summary' }));
+    await user.click(screen.getByRole('button', { name: 'New contact' }));
+    await user.click(screen.getByRole('button', { name: /^Location/ }));
     await user.type(screen.getByLabelText('First name'), 'Jane');
     await user.selectOptions(screen.getByLabelText('Geographic area'), 'area-hk');
     await user.type(screen.getByLabelText('Latitude'), '22.3');
@@ -718,69 +579,36 @@ describe('ContactsPanel', () => {
     const user = userEvent.setup();
     const updateContact = vi.fn().mockResolvedValue(null);
     const refreshFamilyOrgLists = vi.fn().mockResolvedValue(undefined);
-    const row: components['schemas']['AdminContact'] = {
+    const row = buildContact({
       id: '22222222-2222-2222-2222-222222222222',
       first_name: 'Bob',
       last_name: null,
-      email: null,
-      instagram_handle: null,
-      phone_region: null,
-      phone_national_number: null,
-      phone_e164: null,
-      contact_type: 'parent',
-      relationship_type: 'prospect',
-      source: 'manual',
-      mailchimp_status: 'pending',
-      active: true,
-      created_at: '2020-01-01T00:00:00.000Z',
-      updated_at: '2020-01-01T00:00:00.000Z',
-      tag_ids: [],
-      tags: [],
-      family_ids: [],
-      organization_ids: [],
       location_id: 'loc-1',
       location_summary: null,
-      standalone_note_count: 0,
-      has_completion_certificate: false,
-      has_sales_conversation: false,
-      has_service_instance: false,
-      has_invoice: false,
-    };
-    const contacts = buildContactsHook({
-      updateContact,
-      contacts: [row],
+    });
+    renderPanel({
+      contacts: buildContactsHook({ updateContact, contacts: [row] }),
+      locations: [
+        {
+          id: 'loc-1',
+          name: null,
+          areaId: 'area-hk',
+          address: 'X',
+          lat: null,
+          lng: null,
+          createdAt: null,
+          updatedAt: null,
+          lockedFromPartnerOrg: false,
+          partnerOrganizationLabels: [],
+          partnerOrganizationIds: [],
+        },
+      ],
+      geographicAreas: [hkArea],
+      refreshFamilyOrgLists,
     });
 
-    render(
-      <ContactsPanel
-        contacts={contacts}
-        adminUsers={[]}
-        onPatchStandaloneNoteCount={vi.fn()}
-        tags={[]}
-        locations={[
-          {
-            id: 'loc-1',
-            name: null,
-            areaId: 'area-hk',
-            address: 'X',
-            lat: null,
-            lng: null,
-            createdAt: null,
-            updatedAt: null,
-            lockedFromPartnerOrg: false,
-            partnerOrganizationLabels: [],
-            partnerOrganizationIds: [],
-          },
-        ]}
-        geographicAreas={[hkArea]}
-        areasLoading={false}
-        refreshLocations={noopRefresh}
-        refreshFamilyOrgLists={refreshFamilyOrgLists}
-      />
-    );
-
     await user.click(screen.getByText('Bob'));
-    await user.click(screen.getByText('Location', { selector: 'summary' }));
+    await user.click(screen.getByRole('button', { name: /^Location/ }));
     await user.click(screen.getByRole('button', { name: 'Clear' }));
     await user.click(screen.getByRole('button', { name: 'Update contact' }));
 
@@ -794,76 +622,63 @@ describe('ContactsPanel', () => {
     await waitFor(() => {
       expect(refreshFamilyOrgLists).toHaveBeenCalledTimes(1);
     });
+    expect(window.location.search).toBe(`?contact=${row.id}`);
   });
 
   it('does not render the Mailchimp sync card on the contacts list', () => {
-    const contacts = buildContactsHook();
-    render(
-      <ContactsPanel
-        contacts={contacts}
-        adminUsers={[]}
-        onPatchStandaloneNoteCount={vi.fn()}
-        tags={[]}
-        locations={[]}
-        geographicAreas={[]}
-        areasLoading={false}
-        refreshLocations={noopRefresh}
-        refreshFamilyOrgLists={vi.fn()}
-      />
-    );
+    renderPanel({ refreshFamilyOrgLists: vi.fn() });
     expect(screen.queryByRole('heading', { name: 'Mailchimp sync' })).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Contact' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Contacts' })).toBeInTheDocument();
   });
 
-  it('opens the matching contact in the editor from the contact query param', async () => {
-    window.history.replaceState(null, '', '/contacts?contact=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
-    const row: components['schemas']['AdminContact'] = {
+  it('expands the matching contact from the contact query param', async () => {
+    const row = buildContact({
       id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
       first_name: 'Ann',
       last_name: 'Family',
-      email: null,
-      instagram_handle: null,
-      phone_region: null,
-      phone_national_number: null,
-      phone_e164: null,
-      contact_type: 'parent',
-      relationship_type: 'prospect',
-      source: 'manual',
-      mailchimp_status: 'pending',
-      active: true,
-      created_at: '2020-01-01T00:00:00.000Z',
-      updated_at: '2020-01-01T00:00:00.000Z',
-      tag_ids: [],
-      tags: [],
-      standalone_note_count: 0,
-      has_completion_certificate: false,
-      has_sales_conversation: false,
-      has_service_instance: false,
-      has_invoice: false,
-      family_ids: [],
-      organization_ids: [],
-      family_location_summary: null,
-      organization_location_summary: null,
-    };
-    const contacts = buildContactsHook({ contacts: [row] });
-
-    render(
-      <ContactsPanel
-        contacts={contacts}
-        adminUsers={[]}
-        onPatchStandaloneNoteCount={vi.fn()}
-        tags={[]}
-        locations={[]}
-        geographicAreas={[]}
-        areasLoading={false}
-        refreshLocations={noopRefresh}
-      />
-    );
+    });
+    window.history.replaceState(null, '', `/contacts?contact=${row.id}`);
+    renderPanel({ contacts: buildContactsHook({ contacts: [row] }) });
 
     await waitFor(() => {
       expect(screen.getByLabelText('First name')).toHaveValue('Ann');
     });
     expect(screen.getByLabelText('Last name')).toHaveValue('Family');
+    expect(screen.getByTestId(`admin-row-${row.id}`)).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('button', { name: 'Update contact' })).toBeInTheDocument();
+    expect(getAdminContact).not.toHaveBeenCalled();
+  });
+
+  it('fetches and pins a deep-linked contact that is not in the loaded pages', async () => {
+    const listed = buildContact({ id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', first_name: 'Ann', last_name: 'Lee' });
+    const pinned = buildContact({ id: 'cccccccc-cccc-cccc-cccc-cccccccccccc', first_name: 'Zed', last_name: 'Far' });
+    getAdminContact.mockResolvedValue(pinned);
+    window.history.replaceState(null, '', `/contacts?contact=${pinned.id}`);
+
+    renderPanel({ contacts: buildContactsHook({ contacts: [listed] }) });
+
+    await waitFor(() => {
+      expect(getAdminContact).toHaveBeenCalledWith(pinned.id);
+    });
+    await waitFor(() => {
+      expect(screen.getByLabelText('First name')).toHaveValue('Zed');
+    });
+    const rows = screen.getAllByRole('row').filter((row) => row.getAttribute('data-testid')?.startsWith('admin-row-') && !row.getAttribute('data-testid')?.endsWith('-detail'));
+    expect(rows.map((row) => row.getAttribute('data-testid'))).toEqual([
+      `admin-row-${pinned.id}`,
+      `admin-row-${listed.id}`,
+    ]);
+  });
+
+  it('collapses the deep link when the contact cannot be loaded', async () => {
+    getAdminContact.mockRejectedValue(new Error('missing'));
+    window.history.replaceState(null, '', '/contacts?contact=99999999-9999-9999-9999-999999999999');
+
+    renderPanel({ contacts: buildContactsHook({ contacts: [buildContact()] }) });
+
+    await waitFor(() => {
+      expect(window.location.search).toBe('');
+    });
+    expect(screen.queryByLabelText('First name')).not.toBeInTheDocument();
   });
 });

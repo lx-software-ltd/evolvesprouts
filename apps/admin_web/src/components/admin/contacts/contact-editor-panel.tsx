@@ -2,32 +2,42 @@
 
 import { ContactEditorIdentityFields } from '@/components/admin/contacts/contact-editor-identity-fields';
 import { ContactEditorSourceFields } from '@/components/admin/contacts/contact-editor-source-fields';
+import { ContactNotesPanel } from '@/components/admin/contacts/contact-notes-panel';
 import { EntityServicesSection } from '@/components/admin/contacts/entity-services-section';
 import { EntityTagPicker } from '@/components/admin/contacts/entity-tag-picker';
 import { InlineLocationEditor } from '@/components/admin/locations/inline-location-editor';
-import { AdminCollapsibleSection } from '@/components/ui/admin-collapsible-section';
-import { AdminEditorCard } from '@/components/ui/admin-editor-card';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { AdminDisclosure } from '@/components/ui/admin-disclosure';
+import { AdminEditorActions, AdminEditorPanel } from '@/components/ui/admin-editor-panel';
+import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { Select } from '@/components/ui/select';
 import { formatEnumLabel } from '@/lib/format';
 import type { EntityTagRef } from '@/lib/entity-api';
+import type { AdminUser } from '@/types/leads';
 import type { GeographicAreaSummary } from '@/types/services';
 import type { useContactsPanelEditor } from '@/hooks/use-contacts-panel-editor';
 
-export interface ContactEditorCardProps {
+export interface ContactEditorPanelProps {
   editor: ReturnType<typeof useContactsPanelEditor>;
   tags: EntityTagRef[];
   geographicAreas: GeographicAreaSummary[];
   areasLoading: boolean;
+  adminUsers: AdminUser[];
+  onPatchStandaloneNoteCount: (contactId: string, standaloneNoteCount: number) => void;
 }
 
-export function ContactEditorCard({
+/**
+ * Editor rendered inside the expanded contact row. No title: the row above
+ * names the record. Fields first, disclosures for Location, Tags, Services,
+ * and Notes, then one action row.
+ */
+export function ContactEditorPanel({
   editor,
   tags,
   geographicAreas,
   areasLoading,
-}: ContactEditorCardProps) {
+  adminUsers,
+  onPatchStandaloneNoteCount,
+}: ContactEditorPanelProps) {
   const {
     editorMode,
     selected,
@@ -77,174 +87,186 @@ export function ContactEditorCard({
     setPendingLocationId,
     setOptimisticLocationSummary,
     saveDisabled,
-    resetCreateForm,
     handleSubmit,
+    expanded,
+    notesOpen,
+    setNotesOpen,
   } = editor;
 
   return (
-    <AdminEditorCard
-      title='Contact'
-      description='Create a contact or select a row below to edit. When this contact is linked to a family or organisation, set location on that record instead. Mailchimp sync status is read-only from the API.'
+    <AdminEditorPanel
       actions={
-        <>
-          {editorMode === 'edit' ? (
-            <Button
-              type='button'
-              variant='secondary'
-              onClick={() => void resetCreateForm()}
-              disabled={isSaving}
-            >
-              Cancel
-            </Button>
-          ) : null}
-          <Button type='button' disabled={saveDisabled} onClick={() => void handleSubmit()}>
-            {editorMode === 'create' ? 'Create contact' : 'Update contact'}
-          </Button>
-        </>
+        <AdminEditorActions
+          mode={editorMode}
+          onSubmit={() => void handleSubmit()}
+          onCancel={expanded.collapse}
+          isSaving={isSaving}
+          submitDisabled={saveDisabled}
+          submitLabel={editorMode === 'create' ? 'Create contact' : 'Update contact'}
+        />
       }
     >
-      <div className='space-y-4'>
-        <ContactEditorIdentityFields
-          firstName={firstName}
-          lastName={lastName}
-          contactType={contactType}
-          relationshipType={relationshipType}
-          email={email}
-          phoneRegion={phoneRegion}
-          phoneNational={phoneNational}
-          instagramHandle={instagramHandle}
-          dateOfBirth={dateOfBirth}
-          onFirstNameChange={setFirstName}
-          onLastNameChange={setLastName}
-          onContactTypeChange={setContactType}
-          onRelationshipTypeChange={setRelationshipType}
-          onEmailChange={setEmail}
-          onPhoneRegionChange={setPhoneRegion}
-          onPhoneNationalChange={setPhoneNational}
-          onInstagramHandleChange={setInstagramHandle}
-          onDateOfBirthChange={setDateOfBirth}
-        />
+      <ContactEditorIdentityFields
+        firstName={firstName}
+        lastName={lastName}
+        contactType={contactType}
+        relationshipType={relationshipType}
+        email={email}
+        phoneRegion={phoneRegion}
+        phoneNational={phoneNational}
+        instagramHandle={instagramHandle}
+        dateOfBirth={dateOfBirth}
+        onFirstNameChange={setFirstName}
+        onLastNameChange={setLastName}
+        onContactTypeChange={setContactType}
+        onRelationshipTypeChange={setRelationshipType}
+        onEmailChange={setEmail}
+        onPhoneRegionChange={setPhoneRegion}
+        onPhoneNationalChange={setPhoneNational}
+        onInstagramHandleChange={setInstagramHandle}
+        onDateOfBirthChange={setDateOfBirth}
+      />
 
-        <ContactEditorSourceFields
-          source={source}
-          sourceDetail={sourceDetail}
-          referralContactId={referralContactId}
-          referralSearchInput={referralSearchInput}
-          referralSelectOptions={referralSelectOptions}
-          onSourceChange={handleSourceChange}
-          onSourceDetailChange={setSourceDetail}
-          onReferralSearchInputChange={setReferralSearchInput}
-          onReferralContactIdChange={(contactId, pinnedLabel) => {
-            setReferralContactId(contactId);
-            if (pinnedLabel) {
-              setReferralPinnedLabel(pinnedLabel);
-            }
-          }}
-        />
+      <ContactEditorSourceFields
+        source={source}
+        sourceDetail={sourceDetail}
+        referralContactId={referralContactId}
+        referralSearchInput={referralSearchInput}
+        referralSelectOptions={referralSelectOptions}
+        onSourceChange={handleSourceChange}
+        onSourceDetailChange={setSourceDetail}
+        onReferralSearchInputChange={setReferralSearchInput}
+        onReferralContactIdChange={(contactId, pinnedLabel) => {
+          setReferralContactId(contactId);
+          if (pinnedLabel) {
+            setReferralPinnedLabel(pinnedLabel);
+          }
+        }}
+      />
 
-        <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-          <div>
-            <Label htmlFor='crm-contact-family'>Family</Label>
-            <Select
-              id='crm-contact-family'
-              value={familySelectId}
-              onChange={(e) => {
-                const v = e.target.value;
-                setFamilySelectId(v);
-                if (v) {
-                  setPendingLocationId(null);
-                  setOptimisticLocationSummary(null);
-                }
-              }}
-            >
-              <option value=''>None</option>
-              {familyPicker.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.label}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor='crm-contact-org'>Organisation</Label>
-            <Select
-              id='crm-contact-org'
-              value={organizationSelectId}
-              onChange={(e) => {
-                const v = e.target.value;
-                setOrganizationSelectId(v);
-                if (v) {
-                  setPendingLocationId(null);
-                  setOptimisticLocationSummary(null);
-                }
-              }}
-            >
-              <option value=''>None</option>
-              {organizationPicker.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.label}
-                </option>
-              ))}
-            </Select>
-          </div>
-          {editorMode === 'edit' ? (
-            <div>
-              <Label htmlFor='crm-contact-active'>Status</Label>
-              <Select
-                id='crm-contact-active'
-                value={active ? 'true' : 'false'}
-                onChange={(e) => setActive(e.target.value === 'true')}
-              >
-                <option value='true'>Active</option>
-                <option value='false'>Archived</option>
-              </Select>
-            </div>
-          ) : null}
-        </div>
-
-        <AdminCollapsibleSection id='crm-contact-location' title='Location' disabled={isSaving}>
-          <InlineLocationEditor
-            stateKey={location.inlineLocationStateKey}
-            location={location.resolvedLocation}
-            embeddedSummary={location.embeddedLocationSummary}
-            areas={geographicAreas}
-            areasLoading={areasLoading}
-            canModify={!linkedToFamilyOrOrg}
-            readOnlyLockedLines={readOnlyLockedLinesForEditor}
-            readOnlyNote={
-              linkedToFamilyOrOrg ? 'Location is managed on the linked family or organisation.' : null
-            }
-            isSaving={isSaving || location.locationSaveStatus.isSaving}
-            isGeocoding={location.locationGeocoding}
-            saveError={location.locationSaveStatus.error}
-            onDraftChange={location.onLocationDraftChange}
-            onClear={() => {
-              setPendingLocationId(null);
-              setOptimisticLocationSummary(null);
-              location.clearLocationSaveError();
+      <AdminFieldGrid columns={4}>
+        <AdminField
+          label='Family'
+          htmlFor='crm-contact-family'
+          hint={linkedToFamilyOrOrg ? 'Location is set on the linked family or organisation.' : undefined}
+        >
+          <Select
+            id='crm-contact-family'
+            value={familySelectId}
+            onChange={(e) => {
+              const v = e.target.value;
+              setFamilySelectId(v);
+              if (v) {
+                setPendingLocationId(null);
+                setOptimisticLocationSummary(null);
+              }
             }}
-            onGeocode={location.geocodeLocation}
-          />
-        </AdminCollapsibleSection>
-
-        <EntityTagPicker
-          id='crm-contact-tags'
-          label='Tags'
-          tags={tags}
-          selectedIds={tagIds}
-          onChange={setTagIds}
-          disabled={isSaving}
-          variant='collapsible'
-        />
-
-        <EntityServicesSection id='crm-contact-services' labels={serviceLabels} />
-
-        {editorMode === 'edit' && selected ? (
-          <div className='text-sm text-slate-600'>
-            <p>Mailchimp: {formatEnumLabel(selected.mailchimp_status)}</p>
-          </div>
+          >
+            <option value=''>None</option>
+            {familyPicker.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.label}
+              </option>
+            ))}
+          </Select>
+        </AdminField>
+        <AdminField label='Organisation' htmlFor='crm-contact-org'>
+          <Select
+            id='crm-contact-org'
+            value={organizationSelectId}
+            onChange={(e) => {
+              const v = e.target.value;
+              setOrganizationSelectId(v);
+              if (v) {
+                setPendingLocationId(null);
+                setOptimisticLocationSummary(null);
+              }
+            }}
+          >
+            <option value=''>None</option>
+            {organizationPicker.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.label}
+              </option>
+            ))}
+          </Select>
+        </AdminField>
+        {editorMode === 'edit' ? (
+          <AdminField label='Status' htmlFor='crm-contact-active'>
+            <Select
+              id='crm-contact-active'
+              value={active ? 'true' : 'false'}
+              onChange={(e) => setActive(e.target.value === 'true')}
+            >
+              <option value='true'>Active</option>
+              <option value='false'>Archived</option>
+            </Select>
+          </AdminField>
         ) : null}
-      </div>
-    </AdminEditorCard>
+        {editorMode === 'edit' && selected ? (
+          <AdminField label='Mailchimp' hint='Sync status is read-only from the API.'>
+            <p className='flex h-10 items-center text-sm text-slate-700'>
+              {formatEnumLabel(selected.mailchimp_status)}
+            </p>
+          </AdminField>
+        ) : null}
+      </AdminFieldGrid>
+
+      <AdminDisclosure id='crm-contact-location' title='Location' disabled={isSaving}>
+        <InlineLocationEditor
+          stateKey={location.inlineLocationStateKey}
+          location={location.resolvedLocation}
+          embeddedSummary={location.embeddedLocationSummary}
+          areas={geographicAreas}
+          areasLoading={areasLoading}
+          canModify={!linkedToFamilyOrOrg}
+          readOnlyLockedLines={readOnlyLockedLinesForEditor}
+          readOnlyNote={
+            linkedToFamilyOrOrg ? 'Location is managed on the linked family or organisation.' : null
+          }
+          isSaving={isSaving || location.locationSaveStatus.isSaving}
+          isGeocoding={location.locationGeocoding}
+          saveError={location.locationSaveStatus.error}
+          onDraftChange={location.onLocationDraftChange}
+          onClear={() => {
+            setPendingLocationId(null);
+            setOptimisticLocationSummary(null);
+            location.clearLocationSaveError();
+          }}
+          onGeocode={location.geocodeLocation}
+        />
+      </AdminDisclosure>
+
+      <EntityTagPicker
+        id='crm-contact-tags'
+        label='Tags'
+        tags={tags}
+        selectedIds={tagIds}
+        onChange={setTagIds}
+        disabled={isSaving}
+        variant='collapsible'
+      />
+
+      <EntityServicesSection id='crm-contact-services' labels={serviceLabels} />
+
+      {editorMode === 'edit' && selected ? (
+        <AdminDisclosure
+          id='crm-contact-notes'
+          title='Notes'
+          summary={selected.standalone_note_count > 0 ? selected.standalone_note_count : undefined}
+          open={notesOpen}
+          onOpenChange={setNotesOpen}
+        >
+          {notesOpen ? (
+            <ContactNotesPanel
+              layout='embedded'
+              contact={selected}
+              adminUsers={adminUsers}
+              onStandaloneNoteCountChange={onPatchStandaloneNoteCount}
+            />
+          ) : null}
+        </AdminDisclosure>
+      ) : null}
+    </AdminEditorPanel>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
+import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { CONTACT_SOURCES } from '@/lib/contacts/contacts-panel-constants';
 import { formatEnumLabel } from '@/lib/format';
@@ -32,10 +32,10 @@ export function ContactEditorSourceFields({
   onReferralSearchInputChange,
   onReferralContactIdChange,
 }: ContactEditorSourceFieldsProps) {
+  const isReferral = source === 'referral';
   return (
-    <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-end'>
-      <div>
-        <Label htmlFor='crm-contact-source'>Source</Label>
+    <AdminFieldGrid columns={4}>
+      <AdminField label='Source' htmlFor='crm-contact-source'>
         <Select
           id='crm-contact-source'
           value={source}
@@ -47,9 +47,8 @@ export function ContactEditorSourceFields({
             </option>
           ))}
         </Select>
-      </div>
-      <div className={source === 'referral' ? undefined : 'lg:col-span-3'}>
-        <Label htmlFor='crm-contact-source-detail'>Source detail</Label>
+      </AdminField>
+      <AdminField label='Source detail' htmlFor='crm-contact-source-detail' span={isReferral ? 1 : 2}>
         <Input
           id='crm-contact-source-detail'
           type='text'
@@ -57,11 +56,10 @@ export function ContactEditorSourceFields({
           onChange={(e) => onSourceDetailChange(e.target.value)}
           autoComplete='off'
         />
-      </div>
-      {source === 'referral' ? (
+      </AdminField>
+      {isReferral ? (
         <>
-          <div>
-            <Label htmlFor='crm-contact-referral-search'>Find referring contact</Label>
+          <AdminField label='Find referring contact' htmlFor='crm-contact-referral-search'>
             <Input
               id='crm-contact-referral-search'
               value={referralSearchInput}
@@ -69,9 +67,8 @@ export function ContactEditorSourceFields({
               placeholder='Type at least 2 characters (name, email, phone, Instagram)'
               autoComplete='off'
             />
-          </div>
-          <div>
-            <Label htmlFor='crm-contact-referral'>Referred by contact</Label>
+          </AdminField>
+          <AdminField label='Referred by contact' htmlFor='crm-contact-referral'>
             <Select
               id='crm-contact-referral'
               value={referralContactId}
@@ -88,9 +85,9 @@ export function ContactEditorSourceFields({
                 </option>
               ))}
             </Select>
-          </div>
+          </AdminField>
         </>
       ) : null}
-    </div>
+    </AdminFieldGrid>
   );
 }
