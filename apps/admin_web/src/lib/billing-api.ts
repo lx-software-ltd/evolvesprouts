@@ -108,17 +108,25 @@ export async function getCustomerInvoicePdfDownload(
 }
 
 export async function listCustomerPayments(
-  params: { invoiceId?: string } = {},
+  params: { invoiceId?: string; cursor?: string | null; limit?: number } = {},
   signal?: AbortSignal,
-): Promise<CustomerPaymentSummary[]> {
-  const payload = await adminApiRequest<{ items?: CustomerPaymentSummary[] }>({
+): Promise<{ items: CustomerPaymentSummary[]; next_cursor: string | null }> {
+  const payload = await adminApiRequest<{
+    items?: CustomerPaymentSummary[];
+    next_cursor?: string | null;
+  }>({
     endpointPath: buildAdminListPath('/v1/admin/billing/payments', {
       filters: { invoice_id: params.invoiceId },
+      cursor: params.cursor,
+      limit: params.limit,
     }),
     method: 'GET',
     signal,
   });
-  return Array.isArray(payload.items) ? payload.items : [];
+  return {
+    items: Array.isArray(payload.items) ? payload.items : [],
+    next_cursor: payload.next_cursor ?? null,
+  };
 }
 
 export async function getCustomerPayment(id: string, signal?: AbortSignal): Promise<CustomerPaymentDetail> {

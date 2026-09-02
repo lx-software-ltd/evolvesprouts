@@ -10,7 +10,7 @@ from uuid import UUID
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import selectinload
 
-from app.api.admin_billing_common import DEFAULT_BILLING_LIST_LIMIT, _session_with_audit
+from app.api.admin_billing_common import _session_with_audit
 from app.api.admin_billing_invoice_serializers import (
     parse_optional_invoice_settlement,
     parse_optional_invoice_status,
@@ -55,7 +55,7 @@ def list_invoices(
     event: Mapping[str, Any], *, user_sub: str, request_id: str | None
 ) -> dict[str, Any]:
     """All invoices for the tenant; admin authorization is enforced at API Gateway."""
-    limit = parse_limit(event, default=DEFAULT_BILLING_LIST_LIMIT, max_limit=100)
+    limit = parse_limit(event)
     status_filter = parse_optional_invoice_status(query_param(event, "status"))
     settlement_filter = parse_optional_invoice_settlement(
         query_param(event, "settlement")

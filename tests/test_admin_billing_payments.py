@@ -13,7 +13,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.api import admin_billing
+from app.api import admin_billing, admin_request
 from app.api import admin_billing_payment_create as admin_billing_payment_create_mod
 from app.api import admin_billing_payment_update as admin_billing_payment_update_mod
 from app.api import admin_billing_payments as admin_billing_payments_mod
@@ -109,6 +109,89 @@ def test_handle_admin_billing_get_payment_and_wrong_method_statuses(
         ev3, "GET", f"/v1/admin/billing/payments/{pid}/unapplied"
     )
     assert r3["statusCode"] == 404
+
+
+def test_list_payments_pages_with_created_cursor(
+    api_gateway_event: Any,
+    admin_identity: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """limit+1 fetch yields ``next_cursor`` only when more rows exist; cursor decodes to created_at/id."""
+
+    def _fake_pay(created_at: datetime) -> Any:
+        return SimpleNamespace(
+            id=uuid4(),
+            direction=MagicMock(value="inbound"),
+            status=MagicMock(value="succeeded"),
+            method="fps",
+            amount=Decimal("10"),
+            currency="HKD",
+            original_payment_id=None,
+            stripe_payment_intent_id=None,
+            stripe_refund_id=None,
+            enrollment_id=None,
+            contact_id=None,
+            succeeded_at=None,
+            external_reference=None,
+            created_at=created_at,
+        )
+
+    base = datetime(2026, 1, 1, tzinfo=UTC)
+    rows = [_fake_pay(base.replace(day=3 - i)) for i in range(3)]
+    seen_limits: list[int] = []
+
+    @contextmanager
+    def _fake_session(_u: str, _r: str | None) -> Any:
+        s = MagicMock()
+
+        def _execute(stmt: Any) -> Any:
+            seen_limits.append(stmt._limit_clause.value)
+            result = MagicMock()
+            result.scalars.return_value.all.return_value = rows
+            return result
+
+        s.execute.side_effect = _execute
+        yield s
+
+    patch_billing_sessions(monkeypatch, _fake_session)
+    monkeypatch.setattr(
+        admin_billing_payments_mod,
+        "_batch_orphan_payment_deletable",
+        lambda _session, page: {r.id: False for r in page},
+    )
+    monkeypatch.setattr(
+        admin_billing_payments_serializers_mod,
+        "_batch_party_label_by_payment",
+        lambda _session, page: {r.id: "Pat" for r in page},
+    )
+    monkeypatch.setattr(
+        admin_billing_payments_serializers_mod,
+        "payment_unapplied_amount",
+        lambda _s, _pid: Decimal("0"),
+    )
+
+    ev = api_gateway_event(
+        method="GET",
+        path="/v1/admin/billing/payments",
+        query_params={"limit": "2"},
+        authorizer_context=admin_identity,
+    )
+    resp = admin_billing.handle_admin_billing_request(
+        ev, "GET", "/v1/admin/billing/payments"
+    )
+    assert resp["statusCode"] == 200
+    body = json.loads(resp["body"])
+    assert seen_limits == [3]
+    assert [item["id"] for item in body["items"]] == [str(r.id) for r in rows[:2]]
+    assert body["next_cursor"]
+    cursor_ts, cursor_id = admin_request.parse_created_cursor(body["next_cursor"])
+    assert (cursor_ts, cursor_id) == (rows[1].created_at, rows[1].id)
+
+    rows[:] = rows[:1]
+    resp_last = admin_billing.handle_admin_billing_request(
+        ev, "GET", "/v1/admin/billing/payments"
+    )
+    assert json.loads(resp_last["body"])["next_cursor"] is None
 
 
 def test_payment_unapplied_amount_subtracts_allocations() -> None:

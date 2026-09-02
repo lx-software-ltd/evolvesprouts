@@ -45,7 +45,6 @@ from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
-_DEFAULT_LIMIT = 25
 _CERTIFICATE_DOWNLOAD_LINK_EXPIRY = timedelta(hours=1)
 
 
@@ -195,7 +194,7 @@ def _issue_certificate(event: Mapping[str, Any], *, actor_sub: str) -> dict[str,
 
 
 def _list_certificates(event: Mapping[str, Any]) -> dict[str, Any]:
-    limit = parse_limit(event, default=_DEFAULT_LIMIT)
+    limit = parse_limit(event)
     cursor_ts, cursor_id = parse_created_cursor(query_param(event, "cursor"))
     contact_id = parse_optional_uuid(query_param(event, "contact_id"), "contact_id")
     instance_id = parse_optional_uuid(query_param(event, "instance_id"), "instance_id")

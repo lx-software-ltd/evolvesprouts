@@ -13,14 +13,17 @@ from typing import Any
 from collections.abc import Mapping
 from uuid import UUID
 
-from sqlalchemy import exists, select
+from sqlalchemy import and_, exists, or_, select
 from sqlalchemy.orm import Session
 
-from app.api.admin_billing_common import (
-    DEFAULT_BILLING_LIST_LIMIT,
-    _session_with_audit,
+from app.api.admin_billing_common import _session_with_audit
+from app.api.admin_request import (
+    encode_created_cursor,
+    parse_body,
+    parse_created_cursor,
+    parse_limit,
+    query_param,
 )
-from app.api.admin_request import parse_body, query_param
 from app.db.audit import AuditService
 from app.db.engine import get_engine
 from app.db.models.customer_payment import CustomerPayment
@@ -202,6 +205,8 @@ def _delete_payment(
 def _list_payments(
     event: Mapping[str, Any], *, user_sub: str, request_id: str | None
 ) -> dict[str, Any]:
+    limit = parse_limit(event)
+    cursor_ts, cursor_id = parse_created_cursor(query_param(event, "cursor"))
     invoice_raw = query_param(event, "invoice_id") or query_param(event, "invoiceId")
     inv_filter: UUID | None = None
     if invoice_raw and str(invoice_raw).strip():
@@ -213,7 +218,7 @@ def _list_payments(
             ) from exc
 
     with _session_with_audit(user_sub, request_id) as session:
-        stmt = select(CustomerPayment).order_by(CustomerPayment.created_at.desc())
+        stmt = select(CustomerPayment)
         if inv_filter is not None:
             subq = (
                 select(PaymentAllocation.payment_id)
@@ -221,14 +226,29 @@ def _list_payments(
                 .distinct()
                 .subquery()
             )
-            stmt = (
-                select(CustomerPayment)
-                .join(subq, CustomerPayment.id == subq.c.payment_id)
-                .order_by(CustomerPayment.created_at.desc())
+            stmt = stmt.join(subq, CustomerPayment.id == subq.c.payment_id)
+        if cursor_ts is not None and cursor_id is not None:
+            stmt = stmt.where(
+                or_(
+                    CustomerPayment.created_at < cursor_ts,
+                    and_(
+                        CustomerPayment.created_at == cursor_ts,
+                        CustomerPayment.id < cursor_id,
+                    ),
+                )
             )
-        stmt = stmt.limit(DEFAULT_BILLING_LIST_LIMIT)
+        stmt = stmt.order_by(
+            CustomerPayment.created_at.desc(), CustomerPayment.id.desc()
+        ).limit(limit + 1)
         rows = list(session.execute(stmt).scalars().all())
-        deletable_by_id = _batch_orphan_payment_deletable(session, rows)
+        has_more = len(rows) > limit
+        page = rows[:limit]
+        deletable_by_id = _batch_orphan_payment_deletable(session, page)
+        next_cursor = (
+            encode_created_cursor(page[-1].created_at, page[-1].id)
+            if has_more and page
+            else None
+        )
         return json_response(
             200,
             {
@@ -238,8 +258,9 @@ def _list_payments(
                         p,
                         orphan_payment_deletable=deletable_by_id.get(p.id, False),
                     )
-                    for p in rows
-                ]
+                    for p in page
+                ],
+                "next_cursor": next_cursor,
             },
             event=event,
         )

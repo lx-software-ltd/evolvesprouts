@@ -38,7 +38,10 @@ export function ClientInvoicesPaymentsTable({
   const {
     payments,
     listLoading,
+    listLoadingMore,
+    listHasMore,
     listError,
+    loadMorePayments,
     selectedId,
     setSelectedId,
     setManualPaymentPreferCreateForm,
@@ -56,10 +59,10 @@ export function ClientInvoicesPaymentsTable({
       title='Customer payments'
       description='Recent customer payments and refunds. Select a row for allocation and refund source; manual inbound payments without Stripe can be edited in the Customer payment card above. Pending inbound: confirm from Operations. Deletable orphan rows: delete from Operations (see server rules).'
       isLoading={listLoading}
-      isLoadingMore={false}
-      hasMore={false}
+      isLoadingMore={listLoadingMore}
+      hasMore={listHasMore}
       error={listError}
-      onLoadMore={() => {}}
+      onLoadMore={() => void loadMorePayments()}
       toolbar={
         <AdminTableToolbar className='gap-2'>
           <Button

@@ -7,14 +7,12 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.admin_request import DEFAULT_LIST_LIMIT
 from app.db.audit import session_with_audit
 from app.db.models import Contact, Enrollment
 from app.db.models.enums import BillingBillToKind
 from app.db.models.family import FamilyMember
 from app.db.models.organization import OrganizationMember
 
-DEFAULT_BILLING_LIST_LIMIT = DEFAULT_LIST_LIMIT
 _session_with_audit = session_with_audit
 
 

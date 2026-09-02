@@ -89,7 +89,7 @@ describe('ClientInvoicesPanel', () => {
     billToPartyMocks.searchBillToParties.mockResolvedValue([
       { id: 'cccccccc-cccc-cccc-cccc-cccccccccccc', label: 'Pat Contact' },
     ]);
-    billingMocks.listCustomerPayments.mockResolvedValue([]);
+    billingMocks.listCustomerPayments.mockResolvedValue({ items: [], next_cursor: null });
     billingMocks.listCustomerInvoices.mockResolvedValue({ items: [], next_cursor: null });
     billingMocks.listRecentEnrollmentsForInvoicing.mockResolvedValue({ items: [], truncated: false });
     billingMocks.getCustomerInvoicePdfDownload.mockResolvedValue({
@@ -426,22 +426,25 @@ describe('ClientInvoicesPanel', () => {
   it('manual payment editor Cancel keeps payment row selected for allocation', async () => {
     const payId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
     const eid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
-    billingMocks.listCustomerPayments.mockResolvedValue([
-      {
-        id: payId,
-        direction: 'inbound',
-        status: 'pending',
-        method: 'bank_transfer',
-        amount: '10',
-        currency: 'HKD',
-        enrollmentId: eid,
-        stripePaymentIntentId: null,
-        party: 'Pat',
-        unappliedAmount: '10',
-        createdAt: '2026-01-01T00:00:00+00:00',
-        orphanPaymentDeletable: false,
-      },
-    ]);
+    billingMocks.listCustomerPayments.mockResolvedValue({
+      items: [
+        {
+          id: payId,
+          direction: 'inbound',
+          status: 'pending',
+          method: 'bank_transfer',
+          amount: '10',
+          currency: 'HKD',
+          enrollmentId: eid,
+          stripePaymentIntentId: null,
+          party: 'Pat',
+          unappliedAmount: '10',
+          createdAt: '2026-01-01T00:00:00+00:00',
+          orphanPaymentDeletable: false,
+        },
+      ],
+      next_cursor: null,
+    });
     billingMocks.getCustomerPayment.mockResolvedValue({
       id: payId,
       direction: 'inbound',
@@ -792,18 +795,21 @@ describe('ClientInvoicesPanel', () => {
 
   it('confirm payment dialog calls confirmCustomerPayment', async () => {
     const payId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
-    billingMocks.listCustomerPayments.mockResolvedValue([
-      {
-        id: payId,
-        direction: 'inbound',
-        status: 'pending',
-        method: 'bank_transfer',
-        amount: '10',
-        currency: 'HKD',
-        createdAt: '2026-01-01T00:00:00+00:00',
-        orphanPaymentDeletable: false,
-      },
-    ]);
+    billingMocks.listCustomerPayments.mockResolvedValue({
+      items: [
+        {
+          id: payId,
+          direction: 'inbound',
+          status: 'pending',
+          method: 'bank_transfer',
+          amount: '10',
+          currency: 'HKD',
+          createdAt: '2026-01-01T00:00:00+00:00',
+          orphanPaymentDeletable: false,
+        },
+      ],
+      next_cursor: null,
+    });
     billingMocks.getCustomerPayment.mockResolvedValue({
       id: payId,
       direction: 'inbound',
@@ -853,18 +859,21 @@ describe('ClientInvoicesPanel', () => {
 
   it('delete payment dialog calls deleteCustomerPayment when server marks row deletable', async () => {
     const payId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
-    billingMocks.listCustomerPayments.mockResolvedValue([
-      {
-        id: payId,
-        direction: 'inbound',
-        status: 'pending',
-        method: 'bank_transfer',
-        amount: '10',
-        currency: 'HKD',
-        createdAt: '2026-01-01T00:00:00+00:00',
-        orphanPaymentDeletable: true,
-      },
-    ]);
+    billingMocks.listCustomerPayments.mockResolvedValue({
+      items: [
+        {
+          id: payId,
+          direction: 'inbound',
+          status: 'pending',
+          method: 'bank_transfer',
+          amount: '10',
+          currency: 'HKD',
+          createdAt: '2026-01-01T00:00:00+00:00',
+          orphanPaymentDeletable: true,
+        },
+      ],
+      next_cursor: null,
+    });
     billingMocks.deleteCustomerPayment.mockResolvedValue(undefined);
 
     render(<ClientInvoicesPanel />);
@@ -937,33 +946,36 @@ describe('ClientInvoicesPanel', () => {
   });
 
   it('does not render Customer payments Refresh control', async () => {
-    billingMocks.listCustomerPayments.mockResolvedValue([]);
+    billingMocks.listCustomerPayments.mockResolvedValue({ items: [], next_cursor: null });
     render(<ClientInvoicesPanel />);
     await waitFor(() => expect(billingMocks.listCustomerPayments).toHaveBeenCalled());
     expect(screen.queryByRole('button', { name: /^refresh$/i })).not.toBeInTheDocument();
   });
 
   it('capitalizes fps payment method as FPS', async () => {
-    billingMocks.listCustomerPayments.mockResolvedValue([
-      {
-        id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-        direction: 'inbound',
-        status: 'succeeded',
-        method: 'fps',
-        amount: '1',
-        currency: 'HKD',
-        createdAt: '2026-01-01T00:00:00+00:00',
-      },
-      {
-        id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-        direction: 'inbound',
-        status: 'succeeded',
-        method: 'bank_fps',
-        amount: '2',
-        currency: 'HKD',
-        createdAt: '2026-01-01T00:00:00+00:00',
-      },
-    ]);
+    billingMocks.listCustomerPayments.mockResolvedValue({
+      items: [
+        {
+          id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+          direction: 'inbound',
+          status: 'succeeded',
+          method: 'fps',
+          amount: '1',
+          currency: 'HKD',
+          createdAt: '2026-01-01T00:00:00+00:00',
+        },
+        {
+          id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+          direction: 'inbound',
+          status: 'succeeded',
+          method: 'bank_fps',
+          amount: '2',
+          currency: 'HKD',
+          createdAt: '2026-01-01T00:00:00+00:00',
+        },
+      ],
+      next_cursor: null,
+    });
     render(<ClientInvoicesPanel />);
     const paymentTable = screen.getAllByRole('table').at(-1) as HTMLElement;
     await waitFor(() => {
@@ -997,23 +1009,26 @@ describe('ClientInvoicesPanel', () => {
       lines: [{ id: lineId, description: 'Service fee', lineOrder: 0 }],
     });
 
-    billingMocks.listCustomerPayments.mockResolvedValue([
-      {
-        id: payId,
-        direction: 'inbound',
-        status: 'succeeded',
-        method: 'bank_transfer',
-        amount: '100',
-        currency: 'HKD',
-        enrollmentId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
-        stripePaymentIntentId: null,
-        party: 'Pat · Service',
-        externalReference: 'WIRE-999',
-        unappliedAmount: '100',
-        createdAt: '2026-01-01T00:00:00+00:00',
-        orphanPaymentDeletable: false,
-      },
-    ]);
+    billingMocks.listCustomerPayments.mockResolvedValue({
+      items: [
+        {
+          id: payId,
+          direction: 'inbound',
+          status: 'succeeded',
+          method: 'bank_transfer',
+          amount: '100',
+          currency: 'HKD',
+          enrollmentId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+          stripePaymentIntentId: null,
+          party: 'Pat · Service',
+          externalReference: 'WIRE-999',
+          unappliedAmount: '100',
+          createdAt: '2026-01-01T00:00:00+00:00',
+          orphanPaymentDeletable: false,
+        },
+      ],
+      next_cursor: null,
+    });
     billingMocks.getCustomerPayment.mockResolvedValue({
       id: payId,
       direction: 'inbound',
@@ -1120,7 +1135,7 @@ describe('ClientInvoicesPanel', () => {
                 createdAt: '2026-01-01T00:00:00+00:00',
               },
             ];
-      return filtered;
+      return { items: filtered, next_cursor: null };
     });
     billingMocks.getCustomerPayment.mockResolvedValue({
       id: payId,

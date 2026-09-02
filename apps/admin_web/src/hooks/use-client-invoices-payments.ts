@@ -6,6 +6,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ClientInvoicesPaymentsInput } from '@/hooks/client-invoices-panel-types';
 import { toErrorMessage } from '@/hooks/hook-errors';
 import {
+  usePaginatedList,
+  type PaginatedFetcherParams,
+} from '@/hooks/use-paginated-list';
+import {
   confirmCustomerPayment,
   createManualInboundCustomerPayment,
   deleteCustomerPayment,
@@ -43,9 +47,32 @@ export function useClientInvoicesPayments({
   } = shared;
   const { selectedInvoiceId } = selection;
 
-  const [payments, setPayments] = useState<CustomerPaymentSummary[]>([]);
-  const [listLoading, setListLoading] = useState(true);
-  const [listError, setListError] = useState('');
+  const fetchPayments = useCallback(
+    async ({ cursor, limit, signal }: PaginatedFetcherParams<object>) => {
+      const { items, next_cursor } = await listCustomerPayments(
+        { cursor, limit },
+        signal,
+      );
+      return { items, nextCursor: next_cursor };
+    },
+    [],
+  );
+  const {
+    items: payments,
+    isLoading: listLoading,
+    isLoadingMore: listLoadingMore,
+    hasMore: listHasMore,
+    error: listError,
+    refetch: refetchPayments,
+    loadMore: loadMorePayments,
+  } = usePaginatedList<CustomerPaymentSummary, object>({
+    fetcher: fetchPayments,
+    defaultFilters: {},
+    errorPrefix: 'Failed to load payments',
+  });
+  // The billing-refresh registry passes an AbortSignal; usePaginatedList owns
+  // its own abort controller, so the loader deliberately ignores that argument.
+  const loadPayments = useCallback(() => refetchPayments(), [refetchPayments]);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [manualPaymentPreferCreateForm, setManualPaymentPreferCreateForm] =
@@ -96,31 +123,6 @@ export function useClientInvoicesPayments({
     }
     return enrollmentPickerRows.some((r) => r.enrollmentId === tid) ? tid : '';
   }, [createPaymentEnrollmentId, enrollmentPickerRows]);
-
-  const loadPayments = useCallback(async (signal?: AbortSignal) => {
-    setListLoading(true);
-    setListError('');
-    try {
-      const items = await listCustomerPayments({}, signal);
-      setPayments(items);
-    } catch (caught) {
-      if (caught instanceof Error && caught.name === 'AbortError') {
-        return;
-      }
-      const message = toErrorMessage(caught, 'Failed to load payments.', {
-        honorBackendMessage: true,
-      });
-      setListError(message);
-    } finally {
-      setListLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const ac = new AbortController();
-    void loadPayments(ac.signal);
-    return () => ac.abort();
-  }, [loadPayments]);
 
   const loadDetail = useCallback(async (id: string, signal?: AbortSignal) => {
     setDetailLoading(true);
@@ -447,7 +449,10 @@ export function useClientInvoicesPayments({
   return {
     payments,
     listLoading,
+    listLoadingMore,
+    listHasMore,
     listError,
+    loadMorePayments,
     selectedId,
     setSelectedId,
     setManualPaymentPreferCreateForm,

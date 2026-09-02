@@ -60,9 +60,6 @@ _AUDIT_PII_SUBSTRINGS: tuple[str, ...] = ("email", "phone", "address", "name")
 
 _REDACTED_MARKER = "***REDACTED***"
 
-_DEFAULT_LIMIT = 25
-_MAX_LIMIT = 100
-
 
 def _actor_labels_for_user_ids(
     session: Session,
@@ -134,7 +131,7 @@ def _redact_audit_value(key: str, value: Any) -> Any:
 
 
 def _list_audit_logs(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, Any]:
-    limit = parse_limit(event, default=_DEFAULT_LIMIT, max_limit=_MAX_LIMIT)
+    limit = parse_limit(event)
 
     table_name = query_param(event, "table")
     record_id = query_param(event, "record_id")

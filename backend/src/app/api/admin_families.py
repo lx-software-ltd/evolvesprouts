@@ -48,7 +48,6 @@ from app.exceptions import DatabaseError, NotFoundError, ValidationError
 from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger
 
-_DEFAULT_LIMIT = 25
 logger = get_logger(__name__)
 
 
@@ -121,7 +120,7 @@ def handle_admin_families_request(
 
 
 def _list_families(event: Mapping[str, Any]) -> dict[str, Any]:
-    limit = parse_limit(event, default=_DEFAULT_LIMIT)
+    limit = parse_limit(event)
     cursor = parse_cursor(query_param(event, "cursor"))
     query = validate_string_length(
         query_param(event, "query"),

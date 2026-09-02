@@ -4951,12 +4951,18 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List recent customer payments */
+        /**
+         * List customer payments
+         * @description Cursor-paginated list ordered by `created_at` descending, then `id` descending. Pass `next_cursor` from the previous response as `cursor` for the next page.
+         */
         get: {
             parameters: {
                 query?: {
                     /** @description When set, return only payments that have at least one allocation to this invoice. */
                     invoice_id?: string;
+                    /** @description Opaque cursor from a prior `next_cursor` value. */
+                    cursor?: string;
+                    limit?: number;
                 };
                 header?: never;
                 path?: never;
@@ -4971,7 +4977,8 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            items?: components["schemas"]["CustomerPaymentSummary"][];
+                            items: components["schemas"]["CustomerPaymentSummary"][];
+                            next_cursor?: string | null;
                         };
                     };
                 };
