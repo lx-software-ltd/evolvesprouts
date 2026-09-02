@@ -9,6 +9,7 @@ import {
   AdminDataTableHeadCell,
   AdminDataTableOperationsHeadCell,
 } from '@/components/ui/admin-data-table';
+import { AdminTableToolbar } from '@/components/ui/admin-table-toolbar';
 import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
 import { DeleteIcon, MarkPaidIcon } from '@/components/icons/action-icons';
 import { formatPaymentMethodLabel } from '@/components/admin/finance/client-invoices-format-helpers';
@@ -60,7 +61,7 @@ export function ClientInvoicesPaymentsTable({
       error={listError}
       onLoadMore={() => {}}
       toolbar={
-        <div className='mb-3 flex flex-wrap gap-2'>
+        <AdminTableToolbar className='gap-2'>
           <Button
             type='button'
             variant='outline'
@@ -69,7 +70,7 @@ export function ClientInvoicesPaymentsTable({
           >
             {exportBusy ? 'Exporting…' : 'Download CSV export (v2)'}
           </Button>
-        </div>
+        </AdminTableToolbar>
       }
     >
       <AdminDataTable tableClassName='min-w-[860px]'>

@@ -18,9 +18,7 @@ export interface ConfirmDialogProps {
   children?: ReactNode;
   /** When true, the confirm action is non-interactive (for example during an in-flight mutation). */
   confirmDisabled?: boolean;
-  /** When true, only the cancel/secondary control is shown (use for preview dialogs). */
-  hideConfirm?: boolean;
-  /** ARIA role for the modal surface; use `dialog` for informational previews. */
+  /** ARIA role for the modal surface; `alertdialog` for destructive confirmations. */
   dialogRole?: 'dialog' | 'alertdialog';
 }
 
@@ -35,7 +33,6 @@ export function ConfirmDialog({
   onCancel,
   children,
   confirmDisabled = false,
-  hideConfirm = false,
   dialogRole = 'alertdialog',
 }: ConfirmDialogProps) {
   return (
@@ -47,23 +44,17 @@ export function ConfirmDialog({
       dialogRole={dialogRole}
       footer={
         <div className='flex justify-end gap-2'>
-          <Button
-            type='button'
-            variant={hideConfirm ? 'primary' : 'secondary'}
-            onClick={onCancel}
-          >
+          <Button type='button' variant='secondary' onClick={onCancel}>
             {cancelLabel}
           </Button>
-          {hideConfirm ? null : (
-            <Button
-              type='button'
-              variant={variant === 'danger' ? 'danger' : 'primary'}
-              disabled={confirmDisabled}
-              onClick={onConfirm}
-            >
-              {confirmLabel}
-            </Button>
-          )}
+          <Button
+            type='button'
+            variant={variant === 'danger' ? 'danger' : 'primary'}
+            disabled={confirmDisabled}
+            onClick={onConfirm}
+          >
+            {confirmLabel}
+          </Button>
         </div>
       }
     >

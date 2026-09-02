@@ -9,7 +9,7 @@ import type { components } from '@/types/generated/admin-api.generated';
 import type { LocationSummary, ServiceDetail } from '@/types/services';
 
 import { ServiceDetailFormBody } from './service-detail-form-body';
-import { useServiceDetailPanel } from './use-service-detail-panel';
+import { useServiceDetailPanel } from '@/hooks/use-service-detail-panel';
 
 type ApiSchemas = components['schemas'];
 

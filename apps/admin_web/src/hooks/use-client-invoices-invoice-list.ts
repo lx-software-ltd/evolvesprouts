@@ -2,9 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { ADMIN_LIST_PAGE_SIZE } from '@/lib/admin-list-query';
 import type { ClientInvoicesInvoiceListInput } from '@/hooks/client-invoices-panel-types';
 import { toErrorMessage } from '@/hooks/hook-errors';
+import {
+  usePaginatedList,
+  type PaginatedFetcherParams,
+} from '@/hooks/use-paginated-list';
 import {
   deleteDraftCustomerInvoice,
   emailInvoice,
@@ -20,6 +23,24 @@ import {
   normalizeInvoiceRecipientList,
 } from '@/components/admin/finance/client-invoices-utils';
 import { useRelatedPartySearchParams } from '@/hooks/use-related-party-search-params';
+
+export type InvoiceStatusFilter = 'draft' | 'issued' | 'void' | '';
+export type InvoiceSettlementFilter =
+  'not_completed' | 'open' | 'partially_paid' | 'paid' | 'no_charge' | '';
+
+export interface InvoiceListFilters {
+  status: InvoiceStatusFilter;
+  settlement: InvoiceSettlementFilter;
+  currency: string;
+  search: string;
+}
+
+const DEFAULT_INVOICE_LIST_FILTERS: InvoiceListFilters = {
+  status: '',
+  settlement: 'not_completed',
+  currency: '',
+  search: '',
+};
 
 export function useClientInvoicesInvoiceList({
   shared,
@@ -37,33 +58,68 @@ export function useClientInvoicesInvoiceList({
     setAllocateLineId,
   } = selection;
 
-  const [invoices, setInvoices] = useState<CustomerInvoiceSummary[]>([]);
-  const [invoiceListLoading, setInvoiceListLoading] = useState(true);
-  const [invoiceListLoadingMore, setInvoiceListLoadingMore] = useState(false);
-  const [invoiceListError, setInvoiceListError] = useState('');
-  const [invoiceListCursor, setInvoiceListCursor] = useState<string | null>(
-    null,
-  );
-  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<
-    'draft' | 'issued' | 'void' | ''
-  >('');
   const {
     contactId: contactFilterId,
     familyId: familyFilterId,
     organizationId: organizationFilterId,
     partyFilterKey,
   } = useRelatedPartySearchParams();
-  const [invoiceSettlementFilter, setInvoiceSettlementFilter] = useState<
-    'not_completed' | 'open' | 'partially_paid' | 'paid' | 'no_charge' | ''
-  >('not_completed');
+
+  const fetchInvoices = useCallback(
+    async ({
+      status,
+      settlement,
+      currency,
+      search,
+      cursor,
+      limit,
+      signal,
+    }: PaginatedFetcherParams<InvoiceListFilters>) => {
+      const { items, next_cursor } = await listCustomerInvoices(
+        {
+          status: status || undefined,
+          settlement: settlement || undefined,
+          currency: currency || undefined,
+          q: search.trim() || undefined,
+          contactId: contactFilterId || undefined,
+          familyId: familyFilterId || undefined,
+          organizationId: organizationFilterId || undefined,
+          cursor,
+          limit,
+        },
+        signal,
+      );
+      return { items, nextCursor: next_cursor };
+    },
+    [contactFilterId, familyFilterId, organizationFilterId],
+  );
+
+  const list = usePaginatedList<CustomerInvoiceSummary, InvoiceListFilters>({
+    fetcher: fetchInvoices,
+    defaultFilters: DEFAULT_INVOICE_LIST_FILTERS,
+    errorPrefix: 'Failed to load invoices',
+    debounceKeys: ['search'],
+    debounceMs: INVOICE_LIST_SEARCH_DEBOUNCE_MS,
+  });
+  const {
+    items: invoices,
+    filters: invoiceFilters,
+    setFilter: setInvoiceFilter,
+    refetch: refetchInvoices,
+  } = list;
+  // The billing-refresh registry passes an AbortSignal; usePaginatedList owns
+  // its own abort controller, so the loader deliberately ignores that argument.
+  const loadInvoicesFirstPage = useCallback(
+    () => refetchInvoices(),
+    [refetchInvoices],
+  );
+
   useEffect(() => {
     if (partyFilterKey) {
-      setInvoiceSettlementFilter('');
+      setInvoiceFilter('settlement', '');
     }
-  }, [partyFilterKey]);
-  const [invoiceCurrencyFilter, setInvoiceCurrencyFilter] = useState('');
-  const [invoiceSearchInput, setInvoiceSearchInput] = useState('');
-  const [invoiceSearchDebounced, setInvoiceSearchDebounced] = useState('');
+  }, [partyFilterKey, setInvoiceFilter]);
+
   const [issuedInvoiceEmailCsv, setIssuedInvoiceEmailCsv] = useState('');
   const [issuedInvoiceEmailError, setIssuedInvoiceEmailError] = useState('');
 
@@ -82,115 +138,6 @@ export function useClientInvoicesInvoiceList({
 
   const prevIssuedInvoiceSelectionRef = useRef<string | null>(null);
   const issuedInvoiceEmailDirtyRef = useRef(false);
-
-  useEffect(() => {
-    const id = window.setTimeout(() => {
-      setInvoiceSearchDebounced(invoiceSearchInput.trim());
-    }, INVOICE_LIST_SEARCH_DEBOUNCE_MS);
-    return () => window.clearTimeout(id);
-  }, [invoiceSearchInput]);
-
-  const loadInvoicesFirstPage = useCallback(
-    async (signal?: AbortSignal) => {
-      setInvoiceListLoading(true);
-      setInvoiceListError('');
-      setInvoiceListCursor(null);
-      try {
-        const { items, next_cursor } = await listCustomerInvoices(
-          {
-            status:
-              invoiceStatusFilter === '' ? undefined : invoiceStatusFilter,
-            settlement:
-              invoiceSettlementFilter === ''
-                ? undefined
-                : invoiceSettlementFilter,
-            currency:
-              invoiceCurrencyFilter === '' ? undefined : invoiceCurrencyFilter,
-            q:
-              invoiceSearchDebounced === ''
-                ? undefined
-                : invoiceSearchDebounced,
-            contactId: contactFilterId === '' ? undefined : contactFilterId,
-            familyId: familyFilterId === '' ? undefined : familyFilterId,
-            organizationId:
-              organizationFilterId === '' ? undefined : organizationFilterId,
-            limit: ADMIN_LIST_PAGE_SIZE,
-          },
-          signal,
-        );
-        setInvoices(items);
-        setInvoiceListCursor(next_cursor);
-      } catch (caught) {
-        if (caught instanceof Error && caught.name === 'AbortError') {
-          return;
-        }
-        const message = toErrorMessage(caught, 'Failed to load invoices.', {
-          honorBackendMessage: true,
-        });
-        setInvoiceListError(message);
-        setInvoices([]);
-      } finally {
-        setInvoiceListLoading(false);
-      }
-    },
-    [
-      invoiceCurrencyFilter,
-      invoiceSearchDebounced,
-      invoiceStatusFilter,
-      invoiceSettlementFilter,
-      contactFilterId,
-      familyFilterId,
-      organizationFilterId,
-    ],
-  );
-
-  useEffect(() => {
-    const ac = new AbortController();
-    void loadInvoicesFirstPage(ac.signal);
-    return () => ac.abort();
-  }, [loadInvoicesFirstPage]);
-
-  const loadMoreInvoices = useCallback(async () => {
-    if (!invoiceListCursor) {
-      return;
-    }
-    setInvoiceListLoadingMore(true);
-    setInvoiceListError('');
-    try {
-      const { items, next_cursor } = await listCustomerInvoices({
-        status: invoiceStatusFilter === '' ? undefined : invoiceStatusFilter,
-        settlement:
-          invoiceSettlementFilter === '' ? undefined : invoiceSettlementFilter,
-        currency:
-          invoiceCurrencyFilter === '' ? undefined : invoiceCurrencyFilter,
-        q: invoiceSearchDebounced === '' ? undefined : invoiceSearchDebounced,
-        contactId: contactFilterId === '' ? undefined : contactFilterId,
-        familyId: familyFilterId === '' ? undefined : familyFilterId,
-        organizationId:
-          organizationFilterId === '' ? undefined : organizationFilterId,
-        cursor: invoiceListCursor,
-        limit: ADMIN_LIST_PAGE_SIZE,
-      });
-      setInvoices((prev) => [...prev, ...items]);
-      setInvoiceListCursor(next_cursor);
-    } catch (caught) {
-      const message = toErrorMessage(caught, 'Failed to load more invoices.', {
-        honorBackendMessage: true,
-      });
-      setInvoiceListError(message);
-    } finally {
-      setInvoiceListLoadingMore(false);
-    }
-  }, [
-    invoiceListCursor,
-    invoiceCurrencyFilter,
-    invoiceSearchDebounced,
-    invoiceStatusFilter,
-    invoiceSettlementFilter,
-    contactFilterId,
-    familyFilterId,
-    organizationFilterId,
-  ]);
 
   const selectedIssuedInvoice = useMemo(() => {
     if (!selectedInvoiceId) {
@@ -408,18 +355,21 @@ export function useClientInvoicesInvoiceList({
 
   return {
     invoices,
-    invoiceListLoading,
-    invoiceListLoadingMore,
-    invoiceListError,
-    invoiceListCursor,
-    invoiceStatusFilter,
-    setInvoiceStatusFilter,
-    invoiceSettlementFilter,
-    setInvoiceSettlementFilter,
-    invoiceCurrencyFilter,
-    setInvoiceCurrencyFilter,
-    invoiceSearchInput,
-    setInvoiceSearchInput,
+    invoiceListLoading: list.isLoading,
+    invoiceListLoadingMore: list.isLoadingMore,
+    invoiceListError: list.error,
+    invoiceListHasMore: list.hasMore,
+    invoiceStatusFilter: invoiceFilters.status,
+    setInvoiceStatusFilter: (value: InvoiceStatusFilter) =>
+      setInvoiceFilter('status', value),
+    invoiceSettlementFilter: invoiceFilters.settlement,
+    setInvoiceSettlementFilter: (value: InvoiceSettlementFilter) =>
+      setInvoiceFilter('settlement', value),
+    invoiceCurrencyFilter: invoiceFilters.currency,
+    setInvoiceCurrencyFilter: (value: string) =>
+      setInvoiceFilter('currency', value),
+    invoiceSearchInput: invoiceFilters.search,
+    setInvoiceSearchInput: (value: string) => setInvoiceFilter('search', value),
     selectedIssuedInvoice,
     issuedInvoicesForAllocate,
     issuedInvoiceEmailCsv,
@@ -428,7 +378,7 @@ export function useClientInvoicesInvoiceList({
     setIssuedInvoiceEmailError,
     issuedInvoiceEmailDirtyRef,
     loadInvoicesFirstPage,
-    loadMoreInvoices,
+    loadMoreInvoices: list.loadMore,
     handleEmailIssuedInvoice,
     handleOpenInvoicePdfPreview,
     handleIssueRow,

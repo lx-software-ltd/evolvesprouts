@@ -11,20 +11,20 @@ import { SERVICE_KEY_PATTERN } from '@/lib/service-key-utils';
 import type { components } from '@/types/generated/admin-api.generated';
 import type { LocationSummary, ServiceDetail, ServiceType } from '@/types/services';
 
-import type { ConsultationFormState } from './consultation-form-fields';
-import type { EventFormState } from './event-form-fields';
+import type { ConsultationFormState } from '@/components/admin/services/consultation-form-fields';
+import type { EventFormState } from '@/components/admin/services/event-form-fields';
 import {
   DEFAULT_CONSULTATION_FORM,
   DEFAULT_EVENT_FORM,
   DEFAULT_SERVICE_FORM,
   DEFAULT_TRAINING_FORM,
-} from './form-defaults';
-import type { ServiceFormState } from './service-form-fields';
-import type { TrainingFormState } from './training-form-fields';
+} from '@/components/admin/services/form-defaults';
+import type { ServiceFormState } from '@/components/admin/services/service-form-fields';
+import type { TrainingFormState } from '@/components/admin/services/training-form-fields';
 import {
   buildServiceCreatePayload,
   buildServiceUpdatePayload,
-} from './service-detail-payload';
+} from '@/components/admin/services/service-detail-payload';
 
 type ApiSchemas = components['schemas'];
 

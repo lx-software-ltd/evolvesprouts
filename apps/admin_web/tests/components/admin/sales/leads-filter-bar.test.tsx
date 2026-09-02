@@ -22,16 +22,40 @@ describe('LeadsFilterBar', () => {
     }
   });
 
-  it('does not wrap filters in a bordered box', () => {
+  it('renders as a standard admin table toolbar with labelled controls', () => {
     const { container } = render(
-      <LeadsFilterBar filters={DEFAULT_LEAD_LIST_FILTERS} users={[]} onFilterChange={vi.fn()} />
+      <LeadsFilterBar
+        filters={DEFAULT_LEAD_LIST_FILTERS}
+        users={[{ sub: 'u1', email: 'a@example.com', name: 'Ann' }]}
+        onFilterChange={vi.fn()}
+      />
     );
 
-    const wrapper = container.firstElementChild;
-    expect(wrapper).toHaveClass('space-y-3');
-    expect(wrapper).not.toHaveClass('border');
-    expect(wrapper).not.toHaveClass('rounded-md');
-    expect(wrapper).not.toHaveClass('p-3');
+    const toolbar = container.firstElementChild;
+    expect(toolbar).toHaveClass('flex', 'flex-wrap', 'items-end', 'gap-3');
+    expect(toolbar).not.toHaveClass('border');
+
+    expect(screen.getByRole('group', { name: 'Filter by stage' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Search')).toHaveAttribute('placeholder', 'Search by name or email');
+    expect(screen.getByLabelText('Source')).toBeInTheDocument();
+    expect(screen.getByLabelText('Lead type')).toBeInTheDocument();
+    expect(screen.getByLabelText('Assignee')).toHaveDisplayValue('All assignees');
+    expect(screen.getByLabelText('From')).toHaveAttribute('type', 'date');
+    expect(screen.getByLabelText('To')).toHaveAttribute('type', 'date');
+    expect(screen.getByLabelText('Unassigned only')).not.toBeChecked();
+  });
+
+  it('marks the active stage chips with aria-pressed', () => {
+    render(
+      <LeadsFilterBar
+        filters={{ ...DEFAULT_LEAD_LIST_FILTERS, stage: ['contacted'] }}
+        users={[]}
+        onFilterChange={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Contacted' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('toggles a stage filter when a chip is clicked', async () => {
@@ -48,5 +72,8 @@ describe('LeadsFilterBar', () => {
 
     await user.click(screen.getByRole('button', { name: 'Contacted' }));
     expect(onFilterChange).toHaveBeenCalledWith('stage', ['contacted']);
+
+    await user.selectOptions(screen.getByLabelText('Source'), 'referral');
+    expect(onFilterChange).toHaveBeenCalledWith('source', ['referral']);
   });
 });

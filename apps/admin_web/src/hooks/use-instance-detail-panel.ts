@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { ConsultationFormState } from './consultation-form-fields';
-import type { EventFormState } from './event-form-fields';
+import type { ConsultationFormState } from '@/components/admin/services/consultation-form-fields';
+import type { EventFormState } from '@/components/admin/services/event-form-fields';
 import {
   cloneEventTiersForCreate,
   mergeServiceIntoConsultationForm,
@@ -11,19 +11,19 @@ import {
   mergeServiceIntoInstanceForm,
   mergeServiceIntoTrainingForm,
   resolveInheritedEventCategory,
-} from './instance-form-merge';
-import { DEFAULT_EVENT_FORM } from './form-defaults';
+} from '@/components/admin/services/instance-form-merge';
+import { DEFAULT_EVENT_FORM } from '@/components/admin/services/form-defaults';
 import {
   emptyInstanceDetailFormBundle,
   initialInstanceDetailFormBundle,
   instanceDetailFormBundleFromServiceInstance,
-} from './instance-detail-form-state';
-import type { InstanceFormState } from './instance-form-fields';
+} from '@/components/admin/services/instance-detail-form-state';
+import type { InstanceFormState } from '@/components/admin/services/instance-form-fields';
 import {
   buildInstanceCreatePayload,
   buildInstanceUpdatePayload,
-} from './instance-detail-payload';
-import type { TrainingFormState } from './training-form-fields';
+} from '@/components/admin/services/instance-detail-payload';
+import type { TrainingFormState } from '@/components/admin/services/training-form-fields';
 
 import type { components } from '@/types/generated/admin-api.generated';
 import type { EventTicketTier, LocationSummary, ServiceInstance, ServiceSummary, ServiceType } from '@/types/services';

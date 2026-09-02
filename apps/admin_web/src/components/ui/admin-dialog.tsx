@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
 export interface AdminDialogProps {
@@ -10,7 +11,9 @@ export interface AdminDialogProps {
   description?: string;
   onClose: () => void;
   children?: ReactNode;
+  /** Custom footer; when omitted, a single primary close button labelled `closeLabel` is rendered. */
   footer?: ReactNode;
+  closeLabel?: string;
   dialogRole?: 'dialog' | 'alertdialog';
   contentClassName?: string;
 }
@@ -22,6 +25,7 @@ export function AdminDialog({
   onClose,
   children,
   footer,
+  closeLabel = 'Close',
   dialogRole = 'dialog',
   contentClassName = 'w-full max-w-md',
 }: AdminDialogProps) {
@@ -106,7 +110,13 @@ export function AdminDialog({
             ) : null}
           </div>
           {children}
-          {footer}
+          {footer ?? (
+            <div className='flex justify-end'>
+              <Button type='button' variant='primary' onClick={onClose}>
+                {closeLabel}
+              </Button>
+            </div>
+          )}
         </Card>
       </div>
     </div>

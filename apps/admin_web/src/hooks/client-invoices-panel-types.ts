@@ -12,6 +12,10 @@ import type {
   CustomerPaymentSummary,
 } from '@/lib/billing-api';
 import type { CustomerInvoiceLineRow } from '@/components/admin/finance/client-invoices-utils';
+import type {
+  InvoiceSettlementFilter,
+  InvoiceStatusFilter,
+} from '@/hooks/use-client-invoices-invoice-list';
 
 export interface ClientInvoicesPanelShared {
   draftFilterId: string;
@@ -142,27 +146,15 @@ export interface ClientInvoicesInvoicesTableSlice {
   invoiceListLoading: boolean;
   invoiceListLoadingMore: boolean;
   invoiceListError: string;
-  invoiceListCursor: string | null;
-  invoiceStatusFilter: 'draft' | 'issued' | 'void' | '';
-  setInvoiceStatusFilter: Dispatch<
-    SetStateAction<'draft' | 'issued' | 'void' | ''>
-  >;
-  invoiceSettlementFilter:
-    | 'not_completed'
-    | 'open'
-    | 'partially_paid'
-    | 'paid'
-    | 'no_charge'
-    | '';
-  setInvoiceSettlementFilter: Dispatch<
-    SetStateAction<
-      'not_completed' | 'open' | 'partially_paid' | 'paid' | 'no_charge' | ''
-    >
-  >;
+  invoiceListHasMore: boolean;
+  invoiceStatusFilter: InvoiceStatusFilter;
+  setInvoiceStatusFilter: (value: InvoiceStatusFilter) => void;
+  invoiceSettlementFilter: InvoiceSettlementFilter;
+  setInvoiceSettlementFilter: (value: InvoiceSettlementFilter) => void;
   invoiceCurrencyFilter: string;
-  setInvoiceCurrencyFilter: Dispatch<SetStateAction<string>>;
+  setInvoiceCurrencyFilter: (value: string) => void;
   invoiceSearchInput: string;
-  setInvoiceSearchInput: Dispatch<SetStateAction<string>>;
+  setInvoiceSearchInput: (value: string) => void;
   selectedInvoiceId: string | null;
   setSelectedInvoiceId: Dispatch<SetStateAction<string | null>>;
   selectedIssuedInvoice: CustomerInvoiceSummary | null;

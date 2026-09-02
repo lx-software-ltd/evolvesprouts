@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/admin-data-table';
 import { AdminInlineError } from '@/components/ui/admin-inline-error';
 import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
+import { AdminDialog } from '@/components/ui/admin-dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toErrorMessage } from '@/hooks/hook-errors';
 import {
@@ -299,22 +300,18 @@ export function BulkExpenseImportJobsPanel({ onAfterMutation }: BulkExpenseImpor
         </div>
       </PaginatedTableCard>
 
-      <ConfirmDialog
+      <AdminDialog
         open={detailOpen}
         title={detailTitle}
         description={detailLoading ? 'Loading job details…' : 'Current job snapshot.'}
-        cancelLabel='Close'
-        hideConfirm
-        dialogRole='dialog'
-        onConfirm={closeDetail}
-        onCancel={closeDetail}
+        onClose={closeDetail}
       >
         {detailLoading ? null : (
           <pre className='mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-800'>
             {detailBody}
           </pre>
         )}
-      </ConfirmDialog>
+      </AdminDialog>
 
       <ConfirmDialog
         open={retryTarget !== null}

@@ -307,7 +307,21 @@ should extend the shared primitives rather than reintroducing one-off layouts.
   **title** (and optional **description**), a **single toolbar row** with
   **search and filters** (labels + controls, one horizontal band on desktop),
   then the **table** with a trailing **Operations** column (right-aligned
-  header) for row actions.
+  header) for row actions. The toolbar row is `AdminTableToolbar` from
+  `apps/admin_web/src/components/ui/admin-table-toolbar.tsx`, not an ad-hoc
+  flex `<div>`.
+- **Detail viewers and other non-confirm modals** use `AdminDialog` from
+  `apps/admin_web/src/components/ui/admin-dialog.tsx`. `ConfirmDialog` is only
+  for confirm/cancel decisions.
+- **Cursor-paginated lists** are driven by `usePaginatedList`
+  (`apps/admin_web/src/hooks/use-paginated-list.ts`); do not hand-roll cursor,
+  debounce, or abort state in feature hooks.
+- **Shared reference data** (entity tags, admin users, instructors, geographic
+  areas, locations) is read through the `useShared*` hooks in
+  `apps/admin_web/src/hooks/use-admin-catalog.ts`, which cache in
+  `lib/admin-catalog-store.ts`; invalidate through the exported
+  `invalidateShared*` helpers after mutations instead of ad-hoc refetches.
+- **Hooks live under `apps/admin_web/src/hooks/`**, not beside components.
 - **Inline editor blocks** use `AdminEditorCard` from
   `apps/admin_web/src/components/ui/admin-editor-card.tsx`: **title**,
   optional **description**, field area, then **actions** in a single row with

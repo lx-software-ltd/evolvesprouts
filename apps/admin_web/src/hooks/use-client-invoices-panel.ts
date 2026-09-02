@@ -137,7 +137,7 @@ export function useClientInvoicesPanel() {
     invoiceListLoading: invoiceList.invoiceListLoading,
     invoiceListLoadingMore: invoiceList.invoiceListLoadingMore,
     invoiceListError: invoiceList.invoiceListError,
-    invoiceListCursor: invoiceList.invoiceListCursor,
+    invoiceListHasMore: invoiceList.invoiceListHasMore,
     invoiceStatusFilter: invoiceList.invoiceStatusFilter,
     setInvoiceStatusFilter: invoiceList.setInvoiceStatusFilter,
     invoiceSettlementFilter: invoiceList.invoiceSettlementFilter,
