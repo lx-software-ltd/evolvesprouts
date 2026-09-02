@@ -12,6 +12,7 @@ import {
 import { AdminInlineError } from '@/components/ui/admin-inline-error';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { AdminTableToolbar } from '@/components/ui/admin-table-toolbar';
 import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
 import { Select } from '@/components/ui/select';
 import {
@@ -20,6 +21,10 @@ import {
   ViewIcon,
   VoidExpenseIcon,
 } from '@/components/icons/action-icons';
+import type {
+  InvoiceSettlementFilter,
+  InvoiceStatusFilter,
+} from '@/hooks/use-client-invoices-invoice-list';
 import { getInvoiceSettlementBadgeLabel } from '@/lib/invoice-settlement-display';
 import { formatDateOnly, formatYmdAsLocalDate } from '@/lib/format';
 import { formatAmountInCurrency } from '@/lib/vendor-spend';
@@ -91,7 +96,7 @@ export function ClientInvoicesInvoicesTable({
       error={invoiceListError}
       onLoadMore={() => void loadMoreInvoices()}
       toolbar={
-        <div className='mb-3 flex flex-wrap items-end gap-4'>
+        <AdminTableToolbar className='gap-4'>
           <div className='min-w-[min(100%,16rem)] flex-1 basis-[14rem]'>
             <Label htmlFor={invoiceSearchFilterId}>Filter invoices</Label>
             <Input
@@ -111,11 +116,7 @@ export function ClientInvoicesInvoicesTable({
               className='mt-1 w-44'
               value={invoiceStatusFilter}
               onChange={(e) =>
-                setInvoiceStatusFilter(
-                  e.target.value === ''
-                    ? ''
-                    : (e.target.value as 'draft' | 'issued' | 'void'),
-                )
+                setInvoiceStatusFilter(e.target.value as InvoiceStatusFilter)
               }
             >
               <option value=''>All</option>
@@ -132,14 +133,7 @@ export function ClientInvoicesInvoicesTable({
               value={invoiceSettlementFilter}
               onChange={(e) =>
                 setInvoiceSettlementFilter(
-                  e.target.value === ''
-                    ? ''
-                    : (e.target.value as
-                        | 'not_completed'
-                        | 'open'
-                        | 'partially_paid'
-                        | 'paid'
-                        | 'no_charge'),
+                  e.target.value as InvoiceSettlementFilter,
                 )
               }
             >
@@ -201,7 +195,7 @@ export function ClientInvoicesInvoicesTable({
               ) : null}
             </div>
           ) : null}
-        </div>
+        </AdminTableToolbar>
       }
     >
       <section aria-label='Customer invoices list'>

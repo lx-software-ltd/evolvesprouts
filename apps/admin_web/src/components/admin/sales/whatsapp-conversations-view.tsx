@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/admin-data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { AdminTableToolbar } from '@/components/ui/admin-table-toolbar';
 import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
 import { StatusBanner } from '@/components/status-banner';
 
@@ -259,7 +260,7 @@ export function WhatsAppConversationsView() {
                 </div>
               </form>
             </AdminCollapsibleSection>
-            <div className='flex flex-wrap items-end gap-3'>
+            <AdminTableToolbar marginBottom='none'>
               <label className='flex min-w-48 flex-1 flex-col gap-1 text-sm text-slate-700'>
                 Search
                 <Input
@@ -269,7 +270,7 @@ export function WhatsAppConversationsView() {
                   placeholder='Name or WhatsApp id'
                 />
               </label>
-            </div>
+            </AdminTableToolbar>
           </div>
         }
       >

@@ -13,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Label } from '@/components/ui/label';
+import { AdminTableToolbar } from '@/components/ui/admin-table-toolbar';
 import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
 import { Select } from '@/components/ui/select';
 import { toErrorMessage } from '@/hooks/hook-errors';
@@ -185,7 +186,7 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
   const storedCount = selectedSummary?.answerCount ?? 0;
 
   const toolbar = (
-    <div className='mb-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between'>
+    <AdminTableToolbar>
       <div className='min-w-[240px] max-w-md flex-1'>
         <Label htmlFor={`website-${lowerNoun}s-select`}>{titleNoun}</Label>
         <Select
@@ -205,7 +206,7 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
           )}
         </Select>
       </div>
-      <div className='flex flex-wrap gap-2'>
+      <div className='ml-auto flex flex-wrap gap-2'>
         <Button
           type='button'
           variant='outline'
@@ -223,7 +224,7 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
           Clear answers
         </Button>
       </div>
-    </div>
+    </AdminTableToolbar>
   );
 
   return (

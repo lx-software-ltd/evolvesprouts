@@ -17,6 +17,7 @@ import { DeleteIcon, DuplicateIcon } from '@/components/icons/action-icons';
 import { CopyFeedbackIconButton } from '@/components/ui/copy-feedback-icon-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { AdminTableToolbar } from '@/components/ui/admin-table-toolbar';
 import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
 import { Select } from '@/components/ui/select';
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
@@ -155,7 +156,7 @@ export function InstanceListPanel({
         onLoadMore={onLoadMore}
         toolbar={
           serviceFilter || serviceTypeFilter || statusFilter || searchFilter ? (
-            <div className='mb-3 flex w-full min-w-0 flex-nowrap items-end gap-3'>
+            <AdminTableToolbar className='w-full min-w-0 flex-nowrap'>
               {searchFilter ? (
                 <div
                   className={
@@ -224,7 +225,7 @@ export function InstanceListPanel({
                   </Select>
                 </div>
               ) : null}
-            </div>
+            </AdminTableToolbar>
           ) : undefined
         }
       >
