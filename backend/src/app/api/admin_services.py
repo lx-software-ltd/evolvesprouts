@@ -13,6 +13,7 @@ from app.api.admin_request import (
     parse_body,
     parse_uuid,
     require_admin_identity,
+    route_has_prefix,
     split_route_parts,
 )
 from app.api.admin_service_instances import handle_admin_service_instances_request
@@ -33,7 +34,7 @@ from app.api.admin_services_integrity import (
     is_services_service_key_tier_unique_violation,
     service_key_tier_uniqueness_validation_error,
 )
-from app.api.admin_services_payload_utils import parse_service_type_details
+from app.api.admin_services_type_details import parse_service_type_details
 from app.api.admin_entities_helpers import require_assignable_tag
 from app.db.audit import set_audit_context
 from app.db.engine import get_engine
@@ -54,7 +55,7 @@ from app.db.repositories import (
     ServiceRepository,
 )
 from app.exceptions import NotFoundError, ValidationError
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -71,8 +72,8 @@ def handle_admin_services_request(
         extra={"method": method, "path": path},
     )
     parts = split_route_parts(path)
-    if len(parts) < 2 or parts[0] != "admin" or parts[1] != "services":
-        return json_response(404, {"error": "Not found"}, event=event)
+    if not route_has_prefix(parts, "admin", "services"):
+        return not_found(event)
 
     identity = require_admin_identity(event)
 
@@ -81,7 +82,7 @@ def handle_admin_services_request(
             return _list_services(event)
         if method == "POST":
             return _create_service(event, actor_sub=identity.user_sub)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 3 and parts[2] == "instances":
         return handle_admin_all_service_instances_request(event, method, path)
@@ -102,24 +103,24 @@ def handle_admin_services_request(
             return _delete_service(
                 event, service_id=service_id, actor_sub=identity.user_sub
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) >= 4 and parts[3] == "instances":
         return handle_admin_service_instances_request(event, method, path, service_id)
 
     if len(parts) == 4 and parts[3] == "discount-code-usage-summary":
         if method != "GET":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return _get_discount_code_usage_summary(event, service_id=service_id)
 
     if len(parts) == 4 and parts[3] == "cover-image":
         if method != "POST":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return create_cover_image_upload(
             event, service_id=service_id, actor_sub=identity.user_sub
         )
 
-    return json_response(404, {"error": "Not found"}, event=event)
+    return not_found(event)
 
 
 def _list_services(event: Mapping[str, Any]) -> dict[str, Any]:

@@ -2,50 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-from decimal import Decimal
-from enum import Enum
-from typing import Any
 from collections.abc import Mapping
-
-from collections.abc import Sequence
-from typing import TypeVar
-
-T = TypeVar("T", bound=Enum)
-
-
-def parse_int(value: str | None) -> int | None:
-    """Parse an integer from a string.
-
-    Args:
-        value: The string value to parse, or None.
-
-    Returns:
-        The parsed integer, or None if input is None or empty.
-
-    Raises:
-        ValueError: If the string cannot be converted to an integer.
-    """
-    if value is None or value == "":
-        return None
-    return int(value)
-
-
-def parse_decimal(value: str | None) -> Decimal | None:
-    """Parse a Decimal from a string.
-
-    Args:
-        value: The string value to parse, or None.
-
-    Returns:
-        The parsed Decimal, or None if input is None or empty.
-
-    Raises:
-        ValueError: If the string cannot be converted to a Decimal.
-    """
-    if value is None or value == "":
-        return None
-    return Decimal(value)
+from datetime import datetime
+from typing import Any
 
 
 def parse_datetime(value: str | None) -> datetime | None:
@@ -66,44 +25,6 @@ def parse_datetime(value: str | None) -> datetime | None:
         return None
     cleaned = value.replace("Z", "+00:00") if value.endswith("Z") else value
     return datetime.fromisoformat(cleaned)
-
-
-def parse_enum(value: str | None, enum_type: type[T]) -> T | None:
-    """Parse an enum value from a string.
-
-    Args:
-        value: The string value to parse, or None.
-        enum_type: The enum class to parse into.
-
-    Returns:
-        The parsed enum value, or None if input is None or empty.
-
-    Raises:
-        ValueError: If the string is not a valid enum value.
-    """
-    if value is None or value == "":
-        return None
-    return enum_type(value)
-
-
-def parse_languages(values: Sequence[str]) -> list[str]:
-    """Parse language filters from query parameters.
-
-    Handles both comma-separated strings and multiple parameter values.
-
-    Args:
-        values: List of language parameter values.
-
-    Returns:
-        Deduplicated list of language codes.
-    """
-    languages: list[str] = []
-    for value in values:
-        for item in value.split(","):
-            item = item.strip()
-            if item and item not in languages:
-                languages.append(item)
-    return languages
 
 
 def first_param(params: dict[str, list[str]], key: str) -> str | None:

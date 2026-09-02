@@ -10,11 +10,6 @@ from unittest.mock import MagicMock
 
 from app.api.admin_request import parse_cursor
 from app.api.assets.assets_common import (
-    asset_links_customer_invoice,
-    asset_links_expense_attachment,
-    asset_links_restricted_system_document,
-    file_name_from_pending_asset_content_key,
-    head_s3_object,
     paginate_response,
     parse_admin_asset_content_language,
     parse_admin_asset_list_filters,
@@ -24,6 +19,15 @@ from app.api.assets.assets_common import (
     parse_optional_content_language,
     parse_partial_update_asset_payload,
     parse_update_asset_payload,
+)
+from app.api.assets.assets_serializers import (
+    asset_links_customer_invoice,
+    asset_links_expense_attachment,
+    asset_links_restricted_system_document,
+)
+from app.api.assets.assets_storage import (
+    file_name_from_pending_asset_content_key,
+    head_s3_object,
     validate_pending_asset_content_s3_key,
 )
 from app.exceptions import ValidationError
@@ -431,12 +435,12 @@ def test_validate_pending_asset_content_s3_key_rejects_wrong_prefix() -> None:
 
 
 def test_head_s3_object_calls_s3_client(monkeypatch: pytest.MonkeyPatch) -> None:
-    from app.api.assets import assets_common
+    from app.api.assets import assets_storage
 
     mock_client = MagicMock()
     mock_client.head_object.return_value = {"ContentType": "application/pdf"}
-    monkeypatch.setattr(assets_common, "get_s3_client", lambda: mock_client)
-    monkeypatch.setattr(assets_common, "require_env", lambda _k: "bucket-1")
+    monkeypatch.setattr(assets_storage, "get_s3_client", lambda: mock_client)
+    monkeypatch.setattr(assets_storage, "require_env", lambda _k: "bucket-1")
 
     result = head_s3_object(s3_key="assets/a/b.pdf")
     assert result["ContentType"] == "application/pdf"

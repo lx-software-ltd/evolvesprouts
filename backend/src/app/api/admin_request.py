@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import base64
 import json
-import os
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -84,6 +83,11 @@ def split_route_parts(path: str) -> list[str]:
     if parts and parts[0].startswith("v") and parts[0][1:].isdigit():
         return parts[1:]
     return parts
+
+
+def route_has_prefix(parts: Sequence[str], *prefix: str) -> bool:
+    """Return True when route segments from ``split_route_parts`` start with ``prefix``."""
+    return len(parts) >= len(prefix) and tuple(parts[: len(prefix)]) == prefix
 
 
 def request_id(event: Mapping[str, Any]) -> str:
@@ -291,21 +295,6 @@ def _to_uuid(value: UUID | str) -> UUID:
     if isinstance(value, UUID):
         return value
     return parse_uuid(value)
-
-
-def _parse_group_name(event: Mapping[str, Any]) -> str:
-    """Parse the group name from the request."""
-    raw = event.get("body") or ""
-    if not raw:
-        return os.getenv("ADMIN_GROUP") or "admin"
-    if event.get("isBase64Encoded"):
-        raw = base64.b64decode(raw).decode("utf-8")
-    try:
-        body = json.loads(raw)
-    except json.JSONDecodeError:
-        body = {}
-    group = body.get("group") if isinstance(body, dict) else None
-    return group or os.getenv("ADMIN_GROUP") or "admin"
 
 
 def parse_cursor(value: str | None) -> UUID | None:

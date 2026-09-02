@@ -14,7 +14,6 @@ from app.api.admin_entities_deletes import delete_admin_entity_organization
 from app.api.admin_entity_services import list_organization_services
 from app.api.admin_entities_helpers import (
     ORGANIZATION_RELATIONSHIP_TYPES,
-    assert_contact_can_join_organization,
     request_id,
     ensure_location_exists,
     parse_active_filter,
@@ -35,6 +34,7 @@ from app.api.admin_request import (
     parse_uuid,
     query_param,
     require_admin_identity,
+    route_has_prefix,
     split_route_parts,
 )
 from app.api.admin_services_payload_utils import parse_optional_uuid, parse_uuid_list
@@ -45,22 +45,23 @@ from app.api.admin_validators import (
 from app.db.audit import set_audit_context
 from app.db.engine import get_engine
 from app.db.models import (
-    Contact,
     Organization,
-    OrganizationMember,
     OrganizationType,
     RelationshipType,
 )
-from app.db.models.organization import organization_membership_role_from_contact_type
 from app.db.repositories.organization import (
     OrganizationListOrder,
     OrganizationRepository,
 )
 from app.exceptions import DatabaseError, NotFoundError, ValidationError
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger
+from app.api.admin_organizations_members import (
+    add_organization_member,
+    remove_organization_member,
+    update_organization_member,
+)
 
-_DEFAULT_LIMIT = 25
 logger = get_logger(__name__)
 
 
@@ -75,8 +76,8 @@ def handle_admin_organizations_request(
         extra={"method": method, "path": path},
     )
     parts = split_route_parts(path)
-    if len(parts) < 2 or parts[0] != "admin" or parts[1] != "organizations":
-        return json_response(404, {"error": "Not found"}, event=event)
+    if not route_has_prefix(parts, "admin", "organizations"):
+        return not_found(event)
 
     identity = require_admin_identity(event)
 
@@ -85,7 +86,7 @@ def handle_admin_organizations_request(
             return _list_organizations(event)
         if method == "POST":
             return _create_organization(event, actor_sub=identity.user_sub)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     organization_id = parse_uuid(parts[2])
     if len(parts) == 3:
@@ -101,39 +102,39 @@ def handle_admin_organizations_request(
                 organization_id=organization_id,
                 actor_sub=identity.user_sub,
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 4 and parts[3] == "services":
         if method == "GET":
             return list_organization_services(event, organization_id=organization_id)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 4 and parts[3] == "members":
         if method == "POST":
-            return _add_organization_member(
+            return add_organization_member(
                 event, organization_id=organization_id, actor_sub=identity.user_sub
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 5 and parts[3] == "members":
         member_id = parse_uuid(parts[4])
         if method == "PATCH":
-            return _update_organization_member(
+            return update_organization_member(
                 event,
                 organization_id=organization_id,
                 member_id=member_id,
                 actor_sub=identity.user_sub,
             )
         if method == "DELETE":
-            return _remove_organization_member(
+            return remove_organization_member(
                 event,
                 organization_id=organization_id,
                 member_id=member_id,
                 actor_sub=identity.user_sub,
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
-    return json_response(404, {"error": "Not found"}, event=event)
+    return not_found(event)
 
 
 def _parse_organization_type(value: Any, *, field: str) -> OrganizationType:
@@ -243,7 +244,7 @@ def _is_organizations_partner_key_unique_violation(exc: IntegrityError) -> bool:
 
 
 def _list_organizations(event: Mapping[str, Any]) -> dict[str, Any]:
-    limit = parse_limit(event, default=_DEFAULT_LIMIT)
+    limit = parse_limit(event)
     cursor = parse_cursor(query_param(event, "cursor"))
     query = validate_string_length(
         query_param(event, "query"),
@@ -485,155 +486,6 @@ def _update_organization(
         loaded = loader(organization_id)
         if loaded is None:
             raise DatabaseError("Failed to load organization after update")
-        return json_response(
-            200,
-            {
-                "organization": serialize_organization_summary(
-                    loaded, **organization_related_serializer_kwargs(session, loaded.id)
-                )
-            },
-            event=event,
-        )
-
-
-def _add_organization_member(
-    event: Mapping[str, Any],
-    *,
-    organization_id: UUID,
-    actor_sub: str,
-) -> dict[str, Any]:
-    body = parse_body(event)
-    contact_id = parse_uuid(str(body.get("contact_id")))
-    is_primary = body.get("is_primary_contact")
-    if is_primary is None:
-        is_primary_contact = False
-    elif isinstance(is_primary, bool):
-        is_primary_contact = is_primary
-    elif isinstance(is_primary, str) and is_primary.strip().lower() in {"true", "1"}:
-        is_primary_contact = True
-    elif isinstance(is_primary, str) and is_primary.strip().lower() in {"false", "0"}:
-        is_primary_contact = False
-    else:
-        raise ValidationError(
-            "is_primary_contact must be true or false",
-            field="is_primary_contact",
-        )
-
-    with Session(get_engine()) as session:
-        set_audit_context(session, user_id=actor_sub, request_id=request_id(event))
-        repository = OrganizationRepository(session)
-        org = repository.get_non_vendor_organization_by_id(organization_id)
-        if org is None:
-            raise NotFoundError("Organization", str(organization_id))
-        contact = session.get(Contact, contact_id)
-        if contact is None:
-            raise ValidationError("contact_id not found", field="contact_id")
-        assert_contact_can_join_organization(
-            session, contact_id=contact_id, organization_id=organization_id
-        )
-
-        role = organization_membership_role_from_contact_type(contact.contact_type)
-        member = OrganizationMember(
-            organization_id=organization_id,
-            contact_id=contact_id,
-            role=role,
-            is_primary_contact=is_primary_contact,
-        )
-        session.add(member)
-        contact.location_id = None
-        session.commit()
-        loaded = repository.get_non_vendor_organization_by_id(organization_id)
-        if loaded is None:
-            raise DatabaseError("Failed to load organization after adding member")
-        return json_response(
-            201,
-            {
-                "organization": serialize_organization_summary(
-                    loaded, **organization_related_serializer_kwargs(session, loaded.id)
-                )
-            },
-            event=event,
-        )
-
-
-def _update_organization_member(
-    event: Mapping[str, Any],
-    *,
-    organization_id: UUID,
-    member_id: UUID,
-    actor_sub: str,
-) -> dict[str, Any]:
-    body = parse_body(event)
-    if "is_primary_contact" not in body:
-        raise ValidationError(
-            "is_primary_contact is required",
-            field="is_primary_contact",
-        )
-    is_primary = body.get("is_primary_contact")
-    if isinstance(is_primary, bool):
-        is_primary_contact = is_primary
-    elif isinstance(is_primary, str) and is_primary.strip().lower() in {"true", "1"}:
-        is_primary_contact = True
-    elif isinstance(is_primary, str) and is_primary.strip().lower() in {"false", "0"}:
-        is_primary_contact = False
-    else:
-        raise ValidationError(
-            "is_primary_contact must be true or false",
-            field="is_primary_contact",
-        )
-
-    with Session(get_engine()) as session:
-        set_audit_context(session, user_id=actor_sub, request_id=request_id(event))
-        repository = OrganizationRepository(session)
-        org = repository.get_non_vendor_organization_by_id(organization_id)
-        if org is None:
-            raise NotFoundError("Organization", str(organization_id))
-        member = session.get(OrganizationMember, member_id)
-        if member is None or member.organization_id != organization_id:
-            raise NotFoundError("OrganizationMember", str(member_id))
-
-        if is_primary_contact:
-            for m in org.organization_members:
-                m.is_primary_contact = m.id == member_id
-        else:
-            member.is_primary_contact = False
-
-        session.commit()
-        loaded = repository.get_non_vendor_organization_by_id(organization_id)
-        if loaded is None:
-            raise DatabaseError("Failed to load organization after updating member")
-        return json_response(
-            200,
-            {
-                "organization": serialize_organization_summary(
-                    loaded, **organization_related_serializer_kwargs(session, loaded.id)
-                )
-            },
-            event=event,
-        )
-
-
-def _remove_organization_member(
-    event: Mapping[str, Any],
-    *,
-    organization_id: UUID,
-    member_id: UUID,
-    actor_sub: str,
-) -> dict[str, Any]:
-    with Session(get_engine()) as session:
-        set_audit_context(session, user_id=actor_sub, request_id=request_id(event))
-        repository = OrganizationRepository(session)
-        org = repository.get_non_vendor_organization_by_id(organization_id)
-        if org is None:
-            raise NotFoundError("Organization", str(organization_id))
-        member = session.get(OrganizationMember, member_id)
-        if member is None or member.organization_id != organization_id:
-            raise NotFoundError("OrganizationMember", str(member_id))
-        session.delete(member)
-        session.commit()
-        loaded = repository.get_non_vendor_organization_by_id(organization_id)
-        if loaded is None:
-            raise DatabaseError("Failed to load organization after removing member")
         return json_response(
             200,
             {

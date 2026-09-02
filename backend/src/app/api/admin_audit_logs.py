@@ -26,6 +26,7 @@ from app.api.admin_request import (
     query_param,
     request_id,
     require_admin_identity,
+    route_has_prefix,
     split_route_parts,
 )
 from app.db.audit import AuditLogRepository, set_audit_context
@@ -33,7 +34,7 @@ from app.db.auditable_tables import AUDITABLE_TABLES
 from app.db.engine import get_engine
 from app.db.models import AuditLog
 from app.exceptions import NotFoundError, ValidationError
-from app.utils import json_response, parse_datetime
+from app.utils import json_response, method_not_allowed, not_found, parse_datetime
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -98,24 +99,24 @@ def handle_admin_audit_logs_request(
 ) -> dict[str, Any]:
     """Handle ``/v1/admin/audit-logs`` and ``/v1/admin/audit-logs/{id}``."""
     parts = split_route_parts(path)
-    if len(parts) < 2 or parts[0] != "admin" or parts[1] != "audit-logs":
-        return json_response(404, {"error": "Not found"}, event=event)
+    if not route_has_prefix(parts, "admin", "audit-logs"):
+        return not_found(event)
 
     identity = require_admin_identity(event)
 
     if len(parts) == 2:
         if method != "GET":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return _list_audit_logs(event, actor_sub=identity.user_sub)
 
     if len(parts) == 3:
         if method != "GET":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return _get_audit_log_by_id(
             event, audit_id=parts[2], actor_sub=identity.user_sub
         )
 
-    return json_response(404, {"error": "Not found"}, event=event)
+    return not_found(event)
 
 
 def _get_audit_log_by_id(

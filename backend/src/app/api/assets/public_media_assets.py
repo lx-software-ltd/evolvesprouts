@@ -18,7 +18,7 @@ from app.services.turnstile import (
     extract_turnstile_token,
     verify_turnstile_token,
 )
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed
 from app.utils.deployment import is_production
 from app.utils.logging import get_logger, mask_email
 
@@ -36,7 +36,7 @@ def handle_media_request(
 ) -> dict[str, Any]:
     """Handle POST /v1/assets/free/request (and /www/... website proxy path)."""
     if method != "POST":
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     turnstile_token = extract_turnstile_token(event)
     if not turnstile_token:

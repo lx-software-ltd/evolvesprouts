@@ -24,6 +24,7 @@ from app.api.admin_request import (
     parse_uuid,
     query_param,
     require_admin_identity,
+    route_has_prefix,
     split_route_parts,
 )
 from app.db.engine import get_engine
@@ -31,7 +32,7 @@ from app.db.models.enums import MetaChannel
 from app.db.models.meta import MetaConversation, MetaMessage
 from app.db.repositories.meta import MetaRepository
 from app.exceptions import NotFoundError, ValidationError
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 
 
 def handle_admin_meta_request(
@@ -41,8 +42,8 @@ def handle_admin_meta_request(
 ) -> dict[str, Any]:
     """Handle /v1/admin/meta routes."""
     parts = split_route_parts(path)
-    if len(parts) < 2 or parts[0] != "admin" or parts[1] != "meta":
-        return json_response(404, {"error": "Not found"}, event=event)
+    if not route_has_prefix(parts, "admin", "meta"):
+        return not_found(event)
 
     identity = require_admin_identity(event)
 
@@ -54,15 +55,15 @@ def handle_admin_meta_request(
 
     if len(parts) == 3 and parts[2] == "conversations":
         if method != "GET":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return _list_conversations(event)
 
     if len(parts) == 5 and parts[2] == "conversations" and parts[4] == "messages":
         if method != "GET":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return _list_messages(event, conversation_id=parse_uuid(parts[3]))
 
-    return json_response(404, {"error": "Not found"}, event=event)
+    return not_found(event)
 
 
 def _list_conversations(event: Mapping[str, Any]) -> dict[str, Any]:

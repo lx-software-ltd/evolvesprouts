@@ -21,14 +21,15 @@ from app.api.assets.assets_common import (
     parse_content_language_query_param,
     parse_cursor,
     parse_limit,
-    serialize_public_free_asset,
 )
+from app.api.assets.assets_serializers import serialize_public_free_asset
 from app.db.engine import get_engine
 from app.db.repositories.asset import AssetRepository
 from app.utils import (
     CACHE_CONTROL_EDGE_CACHEABLE_GET,
     CACHE_CONTROL_NO_STORE,
-    json_response,
+    method_not_allowed,
+    not_found,
 )
 from app.utils.logging import get_logger
 
@@ -57,23 +58,15 @@ def handle_public_free_assets_list_request(
 ) -> dict[str, Any]:
     """Handle GET /v1/assets/free and /www/v1/assets/free."""
     if not _is_free_assets_list_path(path):
-        return json_response(
-            404,
-            {"error": "Not found"},
-            headers={"Cache-Control": CACHE_CONTROL_NO_STORE},
-            event=event,
-        )
+        return not_found(event, headers={"Cache-Control": CACHE_CONTROL_NO_STORE})
 
     logger.info(
         "Handling public free assets list request",
         extra={"method": method, "path": path},
     )
     if method != "GET":
-        return json_response(
-            405,
-            {"error": "Method not allowed"},
-            headers={"Cache-Control": CACHE_CONTROL_NO_STORE},
-            event=event,
+        return method_not_allowed(
+            event, headers={"Cache-Control": CACHE_CONTROL_NO_STORE}
         )
 
     limit = parse_limit(event)

@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.api import admin_contacts_mutations as mutations
+from app.api import admin_contacts_delete as mutations
 from app.db.models.enums import MailchimpSyncStatus
 
 

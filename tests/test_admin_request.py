@@ -10,8 +10,23 @@ from app.api.admin_request import (
     parse_body,
     parse_limit,
     require_admin_identity,
+    route_has_prefix,
+    split_route_parts,
 )
 from app.exceptions import AuthorizationError, ValidationError
+
+
+def test_split_route_parts_drops_version_prefix_and_trailing_slash() -> None:
+    assert split_route_parts("/v1/admin/locations/") == ["admin", "locations"]
+    assert split_route_parts("admin/tags") == ["admin", "tags"]
+
+
+def test_route_has_prefix_matches_leading_segments_only() -> None:
+    parts = split_route_parts("/v1/admin/services/abc/instances")
+    assert route_has_prefix(parts, "admin", "services")
+    assert route_has_prefix(parts, "admin")
+    assert not route_has_prefix(parts, "admin", "tags")
+    assert not route_has_prefix(["admin"], "admin", "services")
 
 
 def test_parse_body_rejects_invalid_base64_payload() -> None:

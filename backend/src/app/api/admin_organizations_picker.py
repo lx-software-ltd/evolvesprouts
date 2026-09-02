@@ -13,10 +13,15 @@ from app.api.admin_billing_common import (
     primary_org_contact_names,
 )
 from app.api.admin_entities_helpers import parse_limit, parse_relationship_type
-from app.api.admin_request import query_param, require_admin_identity, split_route_parts
+from app.api.admin_request import (
+    query_param,
+    require_admin_identity,
+    route_has_prefix,
+    split_route_parts,
+)
 from app.db.engine import get_engine
 from app.db.models import Organization, RelationshipType
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger
 
 _DEFAULT_LIMIT = 100
@@ -35,18 +40,18 @@ def handle_admin_organizations_picker_request(
         extra={"method": method, "path": path},
     )
     parts = split_route_parts(path)
-    if len(parts) < 3 or parts[0] != "admin":
-        return json_response(404, {"error": "Not found"}, event=event)
+    if len(parts) < 3 or not route_has_prefix(parts, "admin"):
+        return not_found(event)
 
     require_admin_identity(event)
 
     if method != "GET":
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if parts[1] == "organizations" and parts[2] == "picker" and len(parts) == 3:
         return _list_organization_picker(event)
 
-    return json_response(404, {"error": "Not found"}, event=event)
+    return not_found(event)
 
 
 def _list_organization_picker(event: Mapping[str, Any]) -> dict[str, Any]:

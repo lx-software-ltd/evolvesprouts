@@ -14,7 +14,7 @@ from app.services.public_calendar_availability import (
     parse_availability_request,
     serialize_availability_response,
 )
-from app.utils import json_response, public_cacheable_json_response
+from app.utils import json_response, method_not_allowed, public_cacheable_json_response
 from app.utils.public_http_cache import CACHE_CONTROL_NO_STORE
 
 
@@ -24,11 +24,8 @@ def handle_public_calendar_availability(
 ) -> dict[str, Any]:
     """Handle GET /v1/calendar/availability and /www/v1/calendar/availability."""
     if method != "GET":
-        return json_response(
-            405,
-            {"error": "Method not allowed"},
-            headers={"Cache-Control": CACHE_CONTROL_NO_STORE},
-            event=event,
+        return method_not_allowed(
+            event, headers={"Cache-Control": CACHE_CONTROL_NO_STORE}
         )
 
     try:

@@ -27,7 +27,11 @@ from app.db.repositories.service_instance import ServiceInstanceRepository
 
 if TYPE_CHECKING:
     from app.db.models.location import Location
-from app.utils import public_cacheable_json_response
+from app.utils import (
+    CACHE_CONTROL_NO_STORE,
+    method_not_allowed,
+    public_cacheable_json_response,
+)
 from app.utils.logging import get_logger
 from app.utils.maps import build_google_maps_directions_url
 from app.utils.public_slug import PUBLIC_INSTANCE_SLUG_PATTERN
@@ -54,8 +58,8 @@ def handle_public_events(
             "Handling public events feed request",
             extra={"method": method},
         )
-        return public_cacheable_json_response(
-            405, {"error": "Method not allowed"}, event=event
+        return method_not_allowed(
+            event, headers={"Cache-Control": CACHE_CONTROL_NO_STORE}
         )
 
     query = event.get("queryStringParameters") or {}
@@ -90,14 +94,6 @@ def handle_public_events(
     return public_cacheable_json_response(
         200, {"events": items, "items": items}, event=event
     )
-
-
-def handle_public_calendar_events_request(
-    event: Mapping[str, Any],
-    method: str,
-) -> dict[str, Any]:
-    """Backward-compatible entrypoint for public calendar events."""
-    return handle_public_events(event, method)
 
 
 def _parse_public_instance_slug(raw: str | None) -> str | None:

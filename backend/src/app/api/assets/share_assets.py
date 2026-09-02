@@ -9,8 +9,8 @@ from sqlalchemy.orm import Session
 
 from app.auth.authorizer_utils import extract_bearer_token
 from app.auth.jwt_validator import JWTValidationError, decode_and_verify_token
-from app.api.admin_request import split_route_parts
-from app.api.assets.assets_common import (
+from app.api.admin_request import route_has_prefix, split_route_parts
+from app.api.assets.assets_storage import (
     generate_download_url,
     signed_link_no_cache_headers,
 )
@@ -21,7 +21,7 @@ from app.api.assets.share_links import (
 from app.db.models import AssetVisibility
 from app.db.engine import get_engine
 from app.db.repositories.asset import AssetRepository
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 
 
 def handle_share_assets_request(
@@ -31,11 +31,11 @@ def handle_share_assets_request(
 ) -> dict[str, Any]:
     """Handle /v1/assets/share/{token} route."""
     parts = split_route_parts(path)
-    if len(parts) != 3 or parts[0] != "assets" or parts[1] != "share":
-        return json_response(404, {"error": "Not found"}, event=event)
+    if len(parts) != 3 or not route_has_prefix(parts, "assets", "share"):
+        return not_found(event)
 
     if method != "GET":
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     return _resolve_share_token(event, parts[2], require_source_domain=True)
 
@@ -47,11 +47,11 @@ def handle_email_download_request(
 ) -> dict[str, Any]:
     """Handle /v1/assets/email-download/{token} (email links; no Referer/Origin check)."""
     parts = split_route_parts(path)
-    if len(parts) != 3 or parts[0] != "assets" or parts[1] != "email-download":
-        return json_response(404, {"error": "Not found"}, event=event)
+    if len(parts) != 3 or not route_has_prefix(parts, "assets", "email-download"):
+        return not_found(event)
 
     if method != "GET":
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     return _resolve_share_token(event, parts[2], require_source_domain=False)
 
@@ -63,13 +63,13 @@ def _resolve_share_token(
     require_source_domain: bool,
 ) -> dict[str, Any]:
     if not is_valid_share_token(share_token):
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
 
     with Session(get_engine()) as session:
         repository = AssetRepository(session)
         share_link = repository.get_share_link_by_token(token=share_token)
         if share_link is None:
-            return json_response(404, {"error": "Not found"}, event=event)
+            return not_found(event)
         if require_source_domain:
             source_domain = extract_request_source_domain(event)
             allowed_domains = set(share_link.allowed_domains or [])
@@ -78,7 +78,7 @@ def _resolve_share_token(
 
         asset = repository.get_by_id(share_link.asset_id)
         if asset is None:
-            return json_response(404, {"error": "Not found"}, event=event)
+            return not_found(event)
         if (
             asset.visibility == AssetVisibility.RESTRICTED
             and not _is_restricted_share_request_authenticated(event)

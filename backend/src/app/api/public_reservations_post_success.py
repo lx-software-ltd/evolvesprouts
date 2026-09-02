@@ -5,11 +5,11 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from app.api.public_booking_confirmation_email import send_booking_confirmation_email
 from app.api.public_form_hooks import (
     mailchimp_booking_tag_from_payload,
     maybe_subscribe_booking_marketing,
     normalize_body_locale,
-    send_booking_confirmation_email,
 )
 from app.services.public_form_internal_notifications import (
     build_reservation_recap_lines,

@@ -2,23 +2,17 @@
 
 from __future__ import annotations
 
-import csv
-import io
 from collections.abc import Mapping
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
 from app.api.admin_leads_common import (
-    count_leads_in_window,
     encode_lead_cursor,
-    max_datetime,
-    min_datetime,
     parse_create_lead_payload,
     parse_lead_filters,
-    parse_optional_datetime,
     parse_update_lead_payload,
     request_id,
     serialize_lead_detail,
@@ -29,8 +23,8 @@ from app.api.admin_sales_settings import handle_sales_settings_request
 from app.api.admin_request import (
     parse_body,
     parse_uuid,
-    query_param,
     require_admin_identity,
+    route_has_prefix,
     split_route_parts,
 )
 from app.api.admin_validators import MAX_DESCRIPTION_LENGTH, validate_string_length
@@ -44,26 +38,21 @@ from app.db.repositories import (
     SalesLeadRepository,
 )
 from app.exceptions import NotFoundError, ValidationError
-from app.db.models.sales_lead_ai_suggestion_job import (
-    SalesLeadAiSuggestionJob,
-    SalesLeadAiSuggestionJobStatus,
-)
-from app.db.repositories.sales_lead_ai_suggestion_job import (
-    SalesLeadAiSuggestionJobRepository,
-)
-from app.services.lead_ai_suggestion_events import enqueue_lead_ai_suggestion_job
-from app.services.lead_ai_suggestion_serialize import serialize_lead_ai_suggestion_job
-from app.services.lead_close_suggestion import (
-    get_latest_suggestion,
-    serialize_suggestion,
-)
 from app.services.sales_assignment import (
     notify_lead_assignee,
     record_new_lead_assignment_event,
     resolve_create_assignee,
 )
-from app.utils import json_response
-from app.utils.responses import get_cors_headers, get_security_headers
+from app.utils import json_response, method_not_allowed, not_found
+from app.api.admin_leads_ai_suggestions import (
+    create_lead_ai_suggestion,
+    get_lead_ai_suggestion,
+    get_lead_ai_suggestion_job,
+)
+from app.api.admin_leads_analytics import (
+    export_leads,
+    get_analytics,
+)
 
 
 def handle_admin_leads_request(
@@ -73,8 +62,8 @@ def handle_admin_leads_request(
 ) -> dict[str, Any]:
     """Handle /v1/admin/leads routes."""
     parts = split_route_parts(path)
-    if len(parts) < 2 or parts[0] != "admin" or parts[1] != "leads":
-        return json_response(404, {"error": "Not found"}, event=event)
+    if not route_has_prefix(parts, "admin", "leads"):
+        return not_found(event)
 
     identity = require_admin_identity(event)
 
@@ -83,17 +72,17 @@ def handle_admin_leads_request(
             return _list_leads(event)
         if method == "POST":
             return _create_lead(event, actor_sub=identity.user_sub)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 3 and parts[2] == "analytics":
         if method != "GET":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
-        return _get_analytics(event)
+            return method_not_allowed(event)
+        return get_analytics(event)
 
     if len(parts) == 3 and parts[2] == "export":
         if method != "GET":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
-        return _export_leads(event)
+            return method_not_allowed(event)
+        return export_leads(event)
 
     if len(parts) == 3 and parts[2] == "settings":
         return handle_sales_settings_request(event, method, actor_sub=identity.user_sub)
@@ -104,29 +93,29 @@ def handle_admin_leads_request(
             return _get_lead(event, lead_id=lead_id)
         if method == "PATCH":
             return _update_lead(event, lead_id=lead_id, actor_sub=identity.user_sub)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 4 and parts[3] == "notes":
         if method != "POST":
-            return json_response(405, {"error": "Method not allowed"}, event=event)
+            return method_not_allowed(event)
         return _create_lead_note(event, lead_id=lead_id, actor_sub=identity.user_sub)
 
     if len(parts) == 4 and parts[3] == "ai-suggestion":
         if method == "GET":
-            return _get_lead_ai_suggestion(event, lead_id=lead_id)
+            return get_lead_ai_suggestion(event, lead_id=lead_id)
         if method == "POST":
-            return _create_lead_ai_suggestion(
+            return create_lead_ai_suggestion(
                 event, lead_id=lead_id, actor_sub=identity.user_sub
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 6 and parts[3] == "ai-suggestion" and parts[4] == "jobs":
         job_id = parse_uuid(parts[5])
         if method == "GET":
-            return _get_lead_ai_suggestion_job(event, lead_id=lead_id, job_id=job_id)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+            return get_lead_ai_suggestion_job(event, lead_id=lead_id, job_id=job_id)
+        return method_not_allowed(event)
 
-    return json_response(404, {"error": "Not found"}, event=event)
+    return not_found(event)
 
 
 def _list_leads(event: Mapping[str, Any]) -> dict[str, Any]:
@@ -398,256 +387,3 @@ def _create_lead_note(
         )
         session.commit()
         return json_response(201, {"note": serialize_note(note)}, event=event)
-
-
-def _get_lead_ai_suggestion(
-    event: Mapping[str, Any],
-    *,
-    lead_id: UUID,
-) -> dict[str, Any]:
-    with Session(get_engine()) as session:
-        lead_repo = SalesLeadRepository(session)
-        lead = lead_repo.get_by_id(lead_id)
-        if lead is None:
-            raise NotFoundError("SalesLead", str(lead_id))
-        suggestion = get_latest_suggestion(session, lead_id=lead.id)
-        if suggestion is None:
-            return json_response(200, {"suggestion": None}, event=event)
-        return json_response(
-            200,
-            {
-                "suggestion": serialize_suggestion(
-                    session,
-                    suggestion=suggestion,
-                    contact_id=lead.contact_id,
-                )
-            },
-            event=event,
-        )
-
-
-def _create_lead_ai_suggestion(
-    event: Mapping[str, Any],
-    *,
-    lead_id: UUID,
-    actor_sub: str,
-) -> dict[str, Any]:
-    with Session(get_engine()) as session:
-        set_audit_context(
-            session,
-            user_id=actor_sub,
-            request_id=request_id(event),
-        )
-        lead_repo = SalesLeadRepository(session)
-        lead = lead_repo.get_by_id(lead_id)
-        if lead is None:
-            raise NotFoundError("SalesLead", str(lead_id))
-        job = SalesLeadAiSuggestionJob(
-            lead_id=lead.id,
-            created_by=actor_sub,
-            status=SalesLeadAiSuggestionJobStatus.PENDING,
-        )
-        session.add(job)
-        session.flush()
-        job_id = job.id
-        session.commit()
-
-    try:
-        enqueue_lead_ai_suggestion_job(job_id)
-    except ValidationError:
-        with Session(get_engine()) as session:
-            stale = session.get(SalesLeadAiSuggestionJob, job_id)
-            if stale is not None:
-                session.delete(stale)
-                session.commit()
-        raise
-    except Exception:
-        with Session(get_engine()) as session:
-            job_repo = SalesLeadAiSuggestionJobRepository(session)
-            failed = job_repo.get_by_id(job_id)
-            if failed is not None:
-                job_repo.mark_failed(
-                    failed, "Could not queue AI suggestion; try again shortly."
-                )
-                session.commit()
-        raise ValidationError(
-            "AI suggestion could not be queued; try again shortly.",
-            field="configuration",
-        ) from None
-
-    with Session(get_engine()) as session:
-        job_repo = SalesLeadAiSuggestionJobRepository(session)
-        persisted_job = job_repo.get_by_id(job_id)
-        if persisted_job is None:
-            raise NotFoundError("SalesLeadAiSuggestionJob", str(job_id))
-        return json_response(
-            202,
-            {"job": serialize_lead_ai_suggestion_job(persisted_job)},
-            event=event,
-        )
-
-
-def _get_lead_ai_suggestion_job(
-    event: Mapping[str, Any],
-    *,
-    lead_id: UUID,
-    job_id: UUID,
-) -> dict[str, Any]:
-    with Session(get_engine()) as session:
-        lead_repo = SalesLeadRepository(session)
-        lead = lead_repo.get_by_id(lead_id)
-        if lead is None:
-            raise NotFoundError("SalesLead", str(lead_id))
-        job_repo = SalesLeadAiSuggestionJobRepository(session)
-        job = job_repo.get_for_lead(job_id, lead_id=lead.id)
-        if job is None:
-            raise NotFoundError("SalesLeadAiSuggestionJob", str(job_id))
-        suggestion_payload = None
-        if (
-            job.status == SalesLeadAiSuggestionJobStatus.SUCCEEDED
-            and job.suggestion_id is not None
-        ):
-            from app.db.models.sales_lead_ai_suggestion import SalesLeadAiSuggestion
-
-            suggestion = session.get(SalesLeadAiSuggestion, job.suggestion_id)
-            if suggestion is not None:
-                suggestion_payload = serialize_suggestion(
-                    session,
-                    suggestion=suggestion,
-                    contact_id=lead.contact_id,
-                )
-        return json_response(
-            200,
-            {
-                "job": serialize_lead_ai_suggestion_job(
-                    job, suggestion=suggestion_payload
-                )
-            },
-            event=event,
-        )
-
-
-def _get_analytics(event: Mapping[str, Any]) -> dict[str, Any]:
-    date_from = parse_optional_datetime(query_param(event, "date_from"), "date_from")
-    date_to = parse_optional_datetime(query_param(event, "date_to"), "date_to")
-
-    with Session(get_engine()) as session:
-        repository = SalesLeadRepository(session)
-        base = repository.get_analytics(date_from=date_from, date_to=date_to)
-        now = datetime.now(UTC)
-        week_start = datetime.combine(
-            (now - timedelta(days=now.weekday())).date(),
-            datetime.min.time(),
-            tzinfo=UTC,
-        )
-        month_start = datetime.combine(
-            date(now.year, now.month, 1),
-            datetime.min.time(),
-            tzinfo=UTC,
-        )
-        week_window_start = max_datetime(date_from, week_start)
-        week_window_end = min_datetime(date_to, now)
-        month_window_start = max_datetime(date_from, month_start)
-        month_window_end = min_datetime(date_to, now)
-        leads_this_week = count_leads_in_window(
-            repository,
-            date_from=week_window_start,
-            date_to=week_window_end,
-        )
-        leads_this_month = count_leads_in_window(
-            repository,
-            date_from=month_window_start,
-            date_to=month_window_end,
-        )
-        return json_response(
-            200,
-            {
-                **base,
-                "leads_this_week": leads_this_week,
-                "leads_this_month": leads_this_month,
-            },
-            event=event,
-        )
-
-
-def _export_leads(event: Mapping[str, Any]) -> dict[str, Any]:
-    filters = parse_lead_filters(event)
-    with Session(get_engine()) as session:
-        repository = SalesLeadRepository(session)
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(
-            [
-                "ID",
-                "First Name",
-                "Last Name",
-                "Email",
-                "Phone E.164",
-                "Source",
-                "Lead Type",
-                "Stage",
-                "Assigned To",
-                "Created",
-                "Last Activity",
-                "Days In Stage",
-                "Tags",
-            ]
-        )
-        cursor_created_at: datetime | None = None
-        cursor_id: UUID | None = None
-        while True:
-            rows = repository.list_leads(
-                limit=500,
-                stage=filters["stage"],
-                source=filters["source"],
-                lead_type=filters["lead_type"],
-                assigned_to=filters["assigned_to"],
-                unassigned=filters["unassigned"],
-                date_from=filters["date_from"],
-                date_to=filters["date_to"],
-                search=filters["search"],
-                sort="created_at",
-                sort_dir="desc",
-                cursor_created_at=cursor_created_at,
-                cursor_id=cursor_id,
-            )
-            if not rows:
-                break
-
-            for lead in rows:
-                summary = serialize_lead_summary(lead)
-                contact = summary["contact"]
-                writer.writerow(
-                    [
-                        summary["id"],
-                        contact["first_name"],
-                        contact["last_name"],
-                        contact["email"],
-                        contact["phone_e164"],
-                        contact["source"],
-                        summary["lead_type"],
-                        summary["funnel_stage"],
-                        summary["assigned_to"],
-                        summary["created_at"],
-                        summary["last_activity_at"],
-                        summary["days_in_stage"],
-                        ",".join(summary["tags"]),
-                    ]
-                )
-            if len(rows) < 500:
-                break
-            cursor_created_at = rows[-1].created_at
-            cursor_id = rows[-1].id
-
-        filename = f"leads-export-{datetime.now(UTC).date().isoformat()}.csv"
-        response_headers = {
-            "Content-Type": "text/csv; charset=utf-8",
-            "Content-Disposition": f'attachment; filename="{filename}"',
-            **get_security_headers(),
-            **get_cors_headers(event),
-        }
-        return {
-            "statusCode": 200,
-            "headers": response_headers,
-            "body": output.getvalue(),
-        }

@@ -863,6 +863,33 @@ detector.
 - Fail-open keeps webhook and form latency bounded when the model is slow or
   unavailable.
 
+## API route module conventions
+
+**Decision:** Every route module under `backend/src/app/api/**` follows the same
+dispatch shape and stays under 500 lines:
+
+- Sub-routers call `split_route_parts(path)` and reject unknown prefixes with
+  `route_has_prefix(parts, "admin", "<resource>")` from `app.api.admin_request`
+  (re-exported by `app.api.shared_request` for public/user routes).
+- Unmatched paths return `not_found(event)` and unsupported methods return
+  `method_not_allowed(event)` from `app.utils.responses`; handlers do not build
+  these `json_response` bodies inline.
+- Payload validation helpers are defined once in `app.api.validators` and
+  `app.utils.validators`; `app.api.admin_validators` re-exports them and adds
+  only admin-specific parsers (service instance slugs, partner keys, Instagram
+  handles).
+- When a route module grows past 500 lines, split by responsibility into a
+  sibling module named `<module>_<concern>.py` (for example
+  `admin_expenses_bulk_import.py`, `admin_billing_payments_serializers.py`,
+  `admin_services_type_details.py`, `public_polls_validation.py`). Moved names
+  become public (no leading underscore) so cross-module imports and test
+  monkeypatches target the module that owns them.
+
+**Why:** Sub-routers were repeating the same three-clause prefix check and
+literal 404/405 payloads, and validators had drifted into two copies. One
+helper per concern keeps route handling greppable and stops the duplicates from
+diverging again.
+
 ## Keeping Documentation Up to Date
 
 **Decision:** Architecture documentation in `docs/architecture/` describes

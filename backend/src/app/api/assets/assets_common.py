@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import os
 import re
 from collections.abc import Callable, Mapping, Sequence
-from datetime import UTC, datetime, timedelta
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from app.api.admin_request import (
     encode_cursor,
@@ -21,34 +19,21 @@ from app.api.admin_request import (
 from app.api.admin_validators import validate_string_length
 from app.db.models import (
     AccessGrantType,
-    Asset,
-    AssetAccessGrant,
     AssetType,
     AssetVisibility,
 )
 from app.exceptions import ValidationError
 from app.services.asset_expense_tagging import (
     CLIENT_DOCUMENT_TAG_NAME,
-    EXPENSE_ATTACHMENT_TAG_NAME,
 )
-from app.services.asset_invoice_tagging import CUSTOMER_INVOICE_TAG_NAME
-from app.services.aws_clients import get_s3_client
-from app.services.cloudfront_signing import generate_signed_download_url
-from app.utils import require_env
-from sqlalchemy import inspect
+from app.api.assets.assets_storage import (
+    MAX_FILE_NAME_LENGTH,
+)
 
 __all__ = [
     "normalize_path",
 ]
 
-_MAX_FILE_NAME_LENGTH = 255
-# Admin presigned PUT uploads (create + replace): reject completes larger than this (bytes).
-_MAX_ASSET_PRESIGNED_UPLOAD_BYTES = 52_428_800  # 50 MiB
-_ADMIN_ASSET_REPLACE_CONTENT_TYPE = "application/pdf"
-_UUID_OBJECT_NAME_PREFIX_RE = re.compile(
-    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-",
-    re.IGNORECASE,
-)
 _MAX_MIME_TYPE_LENGTH = 127
 _MAX_RESOURCE_KEY_LENGTH = 64
 _MAX_CONTENT_LANGUAGE_LENGTH = 35
@@ -60,13 +45,6 @@ _ADMIN_ASSET_CONTENT_LANGUAGE_CANONICAL: dict[str, str] = {
     "zh-hk": "zh-HK",
 }
 _MAX_PRINCIPAL_ID_LENGTH = 128
-_DEFAULT_PRESIGN_TTL_SECONDS = 900
-_MIN_PRESIGN_TTL_SECONDS = 60
-_MAX_PRESIGN_TTL_SECONDS = 3600
-_DEFAULT_DOWNLOAD_LINK_EXPIRY_DAYS = 9999
-_MIN_DOWNLOAD_LINK_EXPIRY_DAYS = 1
-_MAX_DOWNLOAD_LINK_EXPIRY_DAYS = 36500
-_FILENAME_SAFE_RE = re.compile(r"[^A-Za-z0-9._-]+")
 _RESOURCE_KEY_SANITIZE_RE = re.compile(r"[^a-z0-9]+")
 
 
@@ -173,7 +151,7 @@ def _parse_asset_core_fields_for_write(body: Mapping[str, Any]) -> dict[str, Any
     title = _required_text(body, "title", max_length=255)
     description = _optional_text(body, "description", max_length=5000)
     file_name = _required_text(
-        body, "file_name", "fileName", max_length=_MAX_FILE_NAME_LENGTH
+        body, "file_name", "fileName", max_length=MAX_FILE_NAME_LENGTH
     )
     resource_key = _optional_resource_key(body, "resource_key", "resourceKey")
     asset_type = parse_asset_type(
@@ -239,30 +217,6 @@ def parse_update_asset_payload(event: Mapping[str, Any]) -> dict[str, Any]:
     return result
 
 
-def _asset_has_tag_name(asset: Asset, tag_name: str) -> bool:
-    needle = tag_name.lower()
-    for link in asset.asset_tags:
-        tag = link.tag
-        if tag is not None and tag.name.lower() == needle:
-            return True
-    return False
-
-
-def asset_links_expense_attachment(asset: Asset) -> bool:
-    """Return True when the asset carries the expense_attachment tag (relationship loaded)."""
-    return _asset_has_tag_name(asset, EXPENSE_ATTACHMENT_TAG_NAME)
-
-
-def asset_links_customer_invoice(asset: Asset) -> bool:
-    """Return True when the asset carries the customer_invoice tag (relationship loaded)."""
-    return _asset_has_tag_name(asset, CUSTOMER_INVOICE_TAG_NAME)
-
-
-def asset_links_restricted_system_document(asset: Asset) -> bool:
-    """Return True when expense or customer-invoice system tags are present."""
-    return asset_links_expense_attachment(asset) or asset_links_customer_invoice(asset)
-
-
 def parse_partial_update_asset_payload(event: Mapping[str, Any]) -> dict[str, Any]:
     """Parse and validate partial update payload for PATCH requests."""
     body = parse_body(event)
@@ -277,7 +231,7 @@ def parse_partial_update_asset_payload(event: Mapping[str, Any]) -> dict[str, An
             body,
             "file_name",
             "fileName",
-            max_length=_MAX_FILE_NAME_LENGTH,
+            max_length=MAX_FILE_NAME_LENGTH,
         )
     if _has_any_field(body, "resource_key", "resourceKey"):
         payload["resource_key"] = _optional_resource_key(
@@ -400,140 +354,13 @@ def paginate_response(
     )
 
 
-def build_s3_key(asset_id: UUID, file_name: str) -> str:
-    """Build canonical S3 object key for a new asset."""
-    sanitized = sanitize_file_name(file_name)
-    return f"assets/{asset_id}/{uuid4()}-{sanitized}"
-
-
-def file_name_from_pending_asset_content_key(s3_key: str) -> str:
-    """Return the filename segment after the UUID prefix in a key from ``build_s3_key``."""
-    segment = s3_key.rsplit("/", maxsplit=1)[-1]
-    match = _UUID_OBJECT_NAME_PREFIX_RE.match(segment)
-    if match is None:
-        raise ValidationError(
-            "pending_s3_key has an unexpected object name format",
-            field="pending_s3_key",
-        )
-    suffix = segment[match.end() :]
-    if not suffix:
-        raise ValidationError(
-            "pending_s3_key has an unexpected object name format",
-            field="pending_s3_key",
-        )
-    return suffix
-
-
-def max_asset_presigned_upload_bytes() -> int:
-    """Maximum allowed S3 object size for admin asset uploads (create and replace complete)."""
-    return _MAX_ASSET_PRESIGNED_UPLOAD_BYTES
-
-
-def admin_asset_replace_content_type() -> str:
-    """Content-Type bound for admin PDF replace presigns and enforced on complete."""
-    return _ADMIN_ASSET_REPLACE_CONTENT_TYPE
-
-
-def validate_pending_asset_content_s3_key(*, asset_id: UUID, pending_key: str) -> None:
-    """Ensure pending upload key is under this asset's prefix (defense in depth)."""
-    if ".." in pending_key or pending_key.strip() != pending_key:
-        raise ValidationError("pending_s3_key is invalid", field="pending_s3_key")
-    expected_prefix = f"assets/{asset_id}/"
-    if not pending_key.startswith(expected_prefix):
-        raise ValidationError(
-            "pending_s3_key does not match this asset",
-            field="pending_s3_key",
-        )
-
-
-def sanitize_file_name(file_name: str) -> str:
-    """Sanitize filename to safe object-key segment."""
-    normalized = file_name.strip()
-    if not normalized:
-        return "asset"
-    cleaned = _FILENAME_SAFE_RE.sub("-", normalized)
-    cleaned = cleaned.strip("-")
-    return cleaned[:_MAX_FILE_NAME_LENGTH] if cleaned else "asset"
-
-
-def generate_upload_url(*, s3_key: str, content_type: str | None) -> dict[str, Any]:
-    """Generate a presigned PUT URL for upload."""
-    bucket_name = _require_assets_bucket_name()
-    ttl_seconds = _presign_ttl_seconds()
-    s3_client = get_s3_client()
-
-    params: dict[str, Any] = {"Bucket": bucket_name, "Key": s3_key}
-    headers: dict[str, str] = {}
-    if content_type:
-        params["ContentType"] = content_type
-        headers["Content-Type"] = content_type
-
-    url = s3_client.generate_presigned_url(
-        "put_object",
-        Params=params,
-        ExpiresIn=ttl_seconds,
-        HttpMethod="PUT",
-    )
-    expires_at = datetime.now(UTC) + timedelta(seconds=ttl_seconds)
-    return {
-        "upload_url": url,
-        "upload_method": "PUT",
-        "upload_headers": headers,
-        "expires_at": expires_at.isoformat(),
-    }
-
-
-def generate_download_url(
-    *,
-    s3_key: str,
-    cache_bust_key: str | None = None,
-    expires_at: datetime | None = None,
-) -> dict[str, Any]:
-    """Generate a CloudFront-signed GET URL for download."""
-    if expires_at is None:
-        expiry_days = _download_link_expiry_days()
-        expires_at = datetime.now(UTC) + timedelta(days=expiry_days)
-    url = generate_signed_download_url(
-        s3_key=s3_key,
-        expires_at=expires_at,
-        cache_bust_key=cache_bust_key,
-    )
-    return {
-        "download_url": url,
-        "expires_at": expires_at.isoformat(),
-    }
-
-
-def signed_link_no_cache_headers() -> dict[str, str]:
-    """Return headers that force revalidation for signed-link responses."""
-    return {
-        "Cache-Control": "no-store, no-cache, must-revalidate, private, max-age=0",
-        "Pragma": "no-cache",
-        "Expires": "0",
-    }
-
-
-def delete_s3_object(*, s3_key: str) -> None:
-    """Delete an S3 object by key."""
-    bucket_name = _require_assets_bucket_name()
-    s3_client = get_s3_client()
-    s3_client.delete_object(Bucket=bucket_name, Key=s3_key)
-
-
-def head_s3_object(*, s3_key: str) -> dict[str, Any]:
-    """Return S3 head_object response metadata for the given key."""
-    bucket_name = _require_assets_bucket_name()
-    s3_client = get_s3_client()
-    return s3_client.head_object(Bucket=bucket_name, Key=s3_key)
-
-
 def parse_init_asset_content_replace_payload(
     event: Mapping[str, Any],
 ) -> dict[str, Any]:
     """Parse body for POST .../assets/{id}/content/init (replace file, step 1)."""
     body = parse_body(event)
     file_name = _required_text(
-        body, "file_name", "fileName", max_length=_MAX_FILE_NAME_LENGTH
+        body, "file_name", "fileName", max_length=MAX_FILE_NAME_LENGTH
     )
     content_type = _optional_text(
         body, "content_type", "contentType", max_length=_MAX_MIME_TYPE_LENGTH
@@ -555,7 +382,7 @@ def parse_complete_asset_content_replace_payload(
     if not pending_key:
         raise ValidationError("pending_s3_key is required", field="pending_s3_key")
     file_name = _required_text(
-        body, "file_name", "fileName", max_length=_MAX_FILE_NAME_LENGTH
+        body, "file_name", "fileName", max_length=MAX_FILE_NAME_LENGTH
     )
     content_type = _optional_text(
         body, "content_type", "contentType", max_length=_MAX_MIME_TYPE_LENGTH
@@ -565,103 +392,6 @@ def parse_complete_asset_content_replace_payload(
         "file_name": file_name,
         "content_type": content_type,
     }
-
-
-def _serialize_asset_tags_if_loaded(asset: Asset) -> list[dict[str, Any]]:
-    """Include tags only when the relationship is preloaded (avoids N+1 queries)."""
-    state = inspect(asset)
-    if state.transient:
-        return []
-    if "asset_tags" in state.unloaded:
-        return []
-    rows: list[dict[str, Any]] = []
-    for link in asset.asset_tags:
-        tag = link.tag
-        if tag is None:
-            continue
-        rows.append(
-            {
-                "id": str(tag.id),
-                "name": tag.name,
-                "color": tag.color,
-            }
-        )
-    return sorted(rows, key=lambda item: item["name"].lower())
-
-
-def serialize_asset(asset: Asset) -> dict[str, Any]:
-    """Serialize Asset model to API payload."""
-    return {
-        "id": str(asset.id),
-        "title": asset.title,
-        "description": asset.description,
-        "asset_type": asset.asset_type.value,
-        "s3_key": asset.s3_key,
-        "file_name": asset.file_name,
-        "resource_key": asset.resource_key,
-        "content_type": asset.content_type,
-        "content_language": asset.content_language,
-        "visibility": asset.visibility.value,
-        "created_by": asset.created_by,
-        "created_at": asset.created_at.isoformat() if asset.created_at else None,
-        "updated_at": asset.updated_at.isoformat() if asset.updated_at else None,
-        "tags": _serialize_asset_tags_if_loaded(asset),
-    }
-
-
-def serialize_public_free_asset(asset: Asset) -> dict[str, Any]:
-    """Serialize a public free-website asset for GET /v1/assets/free."""
-    return {
-        "title": asset.title,
-        "description": asset.description,
-        "asset_type": asset.asset_type.value,
-        "resource_key": asset.resource_key,
-        "content_language": asset.content_language,
-        "updated_at": asset.updated_at.isoformat() if asset.updated_at else None,
-    }
-
-
-def serialize_grant(grant: AssetAccessGrant) -> dict[str, Any]:
-    """Serialize AssetAccessGrant model to API payload."""
-    return {
-        "id": str(grant.id),
-        "asset_id": str(grant.asset_id),
-        "grant_type": grant.grant_type.value,
-        "grantee_id": grant.grantee_id,
-        "granted_by": grant.granted_by,
-        "created_at": grant.created_at.isoformat() if grant.created_at else None,
-    }
-
-
-def _require_assets_bucket_name() -> str:
-    return require_env("ASSETS_BUCKET_NAME")
-
-
-def _presign_ttl_seconds() -> int:
-    raw = os.getenv(
-        "ASSET_PRESIGN_TTL_SECONDS", f"{_DEFAULT_PRESIGN_TTL_SECONDS}"
-    ).strip()
-    try:
-        parsed = int(raw)
-    except ValueError as exc:
-        raise RuntimeError("ASSET_PRESIGN_TTL_SECONDS must be an integer") from exc
-    return max(_MIN_PRESIGN_TTL_SECONDS, min(_MAX_PRESIGN_TTL_SECONDS, parsed))
-
-
-def _download_link_expiry_days() -> int:
-    raw = os.getenv(
-        "ASSET_DOWNLOAD_LINK_EXPIRY_DAYS", f"{_DEFAULT_DOWNLOAD_LINK_EXPIRY_DAYS}"
-    ).strip()
-    try:
-        parsed_days = int(raw)
-    except ValueError as exc:
-        raise RuntimeError(
-            "ASSET_DOWNLOAD_LINK_EXPIRY_DAYS must be an integer"
-        ) from exc
-    return max(
-        _MIN_DOWNLOAD_LINK_EXPIRY_DAYS,
-        min(_MAX_DOWNLOAD_LINK_EXPIRY_DAYS, parsed_days),
-    )
 
 
 def _required_text(body: Mapping[str, Any], *keys: str, max_length: int) -> str:

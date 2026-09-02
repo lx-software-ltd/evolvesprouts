@@ -240,25 +240,21 @@ def _serialize_body(body: Any) -> Any:
     return body
 
 
-def error_response(
-    status_code: int,
-    message: str,
-    detail: str | None = None,
+def not_found(
     event: Mapping[str, Any] | None = None,
+    *,
+    headers: dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    """Create an error response.
+    """Standard 404 body for unmatched routes or resources."""
+    return json_response(404, {"error": "Not found"}, headers=headers, event=event)
 
-    Args:
-        status_code: HTTP status code.
-        message: Error message.
-        detail: Optional additional detail.
-        event: Optional Lambda event for CORS origin detection.
 
-    Returns:
-        API Gateway response dictionary.
-    """
-    body: dict[str, Any] = {"error": message}
-    if detail:
-        body["detail"] = detail
-
-    return json_response(status_code, body, event=event)
+def method_not_allowed(
+    event: Mapping[str, Any] | None = None,
+    *,
+    headers: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """Standard 405 body for a known route with an unsupported HTTP method."""
+    return json_response(
+        405, {"error": "Method not allowed"}, headers=headers, event=event
+    )

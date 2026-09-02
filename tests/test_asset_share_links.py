@@ -6,7 +6,7 @@ import pytest
 
 from app.auth.authorizer_utils import extract_bearer_token
 from app.api.assets import share_assets
-from app.api.assets.assets_common import signed_link_no_cache_headers
+from app.api.assets.assets_storage import signed_link_no_cache_headers
 from app.api.assets.share_links import (
     extract_request_source_domain,
     build_configured_email_download_url,

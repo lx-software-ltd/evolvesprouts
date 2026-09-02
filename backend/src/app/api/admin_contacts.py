@@ -22,9 +22,9 @@ from app.api.admin_contacts_mailchimp_sync import (
 )
 from app.api.admin_contacts_mutations import (
     create_contact,
-    delete_contact,
     update_contact,
 )
+from app.api.admin_contacts_delete import delete_contact
 from app.api.admin_contacts_related import related_flags_for_contacts
 from app.api.admin_entities_helpers import (
     list_all_tags_for_picker,
@@ -43,6 +43,7 @@ from app.api.admin_request import (
     parse_uuid,
     query_param,
     require_admin_identity,
+    route_has_prefix,
     split_route_parts,
 )
 from app.api.admin_services_payload_utils import parse_optional_uuid
@@ -53,7 +54,7 @@ from app.services.completion_certificate_common import (
     contact_ids_with_issued_certificates,
 )
 from app.exceptions import NotFoundError, ValidationError
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -72,42 +73,42 @@ def handle_admin_contacts_request(
         extra={"method": method, "path": path},
     )
     parts = split_route_parts(path)
-    if len(parts) < 2 or parts[0] != "admin" or parts[1] != "contacts":
-        return json_response(404, {"error": "Not found"}, event=event)
+    if not route_has_prefix(parts, "admin", "contacts"):
+        return not_found(event)
 
     identity = require_admin_identity(event)
 
     if len(parts) == 3 and parts[2] == "tags":
         if method == "GET":
             return _list_contact_tags(event)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 3 and parts[2] == "search":
         if method == "GET":
             return _search_contacts_for_picker(event)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 2:
         if method == "GET":
             return _list_contacts(event)
         if method == "POST":
             return _create_contact(event, actor_sub=identity.user_sub)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 3 and parts[2] == "mailchimp-sync-run":
         if method == "POST":
             return run_mailchimp_sync_batch(event, actor_sub=identity.user_sub)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 3 and parts[2] == "mailchimp-sync-orphans":
         if method == "POST":
             return run_mailchimp_orphan_cleanup(event, actor_sub=identity.user_sub)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 3 and parts[2] == "mailchimp-sync-status":
         if method == "GET":
             return get_mailchimp_sync_summary(event)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     contact_id = parse_uuid(parts[2])
     if len(parts) == 3:
@@ -121,7 +122,7 @@ def handle_admin_contacts_request(
             return delete_contact(
                 event, contact_id=contact_id, actor_sub=identity.user_sub
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 4 and parts[3] == "notes":
         if method == "GET":
@@ -132,12 +133,12 @@ def handle_admin_contacts_request(
             return create_contact_note(
                 event, contact_id=contact_id, actor_sub=identity.user_sub
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 4 and parts[3] == "services":
         if method == "GET":
             return list_contact_services(event, contact_id=contact_id)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 5 and parts[3] == "notes":
         note_id = parse_uuid(parts[4])
@@ -155,9 +156,9 @@ def handle_admin_contacts_request(
                 note_id=note_id,
                 actor_sub=identity.user_sub,
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
-    return json_response(404, {"error": "Not found"}, event=event)
+    return not_found(event)
 
 
 def _search_contacts_for_picker(event: Mapping[str, Any]) -> dict[str, Any]:

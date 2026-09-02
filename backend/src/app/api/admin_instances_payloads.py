@@ -15,7 +15,6 @@ from app.api.admin_service_instance_partners import parse_partner_organization_i
 from app.api.admin_services_payload_utils import (
     has_any_field,
     has_field,
-    parse_instance_type_details,
     parse_optional_bool,
     parse_optional_enum,
     parse_optional_external_url,
@@ -26,6 +25,9 @@ from app.api.admin_services_payload_utils import (
     parse_required_enum,
     parse_session_slots,
     parse_uuid_list,
+)
+from app.api.admin_services_type_details import (
+    parse_instance_type_details,
     reject_consultation_instance_pricing_payload,
 )
 from app.db.models import InstanceStatus, Service, ServiceDeliveryMode, ServiceType

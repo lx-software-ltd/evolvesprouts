@@ -4,7 +4,7 @@ import base64
 from typing import Any
 from unittest.mock import MagicMock
 
-from app.api.public_form_hooks import send_booking_confirmation_email
+from app.api.public_booking_confirmation_email import send_booking_confirmation_email
 from app.utils.fps_qr_png import decode_fps_qr_png_data_url
 
 # 1×1 PNG (valid magic).
@@ -38,11 +38,11 @@ def test_send_booking_confirmation_uses_mime_with_valid_fps_qr(
     mime = MagicMock()
     monkeypatch.setenv("CONFIRMATION_EMAIL_FROM_ADDRESS", "hello@example.com")
     monkeypatch.setattr(
-        "app.api.public_form_hooks.send_templated_email",
+        "app.api.public_booking_confirmation_email.send_templated_email",
         templated,
     )
     monkeypatch.setattr(
-        "app.api.public_form_hooks.send_mime_email_with_optional_attachments",
+        "app.api.public_booking_confirmation_email.send_mime_email_with_optional_attachments",
         mime,
     )
 
@@ -80,11 +80,11 @@ def test_send_booking_confirmation_mime_ics_without_inline_fps_when_not_pending(
     mime = MagicMock()
     monkeypatch.setenv("CONFIRMATION_EMAIL_FROM_ADDRESS", "hello@example.com")
     monkeypatch.setattr(
-        "app.api.public_form_hooks.send_templated_email",
+        "app.api.public_booking_confirmation_email.send_templated_email",
         templated,
     )
     monkeypatch.setattr(
-        "app.api.public_form_hooks.send_mime_email_with_optional_attachments",
+        "app.api.public_booking_confirmation_email.send_mime_email_with_optional_attachments",
         mime,
     )
 
@@ -120,11 +120,11 @@ def test_send_booking_confirmation_consultation_skips_ics_attachment(
     mime = MagicMock()
     monkeypatch.setenv("CONFIRMATION_EMAIL_FROM_ADDRESS", "hello@example.com")
     monkeypatch.setattr(
-        "app.api.public_form_hooks.send_templated_email",
+        "app.api.public_booking_confirmation_email.send_templated_email",
         templated,
     )
     monkeypatch.setattr(
-        "app.api.public_form_hooks.send_mime_email_with_optional_attachments",
+        "app.api.public_booking_confirmation_email.send_mime_email_with_optional_attachments",
         mime,
     )
 
@@ -158,11 +158,11 @@ def test_send_booking_confirmation_falls_back_when_fps_qr_invalid(
     mime = MagicMock()
     monkeypatch.setenv("CONFIRMATION_EMAIL_FROM_ADDRESS", "hello@example.com")
     monkeypatch.setattr(
-        "app.api.public_form_hooks.send_templated_email",
+        "app.api.public_booking_confirmation_email.send_templated_email",
         templated,
     )
     monkeypatch.setattr(
-        "app.api.public_form_hooks.send_mime_email_with_optional_attachments",
+        "app.api.public_booking_confirmation_email.send_mime_email_with_optional_attachments",
         mime,
     )
 

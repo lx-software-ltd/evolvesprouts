@@ -34,6 +34,7 @@ from app.api.admin_request import (
     parse_uuid,
     query_param,
     require_admin_identity,
+    route_has_prefix,
     split_route_parts,
 )
 from app.api.admin_services_payload_utils import parse_optional_uuid, parse_uuid_list
@@ -44,7 +45,7 @@ from app.db.models import Contact, Family, FamilyMember
 from app.db.models.family import family_membership_role_from_contact_type
 from app.db.repositories import FamilyRepository
 from app.exceptions import DatabaseError, NotFoundError, ValidationError
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger
 
 _DEFAULT_LIMIT = 25
@@ -62,8 +63,8 @@ def handle_admin_families_request(
         extra={"method": method, "path": path},
     )
     parts = split_route_parts(path)
-    if len(parts) < 2 or parts[0] != "admin" or parts[1] != "families":
-        return json_response(404, {"error": "Not found"}, event=event)
+    if not route_has_prefix(parts, "admin", "families"):
+        return not_found(event)
 
     identity = require_admin_identity(event)
 
@@ -72,7 +73,7 @@ def handle_admin_families_request(
             return _list_families(event)
         if method == "POST":
             return _create_family(event, actor_sub=identity.user_sub)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     family_id = parse_uuid(parts[2])
     if len(parts) == 3:
@@ -86,19 +87,19 @@ def handle_admin_families_request(
             return delete_admin_entity_family(
                 event, family_id=family_id, actor_sub=identity.user_sub
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 4 and parts[3] == "services":
         if method == "GET":
             return list_family_services(event, family_id=family_id)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 4 and parts[3] == "members":
         if method == "POST":
             return _add_family_member(
                 event, family_id=family_id, actor_sub=identity.user_sub
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 5 and parts[3] == "members":
         member_id = parse_uuid(parts[4])
@@ -116,9 +117,9 @@ def handle_admin_families_request(
                 member_id=member_id,
                 actor_sub=identity.user_sub,
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
-    return json_response(404, {"error": "Not found"}, event=event)
+    return not_found(event)
 
 
 def _list_families(event: Mapping[str, Any]) -> dict[str, Any]:

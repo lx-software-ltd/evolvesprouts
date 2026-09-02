@@ -12,7 +12,11 @@ from app.api.admin_party_related import (
     enrollment_instance_ids_for_family,
     enrollment_instance_ids_for_organization,
 )
-from app.api.admin_request import require_admin_identity, split_route_parts
+from app.api.admin_request import (
+    require_admin_identity,
+    route_has_prefix,
+    split_route_parts,
+)
 from app.api.admin_service_instances import _capacity_commit_and_counts
 from app.api.admin_services_common import (
     encode_instance_cursor,
@@ -23,7 +27,7 @@ from app.api.instance_capacity_status import bulk_reconcile_instance_capacity_st
 from app.db.engine import get_engine
 from app.db.repositories import ServiceInstanceRepository, ServiceRepository
 from app.exceptions import NotFoundError
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -40,15 +44,15 @@ def handle_admin_all_service_instances_request(
         extra={"method": method, "path": path},
     )
     parts = split_route_parts(path)
-    if len(parts) != 3 or parts[0] != "admin" or parts[1] != "services":
-        return json_response(404, {"error": "Not found"}, event=event)
+    if len(parts) != 3 or not route_has_prefix(parts, "admin", "services"):
+        return not_found(event)
     if parts[2] != "instances":
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
 
     require_admin_identity(event)
 
     if method != "GET":
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     filters = parse_global_instance_list_filters(event)
     limit = filters["limit"]

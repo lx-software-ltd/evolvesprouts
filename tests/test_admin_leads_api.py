@@ -84,7 +84,7 @@ def test_handle_admin_leads_dispatches_analytics_before_uuid_parsing(
         "require_admin_identity",
         lambda _: _build_admin_identity(admin_identity),
     )
-    monkeypatch.setattr(admin_leads, "_get_analytics", lambda _: marker)
+    monkeypatch.setattr(admin_leads, "get_analytics", lambda _: marker)
 
     response = admin_leads.handle_admin_leads_request(
         api_gateway_event(method="GET", path="/v1/admin/leads/analytics"),
@@ -164,7 +164,7 @@ def test_handle_admin_leads_dispatches_ai_suggestion_get(
         lambda _: _build_admin_identity(admin_identity),
     )
     monkeypatch.setattr(
-        admin_leads, "_get_lead_ai_suggestion", lambda *_args, **_kwargs: marker
+        admin_leads, "get_lead_ai_suggestion", lambda *_args, **_kwargs: marker
     )
     lead_id = str(uuid4())
 
@@ -198,7 +198,7 @@ def test_handle_admin_leads_dispatches_ai_suggestion_post(
         captured["event"] = event
         return marker
 
-    monkeypatch.setattr(admin_leads, "_create_lead_ai_suggestion", _fake_create)
+    monkeypatch.setattr(admin_leads, "create_lead_ai_suggestion", _fake_create)
     lead_id = str(uuid4())
 
     response = admin_leads.handle_admin_leads_request(
@@ -226,7 +226,7 @@ def test_handle_admin_leads_dispatches_ai_suggestion_job_get(
         lambda _: _build_admin_identity(admin_identity),
     )
     monkeypatch.setattr(
-        admin_leads, "_get_lead_ai_suggestion_job", lambda *_args, **_kwargs: marker
+        admin_leads, "get_lead_ai_suggestion_job", lambda *_args, **_kwargs: marker
     )
     lead_id = str(uuid4())
     job_id = str(uuid4())

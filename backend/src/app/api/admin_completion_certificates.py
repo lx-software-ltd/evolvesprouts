@@ -19,10 +19,11 @@ from app.api.admin_request import (
     parse_uuid,
     query_param,
     require_admin_identity,
+    route_has_prefix,
     split_route_parts,
 )
 from app.api.admin_services_payload_utils import parse_optional_uuid
-from app.api.assets.assets_common import (
+from app.api.assets.assets_storage import (
     delete_s3_object,
     generate_download_url,
     signed_link_no_cache_headers,
@@ -39,7 +40,7 @@ from app.services.completion_certificate_common import (
     resolve_certificate_draft,
     upload_preview_pdf,
 )
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -66,22 +67,22 @@ def handle_admin_completion_certificates_request(
         extra={"method": method, "path": path},
     )
     parts = split_route_parts(path)
-    if len(parts) < 2 or parts[0] != "admin" or parts[1] != "completion-certificates":
-        return json_response(404, {"error": "Not found"}, event=event)
+    if not route_has_prefix(parts, "admin", "completion-certificates"):
+        return not_found(event)
 
     identity = require_admin_identity(event)
 
     if len(parts) == 3 and parts[2] == "preview":
         if method == "POST":
             return _preview_certificate(event)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 2:
         if method == "GET":
             return _list_certificates(event)
         if method == "POST":
             return _issue_certificate(event, actor_sub=identity.user_sub)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     certificate_id = parse_uuid(parts[2])
     if len(parts) == 3:
@@ -91,7 +92,7 @@ def handle_admin_completion_certificates_request(
             return _delete_certificate(
                 event, certificate_id=certificate_id, actor_sub=identity.user_sub
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) == 4 and parts[3] == "pdf" and method == "GET":
         return _get_certificate_pdf(event, certificate_id=certificate_id)
@@ -101,7 +102,7 @@ def handle_admin_completion_certificates_request(
             event, certificate_id=certificate_id, actor_sub=identity.user_sub
         )
 
-    return json_response(404, {"error": "Not found"}, event=event)
+    return not_found(event)
 
 
 def _parse_issue_payload(body: Mapping[str, Any]) -> dict[str, Any]:

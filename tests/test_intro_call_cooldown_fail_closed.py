@@ -34,11 +34,6 @@ def test_intro_call_cooldown_lookup_failure_propagates(
     catalog_service = MagicMock()
     catalog_service.service_type = ServiceType.INTRO_CALL
 
-    monkeypatch.setattr(
-        "app.api.public_reservations.is_intro_call_slot_available",
-        lambda *_args, **_kwargs: True,
-    )
-
     def _boom(*_args: Any, **_kwargs: Any) -> None:
         raise RuntimeError("database unavailable")
 

@@ -10,18 +10,22 @@ from botocore.exceptions import ClientError
 from sqlalchemy.orm import Session
 
 from app.api.assets.assets_common import (
-    admin_asset_replace_content_type,
+    parse_complete_asset_content_replace_payload,
+    parse_init_asset_content_replace_payload,
+)
+from app.api.assets.assets_serializers import (
     asset_links_restricted_system_document,
+    serialize_asset,
+)
+from app.api.assets.assets_storage import (
+    admin_asset_replace_content_type,
     build_s3_key,
     delete_s3_object,
     file_name_from_pending_asset_content_key,
     generate_upload_url,
     head_s3_object,
     max_asset_presigned_upload_bytes,
-    parse_complete_asset_content_replace_payload,
-    parse_init_asset_content_replace_payload,
     sanitize_file_name,
-    serialize_asset,
     validate_pending_asset_content_s3_key,
 )
 from app.db.audit import set_audit_context

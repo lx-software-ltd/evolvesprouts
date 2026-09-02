@@ -112,8 +112,9 @@ repo root
 - Asset API module layout is mandatory:
   - Place asset route handlers and helpers under
     `backend/src/app/api/assets/**`.
-  - Use `*_assets.py` for route modules and `assets_common.py` for shared
-    helpers.
+  - Use `*_assets.py` for route modules and `assets_*.py` for shared
+    helpers (`assets_common.py` request parsing, `assets_storage.py` S3 and
+    CloudFront link helpers, `assets_serializers.py` ORM serializers).
   - Keep `backend/src/app/api/admin.py` focused on request dispatch orchestration.
 ### CDK Lambda physical names (`backend/infrastructure/**`)
 

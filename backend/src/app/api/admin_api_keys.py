@@ -17,6 +17,7 @@ from app.api.admin_request import (
     query_param,
     request_id,
     require_admin_identity,
+    route_has_prefix,
     split_route_parts,
 )
 from app.api.admin_validators import MAX_NAME_LENGTH, validate_string_length
@@ -26,7 +27,7 @@ from app.db.models.api_key import ApiKey
 from app.db.repositories.api_key import ApiKeyRepository
 from app.exceptions import NotFoundError, ValidationError
 from app.services.api_keys import ALLOWED_SCOPES, generate_api_key
-from app.utils import json_response, parse_datetime
+from app.utils import json_response, method_not_allowed, not_found, parse_datetime
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -39,14 +40,14 @@ def handle_admin_api_keys_request(
 ) -> dict[str, Any]:
     """Handle /v1/admin/api-keys routes (list, create, get, revoke)."""
     parts = split_route_parts(path)
-    if len(parts) < 2 or parts[0] != "admin" or parts[1] != "api-keys":
-        return json_response(404, {"error": "Not found"}, event=event)
+    if not route_has_prefix(parts, "admin", "api-keys"):
+        return not_found(event)
 
     identity = require_admin_identity(event)
 
     resource_id = parts[2] if len(parts) == 3 else None
     if len(parts) > 3:
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
 
     if method == "GET" and resource_id is None:
         return _list_api_keys(event)
@@ -56,7 +57,7 @@ def handle_admin_api_keys_request(
         return _create_api_key(event, actor_sub=identity.user_sub)
     if method == "DELETE" and resource_id is not None:
         return _revoke_api_key(event, resource_id, actor_sub=identity.user_sub)
-    return json_response(405, {"error": "Method not allowed"}, event=event)
+    return method_not_allowed(event)
 
 
 def _list_api_keys(event: Mapping[str, Any]) -> dict[str, Any]:

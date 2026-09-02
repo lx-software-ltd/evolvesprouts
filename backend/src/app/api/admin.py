@@ -58,7 +58,7 @@ from app.api.public_polls import handle_public_polls_request
 from app.api.public_reservation_payments import handle_public_reservation_payment_intent
 from app.api.public_reservations import _handle_public_reservation
 from app.exceptions import AppError, ValidationError
-from app.utils import json_response
+from app.utils import json_response, not_found
 from app.utils.logging import (
     clear_request_context,
     configure_logging,
@@ -364,7 +364,7 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
         if handler is not None:
             return _safe_handler(handler, event)
 
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
     finally:
         clear_request_context()
 

@@ -10,7 +10,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
 
-from app.api.assets.assets_common import build_s3_key
+from app.api.assets.assets_storage import build_s3_key
 from app.db.audit import set_audit_context
 from app.db.engine import get_engine
 from app.db.models import (

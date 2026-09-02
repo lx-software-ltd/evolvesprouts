@@ -15,7 +15,7 @@ from app.db.audit import set_audit_context
 from app.db.engine import get_engine
 from app.db.repositories.sales_settings import SalesSettingsRepository
 from app.exceptions import ValidationError
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed
 
 _ASSIGNED_TO_MAX_LENGTH = 128
 
@@ -31,7 +31,7 @@ def handle_sales_settings_request(
         return _get_sales_settings(event, actor_sub=actor_sub)
     if method == "PATCH":
         return _patch_sales_settings(event, actor_sub=actor_sub)
-    return json_response(405, {"error": "Method not allowed"}, event=event)
+    return method_not_allowed(event)
 
 
 def serialize_sales_settings(row: Any) -> dict[str, Any]:

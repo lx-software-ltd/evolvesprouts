@@ -13,6 +13,7 @@ from app.api.admin_request import (
     parse_body,
     parse_uuid,
     require_admin_identity,
+    route_has_prefix,
     split_route_parts,
 )
 from app.api.discount_enrollment_scope import (
@@ -44,7 +45,7 @@ from app.exceptions import NotFoundError, ValidationError
 from app.services.billing_enrollment_confirmation import (
     promote_prospect_party_for_enrollment,
 )
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -70,10 +71,10 @@ def handle_admin_enrollments_request(
         extra={"method": method, "path": path, "instance_id": str(instance_id)},
     )
     parts = split_route_parts(path)
-    if len(parts) < 6 or parts[0] != "admin" or parts[1] != "services":
-        return json_response(404, {"error": "Not found"}, event=event)
+    if len(parts) < 6 or not route_has_prefix(parts, "admin", "services"):
+        return not_found(event)
     if parts[5] != "enrollments":
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
 
     identity = require_admin_identity(event)
 
@@ -84,7 +85,7 @@ def handle_admin_enrollments_request(
             return _create_enrollment(
                 event, instance_id=instance_id, actor_sub=identity.user_sub
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     enrollment_id = parse_uuid(parts[6])
     if len(parts) == 7:
@@ -102,9 +103,9 @@ def handle_admin_enrollments_request(
                 enrollment_id=enrollment_id,
                 actor_sub=identity.user_sub,
             )
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
-    return json_response(404, {"error": "Not found"}, event=event)
+    return not_found(event)
 
 
 def _list_enrollments(event: Mapping[str, Any], *, instance_id: UUID) -> dict[str, Any]:

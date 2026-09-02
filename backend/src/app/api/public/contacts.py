@@ -15,9 +15,9 @@ from sqlalchemy.orm import Session
 
 from app.api.admin_contacts_mutations import (
     create_contact,
-    delete_contact,
     update_contact,
 )
+from app.api.admin_contacts_delete import delete_contact
 from app.api.admin_contacts_related import related_flags_for_contacts
 from app.api.admin_entities_helpers import (
     parse_active_filter,
@@ -27,7 +27,7 @@ from app.api.admin_entities_helpers import (
 from app.api.admin_entities_serializers import serialize_contact_summary
 from app.api.admin_request import encode_cursor, parse_cursor, parse_uuid, query_param
 from app.api.admin_validators import validate_string_length
-from app.api.shared_request import split_route_parts
+from app.api.shared_request import route_has_prefix, split_route_parts
 from app.api.public.token_auth import require_api_token
 from app.db.engine import get_engine
 from app.db.repositories import ContactRepository
@@ -35,7 +35,7 @@ from app.exceptions import NotFoundError
 from app.services.completion_certificate_common import (
     contact_ids_with_issued_certificates,
 )
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -50,8 +50,8 @@ def handle_public_contacts_request(
 ) -> dict[str, Any]:
     """Handle /v1/public/contacts routes."""
     parts = split_route_parts(path)
-    if len(parts) < 2 or parts[0] != "public" or parts[1] != "contacts":
-        return json_response(404, {"error": "Not found"}, event=event)
+    if not route_has_prefix(parts, "public", "contacts"):
+        return not_found(event)
 
     token = require_api_token(event, method)
     actor_sub = f"api-key:{token.api_key_id}"
@@ -61,10 +61,10 @@ def handle_public_contacts_request(
             return _list_contacts(event)
         if method == "POST":
             return create_contact(event, actor_sub=actor_sub)
-        return json_response(405, {"error": "Method not allowed"}, event=event)
+        return method_not_allowed(event)
 
     if len(parts) != 3:
-        return json_response(404, {"error": "Not found"}, event=event)
+        return not_found(event)
 
     contact_id = parse_uuid(parts[2])
     if method == "GET":
@@ -73,7 +73,7 @@ def handle_public_contacts_request(
         return update_contact(event, contact_id=contact_id, actor_sub=actor_sub)
     if method == "DELETE":
         return delete_contact(event, contact_id=contact_id, actor_sub=actor_sub)
-    return json_response(405, {"error": "Method not allowed"}, event=event)
+    return method_not_allowed(event)
 
 
 def _list_contacts(event: Mapping[str, Any]) -> dict[str, Any]:
