@@ -10,7 +10,10 @@ import json
 import re
 from typing import Any
 
-from app.services.openrouter_client import extract_message_text, openrouter_chat_completion
+from app.services.openrouter_client import (
+    extract_message_text,
+    openrouter_chat_completion,
+)
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)

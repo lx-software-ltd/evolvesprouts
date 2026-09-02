@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 
 import pytest
 
@@ -27,7 +26,9 @@ def test_loads_openrouter_json_parses_valid_payload() -> None:
     assert parsed == {"ok": True}
 
 
-def test_loads_openrouter_json_repairs_broken_payload(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_loads_openrouter_json_repairs_broken_payload(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     valid = {
         "summary": "Follow up",
         "actions": ["Call"],
