@@ -12,6 +12,7 @@ from app.api.admin_request import (
     parse_uuid,
     query_param,
     require_admin_identity,
+    route_has_prefix,
     split_route_parts,
 )
 from app.db.engine import get_engine
@@ -28,7 +29,7 @@ def handle_admin_geographic_areas_request(
 ) -> dict[str, Any]:
     """Handle /v1/admin/geographic-areas routes."""
     parts = split_route_parts(path)
-    if len(parts) != 2 or parts[0] != "admin" or parts[1] != "geographic-areas":
+    if len(parts) != 2 or not route_has_prefix(parts, "admin", "geographic-areas"):
         return not_found(event)
 
     require_admin_identity(event)

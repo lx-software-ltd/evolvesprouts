@@ -16,7 +16,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.api.admin_request import parse_limit, parse_uuid, query_param
-from app.api.shared_request import split_route_parts
+from app.api.shared_request import route_has_prefix, split_route_parts
 from app.api.public.token_auth import require_api_token
 from app.db.engine import get_engine
 from app.db.models.enums import MetaChannel
@@ -39,7 +39,7 @@ def handle_public_meta_request(
 ) -> dict[str, Any]:
     """Handle /v1/public/meta routes."""
     parts = split_route_parts(path)
-    if len(parts) < 2 or parts[0] != "public" or parts[1] != "meta":
+    if not route_has_prefix(parts, "public", "meta"):
         return not_found(event)
 
     require_api_token(event, method)

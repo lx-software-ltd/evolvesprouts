@@ -14,6 +14,7 @@ from app.api.admin_request import (
     parse_body,
     parse_uuid,
     require_admin_identity,
+    route_has_prefix,
     split_route_parts,
 )
 from app.api.admin_service_instance_partners import (
@@ -94,7 +95,7 @@ def handle_admin_service_instances_request(
         extra={"method": method, "path": path, "service_id": str(service_id)},
     )
     parts = split_route_parts(path)
-    if len(parts) < 4 or parts[0] != "admin" or parts[1] != "services":
+    if len(parts) < 4 or not route_has_prefix(parts, "admin", "services"):
         return not_found(event)
     if parts[3] != "instances":
         return not_found(event)

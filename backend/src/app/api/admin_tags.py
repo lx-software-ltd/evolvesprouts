@@ -22,6 +22,7 @@ from app.api.admin_request import (
     parse_uuid,
     query_param,
     require_admin_identity,
+    route_has_prefix,
     split_route_parts,
 )
 from app.api.admin_validators import validate_string_length
@@ -78,7 +79,7 @@ def handle_admin_tags_request(
         extra={"method": method, "path": path},
     )
     parts = split_route_parts(path)
-    if len(parts) < 2 or parts[0] != "admin" or parts[1] != "tags":
+    if not route_has_prefix(parts, "admin", "tags"):
         return not_found(event)
 
     identity = require_admin_identity(event)

@@ -13,6 +13,7 @@ from app.api.admin_request import (
     parse_body,
     parse_uuid,
     require_admin_identity,
+    route_has_prefix,
     split_route_parts,
 )
 from app.api.discount_enrollment_scope import (
@@ -70,7 +71,7 @@ def handle_admin_enrollments_request(
         extra={"method": method, "path": path, "instance_id": str(instance_id)},
     )
     parts = split_route_parts(path)
-    if len(parts) < 6 or parts[0] != "admin" or parts[1] != "services":
+    if len(parts) < 6 or not route_has_prefix(parts, "admin", "services"):
         return not_found(event)
     if parts[5] != "enrollments":
         return not_found(event)

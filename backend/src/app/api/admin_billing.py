@@ -38,6 +38,7 @@ from app.api.admin_request import (
     parse_uuid,
     request_id,
     require_admin_identity,
+    route_has_prefix,
     split_route_parts,
 )
 from app.utils import not_found
@@ -56,7 +57,7 @@ def handle_admin_billing_request(
 ) -> dict[str, Any]:
     """Route /v1/admin/billing/*."""
     parts = split_route_parts(path)
-    if len(parts) < 2 or parts[0] != "admin" or parts[1] != "billing":
+    if not route_has_prefix(parts, "admin", "billing"):
         return not_found(event)
 
     identity = require_admin_identity(event)

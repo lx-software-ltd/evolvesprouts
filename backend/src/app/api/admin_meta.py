@@ -24,6 +24,7 @@ from app.api.admin_request import (
     parse_uuid,
     query_param,
     require_admin_identity,
+    route_has_prefix,
     split_route_parts,
 )
 from app.db.engine import get_engine
@@ -41,7 +42,7 @@ def handle_admin_meta_request(
 ) -> dict[str, Any]:
     """Handle /v1/admin/meta routes."""
     parts = split_route_parts(path)
-    if len(parts) < 2 or parts[0] != "admin" or parts[1] != "meta":
+    if not route_has_prefix(parts, "admin", "meta"):
         return not_found(event)
 
     identity = require_admin_identity(event)

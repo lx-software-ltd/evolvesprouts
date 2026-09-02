@@ -13,6 +13,7 @@ from app.api.admin_request import (
     parse_limit,
     query_param,
     require_admin_identity,
+    route_has_prefix,
     split_route_parts,
 )
 from app.exceptions import ValidationError
@@ -38,7 +39,7 @@ def handle_admin_polls_request(
 ) -> dict[str, Any]:
     """Handle /v1/admin/polls routes."""
     parts = split_route_parts(path)
-    if len(parts) < 2 or parts[0] != "admin" or parts[1] != "polls":
+    if not route_has_prefix(parts, "admin", "polls"):
         return not_found(event)
 
     require_admin_identity(event)

@@ -6,7 +6,11 @@ import os
 from collections.abc import Mapping
 from typing import Any
 
-from app.api.admin_request import require_admin_identity, split_route_parts
+from app.api.admin_request import (
+    require_admin_identity,
+    route_has_prefix,
+    split_route_parts,
+)
 from app.exceptions import ValidationError
 from app.services import aws_proxy
 from app.utils import json_response, method_not_allowed, not_found
@@ -19,7 +23,7 @@ def handle_admin_users_request(
 ) -> dict[str, Any]:
     """Handle /v1/admin/users routes."""
     parts = split_route_parts(path)
-    if len(parts) != 2 or parts[0] != "admin" or parts[1] != "users":
+    if len(parts) != 2 or not route_has_prefix(parts, "admin", "users"):
         return not_found(event)
     require_admin_identity(event)
     if method != "GET":
@@ -34,7 +38,7 @@ def handle_admin_instructors_request(
 ) -> dict[str, Any]:
     """Handle /v1/admin/instructors routes."""
     parts = split_route_parts(path)
-    if len(parts) != 2 or parts[0] != "admin" or parts[1] != "instructors":
+    if len(parts) != 2 or not route_has_prefix(parts, "admin", "instructors"):
         return not_found(event)
     require_admin_identity(event)
     if method != "GET":

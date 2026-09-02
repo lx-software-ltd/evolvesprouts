@@ -34,6 +34,7 @@ from app.api.admin_request import (
     parse_uuid,
     query_param,
     require_admin_identity,
+    route_has_prefix,
     split_route_parts,
 )
 from app.api.admin_services_payload_utils import parse_optional_uuid, parse_uuid_list
@@ -62,7 +63,7 @@ def handle_admin_families_request(
         extra={"method": method, "path": path},
     )
     parts = split_route_parts(path)
-    if len(parts) < 2 or parts[0] != "admin" or parts[1] != "families":
+    if not route_has_prefix(parts, "admin", "families"):
         return not_found(event)
 
     identity = require_admin_identity(event)

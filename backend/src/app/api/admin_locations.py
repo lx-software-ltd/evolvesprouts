@@ -19,6 +19,7 @@ from app.api.admin_request import (
     query_param,
     request_id,
     require_admin_identity,
+    route_has_prefix,
     split_route_parts,
 )
 from app.api.admin_validators import (
@@ -42,7 +43,7 @@ def handle_admin_locations_request(
 ) -> dict[str, Any]:
     """Handle /v1/admin/locations routes."""
     parts = split_route_parts(path)
-    if len(parts) < 2 or parts[0] != "admin" or parts[1] != "locations":
+    if not route_has_prefix(parts, "admin", "locations"):
         return not_found(event)
 
     require_admin_identity(event)

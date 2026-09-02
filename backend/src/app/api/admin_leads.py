@@ -24,6 +24,7 @@ from app.api.admin_request import (
     parse_body,
     parse_uuid,
     require_admin_identity,
+    route_has_prefix,
     split_route_parts,
 )
 from app.api.admin_validators import MAX_DESCRIPTION_LENGTH, validate_string_length
@@ -61,7 +62,7 @@ def handle_admin_leads_request(
 ) -> dict[str, Any]:
     """Handle /v1/admin/leads routes."""
     parts = split_route_parts(path)
-    if len(parts) < 2 or parts[0] != "admin" or parts[1] != "leads":
+    if not route_has_prefix(parts, "admin", "leads"):
         return not_found(event)
 
     identity = require_admin_identity(event)

@@ -12,7 +12,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.admin_request import parse_body, parse_uuid, query_param, request_id
-from app.api.shared_request import require_admin_identity, split_route_parts
+from app.api.shared_request import (
+    require_admin_identity,
+    route_has_prefix,
+    split_route_parts,
+)
 from app.db.audit import AuditService
 from app.db.engine import get_engine
 from app.db.models.calendar_manual_block import CalendarManualBlock
@@ -40,7 +44,7 @@ def handle_admin_calendar_manual_blocks_request(
         extra={"method": method, "path": path},
     )
     parts = split_route_parts(path)
-    if len(parts) < 3 or parts[0] != "admin" or parts[1] != "calendar":
+    if len(parts) < 3 or not route_has_prefix(parts, "admin", "calendar"):
         return not_found(event)
     if parts[2] != "manual-blocks":
         return not_found(event)

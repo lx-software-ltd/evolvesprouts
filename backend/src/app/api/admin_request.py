@@ -85,6 +85,11 @@ def split_route_parts(path: str) -> list[str]:
     return parts
 
 
+def route_has_prefix(parts: Sequence[str], *prefix: str) -> bool:
+    """Return True when route segments from ``split_route_parts`` start with ``prefix``."""
+    return len(parts) >= len(prefix) and tuple(parts[: len(prefix)]) == prefix
+
+
 def request_id(event: Mapping[str, Any]) -> str:
     """Return API Gateway request id if present."""
     request_context = event.get("requestContext")

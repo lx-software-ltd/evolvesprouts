@@ -17,6 +17,7 @@ from app.api.admin_request import (
     query_param,
     request_id,
     require_admin_identity,
+    route_has_prefix,
     split_route_parts,
 )
 from app.api.admin_validators import MAX_NAME_LENGTH, validate_string_length
@@ -39,7 +40,7 @@ def handle_admin_api_keys_request(
 ) -> dict[str, Any]:
     """Handle /v1/admin/api-keys routes (list, create, get, revoke)."""
     parts = split_route_parts(path)
-    if len(parts) < 2 or parts[0] != "admin" or parts[1] != "api-keys":
+    if not route_has_prefix(parts, "admin", "api-keys"):
         return not_found(event)
 
     identity = require_admin_identity(event)

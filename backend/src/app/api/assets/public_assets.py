@@ -8,7 +8,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.api.admin_request import parse_uuid, split_route_parts
+from app.api.admin_request import parse_uuid, route_has_prefix, split_route_parts
 from app.api.assets.assets_common import (
     paginate_response,
     parse_cursor,
@@ -33,7 +33,7 @@ def handle_public_assets_request(
 ) -> dict[str, Any]:
     """Handle /v1/assets/public* routes."""
     parts = split_route_parts(path)
-    if len(parts) < 2 or parts[0] != "assets" or parts[1] != "public":
+    if not route_has_prefix(parts, "assets", "public"):
         return not_found(event)
 
     if len(parts) == 2 and method == "GET":

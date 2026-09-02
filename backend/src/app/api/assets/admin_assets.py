@@ -12,6 +12,7 @@ from app.api.admin_request import (
     extract_identity,
     parse_uuid,
     require_admin_identity,
+    route_has_prefix,
     split_route_parts,
 )
 from app.api.assets.admin_assets_content_replace import (
@@ -61,7 +62,7 @@ def handle_admin_assets_request(
 ) -> dict[str, Any]:
     """Handle /v1/admin/assets* routes."""
     parts = split_route_parts(path)
-    if len(parts) < 2 or parts[0] != "admin" or parts[1] != "assets":
+    if not route_has_prefix(parts, "admin", "assets"):
         return not_found(event)
 
     identity = require_admin_identity(event)
