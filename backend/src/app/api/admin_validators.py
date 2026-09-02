@@ -8,25 +8,64 @@ from typing import Any
 from urllib.parse import urlparse
 from uuid import UUID
 
+from app.api.validators import (
+    EMAIL_RE,
+    MAX_ADDRESS_LENGTH,
+    MAX_DESCRIPTION_LENGTH,
+    MAX_EMAIL_LENGTH,
+    MAX_NAME_LENGTH,
+    MAX_PHONE_NUMBER_LENGTH,
+    MAX_PHONE_REGION_LENGTH,
+    MAX_SOCIAL_HANDLE_LENGTH,
+    validate_email,
+    validate_phone_fields,
+    validate_phone_region,
+    validate_string_length,
+)
 from app.exceptions import ValidationError
 from app.utils.validators import instagram_handle_for_storage
+
+# Generic payload validators live in ``app.api.validators``; they are re-exported
+# here so admin modules keep a single import site.
+__all__ = [
+    "EMAIL_RE",
+    "MAX_ADDRESS_LENGTH",
+    "MAX_DESCRIPTION_LENGTH",
+    "MAX_EMAIL_LENGTH",
+    "MAX_FEEDBACK_LABELS_COUNT",
+    "MAX_LANGUAGE_CODE_LENGTH",
+    "MAX_LANGUAGES_COUNT",
+    "MAX_MEDIA_URLS_COUNT",
+    "MAX_NAME_LENGTH",
+    "MAX_PHONE_NUMBER_LENGTH",
+    "MAX_PHONE_REGION_LENGTH",
+    "MAX_SOCIAL_HANDLE_LENGTH",
+    "MAX_SOCIAL_VALUE_LENGTH",
+    "MAX_URL_LENGTH",
+    "SERVICE_INSTANCE_SLUG_RE",
+    "SOCIAL_FIELDS",
+    "SOCIAL_HANDLE_RE",
+    "VALID_LANGUAGE_CODES",
+    "parse_optional_instagram_handle",
+    "parse_optional_partner_key",
+    "parse_optional_service_instance_slug",
+    "parse_optional_service_instance_slug_like_text",
+    "parse_required_service_instance_slug",
+    "validate_email",
+    "validate_phone_fields",
+    "validate_phone_region",
+    "validate_string_length",
+]
 
 # --- Security validation functions ---
 
 # Maximum string lengths to prevent DoS attacks
-MAX_NAME_LENGTH = 200
-MAX_DESCRIPTION_LENGTH = 5000
-MAX_ADDRESS_LENGTH = 500
 MAX_URL_LENGTH = 2048
-MAX_EMAIL_LENGTH = 320
-MAX_PHONE_REGION_LENGTH = 2
-MAX_PHONE_NUMBER_LENGTH = 20
 MAX_LANGUAGE_CODE_LENGTH = 10
 MAX_LANGUAGES_COUNT = 20
 MAX_MEDIA_URLS_COUNT = 20
 MAX_FEEDBACK_LABELS_COUNT = 20
 MAX_SOCIAL_VALUE_LENGTH = 2048
-MAX_SOCIAL_HANDLE_LENGTH = 64
 
 # Valid ISO 639-1 language codes (common ones)
 VALID_LANGUAGE_CODES = frozenset(
@@ -65,7 +104,6 @@ SOCIAL_FIELDS = (
     "wechat",
 )
 
-EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 SOCIAL_HANDLE_RE = re.compile(r"^@?[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 # Lowercase URL-safe slug: alphanumeric segments separated by single hyphens.
 SERVICE_INSTANCE_SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -132,32 +170,6 @@ def parse_optional_service_instance_slug_like_text(
 ) -> str | None:
     """Same character rules and normalization as instance slug; for free-text labels."""
     return _parse_optional_kebab_slug(value, field=field)
-
-
-def validate_string_length(
-    value: Any,
-    field_name: str,
-    max_length: int,
-    required: bool = False,
-) -> str | None:
-    """Validate and sanitize a string input."""
-    if value is None:
-        if required:
-            raise ValidationError(f"{field_name} is required", field=field_name)
-        return None
-    if not isinstance(value, str):
-        value = str(value)
-    value = value.strip()
-    if not value:
-        if required:
-            raise ValidationError(f"{field_name} is required", field=field_name)
-        return None
-    if len(value) > max_length:
-        raise ValidationError(
-            f"{field_name} must be at most {max_length} characters",
-            field=field_name,
-        )
-    return value
 
 
 def parse_optional_instagram_handle(value: Any) -> str | None:
@@ -252,104 +264,6 @@ def _validate_social_value(value: Any, field_name: str) -> str | None:
             field=field_name,
         )
     return value
-
-
-def validate_email(value: Any) -> str | None:
-    """Validate email address."""
-    if value is None:
-        return None
-    if not isinstance(value, str):
-        raise ValidationError("email must be a string", field="email")
-    value = value.strip().lower()
-    if not value:
-        return None
-    if len(value) > MAX_EMAIL_LENGTH:
-        raise ValidationError(
-            f"email must be at most {MAX_EMAIL_LENGTH} characters",
-            field="email",
-        )
-    if not EMAIL_RE.match(value):
-        raise ValidationError("email must be a valid email address", field="email")
-    return value
-
-
-def validate_phone_region(value: Any) -> str | None:
-    """Validate ISO 3166-1 alpha-2 region code for phone parsing (upper-case)."""
-    if value is None:
-        return None
-    if not isinstance(value, str):
-        raise ValidationError("phone_region must be a string", field="phone_region")
-    value = value.strip().upper()
-    if not value:
-        return None
-    if len(value) != MAX_PHONE_REGION_LENGTH:
-        raise ValidationError(
-            "phone_region must be 2 characters",
-            field="phone_region",
-        )
-
-    import phonenumbers
-
-    if value not in phonenumbers.SUPPORTED_REGIONS:
-        raise ValidationError(
-            "phone_region must be a valid ISO 3166-1 alpha-2 region code",
-            field="phone_region",
-        )
-    return value
-
-
-def validate_phone_fields(
-    phone_region: Any, phone_number: Any
-) -> tuple[str | None, str | None]:
-    """Validate phone_region + phone_number; return (region upper, national digits only)."""
-    if phone_region is None and phone_number is None:
-        return None, None
-
-    if phone_region is None:
-        raise ValidationError("phone_region is required", field="phone_region")
-    if phone_number is None:
-        raise ValidationError("phone_number is required", field="phone_number")
-
-    region = validate_phone_region(phone_region)
-    if region is None:
-        raise ValidationError("phone_region is required", field="phone_region")
-
-    if not isinstance(phone_number, str):
-        raise ValidationError("phone_number must be a string", field="phone_number")
-    number = phone_number.strip()
-    normalized_number = re.sub(r"\D", "", number)
-    if not number:
-        raise ValidationError("phone_number is required", field="phone_number")
-    if number != normalized_number:
-        raise ValidationError(
-            "phone_number must contain digits only (no spaces or punctuation)",
-            field="phone_number",
-        )
-    if len(normalized_number) > MAX_PHONE_NUMBER_LENGTH:
-        raise ValidationError(
-            f"phone_number must be at most {MAX_PHONE_NUMBER_LENGTH} digits",
-            field="phone_number",
-        )
-
-    import phonenumbers
-    from phonenumbers.phonenumberutil import NumberParseException
-
-    try:
-        parsed = phonenumbers.parse(normalized_number, region)
-    except NumberParseException as exc:
-        raise ValidationError(
-            "phone_number must be a valid number",
-            field="phone_number",
-        ) from exc
-
-    if not phonenumbers.is_valid_number(parsed):
-        raise ValidationError(
-            "phone_number is not valid for phone_region",
-            field="phone_number",
-        )
-
-    national_number = phonenumbers.national_significant_number(parsed)
-    return region, national_number
 
 
 def _validate_currency(currency: str) -> str:
