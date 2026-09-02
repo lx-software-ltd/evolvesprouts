@@ -68,10 +68,13 @@ describe('MailchimpSyncCard', () => {
     vi.useRealTimers();
   });
 
-  it('renders title and the six counter tiles from a mocked status response', async () => {
+  it('renders an untitled white card with the six counter tiles and no Refresh button', async () => {
     render(<MailchimpSyncCard />);
 
-    expect(await screen.findByRole('heading', { name: 'Mailchimp sync' })).toBeInTheDocument();
+    expect(await screen.findByTestId('mailchimp-sync-card')).toHaveClass('bg-white', 'border');
+    expect(screen.queryByRole('heading', { name: 'Mailchimp sync' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Status snapshot')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
     expect(screen.getAllByText('Pending')[0].nextElementSibling).toHaveTextContent('2');
     expect(screen.getByText('Synced').nextElementSibling).toHaveTextContent('3');
     expect(screen.getAllByText('Failed')[0].nextElementSibling).toHaveTextContent('1');
@@ -94,7 +97,7 @@ describe('MailchimpSyncCard', () => {
     );
 
     render(<MailchimpSyncCard />);
-    await screen.findByRole('heading', { name: 'Mailchimp sync' });
+    await screen.findByTestId('mailchimp-sync-card');
 
     await user.click(screen.getByText('Push CRM contacts to Mailchimp'));
     await user.click(screen.getByRole('button', { name: 'Run upsert batch' }));
@@ -113,9 +116,9 @@ describe('MailchimpSyncCard', () => {
     await screen.findByText('Push CRM contacts to Mailchimp');
     await user.click(screen.getByText('Push CRM contacts to Mailchimp'));
 
-    const pushSection = screen.getByText('Push CRM contacts to Mailchimp').closest('details');
-    expect(pushSection).toBeTruthy();
-    const region = within(pushSection as HTMLElement);
+    const pushSection = screen.getByTestId('mailchimp-sync-push-disclosure');
+    expect(pushSection.tagName).toBe('SECTION');
+    const region = within(pushSection);
 
     expect(region.getByRole('checkbox', { name: 'Pending' })).toBeInTheDocument();
     expect(region.getByRole('checkbox', { name: 'Failed' })).toBeInTheDocument();
@@ -240,8 +243,7 @@ describe('MailchimpSyncCard', () => {
     await screen.findByText('Reconcile Mailchimp orphans');
     await user.click(screen.getByText('Reconcile Mailchimp orphans'));
 
-    const orphanDetails = screen.getByText('Reconcile Mailchimp orphans').closest('details');
-    const orphanRegion = within(orphanDetails as HTMLElement);
+    const orphanRegion = within(screen.getByTestId('mailchimp-sync-orphans-disclosure'));
     await user.click(orphanRegion.getByLabelText(/Dry run/i));
     await user.click(orphanRegion.getByRole('button', { name: 'Run orphan cleanup' }));
 
@@ -262,8 +264,7 @@ describe('MailchimpSyncCard', () => {
     await screen.findByText('Reconcile Mailchimp orphans');
     await user.click(screen.getByText('Reconcile Mailchimp orphans'));
 
-    const orphanDetails = screen.getByText('Reconcile Mailchimp orphans').closest('details');
-    const orphanRegion = within(orphanDetails as HTMLElement);
+    const orphanRegion = within(screen.getByTestId('mailchimp-sync-orphans-disclosure'));
     await user.selectOptions(orphanRegion.getByLabelText('Mode'), 'permanent');
     await user.click(orphanRegion.getByLabelText(/Dry run/i));
     await user.click(orphanRegion.getByRole('button', { name: 'Run orphan cleanup' }));
@@ -383,7 +384,7 @@ describe('MailchimpSyncCard', () => {
     expect(label).toMatch(/\d+s ago/);
   });
 
-  it('409 on sync then Refresh clears production gate and restores forms', async () => {
+  it('409 on sync keeps the production gate notice in both sections while counters stay visible', async () => {
     const user = userEvent.setup();
     runMailchimpSyncBatch.mockRejectedValueOnce(
       new AdminApiError({
@@ -394,7 +395,7 @@ describe('MailchimpSyncCard', () => {
     );
 
     render(<MailchimpSyncCard />);
-    await screen.findByRole('heading', { name: 'Mailchimp sync' });
+    await screen.findByTestId('mailchimp-sync-card');
 
     await user.click(screen.getByText('Push CRM contacts to Mailchimp'));
     await user.click(screen.getByRole('button', { name: 'Run upsert batch' }));
@@ -402,12 +403,8 @@ describe('MailchimpSyncCard', () => {
     await waitFor(() => {
       expect(screen.getAllByText(MAILCHIMP_PRODUCTION_GATE_MESSAGE).length).toBeGreaterThanOrEqual(1);
     });
-
-    await user.click(screen.getByRole('button', { name: 'Refresh' }));
-
-    await waitFor(() => {
-      expect(screen.getByLabelText('Tag name')).toBeInTheDocument();
-    });
+    expect(screen.queryByLabelText('Tag name')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Pending')[0]).toBeInTheDocument();
   });
 
   it('clamps max_contacts input to 200 and max_members to 1000', async () => {

@@ -341,7 +341,7 @@ describe('ContactsPanel', () => {
     expect(screen.getByTestId(`admin-row-${ann.id}`)).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByLabelText('First name')).toHaveValue('Ann');
     expect(screen.getByRole('button', { name: 'Update contact' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
 
     await user.click(screen.getByText('Bob Ray'));
 
@@ -352,7 +352,7 @@ describe('ContactsPanel', () => {
     });
     expect(screen.getByLabelText('Email')).toHaveValue('bob@example.com');
 
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(screen.getByRole('button', { name: 'Collapse Bob Ray' }));
     expect(window.location.search).toBe('');
   });
 
@@ -627,7 +627,7 @@ describe('ContactsPanel', () => {
 
   it('does not render the Mailchimp sync card on the contacts list', () => {
     renderPanel({ refreshFamilyOrgLists: vi.fn() });
-    expect(screen.queryByRole('heading', { name: 'Mailchimp sync' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('mailchimp-sync-card')).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Contacts' })).toBeInTheDocument();
   });
 
