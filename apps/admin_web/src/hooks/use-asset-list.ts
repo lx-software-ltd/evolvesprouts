@@ -91,10 +91,12 @@ export function useAssetList(): UseAssetListReturn {
     loadMore,
   } = list;
 
+  // Keep the explicit selection only when that row is still in the list. Never
+  // auto-select the first row; create mode must stay reachable via Cancel.
   const resolvedSelectedAssetId =
     selectedAssetId && items.some((item) => item.id === selectedAssetId)
       ? selectedAssetId
-      : (items[0]?.id ?? null);
+      : null;
 
   const selectedAsset = useMemo(
     () => items.find((asset) => asset.id === resolvedSelectedAssetId) ?? null,
