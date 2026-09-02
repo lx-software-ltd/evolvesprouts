@@ -50,7 +50,6 @@ from app.api.admin_leads_ai_suggestions import (
     get_lead_ai_suggestion_job,
 )
 from app.api.admin_leads_analytics import (
-    export_leads,
     get_analytics,
 )
 
@@ -78,11 +77,6 @@ def handle_admin_leads_request(
         if method != "GET":
             return method_not_allowed(event)
         return get_analytics(event)
-
-    if len(parts) == 3 and parts[2] == "export":
-        if method != "GET":
-            return method_not_allowed(event)
-        return export_leads(event)
 
     if len(parts) == 3 and parts[2] == "settings":
         return handle_sales_settings_request(event, method, actor_sub=identity.user_sub)

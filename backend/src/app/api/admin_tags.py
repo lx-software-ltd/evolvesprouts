@@ -93,8 +93,6 @@ def handle_admin_tags_request(
 
     tag_id = parse_uuid(parts[2])
     if len(parts) == 3:
-        if method == "GET":
-            return _get_tag(event, tag_id=tag_id)
         if method == "PATCH":
             return _update_tag(event, tag_id=tag_id, actor_sub=identity.user_sub)
         if method == "DELETE":
@@ -245,18 +243,6 @@ def _list_tags(event: Mapping[str, Any]) -> dict[str, Any]:
                     for t in tags
                 ]
             },
-            event=event,
-        )
-
-
-def _get_tag(event: Mapping[str, Any], *, tag_id: UUID) -> dict[str, Any]:
-    with Session(get_engine()) as session:
-        tag = session.get(Tag, tag_id)
-        if tag is None:
-            raise NotFoundError("Tag", str(tag_id))
-        return json_response(
-            200,
-            {"tag": _serialize_admin_tag(session, tag)},
             event=event,
         )
 

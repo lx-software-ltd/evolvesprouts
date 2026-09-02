@@ -385,17 +385,6 @@ class AuditLogRepository:
         """
         self._session = session
 
-    def get_by_id(self, audit_id: UUID) -> AuditLog | None:
-        """Get an audit log entry by ID.
-
-        Args:
-            audit_id: The audit log entry ID.
-
-        Returns:
-            The audit log entry if found.
-        """
-        return self._session.get(AuditLog, audit_id)
-
     def get_record_history(
         self,
         table_name: str,

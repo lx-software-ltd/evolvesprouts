@@ -6,15 +6,15 @@ import base64
 import csv
 import io
 import json
+from collections.abc import Mapping
 from datetime import datetime
 from typing import Any
-from collections.abc import Mapping
 from uuid import UUID
 
 from sqlalchemy import select
 
-from app.api.admin_billing_common import _session_with_audit
 from app.api.admin_request import parse_limit, query_param
+from app.db.audit import session_with_audit
 from app.db.models.customer_invoice import CustomerInvoice, CustomerInvoiceLine
 from app.db.models.customer_payment import CustomerPayment
 from app.db.models.customer_receipt import CustomerReceipt
@@ -55,17 +55,9 @@ def _parse_export_cursor(raw: str | None) -> tuple[datetime, UUID] | None:
 def _export_csv(
     event: Mapping[str, Any], *, user_sub: str, request_id: str | None
 ) -> dict[str, Any]:
-    raw_ver = (
-        (
-            query_param(event, "exportVersion")
-            or query_param(event, "export_version")
-            or "2"
-        )
-        .strip()
-        .lower()
-    )
+    raw_ver = (query_param(event, "export_version") or "2").strip().lower()
     if raw_ver not in ("1", "2"):
-        raise ValidationError("exportVersion must be 1 or 2", field="exportVersion")
+        raise ValidationError("export_version must be 1 or 2", field="export_version")
 
     row_limit = parse_limit(
         event, default=_DEFAULT_EXPORT_LIMIT, max_limit=_MAX_EXPORT_LIMIT
@@ -73,7 +65,7 @@ def _export_csv(
     cursor_raw = query_param(event, "cursor")
     cursor = _parse_export_cursor(cursor_raw)
 
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         allocs: list[PaymentAllocation] = []
         invoices: list[CustomerInvoice] = []
         lines_by_invoice: dict[UUID, list[CustomerInvoiceLine]] = {}

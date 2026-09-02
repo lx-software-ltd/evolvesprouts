@@ -707,7 +707,7 @@ def test_resolve_bill_to_primary_contacts_returns_family_primary_map(
         yield _Sess()
 
     monkeypatch.setattr(
-        admin_billing_dashboard_mod, "_session_with_audit", _fake_session
+        admin_billing_dashboard_mod, "session_with_audit", _fake_session
     )
 
     body = {"familyIds": [str(fam_id)]}

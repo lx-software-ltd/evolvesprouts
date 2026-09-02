@@ -22,7 +22,6 @@ from app.api.admin_request import (
     encode_created_cursor,
     parse_created_cursor,
     parse_limit,
-    parse_uuid,
     query_param,
     request_id,
     require_admin_identity,
@@ -33,7 +32,7 @@ from app.db.audit import AuditLogRepository, set_audit_context
 from app.db.auditable_tables import AUDITABLE_TABLES
 from app.db.engine import get_engine
 from app.db.models import AuditLog
-from app.exceptions import NotFoundError, ValidationError
+from app.exceptions import ValidationError
 from app.utils import json_response, method_not_allowed, not_found, parse_datetime
 from app.utils.logging import get_logger
 
@@ -60,9 +59,6 @@ AUDIT_PII_EXACT_FIELDS: frozenset[str] = frozenset(
 _AUDIT_PII_SUBSTRINGS: tuple[str, ...] = ("email", "phone", "address", "name")
 
 _REDACTED_MARKER = "***REDACTED***"
-
-_DEFAULT_LIMIT = 25
-_MAX_LIMIT = 100
 
 
 def _actor_labels_for_user_ids(
@@ -97,48 +93,16 @@ def handle_admin_audit_logs_request(
     method: str,
     path: str,
 ) -> dict[str, Any]:
-    """Handle ``/v1/admin/audit-logs`` and ``/v1/admin/audit-logs/{id}``."""
+    """Handle ``/v1/admin/audit-logs``."""
     parts = split_route_parts(path)
-    if not route_has_prefix(parts, "admin", "audit-logs"):
+    if len(parts) != 2 or not route_has_prefix(parts, "admin", "audit-logs"):
         return not_found(event)
 
     identity = require_admin_identity(event)
 
-    if len(parts) == 2:
-        if method != "GET":
-            return method_not_allowed(event)
-        return _list_audit_logs(event, actor_sub=identity.user_sub)
-
-    if len(parts) == 3:
-        if method != "GET":
-            return method_not_allowed(event)
-        return _get_audit_log_by_id(
-            event, audit_id=parts[2], actor_sub=identity.user_sub
-        )
-
-    return not_found(event)
-
-
-def _get_audit_log_by_id(
-    event: Mapping[str, Any],
-    *,
-    audit_id: str,
-    actor_sub: str,
-) -> dict[str, Any]:
-    parsed_id = parse_uuid(audit_id)
-    with Session(get_engine()) as session:
-        set_audit_context(session, user_id=actor_sub, request_id=request_id(event))
-        repo = AuditLogRepository(session)
-        entry = repo.get_by_id(parsed_id)
-        if entry is None:
-            raise NotFoundError("audit_log", audit_id)
-        actor_map = _actor_labels_for_user_ids(
-            session,
-            [entry.user_id] if entry.user_id else [],
-        )
-        return json_response(
-            200, _serialize_audit_log(entry, email_map=actor_map), event=event
-        )
+    if method != "GET":
+        return method_not_allowed(event)
+    return _list_audit_logs(event, actor_sub=identity.user_sub)
 
 
 def _should_redact_audit_field(key: str) -> bool:
@@ -167,7 +131,7 @@ def _redact_audit_value(key: str, value: Any) -> Any:
 
 
 def _list_audit_logs(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, Any]:
-    limit = parse_limit(event, default=_DEFAULT_LIMIT, max_limit=_MAX_LIMIT)
+    limit = parse_limit(event)
 
     table_name = query_param(event, "table")
     record_id = query_param(event, "record_id")

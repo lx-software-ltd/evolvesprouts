@@ -7,21 +7,27 @@ mutate allocation rows (orphan payment delete is blocked when allocations exist)
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
-from collections.abc import Mapping
 from uuid import UUID
 
-from sqlalchemy import exists, select
+from sqlalchemy import and_, exists, or_, select
 from sqlalchemy.orm import Session
 
-from app.api.admin_billing_common import (
-    DEFAULT_BILLING_LIST_LIMIT,
-    _session_with_audit,
+from app.api.admin_billing_payments_serializers import (
+    payment_allocation_invoice_refs,
+    serialize_payment_for_response,
 )
-from app.api.admin_request import parse_body, query_param
-from app.db.audit import AuditService
+from app.api.admin_request import (
+    encode_created_cursor,
+    parse_body,
+    parse_created_cursor,
+    parse_limit,
+    query_param,
+)
+from app.db.audit import AuditService, session_with_audit
 from app.db.engine import get_engine
 from app.db.models.customer_payment import CustomerPayment
 from app.db.models.customer_receipt import CustomerReceipt
@@ -36,14 +42,9 @@ from app.exceptions import NotFoundError, ValidationError
 from app.services.customer_billing import (
     create_receipt_for_succeeded_inbound_payment,
     finalize_receipt_pdf_upload,
-    payment_unapplied_amount,
 )
 from app.utils import json_response
 from app.utils.logging import get_logger
-from app.api.admin_billing_payments_serializers import (
-    payment_allocation_invoice_refs,
-    serialize_payment_for_response,
-)
 
 logger = get_logger(__name__)
 
@@ -182,7 +183,7 @@ def _delete_payment(
     user_sub: str,
     request_id: str | None,
 ) -> dict[str, Any]:
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         p = session.get(CustomerPayment, payment_id)
         if p is None:
             raise NotFoundError("CustomerPayment", str(payment_id))
@@ -203,7 +204,9 @@ def _delete_payment(
 def _list_payments(
     event: Mapping[str, Any], *, user_sub: str, request_id: str | None
 ) -> dict[str, Any]:
-    invoice_raw = query_param(event, "invoice_id") or query_param(event, "invoiceId")
+    limit = parse_limit(event)
+    cursor_ts, cursor_id = parse_created_cursor(query_param(event, "cursor"))
+    invoice_raw = query_param(event, "invoice_id")
     inv_filter: UUID | None = None
     if invoice_raw and str(invoice_raw).strip():
         try:
@@ -213,8 +216,8 @@ def _list_payments(
                 "invoice_id must be a UUID", field="invoice_id"
             ) from exc
 
-    with _session_with_audit(user_sub, request_id) as session:
-        stmt = select(CustomerPayment).order_by(CustomerPayment.created_at.desc())
+    with session_with_audit(user_sub, request_id) as session:
+        stmt = select(CustomerPayment)
         if inv_filter is not None:
             subq = (
                 select(PaymentAllocation.payment_id)
@@ -222,14 +225,29 @@ def _list_payments(
                 .distinct()
                 .subquery()
             )
-            stmt = (
-                select(CustomerPayment)
-                .join(subq, CustomerPayment.id == subq.c.payment_id)
-                .order_by(CustomerPayment.created_at.desc())
+            stmt = stmt.join(subq, CustomerPayment.id == subq.c.payment_id)
+        if cursor_ts is not None and cursor_id is not None:
+            stmt = stmt.where(
+                or_(
+                    CustomerPayment.created_at < cursor_ts,
+                    and_(
+                        CustomerPayment.created_at == cursor_ts,
+                        CustomerPayment.id < cursor_id,
+                    ),
+                )
             )
-        stmt = stmt.limit(DEFAULT_BILLING_LIST_LIMIT)
+        stmt = stmt.order_by(
+            CustomerPayment.created_at.desc(), CustomerPayment.id.desc()
+        ).limit(limit + 1)
         rows = list(session.execute(stmt).scalars().all())
-        deletable_by_id = _batch_orphan_payment_deletable(session, rows)
+        has_more = len(rows) > limit
+        page = rows[:limit]
+        deletable_by_id = _batch_orphan_payment_deletable(session, page)
+        next_cursor = (
+            encode_created_cursor(page[-1].created_at, page[-1].id)
+            if has_more and page
+            else None
+        )
         return json_response(
             200,
             {
@@ -239,8 +257,9 @@ def _list_payments(
                         p,
                         orphan_payment_deletable=deletable_by_id.get(p.id, False),
                     )
-                    for p in rows
-                ]
+                    for p in page
+                ],
+                "next_cursor": next_cursor,
             },
             event=event,
         )
@@ -253,7 +272,7 @@ def _get_payment(
     user_sub: str,
     request_id: str | None,
 ) -> dict[str, Any]:
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         p = session.get(CustomerPayment, payment_id)
         if p is None:
             raise NotFoundError("CustomerPayment", str(payment_id))
@@ -267,25 +286,6 @@ def _get_payment(
                 ),
                 "allocationInvoices": allocation_invoices,
             },
-            event=event,
-        )
-
-
-def _unapplied(
-    event: Mapping[str, Any],
-    payment_id: UUID,
-    *,
-    user_sub: str,
-    request_id: str | None,
-) -> dict[str, Any]:
-    with _session_with_audit(user_sub, request_id) as session:
-        p = session.get(CustomerPayment, payment_id)
-        if p is None:
-            raise NotFoundError("CustomerPayment", str(payment_id))
-        u = payment_unapplied_amount(session, payment_id)
-        return json_response(
-            200,
-            {"paymentId": str(payment_id), "unappliedAmount": str(u)},
             event=event,
         )
 
@@ -330,7 +330,7 @@ def _confirm_payment(
 ) -> dict[str, Any]:
     body = parse_body(event) if event.get("body") else {}
     receipt_id_for_upload: UUID | None = None
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         p = session.get(CustomerPayment, payment_id)
         if p is None:
             raise NotFoundError("CustomerPayment", str(payment_id))
@@ -339,12 +339,7 @@ def _confirm_payment(
         p.status = BillingPaymentStatus.SUCCEEDED
         p.succeeded_at = datetime.now(UTC)
         p.confirmed_by = user_sub
-        p.external_reference = (
-            str(
-                body.get("externalReference") or body.get("external_reference") or ""
-            ).strip()
-            or None
-        )
+        p.external_reference = str(body.get("externalReference") or "").strip() or None
         session.flush()
         existing_receipt = session.execute(
             select(CustomerReceipt).where(CustomerReceipt.customer_payment_id == p.id)

@@ -11,10 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.admin_billing_common import (
-    _session_with_audit,
-    effective_enrollment_bill_to_kind,
-)
+from app.api.admin_billing_common import effective_enrollment_bill_to_kind
 from app.api.admin_billing_payment_create import (
     _enrollment_billing_currency,
     contact_id_for_enrollment_payment,
@@ -22,7 +19,7 @@ from app.api.admin_billing_payment_create import (
 )
 from app.api.admin_billing_payments_serializers import serialize_payment_for_response
 from app.api.admin_request import parse_body
-from app.db.audit import AuditService
+from app.db.audit import AuditService, session_with_audit
 from app.db.engine import get_engine
 from app.db.models.customer_payment import CustomerPayment
 from app.db.models.customer_receipt import CustomerReceipt
@@ -91,12 +88,7 @@ def _apply_succeeded_manual_patch(
             field="method",
         )
     p.method = new_method
-    ext_ref = (
-        str(
-            body.get("externalReference") or body.get("external_reference") or ""
-        ).strip()
-        or None
-    )
+    ext_ref = str(body.get("externalReference") or "").strip() or None
     p.external_reference = ext_ref
     try:
         session.flush()
@@ -154,12 +146,7 @@ def _apply_pending_manual_patch(
     if status_raw not in ("pending", "succeeded"):
         raise ValidationError("status must be pending or succeeded", field="status")
 
-    ext_ref = (
-        str(
-            body.get("externalReference") or body.get("external_reference") or ""
-        ).strip()
-        or None
-    )
+    ext_ref = str(body.get("externalReference") or "").strip() or None
 
     is_free_zero = amount == Decimal("0") or method == "free"
     if is_free_zero:
@@ -221,7 +208,7 @@ def update_manual_inbound_customer_payment(
     """Update a manual inbound payment (no Stripe PaymentIntent on row)."""
     body = parse_body(event)
     receipt_id_for_upload: UUID | None = None
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         p = session.get(CustomerPayment, payment_id)
         if p is None:
             raise NotFoundError("CustomerPayment", str(payment_id))

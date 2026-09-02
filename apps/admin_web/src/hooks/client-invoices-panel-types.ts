@@ -202,7 +202,10 @@ export interface ClientInvoicesManualPaymentEditorSlice {
 export interface ClientInvoicesPaymentsTableSlice {
   payments: CustomerPaymentSummary[];
   listLoading: boolean;
+  listLoadingMore: boolean;
+  listHasMore: boolean;
   listError: string;
+  loadMorePayments: () => Promise<void>;
   selectedId: string | null;
   setSelectedId: Dispatch<SetStateAction<string | null>>;
   setManualPaymentPreferCreateForm: Dispatch<SetStateAction<boolean>>;

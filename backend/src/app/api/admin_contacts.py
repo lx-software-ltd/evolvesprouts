@@ -59,8 +59,6 @@ from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
-_DEFAULT_LIMIT = 25
-
 
 def handle_admin_contacts_request(
     event: Mapping[str, Any],
@@ -162,7 +160,7 @@ def handle_admin_contacts_request(
 
 
 def _search_contacts_for_picker(event: Mapping[str, Any]) -> dict[str, Any]:
-    limit = parse_limit(event, default=_DEFAULT_LIMIT)
+    limit = parse_limit(event)
     raw_query = validate_string_length(
         query_param(event, "query"),
         "query",
@@ -205,7 +203,7 @@ def _list_contact_tags(event: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _list_contacts(event: Mapping[str, Any]) -> dict[str, Any]:
-    limit = parse_limit(event, default=_DEFAULT_LIMIT)
+    limit = parse_limit(event)
     cursor = parse_cursor(query_param(event, "cursor"))
     query = validate_string_length(
         query_param(event, "query"),

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { ClientInvoicesAllocateRefundInput } from '@/hooks/client-invoices-panel-types';
 import { toErrorMessage } from '@/hooks/hook-errors';
+import { ADMIN_API_MAX_LIST_LIMIT } from '@/lib/admin-list-query';
 import {
   createCustomerRefund,
   createPaymentAllocation,
@@ -217,8 +218,10 @@ export function useClientInvoicesAllocateRefund({
     setRefundPaymentsError('');
     void (async () => {
       try {
-        const items = await listCustomerPayments(
-          { invoiceId: trimmed },
+        // Refund sources are the payments allocated to one invoice; a single
+        // max-size page covers that set.
+        const { items } = await listCustomerPayments(
+          { invoiceId: trimmed, limit: ADMIN_API_MAX_LIST_LIMIT },
           ac.signal,
         );
         if (ac.signal.aborted) {

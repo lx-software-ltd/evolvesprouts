@@ -48,7 +48,6 @@ from app.exceptions import DatabaseError, NotFoundError, ValidationError
 from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger
 
-_DEFAULT_LIMIT = 25
 logger = get_logger(__name__)
 
 
@@ -77,8 +76,6 @@ def handle_admin_families_request(
 
     family_id = parse_uuid(parts[2])
     if len(parts) == 3:
-        if method == "GET":
-            return _get_family(event, family_id=family_id)
         if method == "PATCH":
             return _update_family(
                 event, family_id=family_id, actor_sub=identity.user_sub
@@ -123,7 +120,7 @@ def handle_admin_families_request(
 
 
 def _list_families(event: Mapping[str, Any]) -> dict[str, Any]:
-    limit = parse_limit(event, default=_DEFAULT_LIMIT)
+    limit = parse_limit(event)
     cursor = parse_cursor(query_param(event, "cursor"))
     query = validate_string_length(
         query_param(event, "query"),
@@ -159,23 +156,6 @@ def _list_families(event: Mapping[str, Any]) -> dict[str, Any]:
                 ],
                 "next_cursor": next_cursor,
                 "total_count": total_count,
-            },
-            event=event,
-        )
-
-
-def _get_family(event: Mapping[str, Any], *, family_id: UUID) -> dict[str, Any]:
-    with Session(get_engine()) as session:
-        repository = FamilyRepository(session)
-        family = repository.get_by_id_for_admin(family_id)
-        if family is None:
-            raise NotFoundError("Family", str(family_id))
-        return json_response(
-            200,
-            {
-                "family": serialize_family_summary(
-                    family, **family_related_serializer_kwargs(session, family.id)
-                )
             },
             event=event,
         )

@@ -4,17 +4,16 @@ from __future__ import annotations
 
 import base64
 import json
+from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
-from collections.abc import Mapping
 from uuid import UUID
 
-from sqlalchemy import and_, cast, exists, or_, select, String
+from sqlalchemy import String, and_, cast, exists, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.admin_billing_common import (
-    _session_with_audit,
     batch_enrollment_party_display_names,
     collect_enrollment_family_org_ids,
     effective_enrollment_bill_to_kind,
@@ -24,6 +23,7 @@ from app.api.admin_billing_common import (
 )
 from app.api.admin_request import parse_limit, query_param
 from app.config import get_default_currency_code
+from app.db.audit import session_with_audit
 from app.db.models import Contact, Enrollment
 from app.db.models.customer_invoice import CustomerInvoice, CustomerInvoiceLine
 from app.db.models.enums import (
@@ -130,7 +130,7 @@ def list_recent_enrollments_for_invoicing(
     cursor_ts, cursor_id = _parse_enrolled_at_cursor(query_param(event, "cursor"))
     q_raw = (query_param(event, "q") or "").strip()
 
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         stmt = (
             select(Enrollment)
             .where(Enrollment.enrolled_at >= cutoff)

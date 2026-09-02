@@ -192,7 +192,10 @@ export function useClientInvoicesPanel() {
   const paymentsSlice = {
     payments: payments.payments,
     listLoading: payments.listLoading,
+    listLoadingMore: payments.listLoadingMore,
+    listHasMore: payments.listHasMore,
     listError: payments.listError,
+    loadMorePayments: payments.loadMorePayments,
     selectedId: payments.selectedId,
     setSelectedId: payments.setSelectedId,
     setManualPaymentPreferCreateForm: payments.setManualPaymentPreferCreateForm,

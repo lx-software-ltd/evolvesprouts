@@ -890,6 +890,44 @@ literal 404/405 payloads, and validators had drifted into two copies. One
 helper per concern keeps route handling greppable and stops the duplicates from
 diverging again.
 
+## Admin API contract conventions
+
+**Decision:** The admin API (`docs/api/admin.yaml`) follows one set of contract
+rules, and handlers accept exactly what the spec documents:
+
+- **List pagination.** Browsable admin lists (contacts, families,
+  organizations, leads, expenses, assets, locations, audit logs, invoices,
+  payments, certificates, conversations, and similar) are cursor-paginated and
+  return `{ "items": [...], "next_cursor": string | null }`. Page size comes
+  from `parse_limit(event)` with the shared defaults in
+  `app.api.admin_request` (`DEFAULT_LIST_LIMIT = 25`, `MAX_LIST_LIMIT = 100`);
+  route modules do not define their own default or maximum. Small reference
+  sets (users, instructors, geographic areas, tags, discount codes, form and
+  poll slugs) and picker endpoints (`/families/picker`,
+  `/organizations/picker`, `/billing/enrollments/recent-for-invoicing`) return
+  a bounded set instead and may carry their own cap. The admin web mirrors the
+  paginated shape with `ADMIN_LIST_PAGE_SIZE` / `ADMIN_API_MAX_LIST_LIMIT` in
+  `apps/admin_web/src/lib/admin-list-query.ts` and `usePaginatedList`.
+- **Key casing.** Query parameters are `snake_case` (`invoice_id`,
+  `export_version`, `record_id`). Request and response body keys use the casing
+  documented for that schema; handlers read only the documented key and do not
+  accept an undocumented `camelCase`/`snake_case` alias.
+- **Endpoint surface.** An admin endpoint exists only when the admin console
+  (or another documented consumer) calls it. Detail `GET /{id}` routes whose
+  data is already present in the list response are not kept "for completeness";
+  remove the handler, OpenAPI entry, and tests together.
+- **Method semantics.** A known path with an unsupported method returns
+  `405 Method Not Allowed`; only unknown paths return `404`.
+- **Audit writes.** Mutating billing handlers open the session with
+  `session_with_audit(user_sub, request_id)` from `app.db.audit` (trigger rows)
+  and add `AuditService.log_custom` only for business events that triggers
+  cannot express (see `audit-logging.md`).
+
+**Why:** The contract had accumulated per-module page sizes, dual-cased
+parameters, and detail endpoints with no caller. Standardising on one set of
+rules keeps the generated admin web types small, makes the console's list hooks
+interchangeable, and stops each new route from re-deciding these details.
+
 ## Keeping Documentation Up to Date
 
 **Decision:** Architecture documentation in `docs/architecture/` describes

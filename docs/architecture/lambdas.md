@@ -152,7 +152,7 @@ their primary responsibilities.
   `/v1/admin/leads/*` (including `GET|PATCH /v1/admin/leads/settings` for the
   default new-lead assignee, assignee-notification toggle, and Helper Detector
   toggle), `/v1/admin/users`, `/v1/admin/instructors`,
-  `GET /v1/admin/audit-logs` and `GET /v1/admin/audit-logs/{id}` (read-only `audit_log` history; list supports filters `table`, `record_id`, `user_id`, `email`, `action`, `since`, `cursor`, `limit`; `email` resolves via Cognito `list_users`, known system-actor labels/`user_id` values, or `api_keys.name`; optional `user_email` is a Cognito email, API key name, or system-actor label),
+  `GET /v1/admin/audit-logs` (read-only `audit_log` history; supports filters `table`, `record_id`, `user_id`, `email`, `action`, `since`, `cursor`, `limit`; `email` resolves via Cognito `list_users`, known system-actor labels/`user_id` values, or `api_keys.name`; optional `user_email` is a Cognito email, API key name, or system-actor label),
   `/v1/admin/services/*` (including `GET /v1/admin/services/instances` for
   cross-service instance listing with optional `service_id` / `service_type` /
   `contact_id` / `family_id` / `organization_id` filters; instance create/update accepts optional `cohort`, and

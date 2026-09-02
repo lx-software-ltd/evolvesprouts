@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.admin_billing_common import _session_with_audit
 from app.api.admin_request import parse_body
 from app.api.admin_services_payload_utils import parse_uuid_list
+from app.db.audit import session_with_audit
 from app.db.models.family import FamilyMember
 from app.db.models.organization import OrganizationMember
 from app.exceptions import ValidationError
@@ -96,8 +96,8 @@ def resolve_bill_to_primary_contacts(
     if not isinstance(body, Mapping):
         raise ValidationError("Request body must be a JSON object", field="body")
 
-    raw_families = body.get("familyIds") or body.get("family_ids")
-    raw_orgs = body.get("organizationIds") or body.get("organization_ids")
+    raw_families = body.get("familyIds")
+    raw_orgs = body.get("organizationIds")
 
     family_ids = _dedupe_uuid_list(parse_uuid_list(raw_families, "familyIds"))
     organization_ids = _dedupe_uuid_list(parse_uuid_list(raw_orgs, "organizationIds"))
@@ -113,7 +113,7 @@ def resolve_bill_to_primary_contacts(
             field="organizationIds",
         )
 
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         fam_map = _primary_contact_by_family(session, family_ids)
         org_map = _primary_contact_by_organization(session, organization_ids)
 

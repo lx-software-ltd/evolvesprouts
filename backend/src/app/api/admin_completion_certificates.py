@@ -45,7 +45,6 @@ from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
-_DEFAULT_LIMIT = 25
 _CERTIFICATE_DOWNLOAD_LINK_EXPIRY = timedelta(hours=1)
 
 
@@ -86,8 +85,6 @@ def handle_admin_completion_certificates_request(
 
     certificate_id = parse_uuid(parts[2])
     if len(parts) == 3:
-        if method == "GET":
-            return _get_certificate(event, certificate_id=certificate_id)
         if method == "DELETE":
             return _delete_certificate(
                 event, certificate_id=certificate_id, actor_sub=identity.user_sub
@@ -197,7 +194,7 @@ def _issue_certificate(event: Mapping[str, Any], *, actor_sub: str) -> dict[str,
 
 
 def _list_certificates(event: Mapping[str, Any]) -> dict[str, Any]:
-    limit = parse_limit(event, default=_DEFAULT_LIMIT)
+    limit = parse_limit(event)
     cursor_ts, cursor_id = parse_created_cursor(query_param(event, "cursor"))
     contact_id = parse_optional_uuid(query_param(event, "contact_id"), "contact_id")
     instance_id = parse_optional_uuid(query_param(event, "instance_id"), "instance_id")
@@ -247,20 +244,6 @@ def _list_certificates(event: Mapping[str, Any]) -> dict[str, Any]:
                 "items": items,
                 "next_cursor": next_cursor,
             },
-            event=event,
-        )
-
-
-def _get_certificate(
-    event: Mapping[str, Any], *, certificate_id: UUID
-) -> dict[str, Any]:
-    with Session(get_engine()) as session:
-        cert = session.get(CompletionCertificate, certificate_id)
-        if cert is None:
-            raise NotFoundError("CompletionCertificate", str(certificate_id))
-        return json_response(
-            200,
-            {"certificate": serialize_completion_certificate(session, cert)},
             event=event,
         )
 

@@ -33,8 +33,6 @@ from app.db.repositories.organization import (
 from app.exceptions import DatabaseError, NotFoundError, ValidationError
 from app.utils import json_response
 
-_DEFAULT_LIMIT = 25
-
 
 def add_organization_member(
     event: Mapping[str, Any],

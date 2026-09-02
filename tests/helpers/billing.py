@@ -31,4 +31,4 @@ def patch_billing_sessions(monkeypatch: pytest.MonkeyPatch, fake_session: Any) -
         admin_billing_export_mod,
         admin_billing_enrollment_queries_mod,
     ):
-        monkeypatch.setattr(mod, "_session_with_audit", fake_session)
+        monkeypatch.setattr(mod, "session_with_audit", fake_session)

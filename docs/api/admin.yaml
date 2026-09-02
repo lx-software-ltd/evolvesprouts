@@ -11,13 +11,12 @@ info:
     - `GET /v1/admin/geographic-areas`
     - `GET|POST /v1/admin/locations`
     - `POST /v1/admin/locations/geocode`
-    - `GET|PUT|PATCH|DELETE /v1/admin/locations/{id}`
+    - `PUT|PATCH|DELETE /v1/admin/locations/{id}`
     - `GET /v1/admin/users`
     - `GET /v1/admin/instructors`
     - `GET /v1/admin/audit-logs` (optional `table`, `record_id`, `user_id`, `email`, `action`, `since`, `cursor`, `limit`)
-    - `GET /v1/admin/audit-logs/{id}`
     - `GET|POST /v1/admin/api-keys` (create returns plaintext `api_token` once)
-    - `GET|DELETE /v1/admin/api-keys/{id}` (`DELETE` revokes the token)
+    - `DELETE /v1/admin/api-keys/{id}` (revokes the token)
     - `GET|POST /v1/admin/services`
     - `GET /v1/admin/services/instances`
     - `GET|PUT|PATCH|DELETE /v1/admin/services/{id}`
@@ -31,13 +30,13 @@ info:
     - `PUT|DELETE /v1/admin/discount-codes/{id}`
     - `GET|POST /v1/admin/completion-certificates`
     - `POST /v1/admin/completion-certificates/preview`
-    - `GET|DELETE /v1/admin/completion-certificates/{id}`
+    - `DELETE /v1/admin/completion-certificates/{id}`
     - `GET /v1/admin/completion-certificates/{id}/pdf`
     - `POST /v1/admin/completion-certificates/{id}/void`
     - `GET|POST /v1/admin/calendar/manual-blocks` (GET requires `purpose`, `from`, `to`)
-    - `GET|PATCH|DELETE /v1/admin/calendar/manual-blocks/{id}`
+    - `PATCH|DELETE /v1/admin/calendar/manual-blocks/{id}`
     - `GET|POST /v1/admin/tags` (optional `include_archived`, `archived_only`)
-    - `GET|PATCH|DELETE /v1/admin/tags/{id}` (DELETE returns JSON with `deleted` and `usage_count`)
+    - `PATCH|DELETE /v1/admin/tags/{id}` (DELETE returns JSON with `deleted` and `usage_count`)
     - `GET /v1/admin/contacts/tags`
     - `GET /v1/admin/contacts/search`
     - `POST /v1/admin/contacts/mailchimp-sync-run`
@@ -50,13 +49,13 @@ info:
     - `GET /v1/admin/contacts/{id}/services`
     - `GET /v1/admin/families/picker`
     - `GET|POST /v1/admin/families`
-    - `GET|PATCH|DELETE /v1/admin/families/{id}`
+    - `PATCH|DELETE /v1/admin/families/{id}`
     - `GET /v1/admin/families/{id}/services`
     - `POST /v1/admin/families/{id}/members`
     - `PATCH|DELETE /v1/admin/families/{id}/members/{member_id}`
     - `GET /v1/admin/organizations/picker`
     - `GET|POST /v1/admin/organizations`
-    - `GET|PATCH|DELETE /v1/admin/organizations/{id}`
+    - `PATCH|DELETE /v1/admin/organizations/{id}`
     - `GET /v1/admin/organizations/{id}/services`
     - `POST /v1/admin/organizations/{id}/members`
     - `PATCH /v1/admin/organizations/{id}/members/{member_id}`
@@ -71,17 +70,16 @@ info:
     - `POST /v1/admin/expenses/import-from-bulk-pdf` (returns **202** with a job id; poll `GET /v1/admin/expenses/bulk-import-jobs/{job_id}` until `succeeded`, `succeeded_with_errors`, or `failed`)
     - `GET /v1/admin/expenses/bulk-import-jobs` (creator-scoped list of recent jobs)
     - `GET|DELETE /v1/admin/expenses/bulk-import-jobs/{job_id}` (`DELETE` removes the job record for the creator; it does not delete expenses created by the job)
-    - `GET|PATCH|DELETE /v1/admin/expenses/{id}`
+    - `PATCH|DELETE /v1/admin/expenses/{id}`
     - `POST /v1/admin/expenses/{id}/cancel`
     - `POST /v1/admin/expenses/{id}/mark-paid`
     - `POST /v1/admin/expenses/{id}/reparse`
     - `POST /v1/admin/expenses/{id}/amend`
     - `GET /v1/admin/billing/export`
-    - `GET|POST /v1/admin/billing/payments` (list supports optional `?invoice_id=` to return
-      payments with an allocation to that invoice; `POST` creates either a refund row
+    - `GET|POST /v1/admin/billing/payments` (list is cursor-paginated (`cursor`, `limit`) and supports
+      optional `?invoice_id=` to return payments with an allocation to that invoice; `POST` creates either a refund row
       (`direction: refund`) or a manual inbound customer payment (`direction: inbound` + `enrollmentId`))
     - `GET|PATCH|DELETE /v1/admin/billing/payments/{id}` (`GET` returns payment detail including `allocationInvoices` and `unappliedAmount`; `PATCH` updates manual inbound rows without a Stripe PaymentIntent; enrollment is immutable; succeeded rows allow method and external reference only; `DELETE` removes eligible orphan inbound payments)
-    - `GET /v1/admin/billing/payments/{id}/unapplied`
     - `POST /v1/admin/billing/payments/{id}/confirm`
     - `GET /v1/admin/billing/enrollments/recent-for-invoicing`
     - `GET|POST /v1/admin/billing/invoices` (GET optional `status`, `currency`, `contact_id`, `family_id`, `organization_id`, `cursor`, `limit`; POST is either enrollment-based draft (`draftKind: enrollment_merge`, `enrollmentIds`, `currency` optional when derivable) or customized draft (`draftKind: customized_manual`, `billTo`, `currency`, `lines`); see request schemas)
@@ -99,16 +97,13 @@ info:
     - `POST /v1/admin/leads/{id}/notes`
     - `GET|POST /v1/admin/leads/{id}/ai-suggestion` (POST queues async job; poll `.../ai-suggestion/jobs/{job_id}`)
     - `GET /v1/admin/leads/analytics`
-    - `GET /v1/admin/leads/export`
     - `GET|PATCH /v1/admin/leads/settings`
     - `GET /v1/admin/whatsapp/conversations`
     - `GET /v1/admin/whatsapp/conversations/{id}/messages`
     - `GET|POST /v1/admin/whatsapp/import-jobs`
-    - `GET /v1/admin/whatsapp/import-jobs/{id}`
     - `GET /v1/admin/meta/conversations`
     - `GET /v1/admin/meta/conversations/{id}/messages`
     - `GET|POST /v1/admin/meta/import-jobs`
-    - `GET /v1/admin/meta/import-jobs/{id}`
     - `GET|POST /v1/admin/assets`
     - `GET|PUT|PATCH|DELETE /v1/admin/assets/{id}`
     - `POST /v1/admin/assets/{id}/content/init`
@@ -718,23 +713,6 @@ paths:
   /v1/admin/locations/{id}:
     parameters:
       - $ref: "#/components/parameters/LocationId"
-    get:
-      summary: Get location
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "200":
-          description: Location response.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LocationResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
     put:
       summary: Update location
       security:
@@ -976,32 +954,6 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /v1/admin/audit-logs/{id}:
-    get:
-      summary: Get audit log entry by id
-      security:
-        - AdminBearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Audit log entry.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AuditLog"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
   /v1/admin/api-keys:
     get:
       summary: List API tokens
@@ -1069,24 +1021,6 @@ paths:
         schema:
           type: string
           format: uuid
-    get:
-      summary: Get an API token
-      description: Returns token metadata without the plaintext or hash.
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "200":
-          description: API token metadata.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiKeySummary"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
     delete:
       summary: Revoke an API token
       description: Soft-revokes the token. Idempotent if already revoked.
@@ -1245,25 +1179,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/LeadAnalyticsResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /v1/admin/leads/export:
-    get:
-      summary: Export leads as CSV
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "200":
-          description: CSV export generated.
-          content:
-            text/csv:
-              schema:
-                type: string
         "400":
           $ref: "#/components/responses/BadRequest"
         "403":
@@ -1470,30 +1385,6 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
-  /v1/admin/whatsapp/import-jobs/{id}:
-    parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-    get:
-      summary: Get a WhatsApp export import job
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "200":
-          description: Job detail.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InboxImportJobResponse"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
   /v1/admin/meta/conversations:
     get:
       summary: List captured Messenger and Instagram conversations
@@ -1657,30 +1548,6 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
-
-  /v1/admin/meta/import-jobs/{id}:
-    parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-    get:
-      summary: Get a Messenger or Instagram Graph import job
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "200":
-          description: Job detail.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/InboxImportJobResponse"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
 
   /v1/admin/leads/{id}:
     parameters:
@@ -2550,21 +2417,6 @@ paths:
   /v1/admin/completion-certificates/{id}:
     parameters:
       - $ref: "#/components/parameters/CompletionCertificateId"
-    get:
-      summary: Get completion certificate
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "200":
-          description: Certificate detail.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CompletionCertificateResponse"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
     delete:
       summary: Delete completion certificate
       description: Permanently removes the certificate row and best-effort deletes the stored PDF.
@@ -2703,21 +2555,6 @@ paths:
         schema:
           type: string
           format: uuid
-    get:
-      summary: Get manual calendar block by id
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "200":
-          description: Block detail.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdminCalendarManualBlockResponse"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
     patch:
       summary: Update manual calendar block
       security:
@@ -2834,21 +2671,6 @@ paths:
         schema:
           type: string
           format: uuid
-    get:
-      summary: Get CRM tag by id
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "200":
-          description: Tag detail.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdminTagResponse"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
     patch:
       summary: Update CRM tag
       description: |
@@ -3402,23 +3224,6 @@ paths:
   /v1/admin/families/{id}:
     parameters:
       - $ref: "#/components/parameters/AdminFamilyId"
-    get:
-      summary: Get CRM family
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "200":
-          description: Family response.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdminFamilyResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
     patch:
       summary: Update CRM family
       description: |
@@ -3690,23 +3495,6 @@ paths:
   /v1/admin/organizations/{id}:
     parameters:
       - $ref: "#/components/parameters/AdminOrganizationId"
-    get:
-      summary: Get CRM organization
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "200":
-          description: Organization response.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AdminOrganizationResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
     patch:
       summary: Update CRM organization
       security:
@@ -3852,12 +3640,12 @@ paths:
     get:
       summary: Export billing CSV (default export v2)
       description: >
-        Default `export_version` is **2** (`?exportVersion=2` or omit). v2 rows include
+        Default `export_version` is **2** (`?export_version=2` or omit). v2 rows include
         `document_type` in `payment`, `refund`, `invoice`, `invoice_line`, `receipt`,
         and `allocation` with columns for `payment_method`, `bank_reference` (payment
         `external_reference`), `counterparty_name_snapshot` (invoice line description or
         invoice snapshot display name), `tax_amount`, `created_by` (payment `confirmed_by`),
-        bill-to fields on invoice rows, and Stripe / linkage ids. Pass `exportVersion=1`
+        bill-to fields on invoice rows, and Stripe / linkage ids. Pass `export_version=1`
         for the legacy payments+allocations-only shape. Payment rows are paginated via
         `limit` and `cursor`; allocations, invoices, invoice lines, and receipts are
         included only on the first page (`cursor` omitted) up to fixed per-entity caps
@@ -3865,7 +3653,7 @@ paths:
       security:
         - AdminBearerAuth: []
       parameters:
-        - name: exportVersion
+        - name: export_version
           in: query
           required: false
           description: "`1` (legacy) or `2` (default)."
@@ -3909,7 +3697,10 @@ paths:
 
   /v1/admin/billing/payments:
     get:
-      summary: List recent customer payments
+      summary: List customer payments
+      description: >
+        Cursor-paginated list ordered by `created_at` descending, then `id` descending.
+        Pass `next_cursor` from the previous response as `cursor` for the next page.
       security:
         - AdminBearerAuth: []
       parameters:
@@ -3920,6 +3711,20 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: cursor
+          in: query
+          required: false
+          description: Opaque cursor from a prior `next_cursor` value.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
       responses:
         "200":
           description: Payment rows.
@@ -3927,11 +3732,16 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - items
                 properties:
                   items:
                     type: array
                     items:
                       $ref: "#/components/schemas/CustomerPaymentSummary"
+                  next_cursor:
+                    type: string
+                    nullable: true
         "400":
           $ref: "#/components/responses/BadRequest"
         "403":
@@ -4079,36 +3889,6 @@ paths:
           description: Payment deleted.
         "400":
           $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
-  /v1/admin/billing/payments/{id}/unapplied:
-    get:
-      summary: Unapplied amount for a payment
-      security:
-        - AdminBearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Unapplied remainder.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  paymentId:
-                    type: string
-                    format: uuid
-                  unappliedAmount:
-                    type: string
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -4860,23 +4640,6 @@ paths:
   /v1/admin/expenses/{id}:
     parameters:
       - $ref: "#/components/parameters/ExpenseId"
-    get:
-      summary: Get expense
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "200":
-          description: Expense response.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ExpenseResponse"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
     patch:
       summary: Update expense
       security:

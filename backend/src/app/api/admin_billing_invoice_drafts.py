@@ -2,19 +2,16 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
-from collections.abc import Mapping
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-from app.api.admin_billing_common import (
-    _session_with_audit,
-    effective_enrollment_bill_to_fks,
-)
+from app.api.admin_billing_common import effective_enrollment_bill_to_fks
 from app.api.admin_billing_invoice_draft_helpers import (
     _build_enrollment_merge_line_description,
     _decimal_field,
@@ -24,10 +21,10 @@ from app.api.admin_billing_invoice_draft_helpers import (
     _resolve_bill_to_party_for_draft,
     _resolve_bill_to_party_from_invoice_fks,
 )
-from app.config import get_default_currency_code
-from app.api.admin_request import parse_body
 from app.api.admin_expenses_common import parse_optional_date
-from app.db.audit import AuditService
+from app.api.admin_request import parse_body
+from app.config import get_default_currency_code
+from app.db.audit import AuditService, session_with_audit
 from app.db.models import Contact, Enrollment, Family, Organization
 from app.db.models.customer_invoice import CustomerInvoice, CustomerInvoiceLine
 from app.db.models.enums import BillingBillToKind, BillingInvoiceStatus
@@ -94,7 +91,7 @@ def _create_customized_invoice_draft(
 
     inv_date = _resolve_draft_invoice_date(body)
 
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         if bill_kind == BillingBillToKind.CONTACT:
             if bill_cid is None:
                 raise ValidationError("billTo.contactId is required", field="billTo")
@@ -321,7 +318,7 @@ def _create_invoice_draft(
 
     inv_date = _resolve_draft_invoice_date(body)
 
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         rows = list(
             session.execute(
                 select(Enrollment)

@@ -856,33 +856,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Get location */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Location identifier. */
-                    id: components["parameters"]["LocationId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Location response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["LocationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get?: never;
         /** Update location */
         put: {
             parameters: {
@@ -1122,47 +1096,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/admin/audit-logs/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get audit log entry by id */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Audit log entry. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AuditLog"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/admin/api-keys": {
         parameters: {
             query?: never;
@@ -1248,35 +1181,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * Get an API token
-         * @description Returns token metadata without the plaintext or hash.
-         */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description API token metadata. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiKeySummary"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get?: never;
         put?: never;
         post?: never;
         /**
@@ -1420,45 +1325,6 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["LeadAnalyticsResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/admin/leads/export": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Export leads as CSV */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description CSV export generated. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/csv": string;
                     };
                 };
                 400: components["responses"]["BadRequest"];
@@ -1705,48 +1571,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/admin/whatsapp/import-jobs/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        /** Get a WhatsApp export import job */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Job detail. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["InboxImportJobResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/admin/meta/conversations": {
         parameters: {
             query?: never;
@@ -1908,48 +1732,6 @@ export interface paths {
                 403: components["responses"]["Forbidden"];
             };
         };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/admin/meta/import-jobs/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        /** Get a Messenger or Instagram Graph import job */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Job detail. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["InboxImportJobResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3221,32 +3003,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Get completion certificate */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Completion certificate identifier. */
-                    id: components["parameters"]["CompletionCertificateId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Certificate detail. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CompletionCertificateResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get?: never;
         put?: never;
         post?: never;
         /**
@@ -3465,31 +3222,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Get manual calendar block by id */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Block detail. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminCalendarManualBlockResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get?: never;
         put?: never;
         post?: never;
         /** Delete manual calendar block */
@@ -3652,31 +3385,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Get CRM tag by id */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Tag detail. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminTagResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get?: never;
         put?: never;
         post?: never;
         /**
@@ -4532,33 +4241,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Get CRM family */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description CRM family identifier. */
-                    id: components["parameters"]["AdminFamilyId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Family response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminFamilyResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get?: never;
         put?: never;
         post?: never;
         /**
@@ -4958,33 +4641,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Get CRM organization */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description CRM organization identifier. */
-                    id: components["parameters"]["AdminOrganizationId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Organization response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminOrganizationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get?: never;
         put?: never;
         post?: never;
         /**
@@ -5245,13 +4902,13 @@ export interface paths {
         };
         /**
          * Export billing CSV (default export v2)
-         * @description Default `export_version` is **2** (`?exportVersion=2` or omit). v2 rows include `document_type` in `payment`, `refund`, `invoice`, `invoice_line`, `receipt`, and `allocation` with columns for `payment_method`, `bank_reference` (payment `external_reference`), `counterparty_name_snapshot` (invoice line description or invoice snapshot display name), `tax_amount`, `created_by` (payment `confirmed_by`), bill-to fields on invoice rows, and Stripe / linkage ids. Pass `exportVersion=1` for the legacy payments+allocations-only shape. Payment rows are paginated via `limit` and `cursor`; allocations, invoices, invoice lines, and receipts are included only on the first page (`cursor` omitted) up to fixed per-entity caps (10,000 allocations; 5,000 invoices and receipts).
+         * @description Default `export_version` is **2** (`?export_version=2` or omit). v2 rows include `document_type` in `payment`, `refund`, `invoice`, `invoice_line`, `receipt`, and `allocation` with columns for `payment_method`, `bank_reference` (payment `external_reference`), `counterparty_name_snapshot` (invoice line description or invoice snapshot display name), `tax_amount`, `created_by` (payment `confirmed_by`), bill-to fields on invoice rows, and Stripe / linkage ids. Pass `export_version=1` for the legacy payments+allocations-only shape. Payment rows are paginated via `limit` and `cursor`; allocations, invoices, invoice lines, and receipts are included only on the first page (`cursor` omitted) up to fixed per-entity caps (10,000 allocations; 5,000 invoices and receipts).
          */
         get: {
             parameters: {
                 query?: {
                     /** @description `1` (legacy) or `2` (default). */
-                    exportVersion?: "1" | "2";
+                    export_version?: "1" | "2";
                     /** @description Maximum payment rows per page (default 1000, max 5000). */
                     limit?: number;
                     /** @description Opaque pagination cursor from a prior export response `next_cursor`. */
@@ -5294,12 +4951,18 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List recent customer payments */
+        /**
+         * List customer payments
+         * @description Cursor-paginated list ordered by `created_at` descending, then `id` descending. Pass `next_cursor` from the previous response as `cursor` for the next page.
+         */
         get: {
             parameters: {
                 query?: {
                     /** @description When set, return only payments that have at least one allocation to this invoice. */
                     invoice_id?: string;
+                    /** @description Opaque cursor from a prior `next_cursor` value. */
+                    cursor?: string;
+                    limit?: number;
                 };
                 header?: never;
                 path?: never;
@@ -5314,7 +4977,8 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            items?: components["schemas"]["CustomerPaymentSummary"][];
+                            items: components["schemas"]["CustomerPaymentSummary"][];
+                            next_cursor?: string | null;
                         };
                     };
                 };
@@ -5484,50 +5148,6 @@ export interface paths {
                 };
             };
         };
-        trace?: never;
-    };
-    "/v1/admin/billing/payments/{id}/unapplied": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Unapplied amount for a payment */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Unapplied remainder. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** Format: uuid */
-                            paymentId?: string;
-                            unappliedAmount?: string;
-                        };
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/v1/admin/billing/payments/{id}/confirm": {
@@ -6353,33 +5973,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Get expense */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Expense identifier. */
-                    id: components["parameters"]["ExpenseId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Expense response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ExpenseResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get?: never;
         put?: never;
         post?: never;
         /**

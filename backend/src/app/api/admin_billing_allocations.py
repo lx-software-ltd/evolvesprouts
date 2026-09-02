@@ -2,22 +2,22 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from decimal import Decimal, InvalidOperation
 from typing import Any
-from collections.abc import Mapping
 from uuid import UUID
 
 from sqlalchemy import select
 
-from app.api.admin_billing_common import _session_with_audit
 from app.api.admin_request import parse_body
+from app.db.audit import session_with_audit
 from app.db.models.customer_invoice import CustomerInvoice
 from app.db.models.customer_payment import CustomerPayment
 from app.db.models.payment_allocation import PaymentAllocation
+from app.exceptions import NotFoundError, ValidationError
 from app.services.billing_enrollment_confirmation import (
     maybe_confirm_enrollments_on_positive_invoice_payment_allocation,
 )
-from app.exceptions import NotFoundError, ValidationError
 from app.services.customer_billing import (
     payment_unapplied_amount,
     recompute_invoice_settlement,
@@ -30,15 +30,15 @@ def _create_allocation(
 ) -> dict[str, Any]:
     body = parse_body(event)
     try:
-        payment_id = UUID(str(body.get("paymentId") or body.get("payment_id")))
+        payment_id = UUID(str(body.get("paymentId")))
     except (ValueError, TypeError) as exc:
         raise ValidationError("paymentId must be a UUID", field="paymentId") from exc
     try:
-        invoice_id = UUID(str(body.get("invoiceId") or body.get("invoice_id")))
+        invoice_id = UUID(str(body.get("invoiceId")))
     except (ValueError, TypeError) as exc:
         raise ValidationError("invoiceId must be a UUID", field="invoiceId") from exc
     try:
-        amt = Decimal(str(body.get("allocatedAmount") or body.get("allocated_amount")))
+        amt = Decimal(str(body.get("allocatedAmount")))
     except (InvalidOperation, TypeError, ValueError) as exc:
         raise ValidationError(
             "allocatedAmount must be a decimal number", field="allocatedAmount"
@@ -49,7 +49,7 @@ def _create_allocation(
             field="allocatedAmount",
         )
     currency = str(body.get("currency") or "").upper()[:3]
-    line_id_raw = body.get("invoiceLineId") or body.get("invoice_line_id")
+    line_id_raw = body.get("invoiceLineId")
     line_id: UUID | None = None
     if line_id_raw:
         try:
@@ -59,7 +59,7 @@ def _create_allocation(
                 "invoiceLineId must be a UUID", field="invoiceLineId"
             ) from exc
 
-    with _session_with_audit(user_sub, request_id) as session:
+    with session_with_audit(user_sub, request_id) as session:
         pay = session.execute(
             select(CustomerPayment)
             .where(CustomerPayment.id == payment_id)

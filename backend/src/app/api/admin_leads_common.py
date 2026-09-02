@@ -33,17 +33,10 @@ from app.db.models.enums import (
 )
 from app.exceptions import ValidationError
 
-_LIST_LEADS_DEFAULT_LIMIT = 25
-_LIST_LEADS_MAX_LIMIT = 100
-
 
 def parse_lead_filters(event: Mapping[str, Any]) -> dict[str, Any]:
-    """Parse list/query filters for lead list and export endpoints."""
-    limit = parse_admin_limit(
-        event,
-        default=_LIST_LEADS_DEFAULT_LIMIT,
-        max_limit=_LIST_LEADS_MAX_LIMIT,
-    )
+    """Parse list/query filters for the lead list endpoint."""
+    limit = parse_admin_limit(event)
     raw_cursor = query_param(event, "cursor")
     sort = (query_param(event, "sort") or "created_at").strip().lower()
     if sort not in {"created_at", "updated_at", "funnel_stage", "contact_name"}:

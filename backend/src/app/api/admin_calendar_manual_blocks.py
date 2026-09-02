@@ -60,8 +60,6 @@ def handle_admin_calendar_manual_blocks_request(
 
     block_id = parse_uuid(parts[3])
     if len(parts) == 4:
-        if method == "GET":
-            return _get_block(event, block_id=block_id)
         if method == "PATCH":
             return _update_block(event, block_id=block_id, actor_sub=identity.user_sub)
         if method == "DELETE":
@@ -146,17 +144,6 @@ def _list_blocks(event: Mapping[str, Any]) -> dict[str, Any]:
     return json_response(200, {"items": items}, event=event)
 
 
-def _get_block(event: Mapping[str, Any], *, block_id: UUID) -> dict[str, Any]:
-    with Session(get_engine()) as session:
-        repo = CalendarManualBlockRepository(session)
-        row = repo.get_by_id(block_id)
-        if row is None:
-            raise NotFoundError("Calendar manual block", str(block_id))
-        payload = _serialize_block(row)
-
-    return json_response(200, {"block": payload}, event=event)
-
-
 def _create_block(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, Any]:
     body = parse_body(event)
     purpose = _parse_purpose(body.get("purpose"))
@@ -166,7 +153,7 @@ def _create_block(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, Any]
             f"purpose must be one of: {allowed}",
             field="purpose",
         )
-    block_date = _parse_block_date(body.get("blockDate") or body.get("block_date"))
+    block_date = _parse_block_date(body.get("blockDate"))
     period = _parse_period(body.get("period"))
     note = _optional_note(body.get("note"))
 
@@ -252,10 +239,8 @@ def _update_block(
             "note": row.note,
         }
 
-        if "blockDate" in body or "block_date" in body:
-            row.block_date = _parse_block_date(
-                body.get("blockDate") or body.get("block_date")
-            )
+        if "blockDate" in body:
+            row.block_date = _parse_block_date(body.get("blockDate"))
         if "period" in body:
             row.period = _parse_period(body.get("period"))
         if "note" in body:

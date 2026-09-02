@@ -31,7 +31,6 @@ from app.api.admin_billing_payments import (
     _delete_payment,
     _get_payment,
     _list_payments,
-    _unapplied,
     _update_manual_inbound_payment,
 )
 from app.api.admin_request import (
@@ -41,7 +40,7 @@ from app.api.admin_request import (
     route_has_prefix,
     split_route_parts,
 )
-from app.utils import not_found
+from app.utils import method_not_allowed, not_found
 
 __all__ = [
     "CustomerPayment",
@@ -69,14 +68,17 @@ def handle_admin_billing_request(
 
     sub = parts[2]
 
-    if sub == "export" and method == "GET" and len(parts) == 3:
-        return _export_csv(event, user_sub=identity.user_sub, request_id=req)
+    if sub == "export" and len(parts) == 3:
+        if method == "GET":
+            return _export_csv(event, user_sub=identity.user_sub, request_id=req)
+        return method_not_allowed(event)
 
     if sub == "payments" and len(parts) == 3:
         if method == "GET":
             return _list_payments(event, user_sub=identity.user_sub, request_id=req)
         if method == "POST":
             return _create_payment(event, user_sub=identity.user_sub, request_id=req)
+        return method_not_allowed(event)
 
     if sub == "payments" and len(parts) == 4:
         pid = parse_uuid(parts[3])
@@ -90,11 +92,7 @@ def handle_admin_billing_request(
             return _delete_payment(
                 event, pid, user_sub=identity.user_sub, request_id=req
             )
-
-    if sub == "payments" and len(parts) == 5 and parts[4] == "unapplied":
-        pid = parse_uuid(parts[3])
-        if method == "GET":
-            return _unapplied(event, pid, user_sub=identity.user_sub, request_id=req)
+        return method_not_allowed(event)
 
     if sub == "payments" and len(parts) == 5 and parts[4] == "confirm":
         pid = parse_uuid(parts[3])
@@ -102,6 +100,7 @@ def handle_admin_billing_request(
             return _confirm_payment(
                 event, pid, user_sub=identity.user_sub, request_id=req
             )
+        return method_not_allowed(event)
 
     if sub == "invoices" and len(parts) == 3:
         if method == "GET":
@@ -110,26 +109,25 @@ def handle_admin_billing_request(
             return _create_invoice_draft(
                 event, user_sub=identity.user_sub, request_id=req
             )
+        return method_not_allowed(event)
 
-    if (
-        sub == "enrollments"
-        and len(parts) == 4
-        and parts[3] == "recent-for-invoicing"
-        and method == "GET"
-    ):
-        return list_recent_enrollments_for_invoicing(
-            event, user_sub=identity.user_sub, request_id=req
-        )
+    if sub == "enrollments" and len(parts) == 4 and parts[3] == "recent-for-invoicing":
+        if method == "GET":
+            return list_recent_enrollments_for_invoicing(
+                event, user_sub=identity.user_sub, request_id=req
+            )
+        return method_not_allowed(event)
 
     if (
         sub == "dashboard"
         and len(parts) == 4
         and parts[3] == "resolve-bill-to-primary-contacts"
-        and method == "POST"
     ):
-        return resolve_bill_to_primary_contacts(
-            event, user_sub=identity.user_sub, request_id=req
-        )
+        if method == "POST":
+            return resolve_bill_to_primary_contacts(
+                event, user_sub=identity.user_sub, request_id=req
+            )
+        return method_not_allowed(event)
 
     if sub == "invoices" and len(parts) == 4:
         inv_id = parse_uuid(parts[3])
@@ -141,28 +139,39 @@ def handle_admin_billing_request(
             return _delete_draft_invoice(
                 event, inv_id, user_sub=identity.user_sub, request_id=req
             )
+        return method_not_allowed(event)
 
     if sub == "invoices" and len(parts) == 5:
         inv_id = parse_uuid(parts[3])
         action = parts[4]
-        if action == "issue" and method == "POST":
-            return _issue_invoice(
-                event, inv_id, user_sub=identity.user_sub, request_id=req
-            )
-        if action == "void" and method == "POST":
-            return _void_invoice(
-                event, inv_id, user_sub=identity.user_sub, request_id=req
-            )
-        if action == "email" and method == "POST":
-            return _email_invoice(
-                event, inv_id, user_sub=identity.user_sub, request_id=req
-            )
-        if action == "pdf" and method == "GET":
-            return get_invoice_pdf_download(
-                event, inv_id, user_sub=identity.user_sub, request_id=req
-            )
+        if action == "issue":
+            if method == "POST":
+                return _issue_invoice(
+                    event, inv_id, user_sub=identity.user_sub, request_id=req
+                )
+            return method_not_allowed(event)
+        if action == "void":
+            if method == "POST":
+                return _void_invoice(
+                    event, inv_id, user_sub=identity.user_sub, request_id=req
+                )
+            return method_not_allowed(event)
+        if action == "email":
+            if method == "POST":
+                return _email_invoice(
+                    event, inv_id, user_sub=identity.user_sub, request_id=req
+                )
+            return method_not_allowed(event)
+        if action == "pdf":
+            if method == "GET":
+                return get_invoice_pdf_download(
+                    event, inv_id, user_sub=identity.user_sub, request_id=req
+                )
+            return method_not_allowed(event)
 
-    if sub == "allocations" and len(parts) == 3 and method == "POST":
-        return _create_allocation(event, user_sub=identity.user_sub, request_id=req)
+    if sub == "allocations" and len(parts) == 3:
+        if method == "POST":
+            return _create_allocation(event, user_sub=identity.user_sub, request_id=req)
+        return method_not_allowed(event)
 
     return not_found(event)
