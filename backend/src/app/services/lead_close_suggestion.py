@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -24,6 +23,7 @@ from app.services.openrouter_client import (
     extract_message_text,
     openrouter_chat_completion,
 )
+from app.services.openrouter_json_parse import loads_openrouter_json
 from app.utils.logging import get_logger, mask_email, mask_pii
 
 logger = get_logger(__name__)
@@ -36,6 +36,7 @@ _MAX_EVENTS = 12
 _SLOW_OPENROUTER_USER_MESSAGE = (
     "The AI model took too long to respond. Please try again in a moment."
 )
+_INVALID_JSON_USER_MESSAGE = "The AI returned an invalid response. Please try again."
 
 
 def _openrouter_timeout_seconds() -> int:
@@ -45,8 +46,6 @@ def _openrouter_timeout_seconds() -> int:
     except ValueError:
         return 90
 
-
-_JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL | re.IGNORECASE)
 
 _SYSTEM_PROMPT = """
 You are a sales coach for Evolve Sprouts (Hong Kong). Given brand context, the
@@ -414,18 +413,11 @@ def _load_similar_leads(session: Session, *, lead: SalesLead) -> list[dict[str, 
 
 
 def _parse_json_object(text: str) -> dict[str, Any]:
-    cleaned = text.strip()
-    fence = _JSON_FENCE_RE.search(cleaned)
-    if fence:
-        cleaned = fence.group(1).strip()
-    try:
-        parsed = json.loads(cleaned)
-    except json.JSONDecodeError:
-        start = cleaned.find("{")
-        end = cleaned.rfind("}")
-        if start < 0 or end <= start:
-            raise RuntimeError("Model response was not valid JSON") from None
-        parsed = json.loads(cleaned[start : end + 1])
+    parsed = loads_openrouter_json(
+        text,
+        context="lead close suggestion",
+        timeout=_openrouter_timeout_seconds(),
+    )
     if not isinstance(parsed, dict):
         raise RuntimeError("Model JSON must be an object")
     return parsed
@@ -492,4 +484,13 @@ def _format_openrouter_failure(exc: BaseException) -> str:
         return _SLOW_OPENROUTER_USER_MESSAGE
     if "status 504" in lowered or "status 502" in lowered:
         return _SLOW_OPENROUTER_USER_MESSAGE
+    invalid_json_markers = (
+        "model response was not valid json",
+        "model json must be an object",
+        "parser returned invalid json",
+        "jsondecodeerror",
+        "no json object found",
+    )
+    if any(marker in lowered for marker in invalid_json_markers):
+        return _INVALID_JSON_USER_MESSAGE
     return message or _SLOW_OPENROUTER_USER_MESSAGE

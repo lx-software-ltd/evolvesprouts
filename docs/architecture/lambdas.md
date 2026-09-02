@@ -637,7 +637,7 @@ their primary responsibilities.
   iterations and rolled back because they introduced more failure modes
   than they fixed. Unescaped-quote `JSONDecodeError` cases (the original
   symptom that prompted JSON mode) are still handled, by the
-  `_loads_with_repair` pathway instead.
+  `loads_openrouter_json` pathway instead.
 - Transient retry (every chat completion): each `_openrouter_chat_completion`
   call retries up to **2 additional times** (3 attempts total) with
   exponential backoff (2s, 4s) on transient upstream failures &mdash; HTTP
