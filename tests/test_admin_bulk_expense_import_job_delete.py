@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from app.api import admin_expenses
+from app.api import admin_expenses, admin_expenses_bulk_import
 from app.exceptions import NotFoundError
 
 
@@ -44,13 +44,17 @@ def test_delete_bulk_import_job_removes_row_for_creator(
         def __exit__(self, *args: object) -> None:
             return None
 
-    monkeypatch.setattr(admin_expenses, "BulkExpenseImportJobRepository", _FakeBulkRepo)
-    monkeypatch.setattr(admin_expenses, "Session", lambda _engine: _FakeSessionCtx())
-    monkeypatch.setattr(admin_expenses, "get_engine", lambda: object())
     monkeypatch.setattr(
-        admin_expenses, "set_audit_context", lambda *args, **kwargs: None
+        admin_expenses_bulk_import, "BulkExpenseImportJobRepository", _FakeBulkRepo
     )
-    monkeypatch.setattr(admin_expenses, "request_id", lambda _e: "req-1")
+    monkeypatch.setattr(
+        admin_expenses_bulk_import, "Session", lambda _engine: _FakeSessionCtx()
+    )
+    monkeypatch.setattr(admin_expenses_bulk_import, "get_engine", lambda: object())
+    monkeypatch.setattr(
+        admin_expenses_bulk_import, "set_audit_context", lambda *args, **kwargs: None
+    )
+    monkeypatch.setattr(admin_expenses_bulk_import, "request_id", lambda _e: "req-1")
     monkeypatch.setattr(
         admin_expenses,
         "require_admin_identity",
@@ -91,13 +95,17 @@ def test_delete_bulk_import_job_returns_404_when_missing(
         def __exit__(self, *args: object) -> None:
             return None
 
-    monkeypatch.setattr(admin_expenses, "BulkExpenseImportJobRepository", _FakeBulkRepo)
-    monkeypatch.setattr(admin_expenses, "Session", lambda _engine: _FakeSessionCtx())
-    monkeypatch.setattr(admin_expenses, "get_engine", lambda: object())
     monkeypatch.setattr(
-        admin_expenses, "set_audit_context", lambda *args, **kwargs: None
+        admin_expenses_bulk_import, "BulkExpenseImportJobRepository", _FakeBulkRepo
     )
-    monkeypatch.setattr(admin_expenses, "request_id", lambda _e: "req-1")
+    monkeypatch.setattr(
+        admin_expenses_bulk_import, "Session", lambda _engine: _FakeSessionCtx()
+    )
+    monkeypatch.setattr(admin_expenses_bulk_import, "get_engine", lambda: object())
+    monkeypatch.setattr(
+        admin_expenses_bulk_import, "set_audit_context", lambda *args, **kwargs: None
+    )
+    monkeypatch.setattr(admin_expenses_bulk_import, "request_id", lambda _e: "req-1")
     monkeypatch.setattr(
         admin_expenses,
         "require_admin_identity",
