@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any
 
-from app.api.assets.assets_common import extract_identity, split_route_parts
+from app.api.admin_request import require_admin_identity, split_route_parts
 from app.exceptions import ValidationError
 from app.services.poll_responses_store import (
     clear_poll_answers,
@@ -33,9 +33,7 @@ def handle_admin_polls_request(
     if len(parts) < 2 or parts[0] != "admin" or parts[1] != "polls":
         return json_response(404, {"error": "Not found"}, event=event)
 
-    identity = extract_identity(event)
-    if not identity.user_sub:
-        raise ValidationError("Authenticated user is required", field="authorization")
+    require_admin_identity(event)
 
     if len(parts) == 2:
         if method != "GET":

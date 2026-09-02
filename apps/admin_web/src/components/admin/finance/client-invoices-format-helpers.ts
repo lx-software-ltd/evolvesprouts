@@ -11,6 +11,8 @@ export function formatTruncatedId(id: string | null | undefined): string {
 }
 
 /** Customer payments Method column: snake_case label with FPS acronym spelled out. */
-export function formatPaymentMethodLabel(raw: string | null | undefined): string {
+export function formatPaymentMethodLabel(
+  raw: string | null | undefined,
+): string {
   return formatEnumLabel(raw ?? '').replace(/\bFps\b/g, 'FPS');
 }

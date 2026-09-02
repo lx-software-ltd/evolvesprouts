@@ -10,7 +10,12 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.admin_request import parse_body, parse_uuid
+from app.api.admin_request import (
+    parse_body,
+    parse_uuid,
+    require_admin_identity,
+    split_route_parts,
+)
 from app.api.admin_services_common import (
     encode_discount_code_cursor,
     parse_create_discount_code_payload,
@@ -25,7 +30,6 @@ from app.api.admin_services_payloads import (
     ensure_discount_validity_window,
 )
 from app.api.discount_scope_validation import ensure_discount_code_scope
-from app.api.assets.assets_common import extract_identity, split_route_parts
 from app.db.audit import set_audit_context
 from app.db.engine import get_engine
 from app.db.models import DiscountCode
@@ -52,9 +56,7 @@ def handle_admin_discount_codes_request(
     if len(parts) < 2 or parts[0] != "admin" or parts[1] != "discount-codes":
         return json_response(404, {"error": "Not found"}, event=event)
 
-    identity = extract_identity(event)
-    if not identity.user_sub:
-        raise ValidationError("Authenticated user is required", field="authorization")
+    identity = require_admin_identity(event)
 
     if len(parts) == 2:
         if method == "GET":

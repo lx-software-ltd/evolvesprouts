@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useState } from 'react';
 
-import { getAdminDefaultCurrencyCode } from "@/lib/config";
-import { getCurrencyOptions } from "@/lib/format";
+import { getAdminDefaultCurrencyCode } from '@/lib/config';
+import { getCurrencyOptions } from '@/lib/format';
 
-import type { ClientInvoicesPanelShared } from "@/hooks/client-invoices-panel-types";
+import type { ClientInvoicesPanelShared } from '@/hooks/client-invoices-panel-types';
 
 export function useClientInvoicesPanelShared(): ClientInvoicesPanelShared {
   const draftFilterId = useId();
@@ -16,8 +16,8 @@ export function useClientInvoicesPanelShared(): ClientInvoicesPanelShared {
   const currencyOptions = useMemo(() => getCurrencyOptions(), []);
   const defaultCurrency = useMemo(() => getAdminDefaultCurrencyCode(), []);
 
-  const [actionMessage, setActionMessage] = useState("");
-  const [actionError, setActionError] = useState("");
+  const [actionMessage, setActionMessage] = useState('');
+  const [actionError, setActionError] = useState('');
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [exportBusy, setExportBusy] = useState(false);
 

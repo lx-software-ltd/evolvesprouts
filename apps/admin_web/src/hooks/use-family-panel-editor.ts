@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState, type MouseEvent } from 'react';
 
 import type { useAdminEntityFamilies } from '@/hooks/use-admin-entity-families';
-import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
+import { useEntityPanelEditorShell } from '@/hooks/use-entity-panel-editor-shell';
 import { useEntityInlineLocation } from '@/hooks/use-entity-inline-location';
 import { useEntityServiceLabels } from '@/hooks/use-entity-service-labels';
 import type { InlineLocationEmbeddedSummary } from '@/components/admin/locations/inline-location-editor';
@@ -51,11 +51,16 @@ export function useFamilyPanelEditor({
     deleteFamily,
   } = families;
 
-  const [confirmDialogProps, requestConfirm] = useConfirmDialog();
-  const [deleteActionError, setDeleteActionError] = useState('');
-
-  const [editorMode, setEditorMode] = useState<'create' | 'edit'>('create');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const {
+    confirmDialogProps,
+    requestConfirm,
+    deleteActionError,
+    setDeleteActionError,
+    editorMode,
+    setEditorMode,
+    selectedId,
+    setSelectedId,
+  } = useEntityPanelEditorShell();
   const [familyName, setFamilyName] = useState('');
   const [relationshipType, setRelationshipType] =
     useState<(typeof FAMILY_RELATIONSHIP_TYPES)[number]>('prospect');

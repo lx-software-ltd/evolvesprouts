@@ -34,9 +34,12 @@ from app.api.admin_billing_payments import (
     _unapplied,
     _update_manual_inbound_payment,
 )
-from app.api.admin_request import parse_uuid, request_id
-from app.api.assets.assets_common import extract_identity, split_route_parts
-from app.exceptions import ValidationError
+from app.api.admin_request import (
+    parse_uuid,
+    request_id,
+    require_admin_identity,
+    split_route_parts,
+)
 from app.utils import json_response
 
 __all__ = [
@@ -56,9 +59,7 @@ def handle_admin_billing_request(
     if len(parts) < 2 or parts[0] != "admin" or parts[1] != "billing":
         return json_response(404, {"error": "Not found"}, event=event)
 
-    identity = extract_identity(event)
-    if not identity.user_sub:
-        raise ValidationError("Authenticated user is required", field="authorization")
+    identity = require_admin_identity(event)
 
     req = request_id(event)
 

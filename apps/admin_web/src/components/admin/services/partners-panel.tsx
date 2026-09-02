@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo, useState, type MouseEvent } from 'react';
+import { useEffect, useMemo, useState, type MouseEvent } from 'react';
 
 import type { usePartners } from '@/hooks/use-partners';
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { useEntityInlineLocation } from '@/hooks/use-entity-inline-location';
+import { toErrorMessage } from '@/hooks/hook-errors';
 import { InlineLocationEditor } from '@/components/admin/locations/inline-location-editor';
 import type { InlineLocationEmbeddedSummary } from '@/components/admin/locations/inline-location-editor';
 import { EntityTagPicker } from '@/components/admin/contacts/entity-tag-picker';
@@ -27,7 +28,7 @@ import { Label } from '@/components/ui/label';
 import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
 import { AdminTableToolbar } from '@/components/ui/admin-table-toolbar';
 import { Select } from '@/components/ui/select';
-import { type EntityTagRef } from '@/lib/entity-api';
+import { listEntityTags, type EntityTagRef } from '@/lib/entity-api';
 import { formatEnumLabel } from '@/lib/format';
 import { INSTANCE_SLUG_PATTERN } from '@/lib/slug-utils';
 import type { PartnerFilters } from '@/types/partners';
@@ -46,23 +47,51 @@ const ORG_TYPES: ApiSchemas['EntityOrganizationType'][] = [
 
 export interface PartnersPanelProps {
   partners: ReturnType<typeof usePartners>;
-  tags: EntityTagRef[];
+  tags?: EntityTagRef[];
   locations: LocationSummary[];
   geographicAreas: GeographicAreaSummary[];
   areasLoading: boolean;
   refreshLocations: () => Promise<void> | void;
-  tagsLoadError: string;
+  tagsLoadError?: string;
 }
 
 export function PartnersPanel({
   partners,
-  tags,
+  tags: tagsProp,
   locations,
   geographicAreas,
   areasLoading,
   refreshLocations,
-  tagsLoadError,
+  tagsLoadError: tagsLoadErrorProp,
 }: PartnersPanelProps) {
+  const [loadedTags, setLoadedTags] = useState<EntityTagRef[]>([]);
+  const [loadedTagsError, setLoadedTagsError] = useState('');
+
+  useEffect(() => {
+    if (tagsProp) {
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const tagList = await listEntityTags();
+        if (!cancelled) {
+          setLoadedTags(tagList);
+          setLoadedTagsError('');
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setLoadedTagsError(toErrorMessage(error, 'Failed to load tags.'));
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tagsProp]);
+
+  const tags = tagsProp ?? loadedTags;
+  const tagsLoadError = tagsLoadErrorProp ?? loadedTagsError;
   const {
     partners: rows,
     filters,

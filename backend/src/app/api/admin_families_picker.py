@@ -8,15 +8,14 @@ from collections.abc import Mapping
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api.admin_request import require_admin_identity, split_route_parts
 from app.api.admin_billing_common import (
     family_or_organization_bill_to_display_label,
     primary_family_contact_names,
 )
 from app.api.admin_entities_helpers import parse_limit
-from app.api.assets.assets_common import extract_identity, split_route_parts
 from app.db.engine import get_engine
 from app.db.models import Family
-from app.exceptions import ValidationError
 from app.utils import json_response
 from app.utils.logging import get_logger
 
@@ -39,9 +38,7 @@ def handle_admin_families_picker_request(
     if len(parts) < 3 or parts[0] != "admin":
         return json_response(404, {"error": "Not found"}, event=event)
 
-    identity = extract_identity(event)
-    if not identity.user_sub:
-        raise ValidationError("Authenticated user is required", field="authorization")
+    require_admin_identity(event)
 
     if method != "GET":
         return json_response(405, {"error": "Method not allowed"}, event=event)

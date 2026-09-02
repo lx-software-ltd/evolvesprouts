@@ -8,7 +8,7 @@ from uuid import uuid4
 import pytest
 
 from app.api import admin_organizations_picker
-from app.api.assets.assets_common import RequestIdentity
+from app.api.admin_request import RequestIdentity
 from app.db.models import RelationshipType
 
 
@@ -38,7 +38,7 @@ def picker_session(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     monkeypatch.setattr(admin_organizations_picker, "get_engine", lambda: object())
     monkeypatch.setattr(
         admin_organizations_picker,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: _admin_identity(),
     )
     return session

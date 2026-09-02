@@ -16,7 +16,7 @@ def test_handle_admin_tags_list_get(monkeypatch: Any, api_gateway_event: Any) ->
     monkeypatch.setattr(admin_tags, "_list_tags", lambda _: marker)
     monkeypatch.setattr(
         admin_tags,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -33,7 +33,7 @@ def test_handle_admin_tags_post(monkeypatch: Any, api_gateway_event: Any) -> Non
     monkeypatch.setattr(admin_tags, "_create_tag", lambda _event, *, actor_sub: marker)
     monkeypatch.setattr(
         admin_tags,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -110,7 +110,7 @@ def test_list_tags_rejects_conflicting_query_params(
 ) -> None:
     monkeypatch.setattr(
         admin_tags,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
     event = api_gateway_event(
@@ -131,7 +131,7 @@ def test_create_tag_rejects_reserved_system_name(
 ) -> None:
     monkeypatch.setattr(
         admin_tags,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
     event = api_gateway_event(
@@ -149,7 +149,7 @@ def test_delete_tag_rejects_system_tag(
     tag_id = str(uuid4())
     monkeypatch.setattr(
         admin_tags,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 

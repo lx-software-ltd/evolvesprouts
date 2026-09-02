@@ -11,15 +11,12 @@ from uuid import UUID, uuid4
 
 from app.api.admin_request import (
     encode_cursor,
-    extract_identity,
     normalize_path,
     paginated_json_response,
     parse_body,
     parse_cursor as parse_admin_cursor,
     parse_limit as parse_admin_limit,
     query_param,
-    RequestIdentity,
-    split_route_parts,
 )
 from app.api.admin_validators import validate_string_length
 from app.db.models import (
@@ -41,10 +38,7 @@ from app.utils import require_env
 from sqlalchemy import inspect
 
 __all__ = [
-    "RequestIdentity",
-    "extract_identity",
     "normalize_path",
-    "split_route_parts",
 ]
 
 _MAX_FILE_NAME_LENGTH = 255

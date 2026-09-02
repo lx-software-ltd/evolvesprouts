@@ -1,29 +1,22 @@
-"use client";
+'use client';
 
-import type { FormEvent } from "react";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import type { FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import type {
-  ClientInvoicesDraftInput,
-} from "@/hooks/client-invoices-panel-types";
-import { toErrorMessage } from "@/hooks/hook-errors";
+import type { ClientInvoicesDraftInput } from '@/hooks/client-invoices-panel-types';
+import { toErrorMessage } from '@/hooks/hook-errors';
 import {
   createDraftInvoice,
   listRecentEnrollmentsForInvoicing,
   compareBillingEnrollmentPickerRowsByEnrolledAtDesc,
   type BillingEnrollmentPickerRow,
-} from "@/lib/billing-api";
-import { localTodayYmd } from "@/lib/format";
+} from '@/lib/billing-api';
+import { localTodayYmd } from '@/lib/format';
 import {
   defaultLineAmount,
   lineAmountsDiffer,
   parseAmountInput,
-} from "@/components/admin/finance/client-invoices-utils";
+} from '@/components/admin/finance/client-invoices-utils';
 
 export function useClientInvoicesDraft({
   shared,
@@ -31,15 +24,12 @@ export function useClientInvoicesDraft({
   billingRefresh,
 }: ClientInvoicesDraftInput) {
   const { setActionMessage, setActionError, setBusy } = shared;
-  const {
-    setSelectedInvoiceId,
-    setAllocateInvoiceId,
-    setAllocateLineId,
-  } = selection;
+  const { setSelectedInvoiceId, setAllocateInvoiceId, setAllocateLineId } =
+    selection;
 
   const [draftCreationMode, setDraftCreationMode] = useState<
-    "enrollment" | "customized"
-  >("enrollment");
+    'enrollment' | 'customized'
+  >('enrollment');
   const [customizedFormSubmitEnabled, setCustomizedFormSubmitEnabled] =
     useState(false);
 
@@ -49,19 +39,19 @@ export function useClientInvoicesDraft({
   const [enrollmentPickerTruncated, setEnrollmentPickerTruncated] =
     useState(false);
   const [enrollmentPickerLoading, setEnrollmentPickerLoading] = useState(true);
-  const [enrollmentPickerError, setEnrollmentPickerError] = useState("");
-  const [enrollmentFilter, setEnrollmentFilter] = useState("");
+  const [enrollmentPickerError, setEnrollmentPickerError] = useState('');
+  const [enrollmentFilter, setEnrollmentFilter] = useState('');
   const [selectedEnrollmentIds, setSelectedEnrollmentIds] = useState<
     Set<string>
   >(() => new Set());
   const [lineOverrideByEnrollmentId, setLineOverrideByEnrollmentId] = useState<
     Record<string, string>
   >({});
-  const draftInvoiceDateMin = "2000-01-01";
+  const draftInvoiceDateMin = '2000-01-01';
   const draftInvoiceDateMax = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() + 365);
-    const pad = (n: number) => String(n).padStart(2, "0");
+    const pad = (n: number) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }, []);
   const [draftInvoiceDate, setDraftInvoiceDate] = useState<string>(() =>
@@ -69,7 +59,7 @@ export function useClientInvoicesDraft({
   );
 
   const [debouncedEnrollmentFilter, setDebouncedEnrollmentFilter] =
-    useState("");
+    useState('');
 
   useEffect(() => {
     const t = window.setTimeout(
@@ -82,7 +72,7 @@ export function useClientInvoicesDraft({
   const loadEnrollmentPicker = useCallback(
     async (signal?: AbortSignal, overrideServerQuery?: string) => {
       setEnrollmentPickerLoading(true);
-      setEnrollmentPickerError("");
+      setEnrollmentPickerError('');
       const serverQuery =
         overrideServerQuery !== undefined
           ? overrideServerQuery
@@ -90,7 +80,7 @@ export function useClientInvoicesDraft({
       try {
         const { items, truncated } = await listRecentEnrollmentsForInvoicing(
           signal,
-          serverQuery === "" ? undefined : { q: serverQuery },
+          serverQuery === '' ? undefined : { q: serverQuery },
         );
         setEnrollmentPickerRows(items);
         setEnrollmentPickerTruncated(truncated);
@@ -107,12 +97,12 @@ export function useClientInvoicesDraft({
           return next;
         });
       } catch (caught) {
-        if (caught instanceof Error && caught.name === "AbortError") {
+        if (caught instanceof Error && caught.name === 'AbortError') {
           return;
         }
         const message = toErrorMessage(
           caught,
-          "Failed to load enrollments for invoicing.",
+          'Failed to load enrollments for invoicing.',
           { honorBackendMessage: true },
         );
         setEnrollmentPickerError(message);
@@ -151,19 +141,19 @@ export function useClientInvoicesDraft({
 
   const draftSelectionIssue = useMemo(() => {
     if (selectedEnrollmentRows.length === 0) {
-      return "";
+      return '';
     }
     const currencies = new Set(selectedEnrollmentRows.map((r) => r.currency));
     if (currencies.size > 1) {
-      return "Selected enrollments must share one currency.";
+      return 'Selected enrollments must share one currency.';
     }
     const billKeys = new Set(
       selectedEnrollmentRows.map((r) => r.billToMergeKey),
     );
     if (billKeys.size > 1) {
-      return "Selected enrollments must share the same bill-to (contact/family/organization).";
+      return 'Selected enrollments must share the same bill-to (contact/family/organization).';
     }
-    return "";
+    return '';
   }, [selectedEnrollmentRows]);
 
   const draftAmountIssue = useMemo(() => {
@@ -172,19 +162,19 @@ export function useClientInvoicesDraft({
         lineOverrideByEnrollmentId[row.enrollmentId] ?? defaultLineAmount(row);
       const amt = parseAmountInput(raw);
       if (amt === null) {
-        return "Enter a valid number for every line total (0 is allowed).";
+        return 'Enter a valid number for every line total (0 is allowed).';
       }
     }
-    return "";
+    return '';
   }, [selectedEnrollmentRows, lineOverrideByEnrollmentId]);
 
   const handleCreateDraft = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setActionError("");
-    setActionMessage("");
+    setActionError('');
+    setActionMessage('');
     const ids = [...selectedEnrollmentIds];
     if (ids.length === 0) {
-      setActionError("Select at least one enrollment.");
+      setActionError('Select at least one enrollment.');
       return;
     }
     const rowsById = new Map(
@@ -194,7 +184,7 @@ export function useClientInvoicesDraft({
       const row = rowsById.get(id);
       if (!row || row.invoiceLinked) {
         setActionError(
-          "The enrollment list changed; update your selection and try again.",
+          'The enrollment list changed; update your selection and try again.',
         );
         return;
       }
@@ -207,7 +197,7 @@ export function useClientInvoicesDraft({
       }
       const raw = lineOverrideByEnrollmentId[id] ?? defaultLineAmount(row);
       const trimmed = raw.trim();
-      const normalized = trimmed === "" ? defaultLineAmount(row) : trimmed;
+      const normalized = trimmed === '' ? defaultLineAmount(row) : trimmed;
       if (lineAmountsDiffer(normalized, row)) {
         overrides[id] = normalized;
       }
@@ -220,22 +210,22 @@ export function useClientInvoicesDraft({
       setActionError(draftAmountIssue);
       return;
     }
-    setBusy("draft");
+    setBusy('draft');
     try {
       const body: Parameters<typeof createDraftInvoice>[0] = {
-        draftKind: "enrollment_merge",
+        draftKind: 'enrollment_merge',
         enrollmentIds: ids,
       };
       if (Object.keys(overrides).length > 0) {
         body.lineTotalsByEnrollmentId = overrides;
       }
-      if (draftInvoiceDate.trim() !== "") {
+      if (draftInvoiceDate.trim() !== '') {
         body.invoiceDate = draftInvoiceDate.trim();
       }
       const result = await createDraftInvoice(body);
       setSelectedInvoiceId(result.invoiceId);
-      setAllocateInvoiceId("");
-      setAllocateLineId("");
+      setAllocateInvoiceId('');
+      setAllocateLineId('');
       setActionMessage(`Draft invoice created: ${result.invoiceId}`);
       setDraftInvoiceDate(localTodayYmd());
       await billingRefresh.refreshBillingLists();
@@ -245,7 +235,7 @@ export function useClientInvoicesDraft({
       );
     } catch (caught) {
       setActionError(
-        toErrorMessage(caught, "Create draft failed.", {
+        toErrorMessage(caught, 'Create draft failed.', {
           honorBackendMessage: true,
         }),
       );

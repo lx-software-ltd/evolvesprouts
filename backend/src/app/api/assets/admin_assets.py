@@ -8,7 +8,12 @@ from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
 
-from app.api.admin_request import parse_uuid
+from app.api.admin_request import (
+    extract_identity,
+    parse_uuid,
+    require_admin_identity,
+    split_route_parts,
+)
 from app.api.assets.admin_assets_content_replace import (
     complete_asset_content_replace,
     init_asset_content_replace,
@@ -24,7 +29,6 @@ from app.api.assets.assets_common import (
     asset_links_expense_attachment,
     build_s3_key,
     delete_s3_object,
-    extract_identity,
     generate_upload_url,
     paginate_response,
     parse_admin_asset_list_filters,
@@ -36,7 +40,6 @@ from app.api.assets.assets_common import (
     parse_update_asset_payload,
     serialize_asset,
     serialize_grant,
-    split_route_parts,
 )
 from app.db.audit import set_audit_context
 from app.db.engine import get_engine
@@ -57,9 +60,7 @@ def handle_admin_assets_request(
     if len(parts) < 2 or parts[0] != "admin" or parts[1] != "assets":
         return json_response(404, {"error": "Not found"}, event=event)
 
-    identity = extract_identity(event)
-    if not identity.user_sub:
-        raise ValidationError("Authenticated user is required", field="authorization")
+    identity = require_admin_identity(event)
 
     if len(parts) == 2:
         if method == "GET":

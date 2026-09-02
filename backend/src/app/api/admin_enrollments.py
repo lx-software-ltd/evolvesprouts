@@ -9,7 +9,12 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.api.admin_request import parse_body, parse_uuid
+from app.api.admin_request import (
+    parse_body,
+    parse_uuid,
+    require_admin_identity,
+    split_route_parts,
+)
 from app.api.discount_enrollment_scope import (
     ensure_discount_code_eligible_for_instance,
     service_id_for_instance,
@@ -23,7 +28,6 @@ from app.api.admin_services_common import (
     request_id,
     serialize_enrollment,
 )
-from app.api.assets.assets_common import extract_identity, split_route_parts
 from app.api.instance_capacity_status import bulk_reconcile_instance_capacity_status
 from app.db.audit import set_audit_context
 from app.db.engine import get_engine
@@ -71,9 +75,7 @@ def handle_admin_enrollments_request(
     if parts[5] != "enrollments":
         return json_response(404, {"error": "Not found"}, event=event)
 
-    identity = extract_identity(event)
-    if not identity.user_sub:
-        raise ValidationError("Authenticated user is required", field="authorization")
+    identity = require_admin_identity(event)
 
     if len(parts) == 6:
         if method == "GET":

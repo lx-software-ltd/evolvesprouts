@@ -4,7 +4,7 @@ from typing import Any
 from uuid import uuid4
 
 from app.api.assets import admin_assets
-from app.api.assets.assets_common import RequestIdentity
+from app.api.admin_request import RequestIdentity
 
 
 def _build_admin_identity(admin_identity: dict[str, str]) -> RequestIdentity:
@@ -23,7 +23,7 @@ def test_handle_admin_assets_dispatches_list_route(
     marker = {"statusCode": 200, "body": "{}"}
     monkeypatch.setattr(
         admin_assets,
-        "extract_identity",
+        "require_admin_identity",
         lambda _: _build_admin_identity(admin_identity),
     )
     monkeypatch.setattr(admin_assets, "_list_assets", lambda _: marker)
@@ -43,7 +43,7 @@ def test_handle_admin_assets_returns_405_for_unsupported_collection_method(
 ) -> None:
     monkeypatch.setattr(
         admin_assets,
-        "extract_identity",
+        "require_admin_identity",
         lambda _: _build_admin_identity(admin_identity),
     )
 
@@ -75,7 +75,7 @@ def test_handle_admin_assets_dispatches_patch_update_route(
     captured: dict[str, Any] = {}
     monkeypatch.setattr(
         admin_assets,
-        "extract_identity",
+        "require_admin_identity",
         lambda _: _build_admin_identity(admin_identity),
     )
 
@@ -103,7 +103,7 @@ def test_handle_admin_assets_dispatches_content_init_route(
     marker = {"statusCode": 200, "body": "{}"}
     monkeypatch.setattr(
         admin_assets,
-        "extract_identity",
+        "require_admin_identity",
         lambda _: _build_admin_identity(admin_identity),
     )
     monkeypatch.setattr(
@@ -129,7 +129,7 @@ def test_handle_admin_assets_dispatches_content_complete_route(
     marker = {"statusCode": 200, "body": "{}"}
     monkeypatch.setattr(
         admin_assets,
-        "extract_identity",
+        "require_admin_identity",
         lambda _: _build_admin_identity(admin_identity),
     )
     monkeypatch.setattr(
@@ -154,7 +154,7 @@ def test_handle_admin_assets_returns_405_for_content_init_get(
 ) -> None:
     monkeypatch.setattr(
         admin_assets,
-        "extract_identity",
+        "require_admin_identity",
         lambda _: _build_admin_identity(admin_identity),
     )
     asset_id = str(uuid4())

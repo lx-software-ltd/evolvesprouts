@@ -15,7 +15,7 @@ def test_handle_admin_contacts_tags_get(
     monkeypatch.setattr(admin_contacts, "_list_contact_tags", lambda _: marker)
     monkeypatch.setattr(
         admin_contacts,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -36,7 +36,7 @@ def test_handle_admin_contacts_search_get(
     monkeypatch.setattr(admin_contacts, "_search_contacts_for_picker", lambda _: marker)
     monkeypatch.setattr(
         admin_contacts,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -69,7 +69,7 @@ def test_handle_admin_contacts_delete(
     monkeypatch.setattr(admin_contacts, "delete_contact", _fake_delete)
     monkeypatch.setattr(
         admin_contacts,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -102,7 +102,7 @@ def test_handle_admin_contacts_notes_get(
     monkeypatch.setattr(admin_contacts, "list_contact_notes", _fake_list)
     monkeypatch.setattr(
         admin_contacts,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -135,7 +135,7 @@ def test_handle_admin_contacts_notes_post(
     monkeypatch.setattr(admin_contacts, "create_contact_note", _fake_create)
     monkeypatch.setattr(
         admin_contacts,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -171,7 +171,7 @@ def test_handle_admin_contacts_note_patch(
     monkeypatch.setattr(admin_contacts, "update_contact_note", _fake_update)
     monkeypatch.setattr(
         admin_contacts,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -210,7 +210,7 @@ def test_handle_admin_contacts_note_delete(
     monkeypatch.setattr(admin_contacts, "delete_contact_note", _fake_delete_note)
     monkeypatch.setattr(
         admin_contacts,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -246,7 +246,7 @@ def test_handle_admin_families_delete(
     monkeypatch.setattr(admin_families, "delete_admin_entity_family", _fake_delete)
     monkeypatch.setattr(
         admin_families,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -268,7 +268,7 @@ def test_handle_admin_families_member_patch(
     marker = {"statusCode": 200, "body": "{}"}
     monkeypatch.setattr(
         admin_families,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
     family_id = str(uuid4())
@@ -308,7 +308,7 @@ def test_handle_admin_families_member_delete(
     marker = {"statusCode": 200, "body": "{}"}
     monkeypatch.setattr(
         admin_families,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
     family_id = str(uuid4())
@@ -362,7 +362,7 @@ def test_handle_admin_organizations_delete(
     )
     monkeypatch.setattr(
         admin_organizations,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -385,7 +385,7 @@ def test_handle_admin_organizations_list_get(
     monkeypatch.setattr(admin_organizations, "_list_organizations", lambda _: marker)
     monkeypatch.setattr(
         admin_organizations,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 

@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.api import admin_polls
-from app.exceptions import ValidationError
+from app.exceptions import AuthorizationError
 from app.services import poll_responses_store as store
 
 
@@ -31,7 +31,7 @@ def _identity_event(
 
 
 def test_list_polls_requires_auth(api_gateway_event: Any) -> None:
-    with pytest.raises(ValidationError, match="Authenticated user is required"):
+    with pytest.raises(AuthorizationError, match="Authenticated user is required"):
         admin_polls.handle_admin_polls_request(
             api_gateway_event(method="GET", path="/v1/admin/polls"),
             "GET",
@@ -55,7 +55,7 @@ def test_list_polls_returns_summaries(
     mock_env(POLL_RESPONSES_TABLE_NAME="evolvesprouts-poll-responses")
     monkeypatch.setattr(
         admin_polls,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -99,7 +99,7 @@ def test_list_poll_answers_excludes_control_row(
     mock_env(POLL_RESPONSES_TABLE_NAME="evolvesprouts-poll-responses")
     monkeypatch.setattr(
         admin_polls,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -143,7 +143,7 @@ def test_list_poll_answers_returns_rows(
     mock_env(POLL_RESPONSES_TABLE_NAME="evolvesprouts-poll-responses")
     monkeypatch.setattr(
         admin_polls,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -188,7 +188,7 @@ def test_clear_poll_answers_preserves_control_row(
     mock_env(POLL_RESPONSES_TABLE_NAME="evolvesprouts-poll-responses")
     monkeypatch.setattr(
         admin_polls,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -230,7 +230,7 @@ def test_clear_poll_answers_deletes_rows(
     mock_env(POLL_RESPONSES_TABLE_NAME="evolvesprouts-poll-responses")
     monkeypatch.setattr(
         admin_polls,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 
@@ -260,7 +260,7 @@ def test_export_poll_answers_returns_csv(
     mock_env(POLL_RESPONSES_TABLE_NAME="evolvesprouts-poll-responses")
     monkeypatch.setattr(
         admin_polls,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 

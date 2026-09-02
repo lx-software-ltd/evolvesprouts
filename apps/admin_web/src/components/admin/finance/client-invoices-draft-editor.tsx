@@ -1,29 +1,29 @@
-"use client";
+'use client';
 
-import type { FormEvent } from "react";
+import type { FormEvent } from 'react';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   AdminDataTable,
   AdminDataTableBody,
   AdminDataTableCell,
   AdminDataTableHead,
   AdminDataTableHeadCell,
-} from "@/components/ui/admin-data-table";
-import { AdminEditorCard } from "@/components/ui/admin-editor-card";
-import { AdminTableToolbar } from "@/components/ui/admin-table-toolbar";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
+} from '@/components/ui/admin-data-table';
+import { AdminEditorCard } from '@/components/ui/admin-editor-card';
+import { AdminTableToolbar } from '@/components/ui/admin-table-toolbar';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select } from '@/components/ui/select';
 import {
   CUSTOMIZED_DRAFT_INVOICE_FORM_ID,
   CustomizedDraftInvoiceCard,
-} from "@/components/admin/finance/customized-draft-invoice-card";
+} from '@/components/admin/finance/customized-draft-invoice-card';
 import {
   DRAFT_FORM_ID,
   defaultLineAmount,
   enrollmentNeedsAmountConfirmation,
-} from "@/components/admin/finance/client-invoices-utils";
+} from '@/components/admin/finance/client-invoices-utils';
 import {
   ENROLLMENT_PICKER_INSTANCE_SERVICE_HEADER,
   INSTANCE_TABLE_TIER_COHORT_HEADER,
@@ -31,15 +31,15 @@ import {
   formatEnrollmentPickerInstanceServiceDisplay,
   formatTierCohortDisplay,
   localTodayYmd,
-} from "@/lib/format";
-import { formatAmountInCurrency } from "@/lib/vendor-spend";
+} from '@/lib/format';
+import { formatAmountInCurrency } from '@/lib/vendor-spend';
 
 import type {
   ClientInvoicesDraftEditorSlice,
   ClientInvoicesPanelBusy,
   ClientInvoicesPanelCurrency,
   ClientInvoicesPanelIds,
-} from "@/hooks/client-invoices-panel-types";
+} from '@/hooks/client-invoices-panel-types';
 
 export interface ClientInvoicesDraftEditorProps {
   ids: ClientInvoicesPanelIds;
@@ -54,11 +54,7 @@ export function ClientInvoicesDraftEditor({
   busy,
   draft,
 }: ClientInvoicesDraftEditorProps) {
-  const {
-    draftFilterId,
-    draftModeId,
-    draftInvoiceDateId,
-  } = ids;
+  const { draftFilterId, draftModeId, draftInvoiceDateId } = ids;
   const { currencyOptions, defaultCurrency } = currency;
   const { busyAction, editorBusy } = busy;
   const {
@@ -96,103 +92,99 @@ export function ClientInvoicesDraftEditor({
 
   return (
     <AdminEditorCard
-      title="Create draft invoice"
-      description="Choose enrollment-based (merge selected enrollments) or customized (manual lines, not linked to enrollments). One primary action submits the visible form."
+      title='Create draft invoice'
+      description='Choose enrollment-based (merge selected enrollments) or customized (manual lines, not linked to enrollments). One primary action submits the visible form.'
       actions={
         <Button
-          type="submit"
+          type='submit'
           form={
-            draftCreationMode === "enrollment"
+            draftCreationMode === 'enrollment'
               ? DRAFT_FORM_ID
               : CUSTOMIZED_DRAFT_INVOICE_FORM_ID
           }
           disabled={
             editorBusy ||
-            (draftCreationMode === "enrollment" &&
+            (draftCreationMode === 'enrollment' &&
               (Boolean(draftSelectionIssue) || Boolean(draftAmountIssue))) ||
-            (draftCreationMode === "customized" &&
-              !customizedFormSubmitEnabled)
+            (draftCreationMode === 'customized' && !customizedFormSubmitEnabled)
           }
           aria-label={
-            draftCreationMode === "enrollment"
-              ? "Create draft invoice from selected enrollments"
-              : "Create draft invoice from custom lines"
+            draftCreationMode === 'enrollment'
+              ? 'Create draft invoice from selected enrollments'
+              : 'Create draft invoice from custom lines'
           }
         >
-          {busyAction === "draft" || busyAction === "customized"
-            ? "Creating…"
-            : "Create draft invoice"}
+          {busyAction === 'draft' || busyAction === 'customized'
+            ? 'Creating…'
+            : 'Create draft invoice'}
         </Button>
       }
     >
-      <div className="space-y-4">
-        <div className="min-w-[200px] max-w-md">
+      <div className='space-y-4'>
+        <div className='min-w-[200px] max-w-md'>
           <Label htmlFor={draftModeId}>Draft type</Label>
           <Select
             id={draftModeId}
-            className="mt-1 w-full"
+            className='mt-1 w-full'
             value={draftCreationMode}
             onChange={(e) => {
               const v =
-                e.target.value === "customized"
-                  ? "customized"
-                  : "enrollment";
+                e.target.value === 'customized' ? 'customized' : 'enrollment';
               setDraftCreationMode(v);
-              if (v === "enrollment") {
+              if (v === 'enrollment') {
                 setCustomizedFormSubmitEnabled(false);
               }
             }}
             disabled={editorBusy}
           >
-            <option value="enrollment">Enrollment-based</option>
-            <option value="customized">Customized (manual lines)</option>
+            <option value='enrollment'>Enrollment-based</option>
+            <option value='customized'>Customized (manual lines)</option>
           </Select>
         </div>
-        {draftCreationMode === "enrollment" ? (
+        {draftCreationMode === 'enrollment' ? (
           <form
             id={DRAFT_FORM_ID}
-            className="space-y-4"
+            className='space-y-4'
             onSubmit={(e) => void handleCreateDraft(e)}
           >
-            <p className="text-sm text-slate-600">
+            <p className='text-sm text-slate-600'>
               Shown: enrollments from the last two years (730 rolling days by
-              enrolled date), excluding cancelled and any row already on a
-              draft or issued invoice. Selected rows must share bill-to and
-              currency on the server.
+              enrolled date), excluding cancelled and any row already on a draft
+              or issued invoice. Selected rows must share bill-to and currency
+              on the server.
             </p>
-            <AdminTableToolbar marginBottom="none">
-              <div className="min-w-[220px] flex-1">
+            <AdminTableToolbar marginBottom='none'>
+              <div className='min-w-[220px] flex-1'>
                 <Label htmlFor={draftFilterId}>Filter enrollments</Label>
                 <Input
                   id={draftFilterId}
-                  className="mt-1"
+                  className='mt-1'
                   value={enrollmentFilter}
                   onChange={(e) => setEnrollmentFilter(e.target.value)}
-                  placeholder="Search name, email, title, tier, cohort…"
+                  placeholder='Search name, email, title, tier, cohort…'
                   disabled={editorBusy}
                 />
               </div>
             </AdminTableToolbar>
             {enrollmentPickerTruncated ? (
-              <p className="text-sm text-amber-800" role="status">
+              <p className='text-sm text-amber-800' role='status'>
                 Enrollment list may be incomplete (server capped additional
-                pages). Narrow your filter or contact support for full
-                exports.
+                pages). Narrow your filter or contact support for full exports.
               </p>
             ) : null}
             {enrollmentPickerError ? (
-              <p className="text-sm text-red-800" role="alert">
+              <p className='text-sm text-red-800' role='alert'>
                 {enrollmentPickerError}
               </p>
             ) : null}
-            <section aria-label="Enrollment picker">
+            <section aria-label='Enrollment picker'>
               <AdminDataTable>
                 <AdminDataTableHead>
                   <tr>
                     <AdminDataTableHeadCell>
                       <input
-                        type="checkbox"
-                        aria-label="Select all visible enrollments"
+                        type='checkbox'
+                        aria-label='Select all visible enrollments'
                         checked={
                           selectableFilteredRows.length > 0 &&
                           selectableFilteredRows.every((row) =>
@@ -226,10 +218,10 @@ export function ClientInvoicesDraftEditor({
                     <AdminDataTableHeadCell>
                       {ENROLLMENT_PICKER_INSTANCE_SERVICE_HEADER}
                     </AdminDataTableHeadCell>
-                    <AdminDataTableHeadCell className="max-w-[14rem]">
+                    <AdminDataTableHeadCell className='max-w-[14rem]'>
                       {INSTANCE_TABLE_TIER_COHORT_HEADER}
                     </AdminDataTableHeadCell>
-                    <AdminDataTableHeadCell className="text-right">
+                    <AdminDataTableHeadCell className='text-right'>
                       Price
                     </AdminDataTableHeadCell>
                     <AdminDataTableHeadCell>Enrolled</AdminDataTableHeadCell>
@@ -240,7 +232,7 @@ export function ClientInvoicesDraftEditor({
                     <tr>
                       <AdminDataTableCell
                         colSpan={6}
-                        className="py-6 text-sm text-slate-600"
+                        className='py-6 text-sm text-slate-600'
                       >
                         Loading enrollments…
                       </AdminDataTableCell>
@@ -249,7 +241,7 @@ export function ClientInvoicesDraftEditor({
                     <tr>
                       <AdminDataTableCell
                         colSpan={6}
-                        className="py-6 text-sm text-slate-600"
+                        className='py-6 text-sm text-slate-600'
                       >
                         No enrollments match this filter.
                       </AdminDataTableCell>
@@ -258,7 +250,7 @@ export function ClientInvoicesDraftEditor({
                     <tr>
                       <AdminDataTableCell
                         colSpan={6}
-                        className="py-6 text-sm text-slate-600"
+                        className='py-6 text-sm text-slate-600'
                       >
                         All matching enrollments are already on a draft or
                         issued invoice.
@@ -269,18 +261,17 @@ export function ClientInvoicesDraftEditor({
                       const checked = selectedEnrollmentIds.has(
                         row.enrollmentId,
                       );
-                      const amountPaidTrimmed = row.amountPaid?.trim() ?? "";
+                      const amountPaidTrimmed = row.amountPaid?.trim() ?? '';
                       const currencyCode =
                         (row.currency ?? defaultCurrency)
                           .trim()
                           .toUpperCase() || defaultCurrency;
-                      const parsedAmount =
-                        Number.parseFloat(amountPaidTrimmed);
+                      const parsedAmount = Number.parseFloat(amountPaidTrimmed);
                       const priceLabel =
-                        amountPaidTrimmed !== "" &&
+                        amountPaidTrimmed !== '' &&
                         Number.isFinite(parsedAmount)
                           ? formatAmountInCurrency(parsedAmount, currencyCode)
-                          : "—";
+                          : '—';
                       const tierCohortDisplay = formatTierCohortDisplay(
                         row.serviceTierName,
                         row.instanceCohort,
@@ -291,9 +282,9 @@ export function ClientInvoicesDraftEditor({
                         formatBillingEnrollmentPartyCell(row);
                       return (
                         <tr key={row.enrollmentId}>
-                          <AdminDataTableCell className="align-top">
+                          <AdminDataTableCell className='align-top'>
                             <input
-                              type="checkbox"
+                              type='checkbox'
                               aria-label={`Select enrollment ${row.enrollmentId}`}
                               checked={checked}
                               disabled={editorBusy}
@@ -311,26 +302,22 @@ export function ClientInvoicesDraftEditor({
                               }}
                             />
                           </AdminDataTableCell>
-                          <AdminDataTableCell className="min-w-0 max-w-[22rem] break-words align-top text-sm">
-                            {partyCellDisplay !== "" ? partyCellDisplay : "—"}
+                          <AdminDataTableCell className='min-w-0 max-w-[22rem] break-words align-top text-sm'>
+                            {partyCellDisplay !== '' ? partyCellDisplay : '—'}
                           </AdminDataTableCell>
-                          <AdminDataTableCell className="align-top text-sm">
-                            {instanceServiceDisplay !== ""
+                          <AdminDataTableCell className='align-top text-sm'>
+                            {instanceServiceDisplay !== ''
                               ? instanceServiceDisplay
-                              : "—"}
+                              : '—'}
                           </AdminDataTableCell>
-                          <AdminDataTableCell className="max-w-[14rem] min-w-0 break-words align-top text-sm">
-                            {tierCohortDisplay !== ""
-                              ? tierCohortDisplay
-                              : "—"}
+                          <AdminDataTableCell className='max-w-[14rem] min-w-0 break-words align-top text-sm'>
+                            {tierCohortDisplay !== '' ? tierCohortDisplay : '—'}
                           </AdminDataTableCell>
-                          <AdminDataTableCell className="align-top text-right text-sm tabular-nums">
+                          <AdminDataTableCell className='align-top text-right text-sm tabular-nums'>
                             {priceLabel}
                           </AdminDataTableCell>
-                          <AdminDataTableCell className="align-top whitespace-nowrap text-sm">
-                            {row.enrolledAt
-                              ? row.enrolledAt.slice(0, 10)
-                              : "—"}
+                          <AdminDataTableCell className='align-top whitespace-nowrap text-sm'>
+                            {row.enrolledAt ? row.enrolledAt.slice(0, 10) : '—'}
                           </AdminDataTableCell>
                         </tr>
                       );
@@ -340,23 +327,23 @@ export function ClientInvoicesDraftEditor({
               </AdminDataTable>
             </section>
             {draftSelectionIssue ? (
-              <p className="text-sm text-amber-800">{draftSelectionIssue}</p>
+              <p className='text-sm text-amber-800'>{draftSelectionIssue}</p>
             ) : null}
             {draftAmountIssue ? (
-              <p className="text-sm text-amber-800">{draftAmountIssue}</p>
+              <p className='text-sm text-amber-800'>{draftAmountIssue}</p>
             ) : null}
-            <div className="space-y-2">
+            <div className='space-y-2'>
               <Label>Line totals override</Label>
-              <p className="text-xs text-slate-600">
+              <p className='text-xs text-slate-600'>
                 Defaults follow each enrollment&apos;s amount. Adjust selected
                 rows only.
               </p>
               {selectedEnrollmentRows.length === 0 ? (
-                <p className="text-sm text-slate-600">
+                <p className='text-sm text-slate-600'>
                   Select enrollments above to override line amounts.
                 </p>
               ) : (
-                <div className="space-y-2">
+                <div className='space-y-2'>
                   {selectedEnrollmentRows.map((row) => {
                     const needsAmt = enrollmentNeedsAmountConfirmation(row);
                     const partyCellDisplay =
@@ -368,43 +355,43 @@ export function ClientInvoicesDraftEditor({
                     const instanceServiceDisplay =
                       formatEnrollmentPickerInstanceServiceDisplay(row);
                     const partyPart =
-                      partyCellDisplay !== "" ? partyCellDisplay : "—";
+                      partyCellDisplay !== '' ? partyCellDisplay : '—';
                     const servicePart =
-                      instanceServiceDisplay !== ""
+                      instanceServiceDisplay !== ''
                         ? instanceServiceDisplay
-                        : "—";
+                        : '—';
                     const tierPart =
-                      tierCohortDisplay !== "" ? tierCohortDisplay : "—";
+                      tierCohortDisplay !== '' ? tierCohortDisplay : '—';
                     const lineOverrideEnrollmentLabel = `${partyPart} · ${servicePart} · ${tierPart}`;
                     return (
                       <div
                         key={row.enrollmentId}
                         className={`flex flex-wrap items-center gap-x-4 gap-y-2 border px-3 py-2 ${
                           needsAmt
-                            ? "border-amber-300 bg-amber-50"
-                            : "border-slate-200"
+                            ? 'border-amber-300 bg-amber-50'
+                            : 'border-slate-200'
                         }`}
                       >
-                        <span className="min-w-0 flex-1 text-sm break-words">
+                        <span className='min-w-0 flex-1 text-sm break-words'>
                           {lineOverrideEnrollmentLabel}
                         </span>
                         {needsAmt ? (
-                          <p className="w-full basis-full text-xs text-amber-900">
-                            This enrollment has no recorded amount; enter a
-                            line total (use 0 for a zero-dollar line).
+                          <p className='w-full basis-full text-xs text-amber-900'>
+                            This enrollment has no recorded amount; enter a line
+                            total (use 0 for a zero-dollar line).
                           </p>
                         ) : null}
-                        <div className="ml-auto flex shrink-0 items-center gap-2">
+                        <div className='ml-auto flex shrink-0 items-center gap-2'>
                           <Label
-                            className="sr-only"
+                            className='sr-only'
                             htmlFor={`billing-line-override-${row.enrollmentId}`}
                           >
                             Line total for {lineOverrideEnrollmentLabel}
                           </Label>
                           <Input
                             id={`billing-line-override-${row.enrollmentId}`}
-                            className="w-36 font-mono text-sm tabular-nums"
-                            inputMode="decimal"
+                            className='w-36 font-mono text-sm tabular-nums'
+                            inputMode='decimal'
                             value={
                               lineOverrideByEnrollmentId[row.enrollmentId] ??
                               defaultLineAmount(row)
@@ -417,7 +404,7 @@ export function ClientInvoicesDraftEditor({
                             }
                             disabled={editorBusy}
                           />
-                          <span className="text-xs text-slate-600">
+                          <span className='text-xs text-slate-600'>
                             {row.currency}
                           </span>
                         </div>
@@ -433,37 +420,37 @@ export function ClientInvoicesDraftEditor({
             defaultCurrency={defaultCurrency}
             currencyOptions={currencyOptions}
             editorBusy={editorBusy}
-            loadParents={draftCreationMode === "customized"}
+            loadParents={draftCreationMode === 'customized'}
             draftInvoiceDate={draftInvoiceDate}
-            onRequestBusy={(busy) => setBusy(busy ? "customized" : null)}
+            onRequestBusy={(busy) => setBusy(busy ? 'customized' : null)}
             onDraftError={(msg) => setActionError(msg)}
             onValidityChange={setCustomizedFormSubmitEnabled}
             onCreated={async (invoiceId) => {
-              setActionError("");
+              setActionError('');
               setSelectedInvoiceId(invoiceId);
-              setAllocateInvoiceId("");
-              setAllocateLineId("");
+              setAllocateInvoiceId('');
+              setAllocateLineId('');
               setActionMessage(`Draft invoice created: ${invoiceId}`);
               setDraftInvoiceDate(localTodayYmd());
               await refreshBillingLists();
             }}
           />
         )}
-        <div className="min-w-[180px] max-w-xs">
+        <div className='min-w-[180px] max-w-xs'>
           <Label htmlFor={draftInvoiceDateId}>Invoice date</Label>
           <Input
             id={draftInvoiceDateId}
             form={
-              draftCreationMode === "enrollment"
+              draftCreationMode === 'enrollment'
                 ? DRAFT_FORM_ID
                 : CUSTOMIZED_DRAFT_INVOICE_FORM_ID
             }
-            type="date"
-            className="mt-1 w-full"
+            type='date'
+            className='mt-1 w-full'
             value={draftInvoiceDate}
             onChange={(e) => setDraftInvoiceDate(e.target.value)}
             onBlur={(e) => {
-              if (e.target.value === "") {
+              if (e.target.value === '') {
                 setDraftInvoiceDate(localTodayYmd());
               }
             }}

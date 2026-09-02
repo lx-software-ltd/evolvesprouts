@@ -2,32 +2,36 @@
 
 from __future__ import annotations
 
-import base64
-import json
-from datetime import datetime, timezone
 from typing import Any
 from collections.abc import Mapping
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.api.admin_inbox_cursors import (
+    encode_last_message_cursor,
+    isoformat_inbox_datetime,
+    parse_inbox_limit,
+    parse_inbox_search,
+    parse_last_message_cursor,
+)
 from app.api.admin_inbox_import import handle_meta_import_jobs
 from app.api.admin_party_related import (
     conversation_contact_ids_for_party,
     parse_related_party_ids,
 )
-from app.api.admin_request import parse_uuid, query_param
-from app.api.assets.assets_common import extract_identity, split_route_parts
+from app.api.admin_request import (
+    parse_uuid,
+    query_param,
+    require_admin_identity,
+    split_route_parts,
+)
 from app.db.engine import get_engine
 from app.db.models.enums import MetaChannel
 from app.db.models.meta import MetaConversation, MetaMessage
 from app.db.repositories.meta import MetaRepository
 from app.exceptions import NotFoundError, ValidationError
 from app.utils import json_response
-
-_DEFAULT_LIMIT = 25
-_MAX_LIMIT = 100
-_MAX_SEARCH_LENGTH = 120
 
 
 def handle_admin_meta_request(
@@ -40,9 +44,7 @@ def handle_admin_meta_request(
     if len(parts) < 2 or parts[0] != "admin" or parts[1] != "meta":
         return json_response(404, {"error": "Not found"}, event=event)
 
-    identity = extract_identity(event)
-    if not identity.user_sub:
-        raise ValidationError("Authenticated user is required", field="authorization")
+    identity = require_admin_identity(event)
 
     import_response = handle_meta_import_jobs(
         event, method, parts, actor_sub=identity.user_sub
@@ -64,11 +66,13 @@ def handle_admin_meta_request(
 
 
 def _list_conversations(event: Mapping[str, Any]) -> dict[str, Any]:
-    limit = _parse_limit(query_param(event, "limit"))
-    search = _parse_search(query_param(event, "q"))
+    limit = parse_inbox_limit(query_param(event, "limit"))
+    search = parse_inbox_search(query_param(event, "q"))
     channel = _parse_channel(query_param(event, "channel"))
     contact_id, family_id, organization_id = parse_related_party_ids(event)
-    cursor_last_message_at, cursor_id = _parse_cursor(query_param(event, "cursor"))
+    cursor_last_message_at, cursor_id = parse_last_message_cursor(
+        query_param(event, "cursor")
+    )
 
     with Session(get_engine()) as session:
         repository = MetaRepository(session)
@@ -92,7 +96,11 @@ def _list_conversations(event: Mapping[str, Any]) -> dict[str, Any]:
             contact_id=contact_id,
             contact_ids=party_contact_ids,
         )
-        next_cursor = _encode_cursor(page_rows[-1]) if has_more and page_rows else None
+        next_cursor = (
+            encode_last_message_cursor(page_rows[-1].last_message_at, page_rows[-1].id)
+            if has_more and page_rows
+            else None
+        )
         return json_response(
             200,
             {
@@ -109,7 +117,7 @@ def _list_messages(
     *,
     conversation_id: UUID,
 ) -> dict[str, Any]:
-    limit = _parse_limit(query_param(event, "limit"))
+    limit = parse_inbox_limit(query_param(event, "limit"))
 
     with Session(get_engine()) as session:
         repository = MetaRepository(session)
@@ -147,11 +155,11 @@ def _serialize_conversation(conversation: MetaConversation) -> dict[str, Any]:
             else None
         ),
         "lead_id": str(conversation.lead_id) if conversation.lead_id else None,
-        "first_inbound_at": _isoformat(conversation.first_inbound_at),
-        "last_message_at": _isoformat(conversation.last_message_at),
+        "first_inbound_at": isoformat_inbox_datetime(conversation.first_inbound_at),
+        "last_message_at": isoformat_inbox_datetime(conversation.last_message_at),
         "inbound_count": conversation.inbound_count,
         "outbound_count": conversation.outbound_count,
-        "created_at": _isoformat(conversation.created_at),
+        "created_at": isoformat_inbox_datetime(conversation.created_at),
     }
 
 
@@ -162,33 +170,8 @@ def _serialize_message(message: MetaMessage) -> dict[str, Any]:
         "direction": message.direction.value,
         "message_type": message.message_type,
         "body": message.body,
-        "sent_at": _isoformat(message.sent_at),
+        "sent_at": isoformat_inbox_datetime(message.sent_at),
     }
-
-
-def _parse_limit(raw_value: str | None) -> int:
-    if raw_value is None or not raw_value.strip():
-        return _DEFAULT_LIMIT
-    try:
-        limit = int(raw_value)
-    except ValueError as exc:
-        raise ValidationError("limit must be an integer", field="limit") from exc
-    if limit < 1 or limit > _MAX_LIMIT:
-        raise ValidationError(
-            f"limit must be between 1 and {_MAX_LIMIT}", field="limit"
-        )
-    return limit
-
-
-def _parse_search(raw_value: str | None) -> str | None:
-    if raw_value is None:
-        return None
-    normalized = raw_value.strip()
-    if not normalized:
-        return None
-    if len(normalized) > _MAX_SEARCH_LENGTH:
-        raise ValidationError("q is too long", field="q")
-    return normalized
 
 
 def _parse_channel(raw_value: str | None) -> MetaChannel | None:
@@ -201,45 +184,3 @@ def _parse_channel(raw_value: str | None) -> MetaChannel | None:
         raise ValidationError(
             "channel must be facebook or instagram", field="channel"
         ) from exc
-
-
-def _encode_cursor(conversation: MetaConversation) -> str | None:
-    if conversation.last_message_at is None:
-        return None
-    payload = json.dumps(
-        {
-            "last_message_at": _normalize_datetime(
-                conversation.last_message_at
-            ).isoformat(),
-            "id": str(conversation.id),
-        }
-    ).encode("utf-8")
-    return base64.urlsafe_b64encode(payload).decode("utf-8").rstrip("=")
-
-
-def _parse_cursor(cursor: str | None) -> tuple[datetime | None, UUID | None]:
-    if not cursor:
-        return None, None
-    try:
-        padding = "=" * (-len(cursor) % 4)
-        payload = json.loads(base64.urlsafe_b64decode(cursor + padding))
-        last_message_at_raw = payload["last_message_at"]
-        if not isinstance(last_message_at_raw, str):
-            raise ValueError("last_message_at must be a string")
-        last_message_at = _normalize_datetime(
-            datetime.fromisoformat(last_message_at_raw.replace("Z", "+00:00"))
-        )
-        conversation_id = UUID(str(payload["id"]))
-        return last_message_at, conversation_id
-    except (ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
-        raise ValidationError("Invalid cursor", field="cursor") from exc
-
-
-def _normalize_datetime(value: datetime) -> datetime:
-    if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
-
-
-def _isoformat(value: datetime | None) -> str | None:
-    return _normalize_datetime(value).isoformat() if value is not None else None

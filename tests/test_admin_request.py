@@ -4,8 +4,8 @@ import base64
 
 import pytest
 
-from app.api.admin_request import parse_body, parse_limit
-from app.exceptions import ValidationError
+from app.api.admin_request import parse_body, parse_limit, require_admin_identity
+from app.exceptions import AuthorizationError, ValidationError
 
 
 def test_parse_body_rejects_invalid_base64_payload() -> None:
@@ -36,6 +36,19 @@ def test_parse_body_decodes_base64_json_payload() -> None:
     }
 
     assert parse_body(event) == {"title": "Guide"}
+
+
+def test_require_admin_identity_raises_when_user_sub_missing() -> None:
+    with pytest.raises(AuthorizationError, match="Authenticated user is required"):
+        require_admin_identity({"requestContext": {"authorizer": {}}})
+
+
+def test_require_admin_identity_returns_identity_when_present() -> None:
+    identity = require_admin_identity(
+        {"requestContext": {"authorizer": {"userSub": "sub-1", "groups": "admin"}}}
+    )
+    assert identity.user_sub == "sub-1"
+    assert identity.is_admin_or_manager is True
 
 
 def test_parse_limit_defaults_to_standard_admin_page_size() -> None:

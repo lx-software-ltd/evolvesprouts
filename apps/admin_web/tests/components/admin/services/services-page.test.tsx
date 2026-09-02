@@ -146,12 +146,52 @@ vi.mock('@/hooks/use-services-page', () => ({
   useServicesPage: mockUseServicesPage,
 }));
 
-vi.mock('@/components/admin/services/partners-tab', () => ({
-  PartnersTab: () => <div data-testid='partners-tab-mock'>Partners</div>,
+vi.mock('@/hooks/use-partners', () => ({
+  usePartners: () => ({
+    partners: [],
+    filters: { query: '', active: '' },
+    setFilter: vi.fn(),
+    isLoading: false,
+    isLoadingMore: false,
+    hasMore: false,
+    error: '',
+    loadMore: vi.fn(),
+    totalCount: 0,
+    isSaving: false,
+    createPartner: vi.fn(),
+    updatePartner: vi.fn(),
+    addMember: vi.fn(),
+    removeMember: vi.fn(),
+    updateMember: vi.fn(),
+    deletePartner: vi.fn(),
+    refetch: vi.fn(),
+    relationshipOptions: ['partner'] as const,
+  }),
 }));
 
-vi.mock('@/components/admin/services/certificates-tab', () => ({
-  CertificatesTab: () => <div data-testid='certificates-tab-mock'>Certificates</div>,
+vi.mock('@/hooks/use-completion-certificates', () => ({
+  useCompletionCertificates: () => ({
+    certificates: [],
+    filters: {},
+    setFilter: vi.fn(),
+    isLoading: false,
+    isLoadingMore: false,
+    hasMore: false,
+    error: '',
+    loadMore: vi.fn(),
+    refetch: vi.fn(),
+    isSaving: false,
+    createCertificate: vi.fn(),
+    voidCertificate: vi.fn(),
+  }),
+}));
+
+vi.mock('@/components/admin/services/partners-panel', () => ({
+  PartnersPanel: () => <div data-testid='partners-tab-mock'>Partners</div>,
+}));
+
+vi.mock('@/components/admin/services/certificates-panel', () => ({
+  CertificatesPanel: () => <div data-testid='certificates-tab-mock'>Certificates</div>,
 }));
 
 import { ServicesPage } from '@/components/admin/services/services-page';

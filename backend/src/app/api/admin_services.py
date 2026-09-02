@@ -9,10 +9,15 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.admin_request import parse_body, parse_uuid
-from app.api.admin_service_instances import (
+from app.api.admin_request import (
+    parse_body,
+    parse_uuid,
+    require_admin_identity,
+    split_route_parts,
+)
+from app.api.admin_service_instances import handle_admin_service_instances_request
+from app.api.admin_service_instances_list import (
     handle_admin_all_service_instances_request,
-    handle_admin_service_instances_request,
 )
 from app.api.admin_services_common import (
     encode_service_cursor,
@@ -30,7 +35,6 @@ from app.api.admin_services_integrity import (
 )
 from app.api.admin_services_payload_utils import parse_service_type_details
 from app.api.admin_entities_helpers import require_assignable_tag
-from app.api.assets.assets_common import extract_identity, split_route_parts
 from app.db.audit import set_audit_context
 from app.db.engine import get_engine
 from app.db.models import (
@@ -70,9 +74,7 @@ def handle_admin_services_request(
     if len(parts) < 2 or parts[0] != "admin" or parts[1] != "services":
         return json_response(404, {"error": "Not found"}, event=event)
 
-    identity = extract_identity(event)
-    if not identity.user_sub:
-        raise ValidationError("Authenticated user is required", field="authorization")
+    identity = require_admin_identity(event)
 
     if len(parts) == 2:
         if method == "GET":

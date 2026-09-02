@@ -11,7 +11,7 @@ import pytest
 
 from app.api import admin_service_instances
 from app.api.admin_services_common import parse_update_instance_payload
-from app.api.assets.assets_common import RequestIdentity
+from app.api.admin_request import RequestIdentity
 from app.db.models.enums import (
     InstanceStatus,
     ServiceDeliveryMode,
@@ -150,7 +150,7 @@ def test_update_instance_skips_repository_update_instance_after_partner_reconcil
     monkeypatch.setattr(admin_service_instances, "get_engine", lambda: object())
     monkeypatch.setattr(
         admin_service_instances,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: _admin_identity(),
     )
     monkeypatch.setattr(

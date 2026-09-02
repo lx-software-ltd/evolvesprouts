@@ -63,7 +63,7 @@ def _session_harness(
     monkeypatch.setattr(admin_assets_mod, "AssetRepository", lambda _s: _Repo())
     monkeypatch.setattr(
         admin_assets_mod,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: type("Identity", (), {"user_sub": "admin-sub"})(),
     )
 

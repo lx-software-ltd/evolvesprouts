@@ -42,10 +42,11 @@ from app.api.admin_request import (
     parse_cursor,
     parse_uuid,
     query_param,
+    require_admin_identity,
+    split_route_parts,
 )
 from app.api.admin_services_payload_utils import parse_optional_uuid
 from app.api.admin_validators import validate_string_length
-from app.api.assets.assets_common import extract_identity, split_route_parts
 from app.db.engine import get_engine
 from app.db.repositories import ContactRepository
 from app.services.completion_certificate_common import (
@@ -74,9 +75,7 @@ def handle_admin_contacts_request(
     if len(parts) < 2 or parts[0] != "admin" or parts[1] != "contacts":
         return json_response(404, {"error": "Not found"}, event=event)
 
-    identity = extract_identity(event)
-    if not identity.user_sub:
-        raise ValidationError("Authenticated user is required", field="authorization")
+    identity = require_admin_identity(event)
 
     if len(parts) == 3 and parts[2] == "tags":
         if method == "GET":

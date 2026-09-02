@@ -6630,31 +6630,7 @@ export interface paths {
                 404: components["responses"]["NotFound"];
             };
         };
-        /** Delete discount code */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Expense identifier. */
-                    id: components["parameters"]["ExpenseId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Discount code deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;

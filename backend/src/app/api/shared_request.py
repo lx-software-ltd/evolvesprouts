@@ -7,6 +7,10 @@ direction.
 
 from __future__ import annotations
 
-from app.api.admin_request import extract_identity, split_route_parts
+from app.api.admin_request import (
+    extract_identity,
+    require_admin_identity,
+    split_route_parts,
+)
 
-__all__ = ["extract_identity", "split_route_parts"]
+__all__ = ["extract_identity", "require_admin_identity", "split_route_parts"]

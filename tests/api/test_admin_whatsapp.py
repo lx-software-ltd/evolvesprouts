@@ -12,7 +12,7 @@ import pytest
 
 from app.api import admin_whatsapp as aw
 from app.db.models.enums import WhatsAppMessageDirection
-from app.exceptions import ValidationError
+from app.exceptions import AuthorizationError
 
 
 def _identity_event(
@@ -28,7 +28,7 @@ def _identity_event(
 
 def test_admin_whatsapp_requires_auth(api_gateway_event: Any) -> None:
     event = api_gateway_event(method="GET", path="/v1/admin/whatsapp/conversations")
-    with pytest.raises(ValidationError):
+    with pytest.raises(AuthorizationError, match="Authenticated user is required"):
         aw.handle_admin_whatsapp_request(
             event, "GET", "/v1/admin/whatsapp/conversations"
         )

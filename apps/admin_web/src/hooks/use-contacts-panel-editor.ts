@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } fr
 import type { useAdminEntityContacts } from '@/hooks/use-admin-entity-contacts';
 import { useFamilyOrgPickers } from '@/hooks/use-family-org-pickers';
 import { useEntityInlineLocation } from '@/hooks/use-entity-inline-location';
-import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
+import { useEntityPanelEditorShell } from '@/hooks/use-entity-panel-editor-shell';
 import type { InlineLocationEmbeddedSummary } from '@/components/admin/locations/inline-location-editor';
 import { getAdminContact, type EntityPickerListItem } from '@/lib/entity-api';
 import { readAdminContactQueryId } from '@/lib/inbox-conversation-name';
@@ -40,13 +40,18 @@ export function useContactsPanelEditor({
 }: UseContactsPanelEditorInput) {
   const { isSaving, createContact, updateContact, deleteContact, contacts: rows } = contacts;
 
-  const [confirmDialogProps, requestConfirm] = useConfirmDialog();
-  const [deleteActionError, setDeleteActionError] = useState('');
+  const {
+    confirmDialogProps,
+    requestConfirm,
+    deleteActionError,
+    setDeleteActionError,
+    editorMode,
+    setEditorMode,
+    selectedId,
+    setSelectedId,
+  } = useEntityPanelEditorShell();
   const [notesTarget, setNotesTarget] = useState<ApiSchemas['AdminContact'] | null>(null);
   const { familyPicker, organizationPicker } = useFamilyOrgPickers();
-
-  const [editorMode, setEditorMode] = useState<'create' | 'edit'>('create');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const appliedContactQueryIdRef = useRef<string | null>(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -282,7 +287,7 @@ export function useContactsPanelEditor({
     setOrganizationSelectId(row.organization_ids[0] ?? '');
     setTagIds([...row.tag_ids]);
     setActive(row.active);
-  }, [resetLocationDraft]);
+  }, [resetLocationDraft, setEditorMode, setSelectedId]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {

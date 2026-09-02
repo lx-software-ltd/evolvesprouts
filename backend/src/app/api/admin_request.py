@@ -11,7 +11,7 @@ from typing import Any
 from collections.abc import Callable, Mapping, Sequence
 from uuid import UUID
 
-from app.exceptions import ValidationError
+from app.exceptions import AuthorizationError, ValidationError
 from app.utils import json_response
 from app.utils.parsers import collect_query_params, first_param
 
@@ -35,6 +35,13 @@ class RequestIdentity:
     def is_admin_or_manager(self) -> bool:
         normalized = {group.lower() for group in self.groups}
         return "admin" in normalized or "manager" in normalized
+
+
+@dataclass(frozen=True)
+class AuthenticatedIdentity(RequestIdentity):
+    """Identity after ``require_admin_identity``; ``user_sub`` is always set."""
+
+    user_sub: str
 
 
 def parse_body(event: Mapping[str, Any]) -> dict[str, Any]:
@@ -87,6 +94,18 @@ def request_id(event: Mapping[str, Any]) -> str:
         if isinstance(request_id_value, str):
             return request_id_value.strip()
     return ""
+
+
+def require_admin_identity(event: Mapping[str, Any]) -> AuthenticatedIdentity:
+    """Return the caller identity or raise if the authorizer omitted ``user_sub``."""
+    identity = extract_identity(event)
+    if not identity.user_sub:
+        raise AuthorizationError("Authenticated user is required")
+    return AuthenticatedIdentity(
+        user_sub=identity.user_sub,
+        groups=identity.groups,
+        organization_ids=identity.organization_ids,
+    )
 
 
 def extract_identity(event: Mapping[str, Any]) -> RequestIdentity:

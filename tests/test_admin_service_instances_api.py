@@ -6,7 +6,8 @@ from typing import Any
 from uuid import uuid4
 
 from app.api import admin_service_instances
-from app.api.assets.assets_common import RequestIdentity
+from app.api import admin_service_instances_list
+from app.api.admin_request import RequestIdentity
 
 
 def _admin_request_identity() -> RequestIdentity:
@@ -23,7 +24,7 @@ def test_handle_admin_service_instances_rejects_patch(
 ) -> None:
     monkeypatch.setattr(
         admin_service_instances,
-        "extract_identity",
+        "require_admin_identity",
         lambda _event: _admin_request_identity(),
     )
 
@@ -160,7 +161,7 @@ def test_handle_admin_all_service_instances_lists_global(
             return 7
 
     monkeypatch.setattr(
-        admin_service_instances,
+        admin_service_instances_list,
         "parse_global_instance_list_filters",
         lambda _event: {
             "limit": 1,
@@ -174,31 +175,31 @@ def test_handle_admin_all_service_instances_lists_global(
             "organization_id": None,
         },
     )
-    monkeypatch.setattr(admin_service_instances, "Session", _SessionCtx)
-    monkeypatch.setattr(admin_service_instances, "get_engine", lambda: object())
+    monkeypatch.setattr(admin_service_instances_list, "Session", _SessionCtx)
+    monkeypatch.setattr(admin_service_instances_list, "get_engine", lambda: object())
     monkeypatch.setattr(
-        admin_service_instances,
+        admin_service_instances_list,
         "ServiceInstanceRepository",
         _FakeInstanceRepository,
     )
     monkeypatch.setattr(
-        admin_service_instances,
+        admin_service_instances_list,
         "serialize_instance",
         lambda _item, **_kwargs: {"id": "instance-1"},
     )
     monkeypatch.setattr(
-        admin_service_instances,
+        admin_service_instances_list,
         "encode_instance_cursor",
         lambda _item: "next-cursor",
     )
     monkeypatch.setattr(
-        admin_service_instances,
-        "extract_identity",
+        admin_service_instances_list,
+        "require_admin_identity",
         lambda _event: _admin_request_identity(),
     )
 
     path = "/v1/admin/services/instances"
-    response = admin_service_instances.handle_admin_all_service_instances_request(
+    response = admin_service_instances_list.handle_admin_all_service_instances_request(
         api_gateway_event(method="GET", path=path),
         "GET",
         path,

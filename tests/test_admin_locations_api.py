@@ -15,12 +15,17 @@ from app.exceptions import ValidationError
 def test_handle_admin_locations_dispatches_geocode_post(
     monkeypatch: Any,
     api_gateway_event: Any,
+    admin_identity: dict[str, str],
 ) -> None:
     marker = {"statusCode": 200, "body": "{}"}
     monkeypatch.setattr(admin_locations, "_geocode_location", lambda _: marker)
 
     response = admin_locations.handle_admin_locations_request(
-        api_gateway_event(method="POST", path="/v1/admin/locations/geocode"),
+        api_gateway_event(
+            method="POST",
+            path="/v1/admin/locations/geocode",
+            authorizer_context=admin_identity,
+        ),
         "POST",
         "/v1/admin/locations/geocode",
     )
@@ -31,12 +36,17 @@ def test_handle_admin_locations_dispatches_geocode_post(
 def test_handle_admin_locations_dispatches_collection_get(
     monkeypatch: Any,
     api_gateway_event: Any,
+    admin_identity: dict[str, str],
 ) -> None:
     marker = {"statusCode": 200, "body": "{}"}
     monkeypatch.setattr(admin_locations, "_list_locations", lambda _: marker)
 
     response = admin_locations.handle_admin_locations_request(
-        api_gateway_event(method="GET", path="/v1/admin/locations"),
+        api_gateway_event(
+            method="GET",
+            path="/v1/admin/locations",
+            authorizer_context=admin_identity,
+        ),
         "GET",
         "/v1/admin/locations",
     )
@@ -47,6 +57,7 @@ def test_handle_admin_locations_dispatches_collection_get(
 def test_handle_admin_locations_dispatches_resource_patch(
     monkeypatch: Any,
     api_gateway_event: Any,
+    admin_identity: dict[str, str],
 ) -> None:
     marker = {"statusCode": 200, "body": "{}"}
     captured: dict[str, Any] = {}
@@ -61,7 +72,11 @@ def test_handle_admin_locations_dispatches_resource_patch(
     location_id = str(uuid4())
 
     response = admin_locations.handle_admin_locations_request(
-        api_gateway_event(method="PATCH", path=f"/v1/admin/locations/{location_id}"),
+        api_gateway_event(
+            method="PATCH",
+            path=f"/v1/admin/locations/{location_id}",
+            authorizer_context=admin_identity,
+        ),
         "PATCH",
         f"/v1/admin/locations/{location_id}",
     )
@@ -72,9 +87,14 @@ def test_handle_admin_locations_dispatches_resource_patch(
 
 def test_handle_admin_locations_rejects_collection_patch(
     api_gateway_event: Any,
+    admin_identity: dict[str, str],
 ) -> None:
     response = admin_locations.handle_admin_locations_request(
-        api_gateway_event(method="PATCH", path="/v1/admin/locations"),
+        api_gateway_event(
+            method="PATCH",
+            path="/v1/admin/locations",
+            authorizer_context=admin_identity,
+        ),
         "PATCH",
         "/v1/admin/locations",
     )

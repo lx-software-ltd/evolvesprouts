@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState, type MouseEvent } from 'react';
 
 import type { useAdminEntityOrganizations } from '@/hooks/use-admin-entity-organizations';
-import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
+import { useEntityPanelEditorShell } from '@/hooks/use-entity-panel-editor-shell';
 import { useEntityInlineLocation } from '@/hooks/use-entity-inline-location';
 import { useEntityServiceLabels } from '@/hooks/use-entity-service-labels';
 import type { InlineLocationEmbeddedSummary } from '@/components/admin/locations/inline-location-editor';
@@ -52,11 +52,16 @@ export function useOrganizationPanelEditor({
     relationshipOptions,
   } = organizations;
 
-  const [confirmDialogProps, requestConfirm] = useConfirmDialog();
-  const [deleteActionError, setDeleteActionError] = useState('');
-
-  const [editorMode, setEditorMode] = useState<'create' | 'edit'>('create');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const {
+    confirmDialogProps,
+    requestConfirm,
+    deleteActionError,
+    setDeleteActionError,
+    editorMode,
+    setEditorMode,
+    selectedId,
+    setSelectedId,
+  } = useEntityPanelEditorShell();
   const [name, setName] = useState('');
   const [organizationType, setOrganizationType] =
     useState<ApiSchemas['EntityOrganizationType']>('company');

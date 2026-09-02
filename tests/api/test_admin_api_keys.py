@@ -9,7 +9,7 @@ from uuid import uuid4
 import pytest
 
 from app.api import admin_api_keys as aak
-from app.exceptions import ValidationError
+from app.exceptions import AuthorizationError, ValidationError
 from app.services.api_keys import generate_api_key
 
 
@@ -34,7 +34,7 @@ class _FakeSessionCM:
 
 def test_admin_api_keys_requires_auth(api_gateway_event: Any) -> None:
     event = api_gateway_event(method="GET", path="/v1/admin/api-keys")
-    with pytest.raises(ValidationError):
+    with pytest.raises(AuthorizationError, match="Authenticated user is required"):
         aak.handle_admin_api_keys_request(event, "GET", "/v1/admin/api-keys")
 
 
