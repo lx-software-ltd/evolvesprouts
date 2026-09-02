@@ -83,6 +83,24 @@ export function useQueryTabState<T extends string>(
   return [activeTab, setActiveTab];
 }
 
+/**
+ * Write (or clear, with `null`) one query parameter via `history.replaceState`
+ * and notify `useLocationSearchParam` subscribers. Other parameters are kept.
+ */
+export function setLocationSearchParam(paramName: string, value: string | null): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  const url = new URL(window.location.href);
+  if (value === null || value === '') {
+    url.searchParams.delete(paramName);
+  } else {
+    url.searchParams.set(paramName, value);
+  }
+  window.history.replaceState(null, '', formatUrl(url));
+  emitLocationSearchChange();
+}
+
 const LOCATION_SEARCH_EVENT = 'cursor:location-search-change';
 
 function subscribeToLocationSearch(onStoreChange: () => void): () => void {

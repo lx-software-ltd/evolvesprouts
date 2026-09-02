@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+@theme {
+  /* Motion tokens for admin disclosure surfaces (expanding rows, sub-accordions). */
+  --duration-admin-expand: 220ms;
+  --ease-admin-expand: cubic-bezier(0.2, 0, 0, 1);
+}
+
 @layer base {
   :root {
     color-scheme: light;
@@ -71,6 +77,66 @@
     &::-webkit-calendar-picker-indicator {
       padding: 0;
       margin: 0;
+    }
+  }
+}
+
+@layer components {
+  /*
+   * Height animation without measuring: the wrapper is a one-row grid whose
+   * track animates between 0fr and 1fr while the child stays overflow-hidden.
+   * Used by AdminExpandableRow and AdminDisclosure.
+   */
+  .admin-expand {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--duration-admin-expand) var(--ease-admin-expand);
+  }
+  .admin-expand > * {
+    min-height: 0;
+    overflow: hidden;
+  }
+  .admin-expand[data-open="true"] {
+    grid-template-rows: 1fr;
+  }
+  /* Once fully open, let popovers, focus rings, and select menus escape the clip. */
+  .admin-expand[data-open="true"][data-settled="true"] > * {
+    overflow: visible;
+  }
+
+  .admin-chevron {
+    transition: transform var(--duration-admin-expand) var(--ease-admin-expand);
+  }
+
+  /* Portal-rendered Operations overflow menu; coordinates come from AdminRowActions. */
+  .admin-action-menu {
+    position: fixed;
+    top: var(--admin-menu-top, 0px);
+    left: var(--admin-menu-left, 0px);
+  }
+
+  /*
+   * Expanded row detail: pinned to the visible part of a horizontally
+   * scrolling table so the editor is readable without side-scrolling. The
+   * width variable is maintained by AdminRecordTable.
+   */
+  .admin-record-table-scroll {
+    --admin-table-viewport: 100%;
+  }
+  .admin-row-detail {
+    position: sticky;
+    left: 0;
+    width: var(--admin-table-viewport);
+    max-width: 100%;
+  }
+  [aria-expanded="true"] > .admin-chevron {
+    transform: rotate(180deg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .admin-expand,
+    .admin-chevron {
+      transition-duration: 0s;
     }
   }
 }
