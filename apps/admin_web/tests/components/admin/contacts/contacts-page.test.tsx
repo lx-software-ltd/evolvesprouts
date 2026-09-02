@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ContactsPage } from '@/components/admin/contacts/contacts-page';
+import { resetAdminCatalogStoreForTests } from '@/lib/admin-catalog-store';
 
 const listEntityTags = vi.fn();
 const listAllLocations = vi.fn();
@@ -113,6 +114,8 @@ describe('ContactsPage', () => {
 
   afterEach(() => {
     window.history.replaceState(null, '', '/contacts');
+    resetAdminCatalogStoreForTests();
+    vi.clearAllMocks();
   });
 
   it('loads tags and locations on mount', async () => {
@@ -138,7 +141,7 @@ describe('ContactsPage', () => {
     render(<ContactsPage />);
 
     await waitFor(() => {
-      expect(listEntityTags).toHaveBeenCalled();
+      expect(screen.getByRole('heading', { name: 'Contact' })).toBeInTheDocument();
     });
 
     await user.click(screen.getByRole('button', { name: 'Families' }));

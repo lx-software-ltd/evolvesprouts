@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 
 import { ContactsPanel } from '@/components/admin/contacts/contacts-panel';
 import { FamiliesPanel } from '@/components/admin/contacts/families-panel';
@@ -8,16 +8,17 @@ import { MailchimpSyncCard } from '@/components/admin/contacts/mailchimp-sync-ca
 import { OrganizationsPanel } from '@/components/admin/contacts/organizations-panel';
 import { AdminPageErrorBanner } from '@/components/admin/admin-page-error-banner';
 import { AdminTabStrip } from '@/components/ui/admin-tab-strip';
-import { listEntityTags, type EntityTagRef } from '@/lib/entity-api';
 import { formatAdminContactPickerLabel } from '@/lib/format';
-import { listAllLocations, listGeographicAreas } from '@/lib/services-api';
-import { toErrorMessage } from '@/hooks/hook-errors';
+import {
+  useSharedEntityTags,
+  useSharedGeographicAreas,
+  useSharedPickerLocations,
+} from '@/hooks/use-admin-catalog';
 import { useAdminEntityContacts } from '@/hooks/use-admin-entity-contacts';
 import { useAdminUsers } from '@/hooks/use-admin-users';
 import { useAdminEntityFamilies } from '@/hooks/use-admin-entity-families';
 import { useAdminEntityOrganizations } from '@/hooks/use-admin-entity-organizations';
 import { useQueryTabState } from '@/hooks/use-query-tab-state';
-import type { GeographicAreaSummary, LocationSummary } from '@/types/services';
 
 const TAB_ITEMS = [
   { key: 'contacts', label: 'Contacts' },
@@ -38,11 +39,15 @@ export function ContactsPage() {
     CONTACTS_TAB_KEYS,
     DEFAULT_CONTACTS_VIEW
   );
-  const [tags, setTags] = useState<EntityTagRef[]>([]);
-  const [locations, setLocations] = useState<LocationSummary[]>([]);
-  const [geographicAreas, setGeographicAreas] = useState<GeographicAreaSummary[]>([]);
-  const [pickerLoading, setPickerLoading] = useState(true);
-  const [pickerError, setPickerError] = useState('');
+  const tagsCatalog = useSharedEntityTags();
+  const locationsCatalog = useSharedPickerLocations();
+  const areasCatalog = useSharedGeographicAreas();
+  const tags = tagsCatalog.items;
+  const locations = locationsCatalog.items;
+  const geographicAreas = areasCatalog.items;
+  const pickerLoading =
+    tagsCatalog.isLoading || locationsCatalog.isLoading || areasCatalog.isLoading;
+  const pickerError = tagsCatalog.error || locationsCatalog.error || areasCatalog.error;
 
   const contacts = useAdminEntityContacts();
   const adminUsers = useAdminUsers();
@@ -50,6 +55,7 @@ export function ContactsPage() {
   const organizations = useAdminEntityOrganizations();
   const { refetch: refetchFamilies } = families;
   const { refetch: refetchOrganizations } = organizations;
+  const { refetch: refetchLocations } = locationsCatalog;
 
   const patchStandaloneNoteCountRef = useRef(contacts.patchContactStandaloneNoteCount);
   useLayoutEffect(() => {
@@ -64,40 +70,8 @@ export function ContactsPage() {
   }, [refetchFamilies, refetchOrganizations]);
 
   const refreshLocations = useCallback(async () => {
-    const locList = await listAllLocations();
-    setLocations(locList);
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      setPickerLoading(true);
-      try {
-        const [tagList, locList, areaList] = await Promise.all([
-          listEntityTags(),
-          listAllLocations(),
-          listGeographicAreas({ flat: true, activeOnly: true }),
-        ]);
-        if (!cancelled) {
-          setTags(tagList);
-          setLocations(locList);
-          setGeographicAreas(areaList);
-          setPickerError('');
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setPickerError(toErrorMessage(error, 'Failed to load tags or locations.'));
-        }
-      } finally {
-        if (!cancelled) {
-          setPickerLoading(false);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    await refetchLocations();
+  }, [refetchLocations]);
 
   const contactOptions = useMemo(() => {
     return contacts.contacts.map((c) => ({

@@ -6,9 +6,9 @@ import { toErrorMessage } from '@/hooks/hook-errors';
 import { useAutoSelectOnce } from '@/hooks/use-auto-select-once';
 import { useRelatedPartySearchParams } from '@/hooks/use-related-party-search-params';
 import { createInitialCustomerPaymentAfterEnrollmentCreate } from '@/lib/billing-api';
-import { listEntityTags, type EntityTagRef } from '@/lib/entity-api';
 import { compareInstancesByFirstSlotStartsDesc } from '@/lib/format';
 
+import { useSharedEntityTags } from './use-admin-catalog';
 import { useDiscountCodes } from './use-discount-codes';
 import { useVenues } from './use-venues';
 import { useEnrollmentList } from './use-enrollment-list';
@@ -65,14 +65,17 @@ export function useServicesPage() {
   );
   useEffect(() => {
     if (partyFilterKey) {
+      /* eslint-disable react-hooks/set-state-in-effect -- reset instance status when the related-party URL filter changes */
       setInstancesStatusFilter('');
+      /* eslint-enable react-hooks/set-state-in-effect */
     }
   }, [partyFilterKey]);
   const [instancesSearchQuery, setInstancesSearchQuery] = useState<string>('');
-  const [entityTags, setEntityTags] = useState<EntityTagRef[]>([]);
-  const [entityTagsLoading, setEntityTagsLoading] = useState(false);
-  const [entityTagsError, setEntityTagsError] = useState('');
   const [enrollmentCustomerPaymentError, setEnrollmentCustomerPaymentError] = useState('');
+  const entityTagsCatalog = useSharedEntityTags();
+  const entityTags = entityTagsCatalog.items;
+  const entityTagsLoading = entityTagsCatalog.isLoading;
+  const entityTagsError = entityTagsCatalog.error;
 
   const serviceList = useServiceList();
   const selectedServiceId = selectedServiceIdState;
@@ -83,35 +86,9 @@ export function useServicesPage() {
   }, []);
 
   useEffect(() => {
-    if (activeView !== 'instances') {
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      setEntityTagsLoading(true);
-      try {
-        const tagList = await listEntityTags();
-        if (!cancelled) {
-          setEntityTags(tagList);
-          setEntityTagsError('');
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setEntityTagsError(toErrorMessage(error, 'Failed to load tags.'));
-        }
-      } finally {
-        if (!cancelled) {
-          setEntityTagsLoading(false);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [activeView]);
-
-  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- clear enrollment payment error when leaving the enrollment context */
     setEnrollmentCustomerPaymentError('');
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [activeView, selectedInstanceId]);
 
   const serviceDetail = useServiceDetail(selectedServiceId);

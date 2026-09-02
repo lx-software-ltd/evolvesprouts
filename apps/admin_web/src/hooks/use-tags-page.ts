@@ -3,6 +3,7 @@
 import type { FormEvent } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { invalidateSharedEntityTags } from '@/hooks/use-admin-catalog';
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { toErrorMessage } from '@/hooks/hook-errors';
 import { conflictFieldUserMessage } from '@/lib/admin-api-conflict-messages';
@@ -96,6 +97,7 @@ export function useTagsPage() {
     setError('');
     try {
       const updated = await updateAdminTag(row.id, { archived: false });
+      invalidateSharedEntityTags();
       await loadTags();
       if (updated && selectedTagId === row.id) {
         applyRowSelection(updated);
@@ -125,6 +127,7 @@ export function useTagsPage() {
     setError('');
     try {
       const updated = await updateAdminTag(row.id, { archived: true });
+      invalidateSharedEntityTags();
       await loadTags();
       if (updated && selectedTagId === row.id) {
         applyRowSelection(updated);
@@ -152,6 +155,7 @@ export function useTagsPage() {
         };
         await createAdminTag(body);
         resetCreateForm();
+        invalidateSharedEntityTags();
         await loadTags();
         return;
       }
@@ -164,6 +168,7 @@ export function useTagsPage() {
         description: descTrimmed === '' ? null : descTrimmed,
       };
       await updateAdminTag(selectedTagId, body);
+      invalidateSharedEntityTags();
       await loadTags();
     } catch (caught) {
       const conflict = conflictFieldUserMessage(caught, { name: 'A tag with this name already exists.' });
@@ -201,6 +206,7 @@ export function useTagsPage() {
       if (!outcome.deleted && outcome.tag && selectedTagId === row.id) {
         applyRowSelection(outcome.tag);
       }
+      invalidateSharedEntityTags();
       await loadTags();
     } catch (caught) {
       const message = toErrorMessage(caught, 'Delete failed.', { honorBackendMessage: true });
