@@ -12,6 +12,7 @@ from typing import Any
 from collections.abc import Mapping, Sequence
 
 from app.services.aws_clients import get_s3_client, get_secretsmanager_client
+from app.services.openrouter_json_parse import loads_openrouter_json
 from app.services.secrets import SECRETS_CACHE_TTL_SECONDS
 from app.services.aws_proxy import http_invoke
 from app.utils.logging import get_logger
@@ -47,7 +48,7 @@ def parse_invoice_from_assets(assets: Sequence[Mapping[str, Any]]) -> dict[str, 
     layered engine fallbacks were tried and rolled back because they
     amplify rate limits and introduce more failure modes than they fix.
     Unescaped-quote ``JSONDecodeError`` cases are still handled by
-    ``_loads_with_repair`` instead of by forcing JSON mode.
+    ``loads_openrouter_json`` instead of by forcing JSON mode.
     """
     if not assets:
         raise ValueError("At least one asset is required for parsing")
@@ -174,7 +175,7 @@ def _openrouter_chat_completion(
     descriptions, but it caused models to emit empty ``{}`` /
     ``completion_tokens=0`` on borderline PDFs (a worse failure shape).
     The same JSONDecodeError it was meant to mask is now handled by the
-    ``_loads_with_repair`` pathway, so we drop JSON mode and let the model
+    ``loads_openrouter_json`` pathway, so we drop JSON mode and let the model
     emit natural JSON the same way it did in the original synchronous
     parser at commit ``b6f8990b``.
     """
@@ -546,94 +547,9 @@ def _empty_response_error(
     )
 
 
-_JSON_SNIPPET_RADIUS = 80
-_JSON_REPAIR_TIMEOUT_SECONDS = 60
-
-
-def _json_failure_snippet(text: str, error: json.JSONDecodeError) -> str:
-    """Return a short, redacted slice of ``text`` around the parser failure offset."""
-    offset = max(0, getattr(error, "pos", 0))
-    start = max(0, offset - _JSON_SNIPPET_RADIUS)
-    end = min(len(text), offset + _JSON_SNIPPET_RADIUS)
-    snippet = text[start:end].replace("\n", "\\n").replace("\r", "\\r")
-    return f"...{snippet}..."
-
-
-def _loads_with_repair(cleaned: str, *, expecting: str) -> Any:
-    """``json.loads`` with one OpenRouter-driven repair attempt on failure.
-
-    ``expecting`` is a short human description used in logs/errors (for example
-    ``"single invoice"`` or ``"bulk invoices"``).
-    """
-    try:
-        return json.loads(cleaned)
-    except json.JSONDecodeError as initial:
-        snippet = _json_failure_snippet(cleaned, initial)
-        logger.warning(
-            "OpenRouter JSON parse failed; attempting repair",
-            extra={
-                "expecting": expecting,
-                "error": str(initial),
-                "snippet": snippet,
-                "length": len(cleaned),
-            },
-        )
-        try:
-            repaired = _request_json_repair(cleaned, str(initial))
-        except Exception as repair_exc:
-            logger.warning(
-                "OpenRouter JSON repair call failed",
-                extra={"expecting": expecting, "error": repr(repair_exc)},
-            )
-            raise RuntimeError(
-                f"Parser returned invalid JSON for {expecting}: {initial} "
-                f"near {snippet}"
-            ) from initial
-        try:
-            return json.loads(repaired)
-        except json.JSONDecodeError as after_repair:
-            repaired_snippet = _json_failure_snippet(repaired, after_repair)
-            logger.warning(
-                "OpenRouter JSON repair returned invalid JSON",
-                extra={
-                    "expecting": expecting,
-                    "error": str(after_repair),
-                    "snippet": repaired_snippet,
-                },
-            )
-            raise RuntimeError(
-                f"Parser returned invalid JSON for {expecting} even after "
-                f"repair: {after_repair} near {repaired_snippet}"
-            ) from after_repair
-
-
-def _request_json_repair(broken_text: str, parse_error: str) -> str:
-    """Ask OpenRouter to rewrite ``broken_text`` as valid JSON, return the cleaned text."""
-    repair_user = (
-        "The following text was supposed to be a single valid JSON document but "
-        f"failed to parse with this error: {parse_error}. "
-        "Return the same data as STRICT, valid JSON only. "
-        "Escape any embedded double quotes inside string values. "
-        "Do not add commentary, markdown, or code fences. "
-        "Preserve the original keys and structure exactly.\n\n"
-        "BROKEN_JSON_BEGIN\n"
-        f"{broken_text}\n"
-        "BROKEN_JSON_END"
-    )
-    body = _openrouter_chat_completion(
-        system_prompt=(
-            "You repair malformed JSON documents and return strict JSON only."
-        ),
-        user_content_blocks=[{"type": "text", "text": repair_user}],
-        has_pdf_attachment=False,
-        timeout=_JSON_REPAIR_TIMEOUT_SECONDS,
-    )
-    return _extract_message_text(body)
-
-
 def _parse_completion_body(body: str) -> dict[str, Any]:
     cleaned = _extract_message_text(body)
-    parsed = _loads_with_repair(cleaned, expecting="single invoice")
+    parsed = loads_openrouter_json(cleaned, context="single invoice")
     if not isinstance(parsed, dict):
         raise RuntimeError("Parser response payload is not an object")
     return parsed
@@ -736,7 +652,7 @@ def _coerce_bulk_invoice_list(parsed: Any) -> list[Any]:
 def _parse_bulk_invoices_payload(body: str) -> list[dict[str, Any]]:
     """Parse OpenRouter envelope and return raw invoice objects for bulk import."""
     cleaned = _extract_message_text(body)
-    parsed = _loads_with_repair(cleaned, expecting="bulk invoices")
+    parsed = loads_openrouter_json(cleaned, context="bulk invoices")
     raw_list = _coerce_bulk_invoice_list(parsed)
 
     invoices: list[dict[str, Any]] = []

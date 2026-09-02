@@ -5,6 +5,7 @@ from typing import Any
 
 import pytest
 
+from app.services import openrouter_client
 from app.services import openrouter_expense_parser as parser
 
 
@@ -38,6 +39,12 @@ def _mock_secrets(monkeypatch: Any) -> None:
         "get_secretsmanager_client",
         lambda: _FakeSecretsClient(),
     )
+    monkeypatch.setattr(
+        openrouter_client,
+        "get_secretsmanager_client",
+        lambda: _FakeSecretsClient(),
+    )
+    openrouter_client._api_key_cache = None
 
 
 def test_parse_invoice_sends_images_as_image_url(monkeypatch: Any) -> None:
@@ -564,7 +571,7 @@ def test_parse_bulk_expense_invoices_does_not_set_json_response_format(
     3874b3b6) caused models to emit empty ``{}`` / ``completion_tokens=0``
     responses on borderline PDFs, which is the exact cascade the user
     flagged when migrating to async. The same ``JSONDecodeError`` it was
-    introduced to mask is now handled by the ``_loads_with_repair``
+    introduced to mask is now handled by the ``loads_openrouter_json``
     pathway, so the request payload reverts to the original sync-era shape
     from commit b6f8990b.
     """
@@ -681,6 +688,7 @@ def test_parse_bulk_expense_invoices_repairs_invalid_json(monkeypatch: Any) -> N
 
     monkeypatch.setattr(parser, "get_s3_client", lambda: _FakeS3Client())
     monkeypatch.setattr(parser, "http_invoke", _fake_http_invoke)
+    monkeypatch.setattr(openrouter_client, "http_invoke", _fake_http_invoke)
 
     rows = parser.parse_bulk_expense_invoices_from_assets(
         [
@@ -697,7 +705,11 @@ def test_parse_bulk_expense_invoices_repairs_invalid_json(monkeypatch: Any) -> N
     assert len(call_log) == 2, "expected one initial call plus one repair call"
     repair_call = call_log[1]
     assert "plugins" not in repair_call, "repair call must not re-attach the PDF plugin"
-    repair_user_text = repair_call["messages"][1]["content"][0]["text"]
+    repair_user_content = repair_call["messages"][1]["content"]
+    if isinstance(repair_user_content, list):
+        repair_user_text = repair_user_content[0]["text"]
+    else:
+        repair_user_text = str(repair_user_content)
     assert "BROKEN_JSON_BEGIN" in repair_user_text
     assert "Apple iPhone 15" in repair_user_text
     assert len(rows) == 1
@@ -1425,6 +1437,7 @@ def test_parse_bulk_expense_invoices_raises_with_snippet_when_repair_fails(
 
     monkeypatch.setattr(parser, "get_s3_client", lambda: _FakeS3Client())
     monkeypatch.setattr(parser, "http_invoke", _fake_http_invoke)
+    monkeypatch.setattr(openrouter_client, "http_invoke", _fake_http_invoke)
 
     with pytest.raises(RuntimeError) as exc_info:
         parser.parse_bulk_expense_invoices_from_assets(

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
+from typing import Any
 from uuid import uuid4
 
 from app.services.aws_proxy import AwsProxyError
@@ -94,6 +95,33 @@ def test_format_openrouter_failure_maps_timeouts_to_user_message() -> None:
         == "The AI model took too long to respond. Please try again in a moment."
     )
     assert (
-        _format_openrouter_failure(RuntimeError("Model response was not valid JSON"))
-        == "Model response was not valid JSON"
+        _format_openrouter_failure(
+            RuntimeError("Parser returned invalid JSON for lead close suggestion")
+        )
+        == "The AI returned an invalid response. Please try again."
     )
+
+
+def test_parse_json_object_repairs_broken_model_json(monkeypatch: object) -> None:
+    valid = {
+        "summary": "Next step",
+        "actions": ["Ask about ages"],
+        "follow_ups": [],
+        "risks": [],
+    }
+    broken = (
+        '{"summary": "Next step", "actions": ["Ask about ages"], '
+        '"follow_ups": [], "risks": []'  # missing closing brace
+    )
+
+    def _fake_loads(text: str, *, context: str, timeout: int) -> dict[str, Any]:
+        assert context == "lead close suggestion"
+        return valid
+
+    monkeypatch.setattr(
+        "app.services.lead_close_suggestion.loads_openrouter_json",
+        _fake_loads,
+    )
+
+    parsed = _parse_json_object(broken)
+    assert parsed["summary"] == "Next step"
