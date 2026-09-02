@@ -50,6 +50,7 @@ export function EntityInlineLocationSection({
         areas={areas}
         areasLoading={areasLoading}
         canModify
+        hideLabel
         allowClearWhenLocked={allowClearWhenLocked}
         lockedSummaryExtra={lockedSummaryExtra}
         isSaving={isSaving}

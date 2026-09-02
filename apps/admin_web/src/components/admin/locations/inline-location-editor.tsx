@@ -40,6 +40,8 @@ export interface InlineLocationEditorProps {
   isSaving: boolean;
   /** When false and the block is read-only (e.g. contact linked to family/org), show this note under the summary. */
   readOnlyNote?: string | null;
+  /** Omit the "Location" label when the parent (for example an `AdminDisclosure`) already titles the block. */
+  hideLabel?: boolean;
   onRequestEdit?(): void;
   onCancelEdit?(): void;
   onDraftChange?(draft: InlineLocationDraft): void;
@@ -138,6 +140,7 @@ function InlineLocationEditorInner({
   canModify,
   isSaving,
   readOnlyNote,
+  hideLabel = false,
   onRequestEdit,
   onCancelEdit,
   onDraftChange,
@@ -313,7 +316,7 @@ function InlineLocationEditorInner({
   if (!canModify && readOnlyLockedLines && readOnlyLockedLines.lines.length > 0) {
     return (
       <div className='space-y-2'>
-        <Label>Location</Label>
+        {hideLabel ? null : <Label>Location</Label>}
         <div className='space-y-2 rounded-md border border-slate-200 bg-slate-50/60 px-3 py-2 text-sm text-slate-800'>
           {readOnlyLockedLines.lines.map((line, idx) => (
             <div key={idx}>{line}</div>
@@ -330,7 +333,7 @@ function InlineLocationEditorInner({
   if (!canModify && displaySummary) {
     return (
       <div className='space-y-2'>
-        <Label>Location</Label>
+        {hideLabel ? null : <Label>Location</Label>}
         <div className='rounded-md border border-slate-200 bg-slate-50/60 px-3 py-2 text-sm text-slate-800'>
           <div>{displaySummary.line1}</div>
         </div>
@@ -354,7 +357,7 @@ function InlineLocationEditorInner({
   if (!canModify && !displaySummary) {
     return (
       <div className='space-y-2'>
-        <Label>Location</Label>
+        {hideLabel ? null : <Label>Location</Label>}
         <p className='text-sm text-slate-600'>—</p>
       </div>
     );
@@ -363,7 +366,7 @@ function InlineLocationEditorInner({
   return (
     <div className='space-y-3'>
       <div>
-        <Label>Location</Label>
+        {hideLabel ? null : <Label>Location</Label>}
         {showReadBlock && displaySummary ? (
           <div className='mt-2 space-y-2'>
             <div className='rounded-md border border-slate-200 bg-slate-50/60 px-3 py-2 text-sm text-slate-800'>
