@@ -15,7 +15,7 @@ import type { LocationSummary, ServiceInstance, ServiceSummary, ServiceType } fr
 import { InstanceDetailTypeSections } from './instance-detail-type-sections';
 import { InstanceFormFields } from './instance-form-fields';
 import { SessionSlotEditor } from './session-slot-editor';
-import { useInstanceDetailPanel } from './use-instance-detail-panel';
+import { useInstanceDetailPanel } from '@/hooks/use-instance-detail-panel';
 
 type ApiSchemas = components['schemas'];
 
