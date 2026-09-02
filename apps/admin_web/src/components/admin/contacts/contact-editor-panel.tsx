@@ -9,6 +9,7 @@ import { InlineLocationEditor } from '@/components/admin/locations/inline-locati
 import { AdminDisclosure } from '@/components/ui/admin-disclosure';
 import { AdminEditorActions, AdminEditorPanel } from '@/components/ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
+import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { formatEnumLabel } from '@/lib/format';
 import type { EntityTagRef } from '@/lib/entity-api';
@@ -88,7 +89,6 @@ export function ContactEditorPanel({
     setOptimisticLocationSummary,
     saveDisabled,
     handleSubmit,
-    expanded,
     notesOpen,
     setNotesOpen,
   } = editor;
@@ -99,7 +99,6 @@ export function ContactEditorPanel({
         <AdminEditorActions
           mode={editorMode}
           onSubmit={() => void handleSubmit()}
-          onCancel={expanded.collapse}
           isSaving={isSaving}
           submitDisabled={saveDisabled}
           submitLabel={editorMode === 'create' ? 'Create contact' : 'Update contact'}
@@ -204,10 +203,14 @@ export function ContactEditorPanel({
           </AdminField>
         ) : null}
         {editorMode === 'edit' && selected ? (
-          <AdminField label='Mailchimp' hint='Sync status is read-only from the API.'>
-            <p className='flex h-10 items-center text-sm text-slate-700'>
-              {formatEnumLabel(selected.mailchimp_status)}
-            </p>
+          <AdminField label='Mailchimp' htmlFor='crm-contact-mailchimp'>
+            <Input
+              id='crm-contact-mailchimp'
+              value={formatEnumLabel(selected.mailchimp_status)}
+              readOnly
+              aria-readonly='true'
+              title='Sync status is read-only from the API.'
+            />
           </AdminField>
         ) : null}
       </AdminFieldGrid>
@@ -220,6 +223,7 @@ export function ContactEditorPanel({
           areas={geographicAreas}
           areasLoading={areasLoading}
           canModify={!linkedToFamilyOrOrg}
+          hideLabel
           readOnlyLockedLines={readOnlyLockedLinesForEditor}
           readOnlyNote={
             linkedToFamilyOrOrg ? 'Location is managed on the linked family or organisation.' : null

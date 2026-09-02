@@ -62,7 +62,6 @@ export function OrganizationEditorPanel({
     setRemoveTarget,
     location,
     locationLockedReadOnly,
-    expanded,
     handleSubmit,
     handleAddMember,
     handlePrimaryMemberChange,
@@ -74,7 +73,6 @@ export function OrganizationEditorPanel({
         <AdminEditorActions
           mode={editorMode}
           onSubmit={() => void handleSubmit()}
-          onCancel={expanded.collapse}
           isSaving={isSaving}
           submitDisabled={!name.trim() || location.locationDraftInvalid}
           submitLabel={editorMode === 'create' ? 'Create organisation' : 'Update organisation'}

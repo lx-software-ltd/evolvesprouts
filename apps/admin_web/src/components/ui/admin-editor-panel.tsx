@@ -39,40 +39,32 @@ export interface AdminEditorActionsProps {
   /** Id of the `<form>` the primary button submits; omit when using `onSubmit`. */
   formId?: string;
   onSubmit?: () => void;
-  onCancel?: () => void;
   isSaving?: boolean;
   submitDisabled?: boolean;
   submitLabel?: string;
   savingLabel?: string;
-  cancelLabel?: string;
   /** Extra secondary controls rendered after the primary action. */
   children?: ReactNode;
 }
 
 /**
- * Standard action row: Create shows only the primary button; Edit shows
- * Cancel to the left of the primary action.
+ * Standard action row: one primary button (Create / Update). There is no
+ * Cancel: collapsing the row (chevron, row click, or another row) is how the
+ * operator leaves an editor, and unsaved edits are guarded by the row hook.
  */
 export function AdminEditorActions({
   mode,
   formId,
   onSubmit,
-  onCancel,
   isSaving = false,
   submitDisabled = false,
   submitLabel,
   savingLabel = 'Saving...',
-  cancelLabel = 'Cancel',
   children,
 }: AdminEditorActionsProps) {
   const label = submitLabel ?? (mode === 'create' ? 'Create' : 'Update');
   return (
     <>
-      {mode === 'edit' && onCancel ? (
-        <Button type='button' variant='secondary' onClick={onCancel} disabled={isSaving}>
-          {cancelLabel}
-        </Button>
-      ) : null}
       <Button
         type={formId ? 'submit' : 'button'}
         form={formId}
