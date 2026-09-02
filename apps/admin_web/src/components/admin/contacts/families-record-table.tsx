@@ -5,7 +5,12 @@ import type { ReactNode } from 'react';
 import { relatedRecordActions } from '@/components/admin/contacts/related-record-actions';
 import { DeleteIcon } from '@/components/icons/action-icons';
 import { AdminCreateButton } from '@/components/ui/admin-create-button';
-import { AdminDataTableCell, AdminDataTableHeadCell, AdminDataTableOperationsHeadCell } from '@/components/ui/admin-data-table';
+import {
+  AdminDataTableCell,
+  AdminDataTableCellMeta,
+  AdminDataTableHeadCell,
+  AdminDataTableOperationsHeadCell,
+} from '@/components/ui/admin-data-table';
 import { AdminExpandableRow } from '@/components/ui/admin-expandable-row';
 import { AdminFilterBar, AdminFilterField } from '@/components/ui/admin-filter-bar';
 import { AdminRecordTable } from '@/components/ui/admin-record-table';
@@ -73,7 +78,6 @@ export function FamiliesRecordTable({
       error={error || deleteActionError}
       errorTitle='Families'
       emptyLabel='No families match the current filters.'
-      tableClassName='min-w-[720px]'
       filters={
         <AdminFilterBar
           trailing={
@@ -115,8 +119,8 @@ export function FamiliesRecordTable({
         <tr>
           <AdminDataTableHeadCell className='w-10' />
           <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
-          <AdminDataTableHeadCell>Members</AdminDataTableHeadCell>
-          <AdminDataTableHeadCell>Status</AdminDataTableHeadCell>
+          <AdminDataTableHeadCell priority='secondary'>Members</AdminDataTableHeadCell>
+          <AdminDataTableHeadCell priority='tertiary'>Status</AdminDataTableHeadCell>
           <AdminDataTableOperationsHeadCell />
         </tr>
       }
@@ -132,8 +136,12 @@ export function FamiliesRecordTable({
           cells={
             <>
               <AdminDataTableCell className='font-medium text-slate-900'>New family</AdminDataTableCell>
-              <AdminDataTableCell className='text-slate-400'>—</AdminDataTableCell>
-              <AdminDataTableCell className='text-slate-400'>—</AdminDataTableCell>
+              <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                —
+              </AdminDataTableCell>
+              <AdminDataTableCell priority='tertiary' className='text-slate-400'>
+                —
+              </AdminDataTableCell>
             </>
           }
           actions={null}
@@ -154,9 +162,14 @@ export function FamiliesRecordTable({
             columnCount={COLUMN_COUNT}
             cells={
               <>
-                <AdminDataTableCell>{nameCell}</AdminDataTableCell>
-                <AdminDataTableCell>{row.members.length}</AdminDataTableCell>
-                <AdminDataTableCell>{row.active ? 'Active' : 'Archived'}</AdminDataTableCell>
+                <AdminDataTableCell>
+                  {nameCell}
+                  <AdminDataTableCellMeta>
+                    {row.members.length} member{row.members.length === 1 ? '' : 's'}
+                  </AdminDataTableCellMeta>
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='secondary'>{row.members.length}</AdminDataTableCell>
+                <AdminDataTableCell priority='tertiary'>{row.active ? 'Active' : 'Archived'}</AdminDataTableCell>
               </>
             }
             actions={
