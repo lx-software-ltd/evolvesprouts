@@ -1,4 +1,4 @@
-import { clampAdminListLimit } from '@/lib/admin-list-limit';
+import { ADMIN_API_MAX_LIST_LIMIT, buildAdminListPath } from '@/lib/admin-list-query';
 
 import { adminApiRequest } from './api-admin-client';
 import { asNullableString, asNumber } from './api-payload';
@@ -25,12 +25,10 @@ export async function listGeographicAreas(
   params: { flat?: boolean; activeOnly?: boolean } = {},
   signal?: AbortSignal
 ): Promise<GeographicAreaSummary[]> {
-  const query = new URLSearchParams();
-  if (params.flat) query.set('flat', 'true');
-  if (params.activeOnly === false) query.set('active_only', 'false');
-  const queryString = query.toString();
   const payload = await adminApiRequest<ApiGeographicAreaListResponse>({
-    endpointPath: `/v1/admin/geographic-areas${queryString ? `?${queryString}` : ''}`,
+    endpointPath: buildAdminListPath('/v1/admin/geographic-areas', {
+      filters: { flat: params.flat, active_only: params.activeOnly === false ? 'false' : undefined },
+    }),
     method: 'GET',
     signal,
   });
@@ -46,16 +44,12 @@ export async function listLocations(
   },
   signal?: AbortSignal
 ): Promise<{ items: LocationSummary[]; nextCursor: string | null; totalCount: number }> {
-  const query = new URLSearchParams();
-  if (params.cursor) query.set('cursor', params.cursor);
-  if (typeof params.limit === 'number') query.set('limit', `${clampAdminListLimit(params.limit)}`);
-  if (params.areaId) query.set('area_id', params.areaId);
-  if (params.search?.trim()) query.set('search', params.search.trim());
-  if (params.excludeAddresses) query.set('exclude_addresses', 'true');
-  const queryString = query.toString();
-
   const payload = await adminApiRequest<ApiLocationListResponse>({
-    endpointPath: `/v1/admin/locations${queryString ? `?${queryString}` : ''}`,
+    endpointPath: buildAdminListPath('/v1/admin/locations', {
+      filters: { area_id: params.areaId, search: params.search, exclude_addresses: params.excludeAddresses },
+      cursor: params.cursor,
+      limit: params.limit,
+    }),
     method: 'GET',
     signal,
   });
@@ -73,7 +67,7 @@ export async function listAllLocations(signal?: AbortSignal): Promise<LocationSu
     const page = await listLocations(
       {
         cursor,
-        limit: clampAdminListLimit(100),
+        limit: ADMIN_API_MAX_LIST_LIMIT,
       },
       signal
     );
@@ -96,7 +90,7 @@ export async function listAllVenueAndPartnerLocations(signal?: AbortSignal): Pro
     const page = await listLocations(
       {
         cursor: venueCursor,
-        limit: clampAdminListLimit(100),
+        limit: ADMIN_API_MAX_LIST_LIMIT,
         excludeAddresses: true,
       },
       signal
@@ -112,7 +106,7 @@ export async function listAllVenueAndPartnerLocations(signal?: AbortSignal): Pro
     const page = await listLocations(
       {
         cursor: allCursor,
-        limit: clampAdminListLimit(100),
+        limit: ADMIN_API_MAX_LIST_LIMIT,
       },
       signal
     );

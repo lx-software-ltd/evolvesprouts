@@ -1,4 +1,5 @@
 import { adminApiRequest, AdminApiError } from './api-admin-client';
+import { ADMIN_LIST_PAGE_SIZE, buildAdminListPath } from './admin-list-query';
 import { isRecord } from './type-guards';
 
 import type { AuditLogsFilters } from '@/types/audit-log';
@@ -17,33 +18,18 @@ function buildAuditLogsPath(
   cursor: string | undefined,
   limit: number
 ): string {
-  const params = new URLSearchParams();
-  if (cursor) {
-    params.set('cursor', cursor);
-  }
-  if (limit) {
-    params.set('limit', `${limit}`);
-  }
-  if (filters?.table) {
-    params.set('table', filters.table);
-  }
-  if (filters?.record_id) {
-    params.set('record_id', filters.record_id);
-  }
-  if (filters?.user_id) {
-    params.set('user_id', filters.user_id);
-  }
-  if (filters?.email) {
-    params.set('email', filters.email);
-  }
-  if (filters?.action) {
-    params.set('action', filters.action);
-  }
-  if (filters?.since) {
-    params.set('since', filters.since);
-  }
-  const qs = params.toString();
-  return qs ? `/v1/admin/audit-logs?${qs}` : '/v1/admin/audit-logs';
+  return buildAdminListPath('/v1/admin/audit-logs', {
+    filters: {
+      table: filters?.table,
+      record_id: filters?.record_id,
+      user_id: filters?.user_id,
+      email: filters?.email,
+      action: filters?.action,
+      since: filters?.since,
+    },
+    cursor,
+    limit,
+  });
 }
 
 function parseAuditLog(raw: unknown): AuditLog | null {
@@ -114,7 +100,7 @@ function parseListPayload(raw: unknown): AuditLogsResponse {
 export async function listAuditLogs(
   filters?: AuditLogsFilters,
   cursor?: string,
-  limit = 25
+  limit = ADMIN_LIST_PAGE_SIZE
 ): Promise<AuditLogsResponse> {
   const endpointPath = buildAuditLogsPath(filters, cursor, limit);
   const payload = await adminApiRequest<unknown>({

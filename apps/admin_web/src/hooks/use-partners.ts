@@ -3,14 +3,14 @@
 import { useCallback } from 'react';
 
 import {
-  addPartnerMember,
-  createAdminPartner,
-  deleteAdminPartner,
-  listAdminPartners,
-  patchPartnerMember,
-  removePartnerMember,
-  updateAdminPartner,
-} from '@/lib/partners-api';
+  addAdminOrganizationMember,
+  createAdminOrganization,
+  deleteAdminOrganization,
+  listAdminOrganizations,
+  patchAdminOrganizationMember,
+  removeAdminOrganizationMember,
+  updateAdminOrganization,
+} from '@/lib/entity-api';
 import { DEFAULT_PARTNER_FILTERS, type PartnerFilters } from '@/types/partners';
 import type { components } from '@/types/generated/admin-api.generated';
 
@@ -24,10 +24,11 @@ const PARTNER_RELATIONSHIP: readonly ApiSchemas['EntityOrganizationRelationshipT
 export function usePartners() {
   const fetcher = useCallback(
     (params: PartnerFilters & { cursor: string | null; limit: number; signal: AbortSignal }) =>
-      listAdminPartners(
+      listAdminOrganizations(
         {
           query: params.query,
           active: params.active || undefined,
+          relationshipType: 'partner',
           cursor: params.cursor,
           limit: params.limit,
         },
@@ -47,25 +48,25 @@ export function usePartners() {
 
   const createPartner = useCallback(
     async (payload: ApiSchemas['CreateAdminOrganizationRequest']) =>
-      mutate(async () => createAdminPartner(payload)),
+      mutate(async () => createAdminOrganization(payload)),
     [mutate]
   );
 
   const updatePartner = useCallback(
     async (organizationId: string, payload: ApiSchemas['UpdateAdminOrganizationRequest']) =>
-      mutate(async () => updateAdminPartner(organizationId, payload)),
+      mutate(async () => updateAdminOrganization(organizationId, payload)),
     [mutate]
   );
 
   const addMember = useCallback(
     async (organizationId: string, payload: ApiSchemas['AddOrganizationMemberRequest']) =>
-      mutate(async () => addPartnerMember(organizationId, payload)),
+      mutate(async () => addAdminOrganizationMember(organizationId, payload)),
     [mutate]
   );
 
   const removeMember = useCallback(
     async (organizationId: string, memberId: string) =>
-      mutate(async () => removePartnerMember(organizationId, memberId)),
+      mutate(async () => removeAdminOrganizationMember(organizationId, memberId)),
     [mutate]
   );
 
@@ -74,12 +75,12 @@ export function usePartners() {
       organizationId: string,
       memberId: string,
       payload: ApiSchemas['UpdateOrganizationMemberRequest']
-    ) => mutate(async () => patchPartnerMember(organizationId, memberId, payload)),
+    ) => mutate(async () => patchAdminOrganizationMember(organizationId, memberId, payload)),
     [mutate]
   );
 
   const deletePartner = useCallback(
-    async (organizationId: string) => mutate(async () => deleteAdminPartner(organizationId)),
+    async (organizationId: string) => mutate(async () => deleteAdminOrganization(organizationId)),
     [mutate]
   );
 

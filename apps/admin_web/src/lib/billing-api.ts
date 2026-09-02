@@ -1,5 +1,6 @@
-import { appendRelatedPartyQuery, type RelatedPartyQuery } from '@/lib/contact-related-links';
 import { adminApiRequest } from '@/lib/api-admin-client';
+import { ADMIN_API_MAX_LIST_LIMIT, buildAdminListPath } from '@/lib/admin-list-query';
+import { relatedPartyApiFilters, type RelatedPartyQuery } from '@/lib/contact-related-links';
 import { getAdminDefaultCurrencyCode } from '@/lib/config';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -16,8 +17,6 @@ export type CustomerInvoiceSummary = ApiSchemas['CustomerInvoiceSummary'];
 
 export type CustomerInvoiceDetail = ApiSchemas['CustomerInvoiceDetail'];
 
-const CUSTOMER_INVOICE_LIST_PAGE_LIMIT = 100;
-
 export async function listCustomerInvoices(
   params: {
     status?: 'draft' | 'issued' | 'void';
@@ -30,36 +29,21 @@ export async function listCustomerInvoices(
   } & RelatedPartyQuery = {},
   signal?: AbortSignal,
 ): Promise<{ items: CustomerInvoiceSummary[]; next_cursor: string | null }> {
-  const query = new URLSearchParams();
-  if (params.status) {
-    query.set('status', params.status);
-  }
-  if (params.settlement) {
-    query.set('settlement', params.settlement);
-  }
-  if (params.currency && params.currency.trim() !== '') {
-    query.set('currency', params.currency.trim().toUpperCase());
-  }
-  const qTrimmed = params.q?.trim() ?? '';
-  if (qTrimmed !== '') {
-    query.set('q', qTrimmed);
-  }
-  appendRelatedPartyQuery(query, params);
-  if (params.cursor) {
-    query.set('cursor', params.cursor);
-  }
-  if (params.limit != null) {
-    query.set(
-      'limit',
-      String(Math.min(Math.floor(params.limit), CUSTOMER_INVOICE_LIST_PAGE_LIMIT)),
-    );
-  }
-  const qs = query.toString();
   const payload = await adminApiRequest<{
     items?: CustomerInvoiceSummary[];
     next_cursor?: string | null;
   }>({
-    endpointPath: qs ? `/v1/admin/billing/invoices?${qs}` : '/v1/admin/billing/invoices',
+    endpointPath: buildAdminListPath('/v1/admin/billing/invoices', {
+      filters: {
+        status: params.status,
+        settlement: params.settlement,
+        currency: params.currency?.trim().toUpperCase(),
+        q: params.q,
+        ...relatedPartyApiFilters(params),
+      },
+      cursor: params.cursor,
+      limit: params.limit,
+    }),
     method: 'GET',
     signal,
   });
@@ -84,7 +68,7 @@ export async function listAllCustomerInvoices(
       {
         ...params,
         cursor,
-        limit: CUSTOMER_INVOICE_LIST_PAGE_LIMIT,
+        limit: ADMIN_API_MAX_LIST_LIMIT,
       },
       signal,
     );
@@ -127,14 +111,10 @@ export async function listCustomerPayments(
   params: { invoiceId?: string } = {},
   signal?: AbortSignal,
 ): Promise<CustomerPaymentSummary[]> {
-  const query = new URLSearchParams();
-  const inv = params.invoiceId?.trim();
-  if (inv) {
-    query.set('invoice_id', inv);
-  }
-  const qs = query.toString();
   const payload = await adminApiRequest<{ items?: CustomerPaymentSummary[] }>({
-    endpointPath: qs ? `/v1/admin/billing/payments?${qs}` : '/v1/admin/billing/payments',
+    endpointPath: buildAdminListPath('/v1/admin/billing/payments', {
+      filters: { invoice_id: params.invoiceId },
+    }),
     method: 'GET',
     signal,
   });
@@ -283,6 +263,8 @@ export function compareBillingEnrollmentPickerRowsByEnrolledAtDesc(
   return String(b.enrollmentId).localeCompare(String(a.enrollmentId));
 }
 
+const RECENT_ENROLLMENTS_PAGE_LIMIT = 500;
+
 export async function listRecentEnrollmentsForInvoicing(
   signal?: AbortSignal,
   params?: { q?: string },
@@ -293,14 +275,6 @@ export async function listRecentEnrollmentsForInvoicing(
   let guard = 0;
   while (guard < 200) {
     guard += 1;
-    const query = new URLSearchParams();
-    query.set('limit', '500');
-    if (params?.q != null && params.q.trim() !== '') {
-      query.set('q', params.q.trim());
-    }
-    if (cursor) {
-      query.set('cursor', cursor);
-    }
     let payload: {
       items?: BillingEnrollmentPickerRow[];
       truncated?: boolean;
@@ -312,7 +286,11 @@ export async function listRecentEnrollmentsForInvoicing(
         truncated?: boolean;
         next_cursor?: string | null;
       }>({
-        endpointPath: `/v1/admin/billing/enrollments/recent-for-invoicing?${query.toString()}`,
+        endpointPath: buildAdminListPath('/v1/admin/billing/enrollments/recent-for-invoicing', {
+          // This endpoint allows up to 500 rows per page, above the general admin list cap.
+          filters: { limit: RECENT_ENROLLMENTS_PAGE_LIMIT, q: params?.q },
+          cursor,
+        }),
         method: 'GET',
         signal,
       });
@@ -459,10 +437,10 @@ export async function exportBillingCsv(
   exportVersion: '1' | '2' = '2',
   signal?: AbortSignal,
 ): Promise<string> {
-  const query = new URLSearchParams();
-  query.set('exportVersion', exportVersion);
   const payload = await adminApiRequest<{ csv?: string }>({
-    endpointPath: `/v1/admin/billing/export?${query.toString()}`,
+    endpointPath: buildAdminListPath('/v1/admin/billing/export', {
+      filters: { exportVersion },
+    }),
     method: 'GET',
     signal,
   });

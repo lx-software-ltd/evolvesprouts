@@ -32,14 +32,14 @@ vi.mock('@/hooks/use-paginated-list', () => ({
   })),
 }));
 
-vi.mock('@/lib/partners-api', () => ({
-  listAdminPartners: vi.fn(),
-  createAdminPartner: mockCreateAdminPartner,
-  updateAdminPartner: mockUpdateAdminPartner,
-  deleteAdminPartner: vi.fn(),
-  addPartnerMember: vi.fn(),
-  removePartnerMember: vi.fn(),
-  patchPartnerMember: vi.fn(),
+vi.mock('@/lib/entity-api', () => ({
+  listAdminOrganizations: vi.fn(),
+  createAdminOrganization: mockCreateAdminPartner,
+  updateAdminOrganization: mockUpdateAdminPartner,
+  deleteAdminOrganization: vi.fn(),
+  addAdminOrganizationMember: vi.fn(),
+  removeAdminOrganizationMember: vi.fn(),
+  patchAdminOrganizationMember: vi.fn(),
 }));
 
 import { usePartners } from '@/hooks/use-partners';

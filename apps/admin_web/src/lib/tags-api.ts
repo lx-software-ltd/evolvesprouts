@@ -1,4 +1,5 @@
 import { adminApiRequest } from './api-admin-client';
+import { buildAdminListPath } from './admin-list-query';
 import { isRecord } from './type-guards';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -20,16 +21,11 @@ export async function listAdminTags(
   params?: { filter?: AdminTagListFilter },
   signal?: AbortSignal
 ): Promise<AdminTagRow[]> {
-  const query = new URLSearchParams();
   const filter = params?.filter ?? 'active';
-  if (filter === 'all') {
-    query.set('include_archived', 'true');
-  } else if (filter === 'archived') {
-    query.set('archived_only', 'true');
-  }
-  const qs = query.toString();
   const payload = await adminApiRequest<ApiSchemas['AdminTagListResponse']>({
-    endpointPath: `/v1/admin/tags${qs ? `?${qs}` : ''}`,
+    endpointPath: buildAdminListPath('/v1/admin/tags', {
+      filters: { include_archived: filter === 'all', archived_only: filter === 'archived' },
+    }),
     method: 'GET',
     signal,
   });

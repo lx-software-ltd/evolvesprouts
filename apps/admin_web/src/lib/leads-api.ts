@@ -1,4 +1,5 @@
 import { adminApiRequest } from './api-admin-client';
+import { buildAdminListPath } from './admin-list-query';
 import { asNullableString, asNumber } from './api-payload';
 import { isRecord } from './type-guards';
 
@@ -142,46 +143,23 @@ function parseLeadDetail(value: unknown): LeadDetail {
   };
 }
 
-function buildLeadListQuery(params: LeadListParams): string {
-  const query = new URLSearchParams();
-  if (params.cursor) {
-    query.set('cursor', params.cursor);
-  }
-  if (typeof params.limit === 'number' && Number.isFinite(params.limit) && params.limit > 0) {
-    query.set('limit', `${Math.floor(params.limit)}`);
-  }
-  if (params.stage && params.stage.length > 0) {
-    query.set('stage', params.stage.join(','));
-  }
-  if (params.source && params.source.length > 0) {
-    query.set('source', params.source.join(','));
-  }
-  if (params.leadType && params.leadType.length > 0) {
-    query.set('lead_type', params.leadType.join(','));
-  }
-  if (params.assignedTo) {
-    query.set('assigned_to', params.assignedTo);
-  }
-  if (params.unassigned) {
-    query.set('unassigned', 'true');
-  }
-  if (params.dateFrom) {
-    query.set('date_from', params.dateFrom);
-  }
-  if (params.dateTo) {
-    query.set('date_to', params.dateTo);
-  }
-  if (params.search?.trim()) {
-    query.set('search', params.search.trim());
-  }
-  if (params.sort) {
-    query.set('sort', params.sort);
-  }
-  if (params.sortDir) {
-    query.set('sort_dir', params.sortDir);
-  }
-  const queryString = query.toString();
-  return queryString ? `?${queryString}` : '';
+function buildLeadListPath(params: LeadListParams): string {
+  return buildAdminListPath('/v1/admin/leads', {
+    filters: {
+      stage: params.stage,
+      source: params.source,
+      lead_type: params.leadType,
+      assigned_to: params.assignedTo,
+      unassigned: params.unassigned,
+      date_from: params.dateFrom,
+      date_to: params.dateTo,
+      search: params.search,
+      sort: params.sort,
+      sort_dir: params.sortDir,
+    },
+    cursor: params.cursor,
+    limit: params.limit,
+  });
 }
 
 export async function listLeads(
@@ -189,7 +167,7 @@ export async function listLeads(
   signal?: AbortSignal
 ): Promise<{ items: LeadSummary[]; nextCursor: string | null; totalCount: number }> {
   const payload = await adminApiRequest<ApiLeadListResponse>({
-    endpointPath: `/v1/admin/leads${buildLeadListQuery(params)}`,
+    endpointPath: buildLeadListPath(params),
     method: 'GET',
     signal,
   });
@@ -383,17 +361,10 @@ export async function generateLeadAiSuggestion(leadId: string): Promise<LeadAiSu
 }
 
 export async function getLeadAnalytics(params: AnalyticsParams): Promise<LeadAnalytics> {
-  const query = new URLSearchParams();
-  if (params.dateFrom) {
-    query.set('date_from', params.dateFrom);
-  }
-  if (params.dateTo) {
-    query.set('date_to', params.dateTo);
-  }
-  const queryString = query.toString();
-  const endpointPath = queryString ? `/v1/admin/leads/analytics?${queryString}` : '/v1/admin/leads/analytics';
   const payload = await adminApiRequest<ApiLeadAnalyticsResponse>({
-    endpointPath,
+    endpointPath: buildAdminListPath('/v1/admin/leads/analytics', {
+      filters: { date_from: params.dateFrom, date_to: params.dateTo },
+    }),
     method: 'GET',
   });
   const assigneeStats = Array.isArray(payload.assignee_stats)

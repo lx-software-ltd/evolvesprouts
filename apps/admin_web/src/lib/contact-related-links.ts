@@ -59,19 +59,13 @@ export function findEnrollmentForRelatedParty<T extends RelatedPartyEnrollmentFi
   return null;
 }
 
-export function appendRelatedPartyQuery(query: URLSearchParams, party: RelatedPartyQuery): void {
-  const contactId = party.contactId?.trim() ?? '';
-  const familyId = party.familyId?.trim() ?? '';
-  const organizationId = party.organizationId?.trim() ?? '';
-  if (contactId) {
-    query.set(PARTY_API_PARAM.contact, contactId);
-  }
-  if (familyId) {
-    query.set(PARTY_API_PARAM.family, familyId);
-  }
-  if (organizationId) {
-    query.set(PARTY_API_PARAM.organization, organizationId);
-  }
+/** Admin API list filters for a related-party deep link (blank ids are skipped by the query builder). */
+export function relatedPartyApiFilters(party: RelatedPartyQuery): Record<string, string | undefined> {
+  return {
+    [PARTY_API_PARAM.contact]: party.contactId,
+    [PARTY_API_PARAM.family]: party.familyId,
+    [PARTY_API_PARAM.organization]: party.organizationId,
+  };
 }
 
 function partySearch(kind: RelatedPartyKind, id: string): string {

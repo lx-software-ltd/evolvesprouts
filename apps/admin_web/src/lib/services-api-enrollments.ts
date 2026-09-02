@@ -1,4 +1,4 @@
-import { clampAdminListLimit } from '@/lib/admin-list-limit';
+import { buildAdminListPath } from '@/lib/admin-list-query';
 
 import { adminApiRequest } from './api-admin-client';
 import { asNullableString, asNumber } from './api-payload';
@@ -24,13 +24,12 @@ export async function listEnrollments(
   params: Partial<EnrollmentListFilters> & { cursor?: string | null; limit?: number },
   signal?: AbortSignal
 ): Promise<{ items: Enrollment[]; nextCursor: string | null; totalCount: number }> {
-  const query = new URLSearchParams();
-  if (params.cursor) query.set('cursor', params.cursor);
-  if (typeof params.limit === 'number') query.set('limit', `${clampAdminListLimit(params.limit)}`);
-  if (params.status) query.set('status', params.status);
-  const queryString = query.toString();
   const payload = await adminApiRequest<ApiEnrollmentListResponse>({
-    endpointPath: `/v1/admin/services/${serviceId}/instances/${instanceId}/enrollments${queryString ? `?${queryString}` : ''}`,
+    endpointPath: buildAdminListPath(`/v1/admin/services/${serviceId}/instances/${instanceId}/enrollments`, {
+      filters: { status: params.status },
+      cursor: params.cursor,
+      limit: params.limit,
+    }),
     method: 'GET',
     signal,
   });

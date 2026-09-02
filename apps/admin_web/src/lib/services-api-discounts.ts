@@ -1,4 +1,4 @@
-import { clampAdminListLimit } from '@/lib/admin-list-limit';
+import { buildAdminListPath } from '@/lib/admin-list-query';
 
 import { adminApiRequest } from './api-admin-client';
 import { asNullableString, asNumber } from './api-payload';
@@ -22,17 +22,18 @@ export async function listDiscountCodes(
   },
   signal?: AbortSignal
 ): Promise<{ items: DiscountCode[]; nextCursor: string | null; totalCount: number }> {
-  const query = new URLSearchParams();
-  if (params.cursor) query.set('cursor', params.cursor);
-  if (typeof params.limit === 'number') query.set('limit', `${clampAdminListLimit(params.limit)}`);
-  if (params.active) query.set('active', params.active);
-  if (params.search?.trim()) query.set('search', params.search.trim());
-  if (params.scope) query.set('scope', params.scope);
-  if (params.service_id?.trim()) query.set('service_id', params.service_id.trim());
-  if (params.instance_id?.trim()) query.set('instance_id', params.instance_id.trim());
-  const queryString = query.toString();
   const payload = await adminApiRequest<ApiDiscountCodeListResponse>({
-    endpointPath: `/v1/admin/discount-codes${queryString ? `?${queryString}` : ''}`,
+    endpointPath: buildAdminListPath('/v1/admin/discount-codes', {
+      filters: {
+        active: params.active,
+        search: params.search,
+        scope: params.scope,
+        service_id: params.service_id,
+        instance_id: params.instance_id,
+      },
+      cursor: params.cursor,
+      limit: params.limit,
+    }),
     method: 'GET',
     signal,
   });

@@ -1,4 +1,4 @@
-import { clampAdminListLimit } from './admin-list-limit';
+import { buildAdminListPath } from './admin-list-query';
 import { ensureFreshTokens } from './auth';
 import { adminApiRequest } from './api-admin-client';
 import { getApiBaseUrl } from './config';
@@ -67,16 +67,11 @@ export async function listAdminPollAnswers(
   pollSlug: string,
   params: { cursor?: string | null; limit?: number; signal?: AbortSignal } = {}
 ): Promise<{ items: AdminPollAnswerRow[]; nextCursor: string | null }> {
-  const query = new URLSearchParams();
-  if (params.cursor) {
-    query.set('cursor', params.cursor);
-  }
-  if (typeof params.limit === 'number') {
-    query.set('limit', `${clampAdminListLimit(params.limit)}`);
-  }
-  const queryString = query.toString();
   const payload = await adminApiRequest<ApiSchemas['AdminPollAnswerListResponse']>({
-    endpointPath: `/v1/admin/polls/${encodeURIComponent(pollSlug)}/answers${queryString ? `?${queryString}` : ''}`,
+    endpointPath: buildAdminListPath(`/v1/admin/polls/${encodeURIComponent(pollSlug)}/answers`, {
+      cursor: params.cursor,
+      limit: params.limit,
+    }),
     method: 'GET',
     signal: params.signal,
   });

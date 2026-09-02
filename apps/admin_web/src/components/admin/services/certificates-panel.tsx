@@ -24,6 +24,7 @@ import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { useServiceInstanceOptions } from '@/hooks/use-service-instance-options';
 import type { useCompletionCertificates } from '@/hooks/use-completion-certificates';
 import { toErrorMessage } from '@/hooks/hook-errors';
+import { ADMIN_API_MAX_LIST_LIMIT } from '@/lib/admin-list-query';
 import {
   getCompletionCertificatePdfDownload,
   previewCompletionCertificatePdf,
@@ -169,7 +170,7 @@ export function CertificatesPanel({ certificates, serviceOptions }: Certificates
     setEnrollmentsError('');
     void (async () => {
       try {
-        const page = await listEnrollments(sid, iid, { status: 'completed', limit: 100 });
+        const page = await listEnrollments(sid, iid, { status: 'completed', limit: ADMIN_API_MAX_LIST_LIMIT });
         if (!cancelled) {
           setCompletedEnrollments(page.items);
         }

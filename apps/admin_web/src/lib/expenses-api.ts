@@ -1,4 +1,5 @@
 import { AdminApiError, adminApiRequest } from './api-admin-client';
+import { ADMIN_API_MAX_LIST_LIMIT, buildAdminListPath } from './admin-list-query';
 import { asNullableString, asTrimmedString } from './api-payload';
 import { isRecord } from './type-guards';
 
@@ -27,7 +28,6 @@ type ApiBulkImportJob = ApiSchemas['BulkImportJob'];
 type ApiBulkImportJobSummary = ApiSchemas['BulkImportJobSummary'];
 type ApiBulkImportJobListResponse = ApiSchemas['BulkImportJobListResponse'];
 
-const EXPENSE_LIST_PAGE_LIMIT = 100;
 
 type ApiExpensePayload = ApiExpenseResponse | ApiExpense;
 type ApiExpenseListPayload = ApiExpenseListResponse;
@@ -241,19 +241,11 @@ export async function listAdminBulkExpenseImportJobs(input: {
   cursor?: string | null;
   limit?: number;
 } = {}): Promise<PaginatedBulkImportJobList> {
-  const params = new URLSearchParams();
-  if (input.cursor?.trim()) {
-    params.set('cursor', input.cursor.trim());
-  }
-  if (typeof input.limit === 'number' && Number.isFinite(input.limit) && input.limit > 0) {
-    params.set('limit', `${Math.min(Math.floor(input.limit), EXPENSE_LIST_PAGE_LIMIT)}`);
-  }
-  const queryString = params.toString();
-  const endpointPath = queryString
-    ? `/v1/admin/expenses/bulk-import-jobs?${queryString}`
-    : '/v1/admin/expenses/bulk-import-jobs';
   const payload = await adminApiRequest<ApiBulkImportJobListResponse>({
-    endpointPath,
+    endpointPath: buildAdminListPath('/v1/admin/expenses/bulk-import-jobs', {
+      cursor: input.cursor,
+      limit: input.limit,
+    }),
     method: 'GET',
   });
   const root = payload as Record<string, unknown>;
@@ -274,26 +266,12 @@ export async function listAdminExpenses(
   input: ListAdminExpensesInput = {},
   signal?: AbortSignal
 ): Promise<PaginatedExpenseList> {
-  const params = new URLSearchParams();
-  if (input.query?.trim()) {
-    params.set('query', input.query.trim());
-  }
-  if (input.status?.trim()) {
-    params.set('status', input.status);
-  }
-  if (input.parseStatus?.trim()) {
-    params.set('parse_status', input.parseStatus);
-  }
-  if (input.cursor?.trim()) {
-    params.set('cursor', input.cursor);
-  }
-  if (typeof input.limit === 'number' && Number.isFinite(input.limit) && input.limit > 0) {
-    params.set('limit', `${Math.min(Math.floor(input.limit), EXPENSE_LIST_PAGE_LIMIT)}`);
-  }
-  const queryString = params.toString();
-  const endpointPath = queryString ? `/v1/admin/expenses?${queryString}` : '/v1/admin/expenses';
   const payload = await adminApiRequest<ApiExpenseListPayload>({
-    endpointPath,
+    endpointPath: buildAdminListPath('/v1/admin/expenses', {
+      filters: { query: input.query, status: input.status, parse_status: input.parseStatus },
+      cursor: input.cursor,
+      limit: input.limit,
+    }),
     method: 'GET',
     signal,
   });
@@ -316,7 +294,7 @@ export async function listAllAdminExpenses(): Promise<Expense[]> {
       status: '',
       parseStatus: '',
       cursor,
-      limit: EXPENSE_LIST_PAGE_LIMIT,
+      limit: ADMIN_API_MAX_LIST_LIMIT,
     });
     all.push(...page.items);
     cursor = page.nextCursor;

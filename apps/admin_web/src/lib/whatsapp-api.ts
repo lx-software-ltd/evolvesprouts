@@ -1,6 +1,7 @@
-import { appendRelatedPartyQuery, type RelatedPartyQuery } from '@/lib/contact-related-links';
+import { relatedPartyApiFilters, type RelatedPartyQuery } from '@/lib/contact-related-links';
 
 import { adminApiRequest } from './api-admin-client';
+import { buildAdminListPath } from './admin-list-query';
 import { asNumber, asNullableString } from './api-payload';
 import { isRecord } from './type-guards';
 
@@ -77,20 +78,12 @@ export async function listWhatsAppConversations(
   nextCursor: string | null;
   totalCount: number;
 }> {
-  const query = new URLSearchParams();
-  if (params.cursor) {
-    query.set('cursor', params.cursor);
-  }
-  if (typeof params.limit === 'number' && Number.isFinite(params.limit) && params.limit > 0) {
-    query.set('limit', String(params.limit));
-  }
-  if (params.q?.trim()) {
-    query.set('q', params.q.trim());
-  }
-  appendRelatedPartyQuery(query, params);
-  const suffix = query.toString() ? `?${query.toString()}` : '';
   const payload = await adminApiRequest<ApiConversationList>({
-    endpointPath: `/v1/admin/whatsapp/conversations${suffix}`,
+    endpointPath: buildAdminListPath('/v1/admin/whatsapp/conversations', {
+      filters: { q: params.q, ...relatedPartyApiFilters(params) },
+      cursor: params.cursor,
+      limit: params.limit,
+    }),
     signal,
   });
   const items = Array.isArray(payload.items) ? payload.items.map(parseConversation) : [];

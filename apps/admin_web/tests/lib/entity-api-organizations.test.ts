@@ -15,14 +15,14 @@ vi.mock('@/lib/api-admin-client', async () => {
 });
 
 import {
-  addPartnerMember,
-  createAdminPartner,
-  deleteAdminPartner,
-  listAdminPartners,
-  patchPartnerMember,
-  removePartnerMember,
-  updateAdminPartner,
-} from '@/lib/partners-api';
+  addAdminOrganizationMember,
+  createAdminOrganization,
+  deleteAdminOrganization,
+  listAdminOrganizations,
+  patchAdminOrganizationMember,
+  removeAdminOrganizationMember,
+  updateAdminOrganization,
+} from '@/lib/entity-api';
 
 const orgPayload = {
   id: 'partner-1',
@@ -42,21 +42,31 @@ const orgPayload = {
   members: [],
 };
 
-describe('partners-api', () => {
+describe('entity-api organizations', () => {
   beforeEach(() => {
     mockAdminApiRequest.mockReset();
   });
 
-  it('lists partners with relationship_type=partner', async () => {
+  it('lists organisations without a relationship filter by default', async () => {
+    mockAdminApiRequest.mockResolvedValueOnce({ items: [], next_cursor: null, total_count: 0 });
+
+    await listAdminOrganizations({ query: 'x' });
+
+    const request = mockAdminApiRequest.mock.calls[0][0];
+    expect(request.endpointPath).toBe('/v1/admin/organizations?query=x');
+  });
+
+  it('lists partners with relationship_type=partner and a clamped limit', async () => {
     mockAdminApiRequest.mockResolvedValueOnce({
       items: [orgPayload],
       next_cursor: 'c1',
       total_count: 1,
     });
 
-    const result = await listAdminPartners({
+    const result = await listAdminOrganizations({
       query: 'alpha',
       active: 'true',
+      relationshipType: 'partner',
       cursor: 'abc',
       limit: 10,
     });
@@ -67,18 +77,24 @@ describe('partners-api', () => {
 
     const request = mockAdminApiRequest.mock.calls[0][0];
     expect(request.method).toBe('GET');
-    expect(request.endpointPath).toContain('/v1/admin/organizations?');
-    expect(request.endpointPath).toContain('relationship_type=partner');
-    expect(request.endpointPath).toContain('query=alpha');
-    expect(request.endpointPath).toContain('active=true');
-    expect(request.endpointPath).toContain('cursor=abc');
-    expect(request.endpointPath).toContain('limit=10');
+    expect(request.endpointPath).toBe(
+      '/v1/admin/organizations?relationship_type=partner&query=alpha&active=true&cursor=abc&limit=10'
+    );
   });
 
-  it('creates a partner', async () => {
+  it('lists vendors sorted by name', async () => {
+    mockAdminApiRequest.mockResolvedValueOnce({ items: [], next_cursor: null, total_count: 0 });
+
+    await listAdminOrganizations({ relationshipType: 'vendor', sort: 'name', limit: 500 });
+
+    const request = mockAdminApiRequest.mock.calls[0][0];
+    expect(request.endpointPath).toBe('/v1/admin/organizations?relationship_type=vendor&sort=name&limit=100');
+  });
+
+  it('creates an organisation', async () => {
     mockAdminApiRequest.mockResolvedValueOnce({ organization: orgPayload });
 
-    await createAdminPartner({
+    await createAdminOrganization({
       name: 'Beta',
       organization_type: 'ngo',
       relationship_type: 'partner',
@@ -99,9 +115,9 @@ describe('partners-api', () => {
     );
   });
 
-  it('updates and deletes a partner', async () => {
+  it('updates and deletes an organisation', async () => {
     mockAdminApiRequest.mockResolvedValueOnce({ organization: orgPayload });
-    await updateAdminPartner('partner-1', { name: 'Alpha Updated' });
+    await updateAdminOrganization('partner-1', { name: 'Alpha Updated' });
     expect(mockAdminApiRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         endpointPath: '/v1/admin/organizations/partner-1',
@@ -110,7 +126,7 @@ describe('partners-api', () => {
     );
 
     mockAdminApiRequest.mockResolvedValueOnce(undefined);
-    await deleteAdminPartner('partner-1');
+    await deleteAdminOrganization('partner-1');
     expect(mockAdminApiRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         endpointPath: '/v1/admin/organizations/partner-1',
@@ -122,7 +138,7 @@ describe('partners-api', () => {
 
   it('member wrappers call members routes', async () => {
     mockAdminApiRequest.mockResolvedValue({ organization: orgPayload });
-    await addPartnerMember('partner-1', { contact_id: 'c1', is_primary_contact: false });
+    await addAdminOrganizationMember('partner-1', { contact_id: 'c1', is_primary_contact: false });
     expect(mockAdminApiRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         endpointPath: '/v1/admin/organizations/partner-1/members',
@@ -130,7 +146,7 @@ describe('partners-api', () => {
       })
     );
 
-    await removePartnerMember('partner-1', 'm1');
+    await removeAdminOrganizationMember('partner-1', 'm1');
     expect(mockAdminApiRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         endpointPath: '/v1/admin/organizations/partner-1/members/m1',
@@ -138,7 +154,7 @@ describe('partners-api', () => {
       })
     );
 
-    await patchPartnerMember('partner-1', 'm1', { is_primary_contact: true });
+    await patchAdminOrganizationMember('partner-1', 'm1', { is_primary_contact: true });
     expect(mockAdminApiRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         endpointPath: '/v1/admin/organizations/partner-1/members/m1',

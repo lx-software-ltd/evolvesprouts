@@ -347,7 +347,7 @@ describe('services-api', () => {
     expect(mockAdminApiRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         method: 'GET',
-        endpointPath: '/v1/admin/locations?limit=50&exclude_addresses=true',
+        endpointPath: '/v1/admin/locations?exclude_addresses=true&limit=50',
       })
     );
   });
@@ -397,7 +397,7 @@ describe('services-api', () => {
     expect(mockAdminApiRequest).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
-        endpointPath: '/v1/admin/locations?limit=100&exclude_addresses=true',
+        endpointPath: '/v1/admin/locations?exclude_addresses=true&limit=100',
       })
     );
     expect(mockAdminApiRequest).toHaveBeenNthCalledWith(

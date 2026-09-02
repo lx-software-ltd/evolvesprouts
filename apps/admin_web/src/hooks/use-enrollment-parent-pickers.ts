@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
-import { clampAdminListLimit } from '@/lib/admin-list-limit';
+import { ADMIN_API_MAX_LIST_LIMIT } from '@/lib/admin-list-query';
 import {
   listAdminContacts,
   listEntityFamilyPicker,
@@ -81,7 +81,7 @@ export function useEnrollmentParentPickers(canCreate: boolean) {
             {
               ...DEFAULT_CONTACT_LIST_FILTERS,
               cursor,
-              limit: clampAdminListLimit(100),
+              limit: ADMIN_API_MAX_LIST_LIMIT,
             },
             signal
           );

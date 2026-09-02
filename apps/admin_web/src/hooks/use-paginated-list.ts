@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
-import { clampAdminListLimit } from '@/lib/admin-list-limit';
+import { ADMIN_LIST_PAGE_SIZE, clampAdminListLimit } from '@/lib/admin-list-query';
 
 import { toErrorMessage } from './hook-errors';
 import { useDebouncedCallback } from './use-debounced-callback';
@@ -55,7 +55,7 @@ function isAbortError(error: unknown): boolean {
 export function usePaginatedList<TItem, TFilters extends object>({
   fetcher,
   defaultFilters,
-  limit = 25,
+  limit = ADMIN_LIST_PAGE_SIZE,
   errorPrefix = 'Failed to load',
   debounceKeys = [],
   debounceMs = 300,

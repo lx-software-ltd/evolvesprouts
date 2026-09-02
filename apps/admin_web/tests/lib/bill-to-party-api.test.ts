@@ -9,11 +9,6 @@ const entityMocks = vi.hoisted(() => ({
   searchEntityContactsForPicker: vi.fn(),
 }));
 
-const partnerMocks = vi.hoisted(() => ({
-  createAdminPartner: vi.fn(),
-  listAdminPartners: vi.fn(),
-}));
-
 vi.mock('@/lib/entity-api', () => ({
   createAdminContact: entityMocks.createAdminContact,
   createAdminFamily: entityMocks.createAdminFamily,
@@ -21,11 +16,6 @@ vi.mock('@/lib/entity-api', () => ({
   listAdminFamilies: entityMocks.listAdminFamilies,
   listAdminOrganizations: entityMocks.listAdminOrganizations,
   searchEntityContactsForPicker: entityMocks.searchEntityContactsForPicker,
-}));
-
-vi.mock('@/lib/partners-api', () => ({
-  createAdminPartner: partnerMocks.createAdminPartner,
-  listAdminPartners: partnerMocks.listAdminPartners,
 }));
 
 import {
@@ -125,13 +115,13 @@ describe('bill-to-party-api', () => {
   });
 
   it('creates a partner organization', async () => {
-    partnerMocks.createAdminPartner.mockResolvedValue({
+    entityMocks.createAdminOrganization.mockResolvedValue({
       id: 'ffffffff-ffff-ffff-ffff-ffffffffffff',
       name: 'Partner Org',
       members: [],
     });
     await createBillToParty('partner', 'Partner Org');
-    expect(partnerMocks.createAdminPartner).toHaveBeenCalledWith({
+    expect(entityMocks.createAdminOrganization).toHaveBeenCalledWith({
       name: 'Partner Org',
       organization_type: 'company',
       relationship_type: 'partner',

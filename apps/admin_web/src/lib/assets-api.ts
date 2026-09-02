@@ -1,4 +1,5 @@
 import { AdminApiError, adminApiRequest } from './api-admin-client';
+import { buildAdminListPath } from './admin-list-query';
 import { asNullableString, asTrimmedString, asStringArray } from './api-payload';
 import { isRecord } from './type-guards';
 
@@ -305,31 +306,17 @@ function buildAdminAssetPatchBody(input: UpdateAdminAssetPatchInput): ApiPartial
 export async function listAdminAssets(
   input: ListAdminAssetsInput = {}
 ): Promise<AdminAssetListResult> {
-  const params = new URLSearchParams();
-  if (input.query?.trim()) {
-    params.set('query', input.query.trim());
-  }
-  if (input.visibility?.trim()) {
-    params.set('visibility', input.visibility);
-  }
-  if (input.assetType?.trim()) {
-    params.set('asset_type', input.assetType);
-  }
-  const tagFilter = input.tagName?.trim();
-  if (tagFilter) {
-    params.set('tag_name', tagFilter);
-  }
-  if (input.cursor?.trim()) {
-    params.set('cursor', input.cursor);
-  }
-  if (typeof input.limit === 'number' && Number.isFinite(input.limit) && input.limit > 0) {
-    params.set('limit', `${Math.floor(input.limit)}`);
-  }
-
-  const queryString = params.toString();
-  const endpointPath = queryString ? `/v1/admin/assets?${queryString}` : '/v1/admin/assets';
   const payload = await adminApiRequest<ApiAssetListPayload>({
-    endpointPath,
+    endpointPath: buildAdminListPath('/v1/admin/assets', {
+      filters: {
+        query: input.query,
+        visibility: input.visibility,
+        asset_type: input.assetType,
+        tag_name: input.tagName,
+      },
+      cursor: input.cursor,
+      limit: input.limit,
+    }),
     method: 'GET',
   });
   const list = extractAssetList(payload);

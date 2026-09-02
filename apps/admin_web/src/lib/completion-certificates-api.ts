@@ -1,4 +1,5 @@
 import { adminApiRequest } from '@/lib/api-admin-client';
+import { buildAdminListPath } from '@/lib/admin-list-query';
 
 import type { components } from '@/types/generated/admin-api.generated';
 
@@ -42,30 +43,17 @@ export async function listCompletionCertificates(
   items: CompletionCertificate[];
   nextCursor: string | null;
 }> {
-  const q = new URLSearchParams();
-  if (params.contactId?.trim()) {
-    q.set('contact_id', params.contactId.trim());
-  }
-  if (params.serviceId?.trim()) {
-    q.set('service_id', params.serviceId.trim());
-  }
-  if (params.instanceId?.trim()) {
-    q.set('instance_id', params.instanceId.trim());
-  }
-  if (params.status) {
-    q.set('status', params.status);
-  }
-  if (typeof params.limit === 'number') {
-    q.set('limit', String(params.limit));
-  }
-  if (params.cursor?.trim()) {
-    q.set('cursor', params.cursor.trim());
-  }
-  const qs = q.toString();
   const payload = await adminApiRequest<ApiSchemas['CompletionCertificateListResponse']>({
-    endpointPath: qs
-      ? `/v1/admin/completion-certificates?${qs}`
-      : '/v1/admin/completion-certificates',
+    endpointPath: buildAdminListPath('/v1/admin/completion-certificates', {
+      filters: {
+        contact_id: params.contactId,
+        service_id: params.serviceId,
+        instance_id: params.instanceId,
+        status: params.status,
+      },
+      cursor: params.cursor,
+      limit: params.limit,
+    }),
     method: 'GET',
     signal,
   });

@@ -1,4 +1,4 @@
-import { clampAdminListLimit } from '@/lib/admin-list-limit';
+import { ADMIN_API_MAX_LIST_LIMIT, buildAdminListPath } from '@/lib/admin-list-query';
 
 import { adminApiRequest } from './api-admin-client';
 import { asNullableString, asNumber } from './api-payload';
@@ -73,7 +73,7 @@ export async function listEntityFamilyPicker(
   signal?: AbortSignal
 ): Promise<EntityPickerListItem[]> {
   const payload = await adminApiRequest<ApiEntityPickerList>({
-    endpointPath: `/v1/admin/families/picker?limit=${clampAdminListLimit(100)}`,
+    endpointPath: buildAdminListPath('/v1/admin/families/picker', { limit: ADMIN_API_MAX_LIST_LIMIT }),
     method: 'GET',
     signal,
   });
@@ -84,13 +84,11 @@ export async function listEntityOrganizationPicker(
   params?: { relationshipType?: string },
   signal?: AbortSignal
 ): Promise<EntityPickerListItem[]> {
-  const query = new URLSearchParams();
-  query.set('limit', `${clampAdminListLimit(100)}`);
-  if (params?.relationshipType?.trim()) {
-    query.set('relationship_type', params.relationshipType.trim());
-  }
   const payload = await adminApiRequest<ApiEntityPickerList>({
-    endpointPath: `/v1/admin/organizations/picker?${query.toString()}`,
+    endpointPath: buildAdminListPath('/v1/admin/organizations/picker', {
+      filters: { relationship_type: params?.relationshipType },
+      limit: ADMIN_API_MAX_LIST_LIMIT,
+    }),
     method: 'GET',
     signal,
   });
@@ -107,16 +105,11 @@ export async function searchEntityContactsForPicker(
   params: { query: string; excludeContactId?: string | null; limit?: number },
   signal?: AbortSignal
 ): Promise<EntityPickerListItem[]> {
-  const q = new URLSearchParams();
-  q.set('query', params.query.trim());
-  if (params.excludeContactId?.trim()) {
-    q.set('exclude_contact_id', params.excludeContactId.trim());
-  }
-  if (typeof params.limit === 'number') {
-    q.set('limit', `${clampAdminListLimit(params.limit)}`);
-  }
   const payload = await adminApiRequest<ApiEntityPickerList>({
-    endpointPath: `/v1/admin/contacts/search?${q.toString()}`,
+    endpointPath: buildAdminListPath('/v1/admin/contacts/search', {
+      filters: { query: params.query, exclude_contact_id: params.excludeContactId },
+      limit: params.limit,
+    }),
     method: 'GET',
     signal,
   });
@@ -139,15 +132,12 @@ export async function listAdminContacts(
   params: Partial<EntityListFilters> & { cursor?: string | null; limit?: number },
   signal?: AbortSignal
 ): Promise<{ items: AdminContactRow[]; nextCursor: string | null; totalCount: number }> {
-  const query = new URLSearchParams();
-  if (params.cursor) query.set('cursor', params.cursor);
-  if (typeof params.limit === 'number') query.set('limit', `${clampAdminListLimit(params.limit)}`);
-  if (params.query?.trim()) query.set('query', params.query.trim());
-  if (params.active) query.set('active', params.active);
-  if (params.contact_type) query.set('contact_type', params.contact_type);
-  const qs = query.toString();
   const payload = await adminApiRequest<ApiContactList>({
-    endpointPath: `/v1/admin/contacts${qs ? `?${qs}` : ''}`,
+    endpointPath: buildAdminListPath('/v1/admin/contacts', {
+      filters: { query: params.query, active: params.active, contact_type: params.contact_type },
+      cursor: params.cursor,
+      limit: params.limit,
+    }),
     method: 'GET',
     signal,
   });
@@ -291,14 +281,12 @@ export async function listAdminFamilies(
   params: Partial<EntityListFilters> & { cursor?: string | null; limit?: number },
   signal?: AbortSignal
 ): Promise<{ items: AdminFamilyRow[]; nextCursor: string | null; totalCount: number }> {
-  const query = new URLSearchParams();
-  if (params.cursor) query.set('cursor', params.cursor);
-  if (typeof params.limit === 'number') query.set('limit', `${clampAdminListLimit(params.limit)}`);
-  if (params.query?.trim()) query.set('query', params.query.trim());
-  if (params.active) query.set('active', params.active);
-  const qs = query.toString();
   const payload = await adminApiRequest<ApiFamilyList>({
-    endpointPath: `/v1/admin/families${qs ? `?${qs}` : ''}`,
+    endpointPath: buildAdminListPath('/v1/admin/families', {
+      filters: { query: params.query, active: params.active },
+      cursor: params.cursor,
+      limit: params.limit,
+    }),
     method: 'GET',
     signal,
   });
@@ -378,18 +366,31 @@ export async function patchAdminFamilyMember(
   return payload.family ?? null;
 }
 
+export type OrganizationRelationshipType = 'vendor' | 'partner';
+
+export interface AdminOrganizationListParams extends Partial<EntityListFilters> {
+  cursor?: string | null;
+  limit?: number;
+  /** Restrict to vendors or partners; omit for every organisation. */
+  relationshipType?: OrganizationRelationshipType;
+  sort?: 'name';
+}
+
 export async function listAdminOrganizations(
-  params: Partial<EntityListFilters> & { cursor?: string | null; limit?: number },
+  params: AdminOrganizationListParams,
   signal?: AbortSignal
 ): Promise<{ items: AdminOrganizationRow[]; nextCursor: string | null; totalCount: number }> {
-  const query = new URLSearchParams();
-  if (params.cursor) query.set('cursor', params.cursor);
-  if (typeof params.limit === 'number') query.set('limit', `${clampAdminListLimit(params.limit)}`);
-  if (params.query?.trim()) query.set('query', params.query.trim());
-  if (params.active) query.set('active', params.active);
-  const qs = query.toString();
   const payload = await adminApiRequest<ApiOrganizationList>({
-    endpointPath: `/v1/admin/organizations${qs ? `?${qs}` : ''}`,
+    endpointPath: buildAdminListPath('/v1/admin/organizations', {
+      filters: {
+        relationship_type: params.relationshipType,
+        sort: params.sort,
+        query: params.query,
+        active: params.active,
+      },
+      cursor: params.cursor,
+      limit: params.limit,
+    }),
     method: 'GET',
     signal,
   });

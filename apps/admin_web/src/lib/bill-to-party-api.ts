@@ -8,7 +8,6 @@ import {
   type EntityPickerListItem,
 } from '@/lib/entity-api';
 import { formatAdminContactPickerLabel, formatFamilyOrOrganizationPartyLabel } from '@/lib/format';
-import { createAdminPartner, listAdminPartners } from '@/lib/partners-api';
 import { parseContactSearchQuery } from '@/lib/parse-contact-search-query';
 import { contactPhoneRequestFields } from '@/lib/phone-request';
 
@@ -70,7 +69,10 @@ export async function searchBillToParties(
     return page.items.map((row) => ({ id: row.id, label: familyRowLabel(row) }));
   }
   if (kind === 'partner') {
-    const page = await listAdminPartners({ query: q, active: 'true', limit: 50 }, signal);
+    const page = await listAdminOrganizations(
+      { query: q, active: 'true', relationshipType: 'partner', limit: 50 },
+      signal
+    );
     return page.items.map((row) => ({ id: row.id, label: organizationRowLabel(row) }));
   }
   const page = await listAdminOrganizations({ query: q, active: 'true', limit: 50 }, signal);
@@ -123,7 +125,7 @@ export async function createBillToParty(
     return { id: created.id, label: familyRowLabel(created) };
   }
   if (kind === 'partner') {
-    const created = await createAdminPartner({
+    const created = await createAdminOrganization({
       name: trimmed.slice(0, 255),
       organization_type: 'company',
       relationship_type: 'partner',

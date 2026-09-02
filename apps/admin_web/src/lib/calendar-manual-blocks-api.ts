@@ -1,4 +1,5 @@
 import { adminApiRequest } from '@/lib/api-admin-client';
+import { buildAdminListPath } from '@/lib/admin-list-query';
 import { isRecord } from '@/lib/type-guards';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -17,12 +18,10 @@ export async function listCalendarManualBlocks(
   params: { purpose: string; from: string; to: string },
   signal?: AbortSignal,
 ): Promise<AdminCalendarManualBlockRow[]> {
-  const query = new URLSearchParams();
-  query.set('purpose', params.purpose);
-  query.set('from', params.from);
-  query.set('to', params.to);
   const payload = await adminApiRequest<ApiSchemas['AdminCalendarManualBlockListResponse']>({
-    endpointPath: `/v1/admin/calendar/manual-blocks?${query.toString()}`,
+    endpointPath: buildAdminListPath('/v1/admin/calendar/manual-blocks', {
+      filters: { purpose: params.purpose, from: params.from, to: params.to },
+    }),
     method: 'GET',
     signal,
   });
