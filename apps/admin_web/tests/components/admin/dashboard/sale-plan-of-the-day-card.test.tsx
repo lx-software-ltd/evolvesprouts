@@ -30,6 +30,7 @@ const samplePlan = {
       why: 'Inbound yesterday asking about helper training.',
       action: 'Send a consult CTA on WhatsApp.',
       leadId: 'lead-1',
+      invoiceId: null,
     },
   ],
   outreach: [
@@ -111,6 +112,33 @@ describe('SalePlanOfTheDayCard', () => {
     expect(screen.getByText(/Last run: queue 1\.0 s · model 7\.0 s/i)).toBeInTheDocument();
     expect(enqueueSalesDailyPlanJob).toHaveBeenCalledTimes(1);
     expect(pollSalesDailyPlanJob).toHaveBeenCalledWith('job-1', expect.any(AbortSignal));
+  });
+
+  it('shows invoice links on payment follow-up priorities', async () => {
+    fetchSalesDailyPlan.mockResolvedValue({
+      ...samplePlan,
+      priorities: [
+        {
+          title: 'Chase INV-1001',
+          why: 'Balance overdue',
+          action: 'Send a polite payment reminder.',
+          leadId: null,
+          invoiceId: 'inv-1001',
+        },
+      ],
+      outreach: [],
+    });
+
+    render(<SalePlanOfTheDayCard />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Chase INV-1001')).toBeInTheDocument();
+    });
+    const invoiceLink = screen.getByRole('link', { name: 'Open invoice' });
+    expect(invoiceLink).toHaveAttribute(
+      'href',
+      '/finance?tab=client-invoices&invoice=inv-1001',
+    );
   });
 
   it('shows a stale banner when the stored plan is outdated', async () => {

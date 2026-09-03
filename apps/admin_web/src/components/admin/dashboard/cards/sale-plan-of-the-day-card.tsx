@@ -49,6 +49,26 @@ function LeadLink({ leadId, children }: { leadId: string | null; children: strin
   );
 }
 
+function InvoiceLink({
+  invoiceId,
+  children,
+}: {
+  invoiceId: string | null;
+  children: string;
+}) {
+  if (!invoiceId) {
+    return null;
+  }
+  return (
+    <Link
+      href={`/finance?tab=client-invoices&invoice=${encodeURIComponent(invoiceId)}`}
+      className='text-sm font-medium text-slate-900 underline-offset-2 hover:underline'
+    >
+      {children}
+    </Link>
+  );
+}
+
 function PriorityItem({ item }: { item: SalesDailyPlanPriority }) {
   return (
     <li className='space-y-1'>
@@ -56,6 +76,9 @@ function PriorityItem({ item }: { item: SalesDailyPlanPriority }) {
       {item.why ? <p className='text-sm text-slate-600'>{item.why}</p> : null}
       {item.action ? <p className='text-sm text-slate-700'>{item.action}</p> : null}
       {item.leadId ? <LeadLink leadId={item.leadId}>Open lead</LeadLink> : null}
+      {item.invoiceId ? (
+        <InvoiceLink invoiceId={item.invoiceId}>Open invoice</InvoiceLink>
+      ) : null}
     </li>
   );
 }
@@ -94,8 +117,9 @@ export function SalePlanOfTheDayCard() {
     <DashboardCard width='full' title='Sale Plan of the Day'>
       <div className='space-y-4' data-testid='sale-plan-of-the-day'>
         <p className='text-xs text-slate-500'>
-          Sales-focused advice for today from your pipeline, unanswered messages, and
-          catalogue. Saved until you regenerate. Suggestions are not sent automatically.
+          Sales-focused advice for today from your pipeline, unanswered messages,
+          unpaid invoices, and catalogue. Saved until you regenerate. Suggestions
+          are not sent automatically.
         </p>
         {error ? (
           <StatusBanner variant='error' title='Sale Plan of the Day'>

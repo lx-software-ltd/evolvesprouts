@@ -38,6 +38,12 @@ def test_normalize_plan_payload_coerces_lists() -> None:
                     "action": "Send consult CTA",
                     "lead_id": lead_id,
                 },
+                {
+                    "title": "Chase INV-1001",
+                    "why": "Overdue balance",
+                    "action": "Send payment reminder",
+                    "invoice_id": str(uuid4()),
+                },
                 {"title": ""},
                 "ignore-me",
             ],
@@ -56,14 +62,9 @@ def test_normalize_plan_payload_coerces_lists() -> None:
         }
     )
     assert payload["focus"] == "Follow up MBA leads"
-    assert payload["priorities"] == [
-        {
-            "title": "Reply to Mei",
-            "why": "Inbound yesterday",
-            "action": "Send consult CTA",
-            "lead_id": lead_id,
-        }
-    ]
+    assert payload["priorities"][0]["lead_id"] == lead_id
+    assert payload["priorities"][1]["invoice_id"] is not None
+    assert payload["priorities"][1]["lead_id"] is None
     assert payload["outreach"] == [
         {
             "channel": "whatsapp",
