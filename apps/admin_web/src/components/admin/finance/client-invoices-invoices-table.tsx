@@ -170,7 +170,9 @@ export function ClientInvoicesInvoicesTable({
             <AdminDataTableHeadCell>Number</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>Settlement</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>Bill to</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell className='text-right'>Total</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary' className='text-right'>
+              Total
+            </AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>Invoice date</AdminDataTableHeadCell>
             <AdminDataTableOperationsHeadCell />
           </tr>
@@ -193,7 +195,9 @@ export function ClientInvoicesInvoicesTable({
                 <AdminDataTableCell priority='secondary' className='text-slate-400'>
                   —
                 </AdminDataTableCell>
-                <AdminDataTableCell className='text-right text-slate-400'>—</AdminDataTableCell>
+                <AdminDataTableCell priority='secondary' className='text-right text-slate-400'>
+                  —
+                </AdminDataTableCell>
                 <AdminDataTableCell priority='tertiary' className='text-slate-400'>
                   —
                 </AdminDataTableCell>
@@ -242,7 +246,8 @@ export function ClientInvoicesInvoicesTable({
                   <AdminDataTableCell>
                     <p className='font-medium text-slate-900'>{numberLabel}</p>
                     <AdminDataTableCellMeta>
-                      {settlementLabel} · {billToLabel}
+                      {totalDisplay}
+                      {dueDisplay ? ` (${dueDisplay})` : ''} · {settlementLabel} · {billToLabel}
                     </AdminDataTableCellMeta>
                     <AdminDataTableCellMeta until='tertiary'>{dateLabel}</AdminDataTableCellMeta>
                   </AdminDataTableCell>
@@ -250,7 +255,7 @@ export function ClientInvoicesInvoicesTable({
                   <AdminDataTableCell priority='secondary' className='text-slate-700'>
                     {billToLabel}
                   </AdminDataTableCell>
-                  <AdminDataTableCell className='text-right tabular-nums'>
+                  <AdminDataTableCell priority='secondary' className='text-right tabular-nums'>
                     <span className='block'>{totalDisplay}</span>
                     {dueDisplay ? <span className='block text-xs text-slate-500'>{dueDisplay}</span> : null}
                   </AdminDataTableCell>

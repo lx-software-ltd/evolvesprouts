@@ -94,7 +94,7 @@ export function ClientInvoicesPaymentsTable({
                 <Button
                   type='button'
                   variant='outline'
-                  className='h-10 flex-1 sm:h-9 sm:flex-none'
+                  className='h-10 w-full sm:h-9 sm:w-auto'
                   onClick={() => void handleExport()}
                   disabled={exportBusy}
                   loading={exportBusy}
@@ -119,7 +119,9 @@ export function ClientInvoicesPaymentsTable({
             <AdminDataTableHeadCell priority='secondary'>Direction</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>Status</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>Method</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell className='text-right'>Amount</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary' className='text-right'>
+              Amount
+            </AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary' className='text-right'>
               Unapplied
             </AdminDataTableHeadCell>
@@ -147,7 +149,9 @@ export function ClientInvoicesPaymentsTable({
                 <AdminDataTableCell priority='tertiary' className='text-slate-400'>
                   —
                 </AdminDataTableCell>
-                <AdminDataTableCell className='text-right text-slate-400'>—</AdminDataTableCell>
+                <AdminDataTableCell priority='secondary' className='text-right text-slate-400'>
+                  —
+                </AdminDataTableCell>
                 <AdminDataTableCell priority='tertiary' className='text-right text-slate-400'>
                   —
                 </AdminDataTableCell>
@@ -186,16 +190,17 @@ export function ClientInvoicesPaymentsTable({
                   <AdminDataTableCell>
                     <p className='font-medium text-slate-900 wrap-anywhere'>{partyDisplay}</p>
                     <AdminDataTableCellMeta>
-                      {directionLabel} · {statusLabel}
+                      {amountDisplay} · {directionLabel} · {statusLabel}
                     </AdminDataTableCellMeta>
-                    <AdminDataTableCellMeta until='tertiary'>{methodLabel}</AdminDataTableCellMeta>
+                    <AdminDataTableCellMeta until='tertiary'>
+                      {methodLabel} · Unapplied {unappliedDisplay}
+                    </AdminDataTableCellMeta>
                   </AdminDataTableCell>
                   <AdminDataTableCell priority='secondary'>{directionLabel}</AdminDataTableCell>
                   <AdminDataTableCell priority='secondary'>{statusLabel}</AdminDataTableCell>
                   <AdminDataTableCell priority='tertiary'>{methodLabel}</AdminDataTableCell>
-                  <AdminDataTableCell className='text-right tabular-nums'>
-                    <span className='block'>{amountDisplay}</span>
-                    <AdminDataTableCellMeta until='tertiary'>Unapplied {unappliedDisplay}</AdminDataTableCellMeta>
+                  <AdminDataTableCell priority='secondary' className='text-right tabular-nums'>
+                    {amountDisplay}
                   </AdminDataTableCell>
                   <AdminDataTableCell priority='tertiary' className='text-right tabular-nums'>
                     {unappliedDisplay}
