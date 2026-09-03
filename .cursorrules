@@ -389,8 +389,23 @@ so on) follows the same shape, built from the shared primitives in
   the only heading for that block: do not repeat it as a label inside (pass
   `hideLabel` to `InlineLocationEditor` when it sits in a Location disclosure).
   Standalone tool panels without a table (for example the Contacts →
-  Mailchimp tab) use the same shape: an untitled `Card` with `AdminDisclosure`
-  sections, no `AdminCollapsibleSection`, and no manual refresh button.
+  Mailchimp tab, Sales → Configuration, the Analytics date range) use the same
+  shape: an untitled `Card` with `AdminEditorPanel` / `AdminFilterBar` /
+  `AdminDisclosure` content, no `AdminCollapsibleSection`, and no manual
+  refresh button (queries re-run when their inputs change).
+- **Imports and other tools attached to a table** (combined-PDF expenses,
+  WhatsApp chat export) render as an `AdminDisclosure` **between the filter
+  bar and the table**, collapsed by default, with their form on
+  `AdminFieldGrid` and a `Button loading` submit. A one-click tool (Meta
+  `Import recent history`, CSV export) is a `Button` in the filter bar's
+  trailing slot with the shared loading state. Job status and errors render
+  inside the accordion or directly above the table, never as a card title or
+  description.
+- **Lazy row sections:** disclosures inside an expanded row that need their
+  own request (lead Notes, AI suggestion, Conversation) mount their content
+  only once opened, so expanding a row costs one detail request. Disclosures
+  whose data already arrived with the record (lead Activity) may show a count
+  or `Loading…` in the `summary` slot.
 - **In-flight buttons:** any button whose click starts an API call must be
   rendered with the shared `Button` and pass `loading={...}` for the duration
   of the call. While loading, `Button` disables itself, sets `aria-busy`, and
