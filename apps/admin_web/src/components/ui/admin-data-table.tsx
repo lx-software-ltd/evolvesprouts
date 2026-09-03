@@ -116,7 +116,9 @@ export function AdminDataTableCellMeta({ children, until = 'secondary', classNam
   return (
     <span
       className={clsx(
-        'mt-0.5 block truncate text-xs font-normal text-slate-500',
+        // `wrap-anywhere` (not `truncate`) so a long email or timestamp never
+        // sets the column's minimum width and forces a horizontal scroll.
+        'mt-0.5 block wrap-anywhere text-xs font-normal text-slate-500',
         until === 'secondary' ? 'md:hidden' : 'lg:hidden',
         className
       )}
@@ -144,7 +146,8 @@ export function AdminDataTableOperationsHeadCell({
 }: AdminDataTableOperationsHeadCellProps) {
   return (
     <th scope={scope} className={twMerge(adminDataTableHeadCellBase, 'text-right', className)}>
-      {children}
+      {/* Label stays in the accessibility tree on phones but stops widening the column. */}
+      <span className='sr-only md:not-sr-only'>{children}</span>
     </th>
   );
 }

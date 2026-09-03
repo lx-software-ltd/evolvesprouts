@@ -142,7 +142,7 @@ export function ContactNotesRecordTable({
             cells={
               <>
                 <AdminDataTableCell className='text-slate-900'>
-                  <span className='line-clamp-2 whitespace-pre-wrap'>{note.content}</span>
+                  <span className='line-clamp-2 wrap-anywhere whitespace-pre-wrap'>{note.content}</span>
                   <AdminDataTableCellMeta>{meta}</AdminDataTableCellMeta>
                 </AdminDataTableCell>
                 <AdminDataTableCell priority='secondary' className='whitespace-nowrap text-xs text-slate-500'>
