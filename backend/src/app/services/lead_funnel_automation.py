@@ -83,7 +83,7 @@ def reopen_closed_lead(
     lead.lost_reason = None
     lead.updated_at = datetime.now(UTC)
     repository.update(lead)
-    event_metadata = {"source": "reopen_on_action"}
+    event_metadata: dict[str, object] = {"source": "reopen_on_action"}
     if metadata:
         event_metadata.update(metadata)
     repository.add_event(

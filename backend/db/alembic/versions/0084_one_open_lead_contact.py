@@ -160,16 +160,16 @@ def upgrade() -> None:
         ),
     )
     op.execute("ALTER TYPE lead_event_type ADD VALUE IF NOT EXISTS 'action_recorded'")
-    op.execute(sa.text(_MERGE_OPEN_DUPLICATES))
-    op.create_index(
-        "sales_leads_one_open_contact_idx",
-        "sales_leads",
-        ["contact_id"],
-        unique=True,
-        postgresql_where=sa.text(
-            "contact_id IS NOT NULL AND is_manual IS NOT TRUE "
-            f"AND funnel_stage IN {_OPEN_STAGES}"
-        ),
+    op.execute(_MERGE_OPEN_DUPLICATES)
+    op.execute(
+        """
+        CREATE UNIQUE INDEX sales_leads_one_open_contact_idx
+        ON sales_leads (contact_id)
+        WHERE contact_id IS NOT NULL
+          AND is_manual IS NOT TRUE
+          AND funnel_stage IN
+          ('new', 'contacted', 'engaged', 'qualified', 'unqualified')
+        """
     )
 
 
