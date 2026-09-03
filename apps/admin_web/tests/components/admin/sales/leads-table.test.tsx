@@ -72,6 +72,7 @@ function renderComponent(overrides: Partial<ComponentProps<typeof LeadsTable>> =
   const onFilterChange = vi.fn();
   const onBulkAssign = vi.fn().mockResolvedValue(undefined);
   const onBulkStageChange = vi.fn().mockResolvedValue(undefined);
+  const onBulkMerge = vi.fn().mockResolvedValue(undefined);
   const renderDetail = vi.fn((lead: LeadSummary | null) => (
     <div data-testid='lead-detail'>{lead ? lead.id : 'new'}</div>
   ));
@@ -91,11 +92,12 @@ function renderComponent(overrides: Partial<ComponentProps<typeof LeadsTable>> =
       onFilterChange={onFilterChange}
       onBulkAssign={onBulkAssign}
       onBulkStageChange={onBulkStageChange}
+      onBulkMerge={onBulkMerge}
       renderDetail={renderDetail}
       {...overrides}
     />
   );
-  return { onLoadMore, onFilterChange, onBulkAssign, onBulkStageChange, renderDetail, expanded };
+  return { onLoadMore, onFilterChange, onBulkAssign, onBulkStageChange, onBulkMerge, renderDetail, expanded };
 }
 
 describe('LeadsTable', () => {

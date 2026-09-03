@@ -92,6 +92,8 @@ their primary responsibilities.
   reconciliation job exists. **Caching:** share-link tokens stay stable on replace;
   CDN or browser caching keyed only by URL (not `s3_key`) may show stale bytes until TTL—
   downloads keyed by changing `s3_key` generally avoid that.
+  `/v1/admin/leads/merge` (POST merges selected leads; consolidates loser contacts and
+  deletes orphaned contacts),
   `/v1/admin/leads/{id}/ai-suggestion` (GET latest stored close suggestion / POST
   enqueues async generation on `LeadAiSuggestionFunction` via SQS; poll
   `/v1/admin/leads/{id}/ai-suggestion/jobs/{job_id}` for status and timing),

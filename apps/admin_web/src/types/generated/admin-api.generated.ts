@@ -1301,6 +1301,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/leads/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge selected sales leads
+         * @description Merges two or more leads into the chosen keeper lead. When selected leads belong to different contacts, loser contact fields and related records (notes, enrollments, invoices, payments, conversations, certificates, and tags) are consolidated onto the keeper contact and orphaned loser contacts are deleted. Non-selected leads on loser contacts remain on the keeper contact as separate lead rows.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["MergeLeadsRequest"];
+                };
+            };
+            responses: {
+                /** @description Surviving lead detail after merge. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LeadDetailResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/leads/analytics": {
         parameters: {
             query?: never;
@@ -7307,6 +7353,14 @@ export interface components {
         };
         LeadDetailResponse: {
             lead: components["schemas"]["LeadDetail"];
+        };
+        MergeLeadsRequest: {
+            lead_ids: string[];
+            /**
+             * Format: uuid
+             * @description Lead that survives the merge; must be one of `lead_ids`.
+             */
+            keeper_lead_id: string;
         };
         CreateLeadRequest: {
             first_name: string;

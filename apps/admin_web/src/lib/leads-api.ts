@@ -205,6 +205,23 @@ export async function updateLead(id: string, body: ApiUpdateLeadRequest): Promis
   return payload.lead ? parseLeadDetail(payload.lead) : null;
 }
 
+export interface MergeLeadsParams {
+  leadIds: string[];
+  keeperLeadId: string;
+}
+
+export async function mergeLeads(params: MergeLeadsParams): Promise<LeadDetail | null> {
+  const payload = await adminApiRequest<ApiLeadDetailResponse>({
+    endpointPath: '/v1/admin/leads/merge',
+    method: 'POST',
+    body: {
+      lead_ids: params.leadIds,
+      keeper_lead_id: params.keeperLeadId,
+    },
+  });
+  return payload.lead ? parseLeadDetail(payload.lead) : null;
+}
+
 export async function createLeadNote(
   leadId: string,
   body: ApiCreateNoteRequest

@@ -11,6 +11,7 @@ from uuid import UUID
 
 from app.api.admin_request import (
     parse_limit as parse_admin_limit,
+    parse_uuid,
     query_param,
     request_id as request_id,
 )
@@ -172,6 +173,31 @@ def parse_update_lead_payload(body: Mapping[str, Any]) -> dict[str, Any]:
         "assigned_to": _parse_optional_text(body.get("assigned_to")),
         "assigned_to_provided": "assigned_to" in body,
     }
+
+
+def parse_merge_leads_payload(body: Mapping[str, Any]) -> dict[str, UUID | list[UUID]]:
+    """Validate merge-leads request payload."""
+    raw_ids = body.get("lead_ids")
+    if not isinstance(raw_ids, list) or len(raw_ids) < 2:
+        raise ValidationError(
+            "lead_ids must contain at least two ids", field="lead_ids"
+        )
+    lead_ids = [parse_uuid(str(value)) for value in raw_ids]
+    raw_keeper = body.get("keeper_lead_id")
+    if raw_keeper is None or str(raw_keeper).strip() == "":
+        raise ValidationError("keeper_lead_id is required", field="keeper_lead_id")
+    keeper_lead_id = parse_uuid(str(raw_keeper))
+    return {"lead_ids": lead_ids, "keeper_lead_id": keeper_lead_id}
+
+
+def merge_leads_payload_from(body: Mapping[str, Any]) -> tuple[list[UUID], UUID]:
+    """Return typed merge payload values."""
+    payload = parse_merge_leads_payload(body)
+    lead_ids = payload["lead_ids"]
+    keeper_lead_id = payload["keeper_lead_id"]
+    if not isinstance(lead_ids, list) or not isinstance(keeper_lead_id, UUID):
+        raise ValidationError("Invalid merge payload", field="body")
+    return lead_ids, keeper_lead_id
 
 
 def serialize_lead_summary(lead: SalesLead) -> dict[str, Any]:

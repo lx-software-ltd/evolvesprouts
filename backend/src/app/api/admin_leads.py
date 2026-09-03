@@ -13,6 +13,7 @@ from app.api.admin_leads_common import (
     encode_lead_cursor,
     parse_create_lead_payload,
     parse_lead_filters,
+    merge_leads_payload_from,
     parse_update_lead_payload,
     request_id,
     serialize_lead_detail,
@@ -38,11 +39,14 @@ from app.db.repositories import (
     SalesLeadRepository,
 )
 from app.exceptions import NotFoundError, ValidationError
+from app.services.lead_merge import merge_leads
+from app.services.mailchimp_sync import remove_contact_from_mailchimp
 from app.services.sales_assignment import (
     notify_lead_assignee,
     record_new_lead_assignment_event,
     resolve_create_assignee,
 )
+from app.utils.logging import get_logger, mask_email
 from app.utils import json_response, method_not_allowed, not_found
 from app.api.admin_leads_ai_suggestions import (
     create_lead_ai_suggestion,
@@ -94,6 +98,11 @@ def handle_admin_leads_request(
             return create_sales_daily_plan(event, actor_sub=identity.user_sub)
         if method == "DELETE":
             return delete_sales_daily_plan_memory(event, actor_sub=identity.user_sub)
+        return method_not_allowed(event)
+
+    if len(parts) == 3 and parts[2] == "merge":
+        if method == "POST":
+            return _merge_leads(event, actor_sub=identity.user_sub)
         return method_not_allowed(event)
 
     if len(parts) == 5 and parts[2] == "daily-plan" and parts[3] == "jobs":
@@ -403,3 +412,44 @@ def _create_lead_note(
         )
         session.commit()
         return json_response(201, {"note": serialize_note(note)}, event=event)
+
+
+logger = get_logger(__name__)
+
+
+def _merge_leads(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, Any]:
+    body = parse_body(event)
+    lead_ids, keeper_lead_id = merge_leads_payload_from(body)
+
+    mailchimp_archive_emails: list[str] = []
+    with Session(get_engine()) as session:
+        set_audit_context(
+            session,
+            user_id=actor_sub,
+            request_id=request_id(event),
+        )
+        keeper, mailchimp_archive_emails = merge_leads(
+            session,
+            lead_ids=lead_ids,
+            keeper_lead_id=keeper_lead_id,
+            actor_sub=actor_sub,
+        )
+        session.commit()
+        lead_repo = SalesLeadRepository(session)
+        detail = lead_repo.get_by_id_with_details(keeper.id)
+        if detail is None:
+            raise NotFoundError("SalesLead", str(keeper.id))
+
+    for email in mailchimp_archive_emails:
+        removal = remove_contact_from_mailchimp(
+            email=email,
+            logger=logger,
+            max_attempts=2,
+        )
+        if removal == "failed":
+            logger.warning(
+                "Mailchimp remove after lead merge failed (best effort)",
+                extra={"lead_email": mask_email(email)},
+            )
+
+    return json_response(200, {"lead": serialize_lead_detail(detail)}, event=event)

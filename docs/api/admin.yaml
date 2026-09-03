@@ -93,6 +93,7 @@ info:
       totals to main contacts in admin dashboard spend rankings)
     - `POST /v1/admin/billing/allocations`
     - `GET|POST /v1/admin/leads`
+    - `POST /v1/admin/leads/merge`
     - `GET|PATCH /v1/admin/leads/{id}`
     - `POST /v1/admin/leads/{id}/notes`
     - `GET|POST /v1/admin/leads/{id}/ai-suggestion` (POST queues async job; poll `.../ai-suggestion/jobs/{job_id}`)
@@ -1148,6 +1149,38 @@ paths:
       responses:
         "201":
           description: Lead create response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeadDetailResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/admin/leads/merge:
+    post:
+      summary: Merge selected sales leads
+      description: >
+        Merges two or more leads into the chosen keeper lead. When selected leads
+        belong to different contacts, loser contact fields and related records
+        (notes, enrollments, invoices, payments, conversations, certificates,
+        and tags) are consolidated onto the keeper contact and orphaned loser
+        contacts are deleted. Non-selected leads on loser contacts remain on
+        the keeper contact as separate lead rows.
+      security:
+        - AdminBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MergeLeadsRequest"
+      responses:
+        "200":
+          description: Surviving lead detail after merge.
           content:
             application/json:
               schema:
@@ -6507,6 +6540,22 @@ components:
       properties:
         lead:
           $ref: "#/components/schemas/LeadDetail"
+    MergeLeadsRequest:
+      type: object
+      required:
+        - lead_ids
+        - keeper_lead_id
+      properties:
+        lead_ids:
+          type: array
+          minItems: 2
+          items:
+            type: string
+            format: uuid
+        keeper_lead_id:
+          type: string
+          format: uuid
+          description: Lead that survives the merge; must be one of `lead_ids`.
     CreateLeadRequest:
       type: object
       required:
