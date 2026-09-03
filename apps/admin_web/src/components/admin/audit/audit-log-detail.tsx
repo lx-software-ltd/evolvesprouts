@@ -1,5 +1,6 @@
 'use client';
 
+import { AuditHighlightedJson } from '@/components/admin/audit/audit-highlighted-json';
 import { ActionBadge, SourceBadge } from '@/components/admin/audit/audit-log-badges';
 import { AdminEditorPanel } from '@/components/ui/admin-editor-panel';
 import { AdminFieldGrid } from '@/components/ui/admin-field-grid';
@@ -9,10 +10,6 @@ import { formatDate } from '@/lib/format';
 import type { components } from '@/types/generated/admin-api.generated';
 
 type AuditLog = components['schemas']['AuditLog'];
-
-function formatJson(obj: Record<string, unknown> | null | undefined): string {
-  return obj ? JSON.stringify(obj, null, 2) : '—';
-}
 
 /** Full audit row payload, rendered inside the expanded log row. */
 export function AuditLogDetail({ log }: { log: AuditLog }) {
@@ -58,16 +55,24 @@ export function AuditLogDetail({ log }: { log: AuditLog }) {
       <AdminFieldGrid columns={2}>
         {log.old_values && Object.keys(log.old_values).length > 0 ? (
           <Value label='Old values'>
-            <pre className='max-h-60 overflow-auto rounded bg-red-50 p-3 text-xs text-red-900'>
-              {formatJson(log.old_values as Record<string, unknown>)}
-            </pre>
+            <AuditHighlightedJson
+              aria-label='Old values JSON'
+              className='max-h-60 overflow-auto rounded bg-red-50 p-3 text-xs text-red-900'
+              value={log.old_values as Record<string, unknown>}
+              counterpart={log.new_values}
+              changedFields={log.changed_fields}
+            />
           </Value>
         ) : null}
         {log.new_values && Object.keys(log.new_values).length > 0 ? (
           <Value label='New values'>
-            <pre className='max-h-60 overflow-auto rounded bg-green-50 p-3 text-xs text-green-900'>
-              {formatJson(log.new_values as Record<string, unknown>)}
-            </pre>
+            <AuditHighlightedJson
+              aria-label='New values JSON'
+              className='max-h-60 overflow-auto rounded bg-green-50 p-3 text-xs text-green-900'
+              value={log.new_values as Record<string, unknown>}
+              counterpart={log.old_values}
+              changedFields={log.changed_fields}
+            />
           </Value>
         ) : null}
       </AdminFieldGrid>
