@@ -23,7 +23,9 @@ def _build_admin_identity(admin_identity: dict[str, str]) -> RequestIdentity:
 
 def test_parse_merge_leads_payload_requires_two_ids() -> None:
     with pytest.raises(ValidationError, match="lead_ids"):
-        parse_merge_leads_payload({"lead_ids": [str(uuid4())], "keeper_lead_id": str(uuid4())})
+        parse_merge_leads_payload(
+            {"lead_ids": [str(uuid4())], "keeper_lead_id": str(uuid4())}
+        )
 
 
 def test_parse_merge_leads_payload_requires_keeper() -> None:

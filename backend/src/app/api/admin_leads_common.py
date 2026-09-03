@@ -190,6 +190,16 @@ def parse_merge_leads_payload(body: Mapping[str, Any]) -> dict[str, UUID | list[
     return {"lead_ids": lead_ids, "keeper_lead_id": keeper_lead_id}
 
 
+def merge_leads_payload_from(body: Mapping[str, Any]) -> tuple[list[UUID], UUID]:
+    """Return typed merge payload values."""
+    payload = parse_merge_leads_payload(body)
+    lead_ids = payload["lead_ids"]
+    keeper_lead_id = payload["keeper_lead_id"]
+    if not isinstance(lead_ids, list) or not isinstance(keeper_lead_id, UUID):
+        raise ValidationError("Invalid merge payload", field="body")
+    return lead_ids, keeper_lead_id
+
+
 def serialize_lead_summary(lead: SalesLead) -> dict[str, Any]:
     """Serialize lead list row payload."""
     computed_days_in_stage = getattr(lead, "_computed_days_in_stage", None)

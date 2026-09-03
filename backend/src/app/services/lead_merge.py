@@ -80,11 +80,11 @@ def merge_leads(
     if len(unique_ids) < 2:
         raise ValidationError("At least two lead_ids are required", field="lead_ids")
     if keeper_lead_id not in unique_ids:
-        raise ValidationError("keeper_lead_id must be one of lead_ids", field="keeper_lead_id")
+        raise ValidationError(
+            "keeper_lead_id must be one of lead_ids", field="keeper_lead_id"
+        )
 
-    leads = session.scalars(
-        select(SalesLead).where(SalesLead.id.in_(unique_ids))
-    ).all()
+    leads = session.scalars(select(SalesLead).where(SalesLead.id.in_(unique_ids))).all()
     if len(leads) != len(unique_ids):
         raise NotFoundError("SalesLead", "one or more lead_ids")
 
@@ -129,11 +129,11 @@ def merge_leads(
         session.flush()
 
     keeper.contact_id = keeper_contact.id
-    surviving_merged = [
-        lead
-        for lead_id in [item.id for item in merged_leads]
-        if (lead := session.get(SalesLead, lead_id)) is not None and lead.id != keeper.id
-    ]
+    surviving_merged: list[SalesLead] = []
+    for merged_lead in merged_leads:
+        loaded = session.get(SalesLead, merged_lead.id)
+        if loaded is not None and loaded.id != keeper.id:
+            surviving_merged.append(loaded)
     _merge_lead_records(session, keeper, surviving_merged, actor_sub=actor_sub)
     keeper.updated_at = datetime.now(UTC)
     session.flush()
@@ -273,7 +273,9 @@ def _transfer_memberships(
             OrganizationMember(
                 organization_id=loser_org,
                 contact_id=keeper.id,
-                role=organization_membership_role_from_contact_type(keeper.contact_type),
+                role=organization_membership_role_from_contact_type(
+                    keeper.contact_type
+                ),
             )
         )
 
@@ -372,9 +374,7 @@ def _reassign_enrollments(
 ) -> None:
     keeper_instance_ids = set(
         session.scalars(
-            select(Enrollment.instance_id).where(
-                Enrollment.contact_id == to_contact_id
-            )
+            select(Enrollment.instance_id).where(Enrollment.contact_id == to_contact_id)
         ).all()
     )
     loser_enrollments = session.scalars(

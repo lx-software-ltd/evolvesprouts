@@ -13,7 +13,7 @@ from app.api.admin_leads_common import (
     encode_lead_cursor,
     parse_create_lead_payload,
     parse_lead_filters,
-    parse_merge_leads_payload,
+    merge_leads_payload_from,
     parse_update_lead_payload,
     request_id,
     serialize_lead_detail,
@@ -416,11 +416,7 @@ logger = get_logger(__name__)
 
 def _merge_leads(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, Any]:
     body = parse_body(event)
-    payload = parse_merge_leads_payload(body)
-    lead_ids = payload["lead_ids"]
-    keeper_lead_id = payload["keeper_lead_id"]
-    assert isinstance(lead_ids, list)
-    assert isinstance(keeper_lead_id, UUID)
+    lead_ids, keeper_lead_id = merge_leads_payload_from(body)
 
     mailchimp_archive_emails: list[str] = []
     with Session(get_engine()) as session:
