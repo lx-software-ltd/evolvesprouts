@@ -301,8 +301,8 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
               autoFocusDetail={false}
               cells={
                 <>
-                  <AdminDataTableCell className='font-mono text-xs text-slate-900'>
-                    {row.sessionId}
+                  <AdminDataTableCell className='text-slate-900'>
+                    <span className='font-mono text-xs md:whitespace-nowrap'>{row.sessionId}</span>
                     <AdminDataTableCellMeta>
                       {row.questionId} · {answerText}
                     </AdminDataTableCellMeta>
@@ -316,7 +316,7 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
                   <AdminDataTableCell priority='secondary' className='text-slate-700'>
                     <span className='line-clamp-2 wrap-anywhere'>{answerText}</span>
                   </AdminDataTableCell>
-                  <AdminDataTableCell priority='tertiary' className='text-slate-700'>
+                  <AdminDataTableCell priority='tertiary' className='whitespace-nowrap text-slate-700'>
                     {updatedLabel}
                   </AdminDataTableCell>
                 </>
