@@ -90,7 +90,9 @@ def test_queue_sales_daily_plan_job_deletes_row_when_queue_misconfigured(
     monkeypatch.setattr(enqueue_mod, "set_audit_context", lambda *_a, **_k: None)
 
     def _raise(_job_id: object) -> None:
-        raise ValidationError("Sales daily plan queue is not configured", field="configuration")
+        raise ValidationError(
+            "Sales daily plan queue is not configured", field="configuration"
+        )
 
     monkeypatch.setattr(enqueue_mod, "enqueue_sales_daily_plan_job", _raise)
 
@@ -146,7 +148,9 @@ def test_queue_sales_daily_plan_job_raises_when_row_disappears(
     monkeypatch.setattr(enqueue_mod, "Session", lambda *_a, **_k: session)
     monkeypatch.setattr(enqueue_mod, "get_engine", lambda: object())
     monkeypatch.setattr(enqueue_mod, "set_audit_context", lambda *_a, **_k: None)
-    monkeypatch.setattr(enqueue_mod, "enqueue_sales_daily_plan_job", lambda _job_id: None)
+    monkeypatch.setattr(
+        enqueue_mod, "enqueue_sales_daily_plan_job", lambda _job_id: None
+    )
     monkeypatch.setattr(enqueue_mod, "SalesDailyPlanJobRepository", _Repo)
 
     with pytest.raises(NotFoundError):

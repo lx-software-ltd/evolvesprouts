@@ -69,7 +69,10 @@ def test_enqueue_scheduled_skips_when_job_in_flight(
         lambda **_k: queued.append(1),
     )
 
-    assert enqueue_scheduled_sales_daily_plan(request_id="sales-daily-plan-schedule:1") is None
+    assert (
+        enqueue_scheduled_sales_daily_plan(request_id="sales-daily-plan-schedule:1")
+        is None
+    )
     assert queued == []
 
 
@@ -96,7 +99,9 @@ def test_enqueue_scheduled_creates_system_job(
 
     monkeypatch.setattr(schedule_mod, "queue_sales_daily_plan_job", _queue)
 
-    result = enqueue_scheduled_sales_daily_plan(request_id="sales-daily-plan-schedule:abc")
+    result = enqueue_scheduled_sales_daily_plan(
+        request_id="sales-daily-plan-schedule:abc"
+    )
     assert result == job_id
     assert captured["created_by"] == SALES_DAILY_PLAN_SCHEDULE_AUDIT_USER_ID
     assert captured["request_id"] == "sales-daily-plan-schedule:abc"
@@ -107,7 +112,9 @@ def test_scheduler_lambda_handler_returns_skipped(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     handler = _load_scheduler_handler()
-    monkeypatch.setattr(handler, "enqueue_scheduled_sales_daily_plan", lambda **_k: None)
+    monkeypatch.setattr(
+        handler, "enqueue_scheduled_sales_daily_plan", lambda **_k: None
+    )
     result = handler.lambda_handler({}, SimpleNamespace(aws_request_id="req-skip"))
     assert result == {"statusCode": 200, "skipped": True}
 
