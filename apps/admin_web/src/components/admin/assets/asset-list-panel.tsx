@@ -275,7 +275,6 @@ export function AssetListPanel({
                 <>
                   <AdminDataTableCell>
                     <p className='font-medium text-slate-900'>{asset.title}</p>
-                    <p className='mt-0.5 hidden text-xs text-slate-500 md:block'>{asset.id}</p>
                     <AdminDataTableCellMeta>
                       {visibilityLabel}
                       {sortedTags.length > 0
