@@ -87,12 +87,8 @@ def test_handle_public_contact_us_persists_and_runs_hooks(
     monkeypatch.setattr(pc, "verify_turnstile_token", lambda *_a, **_k: True)
     hook = MagicMock()
     monkeypatch.setattr(pc, "run_contact_us_post_success", hook)
-
-    class _FakeSalesLead:
-        def __init__(self, **kwargs: object) -> None:
-            pass
-
-    monkeypatch.setattr(pc, "SalesLead", _FakeSalesLead)
+    ensure = MagicMock(return_value=(MagicMock(), True))
+    monkeypatch.setattr(pc, "ensure_contact_lead", ensure)
 
     contact_id = uuid4()
 
@@ -108,16 +104,6 @@ def test_handle_public_contact_us_persists_and_runs_hooks(
         def update(self, *_a: object, **_k: object) -> None:
             return None
 
-    class _FakeLeadRepo:
-        def __init__(self, _session: object) -> None:
-            pass
-
-        def find_open_by_contact(self, *_a: object, **_k: object) -> None:
-            return None
-
-        def create_with_event(self, *_a: object, **_k: object) -> None:
-            return None
-
     class _FakeSession:
         def commit(self) -> None:
             return None
@@ -130,7 +116,6 @@ def test_handle_public_contact_us_persists_and_runs_hooks(
             return False
 
     monkeypatch.setattr(pc, "ContactRepository", _FakeContactRepo)
-    monkeypatch.setattr(pc, "SalesLeadRepository", _FakeLeadRepo)
     monkeypatch.setattr(pc, "Session", lambda _e: _FakeSessionCM())
     monkeypatch.setattr(pc, "get_engine", lambda: object())
 
@@ -153,6 +138,9 @@ def test_handle_public_contact_us_persists_and_runs_hooks(
     assert payload["email_address"] == "ada@example.com"
     assert payload["signup_intent"] == "contact_inquiry"
     assert payload["message"] == "Hello"
+    ensure.assert_called_once()
+    assert ensure.call_args.kwargs["lead_type"] == pc.LeadType.OTHER
+    assert ensure.call_args.kwargs["contact_id"] == contact_id
 
 
 def test_handle_public_contact_us_newsletter_creates_sales_lead(
@@ -161,15 +149,8 @@ def test_handle_public_contact_us_newsletter_creates_sales_lead(
 ) -> None:
     monkeypatch.setattr(pc, "verify_turnstile_token", lambda *_a, **_k: True)
     monkeypatch.setattr(pc, "run_contact_us_post_success", MagicMock())
-
-    lead_create = MagicMock()
-
-    class _FakeSalesLead:
-        def __init__(self, **kwargs: object) -> None:
-            self.lead_type = kwargs.get("lead_type")
-            self.assigned_to = kwargs.get("assigned_to")
-
-    monkeypatch.setattr(pc, "SalesLead", _FakeSalesLead)
+    ensure = MagicMock(return_value=(MagicMock(), True))
+    monkeypatch.setattr(pc, "ensure_contact_lead", ensure)
 
     class _FakeContactRepo:
         def __init__(self, _session: object) -> None:
@@ -183,16 +164,6 @@ def test_handle_public_contact_us_newsletter_creates_sales_lead(
         def update(self, *_a: object, **_k: object) -> None:
             return None
 
-    class _FakeLeadRepo:
-        def __init__(self, _session: object) -> None:
-            pass
-
-        def find_open_by_contact(self, *_a: object, **_k: object) -> None:
-            return None
-
-        def create_with_event(self, *a: object, **k: object) -> None:
-            lead_create(*a, **k)
-
     class _FakeSession:
         def commit(self) -> None:
             return None
@@ -205,7 +176,6 @@ def test_handle_public_contact_us_newsletter_creates_sales_lead(
             return False
 
     monkeypatch.setattr(pc, "ContactRepository", _FakeContactRepo)
-    monkeypatch.setattr(pc, "SalesLeadRepository", _FakeLeadRepo)
     monkeypatch.setattr(pc, "Session", lambda _e: _FakeSessionCM())
     monkeypatch.setattr(pc, "get_engine", lambda: object())
 
@@ -219,93 +189,8 @@ def test_handle_public_contact_us_newsletter_creates_sales_lead(
     )
     resp = pc.handle_public_contact_us(event, "POST")
     assert resp["statusCode"] == 202
-    lead_create.assert_called_once()
-    created_lead = lead_create.call_args.args[0]
-    assert created_lead.lead_type == pc.LeadType.OTHER
-    assert created_lead.assigned_to is None
-
-
-def test_handle_public_contact_us_applies_default_assignee(
-    api_gateway_event: Any,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(pc, "verify_turnstile_token", lambda *_a, **_k: True)
-    monkeypatch.setattr(pc, "run_contact_us_post_success", MagicMock())
-    notify = MagicMock()
-    monkeypatch.setattr(pc, "notify_lead_assignee", notify)
-
-    captured: dict[str, object] = {}
-
-    class _FakeSalesLead:
-        def __init__(self, **kwargs: object) -> None:
-            self.id = uuid4()
-            self.lead_type = kwargs.get("lead_type")
-            self.assigned_to = kwargs.get("assigned_to")
-
-    class _Settings:
-        default_assigned_to = "user-default"
-        notify_assignee_on_assignment = True
-
-    class _FakeSession:
-        def get(self, _model: object, _id: object) -> _Settings:
-            return _Settings()
-
-        def commit(self) -> None:
-            return None
-
-    class _FakeSessionCM:
-        def __enter__(self) -> _FakeSession:
-            return _FakeSession()
-
-        def __exit__(self, *_a: object) -> bool:
-            return False
-
-    class _FakeContactRepo:
-        def __init__(self, _session: object) -> None:
-            pass
-
-        def upsert_by_email(self, _email: str, **kwargs: object) -> tuple[object, bool]:
-            contact = MagicMock()
-            contact.id = uuid4()
-            return contact, True
-
-        def update(self, *_a: object, **_k: object) -> None:
-            return None
-
-    class _FakeLeadRepo:
-        def __init__(self, _session: object) -> None:
-            pass
-
-        def find_open_by_contact(self, *_a: object, **_k: object) -> None:
-            return None
-
-        def create_with_event(self, lead: object, *_a: object, **_k: object) -> object:
-            captured["lead"] = lead
-            return lead
-
-        def add_event(self, **kwargs: object) -> None:
-            captured["event"] = kwargs
-
-    monkeypatch.setattr(pc, "SalesLead", _FakeSalesLead)
-    monkeypatch.setattr(pc, "ContactRepository", _FakeContactRepo)
-    monkeypatch.setattr(pc, "SalesLeadRepository", _FakeLeadRepo)
-    monkeypatch.setattr(pc, "Session", lambda _e: _FakeSessionCM())
-    monkeypatch.setattr(pc, "get_engine", lambda: object())
-
-    event = _post_event(
-        api_gateway_event,
-        body={
-            "first_name": "Ada",
-            "email_address": "ada@example.com",
-            "signup_intent": "community_newsletter",
-        },
-    )
-    resp = pc.handle_public_contact_us(event, "POST")
-    assert resp["statusCode"] == 202
-    created_lead = captured["lead"]
-    assert created_lead.assigned_to == "user-default"
-    assert captured["event"]["metadata"] == {"from": None, "to": "user-default"}
-    notify.assert_called_once()
+    ensure.assert_called_once()
+    assert ensure.call_args.kwargs["lead_type"] == pc.LeadType.OTHER
 
 
 def test_handle_public_contact_us_hook_failure_still_returns_202(
@@ -318,12 +203,9 @@ def test_handle_public_contact_us_hook_failure_still_returns_202(
         raise RuntimeError("hook failed")
 
     monkeypatch.setattr(pc, "run_contact_us_post_success", _boom)
-
-    class _FakeSalesLead:
-        def __init__(self, **kwargs: object) -> None:
-            pass
-
-    monkeypatch.setattr(pc, "SalesLead", _FakeSalesLead)
+    monkeypatch.setattr(
+        pc, "ensure_contact_lead", lambda *_a, **_k: (MagicMock(), True)
+    )
 
     class _FakeContactRepo:
         def __init__(self, _session: object) -> None:
@@ -335,16 +217,6 @@ def test_handle_public_contact_us_hook_failure_still_returns_202(
             return c, True
 
         def update(self, *_a: object, **_k: object) -> None:
-            return None
-
-    class _FakeLeadRepo:
-        def __init__(self, _session: object) -> None:
-            pass
-
-        def find_open_by_contact(self, *_a: object, **_k: object) -> None:
-            return None
-
-        def create_with_event(self, *_a: object, **_k: object) -> None:
             return None
 
     class _FakeSession:
@@ -359,7 +231,6 @@ def test_handle_public_contact_us_hook_failure_still_returns_202(
             return False
 
     monkeypatch.setattr(pc, "ContactRepository", _FakeContactRepo)
-    monkeypatch.setattr(pc, "SalesLeadRepository", _FakeLeadRepo)
     monkeypatch.setattr(pc, "Session", lambda _e: _FakeSessionCM())
     monkeypatch.setattr(pc, "get_engine", lambda: object())
 

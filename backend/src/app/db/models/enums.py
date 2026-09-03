@@ -151,6 +151,7 @@ class LeadEventType(str, enum.Enum):
     EMAIL_SENT = "email_sent"
     EMAIL_OPENED = "email_opened"
     GUIDE_DOWNLOADED = "guide_downloaded"
+    ACTION_RECORDED = "action_recorded"
     ASSIGNED = "assigned"
     CONVERTED = "converted"
     LOST = "lost"

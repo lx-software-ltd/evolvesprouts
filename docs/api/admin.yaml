@@ -1133,6 +1133,10 @@ paths:
           $ref: "#/components/responses/NotFound"
     post:
       summary: Create sales lead
+      description: >
+        Always inserts a new lead (`is_manual: true`) even when the contact
+        already has an open automated lead. Automated public and inbox paths
+        reuse or reopen the contact's existing lead instead.
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -5497,6 +5501,7 @@ components:
           email_sent,
           email_opened,
           guide_downloaded,
+          action_recorded,
           assigned,
           converted,
           lost,
