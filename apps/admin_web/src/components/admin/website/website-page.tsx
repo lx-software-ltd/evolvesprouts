@@ -24,7 +24,7 @@ export function WebsitePage() {
   );
 
   return (
-    <div className='space-y-6'>
+    <div className='space-y-4'>
       <AdminTabStrip
         items={TAB_ITEMS}
         activeKey={activeView}
