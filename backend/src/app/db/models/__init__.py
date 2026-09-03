@@ -68,6 +68,11 @@ from app.db.models.location import Location
 from app.db.models.note import Note
 from app.db.models.organization import Organization, OrganizationMember
 from app.db.models.payment_allocation import DocumentCounter, PaymentAllocation
+from app.db.models.sales_daily_plan import SalesDailyPlan
+from app.db.models.sales_daily_plan_job import (
+    SalesDailyPlanJob,
+    SalesDailyPlanJobStatus,
+)
 from app.db.models.sales_lead import SalesLead, SalesLeadEvent
 from app.db.models.sales_lead_ai_suggestion import SalesLeadAiSuggestion
 from app.db.models.sales_lead_ai_suggestion_job import (
@@ -169,6 +174,9 @@ __all__ = [
     "OrganizationType",
     "PaymentAllocation",
     "RelationshipType",
+    "SalesDailyPlan",
+    "SalesDailyPlanJob",
+    "SalesDailyPlanJobStatus",
     "SalesLead",
     "SalesLeadAiSuggestion",
     "SalesLeadAiSuggestionJob",

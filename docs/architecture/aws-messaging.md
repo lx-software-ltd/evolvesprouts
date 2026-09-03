@@ -414,6 +414,39 @@ SQS retries or mailbox forwarding duplicates.
 | `EVENTBRITE_ORGANIZATION_ID` | Eventbrite organization ID used for event upserts |
 | `EVENTBRITE_TOKEN_SECRET_ARN` | Secrets Manager ARN for Eventbrite API token JSON |
 
+## Sales daily plan of the day
+
+Admin `POST /v1/admin/leads/daily-plan` enqueues work on a **direct** SQS queue
+(no SNS) so OpenRouter can run longer than API Gateway limits while the
+dashboard card polls `GET /v1/admin/leads/daily-plan/jobs/{job_id}`.
+
+**Deduplication:** the queue is a standard SQS queue (at-least-once delivery).
+Each message carries a unique `job_id`. The worker uses
+`sales_daily_plan_jobs.status` (and `updated_at` for abandoned `processing`
+rows) to stay idempotent across redeliveries. Concurrent POSTs each create a
+new job; GET returns the newest stored plan.
+
+### SQS Queue: `evolvesprouts-sales-daily-plan-queue`
+
+- Receives JSON messages `{ "job_id": "<uuid>" }` from `EvolvesproutsAdminFunction`.
+- **180** second visibility timeout (above the **120** second worker Lambda timeout).
+- 3 retry attempts before DLQ.
+- KMS encryption using the shared queue key.
+
+### Dead Letter Queue: `evolvesprouts-sales-daily-plan-dlq`
+
+- Receives daily-plan messages that fail processing 3 times.
+- 14 day retention for investigation.
+- CloudWatch alarm triggers when messages appear.
+
+### Processor Lambda: `SalesDailyPlanFunction`
+
+- Triggered by `evolvesprouts-sales-daily-plan-queue`.
+- Loads `sales_daily_plan_jobs` rows, assembles org-wide pipeline / catalogue /
+  inbox context, calls OpenRouter via `AwsApiProxyFunction`, then persists
+  `sales_daily_plans` and marks the job succeeded or failed.
+- Uses the same OpenRouter + Secrets + proxy wiring as `LeadAiSuggestionFunction`.
+
 ## Stack Outputs
 
 | Output | Description |
@@ -426,6 +459,8 @@ SQS retries or mailbox forwarding duplicates.
 | `ExpenseParserDLQUrl` | Dead letter queue URL for failed expense parser jobs |
 | `BulkExpenseImportQueueUrl` | SQS queue URL for async bulk combined-PDF imports |
 | `BulkExpenseImportDLQUrl` | Dead letter queue URL for failed bulk import jobs |
+| `SalesDailyPlanQueueUrl` | SQS queue URL for async sales daily plan generation |
+| `SalesDailyPlanDLQUrl` | Dead letter queue URL for failed sales daily plan jobs |
 | `EventbriteSyncTopicArn` | SNS topic ARN for Eventbrite sync events |
 | `EventbriteSyncQueueUrl` | SQS queue URL for Eventbrite sync processing |
 | `EventbriteSyncDLQUrl` | Dead letter queue URL for failed Eventbrite sync jobs (SQS redrive) |

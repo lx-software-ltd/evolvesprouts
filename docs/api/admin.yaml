@@ -97,6 +97,7 @@ info:
     - `POST /v1/admin/leads/{id}/notes`
     - `GET|POST /v1/admin/leads/{id}/ai-suggestion` (POST queues async job; poll `.../ai-suggestion/jobs/{job_id}`)
     - `GET /v1/admin/leads/analytics`
+    - `GET|POST /v1/admin/leads/daily-plan` (POST queues async job; poll `.../daily-plan/jobs/{job_id}`)
     - `GET|PATCH /v1/admin/leads/settings`
     - `GET /v1/admin/whatsapp/conversations`
     - `GET /v1/admin/whatsapp/conversations/{id}/messages`
@@ -1223,6 +1224,78 @@ paths:
                 $ref: "#/components/schemas/SalesSettingsResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/admin/leads/daily-plan:
+    get:
+      summary: Get latest org-wide sales plan of the day
+      description: >
+        Returns the newest stored org-wide AI sales daily plan, including
+        staleness metadata. `plan` is null when none has been generated yet.
+        A plan is stale when it is older than 24 hours, when a newer
+        WhatsApp/Meta message exists after the stored conversation watermark,
+        or when a lead was created or a funnel-stage event occurred after the
+        stored pipeline watermark.
+      security:
+        - AdminBearerAuth: []
+      responses:
+        "200":
+          description: Latest daily plan payload (or null).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesDailyPlanResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      summary: Queue org-wide sales plan of the day generation
+      description: >
+        Enqueues an asynchronous job that generates a sales-focused plan of the
+        day via the shared OpenRouter pipeline (same Secrets Manager key,
+        allow-listed chat-completions URL, and AWS HTTP proxy as lead AI
+        suggestions). Poll `GET /v1/admin/leads/daily-plan/jobs/{job_id}` for
+        status, timing (`queue_wait_ms`, `duration_ms`), and the resulting plan.
+        Does not send messages.
+      security:
+        - AdminBearerAuth: []
+      responses:
+        "202":
+          description: Generation job accepted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesDailyPlanJobResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/admin/leads/daily-plan/jobs/{job_id}:
+    parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get sales daily plan job status
+      description: >
+        Returns job status and timing. When `status` is `succeeded`, includes the
+        serialized plan. Use `queue_wait_ms` (created→started) and
+        `duration_ms` (started→finished) to time OpenRouter runs.
+      security:
+        - AdminBearerAuth: []
+      responses:
+        "200":
+          description: Job status payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesDailyPlanJobResponse"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -5788,6 +5861,168 @@ components:
       properties:
         job:
           $ref: "#/components/schemas/LeadAiSuggestionJob"
+
+    SalesDailyPlanPriority:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+        why:
+          type: string
+        action:
+          type: string
+        lead_id:
+          type: string
+          format: uuid
+          nullable: true
+    SalesDailyPlanOutreach:
+      type: object
+      required: [channel]
+      properties:
+        channel:
+          type: string
+        lead_id:
+          type: string
+          format: uuid
+          nullable: true
+        message_excerpt:
+          type: string
+        draft_reply:
+          type: string
+        rationale:
+          type: string
+    SalesDailyPlan:
+      type: object
+      required:
+        - id
+        - focus
+        - priorities
+        - outreach
+        - product_focus
+        - offer_refinements
+        - risks
+        - generated_at
+        - is_stale
+        - stale_reasons
+        - stale_after
+      properties:
+        id:
+          type: string
+          format: uuid
+        focus:
+          type: string
+        priorities:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesDailyPlanPriority"
+        outreach:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesDailyPlanOutreach"
+        product_focus:
+          type: string
+        offer_refinements:
+          type: array
+          items:
+            type: string
+        risks:
+          type: array
+          items:
+            type: string
+        generated_at:
+          type: string
+          format: date-time
+        generated_by:
+          type: string
+          nullable: true
+        model:
+          type: string
+          nullable: true
+        conversation_watermark_at:
+          type: string
+          format: date-time
+          nullable: true
+        pipeline_watermark_at:
+          type: string
+          format: date-time
+          nullable: true
+        is_stale:
+          type: boolean
+        stale_reasons:
+          type: array
+          items:
+            type: string
+            enum: [age, new_conversation, pipeline_changed]
+        stale_after:
+          type: string
+          format: date-time
+          description: Timestamp when the plan becomes age-stale (generated_at + 24h).
+        latest_message_at:
+          type: string
+          format: date-time
+          nullable: true
+        latest_pipeline_at:
+          type: string
+          format: date-time
+          nullable: true
+    SalesDailyPlanResponse:
+      type: object
+      required: [plan]
+      properties:
+        plan:
+          allOf:
+            - $ref: "#/components/schemas/SalesDailyPlan"
+          nullable: true
+    SalesDailyPlanJob:
+      type: object
+      required: [id, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, processing, succeeded, failed]
+        error_message:
+          type: string
+          nullable: true
+        plan_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        queue_wait_ms:
+          type: integer
+          nullable: true
+        duration_ms:
+          type: integer
+          nullable: true
+        plan:
+          allOf:
+            - $ref: "#/components/schemas/SalesDailyPlan"
+          nullable: true
+    SalesDailyPlanJobResponse:
+      type: object
+      required: [job]
+      properties:
+        job:
+          $ref: "#/components/schemas/SalesDailyPlanJob"
 
     WhatsAppConversationSummary:
       type: object
