@@ -94,6 +94,7 @@ Flutter Mobile / Next.js Admin
   only a valid JWT. Passwordless email challenges and federated sign-in
   with Google are supported.
 - API keys are rotated automatically every 90 days via a scheduled Lambda.
+- The org-wide sales plan of the day is generated every morning at 06:00 HKT.
 
 ## Data model
 
@@ -163,6 +164,7 @@ pull requests for dependency updates:
   signed-in pool users see an access-denied screen with sign out.
 - User routes (when exposed) require any valid Cognito JWT (no group requirement).
 - API keys are rotated every 90 days via a scheduled Lambda.
+- The org-wide sales plan of the day is generated every morning at 06:00 HKT.
 - Optional CDK parameters can bootstrap an initial admin user.
 - Passwordless email sign-in uses Cognito custom auth triggers.
 - Hosted UI enables Google IdP via OAuth.

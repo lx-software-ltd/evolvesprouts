@@ -270,6 +270,52 @@ function assertInboxImportHasNoReservedConcurrency(stack: cdk.Stack): void {
   }
 }
 
+function assertSalesDailyPlanSchedule(stack: cdk.Stack): void {
+  const nested = stack.node.tryFindChild("Messaging");
+  if (!(nested instanceof cdk.NestedStack)) {
+    throw new Error("Expected Messaging nested stack on ApiStack");
+  }
+  const template = Template.fromStack(nested);
+  const functions = template.findResources("AWS::Lambda::Function");
+  const match = Object.entries(functions).find(([, resource]) => {
+    const name = (resource.Properties ?? {}).FunctionName;
+    return name === "evolvesprouts-SalesDailyPlanSchedulerFunction";
+  });
+  if (!match) {
+    throw new Error(
+      "Expected Lambda FunctionName evolvesprouts-SalesDailyPlanSchedulerFunction",
+    );
+  }
+  const [logicalId, resource] = match;
+  const reserved = (resource.Properties ?? {}).ReservedConcurrentExecutions;
+  if (reserved !== undefined) {
+    throw new Error(
+      `SalesDailyPlanSchedulerFunction ${logicalId} must omit ReservedConcurrentExecutions; found ${JSON.stringify(reserved)}`,
+    );
+  }
+  const vars = ((resource.Properties ?? {}).Environment ?? {}).Variables ?? {};
+  if ((vars as Record<string, unknown>).SALES_DAILY_PLAN_QUEUE_URL == null) {
+    throw new Error(
+      "SalesDailyPlanSchedulerFunction must set SALES_DAILY_PLAN_QUEUE_URL",
+    );
+  }
+  const rules = template.findResources("AWS::Events::Rule");
+  const schedule = Object.entries(rules).find(([, resource]) => {
+    return (resource.Properties ?? {}).Name === "evolvesprouts-sales-daily-plan-schedule";
+  });
+  if (!schedule) {
+    throw new Error(
+      "Expected EventBridge rule evolvesprouts-sales-daily-plan-schedule",
+    );
+  }
+  const expression = (schedule[1].Properties ?? {}).ScheduleExpression;
+  if (expression !== "cron(0 22 * * ? *)") {
+    throw new Error(
+      `Sales daily plan schedule must be cron(0 22 * * ? *) UTC (06:00 HKT); found ${JSON.stringify(expression)}`,
+    );
+  }
+}
+
 function assertApiTokenAuthorizerHasNoReservedConcurrency(template: Template): void {
   const functions = template.findResources("AWS::Lambda::Function");
   const match = Object.entries(functions).find(([, resource]) => {
@@ -305,6 +351,7 @@ function main(): void {
   assertApiTokenAuthorizerHasNoReservedConcurrency(template);
   assertInboxImportHasNoReservedConcurrency(stack);
   assertInboxImportUsesDedicatedPageToken(stack);
+  assertSalesDailyPlanSchedule(stack);
 
   console.log("api-stack API Gateway stage cache assertions passed.");
 }

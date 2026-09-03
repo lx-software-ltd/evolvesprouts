@@ -829,7 +829,7 @@ paths:
         `audit_log`). Optional filters combine as in the admin Lambda handler:
         when `record_id` is set, `table` is required; `user_id` is a Cognito subject
         (sub), `api-key:<id>`, or a system actor (`system`, `webhook:whatsapp`,
-        `webhook:meta`, `alembic`). Use `email` to filter by Cognito email, API key name, or
+        `webhook:meta`, `alembic`, `system:sales-daily-plan`). Use `email` to filter by Cognito email, API key name, or
         system-actor label (server resolves to sub, `api-key:<id>`, or the system
         `user_id`); do not pass `user_id` together with `email`.
       security:
@@ -922,8 +922,10 @@ paths:
             Filter by Cognito email, API key name, or system-actor label.
             Values containing `@` resolve to a Cognito `sub` via `list_users`.
             Other values first match known system actors (`System`,
-            `WhatsApp webhook`, `Meta webhook`, `Alembic`, or stored ids
-            `system`, `webhook:whatsapp`, `webhook:meta`, `alembic`), then
+            `WhatsApp webhook`, `Meta webhook`, `Alembic`,
+            `Sales daily plan schedule`, or stored ids
+            `system`, `webhook:whatsapp`, `webhook:meta`, `alembic`,
+            `system:sales-daily-plan`), then
             `api_keys.name`
             (case-insensitive) which becomes `api-key:<id>`. Mutually exclusive
             with `user_id`. When no actor matches, the response is an empty list.
@@ -1273,6 +1275,7 @@ paths:
         Returns the newest stored org-wide AI sales daily plan, including
         staleness metadata, plus `memory` (up to the five newest stored plans,
         including the latest). `plan` is null when none has been generated yet.
+        A scheduled job also generates a new plan every day at 06:00 HKT.
         A plan is stale when it is older than 24 hours, when a newer
         WhatsApp/Meta message exists after the stored conversation watermark,
         or when a lead was created or a funnel-stage event occurred after the
@@ -7922,7 +7925,8 @@ components:
           nullable: true
           description: >
             Cognito subject, `api-key:<id>` for token writes, or a system actor
-            (`system`, `webhook:whatsapp`, `webhook:meta`, `alembic`).
+            (`system`, `webhook:whatsapp`, `webhook:meta`, `alembic`,
+            `system:sales-daily-plan`).
         user_email:
           type: string
           nullable: true

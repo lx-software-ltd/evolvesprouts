@@ -610,7 +610,7 @@ maps legacy `note.id` to the **first** inserted row’s UUID.
 - Stale when older than 24 hours, when a newer conversation message exists
   than the conversation watermark, or when a lead was created / a funnel-stage
   event occurred after the pipeline watermark.
-- No seed rows (generated on demand).
+- No seed rows (generated on the 06:00 HKT schedule and on demand).
 
 ### `sales_daily_plan_jobs`
 

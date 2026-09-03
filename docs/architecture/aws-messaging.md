@@ -417,11 +417,19 @@ SQS retries or mailbox forwarding duplicates.
 ## Sales daily plan of the day
 
 Admin `POST /v1/admin/leads/daily-plan` (optional `operator_input` refinement)
-enqueues work on a **direct** SQS queue (no SNS) so OpenRouter can run longer
-than API Gateway limits while the dashboard card polls
-`GET /v1/admin/leads/daily-plan/jobs/{job_id}`. The worker includes the last
-five stored plans and refinements as memory. `DELETE /v1/admin/leads/daily-plan`
-clears that memory (plans and jobs); live CRM rows are untouched.
+and the daily EventBridge schedule both enqueue work on a **direct** SQS queue
+(no SNS) so OpenRouter can run longer than API Gateway limits while the
+dashboard card polls `GET /v1/admin/leads/daily-plan/jobs/{job_id}`. The worker
+includes the last five stored plans and refinements as memory.
+`DELETE /v1/admin/leads/daily-plan` clears that memory (plans and jobs); live
+CRM rows are untouched.
+
+**Schedule:** EventBridge rule `evolvesprouts-sales-daily-plan-schedule` runs
+`cron(0 22 * * ? *)` UTC (06:00 HKT every day; Hong Kong has no DST) and
+invokes `SalesDailyPlanSchedulerFunction`. The scheduler inserts a
+`sales_daily_plan_jobs` row as `system:sales-daily-plan` and sends
+`{ "job_id" }` to the same queue. It skips when a job is already `pending` or
+`processing`.
 
 **Deduplication:** the queue is a standard SQS queue (at-least-once delivery).
 Each message carries a unique `job_id`. The worker uses
@@ -431,7 +439,8 @@ new job; GET returns the newest stored plan.
 
 ### SQS Queue: `evolvesprouts-sales-daily-plan-queue`
 
-- Receives JSON messages `{ "job_id": "<uuid>" }` from `EvolvesproutsAdminFunction`.
+- Receives JSON messages `{ "job_id": "<uuid>" }` from
+  `EvolvesproutsAdminFunction` and `SalesDailyPlanSchedulerFunction`.
 - **180** second visibility timeout (above the **120** second worker Lambda timeout).
 - 3 retry attempts before DLQ.
 - KMS encryption using the shared queue key.
@@ -449,6 +458,13 @@ new job; GET returns the newest stored plan.
   inbox context, calls OpenRouter via `AwsApiProxyFunction`, then persists
   `sales_daily_plans` and marks the job succeeded or failed.
 - Uses the same OpenRouter + Secrets + proxy wiring as `LeadAiSuggestionFunction`.
+
+### Scheduler Lambda: `SalesDailyPlanSchedulerFunction`
+
+- Triggered by EventBridge rule `evolvesprouts-sales-daily-plan-schedule`
+  (`cron(0 22 * * ? *)` UTC = 06:00 HKT).
+- Creates a pending `sales_daily_plan_jobs` row and sends it to
+  `evolvesprouts-sales-daily-plan-queue`. Does not call OpenRouter.
 
 ## Stack Outputs
 

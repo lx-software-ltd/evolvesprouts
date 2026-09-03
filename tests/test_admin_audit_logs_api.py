@@ -1107,7 +1107,13 @@ def test_system_actor_labels_skip_cognito(
     monkeypatch.setattr(admin_audit_actors.aws_proxy, "invoke", fake_invoke)
     labels = admin_audit_actors.actor_labels_for_user_ids(
         _Session(),  # type: ignore[arg-type]
-        ["webhook:whatsapp", "webhook:meta", "system", "alembic"],
+        [
+            "webhook:whatsapp",
+            "webhook:meta",
+            "system",
+            "alembic",
+            "system:sales-daily-plan",
+        ],
         user_pool_id="pool-1",
     )
     assert labels == {
@@ -1115,6 +1121,7 @@ def test_system_actor_labels_skip_cognito(
         "webhook:meta": "Meta webhook",
         "system": "System",
         "alembic": "Alembic",
+        "system:sales-daily-plan": "Sales daily plan schedule",
     }
     assert cognito_calls == []
 
@@ -1184,6 +1191,14 @@ def test_system_actor_user_id_for_label_accepts_id_or_display() -> None:
     assert (
         admin_audit_actors.system_actor_user_id_for_label("webhook:meta")
         == "webhook:meta"
+    )
+    assert (
+        admin_audit_actors.system_actor_user_id_for_label("Sales daily plan schedule")
+        == "system:sales-daily-plan"
+    )
+    assert (
+        admin_audit_actors.system_actor_user_id_for_label("system:sales-daily-plan")
+        == "system:sales-daily-plan"
     )
     assert admin_audit_actors.system_actor_user_id_for_label("unknown") is None
 

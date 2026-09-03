@@ -1155,14 +1155,17 @@ detector.
 ## Sales plan of the day (dashboard)
 
 **Decision:** Persist org-wide sales daily plans in `sales_daily_plans` and
-generate them on demand through the same async OpenRouter + SQS worker pattern
-as per-lead AI suggestions. The admin dashboard card loads the newest saved
-plan, shows a 24-hour (plus pipeline/inbox watermark) stale flag, and only
-regenerates when the operator clicks Generate / Refresh insight. Optional
+generate them through the same async OpenRouter + SQS worker pattern as
+per-lead AI suggestions. An EventBridge rule queues a new plan every day at
+06:00 HKT (22:00 UTC; Hong Kong has no DST). The admin dashboard card loads
+the newest saved plan, shows a 24-hour (plus pipeline/inbox watermark) stale
+flag, and still lets the operator Generate / Refresh insight. Optional
 `operator_input` on refresh is stored on the new plan. The last five plans
 (and their refinements) are sent back as memory on the next generation. All
 rows are kept until Sales → Configuration resets memory
-(`DELETE /v1/admin/leads/daily-plan`).
+(`DELETE /v1/admin/leads/daily-plan`). Scheduled jobs use audit actor
+`system:sales-daily-plan` and skip enqueue when another job is already
+`pending` or `processing`.
 
 **Why:**
 - Operators need a saved plan they can reopen without paying for another model

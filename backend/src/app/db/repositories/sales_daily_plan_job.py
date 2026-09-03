@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models.sales_daily_plan_job import (
@@ -17,6 +18,21 @@ from app.db.repositories.base import BaseRepository
 class SalesDailyPlanJobRepository(BaseRepository[SalesDailyPlanJob]):
     def __init__(self, session: Session) -> None:
         super().__init__(session, SalesDailyPlanJob)
+
+    def find_in_flight(self) -> SalesDailyPlanJob | None:
+        """Return one pending or processing job, if any."""
+        return self.session.scalars(
+            select(SalesDailyPlanJob)
+            .where(
+                SalesDailyPlanJob.status.in_(
+                    (
+                        SalesDailyPlanJobStatus.PENDING,
+                        SalesDailyPlanJobStatus.PROCESSING,
+                    )
+                )
+            )
+            .limit(1)
+        ).first()
 
     def mark_processing(self, job: SalesDailyPlanJob) -> None:
         now = datetime.now(UTC)

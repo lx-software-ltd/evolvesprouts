@@ -14,14 +14,11 @@ from app.api.admin_validators import validate_string_length
 from app.db.audit import set_audit_context
 from app.db.engine import get_engine
 from app.db.models.sales_daily_plan import SalesDailyPlan
-from app.db.models.sales_daily_plan_job import (
-    SalesDailyPlanJob,
-    SalesDailyPlanJobStatus,
-)
+from app.db.models.sales_daily_plan_job import SalesDailyPlanJobStatus
 from app.db.repositories.sales_daily_plan_job import SalesDailyPlanJobRepository
 from app.exceptions import NotFoundError, ValidationError
 from app.services.sales_daily_plan import get_latest_plan, serialize_plan
-from app.services.sales_daily_plan_events import enqueue_sales_daily_plan_job
+from app.services.sales_daily_plan_enqueue import queue_sales_daily_plan_job
 from app.services.sales_daily_plan_memory import (
     MAX_OPERATOR_INPUT_LENGTH,
     list_recent_plans,
@@ -73,55 +70,16 @@ def create_sales_daily_plan(
     actor_sub: str,
 ) -> dict[str, Any]:
     operator_input = parse_daily_plan_operator_input(event)
-    with Session(get_engine()) as session:
-        set_audit_context(
-            session,
-            user_id=actor_sub,
-            request_id=request_id(event),
-        )
-        job = SalesDailyPlanJob(
-            created_by=actor_sub,
-            status=SalesDailyPlanJobStatus.PENDING,
-            operator_input=operator_input,
-        )
-        session.add(job)
-        session.flush()
-        job_id = job.id
-        session.commit()
-
-    try:
-        enqueue_sales_daily_plan_job(job_id)
-    except ValidationError:
-        with Session(get_engine()) as session:
-            stale = session.get(SalesDailyPlanJob, job_id)
-            if stale is not None:
-                session.delete(stale)
-                session.commit()
-        raise
-    except Exception:
-        with Session(get_engine()) as session:
-            job_repo = SalesDailyPlanJobRepository(session)
-            failed = job_repo.get_by_id(job_id)
-            if failed is not None:
-                job_repo.mark_failed(
-                    failed, "Could not queue daily plan; try again shortly."
-                )
-                session.commit()
-        raise ValidationError(
-            "Daily plan could not be queued; try again shortly.",
-            field="configuration",
-        ) from None
-
-    with Session(get_engine()) as session:
-        job_repo = SalesDailyPlanJobRepository(session)
-        persisted_job = job_repo.get_by_id(job_id)
-        if persisted_job is None:
-            raise NotFoundError("SalesDailyPlanJob", str(job_id))
-        return json_response(
-            202,
-            {"job": serialize_sales_daily_plan_job(persisted_job)},
-            event=event,
-        )
+    persisted_job = queue_sales_daily_plan_job(
+        created_by=actor_sub,
+        request_id=request_id(event),
+        operator_input=operator_input,
+    )
+    return json_response(
+        202,
+        {"job": serialize_sales_daily_plan_job(persisted_job)},
+        event=event,
+    )
 
 
 def delete_sales_daily_plan_memory(

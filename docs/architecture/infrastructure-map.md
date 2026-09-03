@@ -269,6 +269,8 @@ All functions use Python 3.12, KMS-encrypted environment variables,
 | MigrationFunction | `lambda/migrations/handler.py` | CloudFormation | Alembic migrations + seed data |
 | AdminBootstrapFunction | `lambda/admin_bootstrap/handler.py` | CloudFormation | Initial admin user creation in Cognito |
 | ApiKeyRotationFunction | `lambda/api_key_rotation/handler.py` | EventBridge (90 days) | API key rotation |
+| SalesDailyPlanFunction | `lambda/sales_daily_plan/handler.py` | SQS | Org-wide sales plan of the day (OpenRouter) |
+| SalesDailyPlanSchedulerFunction | `lambda/sales_daily_plan_scheduler/handler.py` | EventBridge (06:00 HKT) | Enqueue daily sales plan job |
 | MediaRequestProcessor | `lambda/media_processor/handler.py` | SQS | Process media leads → DB + Mailchimp + SES |
 | InboundInvoiceEmailProcessor | `lambda/inbound_invoice_email/handler.py` | SQS | Store inbound invoice attachments as expenses and enqueue parsing |
 

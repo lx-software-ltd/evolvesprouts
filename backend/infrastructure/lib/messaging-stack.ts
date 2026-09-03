@@ -92,6 +92,7 @@ export class MessagingNestedStack extends cdk.NestedStack {
   public readonly salesDailyPlanDLQ: sqs.Queue;
   public readonly salesDailyPlanQueue: sqs.Queue;
   public readonly salesDailyPlanFunction: lambda.Function;
+  public readonly salesDailyPlanSchedulerFunction: lambda.Function;
 
   public constructor(scope: Construct, id: string, props: MessagingNestedStackProps) {
     super(scope, id, props);
@@ -736,6 +737,75 @@ export class MessagingNestedStack extends cdk.NestedStack {
         batchSize: 1,
         reportBatchItemFailures: true,
       })
+    );
+
+    // 06:00 HKT is 22:00 UTC year-round (Asia/Hong_Kong has no DST).
+    this.salesDailyPlanSchedulerFunction = createPythonFunction(
+      "SalesDailyPlanSchedulerFunction",
+      {
+        handler: "lambda/sales_daily_plan_scheduler/handler.lambda_handler",
+        timeout: cdk.Duration.seconds(30),
+        memorySize: 256,
+        manageLogGroup: false,
+        reservedConcurrentExecutions: -1,
+        environment: {
+          DATABASE_SECRET_ARN: props.databaseSecretArn,
+          DATABASE_NAME: "evolvesprouts",
+          DATABASE_USERNAME: "evolvesprouts_admin",
+          DATABASE_PROXY_ENDPOINT: props.databaseProxyEndpoint,
+          DATABASE_IAM_AUTH: "true",
+          SALES_DAILY_PLAN_QUEUE_URL: this.salesDailyPlanQueue.queueUrl,
+        },
+      }
+    );
+    this.salesDailyPlanSchedulerFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"],
+        resources: [props.databaseSecretArn],
+      })
+    );
+    if (props.databaseSecretKmsKeyArn) {
+      this.salesDailyPlanSchedulerFunction.addToRolePolicy(
+        new iam.PolicyStatement({
+          actions: ["kms:Decrypt"],
+          resources: [props.databaseSecretKmsKeyArn],
+        })
+      );
+    }
+    this.salesDailyPlanSchedulerFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["rds-db:connect"],
+        resources: [
+          cdk.Fn.join("", [
+            "arn:", cdk.Aws.PARTITION, ":rds-db:", cdk.Aws.REGION, ":", cdk.Aws.ACCOUNT_ID,
+            ":dbuser:", cdk.Fn.select(6, cdk.Fn.split(":", props.databaseProxyArn)),
+            "/evolvesprouts_admin",
+          ]),
+        ],
+      })
+    );
+    this.salesDailyPlanQueue.grantSendMessages(this.salesDailyPlanSchedulerFunction);
+
+    const salesDailyPlanSchedule = new cdk.aws_events.Rule(
+      this,
+      "SalesDailyPlanSchedule",
+      {
+        ruleName: name("sales-daily-plan-schedule"),
+        description:
+          "Generate org-wide sales plan of the day at 06:00 HKT (22:00 UTC)",
+        schedule: cdk.aws_events.Schedule.cron({
+          minute: "0",
+          hour: "22",
+        }),
+      }
+    );
+    salesDailyPlanSchedule.addTarget(
+      new cdk.aws_events_targets.LambdaFunction(
+        this.salesDailyPlanSchedulerFunction,
+        {
+          retryAttempts: 2,
+        }
+      )
     );
 
     new cdk.aws_cloudwatch.Alarm(this, "SalesDailyPlanDLQAlarm", {

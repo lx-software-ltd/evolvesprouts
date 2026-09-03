@@ -2238,6 +2238,11 @@ export class ApiStack extends cdk.Stack {
     awsProxyFunction.grantInvoke(messaging.salesDailyPlanFunction);
     database.grantAdminUserSecretRead(messaging.salesDailyPlanFunction);
     database.grantConnect(messaging.salesDailyPlanFunction, "evolvesprouts_admin");
+    database.grantAdminUserSecretRead(messaging.salesDailyPlanSchedulerFunction);
+    database.grantConnect(
+      messaging.salesDailyPlanSchedulerFunction,
+      "evolvesprouts_admin"
+    );
 
     messaging.salesDailyPlanQueue.grantSendMessages(adminFunction)
 
