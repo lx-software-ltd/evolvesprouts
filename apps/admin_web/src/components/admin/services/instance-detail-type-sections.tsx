@@ -22,8 +22,8 @@ import {
 
 import { isConsultationLikeServiceType, type ServiceType } from '@/types/services';
 
+import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import type { PartnerOrgRef } from '@/types/services';
 
 export interface InstanceDetailTypeSectionsProps {
@@ -48,6 +48,7 @@ export interface InstanceDetailTypeSectionsProps {
   externalUrlInvalid: boolean;
 }
 
+/** Type-specific field rows of the instance editor, laid out on the shared 4-column grid. */
 export function InstanceDetailTypeSections({
   effectiveServiceType,
   consultationCatalogPricingReadOnly,
@@ -72,7 +73,7 @@ export function InstanceDetailTypeSections({
   return (
     <>
       {effectiveServiceType === 'training_course' ? (
-        <div className='grid grid-cols-1 gap-3 md:grid-cols-4'>
+        <AdminFieldGrid columns={4}>
           <InstanceInstructorField
             value={instructorId}
             disabled={typeFieldsLocked}
@@ -83,12 +84,12 @@ export function InstanceDetailTypeSections({
           <TrainingPricingUnitControl value={trainingForm} disabled={typeFieldsLocked} onChange={onTrainingFormChange} />
           <TrainingPriceControl value={trainingForm} disabled={typeFieldsLocked} onChange={onTrainingFormChange} />
           <TrainingCurrencyControl value={trainingForm} disabled={typeFieldsLocked} onChange={onTrainingFormChange} />
-        </div>
+        </AdminFieldGrid>
       ) : null}
 
       {effectiveServiceType === 'event' ? (
         <>
-          <div className='grid grid-cols-1 gap-3 md:grid-cols-4'>
+          <AdminFieldGrid columns={4}>
             <InstanceInstructorField
               value={instructorId}
               disabled={typeFieldsLocked}
@@ -115,17 +116,21 @@ export function InstanceDetailTypeSections({
               priceLabel='Price'
             />
             <EventDefaultCurrencyControl value={eventForm} disabled={typeFieldsLocked} onChange={onEventFormChange} />
-          </div>
-          <div className='grid grid-cols-1 gap-3 md:grid-cols-4'>
-            <div className='md:col-span-2'>
+          </AdminFieldGrid>
+          <AdminFieldGrid columns={4}>
+            <div className='min-w-0 sm:col-span-2'>
               <EventInstancePartnersField
                 value={partnerOrganizations}
                 disabled={typeFieldsLocked}
                 onChange={onPartnerOrganizationsChange}
               />
             </div>
-            <div className='md:col-span-2'>
-              <Label htmlFor='instance-external-url'>External URL</Label>
+            <AdminField
+              label='External URL'
+              htmlFor='instance-external-url'
+              span={2}
+              error={externalUrlInvalid ? 'URL must start with http:// or https://' : undefined}
+            >
               <Input
                 id='instance-external-url'
                 value={externalUrl}
@@ -134,27 +139,22 @@ export function InstanceDetailTypeSections({
                 placeholder='https://…'
                 autoComplete='off'
               />
-              {externalUrlInvalid ? (
-                <p className='mt-1 text-xs text-red-600'>URL must start with http:// or https://</p>
-              ) : null}
-            </div>
-          </div>
+            </AdminField>
+          </AdminFieldGrid>
         </>
       ) : null}
 
       {isConsultationLikeServiceType(effectiveServiceType) ? (
         <>
           {consultationCatalogPricingReadOnly ? (
-            <div className='grid grid-cols-1 gap-3 md:grid-cols-4'>
-              <p className='md:col-span-4 text-sm text-slate-500'>
-                Pricing is managed on the service catalog. Open the service detail panel to edit.
-                {effectiveServiceType === 'intro_call'
-                  ? ' Intro-call session slots here drive the public booking grid.'
-                  : ''}
-              </p>
-            </div>
+            <p className='text-sm text-slate-500'>
+              Pricing is managed on the service catalog. Open the service row to edit it.
+              {effectiveServiceType === 'intro_call'
+                ? ' Intro-call session slots here drive the public booking grid.'
+                : ''}
+            </p>
           ) : null}
-          <div className='grid grid-cols-1 gap-3 md:grid-cols-4'>
+          <AdminFieldGrid columns={4}>
             <InstanceInstructorField
               value={instructorId}
               disabled={typeFieldsLocked}
@@ -167,14 +167,14 @@ export function InstanceDetailTypeSections({
               disabled={typeFieldsLocked || consultationCatalogPricingReadOnly}
               onChange={onConsultationFormChange}
             />
-          </div>
-          <div className='grid grid-cols-1 gap-3 md:grid-cols-4'>
+          </AdminFieldGrid>
+          <AdminFieldGrid columns={4}>
             <ConsultationInstanceRowEFields
               value={consultationForm}
               disabled={typeFieldsLocked || consultationCatalogPricingReadOnly}
               onChange={onConsultationFormChange}
             />
-          </div>
+          </AdminFieldGrid>
         </>
       ) : null}
     </>

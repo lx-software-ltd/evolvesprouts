@@ -1,7 +1,8 @@
 'use client';
 
 import { DeleteIcon } from '@/components/icons/action-icons';
-import { AdminCollapsibleSection } from '@/components/ui/admin-collapsible-section';
+import { AdminDisclosure } from '@/components/ui/admin-disclosure';
+import { AdminIconButton } from '@/components/ui/admin-icon-button';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,7 +49,12 @@ export function SessionSlotEditor({
     'grid grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-[1fr_1fr_1fr_minmax(0,5.5rem)_auto] sm:items-end';
 
   return (
-    <AdminCollapsibleSection id='service-instance-session-slots' title='Session slots' disabled={disabled}>
+    <AdminDisclosure
+      id='service-instance-session-slots'
+      title='Session slots'
+      summary={slots.length > 0 ? slots.length : undefined}
+      disabled={disabled}
+    >
       <div className='grid grid-rows-[auto_1fr_auto] gap-3'>
         <div className='min-h-0'>
           {slots.length === 0 ? <p className='text-sm text-slate-500'>No slots configured.</p> : null}
@@ -173,18 +179,13 @@ export function SessionSlotEditor({
                 />
               </div>
               <div className='flex justify-end pb-0.5 sm:justify-start'>
-                <Button
-                  type='button'
-                  variant='danger'
-                  size='sm'
+                <AdminIconButton
+                  label='Delete session slot'
+                  icon={<DeleteIcon className='h-4 w-4' />}
+                  tone='danger'
                   disabled={disabled}
-                  className='min-w-8 px-2'
-                  aria-label='Delete session slot'
-                  title='Delete session slot'
                   onClick={() => onChange(slots.filter((_, itemIndex) => itemIndex !== index))}
-                >
-                  <DeleteIcon className='h-4 w-4' />
-                </Button>
+                />
               </div>
             </div>
           ))}
@@ -201,6 +202,6 @@ export function SessionSlotEditor({
           </Button>
         </div>
       </div>
-    </AdminCollapsibleSection>
+    </AdminDisclosure>
   );
 }

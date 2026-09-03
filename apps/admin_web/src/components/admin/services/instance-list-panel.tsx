@@ -1,28 +1,25 @@
 'use client';
 
-import type { KeyboardEvent, MouseEvent } from 'react';
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 
+import { CheckIcon, DeleteIcon, DuplicateIcon } from '@/components/icons/action-icons';
+import { AdminCreateButton } from '@/components/ui/admin-create-button';
 import {
-  AdminDataTable,
-  AdminDataTableBody,
   AdminDataTableCell,
-  AdminDataTableHead,
+  AdminDataTableCellMeta,
   AdminDataTableHeadCell,
   AdminDataTableOperationsHeadCell,
 } from '@/components/ui/admin-data-table';
-import { Button } from '@/components/ui/button';
+import { AdminExpandableRow } from '@/components/ui/admin-expandable-row';
+import { AdminFilterBar, AdminFilterField } from '@/components/ui/admin-filter-bar';
+import { AdminRecordTable } from '@/components/ui/admin-record-table';
+import { AdminRowActions } from '@/components/ui/admin-row-actions';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { DeleteIcon, DuplicateIcon } from '@/components/icons/action-icons';
-import { CopyFeedbackIconButton } from '@/components/ui/copy-feedback-icon-button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { AdminTableToolbar } from '@/components/ui/admin-table-toolbar';
-import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
 import { Select } from '@/components/ui/select';
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
-import type { InstancesListStatusFilter } from '@/hooks/use-services-page';
 import { useCopyFeedback } from '@/hooks/use-copy-feedback';
+import { DRAFT_RECORD_ID, type UseExpandedRecordReturn } from '@/hooks/use-expanded-record';
 import {
   formatEnumLabel,
   formatInstanceSlotLocationSummary,
@@ -33,9 +30,12 @@ import {
   getFirstSessionSlotForDisplay,
   INSTANCE_TABLE_TIER_COHORT_HEADER,
 } from '@/lib/format';
+import { isInstancesListStatusFilter, type InstancesListStatusFilter } from '@/lib/instance-list-filtering';
 
-import type { LocationSummary, ServiceInstance, ServiceType } from '@/types/services';
+import type { LocationSummary, ServiceInstance } from '@/types/services';
 import { SERVICE_TYPES } from '@/types/services';
+
+const COLUMN_COUNT = 7;
 
 export interface InstanceServiceFilterOption {
   id: string;
@@ -43,93 +43,83 @@ export interface InstanceServiceFilterOption {
 }
 
 export interface InstanceListPanelProps {
+  /** Rows after the client-side status/search narrowing, newest first. */
   instances: ServiceInstance[];
-  selectedInstanceId: string | null;
+  /** Expanded instance hidden by the narrowing; rendered above the rows so its editor stays open. */
+  pinnedInstance?: ServiceInstance | null;
   isLoading: boolean;
   isLoadingMore: boolean;
   hasMore: boolean;
   error: string;
   isMutating: boolean;
-  onSelectInstance: (instanceId: string) => void;
   onLoadMore: () => Promise<void> | void;
+  /** Single-open expansion state shared with the page (`?instance=`). */
+  expanded: UseExpandedRecordReturn;
+  /** Editor rendered inside the draft row. */
+  draftDetail: ReactNode;
+  /** Editor rendered inside an expanded instance row. */
+  renderDetail: (instance: ServiceInstance) => ReactNode;
   /** Resolve true when the draft flow started (e.g. instance loaded); omit feedback on failure. */
   onDuplicateInstance: (instance: ServiceInstance) => Promise<boolean> | boolean | void;
   onDeleteInstance: (instanceId: string, serviceId: string) => Promise<void>;
-  /** When set, show a service filter above the table (empty value = all services). */
-  serviceFilter?: {
+  serviceFilter: {
     value: string;
     options: InstanceServiceFilterOption[];
     onChange: (serviceId: string) => void;
   };
-  /** When set, show a service type filter above the table (empty value = all types). */
-  serviceTypeFilter?: {
+  serviceTypeFilter: {
     value: string;
     onChange: (serviceType: string) => void;
   };
-  /** When set, show an instance lifecycle status filter above the table. */
-  statusFilter?: {
+  statusFilter: {
     value: InstancesListStatusFilter;
     onChange: (value: InstancesListStatusFilter) => void;
   };
-  searchFilter?: {
+  searchFilter: {
     value: string;
     onChange: (value: string) => void;
   };
-  /** When true, add cross-service columns (title, tier · cohort, locations, first slot) before capacity. */
-  showServiceColumn?: boolean;
-  /** Resolve location ids for the locations column (optional; ids shown when unknown). */
+  /** Resolve location ids for the locations column (ids shown when unknown). */
   locationOptions?: LocationSummary[];
 }
 
+/**
+ * Table-first instances list: filters and `New instance` on top, one
+ * expandable row per instance with the editor (and its Enrollments
+ * disclosure) beneath it. Duplicate and Delete live in the Operations column.
+ */
 export function InstanceListPanel({
   instances,
-  selectedInstanceId,
+  pinnedInstance = null,
   isLoading,
   isLoadingMore,
   hasMore,
   error,
   isMutating,
-  onSelectInstance,
   onLoadMore,
+  expanded,
+  draftDetail,
+  renderDetail,
   onDuplicateInstance,
   onDeleteInstance,
   serviceFilter,
   serviceTypeFilter,
   statusFilter,
   searchFilter,
-  showServiceColumn = false,
   locationOptions = [],
 }: InstanceListPanelProps) {
   const [confirmDialogProps, requestConfirm] = useConfirmDialog();
   const { copiedKey: duplicateDraftFeedbackId, markCopied: markDuplicateDraftFeedback } = useCopyFeedback(1000);
-  const locationById = useMemo(
-    () => new Map(locationOptions.map((loc) => [loc.id, loc])),
-    [locationOptions]
-  );
+  const locationById = useMemo(() => new Map(locationOptions.map((loc) => [loc.id, loc])), [locationOptions]);
 
-  const handleRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, instanceId: string) => {
-    if (event.target !== event.currentTarget) {
-      return;
-    }
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      onSelectInstance(instanceId);
-    }
-  };
-
-  const handleDuplicateInstance = async (instance: ServiceInstance, event: MouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation();
+  const handleDuplicateInstance = async (instance: ServiceInstance) => {
     const started = await onDuplicateInstance(instance);
     if (started === true) {
       markDuplicateDraftFeedback(instance.id);
     }
   };
 
-  const handleDeleteInstance = async (
-    instance: ServiceInstance,
-    event: MouseEvent<HTMLButtonElement>
-  ) => {
-    event.stopPropagation();
+  const handleDeleteInstance = async (instance: ServiceInstance) => {
     const deleteLabel = formatInstanceTableTitle(instance);
     const confirmed = await requestConfirm({
       title: 'Delete instance',
@@ -144,210 +134,206 @@ export function InstanceListPanel({
     await onDeleteInstance(instance.id, instance.serviceId);
   };
 
+  const rows = pinnedInstance ? [pinnedInstance, ...instances] : instances;
+
   return (
     <>
-      <PaginatedTableCard
-        title='Instances'
+      <AdminRecordTable
+        aria-label='Instances'
+        columnCount={COLUMN_COUNT}
+        rowCount={rows.length}
         isLoading={isLoading}
         isLoadingMore={isLoadingMore}
         hasMore={hasMore}
-        error={error}
-        loadingLabel='Loading instances...'
         onLoadMore={onLoadMore}
-        toolbar={
-          serviceFilter || serviceTypeFilter || statusFilter || searchFilter ? (
-            <AdminTableToolbar className='w-full min-w-0 flex-nowrap'>
-              {searchFilter ? (
-                <div
-                  className={
-                    serviceTypeFilter || statusFilter || serviceFilter ? 'min-w-0 flex-[2]' : 'min-w-[220px] flex-1'
+        error={error}
+        errorTitle='Instances'
+        emptyLabel='No instances match the current filters.'
+        filters={
+          <AdminFilterBar
+            trailing={
+              <AdminCreateButton
+                label='New instance'
+                active={expanded.isDraftOpen}
+                onClick={() => (expanded.isDraftOpen ? expanded.collapse() : expanded.openDraft())}
+              />
+            }
+          >
+            <AdminFilterField label='Search' htmlFor='instances-filter-search' className='sm:basis-72'>
+              <Input
+                id='instances-filter-search'
+                value={searchFilter.value}
+                autoComplete='off'
+                onChange={(event) => searchFilter.onChange(event.target.value)}
+                placeholder='Title, cohort, service, locations'
+              />
+            </AdminFilterField>
+            <AdminFilterField label='Type' htmlFor='instances-filter-service-type' className='sm:basis-40'>
+              <Select
+                id='instances-filter-service-type'
+                value={serviceTypeFilter.value}
+                onChange={(event) => serviceTypeFilter.onChange(event.target.value)}
+              >
+                <option value=''>All types</option>
+                {SERVICE_TYPES.map((serviceType) => (
+                  <option key={serviceType} value={serviceType}>
+                    {formatEnumLabel(serviceType)}
+                  </option>
+                ))}
+              </Select>
+            </AdminFilterField>
+            <AdminFilterField label='Status' htmlFor='instances-filter-status' className='sm:basis-40'>
+              <Select
+                id='instances-filter-status'
+                value={statusFilter.value}
+                onChange={(event) => {
+                  const raw = event.target.value;
+                  if (isInstancesListStatusFilter(raw)) {
+                    statusFilter.onChange(raw);
                   }
-                >
-                  <Label htmlFor='instances-filter-search'>Search instances</Label>
-                  <Input
-                    id='instances-filter-search'
-                    value={searchFilter.value}
-                    onChange={(event) => searchFilter.onChange(event.target.value)}
-                    placeholder='Title, cohort, service, locations'
-                  />
-                </div>
-              ) : null}
-              {serviceTypeFilter ? (
-                <div className='min-w-0 flex-1'>
-                  <Label htmlFor='instances-filter-service-type'>Type</Label>
-                  <Select
-                    id='instances-filter-service-type'
-                    value={serviceTypeFilter.value}
-                    onChange={(event) => serviceTypeFilter.onChange(event.target.value)}
-                  >
-                    <option value=''>All types</option>
-                    {SERVICE_TYPES.map((serviceType) => (
-                      <option key={serviceType} value={serviceType}>
-                        {formatEnumLabel(serviceType)}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              ) : null}
-              {statusFilter ? (
-                <div className='min-w-0 flex-1'>
-                  <Label htmlFor='instances-filter-status'>Instance statuses</Label>
-                  <Select
-                    id='instances-filter-status'
-                    value={statusFilter.value}
-                    onChange={(event) => {
-                      const raw = event.target.value;
-                      if (raw === '' || raw === 'not_completed' || raw === 'completed') {
-                        statusFilter.onChange(raw);
-                      }
-                    }}
-                  >
-                    <option value=''>All statuses</option>
-                    <option value='not_completed'>Not Completed</option>
-                    <option value='completed'>Completed</option>
-                  </Select>
-                </div>
-              ) : null}
-              {serviceFilter ? (
-                <div className='min-w-0 flex-1'>
-                  <Label htmlFor='instances-filter-service'>Service</Label>
-                  <Select
-                    id='instances-filter-service'
-                    value={serviceFilter.value}
-                    onChange={(event) => serviceFilter.onChange(event.target.value)}
-                  >
-                    <option value=''>All services</option>
-                    {serviceFilter.options.map((entry) => (
-                      <option key={entry.id} value={entry.id}>
-                        {entry.title}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              ) : null}
-            </AdminTableToolbar>
-          ) : undefined
+                }}
+              >
+                <option value=''>All statuses</option>
+                <option value='not_completed'>Not Completed</option>
+                <option value='completed'>Completed</option>
+              </Select>
+            </AdminFilterField>
+            <AdminFilterField label='Service' htmlFor='instances-filter-service' className='sm:basis-56'>
+              <Select
+                id='instances-filter-service'
+                value={serviceFilter.value}
+                onChange={(event) => serviceFilter.onChange(event.target.value)}
+              >
+                <option value=''>All services</option>
+                {serviceFilter.options.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.title}
+                  </option>
+                ))}
+              </Select>
+            </AdminFilterField>
+          </AdminFilterBar>
+        }
+        head={
+          <tr>
+            <AdminDataTableHeadCell className='w-10' />
+            <AdminDataTableHeadCell>Title</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>{INSTANCE_TABLE_TIER_COHORT_HEADER}</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Locations</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>First slot</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Capacity</AdminDataTableHeadCell>
+            <AdminDataTableOperationsHeadCell />
+          </tr>
         }
       >
-        <div className='min-w-0'>
-          <AdminDataTable tableClassName='w-full table-fixed'>
-            <AdminDataTableHead>
-              <tr>
-                {showServiceColumn ? (
-                  <AdminDataTableHeadCell className='w-[22%] min-w-0'>Title</AdminDataTableHeadCell>
-                ) : null}
-                {showServiceColumn ? (
-                  <AdminDataTableHeadCell className='w-[17%] min-w-0'>
-                    {INSTANCE_TABLE_TIER_COHORT_HEADER}
-                  </AdminDataTableHeadCell>
-                ) : null}
-                {showServiceColumn ? (
-                  <AdminDataTableHeadCell className='w-[17%] min-w-0'>Locations</AdminDataTableHeadCell>
-                ) : null}
-                {showServiceColumn ? (
-                  <AdminDataTableHeadCell className='w-[13%] whitespace-nowrap align-middle'>
-                    First slot
-                  </AdminDataTableHeadCell>
-                ) : null}
-                <AdminDataTableHeadCell
-                  className={
-                    showServiceColumn
-                      ? 'w-[18%] whitespace-nowrap'
-                      : 'min-w-0 whitespace-nowrap'
-                  }
-                >
-                  Capacity
-                </AdminDataTableHeadCell>
-                <AdminDataTableOperationsHeadCell className='w-[7rem] whitespace-nowrap' />
-              </tr>
-            </AdminDataTableHead>
-            <AdminDataTableBody>
-              {instances.map((instance) => {
-                const instanceTableTitle = formatInstanceTableTitle(instance);
-                const tierCohortDisplay = formatInstanceTableTierCohort(instance);
-                const firstSlot = getFirstSessionSlotForDisplay(instance.sessionSlots);
-                return (
-                  <tr
-                    key={instance.id}
-                    className={`cursor-pointer transition ${
-                      selectedInstanceId === instance.id ? 'bg-slate-100' : 'hover:bg-slate-50'
-                    }`}
-                    onClick={() => onSelectInstance(instance.id)}
-                    onKeyDown={(event) => handleRowKeyDown(event, instance.id)}
-                    tabIndex={0}
-                    role='row'
-                    aria-selected={selectedInstanceId === instance.id}
-                  >
-                    {showServiceColumn ? (
-                      <AdminDataTableCell className='min-w-0 break-words'>
-                        <span className='inline-flex flex-wrap items-center gap-2'>
-                          <span>
-                            {instanceTableTitle.trim() !== '' ? instanceTableTitle : '\u00a0'}
-                          </span>
-                        </span>
-                      </AdminDataTableCell>
-                    ) : null}
-                    {showServiceColumn ? (
-                      <AdminDataTableCell className='min-w-0 break-words text-sm'>
-                        {tierCohortDisplay !== '' ? tierCohortDisplay : '-'}
-                      </AdminDataTableCell>
-                    ) : null}
-                    {showServiceColumn ? (
-                      <AdminDataTableCell className='min-w-0 break-words text-sm'>
-                        {formatInstanceSlotLocationSummary(instance, locationById)}
-                      </AdminDataTableCell>
-                    ) : null}
-                    {showServiceColumn ? (
-                      <AdminDataTableCell className='whitespace-nowrap align-middle text-sm'>
-                        {firstSlot ? formatSessionSlotStartsAtDisplay(firstSlot.startsAt) : '-'}
-                      </AdminDataTableCell>
-                    ) : null}
-                    <AdminDataTableCell className='whitespace-nowrap'>
-                      <span className='inline-flex items-center gap-2'>
-                        <span>{formatInstanceTableCapacity(instance)}</span>
-                        {instance.capacityLeftOverride != null ? (
-                          <span
-                            className='rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-900'
-                            title='Capacity left override is active'
-                          >
-                            Override
-                          </span>
-                        ) : null}
-                      </span>
-                    </AdminDataTableCell>
-                    <AdminDataTableCell className='whitespace-nowrap text-right'>
-                      <div className='flex justify-end gap-2'>
-                        <CopyFeedbackIconButton
-                          copied={duplicateDraftFeedbackId === instance.id}
-                          idleVariant='outline'
-                          idleIcon={<DuplicateIcon className='h-4 w-4' />}
-                          disabled={isMutating}
-                          onClick={(event) => void handleDuplicateInstance(instance, event)}
-                          idleLabel='Duplicate instance as new row'
-                          copiedLabel='Draft copy ready'
-                          idleTitle='Duplicate instance as new row'
-                          copiedTitle='Copied'
-                        />
-                        <Button
-                          type='button'
-                          size='sm'
-                          variant='danger'
-                          onClick={(event) => void handleDeleteInstance(instance, event)}
-                          disabled={isMutating}
-                          aria-label='Delete instance'
-                          title='Delete instance'
+        {expanded.isDraftOpen ? (
+          <AdminExpandableRow
+            id={DRAFT_RECORD_ID}
+            label='new instance'
+            expanded
+            isDraft
+            onToggle={expanded.collapse}
+            columnCount={COLUMN_COUNT}
+            cells={
+              <>
+                <AdminDataTableCell className='font-medium text-slate-900'>New instance</AdminDataTableCell>
+                <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='tertiary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+              </>
+            }
+            actions={null}
+            detail={draftDetail}
+          />
+        ) : null}
+        {rows.map((instance) => {
+          const isOpen = expanded.isExpanded(instance.id);
+          const title = formatInstanceTableTitle(instance);
+          const tierCohort = formatInstanceTableTierCohort(instance);
+          const firstSlot = getFirstSessionSlotForDisplay(instance.sessionSlots);
+          const firstSlotLabel = firstSlot ? formatSessionSlotStartsAtDisplay(firstSlot.startsAt) : '—';
+          const capacityLabel = formatInstanceTableCapacity(instance);
+          const isDuplicateReady = duplicateDraftFeedbackId === instance.id;
+          return (
+            <AdminExpandableRow
+              key={instance.id}
+              id={instance.id}
+              label={title.trim() !== '' ? title : 'instance'}
+              expanded={isOpen}
+              onToggle={() => expanded.toggle(instance.id)}
+              columnCount={COLUMN_COUNT}
+              cells={
+                <>
+                  <AdminDataTableCell className='font-medium text-slate-900'>
+                    {title.trim() !== '' ? title : '\u00a0'}
+                    <AdminDataTableCellMeta>
+                      {[tierCohort || null, firstSlotLabel, capacityLabel].filter(Boolean).join(' · ')}
+                    </AdminDataTableCellMeta>
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='secondary' className='text-slate-700'>
+                    {tierCohort !== '' ? tierCohort : '—'}
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='tertiary' className='text-slate-700'>
+                    {formatInstanceSlotLocationSummary(instance, locationById)}
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='secondary' className='text-slate-700'>
+                    {firstSlotLabel}
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='secondary' className='text-slate-700'>
+                    <span className='inline-flex flex-wrap items-center gap-2'>
+                      <span className='tabular-nums'>{capacityLabel}</span>
+                      {instance.capacityLeftOverride != null ? (
+                        <span
+                          className='rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-xs font-medium text-amber-900'
+                          title='Capacity left override is active'
                         >
-                          <DeleteIcon className='h-4 w-4' />
-                        </Button>
-                      </div>
-                    </AdminDataTableCell>
-                  </tr>
-                );
-              })}
-            </AdminDataTableBody>
-          </AdminDataTable>
-        </div>
-      </PaginatedTableCard>
+                          Override
+                        </span>
+                      ) : null}
+                    </span>
+                  </AdminDataTableCell>
+                </>
+              }
+              actions={
+                <AdminRowActions
+                  actions={[
+                    {
+                      key: 'duplicate',
+                      label: isDuplicateReady ? 'Draft copy ready' : 'Duplicate instance as new draft',
+                      icon: isDuplicateReady ? (
+                        <CheckIcon className='h-4 w-4' />
+                      ) : (
+                        <DuplicateIcon className='h-4 w-4' />
+                      ),
+                      tone: isDuplicateReady ? 'success' : 'default',
+                      disabled: isMutating,
+                      onClick: () => void handleDuplicateInstance(instance),
+                    },
+                    {
+                      key: 'delete',
+                      label: 'Delete instance',
+                      icon: <DeleteIcon className='h-4 w-4' />,
+                      tone: 'danger',
+                      disabled: isMutating,
+                      onClick: () => void handleDeleteInstance(instance),
+                    },
+                  ]}
+                />
+              }
+              detail={isOpen ? renderDetail(instance) : null}
+            />
+          );
+        })}
+      </AdminRecordTable>
       <ConfirmDialog {...confirmDialogProps} />
     </>
   );

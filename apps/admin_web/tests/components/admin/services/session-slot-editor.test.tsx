@@ -109,6 +109,7 @@ describe('SessionSlotEditor', () => {
       />
     );
 
+    await user.click(screen.getByRole('button', { name: /session slots/i }));
     await user.click(screen.getByRole('button', { name: /add slot/i }));
 
     expect(onChange).toHaveBeenCalledWith([

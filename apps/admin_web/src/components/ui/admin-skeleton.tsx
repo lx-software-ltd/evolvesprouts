@@ -17,6 +17,32 @@ export interface AdminSkeletonRowsProps {
   rows?: number;
 }
 
+export interface AdminEditorSkeletonProps {
+  /** Number of placeholder fields (label + control pairs). */
+  fields?: number;
+  label?: string;
+}
+
+/**
+ * Placeholder for an in-row editor whose full record is still loading (for
+ * example a service detail fetched on expand). Mirrors a four-column field
+ * grid so the expansion does not jump when the real fields arrive.
+ */
+export function AdminEditorSkeleton({ fields = 8, label = 'Loading…' }: AdminEditorSkeletonProps) {
+  return (
+    <div role='status' aria-live='polite' aria-label={label} data-testid='admin-editor-skeleton'>
+      <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4'>
+        {Array.from({ length: fields }, (_, index) => (
+          <div key={index} className='space-y-1.5'>
+            <AdminSkeleton className='h-3 w-1/3' />
+            <AdminSkeleton className='h-9 w-full' />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /**
  * Placeholder rows that keep the table's shape while the first page loads.
  * Cells between the second (identifying) column and the last (Operations)

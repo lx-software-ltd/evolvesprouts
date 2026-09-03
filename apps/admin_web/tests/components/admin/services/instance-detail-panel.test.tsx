@@ -84,10 +84,9 @@ describe('InstanceDetailPanel', () => {
         locationOptions={[buildLocationSummary()]}
         isLoadingLocations={false}
         serviceType={null}
-        isLoading={false}
+        isSaving={false}
         error=''
         onSelectService={vi.fn()}
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
       />
@@ -98,7 +97,10 @@ describe('InstanceDetailPanel', () => {
     expect(screen.getByLabelText('Cohort')).toBeDisabled();
     expect(screen.getByLabelText('Title')).toBeDisabled();
     expect(screen.getByLabelText('Waitlist')).toBeDisabled();
-    expect(screen.queryByRole('button', { name: 'Add instance' })).not.toBeInTheDocument();
+    // Standard editor action row: one primary button, disabled until a service is chosen.
+    expect(screen.getByRole('button', { name: 'Create instance' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 2 })).not.toBeInTheDocument();
   });
 
   it('routes create action with selected service id', async () => {
@@ -114,16 +116,15 @@ describe('InstanceDetailPanel', () => {
         locationOptions={[buildLocationSummary()]}
         isLoadingLocations={false}
         serviceType='training_course'
-        isLoading={false}
+        isSaving={false}
         error=''
         onSelectService={vi.fn()}
-        onCancelSelection={vi.fn()}
         onCreate={onCreate}
         onUpdate={vi.fn()}
       />
     );
 
-    await user.click(screen.getByRole('button', { name: 'Add instance' }));
+    await user.click(screen.getByRole('button', { name: 'Create instance' }));
 
     expect(onCreate).toHaveBeenCalledWith(
       'service-1',
@@ -150,10 +151,9 @@ describe('InstanceDetailPanel', () => {
         locationOptions={[buildLocationSummary()]}
         isLoadingLocations={false}
         serviceType='training_course'
-        isLoading={false}
+        isSaving={false}
         error=''
         onSelectService={vi.fn()}
-        onCancelSelection={vi.fn()}
         onCreate={onCreate}
         onUpdate={vi.fn()}
       />
@@ -161,7 +161,7 @@ describe('InstanceDetailPanel', () => {
 
     await user.click(screen.getByText('Tags'));
     await user.click(screen.getByRole('checkbox', { name: 'Alpha' }));
-    await user.click(screen.getByRole('button', { name: 'Add instance' }));
+    await user.click(screen.getByRole('button', { name: 'Create instance' }));
 
     expect(onCreate).toHaveBeenCalledWith(
       'service-1',
@@ -191,10 +191,9 @@ describe('InstanceDetailPanel', () => {
         locationOptions={[buildLocationSummary()]}
         isLoadingLocations={false}
         serviceType='training_course'
-        isLoading={false}
+        isSaving={false}
         error=''
         onSelectService={onSelectService}
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
       />
@@ -221,10 +220,9 @@ describe('InstanceDetailPanel', () => {
         locationOptions={[buildLocationSummary()]}
         isLoadingLocations={false}
         serviceType='consultation'
-        isLoading={false}
+        isSaving={false}
         error=''
         onSelectService={vi.fn()}
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
       />
@@ -261,10 +259,9 @@ describe('InstanceDetailPanel', () => {
         locationOptions={[buildLocationSummary()]}
         isLoadingLocations={false}
         serviceType='consultation'
-        isLoading={false}
+        isSaving={false}
         error=''
         onSelectService={vi.fn()}
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
       />
@@ -303,10 +300,9 @@ describe('InstanceDetailPanel', () => {
         locationOptions={[buildLocationSummary()]}
         isLoadingLocations={false}
         serviceType={null}
-        isLoading={false}
+        isSaving={false}
         error=''
         onSelectService={onSelectService}
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
       />
@@ -349,10 +345,9 @@ describe('InstanceDetailPanel', () => {
         locationOptions={[buildLocationSummary()]}
         isLoadingLocations={false}
         serviceType='event'
-        isLoading={false}
+        isSaving={false}
         error=''
         onSelectService={vi.fn()}
-        onCancelSelection={vi.fn()}
         onCreate={onCreate}
         onUpdate={vi.fn()}
       />
@@ -368,7 +363,7 @@ describe('InstanceDetailPanel', () => {
     });
     expect(screen.getByLabelText('External URL')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Add instance' }));
+    await user.click(screen.getByRole('button', { name: 'Create instance' }));
 
     expect(onCreate).toHaveBeenCalledWith(
       'evt-svc',
@@ -430,10 +425,9 @@ describe('InstanceDetailPanel', () => {
         locationOptions={[pure, partnerVenue, foreignVenue]}
         isLoadingLocations={false}
         serviceType='event'
-        isLoading={false}
+        isSaving={false}
         error=''
         onSelectService={vi.fn()}
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
       />
@@ -527,10 +521,9 @@ describe('InstanceDetailPanel', () => {
         locationOptions={[buildLocationSummary()]}
         isLoadingLocations={false}
         serviceType='training_course'
-        isLoading={false}
+        isSaving={false}
         error=''
         onSelectService={vi.fn()}
-        onCancelSelection={vi.fn()}
         onCreate={onCreate}
         onUpdate={vi.fn()}
       />
@@ -551,7 +544,7 @@ describe('InstanceDetailPanel', () => {
     expect(screen.getByLabelText('Currency')).toHaveValue('USD');
     expect(screen.getByLabelText('Cohort')).toHaveValue('spring-2026');
 
-    await user.click(screen.getByRole('button', { name: 'Add instance' }));
+    await user.click(screen.getByRole('button', { name: 'Create instance' }));
     expect(onCreate).toHaveBeenCalledWith(
       'service-1',
       expect.objectContaining({
@@ -636,10 +629,9 @@ describe('InstanceDetailPanel', () => {
         locationOptions={[buildLocationSummary()]}
         isLoadingLocations={false}
         serviceType='training_course'
-        isLoading={false}
+        isSaving={false}
         error=''
         onSelectService={vi.fn()}
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={onUpdate}
       />
@@ -694,10 +686,9 @@ describe('InstanceDetailPanel', () => {
         ]}
         isLoadingLocations={false}
         serviceType='training_course'
-        isLoading={false}
+        isSaving={false}
         error=''
         onSelectService={vi.fn()}
-        onCancelSelection={vi.fn()}
         onCreate={onCreate}
         onUpdate={vi.fn()}
       />
@@ -713,7 +704,7 @@ describe('InstanceDetailPanel', () => {
     expect(slotLocationSelect).toBeDefined();
     expect(slotLocationSelect).toHaveValue(venueFromService);
 
-    await user.click(screen.getByRole('button', { name: 'Add instance' }));
+    await user.click(screen.getByRole('button', { name: 'Create instance' }));
     expect(onCreate).toHaveBeenCalledWith(
       'service-1',
       expect.objectContaining({
@@ -748,10 +739,9 @@ describe('InstanceDetailPanel', () => {
         locationOptions={[buildLocationSummary({ id: venueId })]}
         isLoadingLocations={false}
         serviceType='training_course'
-        isLoading={false}
+        isSaving={false}
         error=''
         onSelectService={vi.fn()}
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
       />
@@ -779,10 +769,9 @@ describe('InstanceDetailPanel', () => {
         locationOptions={[buildLocationSummary({ id: venueId })]}
         isLoadingLocations={false}
         serviceType='training_course'
-        isLoading={false}
+        isSaving={false}
         error=''
         onSelectService={vi.fn()}
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
       />
@@ -831,10 +820,9 @@ describe('InstanceDetailPanel', () => {
         locationOptions={[buildLocationSummary()]}
         isLoadingLocations={false}
         serviceType='event'
-        isLoading={false}
+        isSaving={false}
         error=''
         onSelectService={vi.fn()}
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
       />
@@ -895,10 +883,9 @@ describe('InstanceDetailPanel', () => {
         locationOptions={[buildLocationSummary()]}
         isLoadingLocations={false}
         serviceType='event'
-        isLoading={false}
+        isSaving={false}
         error=''
         onSelectService={vi.fn()}
-        onCancelSelection={vi.fn()}
         onCreate={onCreate}
         onUpdate={vi.fn()}
       />
@@ -913,7 +900,7 @@ describe('InstanceDetailPanel', () => {
     await waitFor(() => {
       expect(slugInput).toHaveValue('');
     });
-    await user.click(screen.getByRole('button', { name: 'Add instance' }));
+    await user.click(screen.getByRole('button', { name: 'Create instance' }));
     expect(
       screen.getByText(/^slug is required$/i),
     ).toBeInTheDocument();
@@ -939,10 +926,9 @@ describe('InstanceDetailPanel', () => {
         locationOptions={[buildLocationSummary()]}
         isLoadingLocations={false}
         serviceType='consultation'
-        isLoading={false}
+        isSaving={false}
         error=''
         onSelectService={vi.fn()}
-        onCancelSelection={vi.fn()}
         onCreate={onCreate}
         onUpdate={vi.fn()}
       />
@@ -953,7 +939,7 @@ describe('InstanceDetailPanel', () => {
     ) as HTMLInputElement;
 
     await user.type(slugInput, 'consultation-instance-1');
-    await user.click(screen.getByRole('button', { name: 'Add instance' }));
+    await user.click(screen.getByRole('button', { name: 'Create instance' }));
     expect(onCreate).toHaveBeenCalledWith(
       'service-1',
       expect.objectContaining({ slug: 'consultation-instance-1' }),
@@ -1036,10 +1022,9 @@ describe('InstanceDetailPanel', () => {
         locationOptions={[buildLocationSummary()]}
         isLoadingLocations={false}
         serviceType='training_course'
-        isLoading={false}
+        isSaving={false}
         error=''
         onSelectService={vi.fn()}
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={onUpdate}
       />
@@ -1126,10 +1111,9 @@ describe('InstanceDetailPanel', () => {
         locationOptions={[buildLocationSummary()]}
         isLoadingLocations={false}
         serviceType='training_course'
-        isLoading={false}
+        isSaving={false}
         error=''
         onSelectService={vi.fn()}
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={onUpdate}
       />
@@ -1220,10 +1204,9 @@ describe('InstanceDetailPanel', () => {
         locationOptions={[buildLocationSummary()]}
         isLoadingLocations={false}
         serviceType='training_course'
-        isLoading={false}
+        isSaving={false}
         error=''
         onSelectService={vi.fn()}
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={onUpdate}
       />
@@ -1240,7 +1223,7 @@ describe('InstanceDetailPanel', () => {
     expect(payload.capacity_left_override).toBeNull();
   });
 
-  it('shows Eventbrite sync status before save actions when editing an instance', () => {
+  it('shows Eventbrite sync status as a read-only field when editing an instance', () => {
     const instance: ServiceInstance = {
       id: 'inst-eb',
       serviceId: 'service-1',
@@ -1303,16 +1286,17 @@ describe('InstanceDetailPanel', () => {
         locationOptions={[buildLocationSummary()]}
         isLoadingLocations={false}
         serviceType='training_course'
-        isLoading={false}
+        isSaving={false}
         error=''
         onSelectService={vi.fn()}
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
       />
     );
 
-    expect(screen.getByText('Eventbrite: Failed')).toBeInTheDocument();
+    const eventbrite = screen.getByLabelText('Eventbrite');
+    expect(eventbrite).toHaveValue('Failed');
+    expect(eventbrite).toHaveAttribute('readonly');
     expect(screen.getByRole('button', { name: 'Update instance' })).toBeInTheDocument();
   });
 });

@@ -1,89 +1,91 @@
 'use client';
 
-import type { KeyboardEvent, MouseEvent } from 'react';
+import type { ReactNode } from 'react';
 
+import { CheckIcon, DeleteIcon, DuplicateIcon } from '@/components/icons/action-icons';
+import { AdminCreateButton } from '@/components/ui/admin-create-button';
 import {
-  AdminDataTable,
-  AdminDataTableBody,
   AdminDataTableCell,
-  AdminDataTableHead,
+  AdminDataTableCellMeta,
   AdminDataTableHeadCell,
   AdminDataTableOperationsHeadCell,
 } from '@/components/ui/admin-data-table';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
+import { AdminExpandableRow } from '@/components/ui/admin-expandable-row';
+import { AdminFilterBar, AdminFilterField } from '@/components/ui/admin-filter-bar';
+import { AdminRecordTable } from '@/components/ui/admin-record-table';
+import { AdminRowActions } from '@/components/ui/admin-row-actions';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { CopyFeedbackIconButton } from '@/components/ui/copy-feedback-icon-button';
-import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
-import { AdminTableToolbar } from '@/components/ui/admin-table-toolbar';
-import { DeleteIcon, DuplicateIcon } from '@/components/icons/action-icons';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { useCopyFeedback } from '@/hooks/use-copy-feedback';
+import { DRAFT_RECORD_ID, type UseExpandedRecordReturn } from '@/hooks/use-expanded-record';
 import { formatEnumLabel, formatServiceListPriceLabel } from '@/lib/format';
 
 import { SERVICE_STATUSES, SERVICE_TYPES } from '@/types/services';
 import type { ServiceListFilters, ServiceSummary } from '@/types/services';
 
+const COLUMN_COUNT = 8;
+
 export interface ServiceListPanelProps {
   services: ServiceSummary[];
-  selectedServiceId: string | null;
+  /** Expanded service outside the loaded pages (deep link); rendered above the list. */
+  pinnedService?: ServiceSummary | null;
   filters: ServiceListFilters;
   isLoading: boolean;
   isLoadingMore: boolean;
   hasMore: boolean;
   error: string;
   isMutating: boolean;
-  onSelectService: (serviceId: string) => void;
   onFilterChange: <TKey extends keyof ServiceListFilters>(
     key: TKey,
     value: ServiceListFilters[TKey]
   ) => void;
   onLoadMore: () => Promise<void> | void;
+  /** Single-open expansion state shared with the page (`?service=`). */
+  expanded: UseExpandedRecordReturn;
+  /** Editor rendered inside the draft row. */
+  draftDetail: ReactNode;
+  /** Editor rendered inside an expanded service row. */
+  renderDetail: (service: ServiceSummary) => ReactNode;
   /** Resolve true when the draft flow started (e.g. service loaded); omit feedback on failure. */
   onDuplicateService: (serviceId: string) => Promise<boolean> | boolean | void;
   onDeleteService: (serviceId: string) => Promise<void>;
 }
 
+/**
+ * Table-first service catalogue: filters and `New service` on top, one
+ * expandable row per service with the editor beneath it. Duplicate and
+ * Delete live in the Operations column.
+ */
 export function ServiceListPanel({
   services,
-  selectedServiceId,
+  pinnedService = null,
   filters,
   isLoading,
   isLoadingMore,
   hasMore,
   error,
   isMutating,
-  onSelectService,
   onFilterChange,
   onLoadMore,
+  expanded,
+  draftDetail,
+  renderDetail,
   onDuplicateService,
   onDeleteService,
 }: ServiceListPanelProps) {
   const [confirmDialogProps, requestConfirm] = useConfirmDialog();
   const { copiedKey: duplicateDraftFeedbackId, markCopied: markDuplicateDraftFeedback } = useCopyFeedback(1000);
 
-  const handleRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, serviceId: string) => {
-    if (event.target !== event.currentTarget) {
-      return;
-    }
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      onSelectService(serviceId);
-    }
-  };
-
-  const handleDuplicateService = async (service: ServiceSummary, event: MouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation();
+  const handleDuplicateService = async (service: ServiceSummary) => {
     const started = await onDuplicateService(service.id);
     if (started === true) {
       markDuplicateDraftFeedback(service.id);
     }
   };
 
-  const handleDeleteService = async (service: ServiceSummary, event: MouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation();
+  const handleDeleteService = async (service: ServiceSummary) => {
     const confirmed = await requestConfirm({
       title: 'Delete service',
       description: `Delete "${service.title}"? This action cannot be undone.`,
@@ -97,29 +99,43 @@ export function ServiceListPanel({
     await onDeleteService(service.id);
   };
 
+  const rows = pinnedService && !services.some((entry) => entry.id === pinnedService.id)
+    ? [pinnedService, ...services]
+    : services;
+
   return (
     <>
-      <PaginatedTableCard
-        title='Services'
+      <AdminRecordTable
+        aria-label='Services'
+        columnCount={COLUMN_COUNT}
+        rowCount={rows.length}
         isLoading={isLoading}
         isLoadingMore={isLoadingMore}
         hasMore={hasMore}
-        error={error}
-        loadingLabel='Loading services...'
         onLoadMore={onLoadMore}
-        toolbar={
-          <AdminTableToolbar>
-            <div className='min-w-[200px] flex-1'>
-              <Label htmlFor='services-filter-search'>Search</Label>
+        error={error}
+        errorTitle='Services'
+        emptyLabel='No services match the current filters.'
+        filters={
+          <AdminFilterBar
+            trailing={
+              <AdminCreateButton
+                label='New service'
+                active={expanded.isDraftOpen}
+                onClick={() => (expanded.isDraftOpen ? expanded.collapse() : expanded.openDraft())}
+              />
+            }
+          >
+            <AdminFilterField label='Search' htmlFor='services-filter-search' className='sm:basis-72'>
               <Input
                 id='services-filter-search'
                 value={filters.search}
+                autoComplete='off'
                 onChange={(event) => onFilterChange('search', event.target.value)}
                 placeholder='Title or description'
               />
-            </div>
-            <div className='min-w-[140px]'>
-              <Label htmlFor='services-filter-type'>Type</Label>
+            </AdminFilterField>
+            <AdminFilterField label='Type' htmlFor='services-filter-type' className='sm:basis-40'>
               <Select
                 id='services-filter-type'
                 value={filters.serviceType}
@@ -134,9 +150,8 @@ export function ServiceListPanel({
                   </option>
                 ))}
               </Select>
-            </div>
-            <div className='min-w-[140px]'>
-              <Label htmlFor='services-filter-status'>Status</Label>
+            </AdminFilterField>
+            <AdminFilterField label='Status' htmlFor='services-filter-status' className='sm:basis-40'>
               <Select
                 id='services-filter-status'
                 value={filters.status}
@@ -149,80 +164,126 @@ export function ServiceListPanel({
                   </option>
                 ))}
               </Select>
-            </div>
-          </AdminTableToolbar>
+            </AdminFilterField>
+          </AdminFilterBar>
+        }
+        head={
+          <tr>
+            <AdminDataTableHeadCell className='w-10' />
+            <AdminDataTableHeadCell>Title</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Tier</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Type</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Price</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Status</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Delivery</AdminDataTableHeadCell>
+            <AdminDataTableOperationsHeadCell />
+          </tr>
         }
       >
-        <AdminDataTable tableClassName='min-w-[800px]'>
-          <AdminDataTableHead>
-            <tr>
-              <AdminDataTableHeadCell>Title</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Tier</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Type</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Price</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Status</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Delivery</AdminDataTableHeadCell>
-              <AdminDataTableOperationsHeadCell />
-            </tr>
-          </AdminDataTableHead>
-          <AdminDataTableBody>
-            {services.map((service) => (
-              <tr
-                key={service.id}
-                className={`cursor-pointer transition ${
-                  selectedServiceId === service.id ? 'bg-slate-100' : 'hover:bg-slate-50'
-                }`}
-                onClick={() => onSelectService(service.id)}
-                onKeyDown={(event) => handleRowKeyDown(event, service.id)}
-                tabIndex={0}
-                role='row'
-                aria-selected={selectedServiceId === service.id}
-              >
-                <AdminDataTableCell>{service.title}</AdminDataTableCell>
-                <AdminDataTableCell>{service.serviceTier?.trim() ? service.serviceTier : '—'}</AdminDataTableCell>
-                <AdminDataTableCell>{formatEnumLabel(service.serviceType)}</AdminDataTableCell>
-                <AdminDataTableCell>{formatServiceListPriceLabel(service)}</AdminDataTableCell>
-                <AdminDataTableCell>{formatEnumLabel(service.status)}</AdminDataTableCell>
-                <AdminDataTableCell>{formatEnumLabel(service.deliveryMode)}</AdminDataTableCell>
-                <AdminDataTableCell className='text-right'>
-                  <div className='flex justify-end gap-2'>
-                    <CopyFeedbackIconButton
-                      copied={duplicateDraftFeedbackId === service.id}
-                      idleVariant='outline'
-                      idleIcon={<DuplicateIcon className='h-4 w-4' />}
-                      disabled={isMutating}
-                      onClick={(event) => void handleDuplicateService(service, event)}
-                      idleLabel='Duplicate service as new draft'
-                      copiedLabel='Draft copy ready'
-                      idleTitle='Duplicate service as new draft'
-                      copiedTitle='Copied'
-                    />
-                    <Button
-                      type='button'
-                      size='sm'
-                      variant='danger'
-                      onClick={(event) => void handleDeleteService(service, event)}
-                      disabled={isMutating || service.instancesCount > 0}
-                      aria-label={
-                        service.instancesCount > 0
-                          ? 'Cannot delete service while it has instances'
-                          : 'Delete service'
-                      }
-                      title={
-                        service.instancesCount > 0
-                          ? 'Remove all instances before deleting this service'
-                          : 'Delete service'
-                      }
-                    >
-                      <DeleteIcon className='h-4 w-4' />
-                    </Button>
-                  </div>
+        {expanded.isDraftOpen ? (
+          <AdminExpandableRow
+            id={DRAFT_RECORD_ID}
+            label='new service'
+            expanded
+            isDraft
+            onToggle={expanded.collapse}
+            columnCount={COLUMN_COUNT}
+            cells={
+              <>
+                <AdminDataTableCell className='font-medium text-slate-900'>New service</AdminDataTableCell>
+                <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                  —
                 </AdminDataTableCell>
-              </tr>
-            ))}
-          </AdminDataTableBody>
-        </AdminDataTable>
-      </PaginatedTableCard>
+                <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='tertiary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='tertiary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+              </>
+            }
+            actions={null}
+            detail={draftDetail}
+          />
+        ) : null}
+        {rows.map((service) => {
+          const isOpen = expanded.isExpanded(service.id);
+          const tierLabel = service.serviceTier?.trim() ? service.serviceTier : '—';
+          const typeLabel = formatEnumLabel(service.serviceType);
+          const statusLabel = formatEnumLabel(service.status);
+          const isDuplicateReady = duplicateDraftFeedbackId === service.id;
+          const hasInstances = service.instancesCount > 0;
+          return (
+            <AdminExpandableRow
+              key={service.id}
+              id={service.id}
+              label={service.title}
+              expanded={isOpen}
+              onToggle={() => expanded.toggle(service.id)}
+              columnCount={COLUMN_COUNT}
+              cells={
+                <>
+                  <AdminDataTableCell className='font-medium text-slate-900'>
+                    {service.title}
+                    <AdminDataTableCellMeta>
+                      {typeLabel} · {statusLabel}
+                      {service.serviceTier?.trim() ? ` · ${service.serviceTier}` : ''}
+                    </AdminDataTableCellMeta>
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='secondary' className='text-slate-700'>
+                    {tierLabel}
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='secondary' className='text-slate-700'>
+                    {typeLabel}
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='tertiary' className='text-slate-700'>
+                    {formatServiceListPriceLabel(service)}
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='secondary' className='text-slate-700'>
+                    {statusLabel}
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='tertiary' className='text-slate-700'>
+                    {formatEnumLabel(service.deliveryMode)}
+                  </AdminDataTableCell>
+                </>
+              }
+              actions={
+                <AdminRowActions
+                  actions={[
+                    {
+                      key: 'duplicate',
+                      label: isDuplicateReady ? 'Draft copy ready' : 'Duplicate service as new draft',
+                      icon: isDuplicateReady ? (
+                        <CheckIcon className='h-4 w-4' />
+                      ) : (
+                        <DuplicateIcon className='h-4 w-4' />
+                      ),
+                      tone: isDuplicateReady ? 'success' : 'default',
+                      disabled: isMutating,
+                      onClick: () => void handleDuplicateService(service),
+                    },
+                    {
+                      key: 'delete',
+                      label: hasInstances ? 'Cannot delete service while it has instances' : 'Delete service',
+                      icon: <DeleteIcon className='h-4 w-4' />,
+                      tone: 'danger',
+                      disabled: isMutating || hasInstances,
+                      onClick: () => void handleDeleteService(service),
+                    },
+                  ]}
+                />
+              }
+              detail={isOpen ? renderDetail(service) : null}
+            />
+          );
+        })}
+      </AdminRecordTable>
       <ConfirmDialog {...confirmDialogProps} />
     </>
   );

@@ -1,26 +1,27 @@
-'use client';
+"use client";
 
-import { WarningTriangleIcon } from '@/components/icons/action-icons';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { formatEnumLabel, formatServiceTitleWithTier } from '@/lib/format';
-import { formatInstanceLocationOptionLabel } from '@/lib/instance-location-options';
-import { INSTANCE_SLUG_PATTERN } from '@/lib/slug-utils';
+import { WarningTriangleIcon } from "@/components/icons/action-icons";
+import { AdminFieldGrid } from "@/components/ui/admin-field-grid";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { formatEnumLabel, formatServiceTitleWithTier } from "@/lib/format";
+import { formatInstanceLocationOptionLabel } from "@/lib/instance-location-options";
+import { INSTANCE_SLUG_PATTERN } from "@/lib/slug-utils";
 
-import { INSTANCE_STATUSES, SERVICE_DELIVERY_MODES } from '@/types/services';
+import { INSTANCE_STATUSES, SERVICE_DELIVERY_MODES } from "@/types/services";
 import type {
   InstanceStatus,
   LocationSummary,
   PartnerOrgRef,
   ServiceDeliveryMode,
   ServiceSummary,
-} from '@/types/services';
+} from "@/types/services";
 
-import type { SessionSlotFormRow } from '@/types/services';
+import type { SessionSlotFormRow } from "@/types/services";
 
-export { INSTANCE_SLUG_PATTERN } from '@/lib/slug-utils';
+export { INSTANCE_SLUG_PATTERN } from "@/lib/slug-utils";
 
 export interface InstanceInstructorOption {
   sub: string;
@@ -33,7 +34,7 @@ export interface InstanceFormState {
   slug: string;
   description: string;
   status: InstanceStatus;
-  deliveryMode: ServiceDeliveryMode | '';
+  deliveryMode: ServiceDeliveryMode | "";
   locationId: string;
   maxCapacity: string;
   capacityLeftOverride: string;
@@ -57,6 +58,8 @@ export interface InstanceFormFieldsProps {
   instructorOptions?: InstanceInstructorOption[];
   isLoadingInstructors?: boolean;
   onSelectService?: (serviceId: string | null) => void;
+  /** Show the (unchangeable) parent service as a read-only field; used while editing a saved instance. */
+  serviceReadOnly?: boolean;
   onChange: (value: InstanceFormState) => void;
   /** Inline message under the slug field (for example submit validation or API field errors). */
   slugFieldError?: string;
@@ -92,18 +95,24 @@ export function InstanceInstructorField({
   isLoadingInstructors = false,
   onChange,
 }: InstanceInstructorFieldProps) {
-  const instructorExists = instructorOptions.some((entry) => entry.sub === value);
+  const instructorExists = instructorOptions.some(
+    (entry) => entry.sub === value,
+  );
   return (
     <div className={className}>
-      <Label htmlFor='instance-instructor-id'>Instructor</Label>
+      <Label htmlFor="instance-instructor-id">Instructor</Label>
       <Select
-        id='instance-instructor-id'
+        id="instance-instructor-id"
         value={value}
         disabled={disabled || isLoadingInstructors}
         onChange={(event) => onChange(event.target.value)}
       >
-        <option value=''>{isLoadingInstructors ? 'Loading instructors...' : 'None'}</option>
-        {value.trim() && !instructorExists ? <option value={value}>{value}</option> : null}
+        <option value="">
+          {isLoadingInstructors ? "Loading instructors..." : "None"}
+        </option>
+        {value.trim() && !instructorExists ? (
+          <option value={value}>{value}</option>
+        ) : null}
         {instructorOptions.map((entry) => (
           <option key={entry.sub} value={entry.sub}>
             {getInstructorOptionLabel(entry)}
@@ -124,102 +133,138 @@ export function InstanceFormFields({
   instructorOptions = [],
   isLoadingInstructors = false,
   onSelectService,
+  serviceReadOnly = false,
   onChange,
-  slugFieldError = '',
+  slugFieldError = "",
 }: InstanceFormFieldsProps) {
   const canSelectService = Boolean(onSelectService);
-  const serviceExists = serviceOptions.some((entry) => entry.id === serviceId);
-  const effectiveLocationId = value.locationId || (serviceLocationId ?? '');
-  const locationExists = locationOptions.some((entry) => entry.id === effectiveLocationId);
-  const selectedLocationValue = locationExists ? effectiveLocationId : effectiveLocationId || '';
+  const selectedServiceOption =
+    serviceOptions.find((entry) => entry.id === serviceId) ?? null;
+  const serviceExists = selectedServiceOption !== null;
+  const effectiveLocationId = value.locationId || (serviceLocationId ?? "");
+  const locationExists = locationOptions.some(
+    (entry) => entry.id === effectiveLocationId,
+  );
+  const selectedLocationValue = locationExists
+    ? effectiveLocationId
+    : effectiveLocationId || "";
   const hasLocationOptions = locationOptions.length > 0;
   const instanceFieldsLocked = canSelectService && !serviceId;
   const cohortTrimmed = value.cohort.trim().toLowerCase();
-  const cohortInvalid = Boolean(cohortTrimmed) && !INSTANCE_SLUG_PATTERN.test(cohortTrimmed);
+  const cohortInvalid =
+    Boolean(cohortTrimmed) && !INSTANCE_SLUG_PATTERN.test(cohortTrimmed);
   const slugTrimmed = value.slug.trim().toLowerCase();
-  const slugPatternInvalid = Boolean(slugTrimmed) && !INSTANCE_SLUG_PATTERN.test(slugTrimmed);
+  const slugPatternInvalid =
+    Boolean(slugTrimmed) && !INSTANCE_SLUG_PATTERN.test(slugTrimmed);
   const maxCapTrimmed = value.maxCapacity.trim();
   const capacityOverrideDisabled = instanceFieldsLocked || !maxCapTrimmed;
 
-  const topRowClass =
-    canSelectService && !instanceFieldsLocked
-      ? 'grid grid-cols-1 gap-3 sm:grid-cols-4'
-      : canSelectService && instanceFieldsLocked
-        ? 'grid grid-cols-1 gap-3 sm:grid-cols-4'
-        : 'grid grid-cols-1 gap-3 sm:grid-cols-3';
-
   return (
-    <div className='space-y-3'>
-      <div className={topRowClass}>
+    <div className="space-y-4">
+      <AdminFieldGrid columns={4}>
+        {!canSelectService && serviceReadOnly ? (
+          <div>
+            <Label htmlFor="instance-service-id">Service</Label>
+            <Input
+              id="instance-service-id"
+              value={
+                selectedServiceOption
+                  ? formatServiceTitleWithTier(
+                      selectedServiceOption.title,
+                      selectedServiceOption.serviceTier,
+                    )
+                  : (serviceId ?? "")
+              }
+              readOnly
+              aria-readonly
+            />
+          </div>
+        ) : null}
         {canSelectService ? (
           <div>
-            <Label htmlFor='instance-service-id'>Service</Label>
+            <Label htmlFor="instance-service-id">Service</Label>
             <Select
-              id='instance-service-id'
-              value={serviceId && serviceExists ? serviceId : ''}
-              onChange={(event) => onSelectService?.(event.target.value || null)}
+              id="instance-service-id"
+              value={serviceId && serviceExists ? serviceId : ""}
+              onChange={(event) =>
+                onSelectService?.(event.target.value || null)
+              }
             >
-              <option value=''>Select service</option>
+              <option value="">Select service</option>
               {serviceId && !serviceExists ? (
                 <option value={serviceId}>{serviceId}</option>
               ) : null}
               {serviceOptions.map((service) => (
                 <option key={service.id} value={service.id}>
-                  {formatServiceTitleWithTier(service.title, service.serviceTier)}
+                  {formatServiceTitleWithTier(
+                    service.title,
+                    service.serviceTier,
+                  )}
                 </option>
               ))}
             </Select>
           </div>
         ) : null}
         <div>
-          <Label htmlFor='instance-title'>Title</Label>
+          <Label htmlFor="instance-title">Title</Label>
           <Input
-            id='instance-title'
+            id="instance-title"
             value={value.title}
             disabled={instanceFieldsLocked}
-            onChange={(event) => onChange({ ...value, title: event.target.value })}
-            placeholder='Leave empty to inherit from service'
+            onChange={(event) =>
+              onChange({ ...value, title: event.target.value })
+            }
+            placeholder="Leave empty to inherit from service"
           />
         </div>
         <div>
-          <Label htmlFor='instance-cohort'>Cohort</Label>
+          <Label htmlFor="instance-cohort">Cohort</Label>
           <Input
-            id='instance-cohort'
+            id="instance-cohort"
             value={value.cohort}
             disabled={instanceFieldsLocked}
-            onChange={(event) => onChange({ ...value, cohort: event.target.value })}
-            onBlur={() => onChange({ ...value, cohort: value.cohort.trim().toLowerCase() })}
-            placeholder='e.g. spring-2026'
-            autoComplete='off'
+            onChange={(event) =>
+              onChange({ ...value, cohort: event.target.value })
+            }
+            onBlur={() =>
+              onChange({ ...value, cohort: value.cohort.trim().toLowerCase() })
+            }
+            placeholder="e.g. spring-2026"
+            autoComplete="off"
           />
           {cohortInvalid ? (
-            <p className='mt-1 text-xs text-red-600'>
-              Use lowercase letters and numbers, with single hyphens between segments (no leading or trailing
-              hyphen).
+            <p className="mt-1 text-xs text-red-600">
+              Use lowercase letters and numbers, with single hyphens between
+              segments (no leading or trailing hyphen).
             </p>
           ) : null}
         </div>
         <div>
-          <div className='relative mb-1'>
-            <Label htmlFor='instance-status' className='mb-0 block pr-7'>
+          <div className="relative mb-1">
+            <Label htmlFor="instance-status" className="mb-0 block pr-7">
               Status
             </Label>
-            {value.status === 'scheduled' ? (
+            {value.status === "scheduled" ? (
               <span
-                className='absolute right-0 top-1/2 inline-flex -translate-y-1/2 text-amber-600'
-                role='img'
-                aria-label='Scheduled — not yet open for booking'
-                title='Scheduled — not yet open for booking'
+                className="absolute right-0 top-1/2 inline-flex -translate-y-1/2 text-amber-600"
+                role="img"
+                aria-label="Scheduled — not yet open for booking"
+                title="Scheduled — not yet open for booking"
               >
-                <WarningTriangleIcon className='h-4 w-4' aria-hidden />
+                <WarningTriangleIcon className="h-4 w-4" aria-hidden />
               </span>
             ) : null}
           </div>
           <Select
-            id='instance-status'
+            id="instance-status"
             value={value.status}
             disabled={instanceFieldsLocked}
-            onChange={(event) => onChange({ ...value, status: event.target.value as InstanceStatus })}
+            onChange={(event) =>
+              onChange({
+                ...value,
+                status: event.target.value as InstanceStatus,
+              })
+            }
           >
             {INSTANCE_STATUSES.map((entry) => (
               <option key={entry} value={entry}>
@@ -228,52 +273,68 @@ export function InstanceFormFields({
             ))}
           </Select>
         </div>
-      </div>
-      <div>
-        <Label htmlFor='instance-description'>Description</Label>
-        <Textarea
-          id='instance-description'
-          value={value.description}
-          disabled={instanceFieldsLocked}
-          onChange={(event) => onChange({ ...value, description: event.target.value })}
-          rows={2}
-          placeholder='Leave empty to inherit from service'
-        />
-      </div>
-      <div>
-        <Label htmlFor='instance-slug'>
-          Slug
-          <span className='text-red-600' aria-hidden>
-            {' '}
-            *
-          </span>
-        </Label>
-        <Input
-          id='instance-slug'
-          value={value.slug}
-          disabled={instanceFieldsLocked}
-          onChange={(event) => onChange({ ...value, slug: event.target.value })}
-          onBlur={() => onChange({ ...value, slug: value.slug.trim().toLowerCase() })}
-          placeholder='e.g. spring-workshop-2026-04-20'
-          autoComplete='off'
-        />
-        {slugPatternInvalid ? (
-          <p className='mt-1 text-xs text-red-600'>
-            Use lowercase letters, digits, and single hyphens between segments (no leading or trailing hyphen).
-          </p>
-        ) : null}
-        {slugFieldError ? <p className='mt-1 text-xs text-red-600'>{slugFieldError}</p> : null}
-      </div>
-      <div className='grid grid-cols-1 gap-3 sm:grid-cols-5'>
+      </AdminFieldGrid>
+      <AdminFieldGrid columns={1}>
         <div>
-          <Label htmlFor='instance-delivery-mode'>Delivery mode</Label>
+          <Label htmlFor="instance-description">Description</Label>
+          <Textarea
+            id="instance-description"
+            value={value.description}
+            disabled={instanceFieldsLocked}
+            onChange={(event) =>
+              onChange({ ...value, description: event.target.value })
+            }
+            rows={2}
+            placeholder="Leave empty to inherit from service"
+          />
+        </div>
+      </AdminFieldGrid>
+      <AdminFieldGrid columns={4}>
+        <div className="sm:col-span-2">
+          <Label htmlFor="instance-slug">
+            Slug
+            <span className="text-red-600" aria-hidden>
+              {" "}
+              *
+            </span>
+          </Label>
+          <Input
+            id="instance-slug"
+            value={value.slug}
+            disabled={instanceFieldsLocked}
+            onChange={(event) =>
+              onChange({ ...value, slug: event.target.value })
+            }
+            onBlur={() =>
+              onChange({ ...value, slug: value.slug.trim().toLowerCase() })
+            }
+            placeholder="e.g. spring-workshop-2026-04-20"
+            autoComplete="off"
+          />
+          {slugPatternInvalid ? (
+            <p className="mt-1 text-xs text-red-600">
+              Use lowercase letters, digits, and single hyphens between segments
+              (no leading or trailing hyphen).
+            </p>
+          ) : null}
+          {slugFieldError ? (
+            <p className="mt-1 text-xs text-red-600">{slugFieldError}</p>
+          ) : null}
+        </div>
+        <div>
+          <Label htmlFor="instance-delivery-mode">Delivery mode</Label>
           <Select
-            id='instance-delivery-mode'
+            id="instance-delivery-mode"
             value={value.deliveryMode}
             disabled={instanceFieldsLocked}
-            onChange={(event) => onChange({ ...value, deliveryMode: event.target.value as ServiceDeliveryMode | '' })}
+            onChange={(event) =>
+              onChange({
+                ...value,
+                deliveryMode: event.target.value as ServiceDeliveryMode | "",
+              })
+            }
           >
-            <option value=''>Inherit from service</option>
+            <option value="">Inherit from service</option>
             {SERVICE_DELIVERY_MODES.map((entry) => (
               <option key={entry} value={entry}>
                 {formatEnumLabel(entry)}
@@ -282,19 +343,25 @@ export function InstanceFormFields({
           </Select>
         </div>
         <div>
-          <Label htmlFor='instance-location-id'>Location</Label>
+          <Label htmlFor="instance-location-id">Location</Label>
           {hasLocationOptions || isLoadingLocations ? (
             <Select
-              id='instance-location-id'
+              id="instance-location-id"
               value={selectedLocationValue}
               disabled={instanceFieldsLocked}
-              onChange={(event) => onChange({ ...value, locationId: event.target.value })}
+              onChange={(event) =>
+                onChange({ ...value, locationId: event.target.value })
+              }
             >
-              <option value=''>
-                {isLoadingLocations ? 'Loading locations...' : 'Select location'}
+              <option value="">
+                {isLoadingLocations
+                  ? "Loading locations..."
+                  : "Select location"}
               </option>
               {effectiveLocationId && !locationExists ? (
-                <option value={effectiveLocationId}>{effectiveLocationId}</option>
+                <option value={effectiveLocationId}>
+                  {effectiveLocationId}
+                </option>
               ) : null}
               {locationOptions.map((location) => (
                 <option key={location.id} value={location.id}>
@@ -304,70 +371,77 @@ export function InstanceFormFields({
             </Select>
           ) : (
             <Input
-              id='instance-location-id'
+              id="instance-location-id"
               value={effectiveLocationId}
               disabled={instanceFieldsLocked}
-              onChange={(event) => onChange({ ...value, locationId: event.target.value })}
-              placeholder='Location UUID'
+              onChange={(event) =>
+                onChange({ ...value, locationId: event.target.value })
+              }
+              placeholder="Location UUID"
             />
           )}
         </div>
-        <div className='sm:col-span-2'>
-          <div className='grid grid-cols-1 gap-2 sm:grid-cols-2'>
-            <div>
-              <Label htmlFor='instance-max-capacity'>Max capacity</Label>
-              <Input
-                id='instance-max-capacity'
-                value={value.maxCapacity}
-                disabled={instanceFieldsLocked}
-                onChange={(event) => {
-                  const nextMax = event.target.value;
-                  onChange({
-                    ...value,
-                    maxCapacity: nextMax,
-                    ...(nextMax.trim() === '' ? { capacityLeftOverride: '' } : {}),
-                  });
-                }}
-                type='number'
-                min={0}
-                placeholder='Unlimited if empty'
-              />
-            </div>
-            <div>
-              <Label htmlFor='instance-capacity-left-override'>Capacity left override</Label>
-              <Input
-                id='instance-capacity-left-override'
-                value={value.capacityLeftOverride}
-                disabled={capacityOverrideDisabled}
-                onChange={(event) => onChange({ ...value, capacityLeftOverride: event.target.value })}
-                type='number'
-                min={0}
-                autoComplete='off'
-                placeholder='None'
-              />
-            </div>
-          </div>
+      </AdminFieldGrid>
+      <AdminFieldGrid columns={4}>
+        <div>
+          <Label htmlFor="instance-max-capacity">Max capacity</Label>
+          <Input
+            id="instance-max-capacity"
+            value={value.maxCapacity}
+            disabled={instanceFieldsLocked}
+            onChange={(event) => {
+              const nextMax = event.target.value;
+              onChange({
+                ...value,
+                maxCapacity: nextMax,
+                ...(nextMax.trim() === "" ? { capacityLeftOverride: "" } : {}),
+              });
+            }}
+            type="number"
+            min={0}
+            placeholder="Unlimited if empty"
+          />
+        </div>
+        <div>
+          <Label htmlFor="instance-capacity-left-override">
+            Capacity left override
+          </Label>
+          <Input
+            id="instance-capacity-left-override"
+            value={value.capacityLeftOverride}
+            disabled={capacityOverrideDisabled}
+            onChange={(event) =>
+              onChange({ ...value, capacityLeftOverride: event.target.value })
+            }
+            type="number"
+            min={0}
+            autoComplete="off"
+            placeholder="None"
+          />
           {capacityOverrideDisabled && !instanceFieldsLocked ? (
-            <p className='mt-1 text-xs text-neutral-500'>
+            <p className="mt-1 text-xs text-slate-500">
               Set max capacity to enable a display-only spots-left override.
             </p>
           ) : null}
         </div>
         <div>
-          <Label htmlFor='instance-waitlist'>Waitlist</Label>
+          <Label htmlFor="instance-waitlist">Waitlist</Label>
           <Select
-            id='instance-waitlist'
-            value={value.waitlistEnabled ? 'true' : 'false'}
+            id="instance-waitlist"
+            value={value.waitlistEnabled ? "true" : "false"}
             disabled={instanceFieldsLocked}
             onChange={(event) =>
-              onChange({ ...value, waitlistEnabled: event.target.value === 'true' })
+              onChange({
+                ...value,
+                waitlistEnabled: event.target.value === "true",
+              })
             }
           >
-            <option value='false'>Disabled</option>
-            <option value='true'>Enabled</option>
+            <option value="false">Disabled</option>
+            <option value="true">Enabled</option>
           </Select>
         </div>
-      </div>
+      </AdminFieldGrid>
     </div>
   );
 }

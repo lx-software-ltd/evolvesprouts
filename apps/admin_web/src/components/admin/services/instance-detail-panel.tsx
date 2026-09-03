@@ -1,10 +1,13 @@
 'use client';
 
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+
 import { EntityTagPicker } from '@/components/admin/contacts/entity-tag-picker';
-import { AdminEditorCard } from '@/components/ui/admin-editor-card';
-import { Button } from '@/components/ui/button';
+import { AdminDisclosure } from '@/components/ui/admin-disclosure';
+import { AdminEditorActions, AdminEditorPanel } from '@/components/ui/admin-editor-panel';
+import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { AdminInlineError } from '@/components/ui/admin-inline-error';
-import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { formatEnumLabel } from '@/lib/format';
 import type { EntityTagRef } from '@/lib/entity-api';
@@ -19,31 +22,51 @@ import { useInstanceDetailPanel } from '@/hooks/use-instance-detail-panel';
 
 type ApiSchemas = components['schemas'];
 
+const INSTANCE_EDITOR_FORM_ID = 'instance-editor-form';
+
 export interface InstanceDetailPanelProps {
+  /** Full record for edit mode; `null` while creating. */
   instance: ServiceInstance | null;
-  /** When set with `instance` null, seed the create form from this row (UI-only duplicate). */
+  /** When set in create mode, seed the draft from this row (UI-only duplicate). */
   createPrefillInstance?: ServiceInstance | null;
   entityTags: EntityTagRef[];
   entityTagsLoading: boolean;
   entityTagsError: string;
+  /** Service the draft belongs to (create mode); edit mode always uses `instance.serviceId`. */
   selectedServiceId: string | null;
   serviceOptions: ServiceSummary[];
   locationOptions: LocationSummary[];
   isLoadingLocations: boolean;
   serviceType: ServiceType | null;
-  isLoading: boolean;
+  isSaving: boolean;
   error: string;
   locationError?: string;
   onSelectService: (serviceId: string | null) => void;
-  onCancelSelection: () => void;
   onCreate: (serviceId: string, payload: ApiSchemas['CreateInstanceRequest']) => Promise<void> | void;
   onUpdate: (
     serviceId: string,
     instanceId: string,
     payload: ApiSchemas['UpdateInstanceRequest']
   ) => Promise<void> | void;
+  /** Reports unsaved edits so the row hook can guard switching rows. */
+  onDirtyChange?: (dirty: boolean) => void;
+  /**
+   * Nested enrollments list for a saved instance. Mounted only once its
+   * disclosure opens so expanding a row costs no enrollment request.
+   */
+  enrollments?: ReactNode;
+  /** Number shown next to the Enrollments title. */
+  enrollmentsCount?: number | null;
+  /** Open the Enrollments disclosure immediately (related-party deep links). */
+  enrollmentsDefaultOpen?: boolean;
 }
 
+/**
+ * Editor rendered inside the expanded instance row (or the draft row). No
+ * title: the row above names the instance. Shared fields, type-specific
+ * rows, Notes, then Tags / Session slots / Enrollments disclosures and one
+ * action row.
+ */
 export function InstanceDetailPanel({
   instance,
   createPrefillInstance = null,
@@ -55,18 +78,40 @@ export function InstanceDetailPanel({
   locationOptions,
   isLoadingLocations,
   serviceType,
-  isLoading,
+  isSaving,
   error,
   locationError = '',
   onSelectService,
-  onCancelSelection,
   onCreate,
   onUpdate,
+  onDirtyChange,
+  enrollments,
+  enrollmentsCount = null,
+  enrollmentsDefaultOpen = false,
 }: InstanceDetailPanelProps) {
+  const mode: 'create' | 'edit' = instance ? 'edit' : 'create';
+  const [enrollmentsOpen, setEnrollmentsOpen] = useState(enrollmentsDefaultOpen);
+
+  const onDirtyChangeRef = useRef(onDirtyChange);
+  useEffect(() => {
+    onDirtyChangeRef.current = onDirtyChange;
+  });
+  // Collapsing the row unmounts the editor; its edits are gone with it.
+  useEffect(() => () => onDirtyChangeRef.current?.(false), []);
+  const markDirty = useCallback(() => onDirtyChangeRef.current?.(true), []);
+  const track = useCallback(
+    <TValue,>(setter: (value: TValue) => void) =>
+      (value: TValue) => {
+        onDirtyChangeRef.current?.(true);
+        setter(value);
+      },
+    []
+  );
+
   const panel = useInstanceDetailPanel({
     instance,
     createPrefillInstance,
-    selectedServiceId,
+    selectedServiceId: instance ? instance.serviceId : selectedServiceId,
     serviceOptions,
     locationOptions,
     serviceType,
@@ -75,146 +120,156 @@ export function InstanceDetailPanel({
     onUpdate,
   });
 
+  async function handleSubmit() {
+    try {
+      const saved = mode === 'create' ? await panel.runCreate() : await panel.runUpdate();
+      if (saved) {
+        onDirtyChangeRef.current?.(false);
+      }
+    } catch {
+      // Keep the form visible so users can correct and retry.
+    }
+  }
+
+  const validationBlocked = panel.externalUrlInvalid || panel.eventPriceMissing || panel.cohortInvalid;
+  const submitDisabled = mode === 'create' ? !panel.selectedServiceId || validationBlocked : validationBlocked;
+
   return (
-    <AdminEditorCard
-      title='Instance'
-      description='Add or update an instance using the same fields below.'
+    <AdminEditorPanel
+      status={
+        <>
+          {panel.sessionSlotsError ? <AdminInlineError>{panel.sessionSlotsError}</AdminInlineError> : null}
+          {panel.effectiveServiceType === 'event' && panel.eventPriceMissing ? (
+            <AdminInlineError>Enter a price for this event instance.</AdminInlineError>
+          ) : null}
+          {entityTagsError ? <AdminInlineError>{entityTagsError}</AdminInlineError> : null}
+          {locationError ? <AdminInlineError>{locationError}</AdminInlineError> : null}
+          {error ? <AdminInlineError>{error}</AdminInlineError> : null}
+        </>
+      }
       actions={
-        panel.canSubmit ? (
-          <>
-            {panel.isEditMode ? (
-              <>
-                <Button type='button' variant='secondary' disabled={isLoading} onClick={onCancelSelection}>
-                  Cancel
-                </Button>
-                <Button
-                  type='button'
-                  disabled={
-                    isLoading ||
-                    !panel.instance ||
-                    panel.externalUrlInvalid ||
-                    panel.eventPriceMissing ||
-                    panel.cohortInvalid
-                  }
-                  loading={isLoading}
-                  onClick={() => {
-                    void panel.runUpdate();
-                  }}
-                >
-                  Update instance
-                </Button>
-              </>
-            ) : (
-              <Button
-                type='button'
-                disabled={
-                  isLoading ||
-                  !panel.selectedServiceId ||
-                  panel.externalUrlInvalid ||
-                  panel.eventPriceMissing ||
-                  panel.cohortInvalid
-                }
-                onClick={() => {
-                  void panel.runCreate();
-                }}
-              >
-                {isLoading ? 'Adding...' : 'Add instance'}
-              </Button>
-            )}
-          </>
-        ) : undefined
+        <AdminEditorActions
+          mode={mode}
+          formId={INSTANCE_EDITOR_FORM_ID}
+          isSaving={isSaving}
+          submitDisabled={submitDisabled}
+          submitLabel={mode === 'create' ? 'Create instance' : 'Update instance'}
+        />
       }
     >
-      {!panel.selectedService ? (
-        <p className='text-sm text-slate-500'>Select a service to enable instance save actions.</p>
-      ) : null}
-      <InstanceFormFields
-        value={panel.instanceForm}
-        serviceId={panel.selectedServiceId}
-        serviceLocationId={panel.selectedService?.locationId ?? null}
-        serviceOptions={panel.serviceOptions}
-        locationOptions={panel.filteredLocationOptions}
-        isLoadingLocations={isLoadingLocations}
-        instructorOptions={panel.instructorUsers}
-        isLoadingInstructors={panel.isLoadingInstructors}
-        onSelectService={panel.handleSelectService}
-        onChange={panel.handleInstanceFormChange}
-        slugFieldError={panel.slugFieldError}
-      />
-
-      <InstanceDetailTypeSections
-        effectiveServiceType={panel.effectiveServiceType}
-        consultationCatalogPricingReadOnly={panel.consultationCatalogPricingReadOnly}
-        typeFieldsLocked={panel.typeFieldsLocked}
-        instructorId={panel.instanceForm.instructorId}
-        onInstructorIdChange={(instructorId) =>
-          panel.handleInstanceFormChange({ ...panel.instanceForm, instructorId })
-        }
-        instructorUsers={panel.instructorUsers}
-        isLoadingInstructors={panel.isLoadingInstructors}
-        trainingForm={panel.trainingForm}
-        onTrainingFormChange={panel.setTrainingForm}
-        eventForm={panel.eventForm}
-        onEventFormChange={panel.setEventForm}
-        resolvedEventCategory={panel.resolvedEventCategory}
-        consultationForm={panel.consultationForm}
-        onConsultationFormChange={panel.setConsultationForm}
-        partnerOrganizations={panel.instanceForm.partnerOrganizations}
-        onPartnerOrganizationsChange={(next) =>
-          panel.handleInstanceFormChange({ ...panel.instanceForm, partnerOrganizations: next })
-        }
-        externalUrl={panel.instanceForm.externalUrl}
-        onExternalUrlChange={(next) =>
-          panel.handleInstanceFormChange({ ...panel.instanceForm, externalUrl: next })
-        }
-        externalUrlInvalid={panel.externalUrlInvalid}
-      />
-
-      <div>
-        <Label htmlFor='instance-notes'>Notes</Label>
-        <Textarea
-          id='instance-notes'
-          value={panel.instanceForm.notes}
-          disabled={panel.typeFieldsLocked}
-          onChange={(event) =>
-            panel.handleInstanceFormChange({ ...panel.instanceForm, notes: event.target.value })
-          }
-          rows={2}
+      <form
+        id={INSTANCE_EDITOR_FORM_ID}
+        className='space-y-4'
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleSubmit();
+        }}
+      >
+        {mode === 'create' && !panel.selectedService ? (
+          <p className='text-sm text-slate-500'>Select a service to enable the instance fields.</p>
+        ) : null}
+        <InstanceFormFields
+          value={panel.instanceForm}
+          serviceId={panel.selectedServiceId}
+          serviceLocationId={panel.selectedService?.locationId ?? null}
+          serviceOptions={panel.serviceOptions}
+          locationOptions={panel.filteredLocationOptions}
+          isLoadingLocations={isLoadingLocations}
+          instructorOptions={panel.instructorUsers}
+          isLoadingInstructors={panel.isLoadingInstructors}
+          onSelectService={mode === 'create' ? track(panel.handleSelectService) : undefined}
+          serviceReadOnly={mode === 'edit'}
+          onChange={track(panel.handleInstanceFormChange)}
+          slugFieldError={panel.slugFieldError}
         />
-      </div>
 
-      <EntityTagPicker
-        id='service-instance-tags'
-        label='Tags'
-        tags={entityTags}
-        selectedIds={panel.tagIds}
-        onChange={panel.setTagIds}
-        disabled={isLoading || entityTagsLoading || panel.typeFieldsLocked}
-        variant='collapsible'
-      />
+        <InstanceDetailTypeSections
+          effectiveServiceType={panel.effectiveServiceType}
+          consultationCatalogPricingReadOnly={panel.consultationCatalogPricingReadOnly}
+          typeFieldsLocked={panel.typeFieldsLocked}
+          instructorId={panel.instanceForm.instructorId}
+          onInstructorIdChange={(instructorId) => {
+            markDirty();
+            panel.handleInstanceFormChange({ ...panel.instanceForm, instructorId });
+          }}
+          instructorUsers={panel.instructorUsers}
+          isLoadingInstructors={panel.isLoadingInstructors}
+          trainingForm={panel.trainingForm}
+          onTrainingFormChange={track(panel.setTrainingForm)}
+          eventForm={panel.eventForm}
+          onEventFormChange={track(panel.setEventForm)}
+          resolvedEventCategory={panel.resolvedEventCategory}
+          consultationForm={panel.consultationForm}
+          onConsultationFormChange={track(panel.setConsultationForm)}
+          partnerOrganizations={panel.instanceForm.partnerOrganizations}
+          onPartnerOrganizationsChange={(next) => {
+            markDirty();
+            panel.handleInstanceFormChange({ ...panel.instanceForm, partnerOrganizations: next });
+          }}
+          externalUrl={panel.instanceForm.externalUrl}
+          onExternalUrlChange={(next) => {
+            markDirty();
+            panel.handleInstanceFormChange({ ...panel.instanceForm, externalUrl: next });
+          }}
+          externalUrlInvalid={panel.externalUrlInvalid}
+        />
 
-      <SessionSlotEditor
-        slots={panel.instanceForm.sessionSlots}
-        disabled={panel.typeFieldsLocked}
-        locationOptions={panel.filteredLocationOptions}
-        isLoadingLocations={isLoadingLocations}
-        defaultLocationId={panel.effectiveSessionSlotDefaultLocationId}
-        onChange={panel.handleSessionSlotsChange}
-      />
-      {panel.sessionSlotsError ? <AdminInlineError>{panel.sessionSlotsError}</AdminInlineError> : null}
+        <AdminFieldGrid columns={mode === 'edit' ? 4 : 1}>
+          <AdminField label='Notes' htmlFor='instance-notes' span={mode === 'edit' ? 2 : 1}>
+            <Textarea
+              id='instance-notes'
+              value={panel.instanceForm.notes}
+              disabled={panel.typeFieldsLocked}
+              onChange={(event) => {
+                markDirty();
+                panel.handleInstanceFormChange({ ...panel.instanceForm, notes: event.target.value });
+              }}
+              rows={2}
+            />
+          </AdminField>
+          {mode === 'edit' && instance ? (
+            <AdminField label='Eventbrite' htmlFor='instance-eventbrite-sync'>
+              <Input
+                id='instance-eventbrite-sync'
+                value={formatEnumLabel(instance.eventbriteSyncStatus)}
+                readOnly
+                aria-readonly
+              />
+            </AdminField>
+          ) : null}
+        </AdminFieldGrid>
 
-      {panel.effectiveServiceType === 'event' && panel.eventPriceMissing ? (
-        <AdminInlineError>Enter a price for this event instance.</AdminInlineError>
+        <EntityTagPicker
+          id='service-instance-tags'
+          label='Tags'
+          tags={entityTags}
+          selectedIds={panel.tagIds}
+          onChange={track(panel.setTagIds)}
+          disabled={isSaving || entityTagsLoading || panel.typeFieldsLocked}
+          variant='collapsible'
+        />
+
+        <SessionSlotEditor
+          slots={panel.instanceForm.sessionSlots}
+          disabled={panel.typeFieldsLocked}
+          locationOptions={panel.filteredLocationOptions}
+          isLoadingLocations={isLoadingLocations}
+          defaultLocationId={panel.effectiveSessionSlotDefaultLocationId}
+          onChange={track(panel.handleSessionSlotsChange)}
+        />
+      </form>
+
+      {mode === 'edit' && instance && enrollments !== undefined ? (
+        <AdminDisclosure
+          id='instance-enrollments'
+          title='Enrollments'
+          summary={enrollmentsCount != null && enrollmentsCount > 0 ? enrollmentsCount : undefined}
+          open={enrollmentsOpen}
+          onOpenChange={setEnrollmentsOpen}
+        >
+          {enrollmentsOpen ? enrollments : null}
+        </AdminDisclosure>
       ) : null}
-      {entityTagsError ? <AdminInlineError>{entityTagsError}</AdminInlineError> : null}
-      {locationError ? <AdminInlineError>{locationError}</AdminInlineError> : null}
-      {error ? <AdminInlineError>{error}</AdminInlineError> : null}
-
-      {panel.isEditMode && panel.instance ? (
-        <div className='text-sm text-slate-600'>
-          <p>Eventbrite: {formatEnumLabel(panel.instance.eventbriteSyncStatus)}</p>
-        </div>
-      ) : null}
-    </AdminEditorCard>
+    </AdminEditorPanel>
   );
 }
