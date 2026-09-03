@@ -362,6 +362,32 @@ describe('AdminExpandableRow', () => {
     expect(onToggle).toHaveBeenCalledTimes(4);
   });
 
+  it('frames the selected record: summary row top and sides match the detail bottom border', () => {
+    const { rerender } = renderRow(false);
+    const row = screen.getByTestId('admin-row-c1');
+    expect(row).not.toHaveClass('border-t-2');
+    expect(row).not.toHaveClass('border-x-2');
+
+    rerender(
+      <table>
+        <tbody>
+          <AdminExpandableRow
+            id='c1'
+            label='Ada Lovelace'
+            expanded
+            onToggle={() => undefined}
+            columnCount={3}
+            cells={<AdminDataTableCell>Ada</AdminDataTableCell>}
+            detail={<input aria-label='First name' />}
+          />
+        </tbody>
+      </table>
+    );
+    expect(row).toHaveClass('border-t-2', 'border-x-2', 'border-t-slate-300', 'border-x-slate-300');
+    const detail = screen.getByLabelText('First name').closest('.admin-row-detail');
+    expect(detail).toHaveClass('border-b-2', 'border-x-2', 'border-b-slate-300', 'border-x-slate-300');
+  });
+
   it('mounts the detail while expanded and unmounts it after collapsing settles', () => {
     vi.useFakeTimers();
     const { rerender } = renderRow(true);
