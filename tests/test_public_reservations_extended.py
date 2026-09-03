@@ -253,19 +253,6 @@ def test_handle_public_reservation_returns_409_when_instance_capacity_full(
         def update(self, *_a: object, **_k: object) -> None:
             return None
 
-    class _FakeLeadRepo:
-        def __init__(self, _session: object) -> None:
-            pass
-
-        def create_with_event(self, *_a: object, **_k: object) -> None:
-            return None
-
-    class _FakeSalesLead:
-        def __init__(self, **kwargs: object) -> None:
-            pass
-
-    monkeypatch.setattr("app.api.public_reservations.SalesLead", _FakeSalesLead)
-
     class _FakeSession:
         def commit(self) -> None:
             return None
@@ -286,10 +273,6 @@ def test_handle_public_reservation_returns_409_when_instance_capacity_full(
     monkeypatch.setattr(
         "app.api.public_reservations.ContactRepository",
         _FakeContactRepo,
-    )
-    monkeypatch.setattr(
-        "app.api.public_reservations.SalesLeadRepository",
-        _FakeLeadRepo,
     )
     monkeypatch.setattr(
         "app.api.public_reservations.Session",
@@ -339,22 +322,6 @@ def test_handle_public_reservation_accepts_free_payment_zero_total(
         def update(self, *_a: object, **_k: object) -> None:
             return None
 
-    class _FakeLeadRepo:
-        def __init__(self, _session: object) -> None:
-            pass
-
-        def create_with_event(self, *_a: object, **_k: object) -> None:
-            return None
-
-    class _FakeSalesLead:
-        def __init__(self, **kwargs: object) -> None:
-            pass
-
-    monkeypatch.setattr(
-        "app.api.public_reservations.SalesLead",
-        _FakeSalesLead,
-    )
-
     class _FakeSession:
         def commit(self) -> None:
             return None
@@ -375,10 +342,6 @@ def test_handle_public_reservation_accepts_free_payment_zero_total(
     monkeypatch.setattr(
         "app.api.public_reservations.ContactRepository",
         _FakeContactRepo,
-    )
-    monkeypatch.setattr(
-        "app.api.public_reservations.SalesLeadRepository",
-        _FakeLeadRepo,
     )
     monkeypatch.setattr(
         "app.api.public_reservations.Session",
@@ -540,22 +503,6 @@ def test_handle_public_reservation_forces_pending_false_for_free_even_if_client_
         def update(self, *_a: object, **_k: object) -> None:
             return None
 
-    class _FakeLeadRepo:
-        def __init__(self, _session: object) -> None:
-            pass
-
-        def create_with_event(self, *_a: object, **_k: object) -> None:
-            return None
-
-    class _FakeSalesLead:
-        def __init__(self, **kwargs: object) -> None:
-            pass
-
-    monkeypatch.setattr(
-        "app.api.public_reservations.SalesLead",
-        _FakeSalesLead,
-    )
-
     class _FakeSession:
         def commit(self) -> None:
             return None
@@ -576,10 +523,6 @@ def test_handle_public_reservation_forces_pending_false_for_free_even_if_client_
     monkeypatch.setattr(
         "app.api.public_reservations.ContactRepository",
         _FakeContactRepo,
-    )
-    monkeypatch.setattr(
-        "app.api.public_reservations.SalesLeadRepository",
-        _FakeLeadRepo,
     )
     monkeypatch.setattr(
         "app.api.public_reservations.Session",
@@ -633,22 +576,6 @@ def test_handle_public_reservation_runs_hooks_after_persist(
         def update(self, *_a: object, **_k: object) -> None:
             return None
 
-    class _FakeLeadRepo:
-        def __init__(self, _session: object) -> None:
-            pass
-
-        def create_with_event(self, *_a: object, **_k: object) -> None:
-            return None
-
-    class _FakeSalesLead:
-        def __init__(self, **kwargs: object) -> None:
-            pass
-
-    monkeypatch.setattr(
-        "app.api.public_reservations.SalesLead",
-        _FakeSalesLead,
-    )
-
     class _FakeSession:
         def commit(self) -> None:
             return None
@@ -669,10 +596,6 @@ def test_handle_public_reservation_runs_hooks_after_persist(
     monkeypatch.setattr(
         "app.api.public_reservations.ContactRepository",
         _FakeContactRepo,
-    )
-    monkeypatch.setattr(
-        "app.api.public_reservations.SalesLeadRepository",
-        _FakeLeadRepo,
     )
     monkeypatch.setattr(
         "app.api.public_reservations.Session",
@@ -724,22 +647,6 @@ def test_handle_public_reservation_accepts_missing_service_tier(
         def update(self, *_a: object, **_k: object) -> None:
             return None
 
-    class _FakeLeadRepo:
-        def __init__(self, _session: object) -> None:
-            pass
-
-        def create_with_event(self, *_a: object, **_k: object) -> None:
-            return None
-
-    class _FakeSalesLead:
-        def __init__(self, **kwargs: object) -> None:
-            pass
-
-    monkeypatch.setattr(
-        "app.api.public_reservations.SalesLead",
-        _FakeSalesLead,
-    )
-
     class _FakeSession:
         def commit(self) -> None:
             return None
@@ -760,10 +667,6 @@ def test_handle_public_reservation_accepts_missing_service_tier(
     monkeypatch.setattr(
         "app.api.public_reservations.ContactRepository",
         _FakeContactRepo,
-    )
-    monkeypatch.setattr(
-        "app.api.public_reservations.SalesLeadRepository",
-        _FakeLeadRepo,
     )
     monkeypatch.setattr(
         "app.api.public_reservations.Session",
@@ -823,22 +726,6 @@ def test_handle_public_reservation_event_booking_skips_booking_child_allocation(
         def update(self, *_a: object, **_k: object) -> None:
             return None
 
-    class _FakeLeadRepo:
-        def __init__(self, _session: object) -> None:
-            pass
-
-        def create_with_event(self, *_a: object, **_k: object) -> None:
-            return None
-
-    class _FakeSalesLead:
-        def __init__(self, **kwargs: object) -> None:
-            pass
-
-    monkeypatch.setattr(
-        "app.api.public_reservations.SalesLead",
-        _FakeSalesLead,
-    )
-
     class _FakeInstanceRepo:
         def __init__(self, _session: object) -> None:
             pass
@@ -897,10 +784,6 @@ def test_handle_public_reservation_event_booking_skips_booking_child_allocation(
         _FakeContactRepo,
     )
     monkeypatch.setattr(
-        "app.api.public_reservations.SalesLeadRepository",
-        _FakeLeadRepo,
-    )
-    monkeypatch.setattr(
         "app.api.public_reservations.Session",
         lambda _e: _FakeSessionCM(),
     )
@@ -957,22 +840,6 @@ def test_handle_public_reservation_mba_style_skips_booking_child_allocation(
         def update(self, *_a: object, **_k: object) -> None:
             return None
 
-    class _FakeLeadRepo:
-        def __init__(self, _session: object) -> None:
-            pass
-
-        def create_with_event(self, *_a: object, **_k: object) -> None:
-            return None
-
-    class _FakeSalesLead:
-        def __init__(self, **kwargs: object) -> None:
-            pass
-
-    monkeypatch.setattr(
-        "app.api.public_reservations.SalesLead",
-        _FakeSalesLead,
-    )
-
     class _FakeInstanceRepo:
         def __init__(self, _session: object) -> None:
             pass
@@ -1027,10 +894,6 @@ def test_handle_public_reservation_mba_style_skips_booking_child_allocation(
     monkeypatch.setattr(
         "app.api.public_reservations.ContactRepository",
         _FakeContactRepo,
-    )
-    monkeypatch.setattr(
-        "app.api.public_reservations.SalesLeadRepository",
-        _FakeLeadRepo,
     )
     monkeypatch.setattr(
         "app.api.public_reservations.Session",

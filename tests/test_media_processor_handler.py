@@ -393,7 +393,7 @@ def test_process_message_require_consent_skips_mailchimp_without_opt_in(
     monkeypatch.setattr(
         handler,
         "ensure_contact_lead",
-        lambda **_k: (
+        lambda *_a, **_k: (
             SimpleNamespace(id=UUID("dddddddd-dddd-dddd-dddd-dddddddddddd")),
             True,
         ),

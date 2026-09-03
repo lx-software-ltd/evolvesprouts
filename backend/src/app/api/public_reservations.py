@@ -112,6 +112,7 @@ def _handle_public_reservation(
     try:
         request_id_str = str(event.get("requestContext", {}).get("requestId") or "")
         created_enrollment_id: UUID | None = None
+        created_new_enrollment = False
         stripe_pi_idempotent_hit: bool = False
         stripe_pi_existing_payment_id: UUID | None = None
         with Session(get_engine()) as session:
@@ -332,6 +333,7 @@ def _handle_public_reservation(
                                 status_code=409,
                             )
                         if create_err != "duplicate" and created_enrollment is not None:
+                            created_new_enrollment = True
                             created_enrollment_id = created_enrollment.id
                             if dc_row is not None:
                                 if not discount_repo.validate_and_increment(dc_row.id):
@@ -385,7 +387,7 @@ def _handle_public_reservation(
                                 stripe_pi_idempotent_hit = True
                                 stripe_pi_existing_payment_id = _pay.id
 
-                    if created_enrollment_id is not None:
+                    if created_new_enrollment:
                         ensure_contact_lead(
                             session,
                             contact_id=contact.id,
@@ -399,6 +401,7 @@ def _handle_public_reservation(
                             ),
                             attach_event_type=LeadEventType.ACTION_RECORDED,
                         )
+                    if created_enrollment_id is not None:
                         audit = AuditService(
                             session,
                             user_id=None,
