@@ -200,6 +200,7 @@ describe('DiscountCodesPanel', () => {
     expect(serviceSelect.value).toBe('svc-archived');
     expect([...serviceSelect.options].some((opt) => opt.textContent?.includes('MBA Archived'))).toBe(true);
     expect(screen.getByLabelText(/^Code/)).toBeDisabled();
+    expect(screen.queryByText('Codes cannot be changed after creation.')).not.toBeInTheDocument();
   });
 
   it('prompts before scope change when the code has current uses', async () => {

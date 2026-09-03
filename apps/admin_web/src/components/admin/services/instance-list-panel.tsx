@@ -159,7 +159,7 @@ export function InstanceListPanel({
               />
             }
           >
-            <AdminFilterField label='Search' htmlFor='instances-filter-search' className='sm:basis-72'>
+            <AdminFilterField label='Search' htmlFor='instances-filter-search' className='sm:basis-[14.4rem]'>
               <Input
                 id='instances-filter-search'
                 value={searchFilter.value}
