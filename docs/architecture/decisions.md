@@ -1150,6 +1150,22 @@ detector.
 - Fail-open keeps webhook and form latency bounded when the model is slow or
   unavailable.
 
+## Sales plan of the day (dashboard)
+
+**Decision:** Persist org-wide sales daily plans in `sales_daily_plans` and
+generate them on demand through the same async OpenRouter + SQS worker pattern
+as per-lead AI suggestions. The admin dashboard card loads the newest saved
+plan, shows a 24-hour (plus pipeline/inbox watermark) stale flag, and only
+regenerates when the operator clicks Generate insight.
+
+**Why:**
+- Operators need a saved plan they can reopen without paying for another model
+  call.
+- Org-wide context (pipeline, unanswered threads, catalogue) exceeds API
+  Gateway time limits, so generation stays off the request path.
+- Reusing the lead-AI OpenRouter / proxy / job-timing pattern keeps secrets and
+  failure handling consistent.
+
 ## API route module conventions
 
 **Decision:** Every route module under `backend/src/app/api/**` follows the same

@@ -89,6 +89,10 @@ export class MessagingNestedStack extends cdk.NestedStack {
   public readonly leadAiSuggestionQueue: sqs.Queue;
   public readonly leadAiSuggestionFunction: lambda.Function;
 
+  public readonly salesDailyPlanDLQ: sqs.Queue;
+  public readonly salesDailyPlanQueue: sqs.Queue;
+  public readonly salesDailyPlanFunction: lambda.Function;
+
   public constructor(scope: Construct, id: string, props: MessagingNestedStackProps) {
     super(scope, id, props);
 
@@ -637,6 +641,108 @@ export class MessagingNestedStack extends cdk.NestedStack {
       alarmDescription:
         "Lead AI suggestion messages failed processing and landed in DLQ",
       metric: this.leadAiSuggestionDLQ.metricApproximateNumberOfMessagesVisible({
+        period: cdk.Duration.minutes(5),
+      }),
+      threshold: 1,
+      evaluationPeriods: 1,
+      treatMissingData: cdk.aws_cloudwatch.TreatMissingData.NOT_BREACHING,
+    });
+
+    // -------------------------------------------------------------------------
+    // Sales daily plan (direct SQS; OpenRouter org-wide plan of the day)
+    // -------------------------------------------------------------------------
+
+    this.salesDailyPlanDLQ = new sqs.Queue(this, "SalesDailyPlanDLQ", {
+      queueName: name("sales-daily-plan-dlq"),
+      retentionPeriod: cdk.Duration.days(14),
+      encryption: sqs.QueueEncryption.KMS,
+      encryptionMasterKey: props.sqsEncryptionKey,
+    });
+
+    this.salesDailyPlanQueue = new sqs.Queue(this, "SalesDailyPlanQueue", {
+      queueName: name("sales-daily-plan-queue"),
+      visibilityTimeout: cdk.Duration.seconds(180),
+      deadLetterQueue: {
+        queue: this.salesDailyPlanDLQ,
+        maxReceiveCount: 3,
+      },
+      encryption: sqs.QueueEncryption.KMS,
+      encryptionMasterKey: props.sqsEncryptionKey,
+    });
+
+    this.salesDailyPlanFunction = createPythonFunction("SalesDailyPlanFunction", {
+      handler: "lambda/sales_daily_plan/handler.lambda_handler",
+      timeout: cdk.Duration.seconds(120),
+      manageLogGroup: false,
+      reservedConcurrentExecutions: -1,
+      environment: {
+        SALES_DAILY_PLAN_LAMBDA_TIMEOUT_SECONDS: "120",
+        SALES_DAILY_PLAN_OPENROUTER_TIMEOUT_SECONDS: "90",
+        DATABASE_SECRET_ARN: props.databaseSecretArn,
+        DATABASE_NAME: "evolvesprouts",
+        DATABASE_USERNAME: "evolvesprouts_admin",
+        DATABASE_PROXY_ENDPOINT: props.databaseProxyEndpoint,
+        DATABASE_IAM_AUTH: "true",
+        OPENROUTER_API_KEY_SECRET_ARN: props.openrouterApiSecretArn,
+        OPENROUTER_CHAT_COMPLETIONS_URL: props.openrouterChatCompletionsUrl,
+        OPENROUTER_MODEL: props.openrouterModel,
+        AWS_PROXY_FUNCTION_ARN: props.awsProxyFunctionArn,
+      },
+    });
+
+    this.salesDailyPlanFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"],
+        resources: [props.databaseSecretArn, props.openrouterApiSecretArn],
+      })
+    );
+    if (props.databaseSecretKmsKeyArn) {
+      this.salesDailyPlanFunction.addToRolePolicy(
+        new iam.PolicyStatement({
+          actions: ["kms:Decrypt"],
+          resources: [props.databaseSecretKmsKeyArn],
+        })
+      );
+    }
+    if (props.openrouterApiSecretKmsKeyArn) {
+      this.salesDailyPlanFunction.addToRolePolicy(
+        new iam.PolicyStatement({
+          actions: ["kms:Decrypt"],
+          resources: [props.openrouterApiSecretKmsKeyArn],
+        })
+      );
+    }
+    this.salesDailyPlanFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["rds-db:connect"],
+        resources: [
+          cdk.Fn.join("", [
+            "arn:", cdk.Aws.PARTITION, ":rds-db:", cdk.Aws.REGION, ":", cdk.Aws.ACCOUNT_ID,
+            ":dbuser:", cdk.Fn.select(6, cdk.Fn.split(":", props.databaseProxyArn)),
+            "/evolvesprouts_admin",
+          ]),
+        ],
+      })
+    );
+    this.salesDailyPlanFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["lambda:InvokeFunction"],
+        resources: [props.awsProxyFunctionArn],
+      })
+    );
+
+    this.salesDailyPlanFunction.addEventSource(
+      new lambdaEventSources.SqsEventSource(this.salesDailyPlanQueue, {
+        batchSize: 1,
+        reportBatchItemFailures: true,
+      })
+    );
+
+    new cdk.aws_cloudwatch.Alarm(this, "SalesDailyPlanDLQAlarm", {
+      alarmName: name("sales-daily-plan-dlq-alarm"),
+      alarmDescription:
+        "Sales daily plan messages failed processing and landed in DLQ",
+      metric: this.salesDailyPlanDLQ.metricApproximateNumberOfMessagesVisible({
         period: cdk.Duration.minutes(5),
       }),
       threshold: 1,

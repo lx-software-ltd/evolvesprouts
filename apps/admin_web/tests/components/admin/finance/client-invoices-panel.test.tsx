@@ -1022,9 +1022,16 @@ describe('ClientInvoicesPanel', () => {
     });
     await user.selectOptions(screen.getByLabelText(/invoice line/i), lineId);
 
-    const amountField = document.getElementById('billing-allocate-amount') as HTMLInputElement;
-    await user.clear(amountField);
-    await user.type(amountField, '25');
+    const amountField = await waitFor(() => {
+      const field = document.getElementById('billing-allocate-amount') as HTMLInputElement | null;
+      expect(field).toBeTruthy();
+      expect(field).not.toBeDisabled();
+      return field!;
+    });
+    fireEvent.change(amountField, { target: { value: '25' } });
+    await waitFor(() => {
+      expect(document.getElementById('billing-allocate-amount')).toHaveValue('25');
+    });
 
     await user.click(screen.getByRole('button', { name: /^create allocation$/i }));
 

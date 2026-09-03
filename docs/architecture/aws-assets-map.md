@@ -402,6 +402,7 @@ Each Lambda function created by `PythonLambda` construct includes:
 | `ApiKeyRotationFunction` | `lambda/api_key_rotation/handler.lambda_handler` | 256 MB | 60s | Yes | Scheduled API key rotation |
 | `MediaRequestProcessor` | `lambda/media_processor/handler.lambda_handler` | 512 MB | 30s | Yes | SQS-triggered media processor (nested stack `evolvesprouts-Messaging`) |
 | `ExpenseParserFunction` | `lambda/expense_parser/handler.lambda_handler` | 512 MB | 90s | Yes | SQS-triggered expense invoice parser (nested stack `evolvesprouts-Messaging`) |
+| `SalesDailyPlanFunction` | `lambda/sales_daily_plan/handler.lambda_handler` | 512 MB | 120s | Yes | SQS-triggered org-wide sales daily plan (nested stack `evolvesprouts-Messaging`) |
 | `InboundInvoiceEmailProcessor` | `lambda/inbound_invoice_email/handler.lambda_handler` | 512 MB | 30s | Yes | SQS-triggered inbound invoice email processor |
 | `EventbriteSyncProcessor` | `lambda/eventbrite_sync_processor/handler.lambda_handler` | 512 MB | 60s | Yes | SQS-triggered Eventbrite sync processor |
 
@@ -443,6 +444,7 @@ For each function above, the following resources are created:
 | `MediaRequestProcessor` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, SES send email + **SendTemplatedEmail** (internal + `AuthEmailFromAddress` identities), read Mailchimp secret and `PublicWwwConfigSecret` (KMS decrypt with the shared Secrets Manager CMK), invoke `AwsApiProxyFunction`; `ASSET_SHARE_LINK_BASE_URL`, `ASSET_SHARE_LINK_DEFAULT_ALLOWED_DOMAINS`, `MAILCHIMP_MEDIA_DOWNLOAD_MERGE_TAG` for Mailchimp download URL merge field; optional `MAILCHIMP_FREE_RESOURCE_JOURNEY_ID` / `MAILCHIMP_FREE_RESOURCE_JOURNEY_STEP_ID` for free-resource Customer Journey trigger; `MAILCHIMP_REQUIRE_MARKETING_CONSENT` + welcome journey env vars (see `aws-messaging.md`); `PUBLIC_WWW_CONFIG_SECRET_ARN` is shared with the admin Lambda and supplies `BASE_URL` and optional social URLs / `BUSINESS_PHONE_NUMBER` for the media download email shell; `SALES_RECAP_DISPLAY_TIMEZONE` from `SalesRecapDisplayTimezone` (optional; app default if empty) |
 | `SesTemplateManagerFunction` | SES template CRUD (`CreateTemplate`, `UpdateTemplate`, `DeleteTemplate`, `GetTemplate`) for CloudFormation custom resource `SesEmailTemplates` (nested stack `evolvesprouts-Messaging`) |
 | `ExpenseParserFunction` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, S3 read for the assets bucket, read OpenRouter API secret (Secrets Manager + KMS decrypt on the `secrets-encryption-key` CMK), invoke `AwsApiProxyFunction` |
+| `SalesDailyPlanFunction` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, read OpenRouter API secret (Secrets Manager + KMS decrypt on the `secrets-encryption-key` CMK), invoke `AwsApiProxyFunction` |
 | `InboundInvoiceEmailProcessor` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, S3 read/write for the assets bucket (including the `inbound-email/raw/` prefix), publish to the expense parser SNS topic |
 | `EventbriteSyncProcessor` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, read Eventbrite token secret, invoke `AwsApiProxyFunction` |
 | `InboxImportFunction` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, S3 read on the assets bucket, invoke `AwsApiProxyFunction` for Graph HTTP; Graph token is `META_PAGE_ACCESS_TOKEN` from `MetaPageAccessToken`; `PUBLIC_WWW_INSTAGRAM_URL` from `PublicWwwInstagramUrl` skips Graph threads whose participant username is the business Instagram handle |
@@ -735,6 +737,8 @@ These raster files ship with `EvolvesproutsAdminFunction` under `backend/src/app
 | `ExpenseParserDLQUrl` | SQS DLQ URL | Failed expense parser messages (from nested stack `evolvesprouts-Messaging`) |
 | `BulkExpenseImportQueueUrl` | SQS queue URL | Async bulk combined-PDF import jobs (from nested stack `evolvesprouts-Messaging`) |
 | `BulkExpenseImportDLQUrl` | SQS DLQ URL | Failed bulk expense import messages (from nested stack `evolvesprouts-Messaging`) |
+| `SalesDailyPlanQueueUrl` | SQS queue URL | Async org-wide sales daily plan jobs (from nested stack `evolvesprouts-Messaging`) |
+| `SalesDailyPlanDLQUrl` | SQS DLQ URL | Failed sales daily plan messages (from nested stack `evolvesprouts-Messaging`) |
 | `EventbriteSyncTopicArn` | SNS topic ARN | Eventbrite sync events topic (from nested stack `evolvesprouts-EventbriteSync`) |
 | `EventbriteSyncQueueUrl` | SQS queue URL | Eventbrite sync processing queue (from nested stack `evolvesprouts-EventbriteSync`) |
 | `EventbriteSyncDLQUrl` | SQS DLQ URL | Failed Eventbrite sync jobs (SQS redrive; from nested stack `evolvesprouts-EventbriteSync`) |

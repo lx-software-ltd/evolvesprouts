@@ -96,6 +96,10 @@ their primary responsibilities.
   enqueues async generation on `LeadAiSuggestionFunction` via SQS; poll
   `/v1/admin/leads/{id}/ai-suggestion/jobs/{job_id}` for status and timing),
   `/v1/admin/leads/{id}/ai-suggestion/jobs/{job_id}` (GET job status / duration),
+  `/v1/admin/leads/daily-plan` (GET latest stored org-wide sales plan of the day /
+  POST enqueues async generation on `SalesDailyPlanFunction` via SQS; poll
+  `/v1/admin/leads/daily-plan/jobs/{job_id}` for status and timing),
+  `/v1/admin/leads/daily-plan/jobs/{job_id}` (GET job status / duration),
   `/v1/admin/contacts/*` (including `GET /v1/admin/contacts` optional `contact_type` filter;
   list and single-contact responses include read-only `family_location_summary` and
   `organization_location_summary` when the contact is linked to a family or organisation that has a venue location,
@@ -315,7 +319,7 @@ their primary responsibilities.
   (list supports optional `area_id`, `search` on address, cursor pagination, and `total_count`),
   CRM contact/family/organization management with soft-archive, locations, tags,
   and family/organization membership rows,
-  sales pipeline lead management (list/detail/create/update/notes/export/analytics),
+  sales pipeline lead management (list/detail/create/update/notes/export/analytics/daily-plan),
   vendor management, expense invoice ingestion and listing (newest `invoice_date` first, undated last), amendment/void/pay/draft-delete flows
   (mark-paid requires vendor, invoice date, currency, and total), and admin-user
   listing for lead assignment and instructor-group listing for service instances
@@ -569,6 +573,29 @@ their primary responsibilities.
     `wa.me/<digits>` for reliable email-client rendering. Lambdas read it via
     the existing Secrets Manager VPC interface endpoint with a five-minute
     in-process cache; see `app.config.public_www`.)
+
+### Sales daily plan processor
+- Function: SalesDailyPlanFunction
+- Handler: backend/lambda/sales_daily_plan/handler.py
+- Stack: nested stack `evolvesprouts-Messaging`
+- Trigger: SQS queue (`evolvesprouts-sales-daily-plan-queue`) with plain JSON bodies
+  `{ "job_id": "<uuid>" }` (not SNS-wrapped)
+- Purpose: generate an org-wide sales plan of the day from open pipeline, unanswered
+  WhatsApp/Meta threads, published catalogue, and recent won/lost leads via OpenRouter
+  (`AwsApiProxyFunction`). Persists `sales_daily_plans` and marks
+  `sales_daily_plan_jobs` `succeeded` or `failed`. Does not send messages.
+- DB access: RDS Proxy with IAM auth (`evolvesprouts_admin`)
+- VPC: Yes
+- Permissions: Secrets Manager read for OpenRouter key, Lambda invoke permission
+  for `AwsApiProxyFunction`
+- Environment:
+  - `DATABASE_SECRET_ARN`, `DATABASE_NAME`, `DATABASE_USERNAME`,
+    `DATABASE_PROXY_ENDPOINT`, `DATABASE_IAM_AUTH`
+  - `OPENROUTER_API_KEY_SECRET_ARN`, `OPENROUTER_CHAT_COMPLETIONS_URL`,
+    `OPENROUTER_MODEL`
+  - `AWS_PROXY_FUNCTION_ARN`
+  - `SALES_DAILY_PLAN_LAMBDA_TIMEOUT_SECONDS` (120),
+    `SALES_DAILY_PLAN_OPENROUTER_TIMEOUT_SECONDS` (90)
 
 ### Expense parser processor
 - Function: ExpenseParserFunction

@@ -22,6 +22,12 @@ vi.mock('@/lib/billing-api', () => ({
   resolveBillToPrimaryContacts: (...args: unknown[]) => mockResolveBillToPrimaryContacts(...args),
 }));
 
+vi.mock('@/lib/sales-daily-plan-api', () => ({
+  fetchSalesDailyPlan: vi.fn(() => Promise.resolve(null)),
+  enqueueSalesDailyPlanJob: vi.fn(),
+  pollSalesDailyPlanJob: vi.fn(),
+}));
+
 import { DashboardPageBody } from '@/components/admin/dashboard/dashboard-page-body';
 import { ADMIN_TAX_FISCAL_YEAR_EMPTY_MESSAGE } from '@/lib/admin-tax-fiscal-year';
 
@@ -47,6 +53,7 @@ describe('DashboardPageBody', () => {
     await waitFor(() => {
       expect(screen.getByText(ADMIN_TAX_FISCAL_YEAR_EMPTY_MESSAGE)).toBeInTheDocument();
     });
+    expect(screen.getByRole('heading', { name: 'Sale Plan of the Day' })).toBeInTheDocument();
 
     expect(mockResolveBillToPrimaryContacts).not.toHaveBeenCalled();
   });

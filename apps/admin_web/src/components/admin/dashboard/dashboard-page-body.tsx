@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
+import { SalePlanOfTheDayCard } from '@/components/admin/dashboard/cards/sale-plan-of-the-day-card';
 import { TaxPositionCard } from '@/components/admin/dashboard/cards/tax-position-card';
 import { TopContactSpendersCard } from '@/components/admin/dashboard/cards/top-contact-spenders-card';
 import { toErrorMessage } from '@/hooks/hook-errors';
@@ -48,6 +49,7 @@ export function DashboardPageBody() {
 
   return (
     <div className='grid grid-cols-1 gap-6 lg:grid-cols-2'>
+      <SalePlanOfTheDayCard />
       <TaxPositionCard
         expenses={expenses}
         issuedInvoices={invoices}
