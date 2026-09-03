@@ -8,7 +8,7 @@ import { ContactIcon } from '@/components/icons/action-icons';
 import { AdminDataTableCell, AdminDataTableCellMeta } from '@/components/ui/admin-data-table';
 import { AdminExpandableRow } from '@/components/ui/admin-expandable-row';
 import { AdminRowActions } from '@/components/ui/admin-row-actions';
-import { formatDate, formatEnumLabel } from '@/lib/format';
+import { DISPLAY_PART_SEP, formatDate, formatEnumLabel } from '@/lib/format';
 import { adminContactDeepLink } from '@/lib/inbox-conversation-name';
 
 import { getStageBadgeClass } from './stage-utils';
@@ -34,6 +34,7 @@ export function LeadsTableRow({ lead, expanded, isChecked, onToggle, onCheck, de
   const contactId = lead.contact.id?.trim() ?? '';
   const name = leadDisplayName(lead);
   const stageLabel = formatEnumLabel(lead.funnelStage);
+  const typeLabel = formatEnumLabel(lead.leadType);
 
   return (
     <AdminExpandableRow
@@ -60,7 +61,11 @@ export function LeadsTableRow({ lead, expanded, isChecked, onToggle, onCheck, de
           </AdminDataTableCell>
           <AdminDataTableCell className='font-medium text-slate-900'>
             {name}
-            <AdminDataTableCellMeta>{stageLabel}</AdminDataTableCellMeta>
+            <AdminDataTableCellMeta>
+              {typeLabel}
+              {DISPLAY_PART_SEP}
+              {stageLabel}
+            </AdminDataTableCellMeta>
           </AdminDataTableCell>
           <AdminDataTableCell priority='tertiary' className='text-slate-700'>
             {lead.contact.source ? formatEnumLabel(lead.contact.source) : '—'}

@@ -37,7 +37,8 @@ Seed data lives in `backend/db/seed/seed_data.sql`.
 - Enum `funnel_stage`: `new`, `contacted`, `engaged`, `qualified`, `unqualified`,
   `converted`, `lost`.
 - Enum `lead_event_type`: `created`, `stage_changed`, `note_added`, `email_sent`,
-  `email_opened`, `guide_downloaded`, `assigned`, `converted`, `lost`.
+  `email_opened`, `guide_downloaded`, `action_recorded`, `assigned`,
+  `converted`, `lost`.
 - Enum `service_type`: `training_course`, `event`, `consultation`, `intro_call`.
 - Enum `service_status`: `draft`, `published`, `archived`.
 - Enum `service_delivery_mode`: `online`, `in_person`, `hybrid`.
@@ -534,12 +535,22 @@ maps legacy `note.id` to the **first** inserted row’s UUID.
 ### `sales_leads`
 
 - Purpose: lead lifecycle tracking for contacts/families/organizations.
-- Includes `lead_type`, `funnel_stage`, optional `asset_id`.
+- Includes `lead_type`, `funnel_stage`, optional `asset_id`, and `is_manual`
+  (true for admin **New lead**; automated paths leave it false).
+- Automated ingest (public forms, bookings, free-guide downloads, live
+  WhatsApp/Meta) reuses the contact's open lead or **reopens** the most
+  recent converted/lost lead instead of inserting another row. Subsequent
+  actions append `sales_lead_events` (`guide_downloaded` or
+  `action_recorded`).
 - `lost_reason` is a nullable controlled enum (`lead_lost_reason`):
   `price_too_high`, `value_not_understood`, `ghosted`, `language_mismatch`,
   `other`. Required by the admin API when setting `funnel_stage` to `lost`.
 - `sales_leads_guide_dedup_idx` enforces idempotency for media processing
   by unique (`contact_id`, `lead_type`, `asset_id`) when `asset_id` is present.
+- `sales_leads_one_open_contact_idx` allows at most one **non-manual** open
+  lead (`new` / `contacted` / `engaged` / `qualified` / `unqualified`) per
+  `contact_id`. Admin-created (`is_manual`) rows are excluded so operators
+  can still force a second open lead.
 
 ### `sales_settings`
 

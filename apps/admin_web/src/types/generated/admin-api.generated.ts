@@ -1264,7 +1264,10 @@ export interface paths {
             };
         };
         put?: never;
-        /** Create sales lead */
+        /**
+         * Create sales lead
+         * @description Always inserts a new lead (`is_manual: true`) even when the contact already has an open automated lead. Automated public and inbox paths reuse or reopen the contact's existing lead instead.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -6854,7 +6857,7 @@ export interface components {
         /** @enum {string} */
         LeadType: "free_guide" | "event_inquiry" | "program_enrollment" | "consultation" | "partnership" | "other";
         /** @enum {string} */
-        LeadEventType: "created" | "stage_changed" | "note_added" | "email_sent" | "email_opened" | "guide_downloaded" | "assigned" | "converted" | "lost";
+        LeadEventType: "created" | "stage_changed" | "note_added" | "email_sent" | "email_opened" | "guide_downloaded" | "action_recorded" | "assigned" | "converted" | "lost";
         /** @enum {string} */
         ContactSource: "free_guide" | "newsletter" | "contact_form" | "reservation" | "referral" | "instagram" | "facebook" | "manual" | "whatsapp" | "linkedin" | "event" | "phone_call" | "public_website";
         LeadContact: {

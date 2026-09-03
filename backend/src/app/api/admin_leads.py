@@ -242,6 +242,7 @@ def _create_lead(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, Any]:
                 lead_type=payload["lead_type"],
                 funnel_stage=FunnelStage.NEW,
                 assigned_to=assigned_to,
+                is_manual=True,
             ),
             LeadEventType.CREATED,
             from_stage=None,
