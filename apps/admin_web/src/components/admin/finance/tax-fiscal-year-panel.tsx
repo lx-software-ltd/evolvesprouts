@@ -5,15 +5,12 @@ import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import { WarningTriangleIcon } from '@/components/icons/action-icons';
 import { Button } from '@/components/ui/button';
 import {
-  AdminDataTable,
-  AdminDataTableBody,
   AdminDataTableCell,
-  AdminDataTableHead,
+  AdminDataTableCellMeta,
   AdminDataTableHeadCell,
 } from '@/components/ui/admin-data-table';
-import { AdminTableToolbar } from '@/components/ui/admin-table-toolbar';
-import { Label } from '@/components/ui/label';
-import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
+import { AdminFilterBar, AdminFilterField } from '@/components/ui/admin-filter-bar';
+import { AdminRecordTable } from '@/components/ui/admin-record-table';
 import { Select } from '@/components/ui/select';
 import { toErrorMessage } from '@/hooks/hook-errors';
 import { useFxMultipliersForCurrencies } from '@/hooks/use-fx-multipliers-for-currencies';
@@ -38,6 +35,8 @@ import {
 } from '@/lib/tax-fiscal-year-report';
 import { formatMoneyLineWithFxToDefault } from '@/lib/vendor-spend';
 import type { Expense } from '@/types/expenses';
+
+const COLUMN_COUNT = 6;
 
 function isTaxDisplayedAsDash(tax: string | undefined): boolean {
   const t = tax?.trim() ?? '';
@@ -129,26 +128,45 @@ export function TaxFiscalYearPanel() {
   }, [rows, fyStartYear, statusFilter]);
 
   const tableError = [loadError, fxError].filter(Boolean).join(' • ');
+  const controlsDisabled = isLoading || Boolean(tableError);
+
+  function formatAmount(value: string | undefined, currency: string | undefined): string {
+    if (fxMultipliers === null && rowsNeedForeignFx) {
+      return '…';
+    }
+    return formatMoneyLineWithFxToDefault(value ?? '', currency, fxMultipliers ?? new Map());
+  }
 
   return (
-    <PaginatedTableCard
-      title='Tax'
-      description={`Hong Kong fiscal year ${fyMeta.start} to ${fyMeta.end}. Expenses use invoice date when set; otherwise paid date. Revenue uses invoice totals by the invoice date (issue timestamp if missing).`}
+    <AdminRecordTable
+      aria-label='Tax fiscal year'
+      columnCount={COLUMN_COUNT}
+      rowCount={rows.length}
       isLoading={isLoading}
-      isLoadingMore={false}
-      hasMore={false}
       error={tableError}
-      loadingLabel='Loading expenses and invoices…'
-      onLoadMore={() => {}}
-      toolbar={
-        <AdminTableToolbar>
-          <div className='min-w-[220px]'>
-            <Label htmlFor={fySelectId}>Fiscal year</Label>
+      errorTitle='Tax'
+      emptyLabel={ADMIN_TAX_FISCAL_YEAR_EMPTY_MESSAGE}
+      filters={
+        <AdminFilterBar
+          summary={`Hong Kong fiscal year ${fyMeta.start} to ${fyMeta.end}. Expenses use invoice date when set; otherwise paid date. Revenue uses invoice totals by the invoice date (issue timestamp if missing).`}
+          trailing={
+            <Button
+              type='button'
+              variant='outline'
+              className='h-10 w-full sm:h-9 sm:w-auto'
+              onClick={() => downloadCsv()}
+              disabled={controlsDisabled || rows.length === 0}
+            >
+              Download CSV
+            </Button>
+          }
+        >
+          <AdminFilterField label='Fiscal year' htmlFor={fySelectId} className='sm:basis-44'>
             <Select
               id={fySelectId}
               value={String(fyStartYear)}
               onChange={(event) => setFyStartYear(Number.parseInt(event.target.value, 10))}
-              disabled={isLoading || Boolean(tableError)}
+              disabled={controlsDisabled}
             >
               {fyYearOptions.map((y) => {
                 const range = getFiscalYearRangeInclusive(y);
@@ -160,14 +178,13 @@ export function TaxFiscalYearPanel() {
                 );
               })}
             </Select>
-          </div>
-          <div className='min-w-[180px]'>
-            <Label htmlFor={statusSelectId}>Status</Label>
+          </AdminFilterField>
+          <AdminFilterField label='Status' htmlFor={statusSelectId} className='sm:basis-44'>
             <Select
               id={statusSelectId}
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value as TaxFiscalYearStatusFilter)}
-              disabled={isLoading || Boolean(tableError)}
+              disabled={controlsDisabled}
             >
               {TAX_FISCAL_YEAR_STATUS_FILTERS.map((entry) => (
                 <option key={entry} value={entry}>
@@ -175,82 +192,63 @@ export function TaxFiscalYearPanel() {
                 </option>
               ))}
             </Select>
-          </div>
-          <Button
-            type='button'
-            variant='outline'
-            onClick={() => downloadCsv()}
-            disabled={isLoading || Boolean(tableError) || rows.length === 0}
-          >
-            Download CSV
-          </Button>
-        </AdminTableToolbar>
+          </AdminFilterField>
+        </AdminFilterBar>
+      }
+      head={
+        <tr>
+          <AdminDataTableHeadCell>Description</AdminDataTableHeadCell>
+          <AdminDataTableHeadCell priority='secondary'>Type</AdminDataTableHeadCell>
+          <AdminDataTableHeadCell priority='secondary'>Date</AdminDataTableHeadCell>
+          <AdminDataTableHeadCell className='text-right'>Amount</AdminDataTableHeadCell>
+          <AdminDataTableHeadCell priority='tertiary' className='text-right'>
+            Tax
+          </AdminDataTableHeadCell>
+          <AdminDataTableHeadCell priority='tertiary'>Status</AdminDataTableHeadCell>
+        </tr>
       }
     >
-      <AdminDataTable tableClassName='min-w-[920px]'>
-        <AdminDataTableHead>
-          <tr>
-            <AdminDataTableHeadCell>Type</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell>Date</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell>Description</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell>Amount</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell>Tax</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell>Status</AdminDataTableHeadCell>
+      {rows.map((row) => {
+        const kindLabel = row.kind === 'revenue' ? 'Revenue' : 'Expense';
+        const dateLabel = formatDateOnly(row.classificationDate);
+        const statusLabel = row.status !== '' ? row.status : '—';
+        return (
+          <tr key={`${row.kind}:${row.referenceId}`}>
+            <AdminDataTableCell>
+              <p className='font-medium text-slate-900'>{row.description}</p>
+              <AdminDataTableCellMeta>
+                {kindLabel} · {dateLabel} · {statusLabel}
+              </AdminDataTableCellMeta>
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>{kindLabel}</AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>
+              <div className='flex flex-wrap items-center gap-2'>
+                <span>{dateLabel}</span>
+                {row.needsInvoiceDateWarning ? (
+                  <span
+                    className='inline-flex items-center gap-1 text-xs font-medium text-amber-700'
+                    title={
+                      row.kind === 'revenue'
+                        ? 'Invoice date missing — classified using issue timestamp'
+                        : 'Vendor invoice date missing — classified using paid date'
+                    }
+                  >
+                    <WarningTriangleIcon className='h-4 w-4 shrink-0 text-amber-600' aria-hidden />
+                    Needs date
+                  </span>
+                ) : null}
+              </div>
+            </AdminDataTableCell>
+            <AdminDataTableCell className='text-right tabular-nums'>
+              {formatAmount(row.amount, row.currency)}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary' className='text-right tabular-nums'>
+              {isTaxDisplayedAsDash(row.tax) ? '—' : formatAmount(row.tax, row.currency)}
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>{statusLabel}</AdminDataTableCell>
           </tr>
-        </AdminDataTableHead>
-        <AdminDataTableBody>
-          {!isLoading && !tableError && rows.length === 0 ? (
-            <tr>
-              <AdminDataTableCell colSpan={6} className='py-6 text-slate-600'>
-                {ADMIN_TAX_FISCAL_YEAR_EMPTY_MESSAGE}
-              </AdminDataTableCell>
-            </tr>
-          ) : null}
-          {rows.map((row) => (
-            <tr key={`${row.kind}:${row.referenceId}`}>
-              <AdminDataTableCell>{row.kind === 'revenue' ? 'Revenue' : 'Expense'}</AdminDataTableCell>
-              <AdminDataTableCell>
-                <div className='flex flex-wrap items-center gap-2'>
-                  <span>{formatDateOnly(row.classificationDate)}</span>
-                  {row.needsInvoiceDateWarning ? (
-                    <span
-                      className='inline-flex items-center gap-1 text-xs font-medium text-amber-700'
-                      title={
-                        row.kind === 'revenue'
-                          ? 'Invoice date missing — classified using issue timestamp'
-                          : 'Vendor invoice date missing — classified using paid date'
-                      }
-                    >
-                      <WarningTriangleIcon className='h-4 w-4 shrink-0 text-amber-600' aria-hidden />
-                      Needs date
-                    </span>
-                  ) : null}
-                </div>
-              </AdminDataTableCell>
-              <AdminDataTableCell>
-                <p className='font-medium text-slate-900'>{row.description}</p>
-              </AdminDataTableCell>
-              <AdminDataTableCell>
-                <span className='tabular-nums'>
-                  {fxMultipliers === null && rowsNeedForeignFx
-                    ? '…'
-                    : formatMoneyLineWithFxToDefault(row.amount, row.currency, fxMultipliers ?? new Map())}
-                </span>
-              </AdminDataTableCell>
-              <AdminDataTableCell>
-                <span className='tabular-nums'>
-                  {isTaxDisplayedAsDash(row.tax)
-                    ? '—'
-                    : fxMultipliers === null && rowsNeedForeignFx
-                      ? '…'
-                      : formatMoneyLineWithFxToDefault(row.tax, row.currency, fxMultipliers ?? new Map())}
-                </span>
-              </AdminDataTableCell>
-              <AdminDataTableCell>{row.status !== '' ? row.status : '—'}</AdminDataTableCell>
-            </tr>
-          ))}
-        </AdminDataTableBody>
-      </AdminDataTable>
-    </PaginatedTableCard>
+        );
+      })}
+    </AdminRecordTable>
   );
 }
