@@ -1,10 +1,9 @@
 'use client';
 
-import type { ReactNode } from 'react';
-
 import { ActionBadge, SourceBadge } from '@/components/admin/audit/audit-log-badges';
 import { AdminEditorPanel } from '@/components/ui/admin-editor-panel';
 import { AdminFieldGrid } from '@/components/ui/admin-field-grid';
+import { AdminReadOnlyValue as Value } from '@/components/ui/admin-read-only-value';
 import { formatDate } from '@/lib/format';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -13,17 +12,6 @@ type AuditLog = components['schemas']['AuditLog'];
 
 function formatJson(obj: Record<string, unknown> | null | undefined): string {
   return obj ? JSON.stringify(obj, null, 2) : '—';
-}
-
-function Value({ label, children, mono = false }: { label: string; children: ReactNode; mono?: boolean }) {
-  return (
-    <div className='min-w-0 text-sm'>
-      <span className='block text-xs font-medium text-slate-500'>{label}</span>
-      <div className={mono ? 'mt-1 wrap-anywhere font-mono text-xs text-slate-800' : 'mt-1 text-slate-800'}>
-        {children}
-      </div>
-    </div>
-  );
 }
 
 /** Full audit row payload, rendered inside the expanded log row. */

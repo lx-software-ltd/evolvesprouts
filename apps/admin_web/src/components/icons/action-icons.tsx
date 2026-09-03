@@ -23,3 +23,4 @@ export { default as InvoiceIcon } from './svg/invoice-icon.svg';
 export { default as MoreHorizontalIcon } from './svg/more-horizontal-icon.svg';
 export { default as ChevronDownIcon } from './svg/chevron-down-icon.svg';
 export { default as SpinnerIcon } from './svg/spinner-icon.svg';
+export { default as DownloadIcon } from './svg/download-icon.svg';
