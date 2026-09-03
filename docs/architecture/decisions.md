@@ -415,11 +415,19 @@ a pinned row, and collapses unresolvable ids.
   on the grey page background; the 2px `slate-300` frame around an open record
   (top and sides on the summary row, sides and bottom on the detail region)
   makes its extent legible when the next row follows immediately and lets the
-  summary row read as the card's title bar.
+  summary row read as the card's title bar. The frame is drawn with inset
+  box-shadows on the summary cells and the detail region rather than borders:
+  in a collapsed-border table only half of an outer row border is visible (the
+  other half is clipped by the scroll wrapper), which left the summary row's
+  edge a pixel or two inside the detail's edge.
 - Tables must read on a phone without horizontal scrolling. Columns carry a
   priority (`primary` always, `secondary` from `md`, `tertiary` from `lg`) and
   the identifying cell surfaces the most useful hidden value as a meta line
-  while its column is hidden, so no `min-w-*` is set on record tables.
+  while its column is hidden, so no `min-w-*` is set on record tables. Cell
+  content must not set a nowrap minimum width either: meta lines and long free
+  text use `wrap-anywhere`, and the Operations header label is `sr-only` below
+  `md`, because a single `truncate` (nowrap) email or an `OPERATIONS` heading
+  was enough to push nested notes and members tables past a 390px viewport.
 - The create control spells out its label (`New contact`, `New note`) at
   every breakpoint and matches the filter input height so the toolbar reads as
   one band; a bare `+` was easy to miss and did not say what it created. On
