@@ -79,6 +79,19 @@ describe('TagsPage', () => {
     expect(screen.queryByRole('cell', { name: /Beta/ })).not.toBeInTheDocument();
   });
 
+  it('separates a system tag name from its marker so the cell can wrap on a phone', async () => {
+    mockListAdminTags.mockResolvedValue([
+      { ...tagAlpha, id: 't-sys', name: 'client_document', is_system: true, usage_count: 3 },
+    ]);
+    render(<TagsPage />);
+
+    const cell = await screen.findByRole('cell', { name: /client_document/ });
+    // A real space between the name and "(system)" gives the browser a break
+    // opportunity; a margin alone would leave one unbreakable token.
+    expect(cell.textContent).toContain('client_document (system)');
+    expect(cell.className).toContain('max-md:wrap-anywhere');
+  });
+
   it('disables delete when usage is greater than zero and offers Archive', async () => {
     render(<TagsPage />);
     await screen.findByRole('cell', { name: /Alpha/ });

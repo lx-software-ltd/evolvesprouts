@@ -8,9 +8,18 @@ import { twMerge } from 'tailwind-merge';
 /**
  * Admin listing tables use a single cell padding and header weight everywhere.
  * Prefer `AdminDataTableHeadCell` / `AdminDataTableCell` over ad-hoc `px-*` / `py-*` on `th`/`td`.
+ *
+ * Below `md` every cell gets `overflow-wrap: anywhere`. With the auto table
+ * layout a column can never be narrower than its longest unbreakable token
+ * (a `snake_case` table name, a UUID, a timestamp), so one long value makes
+ * the whole table wider than its card and the phone has to scroll sideways.
+ * `anywhere` counts those break opportunities in the min-content width, so
+ * the table always fits its container and only breaks a word when the
+ * column really is narrower than that word. Desktop layout is unchanged.
  */
-const adminDataTableHeadCellBase = 'px-4 py-3 text-left font-semibold';
-const adminDataTableBodyCellBase = 'px-4 py-3';
+const adminDataTableCellMobileWrap = 'max-md:wrap-anywhere';
+const adminDataTableHeadCellBase = `px-4 py-3 text-left font-semibold ${adminDataTableCellMobileWrap}`;
+const adminDataTableBodyCellBase = `px-4 py-3 ${adminDataTableCellMobileWrap}`;
 
 export interface AdminDataTableProps {
   children: ReactNode;
