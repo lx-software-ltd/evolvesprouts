@@ -138,6 +138,33 @@ describe('LeadsBulkActions', () => {
     expect(onBulkStageChange).toHaveBeenCalledWith('lost', 'price_too_high');
   });
 
+  it('places merge leads before assign dropdown with white background', () => {
+    render(
+      <LeadsBulkActions
+        selectedCount={2}
+        selectedLeads={sampleLeads}
+        users={[{ sub: 'user-1', name: 'Alex', email: 'alex@example.com' }]}
+        onBulkAssign={vi.fn()}
+        onBulkStageChange={vi.fn()}
+        onBulkMerge={vi.fn()}
+      />
+    );
+
+    const toolbar = screen.getByTestId('leads-bulk-actions');
+    const controls = toolbar.querySelector('.flex.flex-col.gap-2');
+    expect(controls).not.toBeNull();
+
+    const mergeButton = screen.getByRole('button', { name: 'Merge leads' });
+    const assignSelect = screen.getByRole('combobox', { name: 'Bulk assign assignee' });
+    const stageSelect = screen.getByRole('combobox', { name: 'Bulk set stage' });
+
+    expect(mergeButton).toHaveClass('bg-white');
+    expect(
+      Array.from(controls!.children).map((element) => element.getAttribute('aria-label') ?? element.textContent)
+    ).toEqual(['Merge leads', 'Bulk assign assignee', 'Bulk set stage']);
+    expect(assignSelect.compareDocumentPosition(stageSelect) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('merges selected leads after choosing a keeper', async () => {
     const user = userEvent.setup();
     const onBulkMerge = vi.fn();
