@@ -19,7 +19,6 @@ import { AdminRowActions } from '@/components/ui/admin-row-actions';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { useCalendarManualBlocks, type CalendarBlockPeriod } from '@/hooks/use-calendar-manual-blocks';
 import { DRAFT_RECORD_ID } from '@/hooks/use-expanded-record';
 
@@ -76,11 +75,12 @@ function BlockEditor({ page }: { page: ReturnType<typeof useCalendarManualBlocks
             </Select>
           </AdminField>
           <AdminField label='Note (optional)' htmlFor='calendar-block-note' span={2}>
-            <Textarea
+            <Input
               id='calendar-block-note'
+              type='text'
+              autoComplete='off'
               value={page.note}
               onChange={(event) => page.setNote(event.target.value)}
-              rows={2}
               maxLength={500}
             />
           </AdminField>
