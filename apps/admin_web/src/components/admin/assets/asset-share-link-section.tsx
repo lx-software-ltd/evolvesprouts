@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import type { AdminAsset } from '@/types/assets';
 
 import {
+  buildAssetEmailDownloadUrlFromShareUrl,
   getAdminAssetShareLink,
   getOrCreateAdminAssetShareLink,
   revokeAdminAssetShareLink,
@@ -38,6 +39,7 @@ function parseAllowedDomainList(input: string): string[] {
 export function AssetShareLinkSection({ selectedAsset }: { selectedAsset: AdminAsset }) {
   const [confirmDialogProps, requestConfirm] = useConfirmDialog();
   const [isCopyingLink, setIsCopyingLink] = useState(false);
+  const [isCopyingEmailLink, setIsCopyingEmailLink] = useState(false);
   const [isRotatingLink, setIsRotatingLink] = useState(false);
   const [isRevokingLink, setIsRevokingLink] = useState(false);
   const [isSavingLinkPolicy, setIsSavingLinkPolicy] = useState(false);
@@ -47,6 +49,8 @@ export function AssetShareLinkSection({ selectedAsset }: { selectedAsset: AdminA
     DEFAULT_ALLOWED_SHARE_DOMAINS
   );
   const { copiedKey: copiedLinkFeedbackKey, markCopied: markShareLinkCopied } = useCopyFeedback(1000);
+  const { copiedKey: copiedEmailLinkFeedbackKey, markCopied: markEmailLinkCopied } =
+    useCopyFeedback(1000);
 
   useEffect(() => {
     let isCancelled = false;
@@ -87,10 +91,26 @@ export function AssetShareLinkSection({ selectedAsset }: { selectedAsset: AdminA
         setAllowedDomainsInput(link.allowedDomains.join('\n'));
       }
       setLinkError('');
-      markShareLinkCopied(selectedAsset.id);
+      markShareLinkCopied(`share-${selectedAsset.id}`);
     } catch (error) {
       setLinkError(
         error instanceof Error ? error.message : 'Unable to copy the link to clipboard.'
+      );
+    }
+  };
+
+  const applyEmailLinkCopiedUi = async (link: AssetShareLink) => {
+    try {
+      const emailDownloadUrl = buildAssetEmailDownloadUrlFromShareUrl(link.shareUrl);
+      await copyTextToClipboard(emailDownloadUrl);
+      if (link.allowedDomains.length > 0) {
+        setAllowedDomainsInput(link.allowedDomains.join('\n'));
+      }
+      setLinkError('');
+      markEmailLinkCopied(`email-${selectedAsset.id}`);
+    } catch (error) {
+      setLinkError(
+        error instanceof Error ? error.message : 'Unable to copy the email link to clipboard.'
       );
     }
   };
@@ -107,6 +127,23 @@ export function AssetShareLinkSection({ selectedAsset }: { selectedAsset: AdminA
       setLinkError(error instanceof Error ? error.message : 'Unable to copy the link to clipboard.');
     } finally {
       setIsCopyingLink(false);
+    }
+  };
+
+  const handleCopyEmailLink = async () => {
+    setIsCopyingEmailLink(true);
+    setLinkError('');
+    setLinkNotice('');
+    try {
+      const policyInput = buildSharePolicyInput();
+      const link = await getOrCreateAdminAssetShareLink(selectedAsset.id, policyInput);
+      await applyEmailLinkCopiedUi(link);
+    } catch (error) {
+      setLinkError(
+        error instanceof Error ? error.message : 'Unable to copy the email link to clipboard.'
+      );
+    } finally {
+      setIsCopyingEmailLink(false);
     }
   };
 
@@ -180,9 +217,14 @@ export function AssetShareLinkSection({ selectedAsset }: { selectedAsset: AdminA
   };
 
   const areLinkButtonsDisabled =
-    isCopyingLink || isRotatingLink || isRevokingLink || isSavingLinkPolicy;
+    isCopyingLink ||
+    isCopyingEmailLink ||
+    isRotatingLink ||
+    isRevokingLink ||
+    isSavingLinkPolicy;
 
-  const isLinkCopied = copiedLinkFeedbackKey === selectedAsset.id;
+  const isLinkCopied = copiedLinkFeedbackKey === `share-${selectedAsset.id}`;
+  const isEmailLinkCopied = copiedEmailLinkFeedbackKey === `email-${selectedAsset.id}`;
 
   return (
     <>
@@ -205,6 +247,17 @@ export function AssetShareLinkSection({ selectedAsset }: { selectedAsset: AdminA
             onClick={() => void handleCopyAssetLink()}
           >
             {isLinkCopied ? 'Link copied' : 'Copy link'}
+          </Button>
+          <Button
+            type='button'
+            size='sm'
+            variant={isEmailLinkCopied ? 'success' : 'secondary'}
+            disabled={areLinkButtonsDisabled}
+            loading={isCopyingEmailLink}
+            loadingLabel='Copying…'
+            onClick={() => void handleCopyEmailLink()}
+          >
+            {isEmailLinkCopied ? 'Link copied' : 'Link for Email'}
           </Button>
           <Button
             type='button'

@@ -16,6 +16,7 @@ def test_serialize_sales_daily_plan_job_computes_timing() -> None:
         id=uuid4(),
         status=SalesDailyPlanJobStatus.SUCCEEDED,
         error_message=None,
+        operator_input="Focus on MBA",
         plan_id=uuid4(),
         created_at=created,
         started_at=started,
@@ -27,3 +28,4 @@ def test_serialize_sales_daily_plan_job_computes_timing() -> None:
     assert payload["duration_ms"] == 7000
     assert payload["plan"]["focus"] == "Close consults"
     assert payload["status"] == "succeeded"
+    assert payload["operator_input"] == "Focus on MBA"

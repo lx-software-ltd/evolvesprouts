@@ -2,7 +2,13 @@ import { adminApiRequest } from './api-admin-client';
 import { asNullableString } from './api-payload';
 import { isRecord } from './type-guards';
 
-import type { SalesDailyPlan, SalesDailyPlanJob, SalesDailyPlanJobStatus } from '@/types/sales-daily-plan';
+import type {
+  SalesDailyPlan,
+  SalesDailyPlanJob,
+  SalesDailyPlanJobStatus,
+  SalesDailyPlanMemoryEntry,
+  SalesDailyPlanSnapshot,
+} from '@/types/sales-daily-plan';
 
 function parsePriority(value: unknown): SalesDailyPlan['priorities'][number] | null {
   if (!isRecord(value)) {
@@ -69,6 +75,7 @@ export function parseSalesDailyPlan(value: unknown): SalesDailyPlan | null {
     generatedAt: asNullableString(value.generated_at),
     generatedBy: asNullableString(value.generated_by),
     model: asNullableString(value.model),
+    operatorInput: asNullableString(value.operator_input),
     conversationWatermarkAt: asNullableString(value.conversation_watermark_at),
     pipelineWatermarkAt: asNullableString(value.pipeline_watermark_at),
     isStale: Boolean(value.is_stale),
@@ -89,6 +96,7 @@ function parseSalesDailyPlanJob(value: unknown): SalesDailyPlanJob | null {
     id: asNullableString(value.id) ?? '',
     status,
     errorMessage: asNullableString(value.error_message),
+    operatorInput: asNullableString(value.operator_input),
     planId: asNullableString(value.plan_id),
     createdAt: asNullableString(value.created_at),
     startedAt: asNullableString(value.started_at),
@@ -100,18 +108,56 @@ function parseSalesDailyPlanJob(value: unknown): SalesDailyPlanJob | null {
   };
 }
 
-export async function fetchSalesDailyPlan(): Promise<SalesDailyPlan | null> {
-  const payload = await adminApiRequest<{ plan?: unknown }>({
+export function parseSalesDailyPlanMemoryEntry(
+  value: unknown,
+): SalesDailyPlanMemoryEntry | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const id = asNullableString(value.id)?.trim() ?? '';
+  if (!id) {
+    return null;
+  }
+  return {
+    id,
+    generatedAt: asNullableString(value.generated_at),
+    focus: asNullableString(value.focus) ?? '',
+    productFocus: asNullableString(value.product_focus) ?? '',
+    operatorInput: asNullableString(value.operator_input),
+  };
+}
+
+export function parseSalesDailyPlanSnapshot(value: unknown): SalesDailyPlanSnapshot {
+  if (!isRecord(value)) {
+    return { plan: null, memory: [] };
+  }
+  const memory = Array.isArray(value.memory)
+    ? value.memory
+        .map((entry) => parseSalesDailyPlanMemoryEntry(entry))
+        .filter((entry): entry is SalesDailyPlanMemoryEntry => entry !== null)
+    : [];
+  return {
+    plan: parseSalesDailyPlan(value.plan),
+    memory,
+  };
+}
+
+export async function fetchSalesDailyPlan(): Promise<SalesDailyPlanSnapshot> {
+  const payload = await adminApiRequest<unknown>({
     endpointPath: '/v1/admin/leads/daily-plan',
     method: 'GET',
   });
-  return parseSalesDailyPlan(payload.plan);
+  return parseSalesDailyPlanSnapshot(payload);
 }
 
-export async function enqueueSalesDailyPlanJob(): Promise<SalesDailyPlanJob> {
+export async function enqueueSalesDailyPlanJob(
+  operatorInput?: string,
+): Promise<SalesDailyPlanJob> {
+  const trimmed = operatorInput?.trim() ?? '';
   const payload = await adminApiRequest<{ job?: unknown }>({
     endpointPath: '/v1/admin/leads/daily-plan',
     method: 'POST',
+    body: { operator_input: trimmed || null },
     expectedSuccessStatuses: [202],
   });
   const job = parseSalesDailyPlanJob(payload.job);
@@ -164,4 +210,12 @@ export async function pollSalesDailyPlanJob(
   throw new Error(
     'Daily plan is taking longer than expected; refresh the dashboard to check again.',
   );
+}
+
+export async function resetSalesDailyPlanMemory(): Promise<void> {
+  await adminApiRequest({
+    endpointPath: '/v1/admin/leads/daily-plan',
+    method: 'DELETE',
+    expectedSuccessStatuses: [204],
+  });
 }

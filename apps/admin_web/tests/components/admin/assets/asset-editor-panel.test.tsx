@@ -63,17 +63,17 @@ describe('AssetEditorPanel', () => {
     vi.clearAllMocks();
     mockGetAdminAssetShareLink.mockResolvedValue({
       assetId: 'asset-1',
-      shareUrl: 'https://share.example.com/a',
+      shareUrl: 'https://media.example.com/v1/assets/share/abc123token',
       allowedDomains: ['example.com'],
     });
     mockGetOrCreateAdminAssetShareLink.mockResolvedValue({
       assetId: 'asset-1',
-      shareUrl: 'https://share.example.com/a',
+      shareUrl: 'https://media.example.com/v1/assets/share/abc123token',
       allowedDomains: ['example.com'],
     });
     mockRotateAdminAssetShareLink.mockResolvedValue({
       assetId: 'asset-1',
-      shareUrl: 'https://share.example.com/b',
+      shareUrl: 'https://media.example.com/v1/assets/share/rotatedtoken',
       allowedDomains: ['example.com'],
     });
     mockRevokeAdminAssetShareLink.mockResolvedValue(undefined);
@@ -390,6 +390,7 @@ describe('AssetEditorPanel', () => {
     const disclosure = screen.getByTestId('asset-share-link-asset-1-disclosure');
     expect(within(disclosure).getByLabelText('Share-link domain allowlist')).toBeInTheDocument();
     expect(within(disclosure).getByRole('button', { name: 'Copy link' })).toBeInTheDocument();
+    expect(within(disclosure).getByRole('button', { name: 'Link for Email' })).toBeInTheDocument();
     expect(within(disclosure).getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
     expect(within(disclosure).getByRole('button', { name: 'Delete links' })).toBeInTheDocument();
     expect(within(disclosure).queryByText('Links', { selector: 'label' })).not.toBeInTheDocument();
@@ -440,6 +441,11 @@ describe('AssetEditorPanel', () => {
       expect(mockGetOrCreateAdminAssetShareLink).toHaveBeenCalledWith('asset-1', {
         allowedDomains: ['example.com'],
       });
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Link for Email' }));
+    await waitFor(() => {
+      expect(mockGetOrCreateAdminAssetShareLink).toHaveBeenCalledTimes(2);
     });
 
     await user.click(screen.getByRole('button', { name: 'Refresh' }));

@@ -61,6 +61,18 @@ export interface AssetShareLinkPolicyInput {
   allowedDomains: string[];
 }
 
+const ASSET_SHARE_URL_PATH = '/v1/assets/share/';
+const ASSET_EMAIL_DOWNLOAD_URL_PATH = '/v1/assets/email-download/';
+
+/** Map an admin share URL to the email-download path (same token; no Referer check). */
+export function buildAssetEmailDownloadUrlFromShareUrl(shareUrl: string): string {
+  const normalized = shareUrl.trim();
+  if (!normalized.includes(ASSET_SHARE_URL_PATH)) {
+    throw new Error('Share URL is not in the expected format.');
+  }
+  return normalized.replace(ASSET_SHARE_URL_PATH, ASSET_EMAIL_DOWNLOAD_URL_PATH);
+}
+
 function isApiAsset(value: unknown): value is ApiAsset {
   return isRecord(value) && typeof value.id === 'string';
 }

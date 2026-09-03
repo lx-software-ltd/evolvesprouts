@@ -1418,7 +1418,7 @@ export interface paths {
         };
         /**
          * Get latest org-wide sales plan of the day
-         * @description Returns the newest stored org-wide AI sales daily plan, including staleness metadata. `plan` is null when none has been generated yet. A plan is stale when it is older than 24 hours, when a newer WhatsApp/Meta message exists after the stored conversation watermark, or when a lead was created or a funnel-stage event occurred after the stored pipeline watermark.
+         * @description Returns the newest stored org-wide AI sales daily plan, including staleness metadata, plus `memory` (up to the five newest stored plans, including the latest). `plan` is null when none has been generated yet. A plan is stale when it is older than 24 hours, when a newer WhatsApp/Meta message exists after the stored conversation watermark, or when a lead was created or a funnel-stage event occurred after the stored pipeline watermark. All stored plans are retained until `DELETE /v1/admin/leads/daily-plan`.
          */
         get: {
             parameters: {
@@ -1429,7 +1429,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Latest daily plan payload (or null). */
+                /** @description Latest daily plan payload (or null) plus memory. */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1444,7 +1444,7 @@ export interface paths {
         put?: never;
         /**
          * Queue org-wide sales plan of the day generation
-         * @description Enqueues an asynchronous job that generates a sales-focused plan of the day via the shared OpenRouter pipeline (same Secrets Manager key, allow-listed chat-completions URL, and AWS HTTP proxy as lead AI suggestions). Context includes open pipeline, unanswered threads, unpaid issued invoices, and the published catalogue. Poll `GET /v1/admin/leads/daily-plan/jobs/{job_id}` for status, timing (`queue_wait_ms`, `duration_ms`), and the resulting plan. Does not send messages or payment reminders.
+         * @description Enqueues an asynchronous job that generates a sales-focused plan of the day via the shared OpenRouter pipeline (same Secrets Manager key, allow-listed chat-completions URL, and AWS HTTP proxy as lead AI suggestions). Context includes open pipeline, unanswered threads, unpaid issued invoices, and the published catalogue. Optional `operator_input` is stored on the job and the resulting plan and is included in later generations as memory, along with the last five persisted plans. Poll `GET /v1/admin/leads/daily-plan/jobs/{job_id}` for status, timing (`queue_wait_ms`, `duration_ms`), and the resulting plan. Does not send messages or payment reminders.
          */
         post: {
             parameters: {
@@ -1453,7 +1453,11 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["SalesDailyPlanGenerateRequest"];
+                };
+            };
             responses: {
                 /** @description Generation job accepted. */
                 202: {
@@ -1468,7 +1472,29 @@ export interface paths {
                 403: components["responses"]["Forbidden"];
             };
         };
-        delete?: never;
+        /**
+         * Reset sale plan memory
+         * @description Permanently deletes every stored sales daily plan, generation job, and operator refinement. Live contacts, leads, and messages are not affected. This cannot be undone.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Memory deleted. */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                403: components["responses"]["Forbidden"];
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -7044,6 +7070,8 @@ export interface components {
             generated_at: string;
             generated_by?: string | null;
             model?: string | null;
+            /** @description Operator refinement stored with this plan and used as later memory. */
+            operator_input?: string | null;
             /** Format: date-time */
             conversation_watermark_at?: string | null;
             /** Format: date-time */
@@ -7060,8 +7088,23 @@ export interface components {
             /** Format: date-time */
             latest_pipeline_at?: string | null;
         };
+        SalesDailyPlanMemoryEntry: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            generated_at: string;
+            focus: string;
+            product_focus: string;
+            operator_input?: string | null;
+        };
         SalesDailyPlanResponse: {
             plan: components["schemas"]["SalesDailyPlan"] | null;
+            /** @description Up to the five newest stored plans, newest first (including the latest). */
+            memory: components["schemas"]["SalesDailyPlanMemoryEntry"][];
+        };
+        SalesDailyPlanGenerateRequest: {
+            /** @description Optional refinement used for this generation and stored as memory. */
+            operator_input?: string | null;
         };
         SalesDailyPlanJob: {
             /** Format: uuid */
@@ -7069,6 +7112,7 @@ export interface components {
             /** @enum {string} */
             status: "pending" | "processing" | "succeeded" | "failed";
             error_message?: string | null;
+            operator_input?: string | null;
             /** Format: uuid */
             plan_id?: string | null;
             /** Format: date-time */

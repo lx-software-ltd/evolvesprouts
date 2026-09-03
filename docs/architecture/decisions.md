@@ -1158,15 +1158,21 @@ detector.
 generate them on demand through the same async OpenRouter + SQS worker pattern
 as per-lead AI suggestions. The admin dashboard card loads the newest saved
 plan, shows a 24-hour (plus pipeline/inbox watermark) stale flag, and only
-regenerates when the operator clicks Generate insight.
+regenerates when the operator clicks Generate / Refresh insight. Optional
+`operator_input` on refresh is stored on the new plan. The last five plans
+(and their refinements) are sent back as memory on the next generation. All
+rows are kept until Sales → Configuration resets memory
+(`DELETE /v1/admin/leads/daily-plan`).
 
 **Why:**
 - Operators need a saved plan they can reopen without paying for another model
-  call.
+  call, and they need prior insights plus refinements to steer the next run.
 - Org-wide context (pipeline, unanswered threads, catalogue, unpaid invoices)
   exceeds API Gateway time limits, so generation stays off the request path.
 - Reusing the lead-AI OpenRouter / proxy / job-timing pattern keeps secrets and
   failure handling consistent.
+- Reset is an explicit admin action so memory is durable until the operator
+  clears it.
 
 ## API route module conventions
 

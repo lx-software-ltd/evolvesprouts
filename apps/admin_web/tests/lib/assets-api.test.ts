@@ -15,6 +15,7 @@ vi.mock('@/lib/api-admin-client', async () => {
 });
 
 import {
+  buildAssetEmailDownloadUrlFromShareUrl,
   completeAdminAssetContentReplace,
   createAdminAsset,
   getUserAssetDownloadUrl,
@@ -434,6 +435,22 @@ describe('assets-api', () => {
           content_type: 'application/pdf',
         },
       })
+    );
+  });
+});
+
+describe('buildAssetEmailDownloadUrlFromShareUrl', () => {
+  it('maps share URLs to the email-download path', () => {
+    expect(
+      buildAssetEmailDownloadUrlFromShareUrl(
+        'https://media.evolvesprouts.com/v1/assets/share/abc123'
+      )
+    ).toBe('https://media.evolvesprouts.com/v1/assets/email-download/abc123');
+  });
+
+  it('throws when the share URL path is missing', () => {
+    expect(() => buildAssetEmailDownloadUrlFromShareUrl('https://media.example.com/bad')).toThrow(
+      /expected format/
     );
   });
 });

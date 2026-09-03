@@ -416,9 +416,12 @@ SQS retries or mailbox forwarding duplicates.
 
 ## Sales daily plan of the day
 
-Admin `POST /v1/admin/leads/daily-plan` enqueues work on a **direct** SQS queue
-(no SNS) so OpenRouter can run longer than API Gateway limits while the
-dashboard card polls `GET /v1/admin/leads/daily-plan/jobs/{job_id}`.
+Admin `POST /v1/admin/leads/daily-plan` (optional `operator_input` refinement)
+enqueues work on a **direct** SQS queue (no SNS) so OpenRouter can run longer
+than API Gateway limits while the dashboard card polls
+`GET /v1/admin/leads/daily-plan/jobs/{job_id}`. The worker includes the last
+five stored plans and refinements as memory. `DELETE /v1/admin/leads/daily-plan`
+clears that memory (plans and jobs); live CRM rows are untouched.
 
 **Deduplication:** the queue is a standard SQS queue (at-least-once delivery).
 Each message carries a unique `job_id`. The worker uses
