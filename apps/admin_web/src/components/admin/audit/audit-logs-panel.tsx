@@ -11,9 +11,7 @@ import {
 } from '@/components/ui/admin-data-table';
 import { AdminExpandableRow } from '@/components/ui/admin-expandable-row';
 import { AdminFilterBar, AdminFilterField } from '@/components/ui/admin-filter-bar';
-import { AdminInlineError } from '@/components/ui/admin-inline-error';
 import { AdminRecordTable } from '@/components/ui/admin-record-table';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { useAuditLogsList, type AuditActionFilter } from '@/hooks/use-audit-logs-list';
@@ -65,28 +63,12 @@ export function AuditLogsPanel({ auditableTables }: AuditLogsPanelProps) {
       errorTitle='Audit logs'
       emptyLabel='No audit logs match the current filters.'
       filters={
-        <AdminFilterBar
-          trailing={
-            <>
-              <Button type='button' variant='primary' onClick={list.applyFilters} disabled={list.filtersInvalid}>
-                Apply filters
-              </Button>
-              <Button type='button' variant='secondary' onClick={list.clearFilters}>
-                Clear
-              </Button>
-            </>
-          }
-          summary={
-            list.filtersInvalid ? (
-              <AdminInlineError size='xs'>Select a table before filtering by record ID.</AdminInlineError>
-            ) : null
-          }
-        >
+        <AdminFilterBar>
           <AdminFilterField label='Action' htmlFor='audit-action-filter' className='sm:basis-40'>
             <Select
               id='audit-action-filter'
-              value={list.draft.action}
-              onChange={(e) => list.setDraftField('action', e.target.value as AuditActionFilter)}
+              value={list.filters.action}
+              onChange={(e) => list.setFilter('action', e.target.value as AuditActionFilter)}
             >
               <option value='all'>All actions</option>
               <option value='INSERT'>Insert</option>
@@ -97,8 +79,8 @@ export function AuditLogsPanel({ auditableTables }: AuditLogsPanelProps) {
           <AdminFilterField label='Table' htmlFor='audit-table-filter'>
             <Select
               id='audit-table-filter'
-              value={list.draft.table}
-              onChange={(e) => list.setDraftField('table', e.target.value)}
+              value={list.filters.table}
+              onChange={(e) => list.setFilter('table', e.target.value)}
             >
               <option value='all'>All tables</option>
               {auditableTables.map((table) => (
@@ -111,8 +93,8 @@ export function AuditLogsPanel({ auditableTables }: AuditLogsPanelProps) {
           <AdminFilterField label='Time range' htmlFor='audit-time-range' className='sm:basis-40'>
             <Select
               id='audit-time-range'
-              value={list.draft.timeRange}
-              onChange={(e) => list.setDraftField('timeRange', e.target.value)}
+              value={list.filters.timeRange}
+              onChange={(e) => list.setFilter('timeRange', e.target.value)}
             >
               {TIME_RANGES.map((range) => (
                 <option key={range.value || 'all'} value={range.value}>
@@ -127,18 +109,8 @@ export function AuditLogsPanel({ auditableTables }: AuditLogsPanelProps) {
               type='text'
               autoComplete='off'
               placeholder='Email, API key, or webhook…'
-              value={list.draft.email}
-              onChange={(e) => list.setDraftField('email', e.target.value)}
-            />
-          </AdminFilterField>
-          <AdminFilterField label='Record ID' htmlFor='audit-record-filter' className='sm:basis-64'>
-            <Input
-              id='audit-record-filter'
-              type='text'
-              autoComplete='off'
-              placeholder='Filter by record ID…'
-              value={list.draft.recordId}
-              onChange={(e) => list.setDraftField('recordId', e.target.value)}
+              value={list.filters.email}
+              onChange={(e) => list.setFilter('email', e.target.value)}
             />
           </AdminFilterField>
         </AdminFilterBar>
