@@ -52,7 +52,7 @@ describe('highlightAuditJson', () => {
 
     const oldSegments = highlightAuditJson({ value: oldValues, counterpart: newValues });
     expect(joinHighlightText(oldSegments)).toBe(JSON.stringify(oldValues, null, 2));
-    expect(emphasizedTexts(oldSegments)).toEqual(['"address"', '"city"', '"Hong Kong"']);
+    expect(emphasizedTexts(oldSegments)).toEqual(['"address"', '"city"', 'Hong Kong']);
     expect(emphasizedTexts(oldSegments)).not.toContain('"street"');
     expect(emphasizedTexts(oldSegments)).not.toContain('"name"');
   });
@@ -86,6 +86,6 @@ describe('highlightAuditJson', () => {
     const oldSegments = highlightAuditJson({ value: oldValues, counterpart: newValues });
 
     expect(joinHighlightText(oldSegments)).toBe(JSON.stringify(oldValues, null, 2));
-    expect(emphasizedTexts(oldSegments)).toEqual(['"tags"', '"beta"']);
+    expect(emphasizedTexts(oldSegments)).toEqual(['"tags"', 'beta']);
   });
 });
