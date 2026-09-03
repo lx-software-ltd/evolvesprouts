@@ -5,7 +5,12 @@ import type { ReactNode } from 'react';
 import { relatedRecordActions } from '@/components/admin/contacts/related-record-actions';
 import { ArchiveIcon, DeleteIcon, NoteIcon, RestoreIcon } from '@/components/icons/action-icons';
 import { AdminCreateButton } from '@/components/ui/admin-create-button';
-import { AdminDataTableCell, AdminDataTableHeadCell, AdminDataTableOperationsHeadCell } from '@/components/ui/admin-data-table';
+import {
+  AdminDataTableCell,
+  AdminDataTableCellMeta,
+  AdminDataTableHeadCell,
+  AdminDataTableOperationsHeadCell,
+} from '@/components/ui/admin-data-table';
 import { AdminExpandableRow } from '@/components/ui/admin-expandable-row';
 import { AdminFilterBar, AdminFilterField } from '@/components/ui/admin-filter-bar';
 import { AdminRecordTable } from '@/components/ui/admin-record-table';
@@ -88,7 +93,6 @@ export function ContactsRecordTable({
       error={error || deleteActionError}
       errorTitle='Contacts'
       emptyLabel='No contacts match the current filters.'
-      tableClassName='min-w-[720px]'
       filters={
         <AdminFilterBar
           trailing={
@@ -147,8 +151,8 @@ export function ContactsRecordTable({
         <tr>
           <AdminDataTableHeadCell className='w-10' />
           <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
-          <AdminDataTableHeadCell>Email</AdminDataTableHeadCell>
-          <AdminDataTableHeadCell>Type</AdminDataTableHeadCell>
+          <AdminDataTableHeadCell priority='secondary'>Email</AdminDataTableHeadCell>
+          <AdminDataTableHeadCell priority='tertiary'>Type</AdminDataTableHeadCell>
           <AdminDataTableOperationsHeadCell />
         </tr>
       }
@@ -164,8 +168,12 @@ export function ContactsRecordTable({
           cells={
             <>
               <AdminDataTableCell className='font-medium text-slate-900'>New contact</AdminDataTableCell>
-              <AdminDataTableCell className='text-slate-400'>—</AdminDataTableCell>
-              <AdminDataTableCell className='text-slate-400'>—</AdminDataTableCell>
+              <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                —
+              </AdminDataTableCell>
+              <AdminDataTableCell priority='tertiary' className='text-slate-400'>
+                —
+              </AdminDataTableCell>
             </>
           }
           actions={null}
@@ -202,9 +210,10 @@ export function ContactsRecordTable({
                       ) : null}
                     </>
                   ) : null}
+                  {row.email ? <AdminDataTableCellMeta>{row.email}</AdminDataTableCellMeta> : null}
                 </AdminDataTableCell>
-                <AdminDataTableCell>{row.email ?? '—'}</AdminDataTableCell>
-                <AdminDataTableCell>{formatEnumLabel(row.contact_type)}</AdminDataTableCell>
+                <AdminDataTableCell priority='secondary'>{row.email ?? '—'}</AdminDataTableCell>
+                <AdminDataTableCell priority='tertiary'>{formatEnumLabel(row.contact_type)}</AdminDataTableCell>
               </>
             }
             actions={

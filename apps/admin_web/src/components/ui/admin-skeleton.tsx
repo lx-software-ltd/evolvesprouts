@@ -17,7 +17,12 @@ export interface AdminSkeletonRowsProps {
   rows?: number;
 }
 
-/** Placeholder rows that keep the table's shape while the first page loads. */
+/**
+ * Placeholder rows that keep the table's shape while the first page loads.
+ * Cells between the second (identifying) column and the last (Operations)
+ * follow the `secondary` column priority so phones see the same silhouette
+ * as the loaded table.
+ */
 export function AdminSkeletonRows({ columnCount, rows = 5 }: AdminSkeletonRowsProps) {
   const widths = ['w-2/3', 'w-1/2', 'w-3/4', 'w-1/3'];
   return (
@@ -25,7 +30,10 @@ export function AdminSkeletonRows({ columnCount, rows = 5 }: AdminSkeletonRowsPr
       {Array.from({ length: rows }, (_, rowIndex) => (
         <tr key={rowIndex} aria-hidden data-testid='admin-skeleton-row'>
           {Array.from({ length: columnCount }, (__, cellIndex) => (
-            <AdminDataTableCell key={cellIndex}>
+            <AdminDataTableCell
+              key={cellIndex}
+              priority={cellIndex > 1 && cellIndex < columnCount - 1 ? 'secondary' : 'primary'}
+            >
               <AdminSkeleton className={clsx('h-4', widths[(rowIndex + cellIndex) % widths.length])} />
             </AdminDataTableCell>
           ))}

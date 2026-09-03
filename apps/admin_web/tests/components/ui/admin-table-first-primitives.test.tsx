@@ -1,7 +1,11 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AdminDataTableCell, AdminDataTableHeadCell } from '@/components/ui/admin-data-table';
+import {
+  AdminDataTableCell,
+  AdminDataTableCellMeta,
+  AdminDataTableHeadCell,
+} from '@/components/ui/admin-data-table';
 import { AdminCreateButton } from '@/components/ui/admin-create-button';
 import { AdminDisclosure } from '@/components/ui/admin-disclosure';
 import { AdminEditorActions, AdminEditorPanel } from '@/components/ui/admin-editor-panel';
@@ -12,6 +16,7 @@ import { AdminIconButton, AdminIconLink } from '@/components/ui/admin-icon-butto
 import { AdminRecordTable } from '@/components/ui/admin-record-table';
 import { AdminRowActions, type AdminRowAction } from '@/components/ui/admin-row-actions';
 import { AdminSkeletonRows } from '@/components/ui/admin-skeleton';
+import { AdminTabStrip } from '@/components/ui/admin-tab-strip';
 
 function Icon({ name }: { name: string }) {
   return <svg data-icon={name} />;
@@ -142,9 +147,68 @@ describe('AdminFilterBar / AdminCreateButton', () => {
     const create = screen.getByRole('button', { name: 'New contact' });
     expect(create).toHaveAttribute('title', 'New contact');
     expect(create).toHaveAttribute('aria-pressed', 'true');
-    expect(create).toHaveClass('h-8', 'w-8', 'border');
+    // Square and input-height on desktop; full-width with the label on phones.
+    expect(create).toHaveClass('h-10', 'w-full', 'sm:h-9', 'sm:w-9', 'rounded-md', 'border');
+    expect(create).toHaveTextContent('New contact');
+    expect(create.querySelector('span')).toHaveClass('sm:hidden');
+    expect(create.parentElement).toHaveClass('order-first', 'w-full', 'sm:order-none', 'sm:w-auto');
     fireEvent.click(create);
     expect(onCreate).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('AdminTabStrip', () => {
+  it('renders a two-per-row grid on phones and a white bordered active control', () => {
+    const onChange = vi.fn();
+    render(
+      <AdminTabStrip
+        items={[
+          { key: 'a', label: 'Contacts' },
+          { key: 'b', label: 'Families' },
+        ]}
+        activeKey='a'
+        onChange={onChange}
+      />
+    );
+    const group = screen.getByRole('group', { name: 'Section views' });
+    expect(group).toHaveClass('grid', 'grid-cols-2', 'sm:inline-flex');
+    const active = screen.getByRole('button', { name: 'Contacts' });
+    expect(active).toHaveAttribute('aria-pressed', 'true');
+    expect(active).toHaveClass('bg-white', 'border', 'border-slate-300', 'w-full', 'sm:w-auto');
+    const inactive = screen.getByRole('button', { name: 'Families' });
+    expect(inactive).toHaveClass('border-transparent', 'hover:bg-white', 'hover:border-slate-300');
+    fireEvent.click(inactive);
+    expect(onChange).toHaveBeenCalledWith('b');
+  });
+});
+
+describe('AdminDataTable column priority', () => {
+  it('hides secondary and tertiary columns below md / lg and shows the mobile meta line', () => {
+    render(
+      <table>
+        <thead>
+          <tr>
+            <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Email</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Type</AdminDataTableHeadCell>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <AdminDataTableCell>
+              Ann
+              <AdminDataTableCellMeta>ann@example.com</AdminDataTableCellMeta>
+            </AdminDataTableCell>
+            <AdminDataTableCell priority='secondary'>ann@example.com</AdminDataTableCell>
+            <AdminDataTableCell priority='tertiary'>Parent</AdminDataTableCell>
+          </tr>
+        </tbody>
+      </table>
+    );
+    expect(screen.getByRole('columnheader', { name: 'Email' })).toHaveClass('hidden', 'md:table-cell');
+    expect(screen.getByRole('columnheader', { name: 'Type' })).toHaveClass('hidden', 'lg:table-cell');
+    expect(screen.getByRole('columnheader', { name: 'Name' })).not.toHaveClass('hidden');
+    expect(screen.getAllByText('ann@example.com')[0]).toHaveClass('md:hidden');
   });
 });
 
@@ -335,6 +399,42 @@ describe('AdminExpandableRow', () => {
       vi.advanceTimersByTime(350);
     });
     expect(document.activeElement).toBe(screen.getByLabelText('First name'));
+    vi.useRealTimers();
+  });
+
+  it('does not steal focus from a field the operator focused before the expansion settled', () => {
+    vi.useFakeTimers();
+    const tree = (expanded: boolean) => (
+      <table>
+        <tbody>
+          <AdminExpandableRow
+            id='c1'
+            label='Ada Lovelace'
+            expanded={expanded}
+            onToggle={() => undefined}
+            columnCount={3}
+            cells={<AdminDataTableCell>Ada</AdminDataTableCell>}
+            detail={
+              <>
+                <input aria-label='First name' />
+                <input aria-label='Address' />
+              </>
+            }
+          />
+        </tbody>
+      </table>
+    );
+    const { rerender } = render(tree(false));
+    rerender(tree(true));
+    // The operator clicks into a later field while the open transition runs.
+    const address = screen.getByLabelText('Address');
+    act(() => {
+      address.focus();
+    });
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+    expect(document.activeElement).toBe(address);
     vi.useRealTimers();
   });
 });

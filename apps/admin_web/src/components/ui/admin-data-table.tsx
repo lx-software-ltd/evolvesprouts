@@ -52,13 +52,37 @@ export function AdminDataTableBody({ children }: { children: ReactNode }) {
   return <tbody className='divide-y divide-slate-200 bg-white text-sm'>{children}</tbody>;
 }
 
-export type AdminDataTableHeadCellProps = Omit<ComponentPropsWithoutRef<'th'>, 'className'> & {
-  className?: string;
+/**
+ * Mobile-first column priority. `primary` columns always show; `secondary`
+ * columns appear from the `md` breakpoint and `tertiary` from `lg`, so a
+ * phone sees only the identifying column plus Operations without horizontal
+ * scrolling. Pair hidden columns with `AdminDataTableCellMeta` to surface
+ * their value under the primary cell on small screens.
+ */
+export type AdminDataTableColumnPriority = 'primary' | 'secondary' | 'tertiary';
+
+export const ADMIN_TABLE_COLUMN_PRIORITY_CLASS: Record<AdminDataTableColumnPriority, string | null> = {
+  primary: null,
+  secondary: 'hidden md:table-cell',
+  tertiary: 'hidden lg:table-cell',
 };
 
-export function AdminDataTableHeadCell({ children, className, ...rest }: AdminDataTableHeadCellProps) {
+export type AdminDataTableHeadCellProps = Omit<ComponentPropsWithoutRef<'th'>, 'className'> & {
+  className?: string;
+  priority?: AdminDataTableColumnPriority;
+};
+
+export function AdminDataTableHeadCell({
+  children,
+  className,
+  priority = 'primary',
+  ...rest
+}: AdminDataTableHeadCellProps) {
   return (
-    <th {...rest} className={twMerge(adminDataTableHeadCellBase, className)}>
+    <th
+      {...rest}
+      className={twMerge(adminDataTableHeadCellBase, ADMIN_TABLE_COLUMN_PRIORITY_CLASS[priority], className)}
+    >
       {children}
     </th>
   );
@@ -66,13 +90,39 @@ export function AdminDataTableHeadCell({ children, className, ...rest }: AdminDa
 
 export type AdminDataTableCellProps = Omit<ComponentPropsWithoutRef<'td'>, 'className'> & {
   className?: string;
+  priority?: AdminDataTableColumnPriority;
 };
 
-export function AdminDataTableCell({ children, className, ...rest }: AdminDataTableCellProps) {
+export function AdminDataTableCell({ children, className, priority = 'primary', ...rest }: AdminDataTableCellProps) {
   return (
-    <td {...rest} className={twMerge(adminDataTableBodyCellBase, className)}>
+    <td
+      {...rest}
+      className={twMerge(adminDataTableBodyCellBase, ADMIN_TABLE_COLUMN_PRIORITY_CLASS[priority], className)}
+    >
       {children}
     </td>
+  );
+}
+
+export interface AdminDataTableCellMetaProps {
+  children: ReactNode;
+  /** Breakpoint at which the dedicated column takes over (matches the column's `priority`). */
+  until?: Exclude<AdminDataTableColumnPriority, 'primary'>;
+  className?: string;
+}
+
+/** Secondary line under a primary cell, shown only while its own column is hidden. */
+export function AdminDataTableCellMeta({ children, until = 'secondary', className }: AdminDataTableCellMetaProps) {
+  return (
+    <span
+      className={clsx(
+        'mt-0.5 block truncate text-xs font-normal text-slate-500',
+        until === 'secondary' ? 'md:hidden' : 'lg:hidden',
+        className
+      )}
+    >
+      {children}
+    </span>
   );
 }
 

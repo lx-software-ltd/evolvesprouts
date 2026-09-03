@@ -267,6 +267,9 @@ describe('FamiliesPanel', () => {
     const membersTrigger = screen.getByRole('button', { name: /^Members/ });
     expect(membersTrigger).toHaveTextContent('1');
     await user.click(membersTrigger);
+    // Members are a nested table: clicking the member row opens its editor.
+    expect(screen.queryByRole('checkbox', { name: 'Primary contact for Alex Smith' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Expand Alex Smith' }));
     const primaryCheckbox = screen.getByRole('checkbox', {
       name: 'Primary contact for Alex Smith',
     });
@@ -276,6 +279,60 @@ describe('FamiliesPanel', () => {
       expect(updateMember).toHaveBeenCalledWith('fam-1', 'mem-1', {
         is_primary_contact: true,
       });
+    });
+  });
+
+  it('adds a member from the + draft row in the members table', async () => {
+    const user = userEvent.setup();
+    const addMember = vi.fn().mockResolvedValue(null);
+    const families = buildFamiliesHook({
+      addMember,
+      families: [
+        {
+          id: 'fam-1',
+          family_name: 'Smith',
+          relationship_type: 'prospect',
+          location_id: null,
+          location_summary: null,
+          tag_ids: [],
+          tags: [],
+          members: [],
+          active: true,
+          created_at: '2020-01-01T00:00:00.000Z',
+          updated_at: '2020-01-01T00:00:00.000Z',
+          ...emptyRelatedFlags,
+        },
+      ],
+    });
+
+    render(
+      <FamiliesPanel
+        families={families}
+        tags={[]}
+        locations={[]}
+        geographicAreas={[]}
+        areasLoading={false}
+        refreshLocations={noopRefresh}
+        contactOptions={[{ id: 'c-9', label: 'Jo Smith' }]}
+        contactsForMembership={[]}
+      />
+    );
+
+    await user.click(screen.getByText('Smith'));
+    await user.click(screen.getByRole('button', { name: /^Members/ }));
+    const membersTable = screen
+      .getAllByTestId('admin-record-table')
+      .find((element) => element.getAttribute('aria-label') === 'Members');
+    expect(membersTable).toHaveAttribute('data-embedded', 'true');
+    expect(screen.queryByRole('button', { name: 'Add member' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'New member' }));
+    expect(screen.getByTestId('admin-row-member-draft')).toHaveAttribute('data-draft', 'true');
+    await user.selectOptions(screen.getByLabelText('Contact'), 'c-9');
+    await user.click(screen.getByRole('button', { name: 'Add member' }));
+
+    await waitFor(() => {
+      expect(addMember).toHaveBeenCalledWith('fam-1', { contact_id: 'c-9', is_primary_contact: false });
     });
   });
 
