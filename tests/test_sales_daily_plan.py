@@ -11,8 +11,10 @@ from app.services.sales_daily_plan import (
     PLAN_STALE_AFTER,
     _format_openrouter_failure,
     evaluate_staleness,
+    generate_and_store_plan,
     normalize_plan_payload,
     parse_plan_json_object,
+    serialize_plan,
 )
 
 
@@ -125,6 +127,79 @@ def test_evaluate_staleness_fresh_plan(monkeypatch: object) -> None:
     )
     assert result["is_stale"] is False
     assert result["stale_reasons"] == []
+
+
+def test_serialize_plan_includes_operator_input(monkeypatch: object) -> None:
+    monkeypatch.setattr(
+        "app.services.sales_daily_plan.evaluate_staleness",
+        lambda session, plan, now=None: {
+            "is_stale": False,
+            "stale_reasons": [],
+            "stale_after": "2026-09-02T10:00:00+00:00",
+            "latest_message_at": None,
+            "latest_pipeline_at": None,
+        },
+    )
+    plan_id = uuid4()
+    payload = serialize_plan(
+        SimpleNamespace(),
+        plan=SimpleNamespace(
+            id=plan_id,
+            payload={
+                "focus": "Close consults",
+                "priorities": [],
+                "outreach": [],
+                "product_focus": "",
+                "offer_refinements": [],
+                "risks": [],
+            },
+            generated_at=datetime(2026, 9, 1, 10, 0, tzinfo=UTC),
+            generated_by="user-1",
+            model="test-model",
+            operator_input="Focus on MBA",
+            conversation_watermark_at=None,
+            pipeline_watermark_at=None,
+        ),
+    )
+    assert payload["id"] == str(plan_id)
+    assert payload["operator_input"] == "Focus on MBA"
+
+
+def test_generate_and_store_plan_persists_operator_input(monkeypatch: object) -> None:
+    added: list[object] = []
+    session = SimpleNamespace(add=added.append, flush=lambda: None)
+    monkeypatch.setattr(
+        "app.services.sales_daily_plan.build_sales_daily_plan_context",
+        lambda _session: (
+            {"open_leads": [], "needs_reply_threads": [], "catalogue": []},
+            SimpleNamespace(
+                conversation_watermark_at=None,
+                pipeline_watermark_at=None,
+            ),
+        ),
+    )
+    monkeypatch.setattr(
+        "app.services.sales_daily_plan.openrouter_chat_completion",
+        lambda **_kwargs: {},
+    )
+    monkeypatch.setattr(
+        "app.services.sales_daily_plan.extract_message_text",
+        lambda _body: (
+            '{"focus": "Go", "priorities": [], "outreach": [],'
+            ' "product_focus": "", "offer_refinements": [], "risks": []}'
+        ),
+    )
+    monkeypatch.setattr(
+        "app.services.sales_daily_plan.configured_model_name",
+        lambda: "test-model",
+    )
+    row = generate_and_store_plan(
+        session,  # type: ignore[arg-type]
+        actor_sub="user-1",
+        operator_input="  Focus on MBA  ",
+    )
+    assert row.operator_input == "Focus on MBA"
+    assert added[0] is row
 
 
 def test_format_openrouter_failure_maps_timeout() -> None:

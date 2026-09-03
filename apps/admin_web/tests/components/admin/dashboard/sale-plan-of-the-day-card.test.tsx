@@ -16,6 +16,7 @@ vi.mock('@/lib/sales-daily-plan-api', () => ({
   fetchSalesDailyPlan,
   enqueueSalesDailyPlanJob,
   pollSalesDailyPlanJob,
+  resetSalesDailyPlanMemory: vi.fn(),
 }));
 
 import { SalePlanOfTheDayCard } from '@/components/admin/dashboard/cards/sale-plan-of-the-day-card';
@@ -47,6 +48,7 @@ const samplePlan = {
   generatedAt: '2026-09-01T10:00:00Z',
   generatedBy: 'user-1',
   model: 'test-model',
+  operatorInput: null,
   conversationWatermarkAt: '2026-09-01T09:00:00Z',
   pipelineWatermarkAt: '2026-09-01T09:00:00Z',
   isStale: false,
@@ -64,11 +66,12 @@ describe('SalePlanOfTheDayCard', () => {
   });
 
   it('loads empty state and generates a plan on demand', async () => {
-    fetchSalesDailyPlan.mockResolvedValue(null);
+    fetchSalesDailyPlan.mockResolvedValue({ plan: null, memory: [] });
     enqueueSalesDailyPlanJob.mockResolvedValue({
       id: 'job-1',
       status: 'pending',
       errorMessage: null,
+      operatorInput: null,
       planId: null,
       createdAt: '2026-09-01T10:00:00Z',
       startedAt: null,
@@ -78,18 +81,33 @@ describe('SalePlanOfTheDayCard', () => {
       durationMs: null,
       plan: null,
     });
-    pollSalesDailyPlanJob.mockResolvedValue({
-      id: 'job-1',
-      status: 'succeeded',
-      errorMessage: null,
-      planId: 'plan-1',
-      createdAt: '2026-09-01T10:00:00Z',
-      startedAt: '2026-09-01T10:00:01Z',
-      finishedAt: '2026-09-01T10:00:08Z',
-      updatedAt: '2026-09-01T10:00:08Z',
-      queueWaitMs: 1000,
-      durationMs: 7000,
-      plan: samplePlan,
+    pollSalesDailyPlanJob.mockImplementation(async () => {
+      fetchSalesDailyPlan.mockResolvedValue({
+        plan: samplePlan,
+        memory: [
+          {
+            id: samplePlan.id,
+            generatedAt: samplePlan.generatedAt,
+            focus: samplePlan.focus,
+            productFocus: samplePlan.productFocus,
+            operatorInput: samplePlan.operatorInput,
+          },
+        ],
+      });
+      return {
+        id: 'job-1',
+        status: 'succeeded',
+        errorMessage: null,
+        operatorInput: null,
+        planId: 'plan-1',
+        createdAt: '2026-09-01T10:00:00Z',
+        startedAt: '2026-09-01T10:00:01Z',
+        finishedAt: '2026-09-01T10:00:08Z',
+        updatedAt: '2026-09-01T10:00:08Z',
+        queueWaitMs: 1000,
+        durationMs: 7000,
+        plan: samplePlan,
+      };
     });
 
     const user = userEvent.setup();
@@ -109,21 +127,39 @@ describe('SalePlanOfTheDayCard', () => {
     expect(leadLinks.length).toBeGreaterThan(0);
     expect(leadLinks[0]).toHaveAttribute('href', '/sales?lead=lead-1');
     expect(screen.getByText(/Last run: queue 1\.0 s · model 7\.0 s/i)).toBeInTheDocument();
-    expect(enqueueSalesDailyPlanJob).toHaveBeenCalledTimes(1);
+    expect(enqueueSalesDailyPlanJob).toHaveBeenCalledWith(undefined);
     expect(pollSalesDailyPlanJob).toHaveBeenCalledWith('job-1', expect.any(AbortSignal));
   });
 
   it('shows a stale banner when the stored plan is outdated', async () => {
     fetchSalesDailyPlan.mockResolvedValue({
-      ...samplePlan,
-      id: 'plan-2',
-      focus: 'Old advice',
-      priorities: [],
-      outreach: [],
-      offerRefinements: [],
-      risks: [],
-      isStale: true,
-      staleReasons: ['age', 'new_conversation', 'pipeline_changed'],
+      plan: {
+        ...samplePlan,
+        id: 'plan-2',
+        focus: 'Old advice',
+        priorities: [],
+        outreach: [],
+        offerRefinements: [],
+        risks: [],
+        isStale: true,
+        staleReasons: ['age', 'new_conversation', 'pipeline_changed'],
+      },
+      memory: [
+        {
+          id: 'plan-2',
+          generatedAt: '2026-09-01T10:00:00Z',
+          focus: 'Old advice',
+          productFocus: 'Push Family Consultations this week.',
+          operatorInput: null,
+        },
+        {
+          id: 'plan-older',
+          generatedAt: '2026-08-31T10:00:00Z',
+          focus: 'Earlier MBA push',
+          productFocus: 'My Best Auntie',
+          operatorInput: 'Lean into helper training',
+        },
+      ],
     });
 
     render(<SalePlanOfTheDayCard />);
@@ -135,10 +171,11 @@ describe('SalePlanOfTheDayCard', () => {
     expect(screen.getByText(/newer conversation messages/i)).toBeInTheDocument();
     expect(screen.getByText(/pipeline activity since this plan/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Refresh insight' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Previous insights/i })).toBeInTheDocument();
   });
 
   it('shows a friendly message when generation hits a gateway timeout', async () => {
-    fetchSalesDailyPlan.mockResolvedValue(null);
+    fetchSalesDailyPlan.mockResolvedValue({ plan: null, memory: [] });
     enqueueSalesDailyPlanJob.mockRejectedValue(
       new AdminApiError({
         statusCode: 504,
@@ -158,6 +195,81 @@ describe('SalePlanOfTheDayCard', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/The AI model took too long to respond/i)).toBeInTheDocument();
+    });
+  });
+
+  it('sends the refinement box with refresh insight', async () => {
+    fetchSalesDailyPlan.mockResolvedValue({
+      plan: samplePlan,
+      memory: [
+        {
+          id: samplePlan.id,
+          generatedAt: samplePlan.generatedAt,
+          focus: samplePlan.focus,
+          productFocus: samplePlan.productFocus,
+          operatorInput: null,
+        },
+      ],
+    });
+    enqueueSalesDailyPlanJob.mockResolvedValue({
+      id: 'job-2',
+      status: 'pending',
+      errorMessage: null,
+      operatorInput: 'Focus on MBA this week',
+      planId: null,
+      createdAt: '2026-09-01T11:00:00Z',
+      startedAt: null,
+      finishedAt: null,
+      updatedAt: '2026-09-01T11:00:00Z',
+      queueWaitMs: null,
+      durationMs: null,
+      plan: null,
+    });
+    pollSalesDailyPlanJob.mockImplementation(async () => {
+      const nextPlan = { ...samplePlan, operatorInput: 'Focus on MBA this week' };
+      fetchSalesDailyPlan.mockResolvedValue({
+        plan: nextPlan,
+        memory: [
+          {
+            id: nextPlan.id,
+            generatedAt: nextPlan.generatedAt,
+            focus: nextPlan.focus,
+            productFocus: nextPlan.productFocus,
+            operatorInput: nextPlan.operatorInput,
+          },
+        ],
+      });
+      return {
+        id: 'job-2',
+        status: 'succeeded',
+        errorMessage: null,
+        operatorInput: 'Focus on MBA this week',
+        planId: 'plan-1',
+        createdAt: '2026-09-01T11:00:00Z',
+        startedAt: '2026-09-01T11:00:01Z',
+        finishedAt: '2026-09-01T11:00:08Z',
+        updatedAt: '2026-09-01T11:00:08Z',
+        queueWaitMs: 1000,
+        durationMs: 7000,
+        plan: nextPlan,
+      };
+    });
+
+    const user = userEvent.setup();
+    render(<SalePlanOfTheDayCard />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Refresh insight' })).toBeInTheDocument();
+    });
+
+    await user.type(
+      screen.getByLabelText('Refinement for next insight'),
+      'Focus on MBA this week'
+    );
+    await user.click(screen.getByRole('button', { name: 'Refresh insight' }));
+
+    await waitFor(() => {
+      expect(enqueueSalesDailyPlanJob).toHaveBeenCalledWith('Focus on MBA this week');
     });
   });
 });

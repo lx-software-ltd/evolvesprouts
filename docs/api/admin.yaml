@@ -97,7 +97,7 @@ info:
     - `POST /v1/admin/leads/{id}/notes`
     - `GET|POST /v1/admin/leads/{id}/ai-suggestion` (POST queues async job; poll `.../ai-suggestion/jobs/{job_id}`)
     - `GET /v1/admin/leads/analytics`
-    - `GET|POST /v1/admin/leads/daily-plan` (POST queues async job; poll `.../daily-plan/jobs/{job_id}`)
+    - `GET|POST|DELETE /v1/admin/leads/daily-plan` (POST queues async job with optional `operator_input`; poll `.../daily-plan/jobs/{job_id}`; DELETE resets stored memory)
     - `GET|PATCH /v1/admin/leads/settings`
     - `GET /v1/admin/whatsapp/conversations`
     - `GET /v1/admin/whatsapp/conversations/{id}/messages`
@@ -1238,16 +1238,18 @@ paths:
       summary: Get latest org-wide sales plan of the day
       description: >
         Returns the newest stored org-wide AI sales daily plan, including
-        staleness metadata. `plan` is null when none has been generated yet.
+        staleness metadata, plus `memory` (up to the five newest stored plans,
+        including the latest). `plan` is null when none has been generated yet.
         A plan is stale when it is older than 24 hours, when a newer
         WhatsApp/Meta message exists after the stored conversation watermark,
         or when a lead was created or a funnel-stage event occurred after the
-        stored pipeline watermark.
+        stored pipeline watermark. All stored plans are retained until
+        `DELETE /v1/admin/leads/daily-plan`.
       security:
         - AdminBearerAuth: []
       responses:
         "200":
-          description: Latest daily plan payload (or null).
+          description: Latest daily plan payload (or null) plus memory.
           content:
             application/json:
               schema:
@@ -1260,11 +1262,20 @@ paths:
         Enqueues an asynchronous job that generates a sales-focused plan of the
         day via the shared OpenRouter pipeline (same Secrets Manager key,
         allow-listed chat-completions URL, and AWS HTTP proxy as lead AI
-        suggestions). Poll `GET /v1/admin/leads/daily-plan/jobs/{job_id}` for
-        status, timing (`queue_wait_ms`, `duration_ms`), and the resulting plan.
-        Does not send messages.
+        suggestions). Optional `operator_input` is stored on the job and the
+        resulting plan and is included in later generations as memory, along
+        with the last five persisted plans. Poll
+        `GET /v1/admin/leads/daily-plan/jobs/{job_id}` for status, timing
+        (`queue_wait_ms`, `duration_ms`), and the resulting plan. Does not send
+        messages.
       security:
         - AdminBearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SalesDailyPlanGenerateRequest"
       responses:
         "202":
           description: Generation job accepted.
@@ -1274,6 +1285,19 @@ paths:
                 $ref: "#/components/schemas/SalesDailyPlanJobResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    delete:
+      summary: Reset sale plan memory
+      description: >
+        Permanently deletes every stored sales daily plan, generation job, and
+        operator refinement. Live contacts, leads, and messages are not
+        affected. This cannot be undone.
+      security:
+        - AdminBearerAuth: []
+      responses:
+        "204":
+          description: Memory deleted.
         "403":
           $ref: "#/components/responses/Forbidden"
 
@@ -5944,6 +5968,10 @@ components:
         model:
           type: string
           nullable: true
+        operator_input:
+          type: string
+          nullable: true
+          description: Operator refinement stored with this plan and used as later memory.
         conversation_watermark_at:
           type: string
           format: date-time
@@ -5971,14 +5999,44 @@ components:
           type: string
           format: date-time
           nullable: true
+    SalesDailyPlanMemoryEntry:
+      type: object
+      required: [id, generated_at, focus, product_focus]
+      properties:
+        id:
+          type: string
+          format: uuid
+        generated_at:
+          type: string
+          format: date-time
+        focus:
+          type: string
+        product_focus:
+          type: string
+        operator_input:
+          type: string
+          nullable: true
     SalesDailyPlanResponse:
       type: object
-      required: [plan]
+      required: [plan, memory]
       properties:
         plan:
           allOf:
             - $ref: "#/components/schemas/SalesDailyPlan"
           nullable: true
+        memory:
+          type: array
+          description: Up to the five newest stored plans, newest first (including the latest).
+          items:
+            $ref: "#/components/schemas/SalesDailyPlanMemoryEntry"
+    SalesDailyPlanGenerateRequest:
+      type: object
+      properties:
+        operator_input:
+          type: string
+          nullable: true
+          maxLength: 4000
+          description: Optional refinement used for this generation and stored as memory.
     SalesDailyPlanJob:
       type: object
       required: [id, status]
@@ -5990,6 +6048,9 @@ components:
           type: string
           enum: [pending, processing, succeeded, failed]
         error_message:
+          type: string
+          nullable: true
+        operator_input:
           type: string
           nullable: true
         plan_id:

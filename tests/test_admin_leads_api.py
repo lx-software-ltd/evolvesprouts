@@ -320,6 +320,36 @@ def test_handle_admin_leads_dispatches_daily_plan_post(
     assert captured["actor_sub"] == admin_identity["userSub"]
 
 
+def test_handle_admin_leads_dispatches_daily_plan_delete(
+    monkeypatch: Any,
+    api_gateway_event: Any,
+    admin_identity: dict[str, str],
+) -> None:
+    marker = {"statusCode": 204, "body": ""}
+    captured: dict[str, Any] = {}
+    monkeypatch.setattr(
+        admin_leads,
+        "require_admin_identity",
+        lambda _: _build_admin_identity(admin_identity),
+    )
+
+    def _fake_delete(event: Any, *, actor_sub: str) -> dict[str, Any]:
+        captured["actor_sub"] = actor_sub
+        captured["event"] = event
+        return marker
+
+    monkeypatch.setattr(admin_leads, "delete_sales_daily_plan_memory", _fake_delete)
+
+    response = admin_leads.handle_admin_leads_request(
+        api_gateway_event(method="DELETE", path="/v1/admin/leads/daily-plan"),
+        "DELETE",
+        "/v1/admin/leads/daily-plan",
+    )
+
+    assert response is marker
+    assert captured["actor_sub"] == admin_identity["userSub"]
+
+
 def test_handle_admin_leads_dispatches_daily_plan_job_get(
     monkeypatch: Any,
     api_gateway_event: Any,

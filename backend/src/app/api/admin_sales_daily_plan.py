@@ -9,6 +9,8 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.api.admin_leads_common import request_id
+from app.api.admin_request import parse_body
+from app.api.admin_validators import validate_string_length
 from app.db.audit import set_audit_context
 from app.db.engine import get_engine
 from app.db.models.sales_daily_plan import SalesDailyPlan
@@ -20,6 +22,12 @@ from app.db.repositories.sales_daily_plan_job import SalesDailyPlanJobRepository
 from app.exceptions import NotFoundError, ValidationError
 from app.services.sales_daily_plan import get_latest_plan, serialize_plan
 from app.services.sales_daily_plan_events import enqueue_sales_daily_plan_job
+from app.services.sales_daily_plan_memory import (
+    MAX_OPERATOR_INPUT_LENGTH,
+    list_recent_plans,
+    reset_sales_daily_plan_memory,
+    serialize_memory_entry,
+)
 from app.services.sales_daily_plan_serialize import serialize_sales_daily_plan_job
 from app.utils import json_response
 
@@ -27,13 +35,36 @@ from app.utils import json_response
 def get_sales_daily_plan(event: Mapping[str, Any]) -> dict[str, Any]:
     with Session(get_engine()) as session:
         plan = get_latest_plan(session)
+        memory = [serialize_memory_entry(row) for row in list_recent_plans(session)]
         if plan is None:
-            return json_response(200, {"plan": None}, event=event)
+            return json_response(200, {"plan": None, "memory": memory}, event=event)
         return json_response(
             200,
-            {"plan": serialize_plan(session, plan=plan)},
+            {
+                "plan": serialize_plan(session, plan=plan),
+                "memory": memory,
+            },
             event=event,
         )
+
+
+def parse_daily_plan_operator_input(event: Mapping[str, Any]) -> str | None:
+    """Read optional ``operator_input`` from POST; empty body is allowed."""
+    raw = event.get("body") or ""
+    if event.get("isBase64Encoded") and raw:
+        body = parse_body(event)
+    elif not str(raw).strip():
+        body = {}
+    else:
+        body = parse_body(event)
+    if not isinstance(body, dict):
+        raise ValidationError("Request body must be a JSON object")
+    return validate_string_length(
+        body.get("operator_input"),
+        "operator_input",
+        MAX_OPERATOR_INPUT_LENGTH,
+        required=False,
+    )
 
 
 def create_sales_daily_plan(
@@ -41,6 +72,7 @@ def create_sales_daily_plan(
     *,
     actor_sub: str,
 ) -> dict[str, Any]:
+    operator_input = parse_daily_plan_operator_input(event)
     with Session(get_engine()) as session:
         set_audit_context(
             session,
@@ -50,6 +82,7 @@ def create_sales_daily_plan(
         job = SalesDailyPlanJob(
             created_by=actor_sub,
             status=SalesDailyPlanJobStatus.PENDING,
+            operator_input=operator_input,
         )
         session.add(job)
         session.flush()
@@ -89,6 +122,22 @@ def create_sales_daily_plan(
             {"job": serialize_sales_daily_plan_job(persisted_job)},
             event=event,
         )
+
+
+def delete_sales_daily_plan_memory(
+    event: Mapping[str, Any],
+    *,
+    actor_sub: str,
+) -> dict[str, Any]:
+    with Session(get_engine()) as session:
+        set_audit_context(
+            session,
+            user_id=actor_sub,
+            request_id=request_id(event),
+        )
+        reset_sales_daily_plan_memory(session)
+        session.commit()
+    return json_response(204, {}, event=event)
 
 
 def get_sales_daily_plan_job(

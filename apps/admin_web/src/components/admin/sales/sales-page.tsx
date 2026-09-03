@@ -13,6 +13,7 @@ import { WhatsAppConversationsView } from './whatsapp-conversations-view';
 import { AdminPageErrorBanner } from '@/components/admin/admin-page-error-banner';
 import { StatusBanner } from '@/components/status-banner';
 import { AdminTabStrip } from '@/components/ui/admin-tab-strip';
+import { useSalesDailyPlanReset } from '@/hooks/use-sales-daily-plan';
 import { type SalesView, useSalesPage } from '@/hooks/use-sales-page';
 import { formatBulkLeadFailureSummary, runBulkLeadOps } from '@/lib/bulk-lead-ops';
 import { updateLead } from '@/lib/leads-api';
@@ -42,6 +43,7 @@ const INBOX_VIEWS = new Set<SalesView>(['instagram', 'messenger', 'whatsapp']);
 
 export function SalesPage() {
   const state = useSalesPage();
+  const salePlanMemory = useSalesDailyPlanReset();
   const [bulkActionError, setBulkActionError] = useState('');
   const hasAnyError =
     state.adminUsers.error ||
@@ -96,6 +98,9 @@ export function SalesPage() {
           isSaving={state.salesSettings.isSaving}
           error={state.salesSettings.error}
           onSave={state.salesSettings.save}
+          onResetMemory={salePlanMemory.resetMemory}
+          isResettingMemory={salePlanMemory.isResetting}
+          resetError={salePlanMemory.resetError}
         />
       ) : state.activeView === 'pipeline' ? (
         <LeadsTable

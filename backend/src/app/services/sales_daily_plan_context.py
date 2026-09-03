@@ -22,6 +22,7 @@ from app.db.models.sales_lead import SalesLead, SalesLeadEvent
 from app.db.models.service import Service
 from app.db.models.service_instance import InstanceSessionSlot, ServiceInstance
 from app.db.models.whatsapp import WhatsAppConversation, WhatsAppMessage
+from app.services.sales_daily_plan_memory import load_prior_plans_for_context
 from app.utils.logging import mask_email, mask_pii
 
 MAX_SERVICES = 20
@@ -66,6 +67,7 @@ def build_sales_daily_plan_context(
     closed_leads = _load_recent_closed_leads(session)
     needs_reply, conversation_watermark = _load_needs_reply_threads(session)
     pipeline_watermark = _latest_pipeline_activity_at(session)
+    prior_plans = load_prior_plans_for_context(session)
     context = {
         "generated_for": "org_wide_sales_plan_of_the_day",
         "as_of": now.isoformat(),
@@ -75,12 +77,16 @@ def build_sales_daily_plan_context(
         "open_leads": open_leads,
         "recent_closed_leads": closed_leads,
         "needs_reply_threads": needs_reply,
+        "prior_plans": prior_plans,
         "guidance": (
             "Prioritize unanswered inbound threads and late-stage open leads. "
             "Suggest concrete activities for today. Recommend which published "
             "service to push and any offer-wording tweaks grounded in message "
-            "feedback. Do not invent pricing, schedules, or guarantees. If "
-            "context is thin, say what to gather next."
+            "feedback. Treat prior_plans as persisted memory of earlier insights "
+            "and operator refinements; follow operator_input when present. Prefer "
+            "live CRM context when it disagrees with older plans. Do not invent "
+            "pricing, schedules, or guarantees. If context is thin, say what to "
+            "gather next."
         ),
     }
     return context, SalesDailyPlanWatermarks(

@@ -28,6 +28,7 @@ export interface SalesDailyPlan {
   generatedAt: string | null;
   generatedBy: string | null;
   model: string | null;
+  operatorInput: string | null;
   conversationWatermarkAt: string | null;
   pipelineWatermarkAt: string | null;
   isStale: boolean;
@@ -37,10 +38,26 @@ export interface SalesDailyPlan {
   latestPipelineAt: string | null;
 }
 
+export interface SalesDailyPlanMemoryEntry {
+  id: string;
+  generatedAt: string | null;
+  focus: string;
+  productFocus: string;
+  operatorInput: string | null;
+}
+
+export interface SalesDailyPlanSnapshot {
+  plan: SalesDailyPlan | null;
+  memory: SalesDailyPlanMemoryEntry[];
+}
+
+export const SALES_DAILY_PLAN_OPERATOR_INPUT_MAX = 4000;
+
 export interface SalesDailyPlanJob {
   id: string;
   status: SalesDailyPlanJobStatus;
   errorMessage: string | null;
+  operatorInput: string | null;
   planId: string | null;
   createdAt: string | null;
   startedAt: string | null;

@@ -11,8 +11,12 @@ import {
   enqueueSalesDailyPlanJob,
   fetchSalesDailyPlan,
   pollSalesDailyPlanJob,
+  resetSalesDailyPlanMemory,
 } from '@/lib/sales-daily-plan-api';
-import type { SalesDailyPlan, SalesDailyPlanJob } from '@/types/sales-daily-plan';
+import type {
+  SalesDailyPlanJob,
+  SalesDailyPlanSnapshot,
+} from '@/types/sales-daily-plan';
 
 import { toErrorMessage } from './hook-errors';
 
@@ -25,10 +29,12 @@ function formatDailyPlanError(error: unknown, fallback: string): string {
   return toErrorMessage(error, fallback);
 }
 
+const EMPTY_SNAPSHOT: SalesDailyPlanSnapshot = { plan: null, memory: [] };
+
 export function useSalesDailyPlan() {
   const queryClient = getAdminQueryClient();
   const queryKey = adminQueryKeys.salesDailyPlan.latest();
-  const query = useQuery<SalesDailyPlan | null, unknown>(
+  const query = useQuery<SalesDailyPlanSnapshot, unknown>(
     {
       queryKey,
       queryFn: fetchSalesDailyPlan,
@@ -40,32 +46,39 @@ export function useSalesDailyPlan() {
   const [generateError, setGenerateError] = useState('');
   const abortRef = useRef<AbortController | null>(null);
 
-  const generate = useCallback(async () => {
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-    setIsGenerating(true);
-    setGenerateError('');
-    setLastJob(null);
-    try {
-      const queued = await enqueueSalesDailyPlanJob();
-      setLastJob(queued);
-      const finished = await pollSalesDailyPlanJob(queued.id, controller.signal);
-      setLastJob(finished);
-      if (finished.plan) {
-        queryClient.setQueryData(queryKey, finished.plan);
-      } else {
+  const generate = useCallback(
+    async (operatorInput?: string) => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+      setIsGenerating(true);
+      setGenerateError('');
+      setLastJob(null);
+      try {
+        const queued = await enqueueSalesDailyPlanJob(operatorInput);
+        setLastJob(queued);
+        const finished = await pollSalesDailyPlanJob(queued.id, controller.signal);
+        setLastJob(finished);
+        if (finished.plan) {
+          queryClient.setQueryData<SalesDailyPlanSnapshot>(queryKey, (current) => ({
+            plan: finished.plan,
+            memory: current?.memory ?? [],
+          }));
+        }
         await queryClient.invalidateQueries({ queryKey });
+        return true;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return false;
+        }
+        setGenerateError(formatDailyPlanError(error, 'Failed to generate daily plan.'));
+        return false;
+      } finally {
+        setIsGenerating(false);
       }
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        return;
-      }
-      setGenerateError(formatDailyPlanError(error, 'Failed to generate daily plan.'));
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [queryClient, queryKey]);
+    },
+    [queryClient, queryKey]
+  );
 
   const cancel = useCallback(() => {
     abortRef.current?.abort();
@@ -77,8 +90,11 @@ export function useSalesDailyPlan() {
     };
   }, []);
 
+  const snapshot = query.data ?? EMPTY_SNAPSHOT;
+
   return {
-    plan: query.data ?? null,
+    plan: snapshot.plan,
+    memory: snapshot.memory,
     isLoading: query.isLoading,
     loadError: query.error
       ? formatDailyPlanError(query.error, 'Failed to load daily plan.')
@@ -88,5 +104,34 @@ export function useSalesDailyPlan() {
     lastJob,
     generate,
     cancel,
+  };
+}
+
+export function useSalesDailyPlanReset() {
+  const queryClient = getAdminQueryClient();
+  const queryKey = adminQueryKeys.salesDailyPlan.latest();
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetError, setResetError] = useState('');
+
+  const resetMemory = useCallback(async () => {
+    setIsResetting(true);
+    setResetError('');
+    try {
+      await resetSalesDailyPlanMemory();
+      queryClient.setQueryData<SalesDailyPlanSnapshot>(queryKey, EMPTY_SNAPSHOT);
+      await queryClient.invalidateQueries({ queryKey });
+    } catch (error) {
+      const message = formatDailyPlanError(error, 'Failed to reset sale plan memory.');
+      setResetError(message);
+      throw error;
+    } finally {
+      setIsResetting(false);
+    }
+  }, [queryClient, queryKey]);
+
+  return {
+    resetMemory,
+    isResetting,
+    resetError,
   };
 }

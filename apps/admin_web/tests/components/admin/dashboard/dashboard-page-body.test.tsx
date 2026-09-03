@@ -23,9 +23,10 @@ vi.mock('@/lib/billing-api', () => ({
 }));
 
 vi.mock('@/lib/sales-daily-plan-api', () => ({
-  fetchSalesDailyPlan: vi.fn(() => Promise.resolve(null)),
+  fetchSalesDailyPlan: vi.fn(() => Promise.resolve({ plan: null, memory: [] })),
   enqueueSalesDailyPlanJob: vi.fn(),
   pollSalesDailyPlanJob: vi.fn(),
+  resetSalesDailyPlanMemory: vi.fn(),
 }));
 
 import { DashboardPageBody } from '@/components/admin/dashboard/dashboard-page-body';
