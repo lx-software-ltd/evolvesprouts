@@ -39,9 +39,11 @@ export function TagsPage() {
                   type='button'
                   variant='secondary'
                   disabled={page.editorIsBusy}
+                  loading={page.restoreBusyId === page.selectedTagId}
+                  loadingLabel='Restoring…'
                   onClick={() => page.selectedRow && void page.handleRestore(page.selectedRow)}
                 >
-                  {page.restoreBusyId === page.selectedTagId ? 'Restoring…' : 'Restore'}
+                  Restore
                 </Button>
               ) : null}
               <Button type='button' variant='secondary' disabled={page.editorIsBusy} onClick={page.resetCreateForm}>
@@ -51,13 +53,19 @@ export function TagsPage() {
                 type='submit'
                 form={EDITOR_FORM_ID}
                 disabled={page.editorIsBusy || !page.name.trim()}
+                loading={page.isSaving}
               >
-                {page.isSaving ? 'Saving…' : 'Save changes'}
+                Save changes
               </Button>
             </>
           ) : (
-            <Button type='submit' form={EDITOR_FORM_ID} disabled={page.editorIsBusy || !page.name.trim()}>
-              {page.isSaving ? 'Creating…' : 'Create tag'}
+            <Button
+              type='submit'
+              form={EDITOR_FORM_ID}
+              disabled={page.editorIsBusy || !page.name.trim()}
+              loading={page.isSaving}
+            >
+              Create tag
             </Button>
           )
         }
@@ -184,10 +192,12 @@ export function TagsPage() {
                         type='button'
                         size='sm'
                         variant='secondary'
-                        disabled={page.editorIsBusy || page.restoreBusyId === row.id}
+                        disabled={page.editorIsBusy}
+                        loading={page.restoreBusyId === row.id}
+                        loadingLabel='Restoring…'
                         onClick={() => void page.handleRestore(row)}
                       >
-                        {page.restoreBusyId === row.id ? '…' : 'Restore'}
+                        Restore
                       </Button>
                     ) : null}
                     {!row.archived_at && !row.is_system ? (

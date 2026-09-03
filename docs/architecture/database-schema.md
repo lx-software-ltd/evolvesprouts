@@ -483,6 +483,9 @@ maps legacy `note.id` to the **first** inserted row’s UUID.
   `phonenumbers` from region + national number.
 - `source_metadata` (jsonb, nullable) may hold structured source data; the admin
   API stores `referral_contact_id` (UUID string) when `source = referral`.
+- `job_title` (`varchar(200)`, nullable) is free text edited from the admin
+  contact editor next to `source_detail`; it is distinct from the legacy import
+  that folds occupation/company into `source_detail`.
 - Key indexes: case-insensitive unique email/instagram indexes and source/type
   indexes.
 - Admin API rule: a contact may belong to at most one family and at most one

@@ -48,8 +48,14 @@ export function PaginatedTableCard({
       {isLoading ? <p className='mt-3 text-sm text-slate-500'>{loadingLabel}</p> : null}
       {hasMore ? (
         <div className='mt-3'>
-          <Button type='button' variant='outline' onClick={() => void onLoadMore()} disabled={isLoadingMore}>
-            {isLoadingMore ? 'Loading...' : 'Load more'}
+          <Button
+            type='button'
+            variant='outline'
+            onClick={() => void onLoadMore()}
+            loading={isLoadingMore}
+            loadingLabel='Loading…'
+          >
+            Load more
           </Button>
         </div>
       ) : null}

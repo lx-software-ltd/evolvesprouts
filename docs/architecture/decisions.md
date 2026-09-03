@@ -367,8 +367,8 @@ list sections so the edit context was visible before browsing/filtering lists.
 **Decision:** Every admin CRUD screen renders filters, then the table, with no
 listing title, inside one untitled white card. Selecting a row expands an
 editor directly beneath that row (one open at a time, animated, URL-synced,
-closed off by a strong bottom rule); creating a record inserts a draft row with
-its editor open. Editors have no title or subtitle and no Cancel button (one
+framed on all four sides by one 2px rule); creating a record inserts a draft
+row with its editor open. Editors have no title or subtitle and no Cancel button (one
 primary action; collapsing the row is how the operator leaves), fields are laid
 out 1, 2, or 4 per row with white-background controls, and Operations-column
 controls are icon-only buttons of one size with a border, white background, and
@@ -378,7 +378,7 @@ Shared primitives in `apps/admin_web/src/components/ui/`:
 
 | Concern | Primitive |
 |---------|-----------|
-| Filters above the table, trailing `+` create control | `AdminFilterBar`, `AdminFilterField`, `AdminCreateButton` |
+| Filters above the table, trailing labelled create control (`New contact`) | `AdminFilterBar`, `AdminFilterField`, `AdminCreateButton` |
 | Table shell with skeleton, empty, and load-more states | `AdminRecordTable` |
 | Row that expands into an editor | `AdminExpandableRow` (+ `useExpandedRecord` hook) |
 | Editor body and single action row | `AdminEditorPanel`, `AdminEditorActions` |
@@ -387,6 +387,7 @@ Shared primitives in `apps/admin_web/src/components/ui/`:
 | Operations column | `AdminRowActions`, `AdminIconButton`, `AdminIconLink` |
 | Animated show/hide | `AdminExpandRegion` + motion tokens in `globals.css` |
 | Unsaved-edit guard when switching rows | `AdminDiscardChangesDialog` |
+| In-flight API call from a button (spinner + `Saving…`) | `Button loading`, `AdminEditorActions isSaving`, `ConfirmDialog confirmLoading` |
 
 Editor hooks in `apps/admin_web/src/hooks/` shared by the migrated screens:
 `useEntityPanelEditorShell` owns the expanded row, dirty flag, and confirm
@@ -411,17 +412,22 @@ a pinned row, and collapses unresolvable ids.
   row click, other row) and, on the draft row, implied a second way to lose
   work; the unsaved-edit guard already covers every exit path.
 - The white card around filters and table restores a clear content boundary
-  on the grey page background; the 2px `slate-300` frame on the left, right,
-  and bottom of an open record (summary row plus detail region) makes its
-  extent legible when the next row follows immediately.
+  on the grey page background; the 2px `slate-300` frame around an open record
+  (top and sides on the summary row, sides and bottom on the detail region)
+  makes its extent legible when the next row follows immediately and lets the
+  summary row read as the card's title bar.
 - Tables must read on a phone without horizontal scrolling. Columns carry a
   priority (`primary` always, `secondary` from `md`, `tertiary` from `lg`) and
   the identifying cell surfaces the most useful hidden value as a meta line
   while its column is hidden, so no `min-w-*` is set on record tables.
-- The create control is square and matches the filter input height so the
-  toolbar reads as one band; on phones it takes its own full-width line with
-  its label spelled out because a bare `+` at the end of a wrapped filter row
-  was easy to miss.
+- The create control spells out its label (`New contact`, `New note`) at
+  every breakpoint and matches the filter input height so the toolbar reads as
+  one band; a bare `+` was easy to miss and did not say what it created. On
+  phones it takes its own full-width line above the filters.
+- A button that starts an API call shows the shared in-flight state (disabled,
+  `aria-busy`, spinning ring plus `Saving…` or an action-specific label) so the
+  operator sees that something is moving. This lives in `Button` itself rather
+  than per-screen ternaries so no screen can forget it.
 - `AdminTabStrip` uses a white active control with a uniform 1px border inside
   a `slate-100` tray (hover previews the same surface) and lays the controls
   out two per row on phones; the earlier ghost/secondary button pair had too
@@ -444,14 +450,17 @@ a pinned row, and collapses unresolvable ids.
   render as a `readOnly` `Input` so the field grid keeps one control shape.
 - Nested record lists inside an open editor (contact notes, family and
   organisation members) reuse the same table-first pattern through
-  `AdminRecordTable embedded` (no inner card): a `+` control opens a draft row
-  with the composer or picker, clicking a row opens its editor beneath it, and
-  Delete / Remove stay in Operations. There is no always-on composer and no
-  edit icon.
+  `AdminRecordTable embedded` (no inner card): a `New note` / `New member`
+  control opens a draft row with the composer or picker, clicking a row opens
+  its editor beneath it, and Delete / Remove stay in Operations. There is no
+  always-on composer and no edit icon. The `AdminExpandRegion` grid pins its
+  column track (`minmax(0, 1fr)`) so a nested table only animates in height
+  and never changes width while it opens.
 - Contact editor field exceptions: the phone number renders as a 40/60
   prefix / national number split inside one field; the Source row is
-  Source (1/4), Source detail (1/4), with the remaining half reserved for a
-  Job title field once the contact model carries one.
+  Source (1/4), Source detail (1/4), Job title (1/2, `contacts.job_title`),
+  with referral fields on their own row at 2 columns each when the source is
+  `referral`.
 
 ## Admin web server state on TanStack Query
 

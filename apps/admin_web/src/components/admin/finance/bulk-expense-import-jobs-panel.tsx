@@ -317,8 +317,9 @@ export function BulkExpenseImportJobsPanel({ onAfterMutation }: BulkExpenseImpor
         open={retryTarget !== null}
         title='Retry bulk import?'
         description='This queues a new background job using the same PDF attachment and default vendor. It does not remove expenses created by earlier attempts.'
-        confirmLabel={retryBusy ? 'Queuing…' : 'Queue retry'}
-        confirmDisabled={retryBusy}
+        confirmLabel='Queue retry'
+        confirmLoading={retryBusy}
+        confirmLoadingLabel='Queuing…'
         cancelLabel='Cancel'
         variant='default'
         onConfirm={() => void confirmRetry()}
@@ -332,8 +333,9 @@ export function BulkExpenseImportJobsPanel({ onAfterMutation }: BulkExpenseImpor
         open={deleteTarget !== null}
         title='Delete bulk import job?'
         description='This removes the job from your recent imports list. Expenses already created from this import are not deleted.'
-        confirmLabel={deleteBusy ? 'Deleting…' : 'Delete job'}
-        confirmDisabled={deleteBusy}
+        confirmLabel='Delete job'
+        confirmLoading={deleteBusy}
+        confirmLoadingLabel='Deleting…'
         cancelLabel='Cancel'
         variant='danger'
         onConfirm={() => void confirmDelete()}

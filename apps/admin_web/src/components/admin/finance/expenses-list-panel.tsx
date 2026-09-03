@@ -428,7 +428,8 @@ export function ExpensesListPanel({
         confirmLabel='Void expense'
         cancelLabel='Cancel'
         variant='danger'
-        confirmDisabled={Boolean(voidExpenseId && isVoidingId === voidExpenseId)}
+        confirmLoading={Boolean(voidExpenseId && isVoidingId === voidExpenseId)}
+        confirmLoadingLabel='Voiding…'
         onCancel={closeVoidDialog}
         onConfirm={() => void confirmVoid()}
       >
@@ -455,7 +456,8 @@ export function ExpensesListPanel({
         confirmLabel='Delete expense'
         cancelLabel='Cancel'
         variant='danger'
-        confirmDisabled={Boolean(deleteDraftExpenseId && isDeletingDraftId === deleteDraftExpenseId)}
+        confirmLoading={Boolean(deleteDraftExpenseId && isDeletingDraftId === deleteDraftExpenseId)}
+        confirmLoadingLabel='Deleting…'
         onCancel={closeDeleteDraftDialog}
         onConfirm={() => void confirmDeleteDraft()}
       >

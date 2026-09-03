@@ -115,8 +115,8 @@ export function AssetGrantsPanel({
             title='Add Grant'
             description={`Asset: ${selectedAsset.title} (${selectedAsset.visibility})`}
             actions={
-              <Button type='submit' form={ASSET_GRANT_FORM_ID} disabled={isSavingGrant}>
-                {isSavingGrant ? 'Adding...' : 'Add grant'}
+              <Button type='submit' form={ASSET_GRANT_FORM_ID} loading={isSavingGrant}>
+                Add grant
               </Button>
             }
           >

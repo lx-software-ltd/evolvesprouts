@@ -89,10 +89,13 @@
    */
   .admin-expand {
     display: grid;
+    /* Fixed-width track: nested tables must only ever animate in height. */
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: 0fr;
     transition: grid-template-rows var(--duration-admin-expand) var(--ease-admin-expand);
   }
   .admin-expand > * {
+    min-width: 0;
     min-height: 0;
     overflow: hidden;
   }

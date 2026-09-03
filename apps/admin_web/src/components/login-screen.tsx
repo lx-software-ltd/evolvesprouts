@@ -212,6 +212,8 @@ export function LoginScreen() {
                   <Button
                     type='submit'
                     disabled={isLoading || hasConfigErrors || !email.trim()}
+                    loading={isSending}
+                    loadingLabel='Sending code…'
                     className='h-11 w-full text-base sm:text-sm'
                   >
                     <span
@@ -220,7 +222,7 @@ export function LoginScreen() {
                     >
                       <EmailIcon className='h-4 w-4' />
                     </span>
-                    {isSending ? 'Sending code...' : 'Email me a verification code'}
+                    Email me a verification code
                   </Button>
                   <p className='text-center text-xs text-slate-600'>
                     We will send a one-time 6-digit code.
@@ -257,9 +259,11 @@ export function LoginScreen() {
                   <Button
                     type='submit'
                     disabled={isLoading || !code.trim()}
+                    loading={isVerifying}
+                    loadingLabel='Verifying…'
                     className='h-11 w-full text-base sm:text-sm'
                   >
-                    {isVerifying ? 'Verifying...' : 'Verify code'}
+                    Verify code
                   </Button>
                   <button
                     type='button'

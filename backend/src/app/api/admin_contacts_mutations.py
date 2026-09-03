@@ -125,6 +125,12 @@ def create_contact(
         max_length=5000,
         required=False,
     )
+    job_title = validate_string_length(
+        body.get("job_title"),
+        "job_title",
+        max_length=200,
+        required=False,
+    )
     date_of_birth = parse_optional_date(
         body.get("date_of_birth"), field="date_of_birth"
     )
@@ -179,6 +185,7 @@ def create_contact(
             location_id=location_id,
             source=source,
             source_detail=source_detail,
+            job_title=job_title,
         )
         if source == ContactSource.REFERRAL and referral_contact_id is not None:
             apply_referral_contact_metadata(
@@ -300,6 +307,13 @@ def update_contact(
                 body.get("source_detail"),
                 "source_detail",
                 max_length=5000,
+                required=False,
+            )
+        if "job_title" in body:
+            contact.job_title = validate_string_length(
+                body.get("job_title"),
+                "job_title",
+                max_length=200,
                 required=False,
             )
 

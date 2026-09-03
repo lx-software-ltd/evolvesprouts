@@ -211,9 +211,11 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
           type='button'
           variant='outline'
           onClick={() => void handleExport()}
-          disabled={!selectedSlug || exporting || answersLoading}
+          disabled={!selectedSlug || answersLoading}
+          loading={exporting}
+          loadingLabel='Exporting…'
         >
-          {exporting ? 'Exporting…' : 'Export answers'}
+          Export answers
         </Button>
         <Button
           type='button'
@@ -291,10 +293,11 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
             ? `Permanently delete all ${storedCount} stored answer rows for "${selectedSlug}"? This cannot be undone.`
             : `Permanently delete all stored answer rows for this ${lowerNoun}? This cannot be undone.`
         }
-        confirmLabel={clearing ? 'Clearing…' : 'Clear answers'}
+        confirmLabel='Clear answers'
         cancelLabel='Cancel'
         variant='danger'
-        confirmDisabled={clearing}
+        confirmLoading={clearing}
+        confirmLoadingLabel='Clearing…'
         onConfirm={() => void handleClearConfirm()}
         onCancel={() => {
           if (!clearing) {

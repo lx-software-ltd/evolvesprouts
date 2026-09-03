@@ -198,14 +198,8 @@ export function LeadDetailPanel({
                 Cancel
               </Button>
             ) : null}
-            <Button type='submit' form={LEAD_EDITOR_FORM_ID} disabled={saveDisabled}>
-              {isLoading
-                ? mode === 'create'
-                  ? 'Creating...'
-                  : 'Updating...'
-                : mode === 'create'
-                  ? 'Create lead'
-                  : 'Update lead'}
+            <Button type='submit' form={LEAD_EDITOR_FORM_ID} disabled={saveDisabled} loading={isLoading}>
+              {mode === 'create' ? 'Create lead' : 'Update lead'}
             </Button>
           </>
         }

@@ -12,11 +12,13 @@ type ApiSchemas = components['schemas'];
 export interface ContactEditorSourceFieldsProps {
   source: ApiSchemas['EntityContactSource'];
   sourceDetail: string;
+  jobTitle: string;
   referralContactId: string;
   referralSearchInput: string;
   referralSelectOptions: { id: string; label: string }[];
   onSourceChange: (value: ApiSchemas['EntityContactSource']) => void;
   onSourceDetailChange: (value: string) => void;
+  onJobTitleChange: (value: string) => void;
   onReferralSearchInputChange: (value: string) => void;
   onReferralContactIdChange: (contactId: string, pinnedLabel: string | null) => void;
 }
@@ -24,11 +26,13 @@ export interface ContactEditorSourceFieldsProps {
 export function ContactEditorSourceFields({
   source,
   sourceDetail,
+  jobTitle,
   referralContactId,
   referralSearchInput,
   referralSelectOptions,
   onSourceChange,
   onSourceDetailChange,
+  onJobTitleChange,
   onReferralSearchInputChange,
   onReferralContactIdChange,
 }: ContactEditorSourceFieldsProps) {
@@ -57,9 +61,19 @@ export function ContactEditorSourceFields({
           autoComplete='off'
         />
       </AdminField>
+      <AdminField label='Job title' htmlFor='crm-contact-job-title' span={2}>
+        <Input
+          id='crm-contact-job-title'
+          type='text'
+          value={jobTitle}
+          onChange={(e) => onJobTitleChange(e.target.value)}
+          autoComplete='organization-title'
+          maxLength={200}
+        />
+      </AdminField>
       {isReferral ? (
         <>
-          <AdminField label='Find referring contact' htmlFor='crm-contact-referral-search'>
+          <AdminField label='Find referring contact' htmlFor='crm-contact-referral-search' span={2}>
             <Input
               id='crm-contact-referral-search'
               value={referralSearchInput}
@@ -68,7 +82,7 @@ export function ContactEditorSourceFields({
               autoComplete='off'
             />
           </AdminField>
-          <AdminField label='Referred by contact' htmlFor='crm-contact-referral'>
+          <AdminField label='Referred by contact' htmlFor='crm-contact-referral' span={2}>
             <Select
               id='crm-contact-referral'
               value={referralContactId}

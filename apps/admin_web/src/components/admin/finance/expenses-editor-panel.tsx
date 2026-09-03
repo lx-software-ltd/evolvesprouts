@@ -235,14 +235,11 @@ export function ExpensesEditorPanel({
     }
   }
 
-  const primaryLabel =
-    isSaving || isUploadingFiles
-      ? 'Saving...'
-      : isTerminal
-        ? 'Create amendment'
-        : selectedExpense
-          ? 'Update expense'
-          : 'Submit expense';
+  const primaryLabel = isTerminal
+    ? 'Create amendment'
+    : selectedExpense
+      ? 'Update expense'
+      : 'Submit expense';
 
   return (
     <AdminEditorCard
@@ -255,7 +252,12 @@ export function ExpensesEditorPanel({
               Cancel
             </Button>
           ) : null}
-          <Button type='button' onClick={() => void handleSave()} disabled={isSubmitDisabled}>
+          <Button
+            type='button'
+            onClick={() => void handleSave()}
+            disabled={isSubmitDisabled}
+            loading={isSaving || isUploadingFiles}
+          >
             {primaryLabel}
           </Button>
         </>

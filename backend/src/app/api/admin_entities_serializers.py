@@ -138,6 +138,7 @@ def serialize_contact_summary(
         ),
         "source": contact.source.value,
         "source_detail": contact.source_detail,
+        "job_title": contact.job_title,
         "referral_contact_id": _referral_contact_id_from_metadata(
             contact.source_metadata
         ),

@@ -210,8 +210,9 @@ export function CalendarManualBlocksPage() {
                 type='submit'
                 form={EDITOR_FORM_ID}
                 disabled={editorIsBusy || !blockDate.trim()}
+                loading={isSaving}
               >
-                {isSaving ? 'Saving…' : 'Save changes'}
+                Save changes
               </Button>
             </>
           ) : (

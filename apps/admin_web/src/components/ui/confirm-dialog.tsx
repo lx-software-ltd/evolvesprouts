@@ -16,8 +16,11 @@ export interface ConfirmDialogProps {
   onCancel: () => void;
   /** Optional fields (for example a void reason) rendered between the description and actions. */
   children?: ReactNode;
-  /** When true, the confirm action is non-interactive (for example during an in-flight mutation). */
+  /** When true, the confirm action is non-interactive (for example while a prerequisite is missing). */
   confirmDisabled?: boolean;
+  /** In-flight confirm mutation: shows the standard spinner + `confirmLoadingLabel`. */
+  confirmLoading?: boolean;
+  confirmLoadingLabel?: string;
   /** ARIA role for the modal surface; `alertdialog` for destructive confirmations. */
   dialogRole?: 'dialog' | 'alertdialog';
 }
@@ -33,6 +36,8 @@ export function ConfirmDialog({
   onCancel,
   children,
   confirmDisabled = false,
+  confirmLoading = false,
+  confirmLoadingLabel,
   dialogRole = 'alertdialog',
 }: ConfirmDialogProps) {
   return (
@@ -51,6 +56,8 @@ export function ConfirmDialog({
             type='button'
             variant={variant === 'danger' ? 'danger' : 'primary'}
             disabled={confirmDisabled}
+            loading={confirmLoading}
+            loadingLabel={confirmLoadingLabel}
             onClick={onConfirm}
           >
             {confirmLabel}

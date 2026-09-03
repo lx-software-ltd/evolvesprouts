@@ -187,6 +187,7 @@ describe('ContactsPanel', () => {
 
     await user.click(screen.getByRole('button', { name: 'New contact' }));
     await user.type(screen.getByLabelText('First name'), 'Jane');
+    await user.type(screen.getByLabelText('Job title'), 'Head teacher');
     await user.click(screen.getByRole('button', { name: 'Create contact' }));
 
     expect(createContact).toHaveBeenCalledWith(
@@ -194,6 +195,7 @@ describe('ContactsPanel', () => {
         first_name: 'Jane',
         relationship_type: 'prospect',
         contact_type: 'parent',
+        job_title: 'Head teacher',
       })
     );
     await waitFor(() => {

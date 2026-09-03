@@ -90,7 +90,10 @@ describe('AdminEditorPanel / AdminEditorActions', () => {
         <p>body</p>
       </AdminEditorPanel>
     );
-    expect(screen.getByRole('button', { name: 'Saving...' })).toBeDisabled();
+    const saving = screen.getByRole('button', { name: 'Saving…' });
+    expect(saving).toBeDisabled();
+    expect(saving).toHaveAttribute('aria-busy', 'true');
+    expect(saving.querySelector('svg.animate-spin')).not.toBeNull();
     expect(screen.getAllByRole('button')).toHaveLength(1);
   });
 });
@@ -145,12 +148,12 @@ describe('AdminFilterBar / AdminCreateButton', () => {
     expect(screen.getByLabelText('Search')).toBeInTheDocument();
     expect(screen.getByText('2 of 40')).toBeInTheDocument();
     const create = screen.getByRole('button', { name: 'New contact' });
-    expect(create).toHaveAttribute('title', 'New contact');
     expect(create).toHaveAttribute('aria-pressed', 'true');
-    // Square and input-height on desktop; full-width with the label on phones.
-    expect(create).toHaveClass('h-10', 'w-full', 'sm:h-9', 'sm:w-9', 'rounded-md', 'border');
+    // Spelled-out label, no plus icon; input-height on desktop, full-width on phones.
     expect(create).toHaveTextContent('New contact');
-    expect(create.querySelector('span')).toHaveClass('sm:hidden');
+    expect(create.querySelector('svg')).toBeNull();
+    expect(create).toHaveClass('h-10', 'w-full', 'sm:h-9', 'sm:w-auto', 'rounded-md', 'border');
+    expect(create).not.toHaveClass('sm:w-9');
     expect(create.parentElement).toHaveClass('order-first', 'w-full', 'sm:order-none', 'sm:w-auto');
     fireEvent.click(create);
     expect(onCreate).toHaveBeenCalledTimes(1);
@@ -357,6 +360,32 @@ describe('AdminExpandableRow', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'op' }));
     expect(onToggle).toHaveBeenCalledTimes(4);
+  });
+
+  it('frames the selected record: summary row top and sides match the detail bottom border', () => {
+    const { rerender } = renderRow(false);
+    const row = screen.getByTestId('admin-row-c1');
+    expect(row).not.toHaveClass('border-t-2');
+    expect(row).not.toHaveClass('border-x-2');
+
+    rerender(
+      <table>
+        <tbody>
+          <AdminExpandableRow
+            id='c1'
+            label='Ada Lovelace'
+            expanded
+            onToggle={() => undefined}
+            columnCount={3}
+            cells={<AdminDataTableCell>Ada</AdminDataTableCell>}
+            detail={<input aria-label='First name' />}
+          />
+        </tbody>
+      </table>
+    );
+    expect(row).toHaveClass('border-t-2', 'border-x-2', 'border-t-slate-300', 'border-x-slate-300');
+    const detail = screen.getByLabelText('First name').closest('.admin-row-detail');
+    expect(detail).toHaveClass('border-b-2', 'border-x-2', 'border-b-slate-300', 'border-x-slate-300');
   });
 
   it('mounts the detail while expanded and unmounts it after collapsing settles', () => {

@@ -113,8 +113,9 @@ export function AdminExpandableRow({
         className={clsx(
           'cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400',
           isDraft ? 'bg-amber-50' : expanded ? 'bg-slate-100' : 'hover:bg-slate-50',
-          // Continue the detail frame up the sides of the selected summary row.
-          expanded && 'border-x-2 border-x-slate-300',
+          // Frame the selected record: the summary row carries the top and side
+          // borders at the same weight as the detail's bottom border.
+          expanded && 'border-x-2 border-t-2 border-x-slate-300 border-t-slate-300',
           className
         )}
       >

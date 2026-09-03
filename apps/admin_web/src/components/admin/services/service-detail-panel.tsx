@@ -65,9 +65,10 @@ export function ServiceDetailPanel({
                 <Button
                   type='button'
                   disabled={panel.updateDisabled}
+                  loading={isLoading}
                   onClick={() => void panel.submitUpdate()}
                 >
-                  {isLoading ? 'Updating...' : 'Update service'}
+                  Update service
                 </Button>
                 <Button
                   type='button'
@@ -82,9 +83,10 @@ export function ServiceDetailPanel({
               <Button
                 type='button'
                 disabled={panel.createDisabled}
+                loading={isLoading}
                 onClick={() => void panel.submitCreate()}
               >
-                {isLoading ? 'Adding...' : 'Add service'}
+                Add service
               </Button>
             )}
           </>

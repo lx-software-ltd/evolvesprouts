@@ -106,6 +106,6 @@ describe('PaginatedTableCard', () => {
         <table />
       </PaginatedTableCard>
     );
-    expect(screen.getByRole('button', { name: 'Loading...' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Loading…' })).toBeDisabled();
   });
 });

@@ -55,7 +55,9 @@ export function ClientInvoicesBillingDialogs({
         confirmLabel='Void invoice'
         cancelLabel='Cancel'
         variant='danger'
-        confirmDisabled={busyAction === 'void' || deleteDraftDialogOpen}
+        confirmDisabled={deleteDraftDialogOpen}
+        confirmLoading={busyAction === 'void'}
+        confirmLoadingLabel='Voiding…'
         onCancel={closeVoidInvoiceDialog}
         onConfirm={() => void confirmVoidInvoice()}
       >
@@ -82,7 +84,8 @@ export function ClientInvoicesBillingDialogs({
         confirmLabel='Delete draft'
         cancelLabel='Cancel'
         variant='danger'
-        confirmDisabled={busyAction === 'delete-draft'}
+        confirmLoading={busyAction === 'delete-draft'}
+        confirmLoadingLabel='Deleting…'
         onCancel={closeDeleteDraftInvoiceDialog}
         onConfirm={() => void confirmDeleteDraftInvoice()}
       >
@@ -97,7 +100,7 @@ export function ClientInvoicesBillingDialogs({
         description='Marks this pending inbound payment as succeeded. Receipt generation follows server rules.'
         confirmLabel='Confirm payment'
         cancelLabel='Cancel'
-        confirmDisabled={busyAction === 'confirm'}
+        confirmLoading={busyAction === 'confirm'}
         onCancel={closeConfirmPaymentDialog}
         onConfirm={() => void submitConfirmPayment()}
       >
@@ -126,7 +129,8 @@ export function ClientInvoicesBillingDialogs({
         confirmLabel='Delete payment'
         cancelLabel='Cancel'
         variant='danger'
-        confirmDisabled={busyAction === 'delete-payment'}
+        confirmLoading={busyAction === 'delete-payment'}
+        confirmLoadingLabel='Deleting…'
         onCancel={closeDeletePaymentDialog}
         onConfirm={() => void submitDeletePayment()}
       >

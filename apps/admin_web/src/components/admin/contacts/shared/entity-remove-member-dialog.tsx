@@ -28,7 +28,8 @@ export function EntityRemoveMemberDialog({
       }
       variant='danger'
       confirmLabel='Remove'
-      confirmDisabled={isSaving}
+      confirmLoading={isSaving}
+      confirmLoadingLabel='Removing…'
       onCancel={onCancel}
       onConfirm={onConfirm}
     />

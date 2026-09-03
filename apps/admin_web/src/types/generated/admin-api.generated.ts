@@ -8572,6 +8572,8 @@ export interface components {
             organization_location_summary?: components["schemas"]["EntityLocationVenueSummary"] | null;
             source: components["schemas"]["EntityContactSource"];
             source_detail?: string | null;
+            /** @description Optional job title (persons only; shown next to source detail in the admin editor). */
+            job_title?: string | null;
             /**
              * Format: uuid
              * @description When `source` is `referral`, the contact UUID of the referring contact
@@ -8712,6 +8714,7 @@ export interface components {
             relationship_type?: components["schemas"]["EntityRelationshipType"];
             source?: components["schemas"]["EntityContactSource"];
             source_detail?: string | null;
+            job_title?: string | null;
             /** Format: date */
             date_of_birth?: string | null;
             /** Format: uuid */
@@ -8738,6 +8741,7 @@ export interface components {
             relationship_type?: components["schemas"]["EntityRelationshipType"];
             source?: components["schemas"]["EntityContactSource"];
             source_detail?: string | null;
+            job_title?: string | null;
             /** Format: date */
             date_of_birth?: string | null;
             /** Format: uuid */

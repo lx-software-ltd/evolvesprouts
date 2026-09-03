@@ -10,11 +10,13 @@ function renderSourceFields(
   const props: ComponentProps<typeof ContactEditorSourceFields> = {
     source: 'manual',
     sourceDetail: '',
+    jobTitle: '',
     referralContactId: '',
     referralSearchInput: '',
     referralSelectOptions: [],
     onSourceChange: vi.fn(),
     onSourceDetailChange: vi.fn(),
+    onJobTitleChange: vi.fn(),
     onReferralSearchInputChange: vi.fn(),
     onReferralContactIdChange: vi.fn(),
     ...overrides,
@@ -51,5 +53,20 @@ describe('ContactEditorSourceFields', () => {
     expect(source.parentElement?.parentElement).toBe(sourceDetail.parentElement?.parentElement);
     expect(source.parentElement?.parentElement).toBe(referralSearch.parentElement?.parentElement);
     expect(source.parentElement?.parentElement).toBe(referredBy.parentElement?.parentElement);
+  });
+
+  it('places job title after source detail spanning two columns', () => {
+    const onJobTitleChange = vi.fn();
+    renderSourceFields({ jobTitle: 'Product manager', onJobTitleChange });
+
+    const sourceDetail = screen.getByLabelText('Source detail');
+    const jobTitle = screen.getByLabelText('Job title');
+
+    expect(jobTitle.tagName).toBe('INPUT');
+    expect(jobTitle).toHaveValue('Product manager');
+    expect(jobTitle).toHaveAttribute('maxlength', '200');
+    expect(sourceDetail.parentElement?.nextElementSibling).toBe(jobTitle.parentElement);
+    expect(jobTitle.parentElement).toHaveClass('sm:col-span-2');
+    expect(sourceDetail.parentElement).not.toHaveClass('sm:col-span-2');
   });
 });

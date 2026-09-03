@@ -488,16 +488,12 @@ function InlineLocationEditorInner({
                 type='button'
                 size='sm'
                 variant='secondary'
-                disabled={
-                  isSaving ||
-                  isGeocoding ||
-                  !areasReady ||
-                  !areaId ||
-                  !address.trim()
-                }
+                disabled={isSaving || !areasReady || !areaId || !address.trim()}
+                loading={isGeocoding}
+                loadingLabel='Looking up…'
                 onClick={() => void handleFillCoordinates()}
               >
-                {isGeocoding ? 'Looking up…' : 'Fill coordinates from address'}
+                Fill coordinates from address
               </Button>
               {location || embeddedSummary ? (
                 <Button type='button' size='sm' variant='secondary' disabled={isSaving} onClick={handleCancelEdit}>
