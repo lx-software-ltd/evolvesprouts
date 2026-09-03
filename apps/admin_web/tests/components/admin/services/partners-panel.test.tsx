@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { createLocation, geocodeVenueAddress, updateLocationPartial } = vi.hoisted(() => ({
   createLocation: vi.fn(),
@@ -77,6 +77,9 @@ describe('PartnersPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
+  afterEach(() => {
+    window.history.replaceState(null, '', '/services');
+  });
 
   it('always shows partner key field and creates with relationship_type partner', async () => {
     const user = userEvent.setup();
@@ -85,9 +88,16 @@ describe('PartnersPanel', () => {
 
     render(<PartnersPanel partners={partners} {...panelShell} />);
 
-    expect(screen.getByLabelText('Partner key')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Partners' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Partner' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Partner key')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'New partner' }));
+
+    expect(await screen.findByLabelText('Partner key')).toBeInTheDocument();
     expect(screen.getByLabelText('Legal name')).toBeInTheDocument();
-    await user.type(screen.getByLabelText('Name'), 'Gamma');
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText(/^Name/), 'Gamma');
     await user.type(screen.getByLabelText('Partner key'), 'gamma-slug');
     await user.type(screen.getByLabelText('Legal name'), 'Gamma Learning Limited');
     await user.click(screen.getByRole('button', { name: 'Create partner' }));
@@ -143,13 +153,11 @@ describe('PartnersPanel', () => {
 
     render(<PartnersPanel partners={partners} {...panelShell} />);
 
-    const table = screen.getByRole('table');
-    const tableRows = within(table).getAllByRole('row');
-    const dataRows = tableRows.slice(1);
-    expect(dataRows.map((row) => within(row).getAllByRole('cell')[0].textContent)).toEqual([
-      'alpha llc',
-      'Beta Co',
-      'Gamma Org',
+    const expandButtons = screen.getAllByRole('button', { name: /^Expand / });
+    expect(expandButtons.map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Expand alpha llc',
+      'Expand Beta Co',
+      'Expand Gamma Org',
     ]);
   });
 
@@ -184,10 +192,11 @@ describe('PartnersPanel', () => {
 
     render(<PartnersPanel partners={partners} {...panelShell} />);
 
-    await user.click(screen.getByText('Row Partner'));
-    expect(screen.getByLabelText('Legal name')).toHaveValue('Row Partner Legal Ltd');
-    await user.clear(screen.getByLabelText('Name'));
-    await user.type(screen.getByLabelText('Name'), 'Row Partner Renamed');
+    await user.click(screen.getByRole('button', { name: 'Expand Row Partner' }));
+    expect(await screen.findByLabelText('Legal name')).toHaveValue('Row Partner Legal Ltd');
+    expect(screen.getByLabelText('Status', { selector: '#svc-partner-active' })).toHaveValue('true');
+    await user.clear(screen.getByLabelText(/^Name/));
+    await user.type(screen.getByLabelText(/^Name/), 'Row Partner Renamed');
     await user.clear(screen.getByLabelText('Legal name'));
     await user.type(screen.getByLabelText('Legal name'), 'Row Partner Legal Renamed');
     await user.click(screen.getByRole('button', { name: 'Update partner' }));
@@ -268,7 +277,8 @@ describe('PartnersPanel', () => {
       />
     );
 
-    await user.click(screen.getByText('Venue Owner'));
+    await user.click(screen.getByRole('button', { name: 'Expand Venue Owner' }));
+    await user.click(await screen.findByRole('button', { name: /^Location/ }));
     await user.click(screen.getByRole('button', { name: 'Change' }));
     await user.clear(screen.getByLabelText('Address'));
     await user.type(screen.getByLabelText('Address'), '2 Test St');
