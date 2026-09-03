@@ -401,6 +401,42 @@ describe('AdminExpandableRow', () => {
     expect(document.activeElement).toBe(screen.getByLabelText('First name'));
     vi.useRealTimers();
   });
+
+  it('does not steal focus from a field the operator focused before the expansion settled', () => {
+    vi.useFakeTimers();
+    const tree = (expanded: boolean) => (
+      <table>
+        <tbody>
+          <AdminExpandableRow
+            id='c1'
+            label='Ada Lovelace'
+            expanded={expanded}
+            onToggle={() => undefined}
+            columnCount={3}
+            cells={<AdminDataTableCell>Ada</AdminDataTableCell>}
+            detail={
+              <>
+                <input aria-label='First name' />
+                <input aria-label='Address' />
+              </>
+            }
+          />
+        </tbody>
+      </table>
+    );
+    const { rerender } = render(tree(false));
+    rerender(tree(true));
+    // The operator clicks into a later field while the open transition runs.
+    const address = screen.getByLabelText('Address');
+    act(() => {
+      address.focus();
+    });
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+    expect(document.activeElement).toBe(address);
+    vi.useRealTimers();
+  });
 });
 
 describe('AdminRecordTable', () => {

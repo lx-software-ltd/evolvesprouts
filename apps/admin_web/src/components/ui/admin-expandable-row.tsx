@@ -79,7 +79,13 @@ export function AdminExpandableRow({
     if (row && typeof row.scrollIntoView === 'function') {
       row.scrollIntoView({ block: 'nearest' });
     }
-    detailRef.current?.querySelector<HTMLElement>(DETAIL_FOCUS_SELECTOR)?.focus({ preventScroll: true });
+    const detail = detailRef.current;
+    // The operator may already be typing in a field they clicked during the
+    // transition; never pull focus away from inside the detail region.
+    if (!detail || (document.activeElement && detail.contains(document.activeElement))) {
+      return;
+    }
+    detail.querySelector<HTMLElement>(DETAIL_FOCUS_SELECTOR)?.focus({ preventScroll: true });
   }, []);
 
   function handleRowKeyDown(event: KeyboardEvent<HTMLTableRowElement>) {
