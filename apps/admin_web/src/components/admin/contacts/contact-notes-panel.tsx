@@ -7,15 +7,9 @@ import {
   ContactNotesRecordTable,
   NOTE_DRAFT_ID,
 } from '@/components/admin/contacts/contact-notes-record-table';
-import { ContactNotesTable } from '@/components/admin/contacts/contact-notes-table';
-import { Button } from '@/components/ui/button';
-import { AdminEditorCard } from '@/components/ui/admin-editor-card';
 import { AdminEditorActions, AdminEditorPanel } from '@/components/ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Label } from '@/components/ui/label';
-import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
-import { StatusBanner } from '@/components/status-banner';
 import { Textarea } from '@/components/ui/textarea';
 import {
   createAdminContactNote,
@@ -35,31 +29,18 @@ export type NotesContactRef = Pick<AdminContact, 'id' | 'first_name'> &
 export interface ContactNotesPanelProps {
   contact: NotesContactRef | null;
   adminUsers: AdminUser[];
-  onClose?: () => void;
   onStandaloneNoteCountChange?: (contactId: string, count: number) => void;
-  title?: string;
-  description?: string;
-  /**
-   * `card` (default) renders the legacy titled composer + notes card pair.
-   * `embedded` renders composer and table without titles for use inside an
-   * expanded record row (see `ContactEditorPanel`).
-   */
-  layout?: 'card' | 'embedded';
 }
 
-function contactDisplayName(contact: NotesContactRef): string {
-  const name = [contact.first_name, contact.last_name].filter(Boolean).join(' ').trim();
-  return name || contact.email || contact.id;
-}
-
+/**
+ * Standalone contact notes as a nested table-first list inside an expanded
+ * contact or lead row: `New note` opens a draft row, clicking a note opens its
+ * editor beneath it, and Delete stays in the Operations column.
+ */
 export function ContactNotesPanel({
   contact,
   adminUsers,
-  onClose,
   onStandaloneNoteCountChange,
-  title,
-  description,
-  layout = 'card',
 }: ContactNotesPanelProps) {
   const contentFieldId = useId();
   const formId = useId();
@@ -76,12 +57,6 @@ export function ContactNotesPanel({
   const [confirmDialogProps, requestConfirm] = useConfirmDialog();
 
   const contactId = contact?.id ?? null;
-  const notesTitle = title ?? (contact ? `Notes · ${contactDisplayName(contact)}` : 'Notes');
-  const notesDescription =
-    description ??
-    (contact
-      ? 'Standalone contact notes (not tied to a sales lead). The table badge reflects this count only; concurrent edits elsewhere update after you refresh the contact list. Notes attached to sales leads are managed on the lead detail screen.'
-      : 'Create the lead to add notes on the linked contact.');
   const emptyLabel = contactId
     ? 'No notes yet for this contact.'
     : 'Save the lead to add notes for the linked contact.';
@@ -159,7 +134,9 @@ export function ContactNotesPanel({
     setActionError('');
     try {
       if (editorMode === 'create') {
-        const created = await createAdminContactNote(contactId, { content: contentDraft.trim() });
+        const created = await createAdminContactNote(contactId, {
+          content: contentDraft.trim(),
+        });
         if (created) {
           const next = [created, ...notes];
           setNotes(next);
@@ -227,138 +204,55 @@ export function ContactNotesPanel({
   const submitLabel = editorMode === 'create' ? 'Add note' : 'Update note';
   const fieldLabel = editorMode === 'create' ? 'New note' : 'Edit note';
 
-  const table = (
-    <ContactNotesTable
-      notes={notes}
-      adminUsers={adminUsers}
-      isLoading={isLoading}
-      isMutating={isMutating}
-      editingId={editingId}
-      emptyLabel={emptyLabel}
-      onEdit={startEdit}
-      onDelete={(note) => void handleDeleteNote(note)}
-    />
-  );
-
-  if (layout === 'embedded') {
-    // Nested table-first list: `+` opens a draft row, clicking a note opens
-    // its editor beneath it, Delete stays in the Operations column.
-    const noteEditor = (
-      <AdminEditorPanel
-        actions={
-          <AdminEditorActions
-            mode={editorMode}
-            formId={formId}
-            isSaving={isMutating}
-            submitDisabled={submitDisabled}
-            submitLabel={submitLabel}
-          />
-        }
-      >
-        <form
-          id={formId}
-          onSubmit={(event) => {
-            event.preventDefault();
-            void handleSaveNote();
-          }}
-        >
-          <AdminFieldGrid columns={1}>
-            <AdminField label={fieldLabel} htmlFor={contentFieldId}>
-              <Textarea
-                id={contentFieldId}
-                value={contentDraft}
-                onChange={(event) => setContentDraft(event.target.value)}
-                rows={3}
-                disabled={composerDisabled}
-                placeholder='Add a note about this contact…'
-              />
-            </AdminField>
-          </AdminFieldGrid>
-        </form>
-      </AdminEditorPanel>
-    );
-    return (
-      <>
-        <ContactNotesRecordTable
-          notes={notes}
-          adminUsers={adminUsers}
-          isLoading={isLoading}
-          isMutating={isMutating}
-          error={loadError || actionError}
-          emptyLabel={emptyLabel}
-          expandedId={expandedNoteId}
-          detail={noteEditor}
-          createDisabled={!contactId || isMutating}
-          onToggle={toggleNoteRow}
-          onDelete={(note) => void handleDeleteNote(note)}
+  const noteEditor = (
+    <AdminEditorPanel
+      actions={
+        <AdminEditorActions
+          mode={editorMode}
+          formId={formId}
+          isSaving={isMutating}
+          submitDisabled={submitDisabled}
+          submitLabel={submitLabel}
         />
-        <ConfirmDialog {...confirmDialogProps} />
-      </>
-    );
-  }
-
-  return (
-    <>
-      <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
-        <AdminEditorCard
-          title={notesTitle}
-          description={notesDescription}
-          actions={
-            <>
-              {editorMode === 'edit' ? (
-                <Button type='button' variant='secondary' disabled={isMutating} onClick={resetEditor}>
-                  Cancel
-                </Button>
-              ) : onClose ? (
-                <Button type='button' variant='secondary' onClick={onClose}>
-                  Close notes
-                </Button>
-              ) : null}
-              <Button type='submit' form={formId} disabled={submitDisabled}>
-                {submitLabel}
-              </Button>
-            </>
-          }
-        >
-          {actionError ? (
-            <StatusBanner variant='error' title='Note action failed'>
-              {actionError}
-            </StatusBanner>
-          ) : null}
-          <form
-            id={formId}
-            className='space-y-2'
-            onSubmit={(event) => {
-              event.preventDefault();
-              void handleSaveNote();
-            }}
-          >
-            <Label htmlFor={contentFieldId}>{fieldLabel}</Label>
+      }
+    >
+      <form
+        id={formId}
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleSaveNote();
+        }}
+      >
+        <AdminFieldGrid columns={1}>
+          <AdminField label={fieldLabel} htmlFor={contentFieldId}>
             <Textarea
               id={contentFieldId}
               value={contentDraft}
               onChange={(event) => setContentDraft(event.target.value)}
-              rows={editorMode === 'create' ? 3 : 4}
+              rows={3}
               disabled={composerDisabled}
               placeholder='Add a note about this contact…'
             />
-          </form>
-        </AdminEditorCard>
-
-        <PaginatedTableCard
-          title='Contact notes'
-          description={`${notes.length.toLocaleString()} note(s)`}
-          isLoading={isLoading}
-          isLoadingMore={false}
-          hasMore={false}
-          error={loadError}
-          loadingLabel='Loading notes…'
-          onLoadMore={() => Promise.resolve()}
-        >
-          {table}
-        </PaginatedTableCard>
-      </div>
-
+          </AdminField>
+        </AdminFieldGrid>
+      </form>
+    </AdminEditorPanel>
+  );
+  return (
+    <>
+      <ContactNotesRecordTable
+        notes={notes}
+        adminUsers={adminUsers}
+        isLoading={isLoading}
+        isMutating={isMutating}
+        error={loadError || actionError}
+        emptyLabel={emptyLabel}
+        expandedId={expandedNoteId}
+        detail={noteEditor}
+        createDisabled={!contactId || isMutating}
+        onToggle={toggleNoteRow}
+        onDelete={(note) => void handleDeleteNote(note)}
+      />
       <ConfirmDialog {...confirmDialogProps} />
     </>
   );

@@ -59,11 +59,11 @@ describe('ServiceDetailPanel', () => {
 
     render(
       <ServiceDetailPanel
+        mode='create'
         service={null}
         createPrefillFromService={template}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
         onUploadCover={vi.fn()}
@@ -88,10 +88,10 @@ describe('ServiceDetailPanel', () => {
   it('shows a draft warning icon next to the service status field label when status is draft', () => {
     render(
       <ServiceDetailPanel
+        mode='edit'
         service={buildService({ status: 'draft' })}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
         onUploadCover={vi.fn()}
@@ -106,15 +106,14 @@ describe('ServiceDetailPanel', () => {
     const onUpdate = vi.fn();
     const onCreate = vi.fn();
     const onUploadCover = vi.fn();
-    const onCancelSelection = vi.fn();
 
     const { rerender } = render(
       <ServiceDetailPanel
+        mode='create'
         key='create'
         service={null}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={onCancelSelection}
         onCreate={onCreate}
         onUpdate={onUpdate}
         onUploadCover={onUploadCover}
@@ -132,11 +131,11 @@ describe('ServiceDetailPanel', () => {
 
     rerender(
       <ServiceDetailPanel
+        mode='edit'
         key='service-1'
         service={buildService()}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={onCancelSelection}
         onCreate={onCreate}
         onUpdate={onUpdate}
         onUploadCover={onUploadCover}
@@ -149,6 +148,7 @@ describe('ServiceDetailPanel', () => {
 
     rerender(
       <ServiceDetailPanel
+        mode='edit'
         key='service-2'
         service={buildService({
           id: 'service-2',
@@ -156,9 +156,8 @@ describe('ServiceDetailPanel', () => {
           description: 'Beta description',
           status: 'published',
         })}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={onCancelSelection}
         onCreate={onCreate}
         onUpdate={onUpdate}
         onUploadCover={onUploadCover}
@@ -171,11 +170,11 @@ describe('ServiceDetailPanel', () => {
 
     rerender(
       <ServiceDetailPanel
+        mode='create'
         key='create-again'
         service={null}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={onCancelSelection}
         onCreate={onCreate}
         onUpdate={onUpdate}
         onUploadCover={onUploadCover}
@@ -191,15 +190,14 @@ describe('ServiceDetailPanel', () => {
     const onUpdate = vi.fn();
     const onCreate = vi.fn();
     const onUploadCover = vi.fn();
-    const onCancelSelection = vi.fn();
 
     const { rerender } = render(
       <ServiceDetailPanel
+        mode='create'
         key='create'
         service={null}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={onCancelSelection}
         onCreate={onCreate}
         onUpdate={onUpdate}
         onUploadCover={onUploadCover}
@@ -211,13 +209,13 @@ describe('ServiceDetailPanel', () => {
 
     rerender(
       <ServiceDetailPanel
+        mode='edit'
         key='edit'
         service={buildService({
           serviceType: 'consultation',
         })}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={onCancelSelection}
         onCreate={onCreate}
         onUpdate={onUpdate}
         onUploadCover={onUploadCover}
@@ -234,10 +232,10 @@ describe('ServiceDetailPanel', () => {
 
     render(
       <ServiceDetailPanel
+        mode='create'
         service={null}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
         onUploadCover={vi.fn()}
@@ -271,10 +269,10 @@ describe('ServiceDetailPanel', () => {
     const user = userEvent.setup();
     render(
       <ServiceDetailPanel
+        mode='create'
         service={null}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
         onUploadCover={vi.fn()}
@@ -290,10 +288,10 @@ describe('ServiceDetailPanel', () => {
     const user = userEvent.setup();
     render(
       <ServiceDetailPanel
+        mode='create'
         service={null}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
         onUploadCover={vi.fn()}
@@ -315,12 +313,12 @@ describe('ServiceDetailPanel', () => {
     const onCreate = vi.fn();
     render(
       <ServiceDetailPanel
+        mode='create'
         service={null}
         locationOptions={[]}
         isLoadingLocations={false}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={onCreate}
         onUpdate={vi.fn()}
         onUploadCover={vi.fn()}
@@ -332,7 +330,7 @@ describe('ServiceDetailPanel', () => {
     await user.type(tierInputs[0], 'ages-3-5');
     await user.type(screen.getByLabelText('Default price'), '100');
     await user.selectOptions(screen.getByLabelText('Delivery mode'), 'In Person');
-    await user.click(screen.getByRole('button', { name: /Add service/i }));
+    await user.click(screen.getByRole('button', { name: /Create service/i }));
     expect(onCreate).toHaveBeenCalled();
     const body = onCreate.mock.calls[0][0] as { service_tier?: string | null };
     expect(body.service_tier).toBe('ages-3-5');
@@ -347,12 +345,12 @@ describe('ServiceDetailPanel', () => {
     const onCreate = vi.fn();
     render(
       <ServiceDetailPanel
+        mode='create'
         service={null}
         locationOptions={[]}
         isLoadingLocations={false}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={onCreate}
         onUpdate={vi.fn()}
         onUploadCover={vi.fn()}
@@ -364,7 +362,7 @@ describe('ServiceDetailPanel', () => {
     await user.type(tierInputs[0], 'spring-tier');
     await user.type(screen.getByLabelText('Default price'), '50');
     await user.selectOptions(screen.getByLabelText('Delivery mode'), 'In Person');
-    await user.click(screen.getByRole('button', { name: /Add service/i }));
+    await user.click(screen.getByRole('button', { name: /Create service/i }));
     expect(onCreate).toHaveBeenCalled();
     const body = onCreate.mock.calls[0][0] as { service_tier?: string | null };
     expect(body.service_tier).toBe('spring-tier');
@@ -379,6 +377,7 @@ describe('ServiceDetailPanel', () => {
     const onUpdate = vi.fn();
     render(
       <ServiceDetailPanel
+        mode='edit'
         service={buildService({
           serviceType: 'event',
           status: 'draft',
@@ -389,9 +388,8 @@ describe('ServiceDetailPanel', () => {
             defaultCurrency: 'HKD',
           },
         })}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={onUpdate}
         onUploadCover={vi.fn()}
@@ -411,6 +409,7 @@ describe('ServiceDetailPanel', () => {
     const user = userEvent.setup();
     render(
       <ServiceDetailPanel
+        mode='edit'
         service={buildService({
           serviceType: 'event',
           status: 'published',
@@ -421,9 +420,8 @@ describe('ServiceDetailPanel', () => {
             defaultCurrency: 'HKD',
           },
         })}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
         onUploadCover={vi.fn()}
@@ -445,12 +443,12 @@ describe('ServiceDetailPanel', () => {
     const user = userEvent.setup();
     render(
       <ServiceDetailPanel
+        mode='create'
         service={null}
         locationOptions={[]}
         isLoadingLocations={false}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
         onUploadCover={vi.fn()}
@@ -468,6 +466,7 @@ describe('ServiceDetailPanel', () => {
     const onCreate = vi.fn();
     render(
       <ServiceDetailPanel
+        mode='create'
         service={null}
         locationOptions={[
           {
@@ -485,9 +484,8 @@ describe('ServiceDetailPanel', () => {
           },
         ]}
         isLoadingLocations={false}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={onCreate}
         onUpdate={vi.fn()}
         onUploadCover={vi.fn()}
@@ -498,7 +496,7 @@ describe('ServiceDetailPanel', () => {
     await user.selectOptions(screen.getByLabelText('Delivery mode'), 'In Person');
     await user.selectOptions(screen.getByLabelText('Default location'), '6ba7b810-9dad-11d1-80b4-00c04fd430c8');
     await user.type(screen.getByLabelText('Default price'), '10');
-    await user.click(screen.getByRole('button', { name: /Add service/i }));
+    await user.click(screen.getByRole('button', { name: /Create service/i }));
     expect(onCreate).toHaveBeenCalled();
     const body = onCreate.mock.calls[0][0] as { location_id?: string | null };
     expect(body.location_id).toBe('6ba7b810-9dad-11d1-80b4-00c04fd430c8');
@@ -510,12 +508,12 @@ describe('ServiceDetailPanel', () => {
     const uuid = '550e8400-e29b-41d4-a716-446655440000';
     render(
       <ServiceDetailPanel
+        mode='create'
         service={null}
         locationOptions={[]}
         isLoadingLocations={false}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={onCreate}
         onUpdate={vi.fn()}
         onUploadCover={vi.fn()}
@@ -528,7 +526,7 @@ describe('ServiceDetailPanel', () => {
     expect(locInput).toBeInTheDocument();
     await user.type(locInput, uuid);
     await user.type(screen.getByLabelText('Default price'), '10');
-    await user.click(screen.getByRole('button', { name: /Add service/i }));
+    await user.click(screen.getByRole('button', { name: /Create service/i }));
     expect(onCreate).toHaveBeenCalled();
     const body = onCreate.mock.calls[0][0] as { location_id?: string | null };
     expect(body.location_id).toBe(uuid);
@@ -538,10 +536,10 @@ describe('ServiceDetailPanel', () => {
     const user = userEvent.setup();
     render(
       <ServiceDetailPanel
+        mode='create'
         service={null}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
         onUploadCover={vi.fn()}
@@ -571,10 +569,10 @@ describe('ServiceDetailPanel', () => {
     const user = userEvent.setup();
     render(
       <ServiceDetailPanel
+        mode='create'
         service={null}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
         onUploadCover={vi.fn()}
@@ -603,10 +601,10 @@ describe('ServiceDetailPanel', () => {
     const user = userEvent.setup();
     render(
       <ServiceDetailPanel
+        mode='create'
         service={null}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
         onUploadCover={vi.fn()}
@@ -624,10 +622,10 @@ describe('ServiceDetailPanel', () => {
     const user = userEvent.setup();
     render(
       <ServiceDetailPanel
+        mode='create'
         service={null}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
         onUploadCover={vi.fn()}
@@ -645,10 +643,10 @@ describe('ServiceDetailPanel', () => {
     const user = userEvent.setup();
     render(
       <ServiceDetailPanel
+        mode='create'
         service={null}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
         onUploadCover={vi.fn()}
@@ -666,6 +664,7 @@ describe('ServiceDetailPanel', () => {
     const user = userEvent.setup();
     render(
       <ServiceDetailPanel
+        mode='create'
         service={null}
         locationOptions={[
           {
@@ -683,9 +682,8 @@ describe('ServiceDetailPanel', () => {
           },
         ]}
         isLoadingLocations={false}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
         onUploadCover={vi.fn()}
@@ -706,12 +704,12 @@ describe('ServiceDetailPanel', () => {
     const onCreate = vi.fn();
     render(
       <ServiceDetailPanel
+        mode='create'
         service={null}
         locationOptions={[]}
         isLoadingLocations={false}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={onCreate}
         onUpdate={vi.fn()}
         onUploadCover={vi.fn()}
@@ -724,7 +722,7 @@ describe('ServiceDetailPanel', () => {
     await user.selectOptions(screen.getByLabelText('Delivery mode'), 'Online');
     expect(screen.queryByLabelText('Default location')).not.toBeInTheDocument();
     await user.type(screen.getByLabelText('Default price'), '10');
-    await user.click(screen.getByRole('button', { name: /Add service/i }));
+    await user.click(screen.getByRole('button', { name: /Create service/i }));
     const body = onCreate.mock.calls[0][0] as { location_id?: string | null };
     expect(body.location_id).toBeNull();
   });
@@ -733,6 +731,7 @@ describe('ServiceDetailPanel', () => {
     const user = userEvent.setup();
     render(
       <ServiceDetailPanel
+        mode='create'
         service={null}
         locationOptions={[
           {
@@ -750,9 +749,8 @@ describe('ServiceDetailPanel', () => {
           },
         ]}
         isLoadingLocations={false}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
         onUploadCover={vi.fn()}

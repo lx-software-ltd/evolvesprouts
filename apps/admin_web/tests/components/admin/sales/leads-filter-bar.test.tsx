@@ -22,18 +22,22 @@ describe('LeadsFilterBar', () => {
     }
   });
 
-  it('renders as a standard admin table toolbar with labelled controls', () => {
-    const { container } = render(
+  it('renders as the standard admin filter bar with labelled controls and a trailing slot', () => {
+    render(
       <LeadsFilterBar
         filters={DEFAULT_LEAD_LIST_FILTERS}
         users={[{ sub: 'u1', email: 'a@example.com', name: 'Ann' }]}
         onFilterChange={vi.fn()}
+        trailing={<button type='button'>New lead</button>}
       />
     );
 
-    const toolbar = container.firstElementChild;
-    expect(toolbar).toHaveClass('flex', 'flex-wrap', 'items-end', 'gap-3');
-    expect(toolbar).not.toHaveClass('border');
+    expect(screen.getByTestId('admin-filter-bar')).toBeInTheDocument();
+    expect(screen.getByTestId('admin-filter-bar-trailing')).toContainElement(
+      screen.getByRole('button', { name: 'New lead' })
+    );
+    // Stage chips take their own full-width line above the other filters.
+    expect(screen.getByRole('group', { name: 'Filter by stage' }).parentElement).toHaveClass('basis-full');
 
     expect(screen.getByRole('group', { name: 'Filter by stage' })).toBeInTheDocument();
     expect(screen.getByLabelText('Search')).toHaveAttribute('placeholder', 'Search by name or email');

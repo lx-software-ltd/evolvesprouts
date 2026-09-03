@@ -19,10 +19,15 @@ import {
 import type { Expense, ExpenseParseStatus, ExpenseStatus, UpsertExpenseInput } from '@/types/expenses';
 
 import { toErrorMessage } from './hook-errors';
+import { DRAFT_RECORD_ID, useExpandedRecord } from './use-expanded-record';
+import { useExpandedRecordForm } from './use-expanded-record-form';
 import { usePaginatedList } from './use-paginated-list';
 
 const MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = new Set(['application/pdf', 'image/png', 'image/jpeg', 'image/webp']);
+
+/** Query parameter that mirrors the expanded expense row (`?expense=<id>` or `?expense=new`). */
+export const ADMIN_EXPENSE_QUERY_PARAM = 'expense';
 
 type Filters = {
   query: string;
@@ -37,7 +42,14 @@ const DEFAULT_FILTERS: Filters = {
 };
 
 export function useExpenses() {
-  const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
+  const editorDirtyRef = useRef(false);
+  const setEditorDirty = useCallback((dirty: boolean) => {
+    editorDirtyRef.current = dirty;
+  }, []);
+  const expanded = useExpandedRecord({
+    paramName: ADMIN_EXPENSE_QUERY_PARAM,
+    isDirty: () => editorDirtyRef.current,
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingFiles, setIsUploadingFiles] = useState(false);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
@@ -86,6 +98,21 @@ export function useExpenses() {
     queryKey: adminQueryKeys.expenses.lists(),
   });
 
+  const noop = useCallback(() => {}, []);
+  // The in-row editor owns its field state (mounted only while the row is
+  // open), so nothing is applied or reset here; ids that are not in the
+  // loaded pages simply collapse.
+  useExpandedRecordForm<Expense>({
+    expandedId: expanded.expandedId,
+    rows: list.items,
+    isLoading: list.isLoading,
+    applyRow: noop,
+    reset: noop,
+    collapse: expanded.collapse,
+  });
+
+  const selectedExpenseId =
+    expanded.expandedId && expanded.expandedId !== DRAFT_RECORD_ID ? expanded.expandedId : null;
   const selectedExpense = useMemo(
     () => list.items.find((item) => item.id === selectedExpenseId) ?? null,
     [list.items, selectedExpenseId]
@@ -95,15 +122,19 @@ export function useExpenses() {
     setMutationError('');
   }, []);
 
-  const selectExpense = useCallback((expenseId: string) => {
-    setSelectedExpenseId(expenseId);
-    setMutationError('');
-  }, []);
+  const { expand, collapse } = expanded;
+  const selectExpense = useCallback(
+    (expenseId: string) => {
+      expand(expenseId);
+      setMutationError('');
+    },
+    [expand]
+  );
 
   const clearSelectedExpense = useCallback(() => {
-    setSelectedExpenseId(null);
+    collapse();
     setMutationError('');
-  }, []);
+  }, [collapse]);
 
   const cleanupUploadedAssets = useCallback(async (assetIds: string[]): Promise<void> => {
     for (const assetId of assetIds) {
@@ -168,12 +199,14 @@ export function useExpenses() {
       let uploadedAssetIds: string[] = [];
       try {
         uploadedAssetIds = await uploadExpenseFiles(files);
-        const created = await createAdminExpense({
+        await createAdminExpense({
           ...input,
           attachmentAssetIds: uploadedAssetIds,
         });
         await list.refetch();
-        setSelectedExpenseId(created?.id ?? null);
+        // The new record now sits in the list; close the draft row.
+        editorDirtyRef.current = false;
+        collapse();
       } catch (error) {
         await cleanupUploadedAssets(uploadedAssetIds);
         setMutationError(toErrorMessage(error, 'Failed to create expense.'));
@@ -182,7 +215,7 @@ export function useExpenses() {
         setIsSaving(false);
       }
     },
-    [cleanupUploadedAssets, list, uploadExpenseFiles]
+    [cleanupUploadedAssets, collapse, list, uploadExpenseFiles]
   );
 
   const updateExpenseEntry = useCallback(
@@ -202,12 +235,12 @@ export function useExpenses() {
       let uploadedAssetIds: string[] = [];
       try {
         uploadedAssetIds = await uploadExpenseFiles(newFiles);
-        const updated = await updateAdminExpense(expenseId, {
+        await updateAdminExpense(expenseId, {
           ...input,
           attachmentAssetIds: [...existingAttachmentAssetIds, ...uploadedAssetIds],
         });
         await list.refetch();
-        setSelectedExpenseId(updated?.id ?? expenseId);
+        editorDirtyRef.current = false;
       } catch (error) {
         await cleanupUploadedAssets(uploadedAssetIds);
         setMutationError(toErrorMessage(error, 'Failed to update expense.'));
@@ -241,7 +274,13 @@ export function useExpenses() {
           attachmentAssetIds: [...existingAttachmentAssetIds, ...uploadedAssetIds],
         });
         await list.refetch();
-        setSelectedExpenseId(amended?.id ?? null);
+        editorDirtyRef.current = false;
+        // The amendment is a new record; move the open row onto it.
+        if (amended?.id) {
+          expand(amended.id);
+        } else {
+          collapse();
+        }
       } catch (error) {
         await cleanupUploadedAssets(uploadedAssetIds);
         setMutationError(toErrorMessage(error, 'Failed to create amendment.'));
@@ -250,7 +289,7 @@ export function useExpenses() {
         setIsSaving(false);
       }
     },
-    [cleanupUploadedAssets, list, uploadExpenseFiles]
+    [cleanupUploadedAssets, collapse, expand, list, uploadExpenseFiles]
   );
 
   const deleteDraftExpenseEntry = useCallback(
@@ -259,8 +298,11 @@ export function useExpenses() {
       setMutationError('');
       try {
         await deleteAdminDraftExpense(expenseId);
+        if (selectedExpenseId === expenseId) {
+          editorDirtyRef.current = false;
+          collapse();
+        }
         await list.refetch();
-        setSelectedExpenseId((current) => (current === expenseId ? null : current));
       } catch (error) {
         setMutationError(toErrorMessage(error, 'Failed to delete draft expense.'));
         throw error;
@@ -268,7 +310,7 @@ export function useExpenses() {
         setIsDeletingDraftId(null);
       }
     },
-    [list]
+    [collapse, list, selectedExpenseId]
   );
 
   const cancelExpenseEntry = useCallback(
@@ -349,7 +391,6 @@ export function useExpenses() {
         didEnqueue = true;
         await pollAdminBulkExpenseImportJob(jobId, signal);
         await list.refetch();
-        setSelectedExpenseId(null);
       } catch (error) {
         if (!didEnqueue && uploadedAssetIds.length > 0) {
           await cleanupUploadedAssets(uploadedAssetIds);
@@ -366,6 +407,10 @@ export function useExpenses() {
 
   return {
     ...list,
+    /** Single-open row state (draft or expense), URL-synced and guarded by `setEditorDirty`. */
+    expanded,
+    /** Flag unsaved editor changes so switching rows asks first. */
+    setEditorDirty,
     selectedExpenseId,
     selectedExpense,
     isSaving,

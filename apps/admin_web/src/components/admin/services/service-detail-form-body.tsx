@@ -1,6 +1,7 @@
 'use client';
 
 import { WarningTriangleIcon } from '@/components/icons/action-icons';
+import { AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
@@ -186,7 +187,7 @@ export function ServiceDetailFormBody({
 
   return (
     <>
-      <div className='grid grid-cols-1 gap-3 md:grid-cols-4'>
+      <AdminFieldGrid columns={4}>
         <div>
           <Label htmlFor='service-type'>Type</Label>
           <Select
@@ -257,20 +258,22 @@ export function ServiceDetailFormBody({
             ))}
           </Select>
         </div>
-      </div>
+      </AdminFieldGrid>
 
-      <div>
-        <Label htmlFor='service-description'>Description</Label>
-        <Textarea
-          id='service-description'
-          value={serviceForm.description}
-          onChange={(event) => onServiceFormChange({ ...serviceForm, description: event.target.value })}
-          rows={3}
-        />
-      </div>
+      <AdminFieldGrid columns={1}>
+        <div>
+          <Label htmlFor='service-description'>Description</Label>
+          <Textarea
+            id='service-description'
+            value={serviceForm.description}
+            onChange={(event) => onServiceFormChange({ ...serviceForm, description: event.target.value })}
+            rows={3}
+          />
+        </div>
+      </AdminFieldGrid>
 
       {serviceType === 'training_course' ? (
-        <div className='grid grid-cols-1 gap-3 md:grid-cols-4'>
+        <AdminFieldGrid columns={4}>
           {deliveryModeSelect}
           <ServiceTierControl
             value={serviceTier}
@@ -280,11 +283,11 @@ export function ServiceDetailFormBody({
             tierConflictError={tierConflictInline}
           />
           {bookingAndCover}
-        </div>
+        </AdminFieldGrid>
       ) : null}
 
       {serviceType === 'training_course' ? (
-        <div className='grid grid-cols-1 gap-3 md:grid-cols-4'>
+        <AdminFieldGrid columns={4}>
           <TrainingPricingUnitControl value={trainingForm} onChange={onTrainingFormChange} />
           <TrainingPriceControl
             value={trainingForm}
@@ -293,11 +296,11 @@ export function ServiceDetailFormBody({
           />
           <TrainingCurrencyControl value={trainingForm} onChange={onTrainingFormChange} />
           {showDefaultLocationField ? defaultLocationField : null}
-        </div>
+        </AdminFieldGrid>
       ) : null}
 
       {serviceType === 'event' ? (
-        <div className='grid grid-cols-1 gap-3 md:grid-cols-4'>
+        <AdminFieldGrid columns={4}>
           {deliveryModeSelect}
           <ServiceTierControl
             value={serviceTier}
@@ -307,20 +310,20 @@ export function ServiceDetailFormBody({
             tierConflictError={tierConflictInline}
           />
           {bookingAndCover}
-        </div>
+        </AdminFieldGrid>
       ) : null}
 
       {serviceType === 'event' ? (
-        <div className='grid grid-cols-1 gap-3 md:grid-cols-4'>
+        <AdminFieldGrid columns={4}>
           <EventCategoryControl value={eventForm} onChange={onEventFormChange} categoryFieldId='service-event-category' />
           <EventDefaultPriceControl value={eventForm} onChange={onEventFormChange} />
           <EventDefaultCurrencyControl value={eventForm} onChange={onEventFormChange} />
           {showDefaultLocationField ? defaultLocationField : null}
-        </div>
+        </AdminFieldGrid>
       ) : null}
 
       {isConsultationLikeServiceType(serviceType) ? (
-        <div className='grid grid-cols-1 gap-3 md:grid-cols-4'>
+        <AdminFieldGrid columns={4}>
           {deliveryModeSelect}
           <ServiceTierControl
             value={serviceTier}
@@ -330,12 +333,12 @@ export function ServiceDetailFormBody({
             tierConflictError={tierConflictInline}
           />
           {bookingAndCover}
-        </div>
+        </AdminFieldGrid>
       ) : null}
 
       {isConsultationLikeServiceType(serviceType) ? (
         <>
-          <div className='grid grid-cols-1 gap-3 md:grid-cols-4'>
+          <AdminFieldGrid columns={4}>
             <ConsultationPricingModelControl value={consultationForm} onChange={onConsultationFormChange} />
             {consultationForm.pricingModel === 'hourly' ? (
               <ConsultationHourlyRateControl value={consultationForm} onChange={onConsultationFormChange} />
@@ -347,8 +350,8 @@ export function ServiceDetailFormBody({
               <ConsultationCurrencyControl value={consultationForm} onChange={onConsultationFormChange} />
             ) : null}
             {showDefaultLocationField ? defaultLocationField : null}
-          </div>
-          <div className='grid grid-cols-1 gap-3 md:grid-cols-4'>
+          </AdminFieldGrid>
+          <AdminFieldGrid columns={4}>
             <ConsultationServiceFormatField value={consultationForm} onChange={onConsultationFormChange} />
             <ConsultationDurationControl value={consultationForm} onChange={onConsultationFormChange} />
             {consultationForm.pricingModel === 'package' ? (
@@ -357,7 +360,7 @@ export function ServiceDetailFormBody({
             {consultationForm.consultationFormat !== 'one_on_one' ? (
               <ConsultationMaxGroupSizeControl value={consultationForm} onChange={onConsultationFormChange} />
             ) : null}
-          </div>
+          </AdminFieldGrid>
         </>
       ) : null}
     </>

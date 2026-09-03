@@ -21,7 +21,7 @@ export interface AdminFilterBarProps {
  * filters themselves (labels), not on the table, so the table can start at
  * the top of the page. The trailing slot (create button) sits at the right
  * end of the row on desktop and on its own full-width line above the
- * filters on phones.
+ * filters on phones (several trailing controls stack, one per line).
  */
 export function AdminFilterBar({ children, trailing, summary, className }: AdminFilterBarProps) {
   return (
@@ -29,7 +29,10 @@ export function AdminFilterBar({ children, trailing, summary, className }: Admin
       <div className='flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end'>
         {children ? <div className='flex min-w-0 flex-1 flex-wrap items-end gap-3'>{children}</div> : null}
         {trailing ? (
-          <div className='order-first flex w-full shrink-0 items-end gap-2 sm:order-none sm:ml-auto sm:w-auto'>
+          <div
+            className='order-first flex w-full shrink-0 flex-col gap-2 sm:order-none sm:ml-auto sm:w-auto sm:flex-row sm:items-end'
+            data-testid='admin-filter-bar-trailing'
+          >
             {trailing}
           </div>
         ) : null}

@@ -3,8 +3,10 @@
 import { useState } from 'react';
 
 import { StatusBanner } from '@/components/status-banner';
-import { AdminEditorCard } from '@/components/ui/admin-editor-card';
+import { AdminEditorPanel } from '@/components/ui/admin-editor-panel';
+import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import type { SalesSettings, UpdateSalesSettingsRequest } from '@/lib/sales-settings-api';
@@ -21,6 +23,10 @@ export interface SalesConfigurationViewProps {
   onSave: (body: UpdateSalesSettingsRequest) => Promise<void>;
 }
 
+/**
+ * Sales settings as an untitled card on the standard editor layout: field
+ * grid, then one action row with the Save button (no heading, no Cancel).
+ */
 export function SalesConfigurationView({
   users,
   settings,
@@ -68,98 +74,88 @@ export function SalesConfigurationView({
   };
 
   return (
-    <AdminEditorCard
-      title='Sales configuration'
-      description='Choose who receives new leads, assignment email notifications, and Helper Detector.'
-      actions={
-        <Button type='submit' form={SETTINGS_FORM_ID} disabled={isLoading} loading={isSaving}>
-          Save
-        </Button>
-      }
-    >
-      {error ? (
-        <StatusBanner variant='error' title='Sales configuration'>
-          {error}
-        </StatusBanner>
-      ) : null}
-
-      {isLoading && !settings ? (
-        <p className='text-sm text-slate-600'>Loading configuration…</p>
-      ) : (
-        <form
-          id={SETTINGS_FORM_ID}
-          className='space-y-4'
-          onSubmit={(event) => {
-            event.preventDefault();
-            void handleSubmit();
-          }}
-        >
-          <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
-            <div>
-              <Label htmlFor='sales-settings-default-assignee'>Default assignee</Label>
-              <Select
-                id='sales-settings-default-assignee'
-                value={defaultAssignedTo}
-                onChange={(event) => setDefaultAssignedTo(event.target.value)}
+    <Card aria-label='Sales configuration'>
+      <AdminEditorPanel
+        status={
+          error ? (
+            <StatusBanner variant='error' title='Sales configuration'>
+              {error}
+            </StatusBanner>
+          ) : null
+        }
+        actions={
+          <Button type='submit' form={SETTINGS_FORM_ID} disabled={isLoading} loading={isSaving}>
+            Save
+          </Button>
+        }
+      >
+        {isLoading && !settings ? (
+          <p className='text-sm text-slate-600'>Loading configuration…</p>
+        ) : (
+          <form
+            id={SETTINGS_FORM_ID}
+            className='space-y-4'
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleSubmit();
+            }}
+          >
+            <AdminFieldGrid columns={4}>
+              <AdminField
+                label='Default assignee'
+                htmlFor='sales-settings-default-assignee'
+                span={2}
+                hint='Applied to new leads when no assignee is chosen. Pipeline create pre-fills this value; choosing Unassigned there leaves the lead unassigned.'
               >
-                <option value=''>Unassigned</option>
-                {staleUserLabel ? (
-                  <option value={staleUserLabel}>{staleUserLabel}</option>
-                ) : null}
-                {users.map((user) => (
-                  <option key={user.sub} value={user.sub}>
-                    {user.name || user.email || user.sub}
-                  </option>
-                ))}
-              </Select>
-              <p className='mt-1 text-xs text-slate-500'>
-                Applied to new leads when no assignee is chosen. Pipeline create
-                pre-fills this value; choosing Unassigned there leaves the lead
-                unassigned.
-              </p>
-            </div>
-          </div>
+                <Select
+                  id='sales-settings-default-assignee'
+                  value={defaultAssignedTo}
+                  onChange={(event) => setDefaultAssignedTo(event.target.value)}
+                >
+                  <option value=''>Unassigned</option>
+                  {staleUserLabel ? <option value={staleUserLabel}>{staleUserLabel}</option> : null}
+                  {users.map((user) => (
+                    <option key={user.sub} value={user.sub}>
+                      {user.name || user.email || user.sub}
+                    </option>
+                  ))}
+                </Select>
+              </AdminField>
+            </AdminFieldGrid>
 
-          <div className='flex items-center gap-2'>
-            <input
-              id='sales-settings-notify-assignee'
-              type='checkbox'
-              className='h-4 w-4 rounded border-slate-300 text-slate-900'
-              checked={notifyAssignee}
-              onChange={(event) => setNotifyAssignee(event.target.checked)}
-            />
-            <Label
-              htmlFor='sales-settings-notify-assignee'
-              className='mb-0 cursor-pointer font-normal'
-            >
-              Email the assignee when a lead is assigned to them
-            </Label>
-          </div>
-
-          <div className='flex items-start gap-2'>
-            <input
-              id='sales-settings-helper-detector'
-              type='checkbox'
-              className='mt-1 h-4 w-4 rounded border-slate-300 text-slate-900'
-              checked={helperDetectorEnabled}
-              onChange={(event) => setHelperDetectorEnabled(event.target.checked)}
-            />
-            <div>
-              <Label
-                htmlFor='sales-settings-helper-detector'
-                className='mb-0 cursor-pointer font-normal'
-              >
-                Helper Detector
-              </Label>
-              <p className='mt-1 text-xs text-slate-500'>
-                When enabled, new automated leads whose name or username looks Filipino
-                or Bahasa (Indonesian/Malay) are set to funnel stage Unqualified. Contact
-                type becomes Helper only when it is currently Other.
-              </p>
-            </div>
-          </div>
-        </form>
-      )}
-    </AdminEditorCard>
+            <AdminFieldGrid columns={1}>
+              <AdminField>
+                <div className='flex items-center gap-2'>
+                  <input
+                    id='sales-settings-notify-assignee'
+                    type='checkbox'
+                    className='h-4 w-4 rounded border-slate-300 text-slate-900'
+                    checked={notifyAssignee}
+                    onChange={(event) => setNotifyAssignee(event.target.checked)}
+                  />
+                  <Label htmlFor='sales-settings-notify-assignee' className='mb-0 cursor-pointer font-normal'>
+                    Email the assignee when a lead is assigned to them
+                  </Label>
+                </div>
+              </AdminField>
+              <AdminField hint='When enabled, new automated leads whose name or username looks Filipino or Bahasa (Indonesian/Malay) are set to funnel stage Unqualified. Contact type becomes Helper only when it is currently Other.'>
+                <div className='flex items-center gap-2'>
+                  <input
+                    id='sales-settings-helper-detector'
+                    type='checkbox'
+                    className='h-4 w-4 rounded border-slate-300 text-slate-900'
+                    checked={helperDetectorEnabled}
+                    onChange={(event) => setHelperDetectorEnabled(event.target.checked)}
+                  />
+                  <Label htmlFor='sales-settings-helper-detector' className='mb-0 cursor-pointer font-normal'>
+                    Helper Detector
+                  </Label>
+                </div>
+              </AdminField>
+            </AdminFieldGrid>
+          </form>
+        )}
+      </AdminEditorPanel>
+    </Card>
   );
 }

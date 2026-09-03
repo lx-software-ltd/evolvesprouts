@@ -325,43 +325,47 @@ export function useInstanceDetailPanel({
 
   const slugFieldError = [slugSubmitError, slugConflictError].filter(Boolean).join(' ');
 
-  const runCreate = async () => {
+  /** Resolves true when the instance was created; false when validation or a slug conflict kept the form open. */
+  const runCreate = async (): Promise<boolean> => {
     if (!selectedServiceId) {
-      return;
+      return false;
     }
     const payload = buildCreatePayload();
     if (!payload) {
-      return;
+      return false;
     }
     try {
       await onCreate(selectedServiceId, payload);
       setSlugConflictError('');
+      return true;
     } catch (err) {
       const slugMsg = conflictFieldUserMessage(err, { slug: 'This slug is already in use.' });
       if (slugMsg) {
         setSlugConflictError(slugMsg);
-        return;
+        return false;
       }
       throw err;
     }
   };
 
-  const runUpdate = async () => {
+  /** Resolves true when the instance was updated; false when validation or a slug conflict kept the form open. */
+  const runUpdate = async (): Promise<boolean> => {
     if (!instance || !selectedServiceId) {
-      return;
+      return false;
     }
     const payload = buildUpdatePayload();
     if (!payload) {
-      return;
+      return false;
     }
     try {
       await onUpdate(selectedServiceId, instance.id, payload);
       setSlugConflictError('');
+      return true;
     } catch (err) {
       const slugMsg = conflictFieldUserMessage(err, { slug: 'This slug is already in use.' });
       if (slugMsg) {
         setSlugConflictError(slugMsg);
-        return;
+        return false;
       }
       throw err;
     }

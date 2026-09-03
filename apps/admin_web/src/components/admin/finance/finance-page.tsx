@@ -11,7 +11,6 @@ import { listAllAdminExpenses } from '@/lib/expenses-api';
 import type { Expense } from '@/types/expenses';
 
 import { ExpensesEditorPanel } from './expenses-editor-panel';
-import { BulkExpenseImportJobsPanel } from './bulk-expense-import-jobs-panel';
 import { BulkExpensePdfImportPanel } from './bulk-expense-pdf-import-panel';
 import { ExpensesListPanel } from './expenses-list-panel';
 import {
@@ -117,31 +116,36 @@ export function FinancePage() {
   return (
     <div className='space-y-6'>
       <FinanceHeader activeView={activeView} onSetView={setFinanceView} />
-      <ExpensesEditorPanel
-        key={expenses.selectedExpense?.id ?? 'new-expense'}
-        selectedExpense={expenses.selectedExpense}
-        isSaving={expenses.isSaving}
-        isUploadingFiles={expenses.isUploadingFiles}
-        mutationError={expenses.mutationError}
-        vendorOptions={vendors.vendors}
-        isLoadingVendors={vendors.isLoading}
-        onCreate={expenses.createExpenseEntry}
-        onUpdate={expenses.updateExpenseEntry}
-        onAmend={expenses.amendExpenseEntry}
-        onStartCreate={expenses.clearSelectedExpense}
-      />
-      <BulkExpensePdfImportPanel
-        vendorOptions={vendors.vendors}
-        isLoadingVendors={vendors.isLoading}
-        isBusy={expenses.isBulkImporting || expenses.isUploadingFiles}
-        error={expenses.bulkImportError}
-        onImport={expenses.bulkImportFromPdf}
-        onCancelBusy={expenses.cancelBulkImport}
-      />
-      <BulkExpenseImportJobsPanel onAfterMutation={() => void expenses.refetch()} />
       <ExpensesListPanel
         expenses={expenses.items}
-        selectedExpenseId={expenses.selectedExpenseId}
+        expanded={expenses.expanded}
+        importSection={
+          <BulkExpensePdfImportPanel
+            className='mb-3'
+            vendorOptions={vendors.vendors}
+            isLoadingVendors={vendors.isLoading}
+            isBusy={expenses.isBulkImporting || expenses.isUploadingFiles}
+            error={expenses.bulkImportError}
+            onImport={expenses.bulkImportFromPdf}
+            onCancelBusy={expenses.cancelBulkImport}
+            onAfterJobMutation={() => void expenses.refetch()}
+          />
+        }
+        renderDetail={(expense) => (
+          <ExpensesEditorPanel
+            key={expense?.id ?? 'new-expense'}
+            selectedExpense={expense}
+            isSaving={expenses.isSaving}
+            isUploadingFiles={expenses.isUploadingFiles}
+            mutationError={expenses.mutationError}
+            vendorOptions={vendors.vendors}
+            isLoadingVendors={vendors.isLoading}
+            onCreate={expenses.createExpenseEntry}
+            onUpdate={expenses.updateExpenseEntry}
+            onAmend={expenses.amendExpenseEntry}
+            onDirtyChange={expenses.setEditorDirty}
+          />
+        )}
         query={expenses.filters.query}
         status={expenses.filters.status}
         parseStatus={expenses.filters.parseStatus}
@@ -154,7 +158,6 @@ export function FinancePage() {
         isReparsingId={expenses.isReparsingId}
         isDeletingDraftId={expenses.isDeletingDraftId}
         onLoadMore={expenses.loadMore}
-        onSelectExpense={expenses.selectExpense}
         onQueryChange={(value) => expenses.setFilter('query', value)}
         onStatusChange={(value) => expenses.setFilter('status', value)}
         onParseStatusChange={(value) => expenses.setFilter('parseStatus', value)}

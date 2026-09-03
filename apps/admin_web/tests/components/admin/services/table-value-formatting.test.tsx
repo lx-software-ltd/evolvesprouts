@@ -2,12 +2,13 @@ import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { DiscountCodesPanel } from '@/components/admin/services/discount-codes-panel';
-import { EnrollmentListPanel } from '@/components/admin/services/enrollment-list-panel';
 import { InstanceListPanel } from '@/components/admin/services/instance-list-panel';
 import { ServiceListPanel } from '@/components/admin/services/service-list-panel';
 import { formatDate } from '@/lib/format';
 import { formatAmountInCurrency } from '@/lib/vendor-spend';
-import type { DiscountCode, Enrollment, ServiceInstance, ServiceSummary } from '@/types/services';
+import type { DiscountCode, ServiceInstance, ServiceSummary } from '@/types/services';
+
+import { makeExpanded } from '../../../fixtures/expanded-record';
 
 vi.mock('@/lib/services-api', () => ({
   isAbortRequestError: () => false,
@@ -93,25 +94,6 @@ const INSTANCE_FIXTURE: ServiceInstance = {
   resolvedConsultationDetails: null,
 };
 
-const ENROLLMENT_FIXTURE: Enrollment = {
-  id: 'enrollment-1',
-  instanceId: 'instance-1',
-  contactId: 'contact-1',
-  familyId: null,
-  organizationId: null,
-  ticketTierId: null,
-  discountCodeId: null,
-  status: 'waitlisted',
-  amountPaid: '1000',
-  currency: 'HKD',
-  enrolledAt: '2026-03-01T10:00:00Z',
-  cancelledAt: null,
-  notes: null,
-  createdBy: 'admin-sub',
-  createdAt: '2026-03-01T10:00:00Z',
-  updatedAt: '2026-03-01T10:00:00Z',
-};
-
 const DISCOUNT_CODE_FIXTURE: DiscountCode = {
   id: 'discount-1',
   code: 'SAVE10',
@@ -144,14 +126,15 @@ describe('services tables value formatting', () => {
     render(
       <ServiceListPanel
         services={[SERVICE_FIXTURE]}
-        selectedServiceId={null}
+        expanded={makeExpanded()}
+        draftDetail={null}
+        renderDetail={() => null}
         filters={{ serviceType: '', status: '', search: '' }}
         isLoading={false}
         isLoadingMore={false}
         hasMore={false}
         error=''
         isMutating={false}
-        onSelectService={vi.fn()}
         onFilterChange={vi.fn()}
         onLoadMore={vi.fn()}
         onDuplicateService={vi.fn()}
@@ -171,14 +154,15 @@ describe('services tables value formatting', () => {
     render(
       <ServiceListPanel
         services={[withTier]}
-        selectedServiceId={null}
+        expanded={makeExpanded()}
+        draftDetail={null}
+        renderDetail={() => null}
         filters={{ serviceType: '', status: '', search: '' }}
         isLoading={false}
         isLoadingMore={false}
         hasMore={false}
         error=''
         isMutating={false}
-        onSelectService={vi.fn()}
         onFilterChange={vi.fn()}
         onLoadMore={vi.fn()}
         onDuplicateService={vi.fn()}
@@ -188,6 +172,7 @@ describe('services tables value formatting', () => {
 
     const headers = screen.getAllByRole('columnheader');
     expect(headers.map((el) => el.textContent?.trim())).toEqual([
+      '',
       'Title',
       'Tier',
       'Type',
@@ -209,14 +194,15 @@ describe('services tables value formatting', () => {
     render(
       <ServiceListPanel
         services={[withInstances]}
-        selectedServiceId={null}
+        expanded={makeExpanded()}
+        draftDetail={null}
+        renderDetail={() => null}
         filters={{ serviceType: '', status: '', search: '' }}
         isLoading={false}
         isLoadingMore={false}
         hasMore={false}
         error=''
         isMutating={false}
-        onSelectService={vi.fn()}
         onFilterChange={vi.fn()}
         onLoadMore={vi.fn()}
         onDuplicateService={vi.fn()}
@@ -237,17 +223,21 @@ describe('services tables value formatting', () => {
               title: 'Custom instance title',
             },
           ]}
-          selectedInstanceId={null}
+          expanded={makeExpanded()}
+          draftDetail={null}
+          renderDetail={() => null}
           isLoading={false}
           isLoadingMore={false}
           hasMore={false}
           error=''
           isMutating={false}
-          onSelectInstance={vi.fn()}
           onLoadMore={vi.fn()}
           onDuplicateInstance={vi.fn()}
           onDeleteInstance={vi.fn()}
-          showServiceColumn
+          serviceFilter={{ value: '', options: [], onChange: vi.fn() }}
+          serviceTypeFilter={{ value: '', onChange: vi.fn() }}
+          statusFilter={{ value: '', onChange: vi.fn() }}
+          searchFilter={{ value: '', onChange: vi.fn() }}
         />
         <DiscountCodesPanel
           codes={[DISCOUNT_CODE_FIXTURE, DISCOUNT_REFERRAL_FIXTURE]}
@@ -275,9 +265,6 @@ describe('services tables value formatting', () => {
     expect(within(tables[1] as HTMLElement).getByText('SAVE10')).toBeInTheDocument();
     expect(within(tables[1] as HTMLElement).getByText('10%')).toBeInTheDocument();
     expect(within(tables[1] as HTMLElement).getByText('Referral')).toBeInTheDocument();
-    const currencySelect = screen.getByLabelText('Currency');
-    expect(currencySelect.tagName).toBe('SELECT');
-    expect(currencySelect).toBeDisabled();
   });
 
   it('shows instance capacity as seats left over max in instances table', () => {
@@ -292,17 +279,21 @@ describe('services tables value formatting', () => {
             status: 'open',
           },
         ]}
-        selectedInstanceId={null}
+        expanded={makeExpanded()}
+        draftDetail={null}
+        renderDetail={() => null}
         isLoading={false}
         isLoadingMore={false}
         hasMore={false}
         error=''
         isMutating={false}
-        onSelectInstance={vi.fn()}
         onLoadMore={vi.fn()}
         onDuplicateInstance={vi.fn()}
         onDeleteInstance={vi.fn()}
-        showServiceColumn
+        serviceFilter={{ value: '', options: [], onChange: vi.fn() }}
+        serviceTypeFilter={{ value: '', onChange: vi.fn() }}
+        statusFilter={{ value: '', onChange: vi.fn() }}
+        searchFilter={{ value: '', onChange: vi.fn() }}
       />
     );
 
@@ -310,7 +301,7 @@ describe('services tables value formatting', () => {
     expect(within(table).getByText('6/8')).toBeInTheDocument();
   });
 
-  it('merges tier and cohort in instances table: interpunct only when both set, else single dash when empty', () => {
+  it('merges tier and cohort in instances table: interpunct only when both set, else em dash when empty', () => {
     render(
       <InstanceListPanel
         instances={[
@@ -342,17 +333,21 @@ describe('services tables value formatting', () => {
             cohort: null,
           },
         ]}
-        selectedInstanceId={null}
+        expanded={makeExpanded()}
+        draftDetail={null}
+        renderDetail={() => null}
         isLoading={false}
         isLoadingMore={false}
         hasMore={false}
         error=''
         isMutating={false}
-        onSelectInstance={vi.fn()}
         onLoadMore={vi.fn()}
         onDuplicateInstance={vi.fn()}
         onDeleteInstance={vi.fn()}
-        showServiceColumn
+        serviceFilter={{ value: '', options: [], onChange: vi.fn() }}
+        serviceTypeFilter={{ value: '', onChange: vi.fn() }}
+        statusFilter={{ value: '', onChange: vi.fn() }}
+        searchFilter={{ value: '', onChange: vi.fn() }}
       />
     );
 
@@ -362,7 +357,7 @@ describe('services tables value formatting', () => {
     expect(within(table).getByText('only-cohort')).toBeInTheDocument();
     expect(within(table).getByText('t1 \u00b7 c1')).toBeInTheDocument();
 
-    const tierCohortColumnIndex = 1;
+    const tierCohortColumnIndex = 2;
     const rowFor = (title: string) => {
       const titleCell = within(table).getByText(title);
       const row = titleCell.closest('tr');
@@ -372,35 +367,7 @@ describe('services tables value formatting', () => {
     expect(rowFor('A')[tierCohortColumnIndex].textContent).toBe('only-tier');
     expect(rowFor('B')[tierCohortColumnIndex].textContent).toBe('only-cohort');
     expect(rowFor('C')[tierCohortColumnIndex].textContent).toBe('t1 \u00b7 c1');
-    expect(rowFor('D')[tierCohortColumnIndex].textContent).toBe('-');
+    expect(rowFor('D')[tierCohortColumnIndex].textContent).toBe('\u2014');
   });
 
-  it('formats enum and date values in enrollment table rows', () => {
-    render(
-      <EnrollmentListPanel
-        enrollments={[ENROLLMENT_FIXTURE]}
-        serviceId='service-1'
-        instanceId='instance-1'
-        canCreate={true}
-        isLoading={false}
-        isLoadingMore={false}
-        hasMore={false}
-        error=''
-        isMutating={false}
-        onLoadMore={vi.fn()}
-        onCreate={vi.fn()}
-        onUpdate={vi.fn()}
-        onDelete={vi.fn()}
-      />
-    );
-
-    const table = screen.getByRole('table');
-    expect(within(table).getByText('Waitlisted')).toBeInTheDocument();
-    expect(
-      within(table).getByText(
-        formatAmountInCurrency(Number.parseFloat(ENROLLMENT_FIXTURE.amountPaid!), ENROLLMENT_FIXTURE.currency!),
-      ),
-    ).toBeInTheDocument();
-    expect(within(table).getByText(formatDate(ENROLLMENT_FIXTURE.enrolledAt))).toBeInTheDocument();
-  });
 });

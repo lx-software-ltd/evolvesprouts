@@ -5,6 +5,8 @@ import { InstanceListPanel } from '@/components/admin/services/instance-list-pan
 import { ServiceListPanel } from '@/components/admin/services/service-list-panel';
 import type { ServiceInstance, ServiceSummary } from '@/types/services';
 
+import { makeExpanded } from '../../../fixtures/expanded-record';
+
 vi.mock('@/lib/clipboard', () => ({
   tryCopyTextToClipboard: vi.fn().mockResolvedValue(false),
 }));
@@ -82,14 +84,15 @@ describe('duplicate-as-draft feedback (services tables)', () => {
       render(
         <ServiceListPanel
           services={[SERVICE_ROW]}
-          selectedServiceId={null}
           filters={{ serviceType: '', status: '', search: '' }}
           isLoading={false}
           isLoadingMore={false}
           hasMore={false}
           error=''
           isMutating={false}
-          onSelectService={vi.fn()}
+          expanded={makeExpanded()}
+          draftDetail={null}
+          renderDetail={() => null}
           onFilterChange={vi.fn()}
           onLoadMore={vi.fn()}
           onDuplicateService={onDuplicateService}
@@ -123,20 +126,25 @@ describe('duplicate-as-draft feedback (services tables)', () => {
       render(
         <InstanceListPanel
           instances={[INSTANCE_ROW]}
-          selectedInstanceId={null}
           isLoading={false}
           isLoadingMore={false}
           hasMore={false}
           error=''
           isMutating={false}
-          onSelectInstance={vi.fn()}
+          expanded={makeExpanded()}
+          draftDetail={null}
+          renderDetail={() => null}
           onLoadMore={vi.fn()}
+          serviceFilter={{ value: '', options: [], onChange: vi.fn() }}
+          serviceTypeFilter={{ value: '', onChange: vi.fn() }}
+          statusFilter={{ value: '', onChange: vi.fn() }}
+          searchFilter={{ value: '', onChange: vi.fn() }}
           onDuplicateInstance={onDuplicateInstance}
           onDeleteInstance={vi.fn()}
         />
       );
 
-      fireEvent.click(screen.getByRole('button', { name: 'Duplicate instance as new row' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Duplicate instance as new draft' }));
 
       await vi.waitFor(() => {
         expect(screen.getByRole('button', { name: 'Draft copy ready' })).toBeInTheDocument();
@@ -147,7 +155,7 @@ describe('duplicate-as-draft feedback (services tables)', () => {
       });
 
       await vi.waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Duplicate instance as new row' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Duplicate instance as new draft' })).toBeInTheDocument();
       });
     } finally {
       vi.useRealTimers();
