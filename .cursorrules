@@ -296,11 +296,12 @@ so on) follows the same shape, built from the shared primitives in
 - **Filters** (`AdminFilterBar` + `AdminFilterField` from
   `admin-filter-bar.tsx`) sit directly above the table with their labels above
   the controls. The **create** control (`AdminCreateButton` from
-  `admin-create-button.tsx`) lives in the filter bar's trailing slot. It is a
-  **square** control the same height as the filter inputs (`sm:h-9 sm:w-9`,
-  `rounded-md`, `+` icon only) on desktop; on phones it moves to **its own
-  full-width line above the filters** and spells out its label (for example
-  `New contact`). Do not render the create control as a round or 32px button.
+  `admin-create-button.tsx`) lives in the filter bar's trailing slot. It
+  **spells out its label** (`New contact`, `New family`, `New note`, ...) at
+  every breakpoint — **no `+` icon** — and is the same height as the filter
+  inputs on desktop (`sm:h-9`, `rounded-md`); on phones it moves to **its own
+  full-width line above the filters**. Do not render the create control as an
+  icon-only, round, or 32px button.
   Filter controls, like every `Input`, `Select`, and `Textarea`, have a
   **white background** (`bg-white` is part of the shared control primitives;
   do not override it with tinted backgrounds).
@@ -316,16 +317,20 @@ so on) follows the same shape, built from the shared primitives in
 - **Rows expand in place** (`AdminRecordTable` + `AdminExpandableRow` from
   `admin-record-table.tsx` / `admin-expandable-row.tsx`). Clicking a row opens
   an animated detail region directly beneath that row containing the editor.
-  The selected record is **framed** on its left, right, and bottom edges by
-  one rule of the same colour and weight (`border-2 border-slate-300`, built
-  into `AdminExpandableRow` on both the summary row and the detail region) so
-  the operator can see where the open record ends and the next row begins.
+  The selected record is **framed on all four sides** by one rule of the same
+  colour and weight (`border-2 border-slate-300`, built into
+  `AdminExpandableRow`): the summary row carries the **top** and side borders,
+  the detail region the side and **bottom** borders, so the open record reads
+  as one card and the operator can see where it ends and the next row begins.
 - **Nested record lists** inside an open editor (contact notes, family and
   organisation members) reuse the same pattern with
-  `AdminRecordTable embedded` (no inner card): a `+` `AdminCreateButton`
-  above the list opens a draft row, clicking a row opens its editor beneath
-  it, and destructive actions stay in Operations. Do not render an always-on
-  composer or an edit icon for these lists.
+  `AdminRecordTable embedded` (no inner card): an `AdminCreateButton`
+  (`New note`, `New member`) above the list opens a draft row, clicking a row
+  opens its editor beneath it, and destructive actions stay in Operations. Do
+  not render an always-on composer or an edit icon for these lists. Nested
+  lists open with the same vertical `AdminExpandRegion` animation; the region
+  pins its grid column (`minmax(0, 1fr)`) so a sub-table never changes width
+  or slides horizontally while opening.
   Exactly one row is open at a time, driven by `useExpandedRecord`
   (`apps/admin_web/src/hooks/use-expanded-record.ts`), which syncs the open
   record id to a URL query parameter and prompts before discarding unsaved
@@ -356,6 +361,16 @@ so on) follows the same shape, built from the shared primitives in
   Standalone tool panels without a table (for example the Contacts →
   Mailchimp tab) use the same shape: an untitled `Card` with `AdminDisclosure`
   sections, no `AdminCollapsibleSection`, and no manual refresh button.
+- **In-flight buttons:** any button whose click starts an API call must be
+  rendered with the shared `Button` and pass `loading={...}` for the duration
+  of the call. While loading, `Button` disables itself, sets `aria-busy`, and
+  swaps its content for a **spinning ring (`SpinnerIcon`) next to
+  `Saving…`** (the default `loadingLabel`). Use `AdminEditorActions
+  isSaving`, `ConfirmDialog confirmLoading`, or `Button loading` rather than
+  hand-rolled `isSaving ? 'Saving...' : label` ternaries or a bare
+  `disabled`. Destructive or non-save actions may pass an action-specific
+  `loadingLabel` (`Deleting…`, `Voiding…`, `Removing…`, `Loading…`); the
+  spinner and the disabled state are the same everywhere.
 - **Loading** renders `AdminSkeletonRows` (`admin-skeleton.tsx`) in the table
   body rather than a spinner or a blank card.
 - Do not implement create/edit flows with modal, dialog, sheet, drawer, or a
