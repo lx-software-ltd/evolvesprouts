@@ -63,6 +63,8 @@ export function ContactEditorPanel({
     source,
     sourceDetail,
     setSourceDetail,
+    jobTitle,
+    setJobTitle,
     referralContactId,
     referralSearchInput,
     setReferralSearchInput,
@@ -129,11 +131,13 @@ export function ContactEditorPanel({
       <ContactEditorSourceFields
         source={source}
         sourceDetail={sourceDetail}
+        jobTitle={jobTitle}
         referralContactId={referralContactId}
         referralSearchInput={referralSearchInput}
         referralSelectOptions={referralSelectOptions}
         onSourceChange={handleSourceChange}
         onSourceDetailChange={setSourceDetail}
+        onJobTitleChange={setJobTitle}
         onReferralSearchInputChange={setReferralSearchInput}
         onReferralContactIdChange={(contactId, pinnedLabel) => {
           setReferralContactId(contactId);

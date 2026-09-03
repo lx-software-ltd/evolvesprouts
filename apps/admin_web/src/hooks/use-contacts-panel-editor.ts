@@ -73,6 +73,7 @@ export function useContactsPanelEditor({
     useState<(typeof CONTACT_RELATIONSHIP_TYPES)[number]>('prospect');
   const [source, setSource] = useState<ApiSchemas['EntityContactSource']>('manual');
   const [sourceDetail, setSourceDetail] = useState('');
+  const [jobTitle, setJobTitle] = useState('');
   const [referralContactId, setReferralContactId] = useState('');
   const [referralSearchInput, setReferralSearchInput] = useState('');
   const [referralSearchResults, setReferralSearchResults] = useState<EntityPickerListItem[]>([]);
@@ -109,6 +110,7 @@ export function useContactsPanelEditor({
     setRelationshipType('prospect');
     setSource('manual');
     setSourceDetail('');
+    setJobTitle('');
     setReferralContactId('');
     setReferralSearchInput('');
     setReferralSearchResults([]);
@@ -136,6 +138,7 @@ export function useContactsPanelEditor({
       setRelationshipType(relationshipTypeForEditor(row.relationship_type));
       setSource(row.source);
       setSourceDetail(row.source_detail ?? '');
+      setJobTitle(row.job_title ?? '');
       setReferralContactId(row.referral_contact_id ?? '');
       setReferralSearchInput('');
       setReferralSearchResults([]);
@@ -254,6 +257,7 @@ export function useContactsPanelEditor({
           relationship_type: relationshipType,
           source,
           source_detail: sourceDetail.trim() || null,
+          job_title: jobTitle.trim() || null,
           date_of_birth: dob,
           location_id: linkedToFamilyOrOrg ? null : loc,
           tag_ids: tagIds,
@@ -279,6 +283,7 @@ export function useContactsPanelEditor({
         relationship_type: relationshipType,
         source,
         source_detail: sourceDetail.trim() || null,
+        job_title: jobTitle.trim() || null,
         date_of_birth: dob,
         active,
         tag_ids: tagIds,
@@ -384,6 +389,8 @@ export function useContactsPanelEditor({
     source,
     sourceDetail,
     setSourceDetail: track(setSourceDetail),
+    jobTitle,
+    setJobTitle: track(setJobTitle),
     referralContactId,
     referralSearchInput,
     setReferralSearchInput,
