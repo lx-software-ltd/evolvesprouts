@@ -346,7 +346,15 @@ so on) follows the same shape, built from the shared primitives in
   edits when switching rows.
 - **Create** inserts a draft row (`DRAFT_RECORD_ID`) at the top of the table
   with its editor already open; saving replaces the draft with the created
-  record, collapsing the draft row removes it.
+  record, collapsing the draft row removes it. Nested lists use their own
+  draft id (`note-draft`, `grant-draft`) so it never collides with the parent
+  table's draft row.
+- **Read-only and create-only records** keep the same shape: a record that
+  cannot be edited (audit log entry, issued API key) still expands in place,
+  into a detail panel on the field grid with `readOnly` inputs or plain
+  values and no action row. A table whose rows have **no row-scoped actions**
+  omits the Operations column instead of rendering an empty one. Do not fall
+  back to a detail dialog for read-only records.
 - **Editors** (`AdminEditorPanel` + `AdminEditorActions` from
   `admin-editor-panel.tsx`) have **no title or subtitle**: field labels and
   fields only, then one action row (`justify-start`, `gap-2`) with **one

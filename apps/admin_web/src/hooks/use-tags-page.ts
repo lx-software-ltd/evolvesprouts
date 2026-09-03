@@ -1,10 +1,10 @@
 'use client';
 
-import type { FormEvent } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { invalidateSharedEntityTags } from '@/hooks/use-admin-catalog';
-import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
+import { useEntityPanelEditorShell } from '@/hooks/use-entity-panel-editor-shell';
+import { useExpandedRecordForm } from '@/hooks/use-expanded-record-form';
 import { toErrorMessage } from '@/hooks/hook-errors';
 import { conflictFieldUserMessage } from '@/lib/admin-api-conflict-messages';
 import {
@@ -20,28 +20,35 @@ import type { components } from '@/types/generated/admin-api.generated';
 
 type ApiSchemas = components['schemas'];
 
+export const ADMIN_TAG_QUERY_PARAM = 'tag';
+
 export function useTagsPage() {
-  const [confirmDialogProps, requestConfirm] = useConfirmDialog();
+  const {
+    confirmDialogProps,
+    requestConfirm,
+    deleteActionError,
+    setDeleteActionError,
+    editorMode,
+    selectedId,
+    expanded,
+    clearDirty,
+    track,
+  } = useEntityPanelEditorShell({ paramName: ADMIN_TAG_QUERY_PARAM });
   const [tags, setTags] = useState<AdminTagRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [saveError, setSaveError] = useState('');
   const [listFilter, setListFilter] = useState<AdminTagListFilter>('active');
-  const [editorMode, setEditorMode] = useState<'create' | 'edit'>('create');
-  const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [color, setColor] = useState('');
   const [description, setDescription] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [deleteBusyId, setDeleteBusyId] = useState<string | null>(null);
-  const [archiveBusyId, setArchiveBusyId] = useState<string | null>(null);
-  const [restoreBusyId, setRestoreBusyId] = useState<string | null>(null);
+  const [rowBusy, setRowBusy] = useState<{ id: string; action: 'delete' | 'archive' | 'restore' } | null>(
+    null
+  );
   const [listSearchQuery, setListSearchQuery] = useState('');
 
-  const selectedRow = useMemo(
-    () => tags.find((row) => row.id === selectedTagId) ?? null,
-    [tags, selectedTagId]
-  );
+  const selectedRow = useMemo(() => tags.find((row) => row.id === selectedId) ?? null, [tags, selectedId]);
 
   const filteredTags = useMemo(() => {
     const q = listSearchQuery.trim().toLowerCase();
@@ -58,8 +65,7 @@ export function useTagsPage() {
       const rows = await listAdminTags({ filter: listFilter });
       setTags(rows);
     } catch (caught) {
-      const message = toErrorMessage(caught, 'Failed to load tags.', { honorBackendMessage: true });
-      setError(message);
+      setError(toErrorMessage(caught, 'Failed to load tags.', { honorBackendMessage: true }));
     } finally {
       setIsLoading(false);
     }
@@ -69,46 +75,62 @@ export function useTagsPage() {
     void loadTags();
   }, [loadTags]);
 
-  const resetCreateForm = () => {
-    setEditorMode('create');
-    setSelectedTagId(null);
+  const resetForm = useCallback(() => {
     setName('');
     setColor('');
     setDescription('');
     setSaveError('');
-  };
+    clearDirty();
+  }, [clearDirty]);
 
-  const applyRowSelection = (row: AdminTagRow) => {
-    setEditorMode('edit');
-    setSelectedTagId(row.id);
-    setName(row.name);
-    setColor(row.color?.trim() ?? '');
-    setDescription(row.description?.trim() ?? '');
-    setSaveError('');
-  };
+  const applyRow = useCallback(
+    (row: AdminTagRow) => {
+      setName(row.name);
+      setColor(row.color?.trim() ?? '');
+      setDescription(row.description?.trim() ?? '');
+      setSaveError('');
+      clearDirty();
+    },
+    [clearDirty]
+  );
 
-  const parseColorPayload = (): string | null => {
-    const trimmed = color.trim();
-    return trimmed === '' ? null : trimmed;
-  };
+  useExpandedRecordForm<AdminTagRow>({
+    expandedId: expanded.expandedId,
+    rows: tags,
+    isLoading,
+    applyRow,
+    reset: resetForm,
+    collapse: expanded.collapse,
+  });
 
-  const handleRestore = async (row: AdminTagRow) => {
-    setRestoreBusyId(row.id);
-    setError('');
+  const runRowAction = async (
+    row: AdminTagRow,
+    action: 'delete' | 'archive' | 'restore',
+    work: () => Promise<void>,
+    failureLabel: string
+  ) => {
+    setRowBusy({ id: row.id, action });
+    setDeleteActionError('');
     try {
-      const updated = await updateAdminTag(row.id, { archived: false });
+      await work();
       invalidateSharedEntityTags();
       await loadTags();
-      if (updated && selectedTagId === row.id) {
-        applyRowSelection(updated);
-      }
     } catch (caught) {
-      const message = toErrorMessage(caught, 'Restore failed.', { honorBackendMessage: true });
-      setError(message);
+      setDeleteActionError(toErrorMessage(caught, failureLabel, { honorBackendMessage: true }));
     } finally {
-      setRestoreBusyId(null);
+      setRowBusy(null);
     }
   };
+
+  const handleRestore = (row: AdminTagRow) =>
+    runRowAction(
+      row,
+      'restore',
+      async () => {
+        await updateAdminTag(row.id, { archived: false });
+      },
+      'Restore failed.'
+    );
 
   const handleArchiveRow = async (row: AdminTagRow) => {
     if (row.is_system || row.archived_at) {
@@ -123,61 +145,43 @@ export function useTagsPage() {
     if (!confirmed) {
       return;
     }
-    setArchiveBusyId(row.id);
-    setError('');
-    try {
-      const updated = await updateAdminTag(row.id, { archived: true });
-      invalidateSharedEntityTags();
-      await loadTags();
-      if (updated && selectedTagId === row.id) {
-        applyRowSelection(updated);
-      }
-    } catch (caught) {
-      const message = toErrorMessage(caught, 'Archive failed.', { honorBackendMessage: true });
-      setError(message);
-    } finally {
-      setArchiveBusyId(null);
-    }
+    await runRowAction(
+      row,
+      'archive',
+      async () => {
+        await updateAdminTag(row.id, { archived: true });
+      },
+      'Archive failed.'
+    );
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmit = async () => {
     setSaveError('');
     setIsSaving(true);
     try {
-      const colorPayload = parseColorPayload();
+      const trimmedColor = color.trim();
       const descTrimmed = description.trim();
-      if (editorMode === 'create') {
-        const body: ApiSchemas['CreateAdminTagRequest'] = {
-          name: name.trim(),
-          color: colorPayload,
-          description: descTrimmed === '' ? null : descTrimmed,
-        };
-        await createAdminTag(body);
-        resetCreateForm();
-        invalidateSharedEntityTags();
-        await loadTags();
-        return;
-      }
-      if (!selectedTagId) {
-        return;
-      }
-      const body: ApiSchemas['UpdateAdminTagRequest'] = {
+      const body: ApiSchemas['CreateAdminTagRequest'] = {
         name: name.trim(),
-        color: colorPayload,
+        color: trimmedColor === '' ? null : trimmedColor,
         description: descTrimmed === '' ? null : descTrimmed,
       };
-      await updateAdminTag(selectedTagId, body);
+      if (editorMode === 'create') {
+        await createAdminTag(body);
+        clearDirty();
+        expanded.collapse();
+      } else {
+        if (!selectedId) {
+          return;
+        }
+        await updateAdminTag(selectedId, body);
+        clearDirty();
+      }
       invalidateSharedEntityTags();
       await loadTags();
     } catch (caught) {
       const conflict = conflictFieldUserMessage(caught, { name: 'A tag with this name already exists.' });
-      if (conflict) {
-        setSaveError(conflict);
-        return;
-      }
-      const message = toErrorMessage(caught, 'Save failed.', { honorBackendMessage: true });
-      setSaveError(message);
+      setSaveError(conflict ?? toErrorMessage(caught, 'Save failed.', { honorBackendMessage: true }));
     } finally {
       setIsSaving(false);
     }
@@ -196,64 +200,52 @@ export function useTagsPage() {
     if (!confirmed) {
       return;
     }
-    setDeleteBusyId(row.id);
-    setError('');
-    try {
-      const outcome = await deleteOrArchiveAdminTag(row.id);
-      if (outcome.deleted && selectedTagId === row.id) {
-        resetCreateForm();
-      }
-      if (!outcome.deleted && outcome.tag && selectedTagId === row.id) {
-        applyRowSelection(outcome.tag);
-      }
-      invalidateSharedEntityTags();
-      await loadTags();
-    } catch (caught) {
-      const message = toErrorMessage(caught, 'Delete failed.', { honorBackendMessage: true });
-      setError(message);
-    } finally {
-      setDeleteBusyId(null);
-    }
+    await runRowAction(
+      row,
+      'delete',
+      async () => {
+        const outcome = await deleteOrArchiveAdminTag(row.id);
+        if (outcome.deleted && selectedId === row.id) {
+          clearDirty();
+          expanded.collapse();
+        }
+      },
+      'Delete failed.'
+    );
   };
 
-  const editorIsBusy =
-    isSaving || Boolean(deleteBusyId) || Boolean(archiveBusyId) || Boolean(restoreBusyId);
-  const isEditingSystemTag = editorMode === 'edit' && selectedRow?.is_system;
-  const showRestoreInEditor =
-    editorMode === 'edit' && selectedRow && Boolean(selectedRow.archived_at) && !selectedRow.is_system;
+  const editorIsBusy = isSaving || rowBusy !== null;
+  const isEditingSystemTag = editorMode === 'edit' && Boolean(selectedRow?.is_system);
 
   return {
     confirmDialogProps,
+    expanded,
     tags,
     isLoading,
     error,
+    deleteActionError,
+    setDeleteActionError,
     saveError,
     listFilter,
     setListFilter,
     editorMode,
-    selectedTagId,
+    selectedRow,
     name,
-    setName,
+    setName: track(setName),
     color,
-    setColor,
+    setColor: track(setColor),
     description,
-    setDescription,
+    setDescription: track(setDescription),
     isSaving,
-    deleteBusyId,
-    archiveBusyId,
-    restoreBusyId,
+    rowBusy,
     listSearchQuery,
     setListSearchQuery,
-    selectedRow,
     filteredTags,
-    resetCreateForm,
-    applyRowSelection,
     handleRestore,
     handleArchiveRow,
     handleSubmit,
     handleDeleteRow,
     editorIsBusy,
     isEditingSystemTag,
-    showRestoreInEditor,
   };
 }

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -35,7 +35,6 @@ function renderEditor(overrides: Partial<ComponentProps<typeof AssetEditorPanel>
   const onCreate = vi.fn().mockResolvedValue(undefined);
   const onUpdate = vi.fn().mockResolvedValue(true);
   const onReplaceFile = vi.fn().mockResolvedValue(true);
-  const onStartCreate = vi.fn();
   const onRetryUpload = vi.fn().mockResolvedValue(undefined);
 
   render(
@@ -52,12 +51,11 @@ function renderEditor(overrides: Partial<ComponentProps<typeof AssetEditorPanel>
       onReplaceFile={onReplaceFile}
       onCreate={onCreate}
       onUpdate={onUpdate}
-      onStartCreate={onStartCreate}
       {...overrides}
     />
   );
 
-  return { onCreate, onUpdate, onReplaceFile, onStartCreate, onRetryUpload };
+  return { onCreate, onUpdate, onReplaceFile, onRetryUpload };
 }
 
 describe('AssetEditorPanel', () => {
@@ -85,7 +83,7 @@ describe('AssetEditorPanel', () => {
     const user = userEvent.setup();
     const { onCreate } = renderEditor();
 
-    await user.type(screen.getByLabelText('Title *'), 'New guide');
+    await user.type(screen.getByLabelText('Title'), 'New guide');
     await user.click(screen.getByRole('button', { name: 'Create asset' }));
 
     expect(screen.getByText('Select a PDF file to upload.')).toBeInTheDocument();
@@ -104,7 +102,7 @@ describe('AssetEditorPanel', () => {
     const user = userEvent.setup();
     const { onCreate } = renderEditor();
 
-    await user.type(screen.getByLabelText('Title *'), 'New guide');
+    await user.type(screen.getByLabelText('Title'), 'New guide');
     const fileInput = screen.getByLabelText('Upload PDF file');
     const pdf = new File(['%PDF-1.4'], 'guide.pdf', { type: 'application/pdf' });
     await user.upload(fileInput, pdf);
@@ -126,7 +124,7 @@ describe('AssetEditorPanel', () => {
     const user = userEvent.setup();
     const { onCreate } = renderEditor();
 
-    await user.type(screen.getByLabelText('Title *'), 'New guide');
+    await user.type(screen.getByLabelText('Title'), 'New guide');
     const fileInput = screen.getByLabelText('Upload PDF file');
     const pdf = new File(['%PDF-1.4'], 'guide.pdf', { type: 'application/pdf' });
     await user.upload(fileInput, pdf);
@@ -144,28 +142,46 @@ describe('AssetEditorPanel', () => {
     });
   });
 
-  it('shows create mode when no asset is selected', () => {
+  it('renders the create editor with no title, no Cancel, and the standard field grid', () => {
     renderEditor();
 
-    expect(screen.getByRole('heading', { name: 'Create Asset' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading')).toBeNull();
     expect(screen.getByRole('button', { name: 'Create asset' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
-    expect(
-      screen.getByText(/Create a new PDF asset or select a row below to edit/)
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/select a row below to edit/)).not.toBeInTheDocument();
+
+    const titleField = screen.getByLabelText('Title').closest('div');
+    expect(titleField).toHaveClass('sm:col-span-2');
+    expect(titleField?.parentElement).toHaveAttribute('data-columns', '4');
+    expect(screen.getByLabelText('Description').closest('div')).toHaveClass('col-span-full');
+    expect(screen.queryByRole('button', { name: /Share link/ })).toBeNull();
   });
 
-  it('returns to create mode when Cancel is clicked in edit mode', async () => {
-    const user = userEvent.setup();
-    const { onStartCreate } = renderEditor({ selectedAsset: SELECTED_ASSET });
+  it('renders the edit editor with no title or Cancel and a collapsed Share link sub-accordion', () => {
+    renderEditor({ selectedAsset: SELECTED_ASSET });
 
-    expect(screen.getByRole('heading', { name: 'Edit Asset' })).toBeInTheDocument();
+    // The only heading is the Share link sub-accordion trigger; no panel title.
+    expect(screen.getAllByRole('heading').map((heading) => heading.textContent)).toEqual(['Share link']);
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeInTheDocument();
-    expect(screen.getByText(/Cancel to create a new asset/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Current file')).toHaveValue('infant-guide.pdf');
+    expect(screen.getByRole('button', { name: /Share link/ })).toHaveAttribute('aria-expanded', 'false');
+  });
 
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(onStartCreate).toHaveBeenCalledTimes(1);
+  it('reports dirty state to the row guard and clears it on submit', async () => {
+    const user = userEvent.setup();
+    const onDirtyChange = vi.fn();
+    renderEditor({ selectedAsset: SELECTED_ASSET, onDirtyChange });
+
+    const titleInput = screen.getByLabelText('Title');
+    await user.type(titleInput, '!');
+    expect(onDirtyChange).toHaveBeenLastCalledWith(true);
+
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => {
+      expect(onDirtyChange).toHaveBeenLastCalledWith(false);
+    });
   });
 
   it('shows validation when save is clicked with no changes in edit mode', async () => {
@@ -185,7 +201,7 @@ describe('AssetEditorPanel', () => {
     const user = userEvent.setup();
     const { onUpdate } = renderEditor({ selectedAsset: SELECTED_ASSET });
 
-    const titleInput = screen.getByLabelText('Title *');
+    const titleInput = screen.getByLabelText('Title');
     await user.clear(titleInput);
     await user.type(titleInput, 'Updated title');
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
@@ -229,7 +245,7 @@ describe('AssetEditorPanel', () => {
       expect(mockGetAdminAssetShareLink).toHaveBeenCalledWith('asset-1');
     });
 
-    const titleInput = screen.getByLabelText('Title *');
+    const titleInput = screen.getByLabelText('Title');
     await user.clear(titleInput);
     await user.type(titleInput, 'Updated title');
 
@@ -255,7 +271,7 @@ describe('AssetEditorPanel', () => {
       expect(mockGetAdminAssetShareLink).toHaveBeenCalledWith('asset-1');
     });
 
-    const titleInput = screen.getByLabelText('Title *');
+    const titleInput = screen.getByLabelText('Title');
     await user.clear(titleInput);
     await user.type(titleInput, 'Updated title');
 
@@ -307,7 +323,7 @@ describe('AssetEditorPanel', () => {
       expect(mockGetAdminAssetShareLink).toHaveBeenCalledWith('asset-1');
     });
 
-    expect(screen.getByLabelText('Visibility *')).toBeDisabled();
+    expect(screen.getByLabelText('Visibility')).toBeDisabled();
   });
 
   it('does not show replace PDF control for invoice-linked assets', async () => {
@@ -321,7 +337,7 @@ describe('AssetEditorPanel', () => {
     });
 
     expect(screen.queryByLabelText('Replace PDF file')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Visibility *')).toBeDisabled();
+    expect(screen.getByLabelText('Visibility')).toBeDisabled();
     expect(
       screen.getByLabelText('Tag (linked to customer invoice; not editable)')
     ).toBeDisabled();
@@ -336,7 +352,7 @@ describe('AssetEditorPanel', () => {
 
     expect(screen.getByLabelText('Tag (linked to expense; not editable)')).toBeDisabled();
 
-    const titleInput = screen.getByLabelText('Title *');
+    const titleInput = screen.getByLabelText('Title');
     await user.clear(titleInput);
     await user.type(titleInput, 'Expense-linked title');
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
@@ -361,23 +377,29 @@ describe('AssetEditorPanel', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('renders share-link domain allowlist as a full-width row in edit mode', async () => {
+  it('keeps the share-link controls inside the Share link sub-accordion in edit mode', async () => {
+    const user = userEvent.setup();
     renderEditor({ selectedAsset: SELECTED_ASSET });
 
     await waitFor(() => {
       expect(mockGetAdminAssetShareLink).toHaveBeenCalledWith('asset-1');
     });
 
-    const allowlistInput = screen.getByLabelText('Share-link domain allowlist');
-    expect(allowlistInput.closest('div')).toHaveClass('lg:col-span-2');
+    await user.click(screen.getByRole('button', { name: /Share link/ }));
+
+    const disclosure = screen.getByTestId('asset-share-link-asset-1-disclosure');
+    expect(within(disclosure).getByLabelText('Share-link domain allowlist')).toBeInTheDocument();
+    expect(within(disclosure).getByRole('button', { name: 'Copy link' })).toBeInTheDocument();
   });
 
   it('removes share-link helper copy and keeps save policy below textarea', async () => {
+    const user = userEvent.setup();
     renderEditor({ selectedAsset: SELECTED_ASSET });
 
     await waitFor(() => {
       expect(mockGetAdminAssetShareLink).toHaveBeenCalledWith('asset-1');
     });
+    await user.click(screen.getByRole('button', { name: /Share link/ }));
 
     expect(
       screen.queryByText(
@@ -404,6 +426,7 @@ describe('AssetEditorPanel', () => {
     await waitFor(() => {
       expect(mockGetAdminAssetShareLink).toHaveBeenCalledWith('asset-1');
     });
+    await user.click(screen.getByRole('button', { name: /Share link/ }));
 
     await user.click(screen.getByRole('button', { name: 'Copy link' }));
     await waitFor(() => {

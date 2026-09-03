@@ -1,8 +1,9 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockListAdminAssets } = vi.hoisted(() => ({
+const { mockListAdminAssets, mockGetAdminAsset } = vi.hoisted(() => ({
   mockListAdminAssets: vi.fn(),
+  mockGetAdminAsset: vi.fn(),
 }));
 
 vi.mock('@/lib/assets-api', async () => {
@@ -10,10 +11,12 @@ vi.mock('@/lib/assets-api', async () => {
   return {
     ...actual,
     listAdminAssets: mockListAdminAssets,
+    getAdminAsset: mockGetAdminAsset,
   };
 });
 
-import { useAssetList } from '@/hooks/use-asset-list';
+import { ADMIN_ASSET_QUERY_PARAM, useAssetList } from '@/hooks/use-asset-list';
+import { DRAFT_RECORD_ID } from '@/hooks/use-expanded-record';
 import { CLIENT_DOCUMENT_ASSET_TAG, CUSTOMER_INVOICE_ASSET_TAG } from '@/types/assets';
 
 import { createAdminAssetFixture } from '../fixtures/assets';
@@ -22,10 +25,16 @@ function setLocation(pathAndQuery: string) {
   window.history.replaceState(null, '', pathAndQuery);
 }
 
+function currentAssetParam(): string | null {
+  return new URLSearchParams(window.location.search).get(ADMIN_ASSET_QUERY_PARAM);
+}
+
 describe('useAssetList', () => {
   beforeEach(() => {
     setLocation('/assets');
     mockListAdminAssets.mockReset();
+    mockGetAdminAsset.mockReset();
+    mockGetAdminAsset.mockRejectedValue(new Error('not found'));
     mockListAdminAssets.mockResolvedValue({
       items: [],
       nextCursor: null,
@@ -143,6 +152,8 @@ describe('useAssetList', () => {
 
     expect(result.current.selectedAssetId).toBe('asset-second');
     expect(result.current.selectedAsset).toEqual(second);
+    expect(result.current.expanded.expandedId).toBe('asset-second');
+    expect(currentAssetParam()).toBe('asset-second');
 
     act(() => {
       result.current.clearSelectedAsset();
@@ -150,9 +161,50 @@ describe('useAssetList', () => {
 
     expect(result.current.selectedAssetId).toBeNull();
     expect(result.current.selectedAsset).toBeNull();
+    expect(currentAssetParam()).toBeNull();
   });
 
-  it('ignores a selection that is not in the current list', async () => {
+  it('opens the draft row without selecting an asset', async () => {
+    const { result } = renderHook(() => useAssetList());
+
+    await waitFor(() => {
+      expect(mockListAdminAssets).toHaveBeenCalled();
+    });
+
+    act(() => {
+      result.current.expanded.openDraft();
+    });
+
+    expect(result.current.expanded.isDraftOpen).toBe(true);
+    expect(result.current.expanded.expandedId).toBe(DRAFT_RECORD_ID);
+    expect(result.current.selectedAssetId).toBeNull();
+    expect(result.current.selectedAsset).toBeNull();
+  });
+
+  it('restores a deep-linked asset that is not in the loaded pages by fetching and pinning it', async () => {
+    const first = createAdminAssetFixture({ id: 'asset-first', title: 'First' });
+    const pinned = createAdminAssetFixture({ id: 'asset-pinned', title: 'Pinned' });
+    mockListAdminAssets.mockResolvedValue({
+      items: [first],
+      nextCursor: null,
+      linkedTagNames: [CLIENT_DOCUMENT_ASSET_TAG],
+    });
+    mockGetAdminAsset.mockResolvedValue(pinned);
+    setLocation(`/assets?${ADMIN_ASSET_QUERY_PARAM}=asset-pinned`);
+
+    const { result } = renderHook(() => useAssetList());
+
+    await waitFor(() => {
+      expect(result.current.pinnedAsset).toEqual(pinned);
+    });
+
+    expect(mockGetAdminAsset).toHaveBeenCalledWith('asset-pinned');
+    expect(result.current.selectedAssetId).toBe('asset-pinned');
+    expect(result.current.selectedAsset).toEqual(pinned);
+    expect(result.current.assets).toEqual([first]);
+  });
+
+  it('collapses a selection that cannot be resolved', async () => {
     const first = createAdminAssetFixture({ id: 'asset-first', title: 'First' });
     mockListAdminAssets.mockResolvedValue({
       items: [first],
@@ -170,8 +222,49 @@ describe('useAssetList', () => {
       result.current.selectAsset('asset-missing');
     });
 
+    await waitFor(() => {
+      expect(mockGetAdminAsset).toHaveBeenCalledWith('asset-missing');
+    });
+    await waitFor(() => {
+      expect(result.current.expanded.expandedId).toBeNull();
+    });
     expect(result.current.selectedAssetId).toBeNull();
     expect(result.current.selectedAsset).toBeNull();
+  });
+
+  it('asks before switching rows while the editor has unsaved changes', async () => {
+    const first = createAdminAssetFixture({ id: 'asset-first', title: 'First' });
+    const second = createAdminAssetFixture({ id: 'asset-second', title: 'Second' });
+    mockListAdminAssets.mockResolvedValue({
+      items: [first, second],
+      nextCursor: null,
+      linkedTagNames: [CLIENT_DOCUMENT_ASSET_TAG],
+    });
+
+    const { result } = renderHook(() => useAssetList());
+
+    await waitFor(() => {
+      expect(result.current.assets).toHaveLength(2);
+    });
+
+    act(() => {
+      result.current.selectAsset('asset-first');
+    });
+    act(() => {
+      result.current.setEditorDirty(true);
+    });
+    act(() => {
+      result.current.selectAsset('asset-second');
+    });
+
+    expect(result.current.expanded.discardPrompt.open).toBe(true);
+    expect(result.current.selectedAssetId).toBe('asset-first');
+
+    act(() => {
+      result.current.expanded.discardPrompt.confirm();
+    });
+
+    expect(result.current.selectedAssetId).toBe('asset-second');
   });
 
   it('clears selection when the selected asset is no longer in the list', async () => {

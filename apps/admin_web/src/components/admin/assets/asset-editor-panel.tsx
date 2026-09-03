@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 
 import type {
   AdminAsset,
@@ -20,20 +20,30 @@ import {
 
 import type { AssetUploadPhase } from '@/hooks/use-asset-mutations';
 
+import {
+  EMPTY_ASSET_FORM,
+  isPdfFile,
+  metadataPatchFor,
+  normalizeResourceKey,
+  resolveContentLanguage,
+  toAssetFormState,
+  type AssetFormState,
+} from '@/components/admin/assets/asset-editor-form';
 import { AssetShareLinkSection } from '@/components/admin/assets/asset-share-link-section';
 import { StatusBanner } from '@/components/status-banner';
-import { AdminEditorCard } from '@/components/ui/admin-editor-card';
-import { Button } from '@/components/ui/button';
+import { AdminDisclosure } from '@/components/ui/admin-disclosure';
+import { AdminEditorActions, AdminEditorPanel } from '@/components/ui/admin-editor-panel';
+import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { ContentLanguageSelect } from '@/components/ui/content-language-select';
 import { FileUploadButton } from '@/components/ui/file-upload-button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
 const ASSET_EDITOR_FORM_ID = 'admin-asset-editor-form';
 
-interface AssetEditorPanelProps {
+export interface AssetEditorPanelProps {
+  /** `null` renders the draft (create) editor. */
   selectedAsset: AdminAsset | null;
   isSavingAsset: boolean;
   isDeletingCurrentAsset: boolean;
@@ -58,107 +68,13 @@ interface AssetEditorPanelProps {
     file: File
   ) => Promise<void>;
   onUpdate: (assetId: string, payload: UpdateAdminAssetPatchInput) => Promise<boolean>;
-  onStartCreate: () => void;
+  /** Reports unsaved edits so the row switch guard can ask before discarding them. */
+  onDirtyChange?: (dirty: boolean) => void;
+  /** Extra sections (for example access grants) rendered after the share link. */
+  children?: ReactNode;
 }
 
-interface AssetFormState {
-  title: string;
-  description: string;
-  resourceKey: string;
-  visibility: AssetVisibility;
-  /** BCP 47 tag or empty when unset / unknown */
-  contentLanguage: string;
-  /** Select value: empty string = no client tag; client_document = Client */
-  clientTag: '' | typeof CLIENT_DOCUMENT_ASSET_TAG;
-}
-
-const EMPTY_ASSET_FORM: AssetFormState = {
-  title: '',
-  description: '',
-  resourceKey: '',
-  visibility: 'restricted',
-  contentLanguage: '',
-  clientTag: '',
-};
-
-const RESOURCE_KEY_MAX_LENGTH = 64;
-
-function assetHasClientDocumentTag(asset: AdminAsset): boolean {
-  return asset.tags.some((t) => t.name.toLowerCase() === CLIENT_DOCUMENT_ASSET_TAG);
-}
-
-function toContentLanguageSelectValue(asset: AdminAsset): string {
-  const match = matchAdminSelectableContentLanguage(asset.contentLanguage);
-  return match && match !== 'unrecognized' ? match : '';
-}
-
-function canonicalContentLanguageFromApi(value: string | null | undefined): string | null {
-  const match = matchAdminSelectableContentLanguage(value);
-  if (match === 'unrecognized') {
-    return null;
-  }
-  return match;
-}
-
-function toFormState(asset: AdminAsset): AssetFormState {
-  return {
-    title: asset.title,
-    description: asset.description ?? '',
-    resourceKey: asset.resourceKey ?? '',
-    visibility: asset.visibility,
-    contentLanguage: toContentLanguageSelectValue(asset),
-    clientTag: assetHasClientDocumentTag(asset) ? CLIENT_DOCUMENT_ASSET_TAG : '',
-  };
-}
-
-function normalizeResourceKey(value: string): string {
-  return value
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/g, '-')
-    .replaceAll(/^-+|-+$/g, '')
-    .slice(0, RESOURCE_KEY_MAX_LENGTH)
-    .replaceAll(/-+$/g, '');
-}
-
-function buildEditMetadataPatch(
-  asset: AdminAsset,
-  input: {
-    title: string;
-    description: string | null;
-    resourceKey: string | null;
-    visibility: AssetVisibility;
-    contentLanguage: AdminAssetWriteContentLanguage | null;
-    clientTagValue: typeof CLIENT_DOCUMENT_ASSET_TAG | null;
-    isRestrictedSystemLinked: boolean;
-  }
-): UpdateAdminAssetPatchInput {
-  const patch: UpdateAdminAssetPatchInput = {};
-  if (input.title !== asset.title) {
-    patch.title = input.title;
-  }
-  if (input.description !== (asset.description ?? null)) {
-    patch.description = input.description;
-  }
-  if (input.resourceKey !== (asset.resourceKey ?? null)) {
-    patch.resourceKey = input.resourceKey;
-  }
-  if (!input.isRestrictedSystemLinked && input.visibility !== asset.visibility) {
-    patch.visibility = input.visibility;
-  }
-  const prevLangCanonical = canonicalContentLanguageFromApi(asset.contentLanguage);
-  if (input.contentLanguage !== prevLangCanonical) {
-    patch.contentLanguage = input.contentLanguage;
-  }
-  if (!input.isRestrictedSystemLinked) {
-    const hadClient = assetHasClientDocumentTag(asset);
-    const nextHasClient = input.clientTagValue === CLIENT_DOCUMENT_ASSET_TAG;
-    if (hadClient !== nextHasClient) {
-      patch.clientTag = input.clientTagValue;
-    }
-  }
-  return patch;
-}
-
+/** Editor rendered inside the expanded asset row. */
 export function AssetEditorPanel({
   selectedAsset,
   isSavingAsset,
@@ -172,62 +88,38 @@ export function AssetEditorPanel({
   onReplaceFile,
   onCreate,
   onUpdate,
-  onStartCreate,
+  onDirtyChange,
+  children,
 }: AssetEditorPanelProps) {
   const [formState, setFormState] = useState<AssetFormState>(() =>
-    selectedAsset ? toFormState(selectedAsset) : EMPTY_ASSET_FORM
+    selectedAsset ? toAssetFormState(selectedAsset) : EMPTY_ASSET_FORM
   );
   const [formError, setFormError] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [replacementFile, setReplacementFile] = useState<File | null>(null);
   const [metadataSaveWarningAfterReplace, setMetadataSaveWarningAfterReplace] = useState(false);
 
+  useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
+
+  const patchForm = useCallback(
+    (patch: Partial<AssetFormState>) => {
+      onDirtyChange?.(true);
+      setFormState((previous) => ({ ...previous, ...patch }));
+    },
+    [onDirtyChange]
+  );
+
   const isEditMode = Boolean(selectedAsset);
-  const isExpenseLinked = Boolean(
-    selectedAsset?.tags.some((t) => isExpenseAttachmentAssetTag(t.name))
-  );
-  const isInvoiceLinked = Boolean(
-    selectedAsset?.tags.some((t) => isCustomerInvoiceAssetTag(t.name))
-  );
-  const isRestrictedSystemLinked = Boolean(
-    selectedAsset && assetHasRestrictedSystemTag(selectedAsset)
-  );
+  const isExpenseLinked = Boolean(selectedAsset?.tags.some((t) => isExpenseAttachmentAssetTag(t.name)));
+  const isInvoiceLinked = Boolean(selectedAsset?.tags.some((t) => isCustomerInvoiceAssetTag(t.name)));
+  const isRestrictedSystemLinked = Boolean(selectedAsset && assetHasRestrictedSystemTag(selectedAsset));
   const canReplaceFile = isEditMode && Boolean(onReplaceFile) && !isRestrictedSystemLinked;
 
-  const metadataPatch = useMemo(() => {
-    if (!selectedAsset) {
-      return {} as UpdateAdminAssetPatchInput;
-    }
-    const title = formState.title.trim();
-    const normalizedResourceKey = normalizeResourceKey(formState.resourceKey);
-    const resourceKey = normalizedResourceKey || null;
-    const contentLanguageTrimmed = formState.contentLanguage.trim();
-    let contentLanguage: AdminAssetWriteContentLanguage | null = null;
-    if (contentLanguageTrimmed !== '') {
-      const matched = matchAdminSelectableContentLanguage(contentLanguageTrimmed);
-      if (matched !== 'unrecognized') {
-        contentLanguage = matched;
-      }
-    }
-    const clientTagValue: typeof CLIENT_DOCUMENT_ASSET_TAG | null =
-      formState.clientTag === CLIENT_DOCUMENT_ASSET_TAG ? CLIENT_DOCUMENT_ASSET_TAG : null;
-    return buildEditMetadataPatch(selectedAsset, {
-      title,
-      description: formState.description.trim() || null,
-      resourceKey,
-      visibility: formState.visibility,
-      contentLanguage,
-      clientTagValue,
-      isRestrictedSystemLinked,
-    });
-  }, [selectedAsset, formState, isRestrictedSystemLinked]);
-
+  const metadataPatch = useMemo(
+    () => (selectedAsset ? metadataPatchFor(selectedAsset, formState, isRestrictedSystemLinked) : {}),
+    [selectedAsset, formState, isRestrictedSystemLinked]
+  );
   const hasMetadataChangesForSubmit = Object.keys(metadataPatch).length > 0;
-
-  const cardTitle = isEditMode ? 'Edit Asset' : 'Create Asset';
-  const cardDescription = isEditMode
-    ? 'Update metadata and visibility, optionally replace the PDF file, and manage sharing. Cancel to create a new asset.'
-    : 'Create a new PDF asset or select a row below to edit. Upload starts automatically with a presigned URL.';
 
   const submitLabel = useMemo(() => {
     if (isEditMode && replacementFile) {
@@ -253,14 +145,9 @@ export function AssetEditorPanel({
       setFormError('Select a PDF file to upload.');
       return;
     }
-
-    if (fileToUpload) {
-      const isPdfMime = !fileToUpload.type || fileToUpload.type === 'application/pdf';
-      const isPdfExtension = fileToUpload.name.toLowerCase().endsWith('.pdf');
-      if (!isPdfMime || !isPdfExtension) {
-        setFormError('Only PDF files are allowed.');
-        return;
-      }
+    if (fileToUpload && !isPdfFile(fileToUpload)) {
+      setFormError('Only PDF files are allowed.');
+      return;
     }
 
     const normalizedResourceKey = normalizeResourceKey(formState.resourceKey);
@@ -270,36 +157,25 @@ export function AssetEditorPanel({
     }
     const resourceKey = normalizedResourceKey || null;
 
-    const contentLanguageTrimmed = formState.contentLanguage.trim();
-    let contentLanguage: AdminAssetWriteContentLanguage | null = null;
-    if (contentLanguageTrimmed !== '') {
-      const matched = matchAdminSelectableContentLanguage(contentLanguageTrimmed);
-      if (matched === 'unrecognized') {
-        setFormError('Invalid language selection.');
-        return;
-      }
-      contentLanguage = matched;
+    const contentLanguage = resolveContentLanguage(formState.contentLanguage);
+    if (contentLanguage === 'unrecognized') {
+      setFormError('Invalid language selection.');
+      return;
     }
 
     const clientTagValue: typeof CLIENT_DOCUMENT_ASSET_TAG | null =
       formState.clientTag === CLIENT_DOCUMENT_ASSET_TAG ? CLIENT_DOCUMENT_ASSET_TAG : null;
 
     if (isEditMode && selectedAsset) {
-      const storedLang = matchAdminSelectableContentLanguage(selectedAsset.contentLanguage);
-      if (storedLang === 'unrecognized') {
+      if (matchAdminSelectableContentLanguage(selectedAsset.contentLanguage) === 'unrecognized') {
         setFormError(
           'This asset has a language value that is not supported in the admin list. Contact engineering before saving, or the value will be cleared.'
         );
         return;
       }
-
-      if (replacementFile) {
-        const isPdfMime = !replacementFile.type || replacementFile.type === 'application/pdf';
-        const isPdfExtension = replacementFile.name.toLowerCase().endsWith('.pdf');
-        if (!isPdfMime || !isPdfExtension) {
-          setFormError('Replacement file must be a PDF.');
-          return;
-        }
+      if (replacementFile && !isPdfFile(replacementFile)) {
+        setFormError('Replacement file must be a PDF.');
+        return;
       }
 
       const patch = metadataPatch;
@@ -328,74 +204,43 @@ export function AssetEditorPanel({
       }
       if (Object.keys(patch).length === 0 && !replacementFile) {
         setFormError('No changes to save.');
+        return;
       }
+      onDirtyChange?.(false);
       return;
     }
-
-    const core = {
-      title,
-      description: formState.description.trim() || null,
-      fileName: fileToUpload?.name || selectedAsset?.fileName || 'document.pdf',
-      resourceKey,
-      visibility: formState.visibility,
-      contentLanguage,
-    };
 
     if (!fileToUpload) {
       setFormError('Select a PDF file to upload.');
       return;
     }
-    await onCreate({ ...core, clientTag: clientTagValue }, fileToUpload);
+    onDirtyChange?.(false);
+    await onCreate(
+      {
+        title,
+        description: formState.description.trim() || null,
+        fileName: fileToUpload.name || 'document.pdf',
+        resourceKey,
+        visibility: formState.visibility,
+        contentLanguage,
+        clientTag: clientTagValue,
+      },
+      fileToUpload
+    );
   };
 
-  const handleCancel = () => {
-    onStartCreate();
-    setFormState(EMPTY_ASSET_FORM);
-    setSelectedFile(null);
-    setReplacementFile(null);
-    setFormError('');
-  };
-
-  return (
-    <AdminEditorCard
-      title={cardTitle}
-      description={cardDescription}
-      actions={
-        <>
-          {isEditMode ? (
-            <Button
-              type='button'
-              variant='secondary'
-              onClick={handleCancel}
-              disabled={isSavingAsset || isDeletingCurrentAsset}
-            >
-              Cancel
-            </Button>
-          ) : null}
-          <Button
-            type='submit'
-            form={ASSET_EDITOR_FORM_ID}
-            disabled={isDeletingCurrentAsset || (hasPendingUpload && uploadState === 'failed')}
-            loading={isSavingAsset}
-            loadingLabel={submitLoadingLabel}
-          >
-            {submitLabel}
-          </Button>
-        </>
-      }
-    >
+  const status = (
+    <>
       {assetMutationError ? (
         <StatusBanner variant='error' title='Asset'>
           {assetMutationError}
         </StatusBanner>
       ) : null}
-
       {formError ? (
         <StatusBanner variant='error' title='Validation'>
           {formError}
         </StatusBanner>
       ) : null}
-
       {uploadState === 'uploading' ? (
         <StatusBanner variant='info' title='Uploading'>
           {uploadPhase === 'complete'
@@ -405,20 +250,17 @@ export function AssetEditorPanel({
               : 'Uploading PDF content to S3...'}
         </StatusBanner>
       ) : null}
-
       {uploadState === 'succeeded' && metadataSaveWarningAfterReplace ? (
         <StatusBanner variant='info' title='File replaced'>
-          The PDF was replaced. Metadata may not have saved; check the Validation message above or
-          the Asset banner, then save again if needed.
+          The PDF was replaced. Metadata may not have saved; check the Validation message above or the
+          Asset banner, then save again if needed.
         </StatusBanner>
       ) : null}
-
       {uploadState === 'succeeded' && !metadataSaveWarningAfterReplace ? (
         <StatusBanner variant='success' title='Upload complete'>
           {isEditMode ? 'PDF updated successfully.' : 'PDF content uploaded successfully.'}
         </StatusBanner>
       ) : null}
-
       {uploadState === 'failed' ? (
         <StatusBanner variant='error' title='Upload failed'>
           {uploadError || 'The PDF upload failed.'}
@@ -433,23 +275,34 @@ export function AssetEditorPanel({
           ) : null}
         </StatusBanner>
       ) : null}
+    </>
+  );
 
+  return (
+    <AdminEditorPanel
+      status={<div className='space-y-2'>{status}</div>}
+      actions={
+        <AdminEditorActions
+          mode={isEditMode ? 'edit' : 'create'}
+          formId={ASSET_EDITOR_FORM_ID}
+          isSaving={isSavingAsset}
+          savingLabel={submitLoadingLabel}
+          submitDisabled={isDeletingCurrentAsset || (hasPendingUpload && uploadState === 'failed')}
+          submitLabel={submitLabel}
+        />
+      }
+    >
       <form id={ASSET_EDITOR_FORM_ID} onSubmit={handleSubmit} className='space-y-4'>
-        <div className='grid grid-cols-1 gap-4 lg:grid-cols-2'>
-          <div className='space-y-2'>
-            <Label htmlFor='asset-title'>Title *</Label>
+        <AdminFieldGrid columns={4}>
+          <AdminField label='Title' htmlFor='asset-title' span={2}>
             <Input
               id='asset-title'
               value={formState.title}
-              onChange={(event) =>
-                setFormState((previous) => ({ ...previous, title: event.target.value }))
-              }
+              onChange={(event) => patchForm({ title: event.target.value })}
               placeholder='Infant nutrition guide'
-              required
             />
-          </div>
-          <div className='space-y-2'>
-            <Label htmlFor='asset-visibility'>Visibility *</Label>
+          </AdminField>
+          <AdminField label='Visibility' htmlFor='asset-visibility'>
             <Select
               id='asset-visibility'
               value={formState.visibility}
@@ -459,12 +312,7 @@ export function AssetEditorPanel({
                   ? 'Visibility must remain restricted for expense and invoice assets.'
                   : undefined
               }
-              onChange={(event) =>
-                setFormState((previous) => ({
-                  ...previous,
-                  visibility: event.target.value as AssetVisibility,
-                }))
-              }
+              onChange={(event) => patchForm({ visibility: event.target.value as AssetVisibility })}
             >
               {ASSET_VISIBILITIES.map((visibility) => (
                 <option key={visibility} value={visibility}>
@@ -472,78 +320,17 @@ export function AssetEditorPanel({
                 </option>
               ))}
             </Select>
-          </div>
-          <div className='space-y-2'>
-            <Label htmlFor='asset-resource-key'>Resource key</Label>
+          </AdminField>
+          <AdminField label='Resource key' htmlFor='asset-resource-key'>
             <Input
               id='asset-resource-key'
               value={formState.resourceKey}
-              onChange={(event) =>
-                setFormState((previous) => ({
-                  ...previous,
-                  resourceKey: event.target.value,
-                }))
-              }
+              onChange={(event) => patchForm({ resourceKey: event.target.value })}
               placeholder='patience-free-guide'
             />
-          </div>
-          {!isEditMode ? (
-            <div className='space-y-2'>
-              <Label htmlFor='asset-file-upload'>PDF file *</Label>
-              <FileUploadButton
-                id='asset-file-upload'
-                accept='application/pdf,.pdf'
-                selectedFileName={selectedFile?.name ?? null}
-                emptyLabel='No file chosen'
-                inputAriaLabel='Upload PDF file'
-                disabled={isSavingAsset}
-                onChange={(event) => {
-                  const file = event.target.files?.[0] ?? null;
-                  setSelectedFile(file);
-                }}
-              />
-            </div>
-          ) : selectedAsset ? (
-            <AssetShareLinkSection selectedAsset={selectedAsset} />
-          ) : null}
-          {isEditMode && selectedAsset ? (
-            <div className='space-y-2 lg:col-span-2'>
-              <Label htmlFor='asset-file-name'>Current file</Label>
-              <Input id='asset-file-name' value={selectedAsset.fileName || '—'} disabled readOnly />
-              {isRestrictedSystemLinked ? (
-                <p className='text-xs text-slate-600'>
-                  {isInvoiceLinked
-                    ? 'File replacement is not available for assets linked to a customer invoice.'
-                    : 'File replacement is not available for assets linked to an expense.'}
-                </p>
-              ) : canReplaceFile ? (
-                <div className='space-y-2 pt-1'>
-                  <Label htmlFor='asset-replace-file-upload'>Replace PDF</Label>
-                  <FileUploadButton
-                    id='asset-replace-file-upload'
-                    accept='application/pdf,.pdf'
-                    selectedFileName={replacementFile?.name ?? null}
-                    emptyLabel='No replacement file chosen'
-                    inputAriaLabel='Replace PDF file'
-                    disabled={isSavingAsset}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0] ?? null;
-                      setReplacementFile(file);
-                    }}
-                  />
-                  <p className='text-xs text-slate-600'>
-                    Choose a new PDF and click Save changes to upload it. Grants and share links for
-                    this asset stay the same.
-                  </p>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
+          </AdminField>
 
-        <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-end'>
-          <div className='space-y-2'>
-            <Label htmlFor='asset-tag'>Tag</Label>
+          <AdminField label='Tag' htmlFor='asset-tag'>
             {isEditMode && isInvoiceLinked ? (
               <Select
                 id='asset-tag'
@@ -570,44 +357,98 @@ export function AssetEditorPanel({
                 value={formState.clientTag}
                 disabled={isSavingAsset}
                 onChange={(event) =>
-                  setFormState((previous) => ({
-                    ...previous,
-                    clientTag:
-                      event.target.value === CLIENT_DOCUMENT_ASSET_TAG
-                        ? CLIENT_DOCUMENT_ASSET_TAG
-                        : '',
-                  }))
+                  patchForm({
+                    clientTag: event.target.value === CLIENT_DOCUMENT_ASSET_TAG ? CLIENT_DOCUMENT_ASSET_TAG : '',
+                  })
                 }
               >
                 <option value=''>No tag</option>
                 <option value={CLIENT_DOCUMENT_ASSET_TAG}>Client</option>
               </Select>
             )}
-          </div>
-          <ContentLanguageSelect
-            id='asset-content-language'
-            label='Language'
-            value={formState.contentLanguage}
-            disabled={isSavingAsset}
-            onChange={(next) =>
-              setFormState((previous) => ({ ...previous, contentLanguage: next }))
-            }
-          />
-        </div>
-
-        <div className='space-y-2'>
-          <Label htmlFor='asset-description'>Description</Label>
-          <Textarea
-            id='asset-description'
-            rows={3}
-            value={formState.description}
-            onChange={(event) =>
-              setFormState((previous) => ({ ...previous, description: event.target.value }))
-            }
-            placeholder='Optional summary shown in client applications.'
-          />
-        </div>
+          </AdminField>
+          <AdminField>
+            <ContentLanguageSelect
+              id='asset-content-language'
+              label='Language'
+              value={formState.contentLanguage}
+              disabled={isSavingAsset}
+              onChange={(next) => patchForm({ contentLanguage: next })}
+            />
+          </AdminField>
+          {!isEditMode ? (
+            <AdminField label='PDF file' htmlFor='asset-file-upload' span={2}>
+              <FileUploadButton
+                id='asset-file-upload'
+                accept='application/pdf,.pdf'
+                selectedFileName={selectedFile?.name ?? null}
+                emptyLabel='No file chosen'
+                inputAriaLabel='Upload PDF file'
+                disabled={isSavingAsset}
+                onChange={(event) => {
+                  onDirtyChange?.(true);
+                  setSelectedFile(event.target.files?.[0] ?? null);
+                }}
+              />
+            </AdminField>
+          ) : (
+            <AdminField label='Current file' htmlFor='asset-file-name' span={2}>
+              <Input id='asset-file-name' value={selectedAsset?.fileName || '—'} readOnly aria-readonly='true' />
+            </AdminField>
+          )}
+          {isEditMode && selectedAsset ? (
+            isRestrictedSystemLinked ? (
+              <AdminField
+                label='Replace PDF'
+                span={2}
+                hint={
+                  isInvoiceLinked
+                    ? 'File replacement is not available for assets linked to a customer invoice.'
+                    : 'File replacement is not available for assets linked to an expense.'
+                }
+              >
+                <Input value='Not available' readOnly aria-readonly='true' aria-label='Replace PDF' />
+              </AdminField>
+            ) : canReplaceFile ? (
+              <AdminField
+                label='Replace PDF'
+                htmlFor='asset-replace-file-upload'
+                span={2}
+                hint='Choose a new PDF and save to upload it. Grants and share links for this asset stay the same.'
+              >
+                <FileUploadButton
+                  id='asset-replace-file-upload'
+                  accept='application/pdf,.pdf'
+                  selectedFileName={replacementFile?.name ?? null}
+                  emptyLabel='No replacement file chosen'
+                  inputAriaLabel='Replace PDF file'
+                  disabled={isSavingAsset}
+                  onChange={(event) => {
+                    onDirtyChange?.(true);
+                    setReplacementFile(event.target.files?.[0] ?? null);
+                  }}
+                />
+              </AdminField>
+            ) : null
+          ) : null}
+          <AdminField label='Description' htmlFor='asset-description' span='full'>
+            <Textarea
+              id='asset-description'
+              rows={3}
+              value={formState.description}
+              onChange={(event) => patchForm({ description: event.target.value })}
+              placeholder='Optional summary shown in client applications.'
+            />
+          </AdminField>
+        </AdminFieldGrid>
       </form>
-    </AdminEditorCard>
+
+      {isEditMode && selectedAsset ? (
+        <AdminDisclosure id={`asset-share-link-${selectedAsset.id}`} title='Share link'>
+          <AssetShareLinkSection selectedAsset={selectedAsset} />
+        </AdminDisclosure>
+      ) : null}
+      {children}
+    </AdminEditorPanel>
   );
 }

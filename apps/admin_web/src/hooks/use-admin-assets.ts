@@ -17,6 +17,9 @@ export function useAdminAssets() {
     assetsError,
     selectedAssetId,
     selectedAsset,
+    pinnedAsset,
+    expanded,
+    setEditorDirty,
     setQueryFilter,
     setVisibilityFilter,
     setTagNameFilter,
@@ -78,6 +81,13 @@ export function useAdminAssets() {
     resetMutationState();
   }, [clearGrantMutationError, clearSelectedAssetInList, resetMutationState]);
 
+  const { openDraft: openDraftRow } = expanded;
+  const openDraft = useCallback(() => {
+    openDraftRow();
+    clearGrantMutationError();
+    resetMutationState();
+  }, [clearGrantMutationError, openDraftRow, resetMutationState]);
+
   return {
     filters,
     assets,
@@ -95,6 +105,9 @@ export function useAdminAssets() {
     hasPendingUpload,
     selectedAssetId,
     selectedAsset,
+    pinnedAsset,
+    expanded,
+    setEditorDirty,
     grants,
     isLoadingGrants,
     grantsError,
@@ -108,6 +121,7 @@ export function useAdminAssets() {
     loadMoreAssets,
     selectAsset,
     clearSelectedAsset,
+    openDraft,
     createAssetEntry,
     replaceAssetFileEntry,
     updateAssetEntry,
