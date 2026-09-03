@@ -28,7 +28,7 @@ def _load_bundle_module() -> Any:
     return module
 
 
-def test_run_pip_retries_then_succeeds() -> None:
+def test_run_pip_retries_then_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
     bundle = _load_bundle_module()
     calls = {"n": 0}
     sleeps: list[float] = []
@@ -40,7 +40,7 @@ def test_run_pip_retries_then_succeeds() -> None:
             raise subprocess.CalledProcessError(2, ["pip", "install"])
         return subprocess.CompletedProcess(["pip", "install"], 0)
 
-    bundle.subprocess.run = fake_run
+    monkeypatch.setattr(bundle.subprocess, "run", fake_run)
 
     bundle._run_pip(
         ["pip", "install"],
@@ -55,13 +55,13 @@ def test_run_pip_retries_then_succeeds() -> None:
     assert resets["n"] == 2
 
 
-def test_run_pip_raises_after_all_attempts() -> None:
+def test_run_pip_raises_after_all_attempts(monkeypatch: pytest.MonkeyPatch) -> None:
     bundle = _load_bundle_module()
 
     def fake_run(*_args: Any, **_kwargs: Any) -> subprocess.CompletedProcess[str]:
         raise subprocess.CalledProcessError(2, ["pip", "install"])
 
-    bundle.subprocess.run = fake_run
+    monkeypatch.setattr(bundle.subprocess, "run", fake_run)
 
     with pytest.raises(subprocess.CalledProcessError):
         bundle._run_pip(
