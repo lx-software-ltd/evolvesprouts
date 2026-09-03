@@ -389,8 +389,23 @@ so on) follows the same shape, built from the shared primitives in
   the only heading for that block: do not repeat it as a label inside (pass
   `hideLabel` to `InlineLocationEditor` when it sits in a Location disclosure).
   Standalone tool panels without a table (for example the Contacts →
-  Mailchimp tab) use the same shape: an untitled `Card` with `AdminDisclosure`
-  sections, no `AdminCollapsibleSection`, and no manual refresh button.
+  Mailchimp tab, Sales → Configuration, the Analytics date range) use the same
+  shape: an untitled `Card` with `AdminEditorPanel` / `AdminFilterBar` /
+  `AdminDisclosure` content, no `AdminCollapsibleSection`, and no manual
+  refresh button (queries re-run when their inputs change).
+- **Imports and other tools attached to a table** (combined-PDF expenses,
+  WhatsApp chat export) render as an `AdminDisclosure` **between the filter
+  bar and the table**, collapsed by default, with their form on
+  `AdminFieldGrid` and a `Button loading` submit. A one-click tool (Meta
+  `Import recent history`, CSV export) is a `Button` in the filter bar's
+  trailing slot with the shared loading state. Job status and errors render
+  inside the accordion or directly above the table, never as a card title or
+  description.
+- **Lazy row sections:** disclosures inside an expanded row that need their
+  own request (lead Notes, AI suggestion, Conversation) mount their content
+  only once opened, so expanding a row costs one detail request. Disclosures
+  whose data already arrived with the record (lead Activity) may show a count
+  or `Loading…` in the `summary` slot.
 - **In-flight buttons:** any button whose click starts an API call must be
   rendered with the shared `Button` and pass `loading={...}` for the duration
   of the call. While loading, `Button` disables itself, sets `aria-busy`, and
@@ -410,9 +425,20 @@ so on) follows the same shape, built from the shared primitives in
   documented in a code comment at the exception site (for example the contact
   phone number is a region + national number pair rendered as two controls
   inside one `AdminField`).
-- Legacy screens that still render `AdminEditorCard` above `PaginatedTableCard`
-  are migration debt; when touching such a screen for a behaviour change,
-  migrate it to the primitives above instead of extending the legacy layout.
+- **Lazy full records:** when the list row is a summary and the editor needs
+  the full record (service catalogue, instance enrollments), fetch the detail
+  when the row expands and render `AdminEditorSkeleton` (`admin-skeleton.tsx`)
+  in the expansion until it arrives; do not fetch details for rows that are
+  not open, and do not block the table on them.
+- **Duplicate as draft:** a row action that clones a record opens the
+  **draft row** seeded from the source (`useDuplicateDraftTemplate`), so the
+  clone is edited and saved through the same create editor; it never saves a
+  copy directly from the Operations column.
+- Every admin screen is on this pattern. The legacy `AdminEditorCard`,
+  `PaginatedTableCard`, `AdminTableToolbar`, and `AdminCollapsibleSection`
+  primitives have been removed; do not reintroduce a titled editor card above
+  a titled table card, a `<details>`-based section, or a toolbar with a
+  manual Apply/Refresh button.
 
 ### Admin Web shell and layout standard (MANDATORY for `apps/admin_web/**`)
 
@@ -437,8 +463,6 @@ should extend the shared primitives rather than reintroducing one-off layouts.
   `AdminDataTable`, `AdminDataTableHead`, and `AdminDataTableBody` from
   `apps/admin_web/src/components/ui/admin-data-table.tsx`, with a trailing
   **Operations** column (right-aligned header) for row actions.
-  `PaginatedTableCard` and `AdminTableToolbar` are retained only for screens
-  not yet migrated; do not introduce them on new screens.
 - **Operations column controls** are rendered by `AdminRowActions`
   (`apps/admin_web/src/components/ui/admin-row-actions.tsx`) and are
   **icon-only**: every control is an `AdminIconButton` / `AdminIconLink`

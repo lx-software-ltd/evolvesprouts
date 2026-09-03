@@ -1,29 +1,39 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { VendorInactiveIcon } from '@/components/icons/action-icons';
-import { Button } from '@/components/ui/button';
+import { AdminCreateButton } from '@/components/ui/admin-create-button';
 import {
-  AdminDataTable,
-  AdminDataTableBody,
   AdminDataTableCell,
-  AdminDataTableHead,
+  AdminDataTableCellMeta,
   AdminDataTableHeadCell,
   AdminDataTableOperationsHeadCell,
 } from '@/components/ui/admin-data-table';
-import { AdminEditorCard } from '@/components/ui/admin-editor-card';
+import { AdminDiscardChangesDialog } from '@/components/ui/admin-discard-changes-dialog';
+import { AdminEditorActions, AdminEditorPanel } from '@/components/ui/admin-editor-panel';
+import { AdminExpandableRow } from '@/components/ui/admin-expandable-row';
+import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
+import { AdminFilterBar, AdminFilterField } from '@/components/ui/admin-filter-bar';
+import { AdminRecordTable } from '@/components/ui/admin-record-table';
+import { AdminRowActions } from '@/components/ui/admin-row-actions';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
-import { AdminTableToolbar } from '@/components/ui/admin-table-toolbar';
 import { Select } from '@/components/ui/select';
+import { useEntityPanelEditorShell } from '@/hooks/use-entity-panel-editor-shell';
+import { DRAFT_RECORD_ID } from '@/hooks/use-expanded-record';
+import { useExpandedRecordForm } from '@/hooks/use-expanded-record-form';
 import { formatAmountInDefaultCurrency } from '@/lib/vendor-spend';
 
 import type { components } from '@/types/generated/admin-api.generated';
 import type { Vendor, VendorFilters } from '@/types/vendors';
 
 type ApiSchemas = components['schemas'];
+
+/** Query parameter that mirrors the expanded vendor row (`?vendor=<id>` or `?vendor=new`). */
+export const ADMIN_VENDOR_QUERY_PARAM = 'vendor';
+
+const COLUMN_COUNT = 5;
+const EDITOR_FORM_ID = 'vendor-editor-form';
 
 interface VendorsPanelProps {
   vendors: Vendor[];
@@ -42,6 +52,10 @@ interface VendorsPanelProps {
   vendorSpendError?: string;
 }
 
+/**
+ * Table-first vendors list: filters and `New vendor` on top, one expandable
+ * row per vendor with the editor (Name, Website, Status) beneath it.
+ */
 export function VendorsPanel({
   vendors,
   filters,
@@ -58,25 +72,40 @@ export function VendorsPanel({
   isVendorSpendLoading,
   vendorSpendError,
 }: VendorsPanelProps) {
-  const [editorMode, setEditorMode] = useState<'create' | 'edit'>('create');
-  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
+  const shell = useEntityPanelEditorShell({ paramName: ADMIN_VENDOR_QUERY_PARAM });
+  const { expanded, editorMode, selectedId, track, clearDirty } = shell;
   const [name, setName] = useState('');
   const [website, setWebsite] = useState('');
   const [active, setActive] = useState(true);
   const [deactivatingVendorId, setDeactivatingVendorId] = useState<string | null>(null);
 
-  const selectedVendor = useMemo(
-    () => vendors.find((entry) => entry.id === selectedVendorId) ?? null,
-    [vendors, selectedVendorId]
-  );
-
-  function resetCreateForm() {
-    setEditorMode('create');
-    setSelectedVendorId(null);
+  const resetForm = useCallback(() => {
     setName('');
     setWebsite('');
     setActive(true);
-  }
+    clearDirty();
+  }, [clearDirty]);
+  const applyRow = useCallback(
+    (vendor: Vendor) => {
+      setName(vendor.name);
+      setWebsite(vendor.website ?? '');
+      setActive(vendor.active);
+      clearDirty();
+    },
+    [clearDirty]
+  );
+  useExpandedRecordForm<Vendor>({
+    expandedId: expanded.expandedId,
+    rows: vendors,
+    isLoading,
+    applyRow,
+    reset: resetForm,
+    collapse: expanded.collapse,
+  });
+
+  const setNameTracked = track(setName);
+  const setWebsiteTracked = track(setWebsite);
+  const setActiveTracked = track(setActive);
 
   async function handleSubmit() {
     try {
@@ -88,17 +117,19 @@ export function VendorsPanel({
           website: website.trim() || null,
           active,
         });
-        resetCreateForm();
+        clearDirty();
+        expanded.collapse();
         return;
       }
-      if (!selectedVendor) {
+      if (!selectedId) {
         return;
       }
-      await onUpdate(selectedVendor.id, {
+      await onUpdate(selectedId, {
         name: name.trim(),
         website: website.trim() || null,
         active,
       });
+      clearDirty();
     } catch {
       // Keep inline form state so users can retry.
     }
@@ -108,6 +139,9 @@ export function VendorsPanel({
     setDeactivatingVendorId(vendorId);
     try {
       await onUpdate(vendorId, { active: false });
+      if (selectedId === vendorId) {
+        setActive(false);
+      }
     } catch {
       // Errors surface via list/refetch; user can retry.
     } finally {
@@ -115,148 +149,192 @@ export function VendorsPanel({
     }
   }
 
-  return (
-    <div className='space-y-6'>
-      <AdminEditorCard
-        title='Vendor'
-        description='Create a new vendor or select one in the table below to update.'
-        actions={
-          <>
-            {editorMode === 'edit' ? (
-              <Button type='button' variant='secondary' onClick={resetCreateForm} disabled={isSaving}>
-                Cancel
-              </Button>
-            ) : null}
-            <Button type='button' disabled={isSaving || !name.trim()} onClick={() => void handleSubmit()}>
-              {editorMode === 'create' ? 'Create vendor' : 'Update vendor'}
-            </Button>
-          </>
-        }
+  const detail = (
+    <AdminEditorPanel
+      actions={
+        <AdminEditorActions
+          mode={editorMode}
+          formId={EDITOR_FORM_ID}
+          isSaving={isSaving}
+          submitDisabled={!name.trim()}
+          submitLabel={editorMode === 'create' ? 'Create vendor' : 'Update vendor'}
+        />
+      }
+    >
+      <form
+        id={EDITOR_FORM_ID}
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleSubmit();
+        }}
       >
-        <div className='grid grid-cols-1 gap-3 sm:grid-cols-3'>
-          <div>
-            <Label htmlFor='vendor-name'>Name</Label>
-            <Input id='vendor-name' value={name} onChange={(event) => setName(event.target.value)} />
-          </div>
-          <div>
-            <Label htmlFor='vendor-website'>Website</Label>
-            <Input id='vendor-website' value={website} onChange={(event) => setWebsite(event.target.value)} />
-          </div>
-          <div>
-            <Label htmlFor='vendor-active'>Status</Label>
+        <AdminFieldGrid columns={4}>
+          <AdminField label='Name' htmlFor='vendor-name' span={2} required>
+            <Input id='vendor-name' value={name} onChange={(event) => setNameTracked(event.target.value)} required />
+          </AdminField>
+          <AdminField label='Website' htmlFor='vendor-website'>
+            <Input
+              id='vendor-website'
+              value={website}
+              inputMode='url'
+              onChange={(event) => setWebsiteTracked(event.target.value)}
+            />
+          </AdminField>
+          <AdminField label='Status' htmlFor='vendor-active'>
             <Select
               id='vendor-active'
               value={active ? 'true' : 'false'}
-              onChange={(event) => setActive(event.target.value === 'true')}
+              onChange={(event) => setActiveTracked(event.target.value === 'true')}
             >
               <option value='true'>Active</option>
               <option value='false'>Inactive</option>
             </Select>
-          </div>
-        </div>
-      </AdminEditorCard>
+          </AdminField>
+        </AdminFieldGrid>
+      </form>
+    </AdminEditorPanel>
+  );
 
-      <PaginatedTableCard
-        title='Vendors'
+  function spendLabel(vendorId: string): string {
+    return isVendorSpendLoading ? '…' : formatAmountInDefaultCurrency(vendorSpendByVendorId.get(vendorId) ?? 0);
+  }
+
+  return (
+    <>
+      <AdminDiscardChangesDialog prompt={expanded.discardPrompt} />
+      <AdminRecordTable
+        aria-label='Vendors'
+        columnCount={COLUMN_COUNT}
+        rowCount={vendors.length}
         isLoading={isLoading}
         isLoadingMore={isLoadingMore}
         hasMore={hasMore}
-        error={error}
-        loadingLabel='Loading vendors...'
         onLoadMore={onLoadMore}
-        toolbar={
-          <div className='mb-3 space-y-2'>
-            {vendorSpendError ? (
-              <p className='text-sm text-amber-700' role='status'>
-                {vendorSpendError}
-              </p>
-            ) : null}
-            <AdminTableToolbar marginBottom='none'>
-              <div className='min-w-[200px] flex-1'>
-                <Label htmlFor='vendors-search'>Search</Label>
-                <Input
-                  id='vendors-search'
-                  value={filters.query}
-                  onChange={(event) => onFilterChange('query', event.target.value)}
-                  placeholder='Vendor name'
-                />
-              </div>
-              <div className='min-w-[140px]'>
-                <Label htmlFor='vendors-active'>Status</Label>
-                <Select
-                  id='vendors-active'
-                  value={filters.active}
-                  onChange={(event) => onFilterChange('active', event.target.value as VendorFilters['active'])}
-                >
-                  <option value=''>All</option>
-                  <option value='true'>Active</option>
-                  <option value='false'>Inactive</option>
-                </Select>
-              </div>
-            </AdminTableToolbar>
-          </div>
+        error={error}
+        errorTitle='Vendors'
+        emptyLabel='No vendors match the current filters.'
+        filters={
+          <AdminFilterBar
+            summary={
+              vendorSpendError ? (
+                <span className='text-amber-700' role='status'>
+                  {vendorSpendError}
+                </span>
+              ) : null
+            }
+            trailing={
+              <AdminCreateButton
+                label='New vendor'
+                active={expanded.isDraftOpen}
+                onClick={() => (expanded.isDraftOpen ? expanded.collapse() : expanded.openDraft())}
+              />
+            }
+          >
+            <AdminFilterField label='Search' htmlFor='vendors-search' className='sm:basis-72'>
+              <Input
+                id='vendors-search'
+                value={filters.query}
+                autoComplete='off'
+                onChange={(event) => onFilterChange('query', event.target.value)}
+                placeholder='Vendor name'
+              />
+            </AdminFilterField>
+            <AdminFilterField label='Status' htmlFor='vendors-active' className='sm:basis-40'>
+              <Select
+                id='vendors-active'
+                value={filters.active}
+                onChange={(event) => onFilterChange('active', event.target.value as VendorFilters['active'])}
+              >
+                <option value=''>All</option>
+                <option value='true'>Active</option>
+                <option value='false'>Inactive</option>
+              </Select>
+            </AdminFilterField>
+          </AdminFilterBar>
+        }
+        head={
+          <tr>
+            <AdminDataTableHeadCell className='w-10' />
+            <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Status</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary' className='text-right'>
+              Total spend
+            </AdminDataTableHeadCell>
+            <AdminDataTableOperationsHeadCell />
+          </tr>
         }
       >
-        <AdminDataTable tableClassName='min-w-[760px]'>
-          <AdminDataTableHead>
-            <tr>
-              <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Status</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell className='text-right'>Total Spend</AdminDataTableHeadCell>
-              <AdminDataTableOperationsHeadCell />
-            </tr>
-          </AdminDataTableHead>
-          <AdminDataTableBody>
-            {vendors.map((vendor) => (
-              <tr
-                key={vendor.id}
-                className={`cursor-pointer transition ${
-                  selectedVendorId === vendor.id ? 'bg-slate-100' : 'hover:bg-slate-50'
-                }`}
-                onClick={() => {
-                  setSelectedVendorId(vendor.id);
-                  setEditorMode('edit');
-                  setName(vendor.name);
-                  setWebsite(vendor.website ?? '');
-                  setActive(vendor.active);
-                }}
-              >
-                <AdminDataTableCell>{vendor.name}</AdminDataTableCell>
-                <AdminDataTableCell>{vendor.active ? 'Active' : 'Inactive'}</AdminDataTableCell>
-                <AdminDataTableCell className='text-right tabular-nums'>
-                  {isVendorSpendLoading ? (
-                    '…'
-                  ) : (
-                    formatAmountInDefaultCurrency(vendorSpendByVendorId.get(vendor.id) ?? 0)
-                  )}
+        {expanded.isDraftOpen ? (
+          <AdminExpandableRow
+            id={DRAFT_RECORD_ID}
+            label='new vendor'
+            expanded
+            isDraft
+            onToggle={expanded.collapse}
+            columnCount={COLUMN_COUNT}
+            cells={
+              <>
+                <AdminDataTableCell className='font-medium text-slate-900'>New vendor</AdminDataTableCell>
+                <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                  —
                 </AdminDataTableCell>
-                <AdminDataTableCell className='text-right' onClick={(event) => event.stopPropagation()}>
-                  <Button
-                    type='button'
-                    size='sm'
-                    variant='danger'
-                    className='w-8 min-w-8 px-0'
-                    disabled={!vendor.active || isSaving}
-                    onClick={() => void handleDeactivateVendor(vendor.id)}
-                    aria-label='Make vendor inactive'
-                    title={vendor.active ? 'Make vendor inactive' : 'Vendor is already inactive'}
-                    aria-busy={deactivatingVendorId === vendor.id}
-                  >
-                    {deactivatingVendorId === vendor.id ? (
-                      <span
-                        className='inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-white border-t-transparent'
-                        aria-hidden
-                      />
-                    ) : (
-                      <VendorInactiveIcon className='h-4 w-4 shrink-0' aria-hidden />
-                    )}
-                  </Button>
+                <AdminDataTableCell priority='secondary' className='text-right text-slate-400'>
+                  —
                 </AdminDataTableCell>
-              </tr>
-            ))}
-          </AdminDataTableBody>
-        </AdminDataTable>
-      </PaginatedTableCard>
-    </div>
+              </>
+            }
+            actions={null}
+            detail={detail}
+          />
+        ) : null}
+        {vendors.map((vendor) => {
+          const isOpen = expanded.isExpanded(vendor.id);
+          const statusLabel = vendor.active ? 'Active' : 'Inactive';
+          const isDeactivating = deactivatingVendorId === vendor.id;
+          return (
+            <AdminExpandableRow
+              key={vendor.id}
+              id={vendor.id}
+              label={vendor.name}
+              expanded={isOpen}
+              onToggle={() => expanded.toggle(vendor.id)}
+              columnCount={COLUMN_COUNT}
+              cells={
+                <>
+                  <AdminDataTableCell className='font-medium text-slate-900'>
+                    {vendor.name}
+                    <AdminDataTableCellMeta>
+                      {statusLabel} · {spendLabel(vendor.id)}
+                    </AdminDataTableCellMeta>
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='secondary' className='text-slate-700'>
+                    {statusLabel}
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='secondary' className='text-right tabular-nums'>
+                    {spendLabel(vendor.id)}
+                  </AdminDataTableCell>
+                </>
+              }
+              actions={
+                <AdminRowActions
+                  actions={[
+                    {
+                      key: 'deactivate',
+                      label: isDeactivating ? 'Making vendor inactive' : 'Make vendor inactive',
+                      icon: <VendorInactiveIcon className='h-4 w-4 shrink-0' aria-hidden />,
+                      tone: 'danger',
+                      hidden: !vendor.active,
+                      disabled: isSaving || isDeactivating,
+                      onClick: () => void handleDeactivateVendor(vendor.id),
+                    },
+                  ]}
+                />
+              }
+              detail={isOpen ? detail : null}
+            />
+          );
+        })}
+      </AdminRecordTable>
+    </>
   );
 }

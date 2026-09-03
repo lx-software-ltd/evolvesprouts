@@ -3,17 +3,56 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SalesView } from '@/hooks/use-sales-page';
+import type { LeadSummary } from '@/types/leads';
+
+const LEAD_FIXTURE: LeadSummary = {
+  id: 'lead-1',
+  contact: {
+    id: 'contact-1',
+    firstName: 'Jane',
+    lastName: 'Doe',
+    email: 'jane@example.com',
+    phoneRegion: null,
+    phoneNationalNumber: null,
+    phoneE164: null,
+    instagramHandle: null,
+    source: 'manual',
+    sourceDetail: null,
+    contactType: 'parent',
+    relationshipType: 'prospect',
+  },
+  leadType: 'consultation',
+  funnelStage: 'new',
+  assignedTo: null,
+  createdAt: '2026-03-01T10:00:00Z',
+  updatedAt: '2026-03-01T10:00:00Z',
+  convertedAt: null,
+  lostAt: null,
+  lostReason: null,
+  daysInStage: 4,
+  lastActivityAt: '2026-03-02T10:00:00Z',
+  tags: [],
+};
 
 const { mockUseSalesPage, state } = vi.hoisted(() => {
   const state = {
     activeView: 'pipeline' as SalesView,
     setActiveView: vi.fn(),
+    expanded: {
+      expandedId: null as string | null,
+      isDraftOpen: false,
+      isExpanded: vi.fn((id: string) => state.expanded.expandedId === id),
+      toggle: vi.fn(),
+      expand: vi.fn(),
+      openDraft: vi.fn(),
+      collapse: vi.fn(),
+      discardPrompt: { open: false, confirm: vi.fn(), cancel: vi.fn() },
+    },
+    setEditorDirty: vi.fn(),
     selectedLeadId: null as string | null,
-    setSelectedLeadId: vi.fn(),
-    selectedLead: null,
-    isCreateMode: false,
-    startCreateLead: vi.fn(),
-    cancelCreateLead: vi.fn(),
+    selectedLead: null as LeadSummary | null,
+    pinnedLead: null as LeadSummary | null,
+    createLead: vi.fn().mockResolvedValue(null),
     adminUsers: {
       users: [],
       isLoading: false,
@@ -24,6 +63,7 @@ const { mockUseSalesPage, state } = vi.hoisted(() => {
       settings: {
         default_assigned_to: null,
         notify_assignee_on_assignment: false,
+        helper_detector_enabled: false,
       },
       isLoading: false,
       isSaving: false,
@@ -32,7 +72,7 @@ const { mockUseSalesPage, state } = vi.hoisted(() => {
       save: vi.fn().mockResolvedValue(undefined),
     },
     leadList: {
-      leads: [],
+      leads: [] as LeadSummary[],
       filters: {
         stage: [],
         source: [],
@@ -171,10 +211,15 @@ import { SalesPage } from '@/components/admin/sales/sales-page';
 describe('SalesPage', () => {
   beforeEach(() => {
     state.activeView = 'pipeline';
-    state.isCreateMode = true;
+    state.expanded.expandedId = null;
+    state.expanded.isDraftOpen = false;
+    state.leadList.leads = [];
     state.selectedLeadId = null;
-    state.startCreateLead.mockClear();
+    state.selectedLead = null;
     state.setActiveView.mockClear();
+    state.expanded.openDraft.mockClear();
+    state.createLead.mockClear();
+    state.mutations.updateLeadEntry.mockClear();
   });
 
   it('renders tabs and triggers view switch', async () => {
@@ -190,26 +235,61 @@ describe('SalesPage', () => {
     expect(state.setActiveView).toHaveBeenCalledWith('analytics');
   });
 
-  it('keeps KPI cards and date filters off the pipeline tab', () => {
-    state.activeView = 'pipeline';
-    state.isCreateMode = true;
+  it('renders the pipeline as a title-less table with New lead and no analytics widgets', async () => {
+    const user = userEvent.setup();
     render(<SalesPage />);
 
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
     expect(screen.queryByText('Total leads')).not.toBeInTheDocument();
-    expect(screen.queryByText('0 total')).not.toBeInTheDocument();
     expect(screen.queryByText('Source Breakdown')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Date range preset')).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Lead' })).toBeInTheDocument();
-    expect(screen.getByLabelText('First name')).toBeInTheDocument();
-    expect(screen.getByLabelText('Email')).toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: 'Email' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create lead' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'New lead' })).toBeInTheDocument();
     expect(screen.queryByLabelText('From')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('To')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Unassigned only')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Export CSV' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^First name/)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'New lead' }));
+    expect(state.expanded.openDraft).toHaveBeenCalledTimes(1);
+  });
+
+  it('mounts the create editor in the draft row and forwards create to the page hook', async () => {
+    const user = userEvent.setup();
+    state.expanded.expandedId = 'new';
+    state.expanded.isDraftOpen = true;
+    render(<SalesPage />);
+
+    expect(screen.getByTestId('admin-row-new')).toHaveAttribute('data-draft', 'true');
+    expect(screen.getByLabelText(/^First name/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Email')).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Email' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText(/^First name/), 'Sam');
+    await user.click(screen.getByRole('button', { name: 'Create lead' }));
+    expect(state.createLead).toHaveBeenCalledWith(expect.objectContaining({ first_name: 'Sam' }));
+  });
+
+  it('mounts the edit editor beneath the expanded lead row', async () => {
+    const user = userEvent.setup();
+    state.leadList.leads = [LEAD_FIXTURE];
+    state.expanded.expandedId = 'lead-1';
+    state.selectedLeadId = 'lead-1';
+    state.selectedLead = LEAD_FIXTURE;
+    render(<SalesPage />);
+
+    expect(screen.getByTestId('admin-row-lead-1')).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByLabelText(/^First name/)).toHaveValue('Jane');
+    expect(screen.getByLabelText('Stage')).toHaveValue('new');
+
+    await user.selectOptions(screen.getByLabelText('Stage'), 'contacted');
+    await user.click(screen.getByRole('button', { name: 'Update lead' }));
+    expect(state.mutations.updateLeadEntry).toHaveBeenCalledWith(
+      'lead-1',
+      expect.objectContaining({ funnel_stage: 'contacted' })
+    );
   });
 
   it('shows inbox import controls on Instagram and WhatsApp views', () => {
@@ -219,52 +299,33 @@ describe('SalesPage', () => {
 
     state.activeView = 'whatsapp';
     rerender(<SalesPage />);
-    expect(screen.getByText('Import WhatsApp export')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Import export' })).toBeDisabled();
-
-    state.activeView = 'pipeline';
+    expect(screen.getByRole('button', { name: 'Import WhatsApp export' })).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    );
+    expect(screen.getByRole('button', { name: 'Import export', hidden: true })).toBeDisabled();
   });
 
-  it('starts create from the pipeline New lead button', async () => {
-    const user = userEvent.setup();
-    state.activeView = 'pipeline';
-    state.isCreateMode = false;
-    render(<SalesPage />);
-
-    await user.click(screen.getByRole('button', { name: 'New lead' }));
-    expect(state.startCreateLead).toHaveBeenCalledTimes(1);
-  });
-
-  it('starts inline create-lead flow from the existing-lead editor', async () => {
-    const user = userEvent.setup();
-    state.activeView = 'pipeline';
-    state.isCreateMode = false;
-    render(<SalesPage />);
-
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(state.startCreateLead).toHaveBeenCalledTimes(1);
-  });
-
-  it('renders the configuration card on the configuration tab', () => {
+  it('renders the configuration as a title-less card on the configuration tab', () => {
     state.activeView = 'configuration';
     render(<SalesPage />);
 
-    expect(screen.getByRole('heading', { name: 'Sales configuration' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Sales configuration' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Sales configuration' })).toBeInTheDocument();
     expect(screen.getByLabelText('Default assignee')).toBeInTheDocument();
-    expect(
-      screen.getByLabelText('Email the assignee when a lead is assigned to them')
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Email the assignee when a lead is assigned to them')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
-
-    state.activeView = 'pipeline';
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
   });
 
-  it('moves KPI cards, funnel, source breakdown, and date filters to analytics', async () => {
+  it('moves KPI cards, funnel, source breakdown, and date filters to analytics without a title or Refresh', async () => {
     state.activeView = 'analytics';
     render(<SalesPage />);
 
-    expect(screen.getByRole('heading', { name: 'Sales Analytics' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Sales Analytics' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Analytics filters' })).toBeInTheDocument();
     expect(screen.getByLabelText('Date range preset')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
     expect(await screen.findByText('Total leads')).toBeInTheDocument();
     expect(screen.getByText('Conversion rate')).toBeInTheDocument();
     expect(screen.getByText('Avg. days to convert')).toBeInTheDocument();
@@ -272,7 +333,5 @@ describe('SalesPage', () => {
     expect(screen.getByText('Funnel')).toBeInTheDocument();
     expect(screen.getByText('Source Breakdown')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'New lead' })).not.toBeInTheDocument();
-
-    state.activeView = 'pipeline';
   });
 });

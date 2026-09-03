@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { ClientInvoicesSelectionState } from '@/hooks/client-invoices-panel-types';
 import { useClientInvoicesAllocateRefund } from '@/hooks/use-client-invoices-allocate-refund';
@@ -9,19 +9,79 @@ import { useClientInvoicesDraft } from '@/hooks/use-client-invoices-draft';
 import { useClientInvoicesInvoiceList } from '@/hooks/use-client-invoices-invoice-list';
 import { useClientInvoicesPayments } from '@/hooks/use-client-invoices-payments';
 import { useClientInvoicesPanelShared } from '@/hooks/use-client-invoices-panel-shared';
+import { DRAFT_RECORD_ID, useExpandedRecord } from '@/hooks/use-expanded-record';
+
+export const ADMIN_INVOICE_QUERY_PARAM = 'invoice';
+export const ADMIN_PAYMENT_QUERY_PARAM = 'payment';
+
+function recordIdOrNull(expandedId: string | null): string | null {
+  return expandedId === DRAFT_RECORD_ID ? null : expandedId;
+}
 
 export function useClientInvoicesPanel() {
   const shared = useClientInvoicesPanelShared();
 
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(
-    null,
+  // Each table keeps one open row (draft or record). The open row *is* the
+  // selection the billing flows act on; unsaved edits guard row switches.
+  const invoiceDirtyRef = useRef(false);
+  const paymentDirtyRef = useRef(false);
+  const invoiceExpanded = useExpandedRecord({
+    paramName: ADMIN_INVOICE_QUERY_PARAM,
+    isDirty: () => invoiceDirtyRef.current,
+    onChange: () => {
+      invoiceDirtyRef.current = false;
+    },
+  });
+  const paymentExpanded = useExpandedRecord({
+    paramName: ADMIN_PAYMENT_QUERY_PARAM,
+    isDirty: () => paymentDirtyRef.current,
+    onChange: () => {
+      paymentDirtyRef.current = false;
+    },
+  });
+
+  const selectedInvoiceId = recordIdOrNull(invoiceExpanded.expandedId);
+  const selectedPaymentId = recordIdOrNull(paymentExpanded.expandedId);
+
+  const { expand: expandInvoice, collapse: collapseInvoice } = invoiceExpanded;
+  const { expand: expandPayment, collapse: collapsePayment } = paymentExpanded;
+  const setSelectedInvoiceId = useCallback(
+    (id: string | null) => {
+      if (id) {
+        expandInvoice(id);
+      } else {
+        collapseInvoice();
+      }
+    },
+    [expandInvoice, collapseInvoice],
   );
+  const setSelectedPaymentId = useCallback(
+    (id: string | null) => {
+      if (id) {
+        expandPayment(id);
+      } else {
+        collapsePayment();
+      }
+    },
+    [expandPayment, collapsePayment],
+  );
+  const setInvoiceEditorDirty = useCallback((dirty: boolean) => {
+    invoiceDirtyRef.current = dirty;
+  }, []);
+  const setPaymentEditorDirty = useCallback((dirty: boolean) => {
+    paymentDirtyRef.current = dirty;
+  }, []);
+
   const [allocateInvoiceId, setAllocateInvoiceId] = useState('');
   const [allocateLineId, setAllocateLineId] = useState('');
 
   const selection: ClientInvoicesSelectionState = {
     selectedInvoiceId,
     setSelectedInvoiceId,
+    setInvoiceEditorDirty,
+    selectedPaymentId,
+    setSelectedPaymentId,
+    setPaymentEditorDirty,
     allocateInvoiceId,
     setAllocateInvoiceId,
     allocateLineId,
@@ -123,16 +183,14 @@ export function useClientInvoicesPanel() {
     draftSelectionIssue: draft.draftSelectionIssue,
     draftAmountIssue: draft.draftAmountIssue,
     handleCreateDraft: draft.handleCreateDraft,
-    refreshBillingLists: billingRefresh.refreshBillingLists,
+    handleCustomizedCreated: draft.handleCustomizedCreated,
+    setInvoiceEditorDirty,
     setBusy: shared.setBusy,
     setActionError: shared.setActionError,
-    setSelectedInvoiceId,
-    setAllocateInvoiceId,
-    setAllocateLineId,
-    setActionMessage: shared.setActionMessage,
   };
 
   const invoicesSlice = {
+    expanded: invoiceExpanded,
     invoices: invoiceList.invoices,
     invoiceListLoading: invoiceList.invoiceListLoading,
     invoiceListLoadingMore: invoiceList.invoiceListLoadingMore,
@@ -147,13 +205,13 @@ export function useClientInvoicesPanel() {
     invoiceSearchInput: invoiceList.invoiceSearchInput,
     setInvoiceSearchInput: invoiceList.setInvoiceSearchInput,
     selectedInvoiceId,
-    setSelectedInvoiceId,
     selectedIssuedInvoice: invoiceList.selectedIssuedInvoice,
     issuedInvoiceEmailCsv: invoiceList.issuedInvoiceEmailCsv,
     setIssuedInvoiceEmailCsv: invoiceList.setIssuedInvoiceEmailCsv,
     issuedInvoiceEmailError: invoiceList.issuedInvoiceEmailError,
     setIssuedInvoiceEmailError: invoiceList.setIssuedInvoiceEmailError,
     issuedInvoiceEmailDirtyRef: invoiceList.issuedInvoiceEmailDirtyRef,
+    setInvoiceEditorDirty,
     handleEmailIssuedInvoice: invoiceList.handleEmailIssuedInvoice,
     loadMoreInvoices: invoiceList.loadMoreInvoices,
     handleOpenInvoicePdfPreview: invoiceList.handleOpenInvoicePdfPreview,
@@ -162,8 +220,6 @@ export function useClientInvoicesPanel() {
     openDeleteDraftInvoiceDialog: invoiceList.openDeleteDraftInvoiceDialog,
     deleteDraftDialogOpen: invoiceList.deleteDraftDialogOpen,
     voidDialogOpen: invoiceList.voidDialogOpen,
-    setAllocateInvoiceId,
-    setAllocateLineId,
   };
 
   const manualPaymentSlice = {
@@ -184,12 +240,13 @@ export function useClientInvoicesPanel() {
     manualPaymentIsUpdate: payments.manualPaymentIsUpdate,
     manualPaymentSucceededReadOnly: payments.manualPaymentSucceededReadOnly,
     manualPaymentEnrollmentEditLabel: payments.manualPaymentEnrollmentEditLabel,
-    handleCancelManualPayment: payments.handleCancelManualPayment,
     handleManualPaymentFormSubmit: payments.handleManualPaymentFormSubmit,
+    setPaymentEditorDirty,
     enrollmentPickerRows: draft.enrollmentPickerRows,
   };
 
   const paymentsSlice = {
+    expanded: paymentExpanded,
     payments: payments.payments,
     listLoading: payments.listLoading,
     listLoadingMore: payments.listLoadingMore,
@@ -197,8 +254,8 @@ export function useClientInvoicesPanel() {
     listError: payments.listError,
     loadMorePayments: payments.loadMorePayments,
     selectedId: payments.selectedId,
-    setSelectedId: payments.setSelectedId,
-    setManualPaymentPreferCreateForm: payments.setManualPaymentPreferCreateForm,
+    detail: payments.detail,
+    detailError: payments.detailError,
     exportBusy: shared.exportBusy,
     handleExport: invoiceList.handleExport,
     openConfirmPaymentDialog: payments.openConfirmPaymentDialog,
@@ -228,7 +285,6 @@ export function useClientInvoicesPanel() {
 
   const refundSlice = {
     refundInvoiceId: allocateRefund.refundInvoiceId,
-    setRefundInvoiceId: allocateRefund.setRefundInvoiceId,
     refundPaymentSelectId: allocateRefund.refundPaymentSelectId,
     setRefundPaymentSelectId: allocateRefund.setRefundPaymentSelectId,
     refundPaymentsLoading: allocateRefund.refundPaymentsLoading,
@@ -242,7 +298,6 @@ export function useClientInvoicesPanel() {
     setRefundMethod: allocateRefund.setRefundMethod,
     refundStripeId: allocateRefund.refundStripeId,
     setRefundStripeId: allocateRefund.setRefundStripeId,
-    issuedInvoicesForAllocate: invoiceList.issuedInvoicesForAllocate,
     handleRefund: allocateRefund.handleRefund,
   };
 

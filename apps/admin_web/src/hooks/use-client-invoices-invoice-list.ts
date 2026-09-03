@@ -54,6 +54,7 @@ export function useClientInvoicesInvoiceList({
   const {
     selectedInvoiceId,
     setSelectedInvoiceId,
+    setInvoiceEditorDirty,
     allocateInvoiceId,
     setAllocateInvoiceId,
     setAllocateLineId,
@@ -245,6 +246,7 @@ export function useClientInvoicesInvoiceList({
       setActionMessage(`Draft invoice deleted: ${id}`);
       closeDeleteDraftInvoiceDialog();
       if (selectedInvoiceId === id) {
+        setInvoiceEditorDirty(false);
         setSelectedInvoiceId(null);
       }
       if (allocateInvoiceId === id) {
@@ -284,6 +286,7 @@ export function useClientInvoicesInvoiceList({
       setActionMessage(
         out.sent ? 'Email send accepted.' : 'Email was not confirmed sent.',
       );
+      setInvoiceEditorDirty(false);
       await billingRefresh.refreshInvoices();
     } catch (caught) {
       setIssuedInvoiceEmailError(

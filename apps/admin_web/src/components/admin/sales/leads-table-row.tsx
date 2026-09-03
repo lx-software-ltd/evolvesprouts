@@ -1,77 +1,99 @@
 'use client';
 
-import Link from 'next/link';
-import { memo } from 'react';
+import type { ReactNode } from 'react';
 
 import type { LeadSummary } from '@/types/leads';
 
 import { ContactIcon } from '@/components/icons/action-icons';
-import { ADMIN_OPS_ICON_LINK_CLASS, AdminDataTableCell } from '@/components/ui/admin-data-table';
+import { AdminDataTableCell, AdminDataTableCellMeta } from '@/components/ui/admin-data-table';
+import { AdminExpandableRow } from '@/components/ui/admin-expandable-row';
+import { AdminRowActions } from '@/components/ui/admin-row-actions';
 import { formatDate, formatEnumLabel } from '@/lib/format';
 import { adminContactDeepLink } from '@/lib/inbox-conversation-name';
 
 import { getStageBadgeClass } from './stage-utils';
 
-export interface LeadsTableRowProps {
-  lead: LeadSummary;
-  isSelected: boolean;
-  isChecked: boolean;
-  onSelect: (leadId: string) => void;
-  onCheck: (leadId: string, checked: boolean) => void;
+/** `<td>` count per leads row: expand, checkbox, five data columns, Operations. */
+export const LEADS_TABLE_COLUMN_COUNT = 8;
+
+export function leadDisplayName(lead: LeadSummary): string {
+  return [lead.contact.firstName, lead.contact.lastName].filter(Boolean).join(' ') || 'Unnamed lead';
 }
 
-export const LeadsTableRow = memo(function LeadsTableRow({
-  lead,
-  isSelected,
-  isChecked,
-  onSelect,
-  onCheck,
-}: LeadsTableRowProps) {
+export interface LeadsTableRowProps {
+  lead: LeadSummary;
+  expanded: boolean;
+  isChecked: boolean;
+  onToggle: () => void;
+  onCheck: (leadId: string, checked: boolean) => void;
+  /** Editor rendered beneath the row while it is expanded. */
+  detail: ReactNode;
+}
+
+export function LeadsTableRow({ lead, expanded, isChecked, onToggle, onCheck, detail }: LeadsTableRowProps) {
   const contactId = lead.contact.id?.trim() ?? '';
+  const name = leadDisplayName(lead);
+  const stageLabel = formatEnumLabel(lead.funnelStage);
 
   return (
-    <tr
-      className={`cursor-pointer ${isSelected ? 'bg-slate-100' : 'hover:bg-slate-50'}`}
-      onClick={() => onSelect(lead.id)}
-    >
-      <AdminDataTableCell onClick={(event) => event.stopPropagation()}>
-        <input
-          type='checkbox'
-          checked={isChecked}
-          onChange={(event) => onCheck(lead.id, event.target.checked)}
-        />
-      </AdminDataTableCell>
-      <AdminDataTableCell className='text-sm font-medium text-slate-900'>
-        {[lead.contact.firstName, lead.contact.lastName].filter(Boolean).join(' ') || 'Unnamed lead'}
-      </AdminDataTableCell>
-      <AdminDataTableCell className='text-sm text-slate-700'>
-        {lead.contact.source ? formatEnumLabel(lead.contact.source) : '—'}
-      </AdminDataTableCell>
-      <AdminDataTableCell className='text-sm'>
-        <span
-          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${getStageBadgeClass(lead.funnelStage)}`}
-        >
-          {formatEnumLabel(lead.funnelStage)}
-        </span>
-      </AdminDataTableCell>
-      <AdminDataTableCell className='text-sm text-slate-700'>{formatDate(lead.createdAt)}</AdminDataTableCell>
-      <AdminDataTableCell className='text-sm text-slate-700'>
-        <span className={lead.daysInStage > 7 ? 'font-semibold text-amber-700' : ''}>
-          {lead.daysInStage}
-        </span>
-      </AdminDataTableCell>
-      <AdminDataTableCell className='text-right' onClick={(event) => event.stopPropagation()}>
-        {contactId ? (
-          <Link
-            href={adminContactDeepLink(contactId)}
-            className={ADMIN_OPS_ICON_LINK_CLASS}
-            aria-label='Open contact'
-            title='Open contact'
+    <AdminExpandableRow
+      id={lead.id}
+      label={name}
+      expanded={expanded}
+      onToggle={onToggle}
+      columnCount={LEADS_TABLE_COLUMN_COUNT}
+      cells={
+        <>
+          <AdminDataTableCell
+            className='w-10 pr-0'
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
           >
-            <ContactIcon className='h-4 w-4 shrink-0' aria-hidden />
-          </Link>
-        ) : null}
-      </AdminDataTableCell>
-    </tr>
+            <input
+              type='checkbox'
+              aria-label={`Select ${name}`}
+              className='h-4 w-4 rounded border-slate-300 text-slate-900'
+              checked={isChecked}
+              onChange={(event) => onCheck(lead.id, event.target.checked)}
+            />
+          </AdminDataTableCell>
+          <AdminDataTableCell className='font-medium text-slate-900'>
+            {name}
+            <AdminDataTableCellMeta>{stageLabel}</AdminDataTableCellMeta>
+          </AdminDataTableCell>
+          <AdminDataTableCell priority='tertiary' className='text-slate-700'>
+            {lead.contact.source ? formatEnumLabel(lead.contact.source) : '—'}
+          </AdminDataTableCell>
+          <AdminDataTableCell priority='secondary'>
+            <span
+              className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${getStageBadgeClass(lead.funnelStage)}`}
+            >
+              {stageLabel}
+            </span>
+          </AdminDataTableCell>
+          <AdminDataTableCell priority='tertiary' className='text-slate-700'>
+            {formatDate(lead.createdAt)}
+          </AdminDataTableCell>
+          <AdminDataTableCell priority='tertiary' className='text-slate-700'>
+            <span className={lead.daysInStage > 7 ? 'font-semibold text-amber-700' : ''}>{lead.daysInStage}</span>
+          </AdminDataTableCell>
+        </>
+      }
+      actions={
+        <AdminRowActions
+          actions={[
+            {
+              key: 'contact',
+              label: 'Open contact',
+              icon: <ContactIcon className='h-4 w-4 shrink-0' aria-hidden />,
+              href: contactId ? adminContactDeepLink(contactId) : undefined,
+              hidden: !contactId,
+            },
+          ]}
+        />
+      }
+      detail={detail}
+    />
   );
-});
+}

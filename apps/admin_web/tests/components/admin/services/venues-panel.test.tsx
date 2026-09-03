@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const { geocodeVenueAddress } = vi.hoisted(() => ({
   geocodeVenueAddress: vi.fn(),
@@ -18,6 +18,10 @@ vi.mock('@/lib/services-api', async () => {
 import { VenuesPanel } from '@/components/admin/services/venues-panel';
 
 describe('VenuesPanel', () => {
+  afterEach(() => {
+    window.history.replaceState(null, '', '/services');
+  });
+
   it('fills latitude and longitude when geocoding succeeds', async () => {
     const user = userEvent.setup();
     geocodeVenueAddress.mockResolvedValueOnce({
@@ -57,7 +61,8 @@ describe('VenuesPanel', () => {
       />
     );
 
-    await user.selectOptions(screen.getByLabelText('Geographic area'), 'area-1');
+    await user.click(screen.getByRole('button', { name: 'New venue' }));
+    await user.selectOptions(await screen.findByLabelText(/^Geographic area/), 'area-1');
     await user.type(screen.getByLabelText('Address'), '1 Test Road');
 
     await user.click(screen.getByRole('button', { name: 'Fill coordinates from address' }));
@@ -118,6 +123,11 @@ describe('VenuesPanel', () => {
       />
     );
 
+    expect(screen.getByRole('region', { name: 'Venues' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New venue' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete venue' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /expand studio a/i })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Address' })).toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: 'Partner organisations' })).not.toBeInTheDocument();

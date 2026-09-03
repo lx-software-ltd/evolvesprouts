@@ -29,20 +29,21 @@ describe('WebsitePage', () => {
     render(<WebsitePage />);
     expect(screen.getByRole('group', { name: 'Website section views' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'QR Codes', pressed: true })).toBeInTheDocument();
-    expect(screen.getByText('Website QR codes')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Website QR codes' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
   });
 
   it('switches to Forms tab', () => {
     render(<WebsitePage />);
     fireEvent.click(screen.getByRole('button', { name: 'Forms' }));
     expect(screen.getByText('Forms panel')).toBeInTheDocument();
-    expect(screen.queryByText('Website QR codes')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Website QR codes' })).not.toBeInTheDocument();
   });
 
   it('switches to Polls tab', () => {
     render(<WebsitePage />);
     fireEvent.click(screen.getByRole('button', { name: 'Polls' }));
     expect(screen.getByText('Polls panel')).toBeInTheDocument();
-    expect(screen.queryByText('Website QR codes')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Website QR codes' })).not.toBeInTheDocument();
   });
 });

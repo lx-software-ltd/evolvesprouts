@@ -19,6 +19,8 @@ export interface EntityInlineLocationSectionProps {
   isGeocoding: boolean;
   saveError: string;
   allowClearWhenLocked?: boolean;
+  /** Partner organisation id that may edit its own locked venue address. */
+  allowEditWhenOwnerPartnerOrganizationId?: string | null;
   lockedSummaryExtra?: string | null;
   onDraftChange: (draft: InlineLocationDraft) => void;
   onClear: () => void;
@@ -36,6 +38,7 @@ export function EntityInlineLocationSection({
   isGeocoding,
   saveError,
   allowClearWhenLocked,
+  allowEditWhenOwnerPartnerOrganizationId,
   lockedSummaryExtra,
   onDraftChange,
   onClear,
@@ -52,6 +55,7 @@ export function EntityInlineLocationSection({
         canModify
         hideLabel
         allowClearWhenLocked={allowClearWhenLocked}
+        allowEditWhenOwnerPartnerOrganizationId={allowEditWhenOwnerPartnerOrganizationId}
         lockedSummaryExtra={lockedSummaryExtra}
         isSaving={isSaving}
         isGeocoding={isGeocoding}

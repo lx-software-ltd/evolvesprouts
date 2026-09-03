@@ -1,36 +1,36 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 
 import type { AdminUser, FunnelStage, LeadListFilters, LeadSummary, LostReason } from '@/types/leads';
 
+import { AdminCreateButton } from '@/components/ui/admin-create-button';
 import {
-  AdminDataTable,
-  AdminDataTableBody,
   AdminDataTableCell,
-  AdminDataTableHead,
   AdminDataTableHeadCell,
   AdminDataTableOperationsHeadCell,
 } from '@/components/ui/admin-data-table';
-import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
+import { AdminDiscardChangesDialog } from '@/components/ui/admin-discard-changes-dialog';
+import { AdminExpandableRow } from '@/components/ui/admin-expandable-row';
+import { AdminRecordTable } from '@/components/ui/admin-record-table';
+import { DRAFT_RECORD_ID, type UseExpandedRecordReturn } from '@/hooks/use-expanded-record';
 
 import { LeadsBulkActions } from './leads-bulk-actions';
 import { LeadsFilterBar } from './leads-filter-bar';
-import { LeadsTableRow } from './leads-table-row';
+import { LEADS_TABLE_COLUMN_COUNT, LeadsTableRow } from './leads-table-row';
 
 export interface LeadsTableProps {
   leads: LeadSummary[];
+  /** Deep-linked lead outside the loaded pages; rendered above the list. */
+  pinnedLead?: LeadSummary | null;
   filters: LeadListFilters;
   users: AdminUser[];
-  selectedLeadId: string | null;
+  expanded: UseExpandedRecordReturn;
   isLoading: boolean;
   isLoadingMore: boolean;
   error: string;
   hasMore: boolean;
   onLoadMore: () => Promise<void>;
-  isCreateMode?: boolean;
-  onCreateLead: () => void;
-  onSelectLead: (leadId: string) => void;
   onFilterChange: <TKey extends keyof LeadListFilters>(
     key: TKey,
     value: LeadListFilters[TKey]
@@ -41,27 +41,39 @@ export interface LeadsTableProps {
     stage: FunnelStage,
     lostReason?: LostReason
   ) => Promise<void> | void;
+  /** Editor for the open row (draft or lead); mounted only while that row is expanded. */
+  renderDetail: (lead: LeadSummary | null) => ReactNode;
 }
 
+/**
+ * Table-first leads pipeline: filters and `New lead` on top, an optional bulk
+ * toolbar once rows are checked, then one expandable row per lead with the
+ * lead editor (fields, notes, AI suggestion, activity, conversation) beneath.
+ */
 export function LeadsTable({
   leads,
+  pinnedLead = null,
   filters,
   users,
-  selectedLeadId,
+  expanded,
   isLoading,
   isLoadingMore,
   error,
   hasMore,
   onLoadMore,
-  isCreateMode = false,
-  onCreateLead,
-  onSelectLead,
   onFilterChange,
   onBulkAssign,
   onBulkStageChange,
+  renderDetail,
 }: LeadsTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+
+  const rows = useMemo(
+    () => (pinnedLead && !leads.some((lead) => lead.id === pinnedLead.id) ? [pinnedLead, ...leads] : leads),
+    [leads, pinnedLead]
+  );
+  const allChecked = rows.length > 0 && rows.every((lead) => selectedSet.has(lead.id));
 
   const handleCheck = (leadId: string, checked: boolean) => {
     setSelectedIds((current) =>
@@ -70,86 +82,113 @@ export function LeadsTable({
   };
 
   return (
-    <PaginatedTableCard
-      title='Leads'
-      isLoading={isLoading}
-      isLoadingMore={isLoadingMore}
-      hasMore={hasMore}
-      error={error}
-      loadingLabel='Loading leads...'
-      onLoadMore={onLoadMore}
-      toolbar={
-        <div className='mb-3 space-y-3'>
-          <LeadsFilterBar
-            filters={filters}
-            users={users}
-            isCreateMode={isCreateMode}
-            onCreateLead={onCreateLead}
-            onFilterChange={onFilterChange}
-          />
-          <LeadsBulkActions
-            selectedCount={selectedIds.length}
-            users={users}
-            onBulkAssign={(assignedTo) => {
-              const normalizedAssignedTo = assignedTo === '__none__' ? null : assignedTo;
-              void onBulkAssign(selectedIds, normalizedAssignedTo);
-              setSelectedIds([]);
-            }}
-            onBulkStageChange={(stage, lostReason) => {
-              void onBulkStageChange(selectedIds, stage, lostReason);
-              setSelectedIds([]);
-            }}
-          />
-        </div>
-      }
-    >
-      <AdminDataTable tableClassName='min-w-[920px]'>
-        <AdminDataTableHead sticky>
+    <>
+      <AdminDiscardChangesDialog prompt={expanded.discardPrompt} />
+      <AdminRecordTable
+        aria-label='Leads'
+        columnCount={LEADS_TABLE_COLUMN_COUNT}
+        rowCount={rows.length}
+        isLoading={isLoading}
+        isLoadingMore={isLoadingMore}
+        hasMore={hasMore}
+        onLoadMore={onLoadMore}
+        error={error}
+        errorTitle='Leads'
+        emptyLabel='No leads found for these filters.'
+        filters={
+          <>
+            <LeadsFilterBar
+              filters={filters}
+              users={users}
+              onFilterChange={onFilterChange}
+              trailing={
+                <AdminCreateButton
+                  label='New lead'
+                  active={expanded.isDraftOpen}
+                  onClick={() => (expanded.isDraftOpen ? expanded.collapse() : expanded.openDraft())}
+                />
+              }
+            />
+            <LeadsBulkActions
+              selectedCount={selectedIds.length}
+              users={users}
+              onBulkAssign={async (assignedTo) => {
+                await onBulkAssign(selectedIds, assignedTo);
+                setSelectedIds([]);
+              }}
+              onBulkStageChange={async (stage, lostReason) => {
+                await onBulkStageChange(selectedIds, stage, lostReason);
+                setSelectedIds([]);
+              }}
+            />
+          </>
+        }
+        head={
           <tr>
-            <AdminDataTableHeadCell>
+            <AdminDataTableHeadCell className='w-10' />
+            <AdminDataTableHeadCell className='w-10 pr-0'>
               <input
                 type='checkbox'
-                checked={leads.length > 0 && selectedIds.length === leads.length}
-                onChange={(event) =>
-                  setSelectedIds(event.target.checked ? leads.map((lead) => lead.id) : [])
-                }
+                aria-label='Select all leads'
+                className='h-4 w-4 rounded border-slate-300 text-slate-900'
+                checked={allChecked}
+                onChange={(event) => setSelectedIds(event.target.checked ? rows.map((lead) => lead.id) : [])}
               />
             </AdminDataTableHeadCell>
             <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell>Source</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell>Stage</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell>Created</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell>Days in stage</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Source</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Stage</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Created</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Days in stage</AdminDataTableHeadCell>
             <AdminDataTableOperationsHeadCell />
           </tr>
-        </AdminDataTableHead>
-        <AdminDataTableBody>
-          {isLoading ? (
-            <tr>
-              <AdminDataTableCell colSpan={7} className='py-8 text-sm text-slate-600'>
-                Loading leads...
-              </AdminDataTableCell>
-            </tr>
-          ) : leads.length === 0 ? (
-            <tr>
-              <AdminDataTableCell colSpan={7} className='py-8 text-sm text-slate-600'>
-                No leads found for these filters.
-              </AdminDataTableCell>
-            </tr>
-          ) : (
-            leads.map((lead) => (
-              <LeadsTableRow
-                key={lead.id}
-                lead={lead}
-                isSelected={selectedLeadId === lead.id}
-                isChecked={selectedSet.has(lead.id)}
-                onSelect={onSelectLead}
-                onCheck={handleCheck}
-              />
-            ))
-          )}
-        </AdminDataTableBody>
-      </AdminDataTable>
-    </PaginatedTableCard>
+        }
+      >
+        {expanded.isDraftOpen ? (
+          <AdminExpandableRow
+            id={DRAFT_RECORD_ID}
+            label='new lead'
+            expanded
+            isDraft
+            onToggle={expanded.collapse}
+            columnCount={LEADS_TABLE_COLUMN_COUNT}
+            cells={
+              <>
+                <AdminDataTableCell className='w-10 pr-0' />
+                <AdminDataTableCell className='font-medium text-slate-900'>New lead</AdminDataTableCell>
+                <AdminDataTableCell priority='tertiary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='tertiary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='tertiary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+              </>
+            }
+            actions={null}
+            detail={renderDetail(null)}
+          />
+        ) : null}
+        {rows.map((lead) => {
+          const isOpen = expanded.isExpanded(lead.id);
+          return (
+            <LeadsTableRow
+              key={lead.id}
+              lead={lead}
+              expanded={isOpen}
+              isChecked={selectedSet.has(lead.id)}
+              onToggle={() => expanded.toggle(lead.id)}
+              onCheck={handleCheck}
+              detail={isOpen ? renderDetail(lead) : null}
+            />
+          );
+        })}
+      </AdminRecordTable>
+    </>
   );
 }

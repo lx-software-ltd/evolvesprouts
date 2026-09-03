@@ -1,33 +1,97 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ServicesView } from '@/hooks/use-services-page';
-import type { ServiceInstance } from '@/types/services';
+import type { ServiceDetail, ServiceInstance, ServiceSummary } from '@/types/services';
+
+import { makeExpanded } from '../../../fixtures/expanded-record';
+
+const SERVICE_ROW: ServiceSummary = {
+  id: 'service-1',
+  instancesCount: 1,
+  serviceType: 'training_course',
+  title: 'Yoga',
+  serviceKey: 'yoga',
+  bookingSystem: null,
+  description: null,
+  coverImageS3Key: null,
+  deliveryMode: 'in_person',
+  status: 'published',
+  serviceTier: null,
+  locationId: null,
+  createdBy: 'admin-sub',
+  createdAt: '2026-03-01T10:00:00Z',
+  updatedAt: '2026-03-01T10:00:00Z',
+  trainingDetails: null,
+  eventDetails: null,
+  consultationDetails: null,
+};
+
+const SERVICE_DETAIL: ServiceDetail = {
+  ...SERVICE_ROW,
+  tagIds: [],
+  assetIds: [],
+  trainingDetails: { pricingUnit: 'per_person', defaultPrice: null, defaultCurrency: null },
+};
+
+const INSTANCE_ROW: ServiceInstance = {
+  id: 'instance-1',
+  serviceId: 'service-1',
+  parentServiceTitle: 'Yoga',
+  parentServiceTier: null,
+  parentServiceKey: null,
+  parentServiceType: 'training_course',
+  title: null,
+  slug: 'instance-1',
+  description: null,
+  coverImageS3Key: null,
+  status: 'in_progress',
+  deliveryMode: null,
+  locationId: null,
+  maxCapacity: 10,
+  capacityEnrolledCount: 3,
+  capacityLeftOverride: null,
+  capacityLeftEffective: 7,
+  waitlistEnabled: false,
+  eventbriteSyncStatus: 'pending',
+  externalUrl: null,
+  partnerOrganizations: [],
+  instructorId: null,
+  notes: null,
+  tagIds: [],
+  createdBy: 'admin-sub',
+  createdAt: '2026-03-01T10:00:00Z',
+  updatedAt: '2026-03-01T10:00:00Z',
+  resolvedTitle: 'Yoga cohort run',
+  cohort: 'spring-2024',
+  resolvedSlug: 'instance-1',
+  resolvedDescription: null,
+  resolvedCoverImageS3Key: null,
+  resolvedDeliveryMode: null,
+  resolvedLocationId: null,
+  sessionSlots: [],
+  trainingDetails: null,
+  resolvedTrainingDetails: null,
+  eventTicketTiers: [],
+  resolvedEventTicketTiers: [],
+  consultationDetails: null,
+  resolvedConsultationDetails: null,
+};
 
 const { mockUseServicesPage, state } = vi.hoisted(() => {
+  const shell = () => ({
+    markDirty: vi.fn(),
+    clearDirty: vi.fn(),
+  });
   const state = {
     activeView: 'catalog' as ServicesView,
     setActiveView: vi.fn(),
-    selectedServiceId: null as string | null,
-    setSelectedServiceId: vi.fn(),
-    selectedService: null,
-    selectedInstanceId: null as string | null,
-    setSelectedInstanceId: vi.fn(),
-    selectedInstance: null,
-    instancesServiceFilter: '',
-    setInstancesServiceFilter: vi.fn(),
-    instancesServiceTypeFilter: '',
-    setInstancesServiceTypeFilter: vi.fn(),
-    instancesStatusFilter: 'not_completed' as const,
-    setInstancesStatusFilter: vi.fn(),
-    instancesSearchQuery: '',
-    setInstancesSearchQuery: vi.fn(),
     entityTags: [],
     entityTagsLoading: false,
     entityTagsError: '',
     serviceList: {
-      services: [],
+      services: [] as ServiceSummary[],
       filters: { serviceType: '', status: 'published', search: '' },
       setFilter: vi.fn(),
       clearFilters: vi.fn(),
@@ -39,67 +103,81 @@ const { mockUseServicesPage, state } = vi.hoisted(() => {
       hasMore: false,
       totalCount: 0,
     },
-    serviceDetail: {
-      service: null,
-      isLoading: false,
-      error: '',
-      refetch: vi.fn().mockResolvedValue(undefined),
-    },
-    serviceMutations: {
-      isLoading: false,
-      error: '',
-      createServiceEntry: vi.fn().mockResolvedValue(null),
-      updateServiceEntry: vi.fn().mockResolvedValue(null),
-      deleteServiceEntry: vi.fn().mockResolvedValue(undefined),
-      createCoverImageUpload: vi.fn().mockResolvedValue(undefined),
-    },
-    instanceList: {
-      instances: [] as ServiceInstance[],
-      filters: { status: '' },
-      setFilter: vi.fn(),
-      isLoading: false,
-      isLoadingMore: false,
-      error: '',
-      refetch: vi.fn().mockResolvedValue(undefined),
-      loadMore: vi.fn().mockResolvedValue(undefined),
-      hasMore: false,
-      totalCount: 0,
-    },
-    instanceMutations: {
-      isLoading: false,
-      error: '',
-      createInstanceEntry: vi.fn().mockResolvedValue(null),
-      updateInstanceEntry: vi.fn().mockResolvedValue(null),
-      deleteInstanceEntry: vi.fn().mockResolvedValue(undefined),
-    },
-    enrollmentList: {
-      enrollments: [],
-      filters: { status: '' },
-      setFilter: vi.fn(),
-      isLoading: false,
-      isLoadingMore: false,
-      error: '',
-      refetch: vi.fn().mockResolvedValue(undefined),
-      loadMore: vi.fn().mockResolvedValue(undefined),
-      hasMore: false,
-      totalCount: 0,
-    },
-    enrollmentMutations: {
-      isLoading: false,
-      error: '',
-      createEnrollmentEntry: vi.fn().mockResolvedValue(null),
-      updateEnrollmentEntry: vi.fn().mockResolvedValue(null),
-      deleteEnrollmentEntry: vi.fn().mockResolvedValue(undefined),
-    },
     locationList: {
       locations: [],
       isLoading: false,
       error: '',
       refetch: vi.fn().mockResolvedValue(undefined),
     },
+    catalog: {
+      shell: shell(),
+      expanded: null as unknown,
+      discardPrompt: { open: false, confirm: vi.fn(), cancel: vi.fn() },
+      selectedId: null as string | null,
+      detail: {
+        service: null as ServiceDetail | null,
+        isLoading: false,
+        error: '',
+        refetch: vi.fn().mockResolvedValue(undefined),
+      },
+      pinnedService: null,
+      mutations: {
+        isLoading: false,
+        error: '',
+        createServiceEntry: vi.fn().mockResolvedValue(null),
+        updateServiceEntry: vi.fn().mockResolvedValue(null),
+        deleteServiceEntry: vi.fn().mockResolvedValue(undefined),
+        createCoverImageUpload: vi.fn().mockResolvedValue(undefined),
+      },
+      duplicateTemplate: null,
+      clearDuplicateTemplate: vi.fn(),
+      duplicateService: vi.fn().mockResolvedValue(true),
+    },
+    instances: {
+      filters: {
+        service: '',
+        setService: vi.fn(),
+        serviceType: '',
+        setServiceType: vi.fn(),
+        status: 'not_completed' as const,
+        setStatus: vi.fn(),
+        search: '',
+        setSearch: vi.fn(),
+      },
+      list: {
+        instances: [] as ServiceInstance[],
+        isLoading: false,
+        isLoadingMore: false,
+        error: '',
+        refetch: vi.fn().mockResolvedValue(undefined),
+        loadMore: vi.fn().mockResolvedValue(undefined),
+        hasMore: false,
+        totalCount: 0,
+      },
+      rows: [] as ServiceInstance[],
+      pinnedInstance: null as ServiceInstance | null,
+      shell: shell(),
+      expanded: null as unknown,
+      discardPrompt: { open: false, confirm: vi.fn(), cancel: vi.fn() },
+      selectedId: null as string | null,
+      draftServiceId: null as string | null,
+      setDraftServiceId: vi.fn(),
+      mutations: {
+        isLoading: false,
+        error: '',
+        createInstanceEntry: vi.fn().mockResolvedValue(null),
+        updateInstanceEntry: vi.fn().mockResolvedValue(null),
+        deleteInstanceEntry: vi.fn().mockResolvedValue(undefined),
+      },
+      optionsCacheVersion: 0,
+      duplicateTemplate: null,
+      clearDuplicateTemplate: vi.fn(),
+      duplicateInstance: vi.fn().mockResolvedValue(true),
+      refetchList: vi.fn().mockResolvedValue(undefined),
+    },
     discountCodes: {
       codes: [],
-      filters: { active: '', search: '' },
+      filters: { active: '', search: '', scope: '' },
       setFilter: vi.fn(),
       isLoading: false,
       isLoadingMore: false,
@@ -194,57 +272,50 @@ vi.mock('@/components/admin/services/certificates-panel', () => ({
   CertificatesPanel: () => <div data-testid='certificates-tab-mock'>Certificates</div>,
 }));
 
-import { ServicesPage } from '@/components/admin/services/services-page';
+vi.mock('@/components/admin/services/service-detail-panel', () => ({
+  ServiceDetailPanel: (props: { mode: string; service: ServiceDetail | null; createPrefillFromService?: unknown }) => (
+    <div data-testid='service-editor' data-mode={props.mode} data-service-id={props.service?.id ?? ''}>
+      service editor
+    </div>
+  ),
+}));
 
-const INSTANCE_FOR_SEARCH: ServiceInstance = {
-  id: 'instance-search-1',
-  serviceId: 'service-1',
-  parentServiceTitle: 'Yoga',
-  parentServiceTier: null,
-  parentServiceKey: null,
-  parentServiceType: 'training_course',
-  title: null,
-  slug: 'instance-search-1',
-  description: null,
-  coverImageS3Key: null,
-  status: 'in_progress',
-  deliveryMode: null,
-  locationId: null,
-  maxCapacity: null,
-  capacityLeftOverride: null,
-  capacityLeftEffective: null,
-  waitlistEnabled: false,
-  eventbriteSyncStatus: 'pending',
-  externalUrl: null,
-  partnerOrganizations: [],
-  instructorId: null,
-  notes: null,
-  tagIds: [],
-  createdBy: 'admin-sub',
-  createdAt: '2026-03-01T10:00:00Z',
-  updatedAt: '2026-03-01T10:00:00Z',
-  resolvedTitle: 'Yoga cohort run',
-  cohort: 'spring-2024',
-  resolvedSlug: 'instance-search-1',
-  resolvedDescription: null,
-  resolvedCoverImageS3Key: null,
-  resolvedDeliveryMode: null,
-  resolvedLocationId: null,
-  sessionSlots: [],
-  trainingDetails: null,
-  resolvedTrainingDetails: null,
-  eventTicketTiers: [],
-  resolvedEventTicketTiers: [],
-  consultationDetails: null,
-  resolvedConsultationDetails: null,
-};
+vi.mock('@/components/admin/services/instance-detail-panel', () => ({
+  InstanceDetailPanel: (props: {
+    instance: ServiceInstance | null;
+    selectedServiceId: string | null;
+    enrollmentsCount?: number | null;
+    enrollments?: unknown;
+  }) => (
+    <div
+      data-testid='instance-editor'
+      data-mode={props.instance ? 'edit' : 'create'}
+      data-instance-id={props.instance?.id ?? ''}
+      data-service-id={props.selectedServiceId ?? ''}
+      data-enrollments-count={props.enrollmentsCount ?? ''}
+      data-has-enrollments={props.enrollments !== undefined ? 'true' : 'false'}
+    >
+      instance editor
+    </div>
+  ),
+}));
+
+import { ServicesPage } from '@/components/admin/services/services-page';
 
 describe('ServicesPage', () => {
   beforeEach(() => {
     state.activeView = 'catalog';
-    state.instanceList.instances = [];
-    state.instancesSearchQuery = '';
-    state.instancesStatusFilter = 'not_completed';
+    state.serviceList.services = [SERVICE_ROW];
+    state.catalog.expanded = makeExpanded();
+    state.catalog.selectedId = null;
+    state.catalog.detail.service = null;
+    state.catalog.detail.error = '';
+    state.instances.expanded = makeExpanded();
+    state.instances.selectedId = null;
+    state.instances.rows = [INSTANCE_ROW];
+    state.instances.list.instances = [INSTANCE_ROW];
+    state.instances.filters.search = '';
+    state.instances.filters.status = 'not_completed';
   });
 
   it('renders tabs-only header and switches views', async () => {
@@ -253,7 +324,6 @@ describe('ServicesPage', () => {
 
     expect(screen.getByRole('button', { name: 'Service Catalogue' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'New service' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Instances' }));
     expect(state.setActiveView).toHaveBeenCalledWith('instances');
     await user.click(screen.getByRole('button', { name: 'Discount Codes' }));
@@ -276,82 +346,101 @@ describe('ServicesPage', () => {
     expect(screen.getByTestId('partners-tab-mock')).toBeInTheDocument();
   });
 
-  it('renders service detail before the services list', () => {
+  it('renders the catalogue as a table-first block: filters and New service above the table, no editor card', () => {
     render(<ServicesPage />);
 
-    const detailHeading = screen.getByRole('heading', { name: 'Service' });
-    const listHeading = screen.getByRole('heading', { name: 'Services' });
-
-    expect(detailHeading.compareDocumentPosition(listHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const region = screen.getByRole('region', { name: 'Services' });
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+    const filterBar = within(region).getByTestId('admin-filter-bar');
+    const table = within(region).getByRole('table');
+    expect(filterBar.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(filterBar).getByRole('button', { name: 'New service' })).toBeInTheDocument();
+    expect(screen.queryByTestId('service-editor')).not.toBeInTheDocument();
+    expect(within(table).getByText('Yoga')).toBeInTheDocument();
   });
 
-  it('renders instance detail before the instances list on Instances', () => {
-    state.activeView = 'instances';
-    render(<ServicesPage />);
+  it('shows the editor skeleton in the expanded service row until the detail arrives, then the edit editor', () => {
+    state.catalog.expanded = makeExpanded({ expandedId: 'service-1', isExpanded: (id) => id === 'service-1' });
+    state.catalog.selectedId = 'service-1';
 
-    const detailHeading = screen.getByRole('heading', { name: 'Instance' });
-    const listHeading = screen.getByRole('heading', { name: 'Instances' });
+    const { rerender } = render(<ServicesPage />);
+    expect(screen.getByTestId('admin-editor-skeleton')).toBeInTheDocument();
+    expect(screen.queryByTestId('service-editor')).not.toBeInTheDocument();
 
-    expect(detailHeading.compareDocumentPosition(listHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  });
-
-  it('wires instances search input changes on Instances', async () => {
-    const user = userEvent.setup();
-    state.activeView = 'instances';
-    render(<ServicesPage />);
-
-    await user.type(screen.getByLabelText('Search instances'), 'yoga');
-
-    expect(state.setInstancesSearchQuery).toHaveBeenCalled();
-  });
-
-  it('wires instances status filter changes on Instances', async () => {
-    const user = userEvent.setup();
-    state.activeView = 'instances';
-    render(<ServicesPage />);
-
-    await user.selectOptions(screen.getByLabelText('Instance statuses'), 'completed');
-
-    expect(state.setInstancesStatusFilter).toHaveBeenCalledWith('completed');
-  });
-
-  it('filters instances to non-completed rows when status filter is Not Completed', () => {
-    state.activeView = 'instances';
-    state.instancesStatusFilter = 'not_completed';
-    state.instanceList.instances = [
-      {
-        ...INSTANCE_FOR_SEARCH,
-        id: 'inst-open',
-        status: 'open',
-        parentServiceTitle: 'Alpha Service',
-      },
-      {
-        ...INSTANCE_FOR_SEARCH,
-        id: 'inst-done',
-        status: 'completed',
-        parentServiceTitle: 'Beta Service',
-      },
-    ];
-
-    render(<ServicesPage />);
-
-    expect(screen.getByText('Alpha Service')).toBeInTheDocument();
-    expect(screen.queryByText('Beta Service')).not.toBeInTheDocument();
-  });
-
-  it('filters instances by cohort using the raw stored value only', () => {
-    state.activeView = 'instances';
-    state.instanceList.instances = [INSTANCE_FOR_SEARCH];
-
-    state.instancesSearchQuery = 'spring 2024';
-    const { rerender, unmount } = render(<ServicesPage />);
-    expect(screen.queryByText('spring-2024')).not.toBeInTheDocument();
-
-    state.instancesSearchQuery = 'spring-2024';
+    state.catalog.detail.service = SERVICE_DETAIL;
     rerender(<ServicesPage />);
-    expect(screen.getByText('Yoga')).toBeInTheDocument();
-    expect(screen.getAllByText('spring-2024').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByTestId('admin-editor-skeleton')).not.toBeInTheDocument();
+    const editor = screen.getByTestId('service-editor');
+    expect(editor).toHaveAttribute('data-mode', 'edit');
+    expect(editor).toHaveAttribute('data-service-id', 'service-1');
+  });
 
-    unmount();
+  it('renders the create editor inside the draft service row', () => {
+    state.catalog.expanded = makeExpanded({ expandedId: 'new', isDraftOpen: true });
+    render(<ServicesPage />);
+    expect(screen.getByTestId('service-editor')).toHaveAttribute('data-mode', 'create');
+  });
+
+  it('renders Instances as a table-first block with one-line filters and New instance', () => {
+    state.activeView = 'instances';
+    render(<ServicesPage />);
+
+    const region = screen.getByRole('region', { name: 'Instances' });
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+    const filterBar = within(region).getByTestId('admin-filter-bar');
+    expect(within(filterBar).getByRole('button', { name: 'New instance' })).toBeInTheDocument();
+    expect(within(filterBar).getByLabelText('Search')).toBeInTheDocument();
+    expect(within(filterBar).getByLabelText('Type')).toBeInTheDocument();
+    expect(within(filterBar).getByLabelText('Status')).toBeInTheDocument();
+    expect(within(filterBar).getByLabelText('Service')).toBeInTheDocument();
+    expect(within(filterBar).queryByRole('button', { name: /apply/i })).not.toBeInTheDocument();
+    expect(within(region).getByRole('table')).toBeInTheDocument();
+    expect(screen.queryByTestId('instance-editor')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Enrollments' })).not.toBeInTheDocument();
+  });
+
+  it('wires instances filter changes immediately to the section hook', async () => {
+    const user = userEvent.setup();
+    state.activeView = 'instances';
+    render(<ServicesPage />);
+
+    await user.type(screen.getByLabelText('Search'), 'y');
+    expect(state.instances.filters.setSearch).toHaveBeenCalledWith('y');
+    await user.selectOptions(screen.getByLabelText('Status'), 'completed');
+    expect(state.instances.filters.setStatus).toHaveBeenCalledWith('completed');
+    await user.selectOptions(screen.getByLabelText('Service'), 'service-1');
+    expect(state.instances.filters.setService).toHaveBeenCalledWith('service-1');
+  });
+
+  it('renders the instance editor in place with the enrollments section wired for saved rows', () => {
+    state.activeView = 'instances';
+    state.instances.expanded = makeExpanded({ expandedId: 'instance-1', isExpanded: (id) => id === 'instance-1' });
+    state.instances.selectedId = 'instance-1';
+    render(<ServicesPage />);
+
+    const editor = screen.getByTestId('instance-editor');
+    expect(editor).toHaveAttribute('data-mode', 'edit');
+    expect(editor).toHaveAttribute('data-instance-id', 'instance-1');
+    expect(editor).toHaveAttribute('data-service-id', 'service-1');
+    expect(editor).toHaveAttribute('data-enrollments-count', '3');
+    expect(editor).toHaveAttribute('data-has-enrollments', 'true');
+  });
+
+  it('renders the create editor in the draft instance row using the draft service', () => {
+    state.activeView = 'instances';
+    state.instances.expanded = makeExpanded({ expandedId: 'new', isDraftOpen: true });
+    state.instances.draftServiceId = 'service-1';
+    render(<ServicesPage />);
+
+    const editor = screen.getByTestId('instance-editor');
+    expect(editor).toHaveAttribute('data-mode', 'create');
+    expect(editor).toHaveAttribute('data-service-id', 'service-1');
+    expect(editor).toHaveAttribute('data-has-enrollments', 'false');
+  });
+
+  it('surfaces list and mutation errors in the page banner', () => {
+    state.catalog.detail.error = 'Failed to load service detail.';
+    render(<ServicesPage />);
+    expect(screen.getByText('Failed to load service detail.')).toBeInTheDocument();
   });
 });

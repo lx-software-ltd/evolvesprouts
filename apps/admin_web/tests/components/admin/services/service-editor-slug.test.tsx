@@ -52,10 +52,10 @@ describe('ServiceDetailPanel service key', () => {
   it('lowercases service key on blur and blocks invalid patterns', () => {
     render(
       <ServiceDetailPanel
+        mode='edit'
         service={buildService()}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={vi.fn()}
         onUploadCover={vi.fn()}
@@ -85,10 +85,10 @@ describe('ServiceDetailPanel service key', () => {
 
     render(
       <ServiceDetailPanel
+        mode='edit'
         service={buildService()}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={onUpdate}
         onUploadCover={vi.fn()}
@@ -124,10 +124,10 @@ describe('ServiceDetailPanel service key', () => {
 
     render(
       <ServiceDetailPanel
+        mode='edit'
         service={buildService()}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={onUpdate}
         onUploadCover={vi.fn()}
@@ -175,10 +175,10 @@ describe('ServiceDetailPanel service key', () => {
 
     render(
       <ServiceDetailPanel
+        mode='edit'
         service={buildService({ serviceKey: 'old-slug', serviceTier: 'cohort-a' })}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={onUpdate}
         onUploadCover={vi.fn()}
@@ -220,10 +220,10 @@ describe('ServiceDetailPanel service key', () => {
 
     render(
       <ServiceDetailPanel
+        mode='edit'
         service={buildService({ serviceKey: 'shared-slug', serviceTier: '' })}
-        isLoading={false}
+        isSaving={false}
         error=''
-        onCancelSelection={vi.fn()}
         onCreate={vi.fn()}
         onUpdate={onUpdate}
         onUploadCover={vi.fn()}

@@ -1,80 +1,49 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { CertificateDetail } from '@/components/admin/services/certificate-detail';
+import { CertificateIssuePanel } from '@/components/admin/services/certificate-issue-panel';
+import { DeleteIcon, DownloadIcon, VoidExpenseIcon } from '@/components/icons/action-icons';
+import { AdminCreateButton } from '@/components/ui/admin-create-button';
 import {
-  AdminDataTable,
-  AdminDataTableBody,
   AdminDataTableCell,
-  AdminDataTableHead,
+  AdminDataTableCellMeta,
   AdminDataTableHeadCell,
   AdminDataTableOperationsHeadCell,
 } from '@/components/ui/admin-data-table';
-import { AdminEditorCard } from '@/components/ui/admin-editor-card';
+import { AdminDiscardChangesDialog } from '@/components/ui/admin-discard-changes-dialog';
+import { AdminExpandableRow } from '@/components/ui/admin-expandable-row';
+import { AdminFilterBar, AdminFilterField } from '@/components/ui/admin-filter-bar';
+import { AdminRecordTable } from '@/components/ui/admin-record-table';
+import { AdminRowActions } from '@/components/ui/admin-row-actions';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
-import { AdminTableToolbar } from '@/components/ui/admin-table-toolbar';
 import { Select } from '@/components/ui/select';
-import { StatusBanner } from '@/components/status-banner';
-import { DeleteIcon } from '@/components/icons/action-icons';
-import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
-import { useServiceInstanceOptions } from '@/hooks/use-service-instance-options';
-import type { useCompletionCertificates } from '@/hooks/use-completion-certificates';
 import { toErrorMessage } from '@/hooks/hook-errors';
-import { ADMIN_API_MAX_LIST_LIMIT } from '@/lib/admin-list-query';
-import {
-  getCompletionCertificatePdfDownload,
-  previewCompletionCertificatePdf,
-  type CompletionCertificate,
-  type CompletionCertificateDraftPayload,
-} from '@/lib/completion-certificates-api';
-import {
-  formatDate,
-  formatDiscountCodeInstanceOptionLabel,
-  formatServiceTitleWithTier,
-  resolveEnrollmentListPartyLabel,
-} from '@/lib/format';
-import { isAbortRequestError, listEnrollments } from '@/lib/services-api';
+import { useCertificateIssueDraft } from '@/hooks/use-certificate-issue-draft';
+import type { useCompletionCertificates } from '@/hooks/use-completion-certificates';
+import { useEntityPanelEditorShell } from '@/hooks/use-entity-panel-editor-shell';
+import { DRAFT_RECORD_ID } from '@/hooks/use-expanded-record';
+import { useExpandedRecordForm } from '@/hooks/use-expanded-record-form';
+import { getCompletionCertificatePdfDownload, type CompletionCertificate } from '@/lib/completion-certificates-api';
+import { formatDate, formatEnumLabel } from '@/lib/format';
+import type { ServiceSummary } from '@/types/services';
 
-import type { Enrollment, ServiceSummary } from '@/types/services';
+/** Query parameter that mirrors the expanded certificate row (`?certificate=<id>` or `?certificate=new`). */
+export const ADMIN_CERTIFICATE_QUERY_PARAM = 'certificate';
+
+const COLUMN_COUNT = 7;
 
 export interface CertificatesPanelProps {
   certificates: ReturnType<typeof useCompletionCertificates>;
   serviceOptions: ServiceSummary[];
 }
 
-function todayIsoDate(): string {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function buildDraftPayload(
-  contactId: string,
-  serviceId: string,
-  instanceId: string,
-  participationDate: string,
-  programTitle: string,
-  partnerOrganizationId: string,
-): CompletionCertificateDraftPayload | null {
-  if (!contactId.trim() || !serviceId.trim() || !instanceId.trim() || !participationDate.trim()) {
-    return null;
-  }
-  return {
-    contactId: contactId.trim(),
-    serviceId: serviceId.trim(),
-    instanceId: instanceId.trim(),
-    participationDate: participationDate.trim(),
-    programTitle: programTitle.trim() || null,
-    partnerOrganizationId: partnerOrganizationId.trim() || null,
-  };
-}
-
+/**
+ * Table-first issued certificates: `Issue certificate` opens a draft row with
+ * the issue form and live preview; existing rows expand into a read-only
+ * record. Download, Void, and Delete live in the Operations column.
+ */
 export function CertificatesPanel({ certificates, serviceOptions }: CertificatesPanelProps) {
   const {
     certificates: rows,
@@ -91,228 +60,57 @@ export function CertificatesPanel({ certificates, serviceOptions }: Certificates
     deleteCertificate,
   } = certificates;
 
-  const instanceOptions = useServiceInstanceOptions();
-  const { instances, isLoading: instancesLoading, loadForService } = instanceOptions;
-  const [confirmDialogProps, requestConfirm] = useConfirmDialog();
+  const { confirmDialogProps, requestConfirm, deleteActionError, setDeleteActionError, expanded, clearDirty, track } =
+    useEntityPanelEditorShell({ paramName: ADMIN_CERTIFICATE_QUERY_PARAM });
+  const [busyRowId, setBusyRowId] = useState<string | null>(null);
 
-  const [contactId, setContactId] = useState('');
-  const [serviceId, setServiceId] = useState('');
-  const [instanceId, setInstanceId] = useState('');
-  const [completedEnrollments, setCompletedEnrollments] = useState<Enrollment[]>([]);
-  const [enrollmentsLoading, setEnrollmentsLoading] = useState(false);
-  const [enrollmentsError, setEnrollmentsError] = useState('');
-  const [partnerOrganizationId, setPartnerOrganizationId] = useState('');
-  const [programTitle, setProgramTitle] = useState('');
-  const [participationDate, setParticipationDate] = useState(todayIsoDate());
-  const [editorError, setEditorError] = useState('');
-  const [previewUrl, setPreviewUrl] = useState('');
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewError, setPreviewError] = useState('');
-  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
-  const previewAbortRef = useRef<AbortController | null>(null);
+  const draft = useCertificateIssueDraft({
+    track,
+    issueCertificate,
+    onIssued: () => {
+      clearDirty();
+      expanded.collapse();
+    },
+  });
+  const resetDraft = draft.reset;
+  const reset = useCallback(() => {
+    resetDraft();
+    clearDirty();
+  }, [clearDirty, resetDraft]);
+  const applyRow = useCallback(() => {
+    resetDraft();
+    clearDirty();
+  }, [clearDirty, resetDraft]);
+  useExpandedRecordForm<CompletionCertificate>({
+    expandedId: expanded.expandedId,
+    rows,
+    isLoading,
+    applyRow,
+    reset,
+    collapse: expanded.collapse,
+  });
 
-  const selectedInstance = useMemo(
-    () => instances.find((i) => i.id === instanceId) ?? null,
-    [instances, instanceId],
-  );
-
-  const activePartners = useMemo(
-    () => (selectedInstance?.partnerOrganizations ?? []).filter((p) => p.active),
-    [selectedInstance],
-  );
-
-  const enrolledContactOptions = useMemo(() => {
-    const emptyMaps = new Map<string, string>();
-    const options: { contactId: string; label: string }[] = [];
-    for (const enrollment of completedEnrollments) {
-      const cid = enrollment.contactId?.trim();
-      if (!cid) {
-        continue;
-      }
-      const label = resolveEnrollmentListPartyLabel(
-        enrollment,
-        emptyMaps,
-        emptyMaps,
-        emptyMaps,
-      );
-      options.push({
-        contactId: cid,
-        label: label || cid,
-      });
-    }
-    return options;
-  }, [completedEnrollments]);
-
-  useEffect(() => {
-    if (!serviceId.trim()) {
-      setInstanceId('');
-      setContactId('');
-      setCompletedEnrollments([]);
-      setEnrollmentsError('');
-      loadForService(null);
-      return;
-    }
-    void loadForService(serviceId);
-  }, [serviceId, loadForService]);
-
-  useEffect(() => {
-    const sid = serviceId.trim();
-    const iid = instanceId.trim();
-    if (!sid || !iid) {
-      setCompletedEnrollments([]);
-      setEnrollmentsError('');
-      setContactId('');
-      return;
-    }
-    setContactId('');
-    let cancelled = false;
-    setEnrollmentsLoading(true);
-    setEnrollmentsError('');
-    void (async () => {
-      try {
-        const page = await listEnrollments(sid, iid, { status: 'completed', limit: ADMIN_API_MAX_LIST_LIMIT });
-        if (!cancelled) {
-          setCompletedEnrollments(page.items);
-        }
-      } catch (caught) {
-        if (!cancelled) {
-          setCompletedEnrollments([]);
-          setEnrollmentsError(
-            toErrorMessage(caught, 'Failed to load completed enrollments for this instance.'),
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setEnrollmentsLoading(false);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [serviceId, instanceId]);
-
-  useEffect(() => {
-    if (!selectedInstance) {
-      setPartnerOrganizationId('');
-      return;
-    }
-    const defaultTitle =
-      selectedInstance.resolvedTitle?.trim() ||
-      selectedInstance.title?.trim() ||
-      '';
-    setProgramTitle(defaultTitle);
-    if (activePartners.length === 1) {
-      setPartnerOrganizationId(activePartners[0].id);
-    } else if (
-      partnerOrganizationId &&
-      !activePartners.some((p) => p.id === partnerOrganizationId)
-    ) {
-      setPartnerOrganizationId('');
-    }
-  }, [selectedInstance, activePartners, partnerOrganizationId]);
-
-  const draftPayload = buildDraftPayload(
-    contactId,
-    serviceId,
-    instanceId,
-    participationDate,
-    programTitle,
-    partnerOrganizationId,
-  );
-
-  const refreshPreview = useCallback(async () => {
-    if (!draftPayload) {
-      setPreviewUrl('');
-      setPreviewError('');
-      return;
-    }
-    if (activePartners.length > 0 && !draftPayload.partnerOrganizationId) {
-      setPreviewUrl('');
-      setPreviewError('Select a partner organisation for this instance.');
-      return;
-    }
-    previewAbortRef.current?.abort();
-    const controller = new AbortController();
-    previewAbortRef.current = controller;
-    setPreviewLoading(true);
-    setPreviewError('');
+  async function runRowAction(row: CompletionCertificate, action: () => Promise<unknown>, fallback: string) {
+    setDeleteActionError('');
+    setBusyRowId(row.id);
     try {
-      const { downloadUrl } = await previewCompletionCertificatePdf(
-        draftPayload,
-        controller.signal,
-      );
-      setPreviewUrl(downloadUrl);
+      await action();
     } catch (caught) {
-      if (isAbortRequestError(caught)) {
-        return;
-      }
-      setPreviewUrl('');
-      setPreviewError(
-        toErrorMessage(caught, 'Could not render certificate preview.'),
-      );
+      setDeleteActionError(toErrorMessage(caught, fallback));
     } finally {
-      if (!controller.signal.aborted) {
-        setPreviewLoading(false);
-      }
-    }
-  }, [draftPayload, activePartners.length]);
-
-  useEffect(() => {
-    if (!draftPayload) {
-      setPreviewUrl('');
-      setPreviewError('');
-      return;
-    }
-    const handle = setTimeout(() => {
-      void refreshPreview();
-    }, 500);
-    return () => clearTimeout(handle);
-  }, [draftPayload, refreshPreview]);
-
-  function resetEditor() {
-    setContactId('');
-    setCompletedEnrollments([]);
-    setEnrollmentsError('');
-    setServiceId('');
-    setInstanceId('');
-    setPartnerOrganizationId('');
-    setProgramTitle('');
-    setParticipationDate(todayIsoDate());
-    setEditorError('');
-    setPreviewUrl('');
-    setPreviewError('');
-    setSelectedRowId(null);
-  }
-
-  async function handleIssue() {
-    if (!draftPayload) {
-      setEditorError('Service, instance, enrolled contact, and participation date are required.');
-      return;
-    }
-    if (activePartners.length > 0 && !draftPayload.partnerOrganizationId) {
-      setEditorError('Select a partner organisation.');
-      return;
-    }
-    setEditorError('');
-    try {
-      await issueCertificate(draftPayload);
-      resetEditor();
-    } catch (caught) {
-      setEditorError(toErrorMessage(caught, 'Could not issue certificate.'));
+      setBusyRowId(null);
     }
   }
 
   async function handleDownloadRow(row: CompletionCertificate) {
-    if (row.status !== 'issued') {
-      return;
-    }
-    try {
-      const { downloadUrl } = await getCompletionCertificatePdfDownload(row.id);
-      window.open(downloadUrl, '_blank', 'noopener,noreferrer');
-    } catch (caught) {
-      setEditorError(toErrorMessage(caught, 'Could not download certificate.'));
-    }
+    await runRowAction(
+      row,
+      async () => {
+        const { downloadUrl } = await getCompletionCertificatePdfDownload(row.id);
+        window.open(downloadUrl, '_blank', 'noopener,noreferrer');
+      },
+      'Could not download certificate.'
+    );
   }
 
   async function handleVoidRow(row: CompletionCertificate) {
@@ -320,16 +118,13 @@ export function CertificatesPanel({ certificates, serviceOptions }: Certificates
       title: 'Void certificate?',
       description: `Void the certificate for ${row.recipient_display_name}? The contact will no longer show the award badge.`,
       confirmLabel: 'Void',
+      cancelLabel: 'Cancel',
       variant: 'danger',
     });
     if (!ok) {
       return;
     }
-    try {
-      await voidCertificate(row.id);
-    } catch (caught) {
-      setEditorError(toErrorMessage(caught, 'Could not void certificate.'));
-    }
+    await runRowAction(row, () => voidCertificate(row.id), 'Could not void certificate.');
   }
 
   async function handleDeleteRow(row: CompletionCertificate) {
@@ -337,269 +132,177 @@ export function CertificatesPanel({ certificates, serviceOptions }: Certificates
       title: 'Delete certificate?',
       description: `Permanently delete the certificate record for ${row.recipient_display_name}?`,
       confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
       variant: 'danger',
     });
     if (!ok) {
       return;
     }
-    try {
-      await deleteCertificate(row.id);
-      if (selectedRowId === row.id) {
-        resetEditor();
-      }
-    } catch (caught) {
-      setEditorError(toErrorMessage(caught, 'Could not delete certificate.'));
-    }
+    await runRowAction(
+      row,
+      async () => {
+        await deleteCertificate(row.id);
+        if (expanded.isExpanded(row.id)) {
+          expanded.collapse();
+        }
+      },
+      'Could not delete certificate.'
+    );
   }
 
-  return (
-    <div className='flex flex-col gap-4'>
-      <ConfirmDialog {...confirmDialogProps} />
-      {error ? (
-        <StatusBanner variant='error' title='Certificates'>
-          {error}
-        </StatusBanner>
-      ) : null}
-      <AdminEditorCard
-        title='Issue certificate'
-        description='Choose service, instance, and a contact with a completed enrollment. Preview updates when the form is valid.'
-        actions={
-          <>
-            <Button type='button' variant='secondary' onClick={() => void refreshPreview()} disabled={previewLoading}>
-              Refresh preview
-            </Button>
-            <Button type='button' onClick={() => void handleIssue()} disabled={isSaving || !draftPayload}>
-              Issue certificate
-            </Button>
-          </>
-        }
-      >
-        {editorError ? (
-          <StatusBanner variant='error' title='Certificate'>
-            {editorError}
-          </StatusBanner>
-        ) : null}
-        <div className='grid gap-4 md:grid-cols-3'>
-          <div className='flex flex-col gap-2'>
-            <Label htmlFor='cert-service-id'>Service</Label>
-            <Select
-              id='cert-service-id'
-              value={serviceId}
-              onChange={(e) => {
-                setServiceId(e.target.value);
-                setInstanceId('');
-                setContactId('');
-              }}
-            >
-              <option value=''>Select service</option>
-              {serviceOptions.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {formatServiceTitleWithTier(s.title, s.serviceTier)}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className='flex flex-col gap-2'>
-            <Label htmlFor='cert-instance-id'>Instance</Label>
-            <Select
-              id='cert-instance-id'
-              value={instanceId}
-              onChange={(e) => setInstanceId(e.target.value)}
-              disabled={!serviceId || instancesLoading}
-            >
-              <option value=''>Select instance</option>
-              {instances.map((inst) => (
-                <option key={inst.id} value={inst.id}>
-                  {formatDiscountCodeInstanceOptionLabel(inst)}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className='flex flex-col gap-2'>
-            <Label htmlFor='cert-contact-enrolled'>Contact enrolled</Label>
-            <Select
-              id='cert-contact-enrolled'
-              value={contactId}
-              onChange={(e) => setContactId(e.target.value)}
-              disabled={!serviceId || !instanceId || enrollmentsLoading}
-            >
-              <option value=''>
-                {enrollmentsLoading
-                  ? 'Loading enrollments…'
-                  : !serviceId || !instanceId
-                    ? 'Select service and instance first'
-                    : enrolledContactOptions.length === 0
-                      ? 'No completed contact enrollments'
-                      : 'Select enrolled contact'}
-              </option>
-              {enrolledContactOptions.map((o) => (
-                <option key={o.contactId} value={o.contactId}>
-                  {o.label}
-                </option>
-              ))}
-            </Select>
-            {enrollmentsError ? (
-              <p className='text-sm text-destructive'>{enrollmentsError}</p>
-            ) : null}
-          </div>
-        </div>
-        <div className='mt-4 grid gap-4 md:grid-cols-2'>
-          <div className='flex flex-col gap-2'>
-            <Label htmlFor='cert-program-title'>Program title</Label>
-            <Input
-              id='cert-program-title'
-              value={programTitle}
-              onChange={(e) => setProgramTitle(e.target.value)}
-            />
-          </div>
-          <div className='flex flex-col gap-2'>
-            <Label htmlFor='cert-participation-date'>Participation date</Label>
-            <Input
-              id='cert-participation-date'
-              type='date'
-              value={participationDate}
-              onChange={(e) => setParticipationDate(e.target.value)}
-            />
-          </div>
-        </div>
-        {activePartners.length > 0 ? (
-          <div className='mt-4 flex max-w-md flex-col gap-2'>
-            <Label htmlFor='cert-partner-id'>Partner</Label>
-            <Select
-              id='cert-partner-id'
-              value={partnerOrganizationId}
-              onChange={(e) => setPartnerOrganizationId(e.target.value)}
-            >
-              <option value=''>Select partner</option>
-              {activePartners.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </Select>
-          </div>
-        ) : null}
-        <div className='mt-4 flex flex-col gap-2'>
-          <p className='text-sm font-medium text-foreground'>Preview</p>
-          {previewLoading ? <p className='text-sm text-muted-foreground'>Rendering preview…</p> : null}
-          {previewError ? (
-            <StatusBanner variant='error' title='Preview'>
-              {previewError}
-            </StatusBanner>
-          ) : null}
-          {previewUrl ? (
-            <iframe
-              title='Certificate preview'
-              src={previewUrl}
-              className='certificates-preview-frame h-[32rem] w-full rounded-md border border-border bg-muted'
-            />
-          ) : (
-            <p className='text-sm text-muted-foreground'>
-              Complete the form to see a certificate preview.
-            </p>
-          )}
-        </div>
-      </AdminEditorCard>
+  const listError = [error, deleteActionError].filter(Boolean).join(' • ');
 
-      <PaginatedTableCard
-        title='Issued certificates'
-        description='Void removes the award badge from the contact. Delete permanently removes the record.'
+  return (
+    <>
+      <ConfirmDialog {...confirmDialogProps} />
+      <AdminDiscardChangesDialog prompt={expanded.discardPrompt} />
+      <AdminRecordTable
+        aria-label='Certificates'
+        columnCount={COLUMN_COUNT}
+        rowCount={rows.length}
         isLoading={isLoading}
         isLoadingMore={isLoadingMore}
         hasMore={hasMore}
-        error={error}
         onLoadMore={loadMore}
-        loadingLabel='Loading certificates…'
-        toolbar={
-          <AdminTableToolbar>
-            <div className='flex flex-wrap items-end gap-3'>
-              <div className='flex min-w-[10rem] flex-col gap-1'>
-                <Label htmlFor='cert-filter-status'>Status</Label>
-                <Select
-                  id='cert-filter-status'
-                  value={filters.status}
-                  onChange={(e) =>
-                    setFilter('status', e.target.value as typeof filters.status)
-                  }
-                >
-                  <option value=''>All</option>
-                  <option value='issued'>Issued</option>
-                  <option value='voided'>Voided</option>
-                </Select>
-              </div>
-            </div>
-          </AdminTableToolbar>
+        error={listError}
+        errorTitle='Certificates'
+        emptyLabel='No certificates match the current filters.'
+        filters={
+          <AdminFilterBar
+            trailing={
+              <AdminCreateButton
+                label='Issue certificate'
+                active={expanded.isDraftOpen}
+                onClick={() => (expanded.isDraftOpen ? expanded.collapse() : expanded.openDraft())}
+              />
+            }
+          >
+            <AdminFilterField label='Status' htmlFor='cert-filter-status'>
+              <Select
+                id='cert-filter-status'
+                value={filters.status}
+                onChange={(e) => setFilter('status', e.target.value as typeof filters.status)}
+              >
+                <option value=''>All</option>
+                <option value='issued'>Issued</option>
+                <option value='voided'>Voided</option>
+              </Select>
+            </AdminFilterField>
+          </AdminFilterBar>
+        }
+        head={
+          <tr>
+            <AdminDataTableHeadCell className='w-10' />
+            <AdminDataTableHeadCell>Recipient</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Program</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Instance</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Participation</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Status</AdminDataTableHeadCell>
+            <AdminDataTableOperationsHeadCell />
+          </tr>
         }
       >
-        <AdminDataTable>
-          <AdminDataTableHead>
-            <AdminDataTableHeadCell>Recipient</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell>Program</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell>Instance</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell>Participation</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell>Status</AdminDataTableHeadCell>
-            <AdminDataTableOperationsHeadCell />
-          </AdminDataTableHead>
-          <AdminDataTableBody>
-            {rows.map((row) => (
-              <tr
-                key={row.id}
-                className={selectedRowId === row.id ? 'bg-muted/50' : undefined}
-                onClick={() => setSelectedRowId(row.id)}
-              >
-                <AdminDataTableCell>{row.recipient_display_name}</AdminDataTableCell>
-                <AdminDataTableCell>{row.program_title}</AdminDataTableCell>
-                <AdminDataTableCell>{row.instance_label}</AdminDataTableCell>
-                <AdminDataTableCell>{formatDate(row.participation_date)}</AdminDataTableCell>
-                <AdminDataTableCell>{row.status}</AdminDataTableCell>
-                <AdminDataTableCell align='right'>
-                  <div className='flex justify-end gap-1'>
-                    {row.status === 'issued' ? (
-                      <>
-                        <Button
-                          type='button'
-                          variant='secondary'
-                          size='sm'
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void handleDownloadRow(row);
-                          }}
-                        >
-                          Download
-                        </Button>
-                        <Button
-                          type='button'
-                          variant='secondary'
-                          size='sm'
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void handleVoidRow(row);
-                          }}
-                        >
-                          Void
-                        </Button>
-                      </>
-                    ) : null}
-                    <Button
-                      type='button'
-                      size='sm'
-                      variant='danger'
-                      aria-label='Delete certificate'
-                      title='Delete certificate'
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void handleDeleteRow(row);
-                      }}
-                    >
-                      <DeleteIcon className='h-4 w-4' />
-                    </Button>
-                  </div>
+        {expanded.isDraftOpen ? (
+          <AdminExpandableRow
+            id={DRAFT_RECORD_ID}
+            label='new certificate'
+            expanded
+            isDraft
+            onToggle={expanded.collapse}
+            columnCount={COLUMN_COUNT}
+            cells={
+              <>
+                <AdminDataTableCell className='font-medium text-slate-900'>New certificate</AdminDataTableCell>
+                <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                  —
                 </AdminDataTableCell>
-              </tr>
-            ))}
-          </AdminDataTableBody>
-        </AdminDataTable>
-      </PaginatedTableCard>
-    </div>
+                <AdminDataTableCell priority='tertiary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='tertiary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+              </>
+            }
+            actions={null}
+            detail={<CertificateIssuePanel draft={draft} serviceOptions={serviceOptions} isSaving={isSaving} />}
+          />
+        ) : null}
+        {rows.map((row) => {
+          const isOpen = expanded.isExpanded(row.id);
+          const isIssued = row.status === 'issued';
+          const isBusy = isSaving || busyRowId === row.id;
+          const statusLabel = formatEnumLabel(row.status);
+          const participationLabel = formatDate(row.participation_date);
+          return (
+            <AdminExpandableRow
+              key={row.id}
+              id={row.id}
+              label={`certificate for ${row.recipient_display_name}`}
+              expanded={isOpen}
+              onToggle={() => expanded.toggle(row.id)}
+              columnCount={COLUMN_COUNT}
+              cells={
+                <>
+                  <AdminDataTableCell className='font-medium text-slate-900'>
+                    {row.recipient_display_name}
+                    <AdminDataTableCellMeta>
+                      {row.program_title} · {participationLabel} · {statusLabel}
+                    </AdminDataTableCellMeta>
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='secondary' className='text-slate-700'>
+                    {row.program_title}
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='tertiary' className='text-slate-700'>
+                    {row.instance_label}
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='secondary' className='text-slate-700'>
+                    {participationLabel}
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='tertiary' className='text-slate-700'>
+                    {statusLabel}
+                  </AdminDataTableCell>
+                </>
+              }
+              actions={
+                <AdminRowActions
+                  actions={[
+                    {
+                      key: 'download',
+                      label: 'Download certificate PDF',
+                      icon: <DownloadIcon className='h-4 w-4' />,
+                      hidden: !isIssued,
+                      disabled: isBusy,
+                      onClick: () => void handleDownloadRow(row),
+                    },
+                    {
+                      key: 'void',
+                      label: 'Void certificate',
+                      icon: <VoidExpenseIcon className='h-4 w-4' />,
+                      tone: 'danger',
+                      hidden: !isIssued,
+                      disabled: isBusy,
+                      onClick: () => void handleVoidRow(row),
+                    },
+                    {
+                      key: 'delete',
+                      label: 'Delete certificate',
+                      icon: <DeleteIcon className='h-4 w-4' />,
+                      tone: 'danger',
+                      disabled: isBusy,
+                      onClick: () => void handleDeleteRow(row),
+                    },
+                  ]}
+                />
+              }
+              detail={isOpen ? <CertificateDetail certificate={row} /> : null}
+            />
+          );
+        })}
+      </AdminRecordTable>
+    </>
   );
 }

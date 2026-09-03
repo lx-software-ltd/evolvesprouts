@@ -4,19 +4,21 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { AdminPageErrorBanner } from '@/components/admin/admin-page-error-banner';
 import {
-  AdminDataTable,
-  AdminDataTableBody,
   AdminDataTableCell,
-  AdminDataTableHead,
+  AdminDataTableCellMeta,
   AdminDataTableHeadCell,
 } from '@/components/ui/admin-data-table';
+import { AdminEditorPanel } from '@/components/ui/admin-editor-panel';
+import { AdminExpandableRow } from '@/components/ui/admin-expandable-row';
+import { AdminFieldGrid } from '@/components/ui/admin-field-grid';
+import { AdminFilterBar, AdminFilterField } from '@/components/ui/admin-filter-bar';
+import { AdminReadOnlyValue } from '@/components/ui/admin-read-only-value';
+import { AdminRecordTable } from '@/components/ui/admin-record-table';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Label } from '@/components/ui/label';
-import { AdminTableToolbar } from '@/components/ui/admin-table-toolbar';
-import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
 import { Select } from '@/components/ui/select';
 import { toErrorMessage } from '@/hooks/hook-errors';
+import { useExpandedRecord } from '@/hooks/use-expanded-record';
 import { usePaginatedList } from '@/hooks/use-paginated-list';
 import { formatDate } from '@/lib/format';
 
@@ -54,6 +56,19 @@ type AnswerFilters = {
   slug: string;
 };
 
+// Read-only rows: expand column + five data columns, no Operations column.
+const COLUMN_COUNT = 6;
+
+function answerRowId(row: WebsiteAnswersRow): string {
+  return `${row.sessionId}:${row.questionId}`;
+}
+
+/**
+ * Stored answers for one form or poll as a table-first, read-only record
+ * table: the form/poll picker is the only filter, `Export answers` and
+ * `Clear answers` are table-scoped tools in the filter bar's trailing slot,
+ * and each row expands into the full answer on the field grid.
+ */
 export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
   noun,
   listSummaries,
@@ -72,6 +87,7 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
   const [exporting, setExporting] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const expanded = useExpandedRecord({ paramName: `${lowerNoun}-answer` });
 
   const selectedSummary = useMemo(
     () => summaries.find((item) => item.slug === selectedSlug) ?? null,
@@ -174,6 +190,7 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
     try {
       await clearAnswers(selectedSlug);
       setClearDialogOpen(false);
+      expanded.collapse();
       await loadSummaries();
       await refetch({ slug: selectedSlug });
     } catch (error) {
@@ -184,106 +201,151 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
   };
 
   const storedCount = selectedSummary?.answerCount ?? 0;
-
-  const toolbar = (
-    <AdminTableToolbar>
-      <div className='min-w-[240px] max-w-md flex-1'>
-        <Label htmlFor={`website-${lowerNoun}s-select`}>{titleNoun}</Label>
-        <Select
-          id={`website-${lowerNoun}s-select`}
-          value={selectedSlug}
-          onChange={(event) => setSelectedSlug(event.target.value)}
-          disabled={summariesLoading || summaries.length === 0}
-        >
-          {summaries.length === 0 ? (
-            <option value=''>No {lowerNoun}s found</option>
-          ) : (
-            summaries.map((item) => (
-              <option key={item.slug} value={item.slug}>
-                {item.slug} ({item.answerCount} answers)
-              </option>
-            ))
-          )}
-        </Select>
-      </div>
-      <div className='ml-auto flex flex-wrap gap-2'>
-        <Button
-          type='button'
-          variant='outline'
-          onClick={() => void handleExport()}
-          disabled={!selectedSlug || answersLoading}
-          loading={exporting}
-          loadingLabel='Exporting…'
-        >
-          Export answers
-        </Button>
-        <Button
-          type='button'
-          variant='outline'
-          onClick={() => setClearDialogOpen(true)}
-          disabled={!selectedSlug || clearing || answersLoading || storedCount === 0}
-        >
-          Clear answers
-        </Button>
-      </div>
-    </AdminTableToolbar>
-  );
+  const isFirstLoad = summariesLoading || (answersLoading && answers.length === 0);
 
   return (
     <div className='space-y-4'>
       {summariesError ? <AdminPageErrorBanner title={`${titleNoun}s`} message={summariesError} /> : null}
-      {actionError ? (
-        <AdminPageErrorBanner title={`${titleNoun} action`} message={actionError} />
-      ) : null}
+      {actionError ? <AdminPageErrorBanner title={`${titleNoun} action`} message={actionError} /> : null}
 
-      <PaginatedTableCard
-        title={`${titleNoun} answers`}
-        description={
-          selectedSummary
-            ? `${selectedSummary.answerCount} stored answer rows for ${selectedSummary.slug}.`
-            : `Choose a ${lowerNoun} to view stored answers from DynamoDB.`
-        }
-        isLoading={answersLoading}
+      <AdminRecordTable
+        aria-label={`${titleNoun} answers`}
+        columnCount={COLUMN_COUNT}
+        rowCount={answers.length}
+        isLoading={isFirstLoad}
         isLoadingMore={isLoadingMore}
         hasMore={hasMore}
-        error={answersError}
-        loadingLabel='Loading answers…'
         onLoadMore={loadMore}
-        toolbar={toolbar}
+        error={answersError}
+        errorTitle={`${titleNoun} answers`}
+        emptyLabel={
+          selectedSlug ? `No answers stored for this ${lowerNoun} yet.` : `No ${lowerNoun}s found.`
+        }
+        filters={
+          <AdminFilterBar
+            summary={
+              selectedSummary
+                ? `${selectedSummary.answerCount} stored answer rows for ${selectedSummary.slug}.`
+                : undefined
+            }
+            trailing={
+              <>
+                <Button
+                  type='button'
+                  variant='outline'
+                  onClick={() => void handleExport()}
+                  disabled={!selectedSlug || answersLoading}
+                  loading={exporting}
+                  loadingLabel='Exporting…'
+                >
+                  Export answers
+                </Button>
+                <Button
+                  type='button'
+                  variant='outline'
+                  onClick={() => setClearDialogOpen(true)}
+                  disabled={!selectedSlug || clearing || answersLoading || storedCount === 0}
+                >
+                  Clear answers
+                </Button>
+              </>
+            }
+          >
+            <AdminFilterField label={titleNoun} htmlFor={`website-${lowerNoun}s-select`} className='sm:basis-72'>
+              <Select
+                id={`website-${lowerNoun}s-select`}
+                value={selectedSlug}
+                onChange={(event) => {
+                  expanded.collapse();
+                  setSelectedSlug(event.target.value);
+                }}
+                disabled={summariesLoading || summaries.length === 0}
+              >
+                {summaries.length === 0 ? (
+                  <option value=''>No {lowerNoun}s found</option>
+                ) : (
+                  summaries.map((item) => (
+                    <option key={item.slug} value={item.slug}>
+                      {item.slug} ({item.answerCount} answers)
+                    </option>
+                  ))
+                )}
+              </Select>
+            </AdminFilterField>
+          </AdminFilterBar>
+        }
+        head={
+          <tr>
+            <AdminDataTableHeadCell className='w-10' />
+            <AdminDataTableHeadCell>Session</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Question</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Type</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Answer</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Updated</AdminDataTableHeadCell>
+          </tr>
+        }
       >
-        <AdminDataTable tableClassName='min-w-[960px]'>
-          <AdminDataTableHead>
-            <tr>
-              <AdminDataTableHeadCell>Session</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Question</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Type</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Answer</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Updated</AdminDataTableHeadCell>
-            </tr>
-          </AdminDataTableHead>
-          <AdminDataTableBody>
-            {!answersLoading && answers.length === 0 ? (
-              <tr>
-                <AdminDataTableCell colSpan={5} className='text-slate-500'>
-                  {selectedSlug
-                    ? `No answers stored for this ${lowerNoun} yet.`
-                    : `Select a ${lowerNoun} to load answers.`}
-                </AdminDataTableCell>
-              </tr>
-            ) : (
-              answers.map((row) => (
-                <tr key={`${row.sessionId}-${row.questionId}`}>
-                  <AdminDataTableCell className='font-mono text-xs'>{row.sessionId}</AdminDataTableCell>
-                  <AdminDataTableCell>{row.questionId}</AdminDataTableCell>
-                  <AdminDataTableCell>{row.questionType}</AdminDataTableCell>
-                  <AdminDataTableCell>{formatAnswer(row)}</AdminDataTableCell>
-                  <AdminDataTableCell>{formatDate(row.updatedAt)}</AdminDataTableCell>
-                </tr>
-              ))
-            )}
-          </AdminDataTableBody>
-        </AdminDataTable>
-      </PaginatedTableCard>
+        {answers.map((row) => {
+          const id = answerRowId(row);
+          const isOpen = expanded.isExpanded(id);
+          const answerText = formatAnswer(row);
+          const updatedLabel = formatDate(row.updatedAt);
+          return (
+            <AdminExpandableRow
+              key={id}
+              id={id}
+              label={`${row.questionId} answer from session ${row.sessionId}`}
+              expanded={isOpen}
+              onToggle={() => expanded.toggle(id)}
+              columnCount={COLUMN_COUNT}
+              autoFocusDetail={false}
+              cells={
+                <>
+                  <AdminDataTableCell className='text-slate-900'>
+                    <span className='font-mono text-xs md:whitespace-nowrap'>{row.sessionId}</span>
+                    <AdminDataTableCellMeta>
+                      {row.questionId} · {answerText}
+                    </AdminDataTableCellMeta>
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='secondary' className='text-slate-700'>
+                    {row.questionId}
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='tertiary' className='text-slate-700'>
+                    {row.questionType}
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='secondary' className='text-slate-700'>
+                    <span className='line-clamp-2 wrap-anywhere'>{answerText}</span>
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='tertiary' className='whitespace-nowrap text-slate-700'>
+                    {updatedLabel}
+                  </AdminDataTableCell>
+                </>
+              }
+              detail={
+                isOpen ? (
+                  <AdminEditorPanel>
+                    <AdminFieldGrid columns={4}>
+                      <AdminReadOnlyValue label='Session' mono>
+                        {row.sessionId}
+                      </AdminReadOnlyValue>
+                      <AdminReadOnlyValue label='Question' mono>
+                        {row.questionId}
+                      </AdminReadOnlyValue>
+                      <AdminReadOnlyValue label='Type'>{row.questionType}</AdminReadOnlyValue>
+                      <AdminReadOnlyValue label='Updated'>{updatedLabel}</AdminReadOnlyValue>
+                    </AdminFieldGrid>
+                    <AdminFieldGrid columns={1}>
+                      <AdminReadOnlyValue label='Answer'>
+                        <span className='wrap-anywhere whitespace-pre-wrap'>{answerText}</span>
+                      </AdminReadOnlyValue>
+                    </AdminFieldGrid>
+                  </AdminEditorPanel>
+                ) : null
+              }
+            />
+          );
+        })}
+      </AdminRecordTable>
 
       <ConfirmDialog
         open={clearDialogOpen}

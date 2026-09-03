@@ -3,10 +3,10 @@
 import dynamic from 'next/dynamic';
 import { useCallback, useState } from 'react';
 
+import { AnalyticsDateFilter } from './analytics-date-filter';
 import { LeadDetailPanel } from './lead-detail-panel';
 import { LeadsTable } from './leads-table';
 import { SalesConfigurationView } from './sales-configuration-view';
-import { SalesHeader } from './sales-header';
 import { MetaConversationsView } from './meta-conversations-view';
 import { WhatsAppConversationsView } from './whatsapp-conversations-view';
 
@@ -74,12 +74,9 @@ export function SalesPage() {
       />
 
       {state.activeView === 'analytics' ? (
-        <SalesHeader
+        <AnalyticsDateFilter
           dateRange={state.leadAnalytics.dateRange}
           onDateRangeChange={state.leadAnalytics.setDateRange}
-          onRefresh={async () => {
-            await state.leadAnalytics.refetch();
-          }}
         />
       ) : null}
 
@@ -101,66 +98,65 @@ export function SalesPage() {
           onSave={state.salesSettings.save}
         />
       ) : state.activeView === 'pipeline' ? (
-        <>
-          <LeadDetailPanel
-            key={`${state.isCreateMode ? 'create' : 'edit'}-${state.selectedLeadId ?? 'none'}`}
-            mode={state.isCreateMode ? 'create' : 'edit'}
-            lead={state.leadDetail.lead}
-            users={state.adminUsers.users}
-            defaultAssignedTo={state.salesSettings.settings?.default_assigned_to ?? null}
-            isLoading={state.mutations.isLoading || state.leadDetail.isLoading}
-            error={state.mutations.error}
-            onStartCreate={state.startCreateLead}
-            onCreate={async (payload) => {
-              await state.mutations.createLeadEntry(payload);
-              state.cancelCreateLead();
-            }}
-            onUpdate={async (payload) => {
-              if (!state.selectedLeadId) {
-                return;
-              }
-              await state.mutations.updateLeadEntry(state.selectedLeadId, payload);
-            }}
-          />
-          <LeadsTable
-            leads={state.leadList.leads}
-            filters={state.leadList.filters}
-            users={state.adminUsers.users}
-            selectedLeadId={state.selectedLeadId}
-            isCreateMode={state.isCreateMode}
-            onCreateLead={state.startCreateLead}
-            isLoading={state.leadList.isLoading}
-            isLoadingMore={state.leadList.isLoadingMore}
-            error={state.leadList.error}
-            hasMore={state.leadList.hasMore}
-            onLoadMore={state.leadList.loadMore}
-            onSelectLead={state.setSelectedLeadId}
-            onFilterChange={state.leadList.setFilter}
-            onBulkAssign={async (leadIds, assignedTo) => {
-              setBulkActionError('');
-              const { failed } = await runBulkLeadOps(leadIds, (leadId) =>
-                updateLead(leadId, { assigned_to: assignedTo })
-              );
-              await refreshAfterBulk();
-              if (failed.length > 0) {
-                setBulkActionError(formatBulkLeadFailureSummary(failed));
-              }
-            }}
-            onBulkStageChange={async (leadIds, stage, lostReason) => {
-              setBulkActionError('');
-              const { failed } = await runBulkLeadOps(leadIds, (leadId) =>
-                updateLead(leadId, {
-                  funnel_stage: stage,
-                  lost_reason: lostReason ?? null,
-                })
-              );
-              await refreshAfterBulk();
-              if (failed.length > 0) {
-                setBulkActionError(formatBulkLeadFailureSummary(failed));
-              }
-            }}
-          />
-        </>
+        <LeadsTable
+          leads={state.leadList.leads}
+          pinnedLead={state.pinnedLead}
+          filters={state.leadList.filters}
+          users={state.adminUsers.users}
+          expanded={state.expanded}
+          isLoading={state.leadList.isLoading}
+          isLoadingMore={state.leadList.isLoadingMore}
+          error={state.leadList.error}
+          hasMore={state.leadList.hasMore}
+          onLoadMore={state.leadList.loadMore}
+          onFilterChange={state.leadList.setFilter}
+          onBulkAssign={async (leadIds, assignedTo) => {
+            setBulkActionError('');
+            const { failed } = await runBulkLeadOps(leadIds, (leadId) =>
+              updateLead(leadId, { assigned_to: assignedTo })
+            );
+            await refreshAfterBulk();
+            if (failed.length > 0) {
+              setBulkActionError(formatBulkLeadFailureSummary(failed));
+            }
+          }}
+          onBulkStageChange={async (leadIds, stage, lostReason) => {
+            setBulkActionError('');
+            const { failed } = await runBulkLeadOps(leadIds, (leadId) =>
+              updateLead(leadId, {
+                funnel_stage: stage,
+                lost_reason: lostReason ?? null,
+              })
+            );
+            await refreshAfterBulk();
+            if (failed.length > 0) {
+              setBulkActionError(formatBulkLeadFailureSummary(failed));
+            }
+          }}
+          renderDetail={(lead) => (
+            <LeadDetailPanel
+              key={lead ? lead.id : 'create'}
+              mode={lead ? 'edit' : 'create'}
+              lead={lead}
+              detail={lead && state.leadDetail.lead?.id === lead.id ? state.leadDetail.lead : null}
+              isDetailLoading={state.leadDetail.isLoading}
+              users={state.adminUsers.users}
+              defaultAssignedTo={state.salesSettings.settings?.default_assigned_to ?? null}
+              isSaving={state.mutations.isLoading}
+              error={state.mutations.error}
+              onDirtyChange={state.setEditorDirty}
+              onCreate={async (payload) => {
+                await state.createLead(payload);
+              }}
+              onUpdate={async (payload) => {
+                if (!lead) {
+                  return;
+                }
+                await state.mutations.updateLeadEntry(lead.id, payload);
+              }}
+            />
+          )}
+        />
       ) : (
         <AnalyticsView analytics={state.leadAnalytics.analytics} />
       )}

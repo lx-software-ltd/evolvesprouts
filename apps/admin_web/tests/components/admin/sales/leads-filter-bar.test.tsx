@@ -8,18 +8,17 @@ import { DEFAULT_LEAD_LIST_FILTERS, FUNNEL_STAGES } from '@/types/leads';
 import { formatEnumLabel } from '@/lib/format';
 
 function renderFilterBar(overrides: Partial<ComponentProps<typeof LeadsFilterBar>> = {}) {
-  const onCreateLead = vi.fn();
   const onFilterChange = vi.fn();
   const view = render(
     <LeadsFilterBar
       filters={DEFAULT_LEAD_LIST_FILTERS}
       users={[{ sub: 'u1', email: 'a@example.com', name: 'Ann' }]}
-      onCreateLead={onCreateLead}
       onFilterChange={onFilterChange}
+      trailing={<button type='button'>New lead</button>}
       {...overrides}
     />
   );
-  return { ...view, onCreateLead, onFilterChange };
+  return { ...view, onFilterChange };
 }
 
 describe('LeadsFilterBar', () => {
@@ -39,33 +38,21 @@ describe('LeadsFilterBar', () => {
   it('keeps source, lead type, assignee, and New lead on the filter row', () => {
     renderFilterBar();
 
-    const filterBar = screen.getByTestId('admin-filter-bar');
-    expect(filterBar).toBeInTheDocument();
+    expect(screen.getByTestId('admin-filter-bar')).toBeInTheDocument();
+    expect(screen.getByTestId('admin-filter-bar-trailing')).toContainElement(
+      screen.getByRole('button', { name: 'New lead' })
+    );
+    expect(screen.getByRole('group', { name: 'Filter by stage' }).parentElement).toHaveClass('basis-full');
 
     expect(screen.getByRole('group', { name: 'Filter by stage' })).toBeInTheDocument();
     expect(screen.getByLabelText('Search')).toHaveAttribute('placeholder', 'Search by name or email');
     expect(screen.getByLabelText('Source')).toBeInTheDocument();
     expect(screen.getByLabelText('Lead type')).toBeInTheDocument();
     expect(screen.getByLabelText('Assignee')).toHaveDisplayValue('All assignees');
-    expect(screen.getByRole('button', { name: 'New lead' })).toBeInTheDocument();
 
     expect(screen.queryByLabelText('From')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('To')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Unassigned only')).not.toBeInTheDocument();
-
-    const filterFields = filterBar.querySelector(':scope > div > div');
-    expect(filterFields).toContainElement(screen.getByLabelText('Source'));
-    expect(filterFields).toContainElement(screen.getByLabelText('Lead type'));
-    expect(filterFields).toContainElement(screen.getByLabelText('Assignee'));
-    expect(filterBar).toContainElement(screen.getByRole('button', { name: 'New lead' }));
-  });
-
-  it('starts create when New lead is clicked', async () => {
-    const user = userEvent.setup();
-    const { onCreateLead } = renderFilterBar();
-
-    await user.click(screen.getByRole('button', { name: 'New lead' }));
-    expect(onCreateLead).toHaveBeenCalledTimes(1);
   });
 
   it('marks the active stage chips with aria-pressed', () => {

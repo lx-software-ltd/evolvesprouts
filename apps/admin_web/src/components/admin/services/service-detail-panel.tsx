@@ -1,8 +1,10 @@
 'use client';
 
-import { AdminEditorCard } from '@/components/ui/admin-editor-card';
-import { Button } from '@/components/ui/button';
+import { useCallback, useEffect, useRef } from 'react';
+
+import { AdminEditorActions, AdminEditorPanel } from '@/components/ui/admin-editor-panel';
 import { AdminInlineError } from '@/components/ui/admin-inline-error';
+import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -13,120 +15,151 @@ import { useServiceDetailPanel } from '@/hooks/use-service-detail-panel';
 
 type ApiSchemas = components['schemas'];
 
+const SERVICE_EDITOR_FORM_ID = 'service-editor-form';
+
 export interface ServiceDetailPanelProps {
+  mode: 'create' | 'edit';
+  /** Full record for edit mode; `null` while creating. */
   service: ServiceDetail | null;
-  /** When set with `service` null, seed the create form from this template (UI-only duplicate). */
+  /** When set in create mode, seed the draft from this template (UI-only duplicate). */
   createPrefillFromService?: ServiceDetail | null;
   locationOptions?: LocationSummary[];
   isLoadingLocations?: boolean;
   locationError?: string | null;
-  isLoading: boolean;
+  isSaving: boolean;
   error: string;
-  onCancelSelection: () => void;
   onCreate: (payload: ApiSchemas['CreateServiceRequest']) => Promise<void> | void;
   onUpdate: (payload: ApiSchemas['PartialUpdateServiceRequest']) => Promise<void> | void;
   onUploadCover: (fileName: string, contentType: string) => Promise<void> | void;
+  /** Reports unsaved edits so the row hook can guard switching rows. */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
+/**
+ * Editor rendered inside the expanded service row (or the draft row). No
+ * title: the row above names the service. Type-specific field rows follow the
+ * shared field grid, then one action row (Create / Update, plus the cover
+ * upload helper while editing).
+ */
 export function ServiceDetailPanel({
+  mode,
   service,
   createPrefillFromService = null,
   locationOptions = [],
   isLoadingLocations = false,
   locationError = null,
-  isLoading,
+  isSaving,
   error,
-  onCancelSelection,
   onCreate,
   onUpdate,
   onUploadCover,
+  onDirtyChange,
 }: ServiceDetailPanelProps) {
   const panel = useServiceDetailPanel({
-    service,
+    service: mode === 'edit' ? service : null,
     createPrefillFromService,
     locationOptions,
-    isLoading,
+    isLoading: isSaving,
     onCreate,
     onUpdate,
   });
 
+  const onDirtyChangeRef = useRef(onDirtyChange);
+  useEffect(() => {
+    onDirtyChangeRef.current = onDirtyChange;
+  });
+  // Collapsing the row unmounts the editor; its edits are gone with it.
+  useEffect(() => () => onDirtyChangeRef.current?.(false), []);
+
+  const track = useCallback(
+    <TValue,>(setter: (value: TValue) => void) =>
+      (value: TValue) => {
+        onDirtyChangeRef.current?.(true);
+        setter(value);
+      },
+    []
+  );
+
+  async function handleSubmit() {
+    try {
+      const saved = mode === 'create' ? await panel.submitCreate() : await panel.submitUpdate();
+      if (saved) {
+        onDirtyChangeRef.current?.(false);
+      }
+    } catch {
+      // Keep the form visible so users can correct and retry.
+    }
+  }
+
+  const submitDisabled = mode === 'create' ? panel.createDisabled : panel.updateDisabled;
+
   return (
     <>
-      <AdminEditorCard
-        title='Service'
-        description='Add or update a service using the same fields below.'
+      <AdminEditorPanel
+        status={error ? <AdminInlineError>{error}</AdminInlineError> : null}
         actions={
-          <>
-            {panel.isEditMode ? (
-              <>
-                <Button type='button' variant='secondary' onClick={onCancelSelection} disabled={isLoading}>
-                  Cancel
-                </Button>
-                <Button
-                  type='button'
-                  disabled={panel.updateDisabled}
-                  loading={isLoading}
-                  onClick={() => void panel.submitUpdate()}
-                >
-                  Update service
-                </Button>
-                <Button
-                  type='button'
-                  variant='outline'
-                  disabled={isLoading || !panel.coverFileName.trim() || !service}
-                  onClick={() => void onUploadCover(panel.coverFileName.trim(), 'image/jpeg')}
-                >
-                  Generate cover upload URL
-                </Button>
-              </>
-            ) : (
+          <AdminEditorActions
+            mode={mode}
+            formId={SERVICE_EDITOR_FORM_ID}
+            isSaving={isSaving}
+            submitDisabled={submitDisabled}
+            submitLabel={mode === 'create' ? 'Create service' : 'Update service'}
+          >
+            {mode === 'edit' ? (
               <Button
                 type='button'
-                disabled={panel.createDisabled}
-                loading={isLoading}
-                onClick={() => void panel.submitCreate()}
+                variant='outline'
+                disabled={isSaving || !panel.coverFileName.trim() || !service}
+                onClick={() => void onUploadCover(panel.coverFileName.trim(), 'image/jpeg')}
               >
-                Add service
+                Generate cover upload URL
               </Button>
-            )}
-          </>
+            ) : null}
+          </AdminEditorActions>
         }
       >
-        <ServiceDetailFormBody
-          isEditMode={panel.isEditMode}
-          serviceType={panel.serviceType}
-          onServiceTypeChange={panel.setServiceType}
-          serviceForm={panel.serviceForm}
-          onServiceFormChange={panel.setServiceForm}
-          trainingForm={panel.trainingForm}
-          onTrainingFormChange={panel.setTrainingForm}
-          eventForm={panel.eventForm}
-          onEventFormChange={panel.setEventForm}
-          consultationForm={panel.consultationForm}
-          onConsultationFormChange={panel.setConsultationForm}
-          bookingSystem={panel.bookingSystem}
-          onBookingSystemChange={panel.setBookingSystem}
-          coverFileName={panel.coverFileName}
-          onCoverFileNameChange={panel.setCoverFileName}
-          serviceTier={panel.serviceTier}
-          onServiceTierChange={panel.setServiceTier}
-          locationId={panel.locationId}
-          onLocationIdChange={panel.setLocationId}
-          locationOptions={locationOptions}
-          isLoadingLocations={isLoadingLocations}
-          locationError={locationError}
-          hasLocationOptions={panel.hasLocationOptions}
-          selectedLocationValue={panel.selectedLocationValue}
-          locationExists={panel.locationExists}
-          showDefaultLocationField={panel.showDefaultLocationField}
-          tierInvalid={panel.tierInvalid}
-          tierConflictInline={panel.tierConflictInline}
-          serviceKeyConflictInline={panel.serviceKeyConflictInline}
-          discountUsageLoadState={panel.discountUsageLoadState}
-        />
-
-        {error ? <AdminInlineError>{error}</AdminInlineError> : null}
-      </AdminEditorCard>
+        <form
+          id={SERVICE_EDITOR_FORM_ID}
+          className='space-y-4'
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleSubmit();
+          }}
+        >
+          <ServiceDetailFormBody
+            isEditMode={mode === 'edit'}
+            serviceType={panel.serviceType}
+            onServiceTypeChange={track(panel.setServiceType)}
+            serviceForm={panel.serviceForm}
+            onServiceFormChange={track(panel.setServiceForm)}
+            trainingForm={panel.trainingForm}
+            onTrainingFormChange={track(panel.setTrainingForm)}
+            eventForm={panel.eventForm}
+            onEventFormChange={track(panel.setEventForm)}
+            consultationForm={panel.consultationForm}
+            onConsultationFormChange={track(panel.setConsultationForm)}
+            bookingSystem={panel.bookingSystem}
+            onBookingSystemChange={track(panel.setBookingSystem)}
+            coverFileName={panel.coverFileName}
+            onCoverFileNameChange={panel.setCoverFileName}
+            serviceTier={panel.serviceTier}
+            onServiceTierChange={track(panel.setServiceTier)}
+            locationId={panel.locationId}
+            onLocationIdChange={track(panel.setLocationId)}
+            locationOptions={locationOptions}
+            isLoadingLocations={isLoadingLocations}
+            locationError={locationError}
+            hasLocationOptions={panel.hasLocationOptions}
+            selectedLocationValue={panel.selectedLocationValue}
+            locationExists={panel.locationExists}
+            showDefaultLocationField={panel.showDefaultLocationField}
+            tierInvalid={panel.tierInvalid}
+            tierConflictInline={panel.tierConflictInline}
+            serviceKeyConflictInline={panel.serviceKeyConflictInline}
+            discountUsageLoadState={panel.discountUsageLoadState}
+          />
+        </form>
+      </AdminEditorPanel>
       <ConfirmDialog {...panel.confirmDialogProps} />
     </>
   );

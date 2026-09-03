@@ -1,26 +1,30 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { DeleteIcon } from '@/components/icons/action-icons';
+import { AdminCreateButton } from '@/components/ui/admin-create-button';
 import {
-  AdminDataTable,
-  AdminDataTableBody,
   AdminDataTableCell,
-  AdminDataTableHead,
+  AdminDataTableCellMeta,
   AdminDataTableHeadCell,
   AdminDataTableOperationsHeadCell,
 } from '@/components/ui/admin-data-table';
-import { AdminEditorCard } from '@/components/ui/admin-editor-card';
+import { AdminDiscardChangesDialog } from '@/components/ui/admin-discard-changes-dialog';
+import { AdminEditorActions, AdminEditorPanel } from '@/components/ui/admin-editor-panel';
+import { AdminExpandableRow } from '@/components/ui/admin-expandable-row';
+import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
+import { AdminFilterBar, AdminFilterField } from '@/components/ui/admin-filter-bar';
+import { AdminInlineError } from '@/components/ui/admin-inline-error';
+import { AdminRecordTable } from '@/components/ui/admin-record-table';
+import { AdminRowActions } from '@/components/ui/admin-row-actions';
+import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
-import { AdminInlineError } from '@/components/ui/admin-inline-error';
-import { Label } from '@/components/ui/label';
-import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
-import { AdminTableToolbar } from '@/components/ui/admin-table-toolbar';
 import { Select } from '@/components/ui/select';
-import { DeleteIcon } from '@/components/icons/action-icons';
-import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
+import { useEntityPanelEditorShell } from '@/hooks/use-entity-panel-editor-shell';
+import { DRAFT_RECORD_ID } from '@/hooks/use-expanded-record';
+import { useExpandedRecordForm } from '@/hooks/use-expanded-record-form';
 import { useGeocodeVenueAddress } from '@/hooks/use-geocode-venue-address';
 import { formatGeocodeErrorMessage } from '@/hooks/hook-errors';
 import { formatEnumLabel, formatLocationLabel } from '@/lib/format';
@@ -30,6 +34,12 @@ import type { components } from '@/types/generated/admin-api.generated';
 import type { GeographicAreaSummary, LocationSummary, VenueFilters } from '@/types/services';
 
 type ApiSchemas = components['schemas'];
+
+/** Query parameter that mirrors the expanded venue row (`?venue=<id>` or `?venue=new`). */
+export const ADMIN_VENUE_QUERY_PARAM = 'venue';
+
+const COLUMN_COUNT = 5;
+const EDITOR_FORM_ID = 'venue-editor-form';
 
 export interface VenuesPanelProps {
   venues: LocationSummary[];
@@ -52,6 +62,11 @@ export interface VenuesPanelProps {
   onDelete: (venueId: string) => Promise<void> | void;
 }
 
+/**
+ * Table-first venues list: area and search filters with `New venue` on top,
+ * one expandable row per venue with its editor (name, area, address,
+ * coordinates) beneath, and Delete in the Operations column.
+ */
 export function VenuesPanel({
   venues,
   geographicAreas,
@@ -70,31 +85,73 @@ export function VenuesPanel({
   onDelete,
 }: VenuesPanelProps) {
   const { geocode: geocodeLocation, isGeocoding } = useGeocodeVenueAddress();
-  const [confirmDialogProps, requestConfirm] = useConfirmDialog();
-  const [editorMode, setEditorMode] = useState<'create' | 'edit'>('create');
-  const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
+  const shell = useEntityPanelEditorShell({ paramName: ADMIN_VENUE_QUERY_PARAM });
+  const {
+    confirmDialogProps,
+    requestConfirm,
+    deleteActionError,
+    setDeleteActionError,
+    editorMode,
+    selectedId,
+    expanded,
+    track,
+    clearDirty,
+  } = shell;
   const [name, setName] = useState('');
-  const [areaId, setAreaIdState] = useState('');
-  const [address, setAddressState] = useState('');
-  const [lat, setLatState] = useState('');
-  const [lng, setLngState] = useState('');
+  const [areaId, setAreaId] = useState('');
+  const [address, setAddress] = useState('');
+  const [lat, setLat] = useState('');
+  const [lng, setLng] = useState('');
   const [geocodeError, setGeocodeError] = useState('');
-  const setAreaId = (v: string) => {
+  const [deletingVenueId, setDeletingVenueId] = useState<string | null>(null);
+
+  const resetForm = useCallback(() => {
+    setName('');
+    setAreaId('');
+    setAddress('');
+    setLat('');
+    setLng('');
     setGeocodeError('');
-    setAreaIdState(v);
-  };
-  const setAddress = (v: string) => {
+    clearDirty();
+  }, [clearDirty]);
+  const applyRow = useCallback(
+    (venue: LocationSummary) => {
+      setName(venue.name ?? '');
+      setAreaId(venue.areaId);
+      setAddress(venue.address ?? '');
+      setLat(venue.lat !== null ? String(venue.lat) : '');
+      setLng(venue.lng !== null ? String(venue.lng) : '');
+      setGeocodeError('');
+      clearDirty();
+    },
+    [clearDirty]
+  );
+  useExpandedRecordForm<LocationSummary>({
+    expandedId: expanded.expandedId,
+    rows: venues,
+    isLoading,
+    applyRow,
+    reset: resetForm,
+    collapse: expanded.collapse,
+  });
+
+  const setNameTracked = track(setName);
+  const setAreaIdTracked = track((value: string) => {
     setGeocodeError('');
-    setAddressState(v);
-  };
-  const setLat = (v: string) => {
+    setAreaId(value);
+  });
+  const setAddressTracked = track((value: string) => {
     setGeocodeError('');
-    setLatState(v);
-  };
-  const setLng = (v: string) => {
+    setAddress(value);
+  });
+  const setLatTracked = track((value: string) => {
     setGeocodeError('');
-    setLngState(v);
-  };
+    setLat(value);
+  });
+  const setLngTracked = track((value: string) => {
+    setGeocodeError('');
+    setLng(value);
+  });
 
   const areaOptions = useMemo(() => {
     return [...geographicAreas].sort((a, b) => {
@@ -104,12 +161,11 @@ export function VenuesPanel({
       return a.name.localeCompare(b.name);
     });
   }, [geographicAreas]);
-
   const areaById = useMemo(() => new Map(geographicAreas.map((a) => [a.id, a])), [geographicAreas]);
 
   const selectedVenue = useMemo(
-    () => venues.find((entry) => entry.id === selectedVenueId) ?? null,
-    [venues, selectedVenueId]
+    () => venues.find((entry) => entry.id === selectedId) ?? null,
+    [venues, selectedId]
   );
   const selectedVenueLocked = selectedVenue?.lockedFromPartnerOrg ?? false;
 
@@ -118,30 +174,9 @@ export function VenuesPanel({
   const lngTrim = lng.trim();
   const latNum = parseOptionalCoordinate(lat);
   const lngNum = parseOptionalCoordinate(lng);
-  const {
-    latParseError,
-    lngParseError,
-    latRangeError,
-    lngRangeError,
-    coordinatesInvalid,
-    onlyOneCoordinate,
-  } = computeLatLngErrors(lat, lng);
-  const canSubmit =
-    areasReady &&
-    Boolean(areaId) &&
-    !coordinatesInvalid &&
-    !onlyOneCoordinate;
-
-  const resetCreateForm = () => {
-    setEditorMode('create');
-    setSelectedVenueId(null);
-    setName('');
-    setAreaIdState('');
-    setAddressState('');
-    setLatState('');
-    setLngState('');
-    setGeocodeError('');
-  };
+  const { latParseError, lngParseError, latRangeError, lngRangeError, coordinatesInvalid, onlyOneCoordinate } =
+    computeLatLngErrors(lat, lng);
+  const canSubmit = areasReady && Boolean(areaId) && !coordinatesInvalid && !onlyOneCoordinate;
 
   const fillCoordinatesFromAddress = async () => {
     const trimmedAddress = address.trim();
@@ -150,18 +185,12 @@ export function VenuesPanel({
     }
     setGeocodeError('');
     try {
-      const result = await geocodeLocation({
-        area_id: areaId,
-        address: trimmedAddress,
-      });
-      setLat(String(result.lat));
-      setLng(String(result.lng));
-    } catch (error) {
+      const result = await geocodeLocation({ area_id: areaId, address: trimmedAddress });
+      setLatTracked(String(result.lat));
+      setLngTracked(String(result.lng));
+    } catch (caught) {
       setGeocodeError(
-        formatGeocodeErrorMessage(
-          error,
-          'Geocoding failed. Check the address and geographic area, then try again.'
-        )
+        formatGeocodeErrorMessage(caught, 'Geocoding failed. Check the address and geographic area, then try again.')
       );
     }
   };
@@ -182,7 +211,8 @@ export function VenuesPanel({
     try {
       if (editorMode === 'create') {
         await onCreate(payload);
-        resetCreateForm();
+        clearDirty();
+        expanded.collapse();
         return;
       }
       if (!selectedVenue) {
@@ -195,29 +225,19 @@ export function VenuesPanel({
           lat: latValue,
           lng: lngValue,
         });
-        return;
+      } else {
+        await onUpdate(selectedVenue.id, payload);
       }
-      await onUpdate(selectedVenue.id, payload);
+      clearDirty();
     } catch {
       // Keep inline form state visible to let users retry.
     }
   };
 
-  const applyVenueSelection = (entry: LocationSummary) => {
-    setSelectedVenueId(entry.id);
-    setEditorMode('edit');
-    setName(entry.name ?? '');
-    setAreaId(entry.areaId);
-    setAddress(entry.address ?? '');
-    setLat(entry.lat !== null ? String(entry.lat) : '');
-    setLng(entry.lng !== null ? String(entry.lng) : '');
-  };
-
   const handleDeleteVenue = async (entry: LocationSummary) => {
-    const label = formatLocationLabel(entry);
     const confirmed = await requestConfirm({
       title: 'Delete venue',
-      description: `Delete ${label}? This action cannot be undone.`,
+      description: `Delete ${formatLocationLabel(entry)}? This action cannot be undone.`,
       confirmLabel: 'Delete',
       cancelLabel: 'Cancel',
       variant: 'danger',
@@ -225,149 +245,174 @@ export function VenuesPanel({
     if (!confirmed) {
       return;
     }
-    await onDelete(entry.id);
-    if (selectedVenueId === entry.id) {
-      resetCreateForm();
+    setDeleteActionError('');
+    setDeletingVenueId(entry.id);
+    try {
+      await onDelete(entry.id);
+      if (selectedId === entry.id) {
+        clearDirty();
+        expanded.collapse();
+      }
+    } catch (caught) {
+      setDeleteActionError(caught instanceof Error ? caught.message : 'Failed to delete venue');
+    } finally {
+      setDeletingVenueId(null);
     }
   };
 
-  const editorFormId = 'venues-editor-form';
+  const validationError = latParseError || lngParseError
+    ? 'Latitude and longitude must be valid numbers.'
+    : onlyOneCoordinate
+      ? 'Provide both latitude and longitude, or leave both empty.'
+      : latRangeError || lngRangeError
+        ? 'Latitude must be between -90 and 90; longitude between -180 and 180.'
+        : '';
+
+  const detail = (
+    <AdminEditorPanel
+      status={
+        geocodeError || validationError ? (
+          <AdminInlineError>{geocodeError || validationError}</AdminInlineError>
+        ) : null
+      }
+      actions={
+        <AdminEditorActions
+          mode={editorMode}
+          formId={EDITOR_FORM_ID}
+          isSaving={isSaving}
+          submitDisabled={!canSubmit}
+          submitLabel={editorMode === 'create' ? 'Create venue' : 'Update venue'}
+        >
+          <Button
+            type='button'
+            variant='secondary'
+            disabled={isSaving || !areasReady || !areaId || !address.trim()}
+            loading={isGeocoding}
+            loadingLabel='Looking up…'
+            onClick={() => void fillCoordinatesFromAddress()}
+          >
+            Fill coordinates from address
+          </Button>
+        </AdminEditorActions>
+      }
+    >
+      <form
+        id={EDITOR_FORM_ID}
+        className='space-y-4'
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleSubmit();
+        }}
+      >
+        <AdminFieldGrid columns={2}>
+          <AdminField
+            label='Location name'
+            htmlFor='venue-name'
+            hint={
+              selectedVenueLocked && selectedVenue
+                ? `Name is managed from the partner organisation${
+                    selectedVenue.partnerOrganizationLabels.length > 0
+                      ? ` (${selectedVenue.partnerOrganizationLabels.join(', ')})`
+                      : ''
+                  }.`
+                : undefined
+            }
+          >
+            <Input
+              id='venue-name'
+              value={name}
+              onChange={(event) => setNameTracked(event.target.value)}
+              disabled={isSaving || selectedVenueLocked}
+              placeholder='e.g. Central Studio'
+            />
+          </AdminField>
+          <AdminField label='Geographic area' htmlFor='venue-area' required>
+            <Select
+              id='venue-area'
+              value={areaId}
+              onChange={(event) => setAreaIdTracked(event.target.value)}
+              disabled={!areasReady || isSaving}
+            >
+              <option value=''>{areasLoading ? 'Loading areas…' : 'Select an area'}</option>
+              {areaOptions.map((area) => (
+                <option key={area.id} value={area.id}>
+                  {area.name} ({formatEnumLabel(area.level)})
+                </option>
+              ))}
+            </Select>
+          </AdminField>
+        </AdminFieldGrid>
+        <AdminFieldGrid columns={1}>
+          <AdminField label='Address' htmlFor='venue-address'>
+            <Input
+              id='venue-address'
+              value={address}
+              onChange={(event) => setAddressTracked(event.target.value)}
+              disabled={isSaving}
+            />
+          </AdminField>
+        </AdminFieldGrid>
+        <AdminFieldGrid columns={2}>
+          <AdminField label='Latitude' htmlFor='venue-lat'>
+            <Input
+              id='venue-lat'
+              value={lat}
+              onChange={(event) => setLatTracked(event.target.value)}
+              disabled={isSaving}
+              inputMode='decimal'
+            />
+          </AdminField>
+          <AdminField label='Longitude' htmlFor='venue-lng'>
+            <Input
+              id='venue-lng'
+              value={lng}
+              onChange={(event) => setLngTracked(event.target.value)}
+              disabled={isSaving}
+              inputMode='decimal'
+            />
+          </AdminField>
+        </AdminFieldGrid>
+      </form>
+    </AdminEditorPanel>
+  );
+
+  const listError = [error, deleteActionError].filter(Boolean).join(' • ');
 
   return (
-    <div className='space-y-6'>
-      <AdminEditorCard
-        title='Venue'
-        description='Create a venue or select a row below to update. Geographic area is required.'
-        actions={
-          <>
-            <Button
-              type='button'
-              variant='secondary'
-              disabled={isSaving || !areasReady || !areaId || !address.trim()}
-              loading={isGeocoding}
-              loadingLabel='Looking up…'
-              onClick={() => void fillCoordinatesFromAddress()}
-            >
-              Fill coordinates from address
-            </Button>
-            {editorMode === 'edit' ? (
-              <Button type='button' variant='secondary' onClick={resetCreateForm} disabled={isSaving}>
-                Cancel
-              </Button>
-            ) : null}
-            <Button
-              type='submit'
-              form={editorFormId}
-              disabled={isSaving || !canSubmit}
-            >
-              {editorMode === 'create' ? 'Create venue' : 'Update venue'}
-            </Button>
-          </>
-        }
-      >
-        <form
-          id={editorFormId}
-          className='space-y-4'
-          onSubmit={(event) => {
-            event.preventDefault();
-            void handleSubmit();
-          }}
-        >
-          <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
-            <div>
-              <Label htmlFor='venue-name'>Location name</Label>
-              <Input
-                id='venue-name'
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                disabled={isSaving || selectedVenueLocked}
-                placeholder='e.g. Central Studio'
-              />
-              {selectedVenueLocked && selectedVenue ? (
-                <p className='mt-1 text-sm text-slate-600'>
-                  Name is managed from the partner organisation
-                  {selectedVenue.partnerOrganizationLabels.length > 0
-                    ? ` (${selectedVenue.partnerOrganizationLabels.join(', ')})`
-                    : ''}
-                  .
-                </p>
-              ) : null}
-            </div>
-            <div>
-              <Label htmlFor='venue-area'>Geographic area</Label>
-              <Select
-                id='venue-area'
-                value={areaId}
-                onChange={(event) => setAreaId(event.target.value)}
-                disabled={!areasReady || isSaving}
-              >
-                <option value=''>{areasLoading ? 'Loading areas…' : 'Select an area'}</option>
-                {areaOptions.map((area) => (
-                  <option key={area.id} value={area.id}>
-                    {area.name} ({formatEnumLabel(area.level)})
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className='sm:col-span-2'>
-              <Label htmlFor='venue-address'>Address</Label>
-              <Input
-                id='venue-address'
-                value={address}
-                onChange={(event) => setAddress(event.target.value)}
-                disabled={isSaving}
-              />
-            </div>
-          </div>
-          <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
-            <div>
-              <Label htmlFor='venue-lat'>Latitude</Label>
-              <Input
-                id='venue-lat'
-                value={lat}
-                onChange={(event) => setLat(event.target.value)}
-                disabled={isSaving}
-                inputMode='decimal'
-              />
-            </div>
-            <div>
-              <Label htmlFor='venue-lng'>Longitude</Label>
-              <Input
-                id='venue-lng'
-                value={lng}
-                onChange={(event) => setLng(event.target.value)}
-                disabled={isSaving}
-                inputMode='decimal'
-              />
-            </div>
-          </div>
-          {geocodeError ? <AdminInlineError>{geocodeError}</AdminInlineError> : null}
-          {(latParseError || lngParseError) ? (
-            <AdminInlineError>Latitude and longitude must be valid numbers.</AdminInlineError>
-          ) : null}
-          {onlyOneCoordinate ? (
-            <AdminInlineError>Provide both latitude and longitude, or leave both empty.</AdminInlineError>
-          ) : null}
-          {(latRangeError || lngRangeError) ? (
-            <AdminInlineError>
-              Latitude must be between -90 and 90; longitude between -180 and 180.
-            </AdminInlineError>
-          ) : null}
-        </form>
-      </AdminEditorCard>
-
-      <PaginatedTableCard
-        title='Venues'
+    <>
+      <ConfirmDialog {...confirmDialogProps} />
+      <AdminDiscardChangesDialog prompt={expanded.discardPrompt} />
+      <AdminRecordTable
+        aria-label='Venues'
+        columnCount={COLUMN_COUNT}
+        rowCount={venues.length}
         isLoading={isLoading}
         isLoadingMore={isLoadingMore}
         hasMore={hasMore}
-        error={error}
-        loadingLabel='Loading venues...'
         onLoadMore={onLoadMore}
-        toolbar={
-          <AdminTableToolbar>
-            <div className='min-w-[160px]'>
-              <Label htmlFor='venues-filter-area'>Area</Label>
+        error={listError}
+        errorTitle='Venues'
+        emptyLabel='No venues match the current filters.'
+        filters={
+          <AdminFilterBar
+            trailing={
+              <AdminCreateButton
+                label='New venue'
+                active={expanded.isDraftOpen}
+                onClick={() => (expanded.isDraftOpen ? expanded.collapse() : expanded.openDraft())}
+              />
+            }
+          >
+            <AdminFilterField label='Search' htmlFor='venues-filter-search' className='sm:basis-72'>
+              <Input
+                id='venues-filter-search'
+                value={filters.search}
+                autoComplete='off'
+                onChange={(event) => onFilterChange('search', event.target.value)}
+                placeholder='Name or address'
+              />
+            </AdminFilterField>
+            <AdminFilterField label='Area' htmlFor='venues-filter-area' className='sm:basis-48'>
               <Select
                 id='venues-filter-area'
                 value={filters.areaId}
@@ -380,62 +425,94 @@ export function VenuesPanel({
                   </option>
                 ))}
               </Select>
-            </div>
-            <div className='min-w-[200px] flex-1'>
-              <Label htmlFor='venues-filter-search'>Search</Label>
-              <Input
-                id='venues-filter-search'
-                value={filters.search}
-                onChange={(event) => onFilterChange('search', event.target.value)}
-                placeholder='Name or address'
-              />
-            </div>
-          </AdminTableToolbar>
+            </AdminFilterField>
+          </AdminFilterBar>
+        }
+        head={
+          <tr>
+            <AdminDataTableHeadCell className='w-10' />
+            <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Address</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Area</AdminDataTableHeadCell>
+            <AdminDataTableOperationsHeadCell />
+          </tr>
         }
       >
-        <AdminDataTable tableClassName='min-w-[520px]'>
-          <AdminDataTableHead>
-            <tr>
-              <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Address</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Area</AdminDataTableHeadCell>
-              <AdminDataTableOperationsHeadCell />
-            </tr>
-          </AdminDataTableHead>
-          <AdminDataTableBody>
-            {venues.map((row) => {
-              const area = areaById.get(row.areaId);
-              return (
-                <tr
-                  key={row.id}
-                  className={`cursor-pointer transition ${
-                    selectedVenueId === row.id ? 'bg-slate-100' : 'hover:bg-slate-50'
-                  }`}
-                  onClick={() => applyVenueSelection(row)}
-                >
-                  <AdminDataTableCell>{row.name?.trim() || '—'}</AdminDataTableCell>
-                  <AdminDataTableCell>{row.address?.trim() || '—'}</AdminDataTableCell>
-                  <AdminDataTableCell>{area?.name ?? row.areaId}</AdminDataTableCell>
-                  <AdminDataTableCell className='text-right' onClick={(event) => event.stopPropagation()}>
-                    <Button
-                      type='button'
-                      size='sm'
-                      variant='danger'
-                      disabled={isSaving || row.lockedFromPartnerOrg}
-                      onClick={() => void handleDeleteVenue(row)}
-                      aria-label='Delete venue'
-                      title='Delete venue'
-                    >
-                      <DeleteIcon className='h-4 w-4' />
-                    </Button>
+        {expanded.isDraftOpen ? (
+          <AdminExpandableRow
+            id={DRAFT_RECORD_ID}
+            label='new venue'
+            expanded
+            isDraft
+            onToggle={expanded.collapse}
+            columnCount={COLUMN_COUNT}
+            cells={
+              <>
+                <AdminDataTableCell className='font-medium text-slate-900'>New venue</AdminDataTableCell>
+                <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+              </>
+            }
+            actions={null}
+            detail={detail}
+          />
+        ) : null}
+        {venues.map((venue) => {
+          const isOpen = expanded.isExpanded(venue.id);
+          const areaName = areaById.get(venue.areaId)?.name ?? venue.areaId;
+          const addressLabel = venue.address?.trim() || '—';
+          const isDeleting = deletingVenueId === venue.id;
+          return (
+            <AdminExpandableRow
+              key={venue.id}
+              id={venue.id}
+              label={formatLocationLabel(venue)}
+              expanded={isOpen}
+              onToggle={() => expanded.toggle(venue.id)}
+              columnCount={COLUMN_COUNT}
+              cells={
+                <>
+                  <AdminDataTableCell className='font-medium text-slate-900'>
+                    {venue.name?.trim() || '—'}
+                    <AdminDataTableCellMeta>
+                      {addressLabel} · {areaName}
+                    </AdminDataTableCellMeta>
                   </AdminDataTableCell>
-                </tr>
-              );
-            })}
-          </AdminDataTableBody>
-        </AdminDataTable>
-      </PaginatedTableCard>
-      <ConfirmDialog {...confirmDialogProps} />
-    </div>
+                  <AdminDataTableCell priority='secondary' className='text-slate-700'>
+                    {addressLabel}
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='secondary' className='text-slate-700'>
+                    {areaName}
+                  </AdminDataTableCell>
+                </>
+              }
+              actions={
+                <AdminRowActions
+                  actions={[
+                    {
+                      key: 'delete',
+                      label: venue.lockedFromPartnerOrg
+                        ? 'Venue is managed by a partner organisation'
+                        : isDeleting
+                          ? 'Deleting venue'
+                          : 'Delete venue',
+                      icon: <DeleteIcon className='h-4 w-4' />,
+                      tone: 'danger',
+                      disabled: isSaving || isDeleting || venue.lockedFromPartnerOrg,
+                      onClick: () => void handleDeleteVenue(venue),
+                    },
+                  ]}
+                />
+              }
+              detail={isOpen ? detail : null}
+            />
+          );
+        })}
+      </AdminRecordTable>
+    </>
   );
 }

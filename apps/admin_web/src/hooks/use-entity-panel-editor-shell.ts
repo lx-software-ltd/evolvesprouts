@@ -8,6 +8,8 @@ import { DRAFT_RECORD_ID, useExpandedRecord } from '@/hooks/use-expanded-record'
 export interface UseEntityPanelEditorShellOptions {
   /** Query parameter that mirrors the expanded record (`contact`, `family`, ...). */
   paramName: string;
+  /** Called after the expanded row changes (including to `null`); see `useExpandedRecord`. */
+  onExpandedChange?: (expandedId: string | null) => void;
 }
 
 /**
@@ -16,7 +18,7 @@ export interface UseEntityPanelEditorShellOptions {
  * dialog, and the row-scoped delete error. `editorMode` and `selectedId`
  * derive from the expanded row so there is one source of truth.
  */
-export function useEntityPanelEditorShell({ paramName }: UseEntityPanelEditorShellOptions) {
+export function useEntityPanelEditorShell({ paramName, onExpandedChange }: UseEntityPanelEditorShellOptions) {
   const [confirmDialogProps, requestConfirm] = useConfirmDialog();
   const [deleteActionError, setDeleteActionError] = useState('');
   const dirtyRef = useRef(false);
@@ -26,6 +28,7 @@ export function useEntityPanelEditorShell({ paramName }: UseEntityPanelEditorShe
   const expanded = useExpandedRecord({
     paramName,
     isDirty: () => dirtyRef.current || externalDirtyRef.current(),
+    onChange: onExpandedChange,
   });
 
   const markDirty = useCallback(() => {

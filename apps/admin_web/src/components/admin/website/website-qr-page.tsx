@@ -3,7 +3,10 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { PublicSiteQrExportPanel } from '@/components/admin/public-site-qr-export-panel';
-import { AdminEditorCard } from '@/components/ui/admin-editor-card';
+import { AdminEditorPanel } from '@/components/ui/admin-editor-panel';
+import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
+import { AdminInlineError } from '@/components/ui/admin-inline-error';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
@@ -132,17 +135,13 @@ export function WebsiteQrPage() {
   const downloadLocaleSuffix = isTrainingSite ? 'training' : locale;
   const downloadBase = `${normalizedSrcForQuery ? `${normalizedSrcForQuery}-` : ''}page-${pathToDownloadBase(normalizedPathResult.path || '/')}-${downloadLocaleSuffix}`;
 
+  const optionsDisabled = Boolean(configError) || Boolean(pathError) || !builtUrl;
+
   return (
-    <div className='space-y-6'>
-      <AdminEditorCard
-        title='Website QR codes'
-        description='Create printable QR codes for the public website (www) or the training site. Choose the site, then a page path. Public URLs include a locale prefix and trailing slash; training URLs use paths only (no locale).'
-      >
-        <div
-          className={`grid grid-cols-1 gap-4 ${isTrainingSite ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}
-        >
-          <div>
-            <Label htmlFor='website-qr-site-target'>Site</Label>
+    <Card aria-label='Website QR codes'>
+      <AdminEditorPanel>
+        <AdminFieldGrid columns={4}>
+          <AdminField label='Site' htmlFor='website-qr-site-target'>
             <Select
               id='website-qr-site-target'
               value={siteTarget}
@@ -159,9 +158,16 @@ export function WebsiteQrPage() {
                 </option>
               ))}
             </Select>
-          </div>
-          <div>
-            <Label htmlFor='website-qr-preset-page'>Page</Label>
+          </AdminField>
+          <AdminField
+            label='Page'
+            htmlFor='website-qr-preset-page'
+            hint={
+              isTrainingSite
+                ? 'Training URLs use paths only (no locale).'
+                : 'Public URLs include a locale prefix and trailing slash.'
+            }
+          >
             <Select
               id='website-qr-preset-page'
               value={isCustom ? CUSTOM_PRESET_VALUE : presetValue}
@@ -178,10 +184,9 @@ export function WebsiteQrPage() {
               ))}
               <option value={CUSTOM_PRESET_VALUE}>Custom path…</option>
             </Select>
-          </div>
+          </AdminField>
           {!isTrainingSite ? (
-            <div>
-              <Label htmlFor='website-qr-locale'>Locale</Label>
+            <AdminField label='Locale' htmlFor='website-qr-locale'>
               <Select
                 id='website-qr-locale'
                 value={locale}
@@ -194,70 +199,81 @@ export function WebsiteQrPage() {
                   </option>
                 ))}
               </Select>
-            </div>
+            </AdminField>
           ) : null}
-        </div>
-        {isCustom ? (
-          <div>
-            <Label htmlFor='website-qr-custom-path'>Custom path</Label>
-            <Input
-              id='website-qr-custom-path'
-              value={customPathInput}
-              onChange={(event) => setCustomPathInput(event.target.value)}
-              placeholder={
+          {isCustom ? (
+            <AdminField
+              label='Custom path'
+              htmlFor='website-qr-custom-path'
+              span={isTrainingSite ? 2 : 1}
+              error={pathError || undefined}
+              errorId='website-qr-custom-path-error'
+              hint={
                 isTrainingSite
-                  ? 'e.g. /polls/workshop-food-jun-26'
-                  : 'e.g. /about-us or /easter-2026-montessori-play-coaching-workshop'
+                  ? 'Site path only (letters, numbers, hyphens per segment). Omit the domain; the training site origin is added automatically.'
+                  : 'Site path only (letters, numbers, hyphens per segment). Omit the locale; it is added automatically for the public website.'
               }
-              disabled={Boolean(configError)}
-              autoComplete='off'
-            />
-            <p className='mt-1 text-xs text-slate-500'>
-              Site path only (letters, numbers, hyphens per segment).
-              {isTrainingSite
-                ? ' Omit the domain; the training site origin is added automatically.'
-                : ' Omit the locale; it is added automatically for the public website.'}
-            </p>
-          </div>
-        ) : null}
-        {pathError ? <p className='text-sm text-red-600'>{pathError}</p> : null}
-        <div className='space-y-2'>
-          <div className='flex items-center gap-2'>
-            <input
-              id='website-qr-append-src'
-              type='checkbox'
-              className='h-4 w-4 rounded border-slate-300 text-slate-900'
-              checked={appendSrcQuery}
-              onChange={(event) => {
-                setAppendSrcQuery(event.target.checked);
-              }}
-              disabled={Boolean(configError) || Boolean(pathError) || !builtUrl}
-            />
-            <Label htmlFor='website-qr-append-src' className='mb-0 cursor-pointer font-normal'>
-              Append <code className='rounded bg-slate-100 px-1 py-0.5 text-xs'>src</code> query
-              parameter
-            </Label>
-          </div>
+            >
+              <Input
+                id='website-qr-custom-path'
+                value={customPathInput}
+                onChange={(event) => setCustomPathInput(event.target.value)}
+                placeholder={
+                  isTrainingSite
+                    ? 'e.g. /polls/workshop-food-jun-26'
+                    : 'e.g. /about-us or /easter-2026-montessori-play-coaching-workshop'
+                }
+                disabled={Boolean(configError)}
+                autoComplete='off'
+                aria-invalid={pathError ? true : undefined}
+                aria-describedby={pathError ? 'website-qr-custom-path-error' : undefined}
+              />
+            </AdminField>
+          ) : null}
+        </AdminFieldGrid>
+        {!isCustom && pathError ? <AdminInlineError>{pathError}</AdminInlineError> : null}
+        <AdminFieldGrid columns={4}>
+          <AdminField span={2}>
+            <div className='flex items-center gap-2 sm:h-9'>
+              <input
+                id='website-qr-append-src'
+                type='checkbox'
+                className='h-4 w-4 rounded border-slate-300 text-slate-900'
+                checked={appendSrcQuery}
+                onChange={(event) => {
+                  setAppendSrcQuery(event.target.checked);
+                }}
+                disabled={optionsDisabled}
+              />
+              <Label htmlFor='website-qr-append-src' className='mb-0 cursor-pointer font-normal'>
+                Append <code className='rounded bg-slate-100 px-1 py-0.5 text-xs'>src</code> query parameter
+              </Label>
+            </div>
+          </AdminField>
           {appendSrcQuery ? (
-            <div>
-              <Label htmlFor='website-qr-src-value'>src value</Label>
+            <AdminField
+              label='src value'
+              htmlFor='website-qr-src-value'
+              span={2}
+              hint={
+                <>
+                  Adds <code className='rounded bg-slate-100 px-1'>?src=…</code> (or{' '}
+                  <code className='rounded bg-slate-100 px-1'>&amp;src=…</code>) for attribution. Leave blank to
+                  omit. Use lowercase letters, numbers, and hyphens only (same slug rules as site paths).
+                </>
+              }
+            >
               <Input
                 id='website-qr-src-value'
                 value={srcQueryValue}
                 onChange={(event) => setSrcQueryValue(sanitizePublicSiteSrcQueryInput(event.target.value))}
                 placeholder='e.g. qr'
-                disabled={Boolean(configError) || Boolean(pathError) || !builtUrl}
+                disabled={optionsDisabled}
                 autoComplete='off'
               />
-              <p className='mt-1 text-xs text-slate-500'>
-                Adds <code className='rounded bg-slate-100 px-1'>?src=…</code> (or{' '}
-                <code className='rounded bg-slate-100 px-1'>&amp;src=…</code>) for attribution. Leave
-                blank to omit. Use lowercase letters, numbers, and hyphens only (same slug rules as
-                site paths).
-              </p>
-            </div>
+            </AdminField>
           ) : null}
-        </div>
+        </AdminFieldGrid>
         <PublicSiteQrExportPanel
           builtUrl={builtUrl && !pathError ? builtUrlForQr : ''}
           configError={configError}
@@ -271,7 +287,7 @@ export function WebsiteQrPage() {
           }}
           previewUrlPresentation='referral'
         />
-      </AdminEditorCard>
-    </div>
+      </AdminEditorPanel>
+    </Card>
   );
 }

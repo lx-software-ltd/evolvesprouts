@@ -1,10 +1,12 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ComponentProps } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DiscountCodesPanel } from '@/components/admin/services/discount-codes-panel';
 import { AdminApiError } from '@/lib/api-admin-client';
 import { tryCopyTextToClipboard } from '@/lib/clipboard';
+import type { DiscountCode } from '@/types/services';
 
 vi.mock('@/lib/clipboard', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/clipboard')>();
@@ -22,6 +24,7 @@ vi.mock('@/hooks/use-service-instance-options', () => ({
     isLoading: false,
     error: '',
     loadForService: vi.fn(),
+    invalidate: vi.fn(),
   }),
 }));
 
@@ -33,6 +36,83 @@ vi.mock('@/lib/config', async (importOriginal) => {
   };
 });
 
+const baseService = {
+  id: 'svc-1',
+  instancesCount: 0,
+  serviceType: 'training_course' as const,
+  title: 'My Best Auntie',
+  serviceKey: 'my-best-auntie-training-course' as string | null,
+  serviceTier: null as string | null,
+  locationId: null as string | null,
+  bookingSystem: null,
+  description: null,
+  coverImageS3Key: null,
+  deliveryMode: 'in_person' as const,
+  status: 'published' as const,
+  createdBy: 'u',
+  createdAt: null,
+  updatedAt: null,
+  trainingDetails: {
+    pricingUnit: 'per_person' as const,
+    defaultPrice: '100',
+    defaultCurrency: 'HKD',
+  },
+  eventDetails: null,
+  consultationDetails: null,
+};
+
+function buildCode(overrides: Partial<DiscountCode> = {}): DiscountCode {
+  return {
+    id: 'dc-1',
+    code: 'SAVE10',
+    description: null,
+    discountType: 'percentage',
+    discountValue: '10',
+    currency: null,
+    validFrom: null,
+    validUntil: null,
+    maxUses: null,
+    currentUses: 0,
+    createdBy: 'u',
+    active: true,
+    serviceId: null,
+    instanceId: null,
+    createdAt: null,
+    updatedAt: null,
+    ...overrides,
+  };
+}
+
+function renderPanel(overrides: Partial<ComponentProps<typeof DiscountCodesPanel>> = {}) {
+  const onCreate = vi.fn().mockResolvedValue(undefined);
+  const onUpdate = vi.fn().mockResolvedValue(undefined);
+  const onDelete = vi.fn().mockResolvedValue(undefined);
+  render(
+    <DiscountCodesPanel
+      codes={[]}
+      filters={{ active: '', search: '', scope: '' }}
+      isLoading={false}
+      isLoadingMore={false}
+      isSaving={false}
+      hasMore={false}
+      error=''
+      serviceOptions={[{ ...baseService }]}
+      onFilterChange={vi.fn()}
+      onLoadMore={vi.fn()}
+      onCreate={onCreate}
+      onUpdate={onUpdate}
+      onDelete={onDelete}
+      {...overrides}
+    />
+  );
+  return { onCreate, onUpdate, onDelete };
+}
+
+async function openDraft() {
+  fireEvent.click(screen.getByRole('button', { name: 'New code' }));
+  return screen.findByLabelText(/^Code/);
+}
+
 describe('DiscountCodesPanel', () => {
   beforeEach(() => {
     mockTryCopyTextToClipboard.mockImplementation(async (text: string) => {
@@ -40,56 +120,38 @@ describe('DiscountCodesPanel', () => {
       return mod.tryCopyTextToClipboard(text);
     });
   });
+  afterEach(() => {
+    window.history.replaceState(null, '', '/services');
+  });
 
-  const baseService = {
-    id: 'svc-1',
-    instancesCount: 0,
-    serviceType: 'training_course' as const,
-    title: 'My Best Auntie',
-    serviceKey: 'my-best-auntie-training-course' as string | null,
-    serviceTier: null as string | null,
-    locationId: null as string | null,
-    bookingSystem: null,
-    description: null,
-    coverImageS3Key: null,
-    deliveryMode: 'in_person' as const,
-    status: 'published' as const,
-    createdBy: 'u',
-    createdAt: null,
-    updatedAt: null,
-    trainingDetails: {
-      pricingUnit: 'per_person' as const,
-      defaultPrice: '100',
-      defaultCurrency: 'HKD',
-    },
-    eventDetails: null,
-    consultationDetails: null,
-  };
+  it('renders a table-first list without an editor card until a row or the draft opens', () => {
+    renderPanel({ codes: [buildCode()] });
+
+    expect(screen.getByRole('region', { name: 'Discount codes' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Code/)).not.toBeInTheDocument();
+    const columnHeaders = screen.getAllByRole('columnheader').map((el) => el.textContent?.trim() ?? '');
+    expect(columnHeaders).toEqual([
+      '',
+      'Code',
+      'Valid from',
+      'Valid until',
+      'Value',
+      'Uses',
+      'Status',
+      'Operations',
+    ]);
+    expect(screen.getByRole('button', { name: 'Expand SAVE10' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy discount code' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'More actions' })).toBeInTheDocument();
+  });
 
   it('includes service and instance selects and sends scope in create payload', async () => {
-    const onCreate = vi.fn().mockResolvedValue(undefined);
-    const serviceOptions = [{ ...baseService }];
+    const { onCreate } = renderPanel();
 
-    render(
-      <DiscountCodesPanel
-        codes={[]}
-        filters={{ active: '', search: '', scope: '' }}
-        isLoading={false}
-        isLoadingMore={false}
-        isSaving={false}
-        hasMore={false}
-        error=''
-        serviceOptions={serviceOptions}
-        onFilterChange={vi.fn()}
-        onLoadMore={vi.fn()}
-        onCreate={onCreate}
-        onUpdate={vi.fn()}
-        onDelete={vi.fn()}
-      />,
-    );
-
-    fireEvent.change(screen.getByLabelText('Code'), { target: { value: 'TEST' } });
-    fireEvent.change(screen.getByLabelText('Value'), { target: { value: '10' } });
+    const codeInput = await openDraft();
+    fireEvent.change(codeInput, { target: { value: 'TEST' } });
+    fireEvent.change(screen.getByLabelText(/^Value/), { target: { value: '10' } });
     fireEvent.change(screen.getByLabelText('Applies to service'), {
       target: { value: 'svc-1' },
     });
@@ -102,159 +164,55 @@ describe('DiscountCodesPanel', () => {
     const payload = onCreate.mock.calls[0][0] as Record<string, unknown>;
     expect(payload.service_id).toBe('svc-1');
     expect(payload.instance_id).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
   });
 
-  it('shows referral QR action for every discount row', () => {
-    const row = {
-      id: 'dc-1',
-      code: 'SAVE10',
-      description: null,
-      discountType: 'percentage' as const,
-      discountValue: '10',
-      currency: null,
-      validFrom: null,
-      validUntil: null,
-      maxUses: null,
-      currentUses: 0,
-      createdBy: 'u',
-      active: true,
-      serviceId: null,
-      instanceId: null,
-      createdAt: null,
-      updatedAt: null,
-    };
+  it('offers the referral QR action in the overflow menu for every discount row', async () => {
+    const user = userEvent.setup();
+    renderPanel({ codes: [buildCode()] });
 
-    render(
-      <DiscountCodesPanel
-        codes={[row]}
-        filters={{ active: '', search: '', scope: '' }}
-        isLoading={false}
-        isLoadingMore={false}
-        isSaving={false}
-        hasMore={false}
-        error=''
-        serviceOptions={[{ ...baseService }]}
-        onFilterChange={vi.fn()}
-        onLoadMore={vi.fn()}
-        onCreate={vi.fn()}
-        onUpdate={vi.fn()}
-        onDelete={vi.fn()}
-      />,
-    );
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
 
-    expect(screen.getByRole('button', { name: 'Link and QR' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Link and QR' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Delete discount code' })).toBeInTheDocument();
   });
 
-  it('shows archived service title in editor when row selected while picker omits archived services until then', async () => {
+  it('shows archived service title in editor when row expanded while picker omits archived services until then', async () => {
     const user = userEvent.setup();
     const archived = {
       ...baseService,
       id: 'svc-archived',
       title: 'MBA Archived',
       status: 'archived' as const,
-      slug: 'other-slug',
     };
-    const row = {
-      id: 'dc-arch',
-      code: 'ARCH',
-      description: null,
-      discountType: 'percentage' as const,
-      discountValue: '10',
-      currency: null,
-      validFrom: null,
-      validUntil: null,
-      maxUses: null,
-      currentUses: 0,
-      createdBy: 'u',
-      active: true,
-      serviceId: 'svc-archived',
-      instanceId: null,
-      createdAt: null,
-      updatedAt: null,
-    };
+    renderPanel({
+      codes: [buildCode({ id: 'dc-arch', code: 'ARCH', serviceId: 'svc-archived' })],
+      serviceDirectoryForDisplay: [archived],
+    });
 
-    render(
-      <DiscountCodesPanel
-        codes={[row]}
-        filters={{ active: '', search: '', scope: '' }}
-        isLoading={false}
-        isLoadingMore={false}
-        isSaving={false}
-        hasMore={false}
-        error=''
-        serviceOptions={[{ ...baseService }]}
-        serviceDirectoryForDisplay={[archived]}
-        onFilterChange={vi.fn()}
-        onLoadMore={vi.fn()}
-        onCreate={vi.fn()}
-        onUpdate={vi.fn()}
-        onDelete={vi.fn()}
-      />,
-    );
+    await user.click(screen.getByRole('button', { name: 'New code' }));
+    const draftSelect = (await screen.findByLabelText('Applies to service')) as HTMLSelectElement;
+    expect([...draftSelect.options].some((opt) => opt.textContent?.includes('MBA Archived'))).toBe(false);
 
-    const serviceSelect = screen.getByLabelText('Applies to service') as HTMLSelectElement;
-    expect(
-      [...serviceSelect.options].some((opt) => opt.textContent?.includes('MBA Archived')),
-    ).toBe(false);
+    await user.click(screen.getByRole('button', { name: 'Expand ARCH' }));
 
-    await user.click(screen.getByText('ARCH'));
-
-    expect(screen.getByText('MBA Archived')).toBeInTheDocument();
-    expect(
-      [...serviceSelect.options].some((opt) => opt.textContent?.includes('MBA Archived')),
-    ).toBe(true);
+    const serviceSelect = (await screen.findByLabelText('Applies to service')) as HTMLSelectElement;
+    expect(serviceSelect.value).toBe('svc-archived');
+    expect([...serviceSelect.options].some((opt) => opt.textContent?.includes('MBA Archived'))).toBe(true);
+    expect(screen.getByLabelText(/^Code/)).toBeDisabled();
   });
 
   it('prompts before scope change when the code has current uses', async () => {
     const user = userEvent.setup();
-    const onUpdate = vi.fn().mockResolvedValue(undefined);
-    const row = {
-      id: 'dc-1',
-      code: 'USED',
-      description: null,
-      discountType: 'percentage' as const,
-      discountValue: '10',
-      currency: null,
-      validFrom: null,
-      validUntil: null,
-      maxUses: null,
-      currentUses: 3,
-      createdBy: 'u',
-      active: true,
-      serviceId: 'svc-1',
-      instanceId: null,
-      createdAt: null,
-      updatedAt: null,
-    };
+    const svc2 = { ...baseService, id: 'svc-2', title: 'Other' };
+    const { onUpdate } = renderPanel({
+      codes: [buildCode({ code: 'USED', currentUses: 3, serviceId: 'svc-1' })],
+      serviceOptions: [{ ...baseService }, svc2],
+    });
 
-    const svc2 = {
-      ...baseService,
-      id: 'svc-2',
-      title: 'Other',
-      slug: 'consultations',
-    };
-
-    render(
-      <DiscountCodesPanel
-        codes={[row]}
-        filters={{ active: '', search: '', scope: '' }}
-        isLoading={false}
-        isLoadingMore={false}
-        isSaving={false}
-        hasMore={false}
-        error=''
-        serviceOptions={[{ ...baseService }, svc2]}
-        onFilterChange={vi.fn()}
-        onLoadMore={vi.fn()}
-        onCreate={vi.fn()}
-        onUpdate={onUpdate}
-        onDelete={vi.fn()}
-      />,
-    );
-
-    fireEvent.click(screen.getByText('USED'));
-    fireEvent.change(screen.getByLabelText('Applies to service'), { target: { value: 'svc-2' } });
-    fireEvent.change(screen.getByLabelText('Value'), { target: { value: '12' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Expand USED' }));
+    fireEvent.change(await screen.findByLabelText('Applies to service'), { target: { value: 'svc-2' } });
+    fireEvent.change(screen.getByLabelText(/^Value/), { target: { value: '12' } });
     fireEvent.click(screen.getByRole('button', { name: 'Update code' }));
 
     expect(await screen.findByText(/Changing scope won't retroactively affect past bookings/)).toBeInTheDocument();
@@ -267,27 +225,10 @@ describe('DiscountCodesPanel', () => {
   });
 
   it('referral type sets value and currency, disables inputs, and submits defaults', async () => {
-    const onCreate = vi.fn().mockResolvedValue(undefined);
+    const { onCreate } = renderPanel();
 
-    render(
-      <DiscountCodesPanel
-        codes={[]}
-        filters={{ active: '', search: '', scope: '' }}
-        isLoading={false}
-        isLoadingMore={false}
-        isSaving={false}
-        hasMore={false}
-        error=''
-        serviceOptions={[{ ...baseService }]}
-        onFilterChange={vi.fn()}
-        onLoadMore={vi.fn()}
-        onCreate={onCreate}
-        onUpdate={vi.fn()}
-        onDelete={vi.fn()}
-      />,
-    );
-
-    fireEvent.change(screen.getByLabelText('Code'), { target: { value: 'REFNEW' } });
+    const codeInput = await openDraft();
+    fireEvent.change(codeInput, { target: { value: 'REFNEW' } });
     fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'referral' } });
 
     const valueInput = screen.getByLabelText('Value') as HTMLInputElement;
@@ -312,122 +253,40 @@ describe('DiscountCodesPanel', () => {
     });
   });
 
-  it('switching away from referral clears value and re-enables value input', () => {
-    render(
-      <DiscountCodesPanel
-        codes={[]}
-        filters={{ active: '', search: '', scope: '' }}
-        isLoading={false}
-        isLoadingMore={false}
-        isSaving={false}
-        hasMore={false}
-        error=''
-        serviceOptions={[{ ...baseService }]}
-        onFilterChange={vi.fn()}
-        onLoadMore={vi.fn()}
-        onCreate={vi.fn()}
-        onUpdate={vi.fn()}
-        onDelete={vi.fn()}
-      />,
-    );
+  it('switching away from referral clears value and re-enables value input', async () => {
+    renderPanel();
 
+    await openDraft();
     fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'referral' } });
     expect((screen.getByLabelText('Value') as HTMLInputElement).value).toBe('0');
     fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'percentage' } });
-    expect((screen.getByLabelText('Value') as HTMLInputElement).value).toBe('');
-    expect(screen.getByLabelText('Value')).not.toBeDisabled();
+    expect((screen.getByLabelText(/^Value/) as HTMLInputElement).value).toBe('');
+    expect(screen.getByLabelText(/^Value/)).not.toBeDisabled();
   });
 
   it('renders Referral in the value column for referral rows', () => {
-    const row = {
-      id: 'dc-ref',
-      code: 'TRACK',
-      description: null,
-      discountType: 'referral' as const,
-      discountValue: '0',
-      currency: 'HKD',
-      validFrom: null,
-      validUntil: null,
-      maxUses: null,
-      currentUses: 0,
-      createdBy: 'u',
-      active: true,
-      serviceId: null,
-      instanceId: null,
-      createdAt: null,
-      updatedAt: null,
-    };
+    renderPanel({
+      codes: [buildCode({ id: 'dc-ref', code: 'TRACK', discountType: 'referral', discountValue: '0', currency: 'HKD' })],
+    });
 
-    render(
-      <DiscountCodesPanel
-        codes={[row]}
-        filters={{ active: '', search: '', scope: '' }}
-        isLoading={false}
-        isLoadingMore={false}
-        isSaving={false}
-        hasMore={false}
-        error=''
-        serviceOptions={[{ ...baseService }]}
-        onFilterChange={vi.fn()}
-        onLoadMore={vi.fn()}
-        onCreate={vi.fn()}
-        onUpdate={vi.fn()}
-        onDelete={vi.fn()}
-      />,
-    );
-
-    const table = screen.getByRole('table');
-    const dataRow = screen.getByText('TRACK').closest('tr');
-    expect(dataRow).toBeTruthy();
-    expect(table.contains(dataRow)).toBe(true);
-    expect(dataRow?.textContent).toContain('Referral');
+    const dataRow = screen.getByTestId('admin-row-dc-ref');
+    expect(dataRow.textContent).toContain('Referral');
   });
 
   it('opens referral QR dialog with row discount type for ref param', async () => {
-    const row = {
-      id: 'dc-ref',
-      code: 'SAVE10',
-      description: null,
-      discountType: 'referral' as const,
-      discountValue: '0',
-      currency: 'HKD',
-      validFrom: null,
-      validUntil: null,
-      maxUses: null,
-      currentUses: 0,
-      createdBy: 'u',
-      active: true,
-      serviceId: 'svc-1',
-      instanceId: null,
-      createdAt: null,
-      updatedAt: null,
-    };
+    const user = userEvent.setup();
+    renderPanel({
+      codes: [buildCode({ id: 'dc-ref', discountType: 'referral', discountValue: '0', currency: 'HKD', serviceId: 'svc-1' })],
+    });
 
-    render(
-      <DiscountCodesPanel
-        codes={[row]}
-        filters={{ active: '', search: '', scope: '' }}
-        isLoading={false}
-        isLoadingMore={false}
-        isSaving={false}
-        hasMore={false}
-        error=''
-        serviceOptions={[{ ...baseService }]}
-        onFilterChange={vi.fn()}
-        onLoadMore={vi.fn()}
-        onCreate={vi.fn()}
-        onUpdate={vi.fn()}
-        onDelete={vi.fn()}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: 'Link and QR' }));
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Link and QR' }));
 
     await vi.waitFor(() => {
       expect(
         screen.getByRole('link', {
           name: 'https://www.example.com/en/services/my-best-auntie-training-course?ref=SAVE10',
-        }),
+        })
       ).toBeInTheDocument();
     });
   });
@@ -436,59 +295,37 @@ describe('DiscountCodesPanel', () => {
     vi.useFakeTimers();
     mockTryCopyTextToClipboard.mockResolvedValue(true);
     try {
-    const row = {
-      id: 'dc-copy',
-      code: 'SAVE10',
-      description: null,
-      discountType: 'percentage' as const,
-      discountValue: '10',
-      currency: 'HKD',
-      validFrom: null,
-      validUntil: null,
-      maxUses: null,
-      currentUses: 0,
-      createdBy: 'u',
-      active: true,
-      serviceId: null,
-      instanceId: null,
-      createdAt: null,
-      updatedAt: null,
-    };
+      renderPanel({ codes: [buildCode({ id: 'dc-copy', currency: 'HKD' })] });
 
-    render(
-      <DiscountCodesPanel
-        codes={[row]}
-        filters={{ active: '', search: '', scope: '' }}
-        isLoading={false}
-        isLoadingMore={false}
-        isSaving={false}
-        hasMore={false}
-        error=''
-        serviceOptions={[{ ...baseService }]}
-        onFilterChange={vi.fn()}
-        onLoadMore={vi.fn()}
-        onCreate={vi.fn()}
-        onUpdate={vi.fn()}
-        onDelete={vi.fn()}
-      />,
-    );
+      fireEvent.click(screen.getByRole('button', { name: 'Copy discount code' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Copy discount code' }));
+      await vi.waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Discount code copied' })).toBeInTheDocument();
+      });
 
-    await vi.waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Discount code copied' })).toBeInTheDocument();
-    });
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
 
-    act(() => {
-      vi.advanceTimersByTime(1000);
-    });
-
-    await vi.waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Copy discount code' })).toBeInTheDocument();
-    });
+      await vi.waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Copy discount code' })).toBeInTheDocument();
+      });
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('deletes a code from the overflow menu after confirmation', async () => {
+    const user = userEvent.setup();
+    const { onDelete } = renderPanel({ codes: [buildCode({ id: 'dc-del', code: 'GONE' })] });
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Delete discount code' }));
+    await user.click(await screen.findByRole('button', { name: 'Delete' }));
+
+    await vi.waitFor(() => {
+      expect(onDelete).toHaveBeenCalledWith('dc-del');
+    });
   });
 
   it('retries create with COPY, COPY2, … until duplicate 409 stops', async () => {
@@ -502,27 +339,11 @@ describe('DiscountCodesPanel', () => {
       .mockRejectedValueOnce(duplicateErr)
       .mockRejectedValueOnce(duplicateErr)
       .mockResolvedValueOnce(undefined);
+    renderPanel({ onCreate });
 
-    render(
-      <DiscountCodesPanel
-        codes={[]}
-        filters={{ active: '', search: '', scope: '' }}
-        isLoading={false}
-        isLoadingMore={false}
-        isSaving={false}
-        hasMore={false}
-        error=''
-        serviceOptions={[{ ...baseService }]}
-        onFilterChange={vi.fn()}
-        onLoadMore={vi.fn()}
-        onCreate={onCreate}
-        onUpdate={vi.fn()}
-        onDelete={vi.fn()}
-      />,
-    );
-
-    fireEvent.change(screen.getByLabelText('Code'), { target: { value: 'DUP' } });
-    fireEvent.change(screen.getByLabelText('Value'), { target: { value: '10' } });
+    const codeInput = await openDraft();
+    fireEvent.change(codeInput, { target: { value: 'DUP' } });
+    fireEvent.change(screen.getByLabelText(/^Value/), { target: { value: '10' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create code' }));
 
     await vi.waitFor(() => {

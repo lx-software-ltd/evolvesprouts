@@ -158,6 +158,22 @@ describe('AdminFilterBar / AdminCreateButton', () => {
     fireEvent.click(create);
     expect(onCreate).toHaveBeenCalledTimes(1);
   });
+
+  it('stacks several trailing controls one per line on phones and inline on desktop', () => {
+    render(
+      <AdminFilterBar
+        trailing={
+          <>
+            <button type='button'>Download CSV</button>
+            <AdminCreateButton label='New payment' onClick={vi.fn()} />
+          </>
+        }
+      />
+    );
+    const trailing = screen.getByTestId('admin-filter-bar-trailing');
+    expect(trailing).toHaveClass('flex', 'flex-col', 'gap-2', 'sm:flex-row', 'sm:items-end');
+    expect(trailing.children).toHaveLength(2);
+  });
 });
 
 describe('AdminTabStrip', () => {

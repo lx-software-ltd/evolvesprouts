@@ -4,21 +4,15 @@ import type { FormEvent } from 'react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { DeleteIcon } from '@/components/icons/action-icons';
-import { AdminCollapsibleSection } from '@/components/ui/admin-collapsible-section';
-import {
-  AdminDataTable,
-  AdminDataTableBody,
-  AdminDataTableCell,
-  AdminDataTableHead,
-  AdminDataTableHeadCell,
-  AdminDataTableOperationsHeadCell,
-} from '@/components/ui/admin-data-table';
+import { AdminDisclosure } from '@/components/ui/admin-disclosure';
+import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
+import { AdminIconButton } from '@/components/ui/admin-icon-button';
+import { AdminInlineError } from '@/components/ui/admin-inline-error';
 import {
   BillToPartySearchOrCreateField,
 } from '@/components/admin/finance/bill-to-party-search-or-create-field';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { toErrorMessage } from '@/hooks/hook-errors';
 import {
@@ -44,6 +38,8 @@ type CustomizedLineDraftRow = {
   taxAmount: string;
 };
 
+type CustomizedLineField = Exclude<keyof CustomizedLineDraftRow, 'id'>;
+
 function makeCustomizedLineRow(seq: number): CustomizedLineDraftRow {
   return {
     id: `custom-line-${seq}`,
@@ -54,6 +50,17 @@ function makeCustomizedLineRow(seq: number): CustomizedLineDraftRow {
     taxRate: '',
     taxAmount: '',
   };
+}
+
+function lineHasInput(line: CustomizedLineDraftRow): boolean {
+  return (
+    line.description.trim() !== '' ||
+    line.unitAmount.trim() !== '' ||
+    line.discountAmount.trim() !== '' ||
+    line.taxRate.trim() !== '' ||
+    line.taxAmount.trim() !== '' ||
+    line.quantity.trim() !== '1'
+  );
 }
 
 function currencySelectValue(
@@ -85,9 +92,16 @@ export interface CustomizedDraftInvoiceCardProps {
   onRequestBusy?: (busy: boolean) => void;
   onDraftError?: (message: string) => void;
   onValidityChange?: (valid: boolean) => void;
+  /** Reports whether the operator has typed anything worth guarding. */
+  onDirtyChange?: (dirty: boolean) => void;
   onCreated: (invoiceId: string) => void | Promise<void>;
 }
 
+/**
+ * Customized (manual lines) draft form. Bill-to, party, and currency sit in
+ * one field row; each line is its own field grid inside the Line items
+ * disclosure so the form stays usable without horizontal scrolling.
+ */
 export function CustomizedDraftInvoiceCard({
   defaultCurrency,
   currencyOptions,
@@ -97,6 +111,7 @@ export function CustomizedDraftInvoiceCard({
   onRequestBusy,
   onDraftError,
   onValidityChange,
+  onDirtyChange,
   onCreated,
 }: CustomizedDraftInvoiceCardProps) {
   const customizedBillKindId = useId();
@@ -186,6 +201,17 @@ export function CustomizedDraftInvoiceCard({
     onValidityChange?.(customizedIssue === '');
   }, [customizedIssue, loadParents, onValidityChange]);
 
+  const hasInput = billToParty.status !== 'empty' || customizedLines.some(lineHasInput);
+  useEffect(() => {
+    onDirtyChange?.(hasInput);
+  }, [hasInput, onDirtyChange]);
+
+  const updateLine = (lineId: string, field: CustomizedLineField, value: string) => {
+    setCustomizedLines((prev) =>
+      prev.map((row) => (row.id === lineId ? { ...row, [field]: value } : row)),
+    );
+  };
+
   const handleCreateCustomizedDraft = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (customizedIssue) {
@@ -256,222 +282,156 @@ export function CustomizedDraftInvoiceCard({
   };
 
   return (
-    <div className='space-y-4'>
-      <form id={CUSTOMIZED_FORM_ID} className='space-y-4' onSubmit={(e) => void handleCreateCustomizedDraft(e)}>
-        <div className='flex flex-wrap gap-4'>
-          <div className='min-w-[200px]'>
-            <Label htmlFor={customizedBillKindId}>Bill to</Label>
-            <Select
-              id={customizedBillKindId}
-              className='mt-1 w-full'
-              value={customizedBillKind}
-              onChange={(e) => {
-                setCustomizedBillKind(e.target.value as BillToPartyKind);
-                setBillToParty({ status: 'empty' });
-              }}
-              disabled={editorBusy}
-            >
-              <option value='contact'>Contact</option>
-              <option value='family'>Family</option>
-              <option value='organization'>Organization</option>
-              <option value='partner'>Partner</option>
-            </Select>
-          </div>
-          <BillToPartySearchOrCreateField
-            key={customizedBillKind}
-            kind={customizedBillKind}
-            inputId={customizedBillEntityInputId}
+    <form id={CUSTOMIZED_FORM_ID} className='space-y-4' onSubmit={(e) => void handleCreateCustomizedDraft(e)}>
+      <AdminFieldGrid columns={4}>
+        <AdminField label='Bill to' htmlFor={customizedBillKindId}>
+          <Select
+            id={customizedBillKindId}
+            className='mt-1 w-full'
+            value={customizedBillKind}
+            onChange={(e) => {
+              setCustomizedBillKind(e.target.value as BillToPartyKind);
+              setBillToParty({ status: 'empty' });
+            }}
             disabled={editorBusy}
-            enabled={loadParents}
-            value={billToParty}
-            onChange={setBillToParty}
-          />
-          <div className='min-w-[140px]'>
-            <Label htmlFor={customizedCurrencyId}>Currency</Label>
-            <Select
-              id={customizedCurrencyId}
-              className='mt-1 w-full'
-              value={customizedCurrency}
-              onChange={(e) => setCustomizedCurrency(e.target.value)}
-              disabled={editorBusy}
+          >
+            <option value='contact'>Contact</option>
+            <option value='family'>Family</option>
+            <option value='organization'>Organization</option>
+            <option value='partner'>Partner</option>
+          </Select>
+        </AdminField>
+        <BillToPartySearchOrCreateField
+          key={customizedBillKind}
+          kind={customizedBillKind}
+          inputId={customizedBillEntityInputId}
+          disabled={editorBusy}
+          enabled={loadParents}
+          value={billToParty}
+          onChange={setBillToParty}
+          className='sm:col-span-2'
+        />
+        <AdminField label='Currency' htmlFor={customizedCurrencyId}>
+          <Select
+            id={customizedCurrencyId}
+            className='mt-1 w-full'
+            value={customizedCurrency}
+            onChange={(e) => setCustomizedCurrency(e.target.value)}
+            disabled={editorBusy}
+          >
+            {currencyOptions.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </Select>
+        </AdminField>
+      </AdminFieldGrid>
+      <AdminDisclosure
+        id='customized-draft-invoice-lines'
+        title='Line items'
+        summary={`${customizedLines.length} of ${MAX_CUSTOMIZED_LINES}`}
+        defaultOpen
+        disabled={editorBusy}
+      >
+        <div className='space-y-3'>
+          {customizedLines.map((ln, index) => (
+            <div key={ln.id} className='rounded-md border border-slate-200 bg-white p-3' data-testid='customized-line'>
+              <div className='mb-2 flex items-center justify-between gap-2'>
+                <span className='text-xs font-semibold uppercase tracking-wide text-slate-500'>
+                  Line {index + 1}
+                </span>
+                <AdminIconButton
+                  label='Delete line'
+                  icon={<DeleteIcon className='h-4 w-4' />}
+                  tone='danger'
+                  disabled={editorBusy || customizedLines.length <= 1}
+                  onClick={() => setCustomizedLines((prev) => prev.filter((row) => row.id !== ln.id))}
+                />
+              </div>
+              <AdminFieldGrid columns={4}>
+                <AdminField label='Description' htmlFor={`${CUSTOMIZED_FORM_ID}-desc-${ln.id}`} span={2}>
+                  <Input
+                    id={`${CUSTOMIZED_FORM_ID}-desc-${ln.id}`}
+                    className='mt-1 w-full min-w-0'
+                    disabled={editorBusy}
+                    value={ln.description}
+                    onChange={(e) => updateLine(ln.id, 'description', e.target.value)}
+                  />
+                </AdminField>
+                <AdminField label='Quantity' htmlFor={`${CUSTOMIZED_FORM_ID}-qty-${ln.id}`}>
+                  <Input
+                    id={`${CUSTOMIZED_FORM_ID}-qty-${ln.id}`}
+                    className='mt-1 w-full min-w-0 font-mono tabular-nums'
+                    inputMode='decimal'
+                    disabled={editorBusy}
+                    value={ln.quantity}
+                    onChange={(e) => updateLine(ln.id, 'quantity', e.target.value)}
+                  />
+                </AdminField>
+                <AdminField label='Unit price' htmlFor={`${CUSTOMIZED_FORM_ID}-unit-${ln.id}`}>
+                  <Input
+                    id={`${CUSTOMIZED_FORM_ID}-unit-${ln.id}`}
+                    className='mt-1 w-full min-w-0 font-mono tabular-nums'
+                    inputMode='decimal'
+                    disabled={editorBusy}
+                    value={ln.unitAmount}
+                    onChange={(e) => updateLine(ln.id, 'unitAmount', e.target.value)}
+                  />
+                </AdminField>
+                <AdminField label='Discount' htmlFor={`${CUSTOMIZED_FORM_ID}-disc-${ln.id}`}>
+                  <Input
+                    id={`${CUSTOMIZED_FORM_ID}-disc-${ln.id}`}
+                    className='mt-1 w-full min-w-0 font-mono tabular-nums'
+                    inputMode='decimal'
+                    disabled={editorBusy}
+                    value={ln.discountAmount}
+                    onChange={(e) => updateLine(ln.id, 'discountAmount', e.target.value)}
+                    placeholder='0'
+                  />
+                </AdminField>
+                <AdminField label='Tax rate' htmlFor={`${CUSTOMIZED_FORM_ID}-tr-${ln.id}`}>
+                  <Input
+                    id={`${CUSTOMIZED_FORM_ID}-tr-${ln.id}`}
+                    className='mt-1 w-full min-w-0 font-mono tabular-nums'
+                    inputMode='decimal'
+                    disabled={editorBusy}
+                    value={ln.taxRate}
+                    onChange={(e) => updateLine(ln.id, 'taxRate', e.target.value)}
+                    placeholder='—'
+                  />
+                </AdminField>
+                <AdminField label='Tax amount' htmlFor={`${CUSTOMIZED_FORM_ID}-ta-${ln.id}`}>
+                  <Input
+                    id={`${CUSTOMIZED_FORM_ID}-ta-${ln.id}`}
+                    className='mt-1 w-full min-w-0 font-mono tabular-nums'
+                    inputMode='decimal'
+                    disabled={editorBusy}
+                    value={ln.taxAmount}
+                    onChange={(e) => updateLine(ln.id, 'taxAmount', e.target.value)}
+                    placeholder='—'
+                  />
+                </AdminField>
+              </AdminFieldGrid>
+            </div>
+          ))}
+          <div className='flex justify-start'>
+            <Button
+              type='button'
+              variant='secondary'
+              size='sm'
+              disabled={editorBusy || customizedLines.length >= MAX_CUSTOMIZED_LINES}
+              onClick={() => {
+                customizedLineIdSeq.current += 1;
+                setCustomizedLines((prev) => [...prev, makeCustomizedLineRow(customizedLineIdSeq.current)]);
+              }}
             >
-              {currencyOptions.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </Select>
+              Add line
+            </Button>
           </div>
         </div>
-        <AdminCollapsibleSection
-          id='customized-draft-invoice-lines'
-          title='Line items'
-          disabled={editorBusy}
-        >
-          <div className='space-y-3'>
-            <div className='max-h-[min(28rem,70vh)] overflow-y-auto overflow-x-auto'>
-              <AdminDataTable tableClassName='min-w-[52rem]'>
-                <AdminDataTableHead sticky>
-                  <tr>
-                    <AdminDataTableHeadCell className='min-w-[12rem]'>Description</AdminDataTableHeadCell>
-                    <AdminDataTableHeadCell className='w-[5.5rem] text-right'>Quantity</AdminDataTableHeadCell>
-                    <AdminDataTableHeadCell className='w-[6.5rem] text-right'>Unit price</AdminDataTableHeadCell>
-                    <AdminDataTableHeadCell className='w-[6rem] text-right'>Discount</AdminDataTableHeadCell>
-                    <AdminDataTableHeadCell className='w-[5.5rem] text-right'>Tax rate</AdminDataTableHeadCell>
-                    <AdminDataTableHeadCell className='w-[6.5rem] text-right'>Tax amount</AdminDataTableHeadCell>
-                    <AdminDataTableOperationsHeadCell />
-                  </tr>
-                </AdminDataTableHead>
-                <AdminDataTableBody>
-                  {customizedLines.map((ln) => (
-                    <tr key={ln.id}>
-                      <AdminDataTableCell className='align-top'>
-                        <Input
-                          id={`${CUSTOMIZED_FORM_ID}-desc-${ln.id}`}
-                          className='w-full min-w-0'
-                          disabled={editorBusy}
-                          aria-label='Description'
-                          value={ln.description}
-                          onChange={(e) =>
-                            setCustomizedLines((prev) =>
-                              prev.map((row) =>
-                                row.id === ln.id ? { ...row, description: e.target.value } : row,
-                              ),
-                            )
-                          }
-                        />
-                      </AdminDataTableCell>
-                      <AdminDataTableCell className='align-top'>
-                        <Input
-                          id={`${CUSTOMIZED_FORM_ID}-qty-${ln.id}`}
-                          className='w-full min-w-0 font-mono tabular-nums'
-                          inputMode='decimal'
-                          disabled={editorBusy}
-                          aria-label='Quantity'
-                          value={ln.quantity}
-                          onChange={(e) =>
-                            setCustomizedLines((prev) =>
-                              prev.map((row) =>
-                                row.id === ln.id ? { ...row, quantity: e.target.value } : row,
-                              ),
-                            )
-                          }
-                        />
-                      </AdminDataTableCell>
-                      <AdminDataTableCell className='align-top'>
-                        <Input
-                          id={`${CUSTOMIZED_FORM_ID}-unit-${ln.id}`}
-                          className='w-full min-w-0 font-mono tabular-nums'
-                          inputMode='decimal'
-                          disabled={editorBusy}
-                          aria-label='Unit price'
-                          value={ln.unitAmount}
-                          onChange={(e) =>
-                            setCustomizedLines((prev) =>
-                              prev.map((row) =>
-                                row.id === ln.id ? { ...row, unitAmount: e.target.value } : row,
-                              ),
-                            )
-                          }
-                        />
-                      </AdminDataTableCell>
-                      <AdminDataTableCell className='align-top'>
-                        <Input
-                          id={`${CUSTOMIZED_FORM_ID}-disc-${ln.id}`}
-                          className='w-full min-w-0 font-mono tabular-nums'
-                          inputMode='decimal'
-                          disabled={editorBusy}
-                          aria-label='Discount'
-                          value={ln.discountAmount}
-                          onChange={(e) =>
-                            setCustomizedLines((prev) =>
-                              prev.map((row) =>
-                                row.id === ln.id ? { ...row, discountAmount: e.target.value } : row,
-                              ),
-                            )
-                          }
-                          placeholder='0'
-                        />
-                      </AdminDataTableCell>
-                      <AdminDataTableCell className='align-top'>
-                        <Input
-                          id={`${CUSTOMIZED_FORM_ID}-tr-${ln.id}`}
-                          className='w-full min-w-0 font-mono tabular-nums'
-                          inputMode='decimal'
-                          disabled={editorBusy}
-                          aria-label='Tax rate'
-                          value={ln.taxRate}
-                          onChange={(e) =>
-                            setCustomizedLines((prev) =>
-                              prev.map((row) =>
-                                row.id === ln.id ? { ...row, taxRate: e.target.value } : row,
-                              ),
-                            )
-                          }
-                          placeholder='—'
-                        />
-                      </AdminDataTableCell>
-                      <AdminDataTableCell className='align-top'>
-                        <Input
-                          id={`${CUSTOMIZED_FORM_ID}-ta-${ln.id}`}
-                          className='w-full min-w-0 font-mono tabular-nums'
-                          inputMode='decimal'
-                          disabled={editorBusy}
-                          aria-label='Tax amount'
-                          value={ln.taxAmount}
-                          onChange={(e) =>
-                            setCustomizedLines((prev) =>
-                              prev.map((row) =>
-                                row.id === ln.id ? { ...row, taxAmount: e.target.value } : row,
-                              ),
-                            )
-                          }
-                          placeholder='—'
-                        />
-                      </AdminDataTableCell>
-                      <AdminDataTableCell className='align-top text-right'>
-                        <div className='flex flex-wrap justify-end gap-1'>
-                          <Button
-                            type='button'
-                            variant='danger'
-                            size='sm'
-                            disabled={editorBusy || customizedLines.length <= 1}
-                            className='min-w-8 px-2'
-                            aria-label='Delete line'
-                            title='Delete line'
-                            onClick={() =>
-                              setCustomizedLines((prev) => prev.filter((row) => row.id !== ln.id))
-                            }
-                          >
-                            <DeleteIcon className='h-4 w-4' />
-                          </Button>
-                        </div>
-                      </AdminDataTableCell>
-                    </tr>
-                  ))}
-                </AdminDataTableBody>
-              </AdminDataTable>
-            </div>
-            <div className='flex justify-start'>
-              <Button
-                type='button'
-                variant='secondary'
-                size='sm'
-                disabled={editorBusy || customizedLines.length >= MAX_CUSTOMIZED_LINES}
-                onClick={() => {
-                  customizedLineIdSeq.current += 1;
-                  setCustomizedLines((prev) => [...prev, makeCustomizedLineRow(customizedLineIdSeq.current)]);
-                }}
-              >
-                Add line
-              </Button>
-            </div>
-          </div>
-        </AdminCollapsibleSection>
-        {customizedIssue && loadParents ? (
-          <p className='text-sm text-amber-800'>{customizedIssue}</p>
-        ) : null}
-      </form>
-    </div>
+      </AdminDisclosure>
+      {customizedIssue && loadParents ? <AdminInlineError>{customizedIssue}</AdminInlineError> : null}
+    </form>
   );
 }

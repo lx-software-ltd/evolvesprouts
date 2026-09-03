@@ -351,20 +351,21 @@ export function useServiceDetailPanel({
     return true;
   }
 
-  async function submitUpdate() {
+  /** Resolves true when the update was saved; false when blocked by validation, a cancelled confirm, or a handled conflict. */
+  async function submitUpdate(): Promise<boolean> {
     if (!service) {
-      return;
+      return false;
     }
     const serviceKeyTrimmed = serviceForm.serviceKey.trim();
     if (serviceKeyTrimmed && !SERVICE_KEY_PATTERN.test(serviceKeyTrimmed.toLowerCase())) {
-      return;
+      return false;
     }
     const newServiceKey = serviceKeyTrimmed.toLowerCase() || null;
     const tierPayloadNormalized = serviceTier.trim().toLowerCase() || null;
     const oldServiceKey = (service.serviceKey ?? '').trim().toLowerCase() || null;
     const ok = await confirmServiceKeyChangeIfNeeded(newServiceKey, oldServiceKey);
     if (!ok) {
-      return;
+      return false;
     }
     try {
       await onUpdate(
@@ -381,6 +382,7 @@ export function useServiceDetailPanel({
         }),
       );
       setServiceKeyTierConflict(null);
+      return true;
     } catch (caught) {
       if (
         applyServiceKeyTierConflictFromApiError(caught, {
@@ -388,13 +390,14 @@ export function useServiceDetailPanel({
           tierNormalized: tierPayloadNormalized,
         })
       ) {
-        return;
+        return false;
       }
       throw caught;
     }
   }
 
-  async function submitCreate() {
+  /** Resolves true when the service was created; false on a handled key/tier conflict. */
+  async function submitCreate(): Promise<boolean> {
     const tierPayloadNormalized = serviceTier.trim().toLowerCase() || null;
     try {
       await onCreate(
@@ -411,6 +414,7 @@ export function useServiceDetailPanel({
         }),
       );
       setServiceKeyTierConflict(null);
+      return true;
     } catch (caught) {
       if (
         applyServiceKeyTierConflictFromApiError(caught, {
@@ -418,7 +422,7 @@ export function useServiceDetailPanel({
           tierNormalized: tierPayloadNormalized,
         })
       ) {
-        return;
+        return false;
       }
       throw caught;
     }
