@@ -75,7 +75,7 @@ def test_new_enum_labels_are_not_used_in_the_same_revision() -> None:
                 violations.append(f"{path.name}: uses new enum label '{label}'")
     assert not violations, (
         "Split ALTER TYPE ... ADD VALUE into its own revision before using "
-        f"the label:\n" + "\n".join(violations)
+        "the label:\n" + "\n".join(violations)
     )
 
 
