@@ -44,7 +44,6 @@ export const LeadsTableRow = memo(function LeadsTableRow({
       <AdminDataTableCell className='text-sm font-medium text-slate-900'>
         {[lead.contact.firstName, lead.contact.lastName].filter(Boolean).join(' ') || 'Unnamed lead'}
       </AdminDataTableCell>
-      <AdminDataTableCell className='text-sm text-slate-700'>{lead.contact.email ?? '—'}</AdminDataTableCell>
       <AdminDataTableCell className='text-sm text-slate-700'>
         {lead.contact.source ? formatEnumLabel(lead.contact.source) : '—'}
       </AdminDataTableCell>

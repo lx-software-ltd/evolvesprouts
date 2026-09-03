@@ -103,7 +103,7 @@ export function LeadsTable({
         </div>
       }
     >
-      <AdminDataTable tableClassName='min-w-[1080px]'>
+      <AdminDataTable tableClassName='min-w-[920px]'>
         <AdminDataTableHead sticky>
           <tr>
             <AdminDataTableHeadCell>
@@ -116,7 +116,6 @@ export function LeadsTable({
               />
             </AdminDataTableHeadCell>
             <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell>Email</AdminDataTableHeadCell>
             <AdminDataTableHeadCell>Source</AdminDataTableHeadCell>
             <AdminDataTableHeadCell>Stage</AdminDataTableHeadCell>
             <AdminDataTableHeadCell>Created</AdminDataTableHeadCell>
@@ -127,13 +126,13 @@ export function LeadsTable({
         <AdminDataTableBody>
           {isLoading ? (
             <tr>
-              <AdminDataTableCell colSpan={8} className='py-8 text-sm text-slate-600'>
+              <AdminDataTableCell colSpan={7} className='py-8 text-sm text-slate-600'>
                 Loading leads...
               </AdminDataTableCell>
             </tr>
           ) : leads.length === 0 ? (
             <tr>
-              <AdminDataTableCell colSpan={8} className='py-8 text-sm text-slate-600'>
+              <AdminDataTableCell colSpan={7} className='py-8 text-sm text-slate-600'>
                 No leads found for these filters.
               </AdminDataTableCell>
             </tr>

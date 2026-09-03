@@ -201,6 +201,8 @@ describe('SalesPage', () => {
     expect(screen.queryByLabelText('Date range preset')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Lead' })).toBeInTheDocument();
     expect(screen.getByLabelText('First name')).toBeInTheDocument();
+    expect(screen.getByLabelText('Email')).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Email' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create lead' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'New lead' })).toBeInTheDocument();
     expect(screen.queryByLabelText('From')).not.toBeInTheDocument();

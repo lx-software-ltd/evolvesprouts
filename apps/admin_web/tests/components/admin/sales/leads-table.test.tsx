@@ -101,6 +101,8 @@ describe('LeadsTable', () => {
     expect(screen.getByRole('heading', { name: 'Leads' })).toBeInTheDocument();
     expect(screen.queryByText(/^\d+ total$/)).not.toBeInTheDocument();
     expect(screen.getByText('Jane Doe')).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Email' })).not.toBeInTheDocument();
+    expect(table).not.toHaveTextContent('jane@example.com');
     expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Export CSV' })).not.toBeInTheDocument();
     expect(table).toHaveTextContent('Manual');
