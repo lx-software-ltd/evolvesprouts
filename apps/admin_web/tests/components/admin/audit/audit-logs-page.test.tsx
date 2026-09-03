@@ -42,6 +42,16 @@ describe('AuditLogsPage', () => {
     expect(screen.queryByRole('heading')).toBeNull();
   });
 
+  it('gives Timestamp a wider desktop share paid for by Changed fields', async () => {
+    render(<AuditLogsPage />);
+    await waitFor(() => {
+      expect(screen.getByRole('table')).toBeInTheDocument();
+    });
+    expect(screen.getByRole('columnheader', { name: /^Timestamp/ }).className).toContain('lg:w-[18%]');
+    expect(screen.getByRole('columnheader', { name: 'Changed fields' }).className).toContain('lg:w-[24%]');
+    expect(screen.getByRole('columnheader', { name: 'Table / action' }).className).not.toMatch(/lg:w-\[/);
+  });
+
   it('shows four filters that apply on change, with no Apply, Clear, or Record ID controls', async () => {
     const user = userEvent.setup();
     render(<AuditLogsPage />);
