@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ADMIN_LIST_PAGE_SIZE } from '@/lib/admin-list-query';
-import { listAdminAssets } from '@/lib/assets-api';
+import { getAdminAsset, listAdminAssets } from '@/lib/assets-api';
 import { adminQueryKeys } from '@/lib/admin-query-keys';
 import {
   CLIENT_DOCUMENT_ASSET_TAG,
@@ -12,12 +12,17 @@ import {
   type ListAdminAssetsInput,
 } from '@/types/assets';
 
+import { DRAFT_RECORD_ID, useExpandedRecord, type UseExpandedRecordReturn } from './use-expanded-record';
+import { useExpandedRecordForm } from './use-expanded-record-form';
 import { useLocationSearchParam } from './use-query-tab-state';
 import { usePaginatedList } from './use-paginated-list';
 
 type Filters = Pick<ListAdminAssetsInput, 'query' | 'visibility' | 'tagName'>;
 
 const ASSET_LIST_TYPE_FILTER = 'document' as const;
+
+/** Query parameter that mirrors the expanded asset row (`?asset=<id>` or `?asset=new`). */
+export const ADMIN_ASSET_QUERY_PARAM = 'asset';
 
 export interface UseAssetListReturn {
   filters: Filters;
@@ -29,6 +34,12 @@ export interface UseAssetListReturn {
   assetsError: string;
   selectedAssetId: string | null;
   selectedAsset: AdminAsset | null;
+  /** Deep-linked asset fetched because it is not in the loaded pages; render it above the list. */
+  pinnedAsset: AdminAsset | null;
+  /** Single-open row state (draft or asset), URL-synced and guarded by `setEditorDirty`. */
+  expanded: UseExpandedRecordReturn;
+  /** Flag unsaved editor changes so switching rows asks first. */
+  setEditorDirty: (dirty: boolean) => void;
   setQueryFilter: (query: string) => void;
   setVisibilityFilter: (visibility: AssetVisibility | '') => void;
   setTagNameFilter: (tagName: ListAdminAssetsInput['tagName']) => void;
@@ -53,7 +64,14 @@ export function useAssetList(): UseAssetListReturn {
   const urlQuery = useLocationSearchParam('query');
   const urlTag = useLocationSearchParam('tag');
   const [linkedTagNames, setLinkedTagNames] = useState<string[]>([]);
-  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
+  const editorDirtyRef = useRef(false);
+  const setEditorDirty = useCallback((dirty: boolean) => {
+    editorDirtyRef.current = dirty;
+  }, []);
+  const expanded = useExpandedRecord({
+    paramName: ADMIN_ASSET_QUERY_PARAM,
+    isDirty: () => editorDirtyRef.current,
+  });
 
   const fetcher = useCallback(
     async (params: Filters & { cursor: string | null; limit: number; signal: AbortSignal }) => {
@@ -94,17 +112,29 @@ export function useAssetList(): UseAssetListReturn {
     loadMore,
   } = list;
 
-  // Keep the explicit selection only when that row is still in the list. Never
-  // auto-select the first row; create mode must stay reachable via Cancel.
-  const resolvedSelectedAssetId =
-    selectedAssetId && items.some((item) => item.id === selectedAssetId)
-      ? selectedAssetId
-      : null;
+  const noop = useCallback(() => {}, []);
+  // Deep links to an asset outside the loaded pages fetch it once and pin it
+  // above the list; unresolvable ids collapse. The editor keeps its own field
+  // state (keyed by asset id), so there is nothing to apply or reset here.
+  const { pinnedRow: pinnedAsset } = useExpandedRecordForm<AdminAsset>({
+    expandedId: expanded.expandedId,
+    rows: items,
+    isLoading,
+    applyRow: noop,
+    reset: noop,
+    collapse: expanded.collapse,
+    fetchMissing: getAdminAsset,
+  });
 
+  const expandedAssetId =
+    expanded.expandedId && expanded.expandedId !== DRAFT_RECORD_ID ? expanded.expandedId : null;
   const selectedAsset = useMemo(
-    () => items.find((asset) => asset.id === resolvedSelectedAssetId) ?? null,
-    [items, resolvedSelectedAssetId]
+    () =>
+      items.find((asset) => asset.id === expandedAssetId) ??
+      (pinnedAsset?.id === expandedAssetId ? pinnedAsset : null),
+    [items, expandedAssetId, pinnedAsset]
   );
+  const resolvedSelectedAssetId = selectedAsset?.id ?? null;
 
   const currentQuery = filters.query;
   const currentTagName = filters.tagName;
@@ -148,13 +178,18 @@ export function useAssetList(): UseAssetListReturn {
     [setFilter]
   );
 
-  const selectAsset = useCallback((assetId: string) => {
-    setSelectedAssetId(assetId);
-  }, []);
+  const { expand: expandRow, collapse: collapseRow, expandedId } = expanded;
+
+  const selectAsset = useCallback(
+    (assetId: string) => {
+      expandRow(assetId);
+    },
+    [expandRow]
+  );
 
   const clearSelectedAsset = useCallback(() => {
-    setSelectedAssetId(null);
-  }, []);
+    collapseRow();
+  }, [collapseRow]);
 
   const applyCreatedAsset = useCallback(
     async (createdAsset: AdminAsset | null) => {
@@ -163,9 +198,12 @@ export function useAssetList(): UseAssetListReturn {
         return;
       }
       setItems((previous) => [createdAsset, ...previous]);
-      setSelectedAssetId(createdAsset.id);
+      // The draft row was the open editor; move the expansion to the new record
+      // so the upload status renders on it.
+      editorDirtyRef.current = false;
+      expandRow(createdAsset.id);
     },
-    [filters.tagName, refreshAssets, setItems]
+    [expandRow, filters.tagName, refreshAssets, setItems]
   );
 
   const applyUpdatedAsset = useCallback(
@@ -182,9 +220,12 @@ export function useAssetList(): UseAssetListReturn {
   const applyDeletedAsset = useCallback(
     (assetId: string) => {
       setItems((previous) => previous.filter((asset) => asset.id !== assetId));
-      setSelectedAssetId((currentId) => (currentId === assetId ? null : currentId));
+      if (expandedId === assetId) {
+        editorDirtyRef.current = false;
+        collapseRow();
+      }
     },
-    [setItems]
+    [collapseRow, expandedId, setItems]
   );
 
   return {
@@ -197,6 +238,9 @@ export function useAssetList(): UseAssetListReturn {
     assetsError: error,
     selectedAssetId: resolvedSelectedAssetId,
     selectedAsset,
+    pinnedAsset,
+    expanded,
+    setEditorDirty,
     setQueryFilter,
     setVisibilityFilter,
     setTagNameFilter,

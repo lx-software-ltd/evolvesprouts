@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, type KeyboardEvent, type MouseEvent } from 'react';
+import { useMemo, type ReactNode } from 'react';
 
 import type { AdminAsset, AssetVisibility, ListAdminAssetsInput } from '@/types/assets';
 
@@ -14,26 +14,25 @@ import {
   isRestrictedSystemAssetTag,
 } from '@/types/assets';
 
-import { OpenAdminAssetInNewTabButton } from '@/components/admin/shared/open-admin-asset-in-new-tab-button';
 import { DeleteIcon } from '@/components/icons/action-icons';
-import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
-import { useOpenAdminAssetInNewTab } from '@/hooks/use-open-admin-asset-in-new-tab';
+import OpenInNewTabIcon from '@/components/icons/svg/open-in-new-tab-icon.svg';
+import { AdminCreateButton } from '@/components/ui/admin-create-button';
 import {
-  AdminDataTable,
-  AdminDataTableBody,
   AdminDataTableCell,
-  AdminDataTableHead,
+  AdminDataTableCellMeta,
   AdminDataTableHeadCell,
   AdminDataTableOperationsHeadCell,
 } from '@/components/ui/admin-data-table';
-import { Button } from '@/components/ui/button';
+import { AdminExpandableRow } from '@/components/ui/admin-expandable-row';
+import { AdminFilterBar, AdminFilterField } from '@/components/ui/admin-filter-bar';
+import { AdminRecordTable } from '@/components/ui/admin-record-table';
+import { AdminRowActions } from '@/components/ui/admin-row-actions';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
-import { AdminInlineError } from '@/components/ui/admin-inline-error';
-import { Label } from '@/components/ui/label';
-import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
-import { AdminTableToolbar } from '@/components/ui/admin-table-toolbar';
 import { Select } from '@/components/ui/select';
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
+import { DRAFT_RECORD_ID } from '@/hooks/use-expanded-record';
+import { useOpenAdminAssetInNewTab } from '@/hooks/use-open-admin-asset-in-new-tab';
 import {
   formatAssetContentLanguageLabel,
   formatAssetTagDisplayName,
@@ -41,11 +40,16 @@ import {
   formatEnumLabel,
 } from '@/lib/format';
 
+const COLUMN_COUNT = 8;
+
 export interface AssetListPanelProps {
   assets: AdminAsset[];
+  /** Deep-linked asset outside the loaded pages; rendered above the list. */
+  pinnedAsset?: AdminAsset | null;
   /** Tag names returned by the admin asset list API for the current asset type scope. */
   linkedTagNames: string[];
-  selectedAssetId: string | null;
+  /** `DRAFT_RECORD_ID`, an asset id, or `null` when no row is open. */
+  expandedId: string | null;
   filters: {
     query?: string;
     visibility?: AssetVisibility | '';
@@ -60,14 +64,46 @@ export interface AssetListPanelProps {
   onVisibilityChange: (value: AssetVisibility | '') => void;
   onTagNameChange: (value: ListAdminAssetsInput['tagName']) => void;
   onLoadMore: () => Promise<void>;
-  onSelectAsset: (assetId: string) => void;
+  /** Toggle a row (`DRAFT_RECORD_ID` for the create button). */
+  onToggle: (id: string) => void;
   onDeleteAsset: (assetId: string) => Promise<void>;
+  /** Editor for the open row; `null` asset renders the draft (create) editor. */
+  renderDetail: (asset: AdminAsset | null) => ReactNode;
 }
 
+function tagPillClass(name: string): string {
+  const nameLower = name.toLowerCase();
+  if (nameLower === EXPENSE_ATTACHMENT_ASSET_TAG) {
+    return 'rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900';
+  }
+  if (nameLower === CLIENT_DOCUMENT_ASSET_TAG) {
+    return 'rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-900';
+  }
+  if (nameLower === CUSTOMER_INVOICE_ASSET_TAG) {
+    return 'rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-900';
+  }
+  return 'rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-800';
+}
+
+function deleteLabel(asset: AdminAsset, isDeleting: boolean): string {
+  if (asset.tags.some((tag) => isCustomerInvoiceAssetTag(tag.name))) {
+    return 'Cannot delete: asset is linked to customer invoices';
+  }
+  if (asset.tags.some((tag) => isExpenseAttachmentAssetTag(tag.name))) {
+    return 'Cannot delete: asset is linked to expenses';
+  }
+  return isDeleting ? 'Deleting asset' : 'Delete asset';
+}
+
+/**
+ * Assets as a table-first list: filters and the create button above, one
+ * expandable row per asset with the editor inside the expansion.
+ */
 export function AssetListPanel({
   assets,
+  pinnedAsset = null,
   linkedTagNames,
-  selectedAssetId,
+  expandedId,
   filters,
   isLoadingAssets,
   isLoadingMoreAssets,
@@ -78,11 +114,13 @@ export function AssetListPanel({
   onVisibilityChange,
   onTagNameChange,
   onLoadMore,
-  onSelectAsset,
+  onToggle,
   onDeleteAsset,
+  renderDetail,
 }: AssetListPanelProps) {
   const [confirmDialogProps, requestConfirm] = useConfirmDialog();
   const { openingAssetId, openError: viewAssetError, openAssetInNewTab } = useOpenAdminAssetInNewTab();
+  const isDraftOpen = expandedId === DRAFT_RECORD_ID;
 
   const tagFilterOptions = useMemo(() => {
     const names = [...linkedTagNames];
@@ -93,18 +131,12 @@ export function AssetListPanel({
     return names.sort((a, b) => a.localeCompare(b));
   }, [linkedTagNames, filters.tagName]);
 
-  const handleRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, assetId: string) => {
-    if (event.target !== event.currentTarget) {
-      return;
-    }
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      onSelectAsset(assetId);
-    }
-  };
+  const rows = useMemo(
+    () => (pinnedAsset && !assets.some((asset) => asset.id === pinnedAsset.id) ? [pinnedAsset, ...assets] : assets),
+    [assets, pinnedAsset]
+  );
 
-  const handleDeleteAsset = async (asset: AdminAsset, event: MouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation();
+  const handleDeleteAsset = async (asset: AdminAsset) => {
     const confirmed = await requestConfirm({
       title: 'Delete asset',
       description: `Delete "${asset.title}"? This removes the asset record and S3 object.`,
@@ -120,190 +152,190 @@ export function AssetListPanel({
 
   return (
     <>
-      <PaginatedTableCard
-        title='Assets'
-        description='Manage document (PDF) assets delivered through presigned URLs.'
+      <AdminRecordTable
+        aria-label='Assets'
+        columnCount={COLUMN_COUNT}
+        rowCount={rows.length}
         isLoading={isLoadingAssets}
         isLoadingMore={isLoadingMoreAssets}
         hasMore={Boolean(nextCursor)}
-        error={assetsError}
-        loadingLabel='Loading assets...'
         onLoadMore={onLoadMore}
-        toolbar={
-          <div className='mb-3 space-y-2'>
-            <AdminTableToolbar marginBottom='none'>
-              <div className='min-w-[200px] flex-1'>
-                <Label htmlFor='assets-search'>Search</Label>
-                <Input
-                  id='assets-search'
-                  value={filters.query ?? ''}
-                  onChange={(event) => onQueryChange(event.target.value)}
-                  placeholder='Title, file name, or client'
-                />
-              </div>
-              <div className='min-w-[180px]'>
-                <Label htmlFor='assets-visibility'>Visibility</Label>
-                <Select
-                  id='assets-visibility'
-                  value={filters.visibility ?? ''}
-                  onChange={(event) => onVisibilityChange(event.target.value as AssetVisibility | '')}
-                >
-                  <option value=''>All</option>
-                  {ASSET_VISIBILITIES.map((visibility) => (
-                    <option key={visibility} value={visibility}>
-                      {formatEnumLabel(visibility)}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div className='min-w-[200px]'>
-                <Label htmlFor='assets-tag-filter'>Tags</Label>
-                <Select
-                  id='assets-tag-filter'
-                  value={filters.tagName ?? ''}
-                  onChange={(event) =>
-                    onTagNameChange(event.target.value === '' ? '' : event.target.value)
-                  }
-                >
-                  <option value=''>All tags</option>
-                  {tagFilterOptions.map((name) => (
-                    <option key={name} value={name}>
-                      {formatAssetTagDisplayName(name)}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            </AdminTableToolbar>
-            {viewAssetError ? <AdminInlineError>{viewAssetError}</AdminInlineError> : null}
-          </div>
+        error={assetsError || viewAssetError}
+        errorTitle='Assets'
+        emptyLabel='No assets found for the current filters.'
+        filters={
+          <AdminFilterBar
+            trailing={
+              <AdminCreateButton
+                label='New asset'
+                active={isDraftOpen}
+                onClick={() => onToggle(DRAFT_RECORD_ID)}
+              />
+            }
+          >
+            <AdminFilterField label='Search' htmlFor='assets-search' className='sm:basis-72'>
+              <Input
+                id='assets-search'
+                value={filters.query ?? ''}
+                onChange={(event) => onQueryChange(event.target.value)}
+                placeholder='Title, file name, or client'
+                autoComplete='off'
+              />
+            </AdminFilterField>
+            <AdminFilterField label='Visibility' htmlFor='assets-visibility'>
+              <Select
+                id='assets-visibility'
+                value={filters.visibility ?? ''}
+                onChange={(event) => onVisibilityChange(event.target.value as AssetVisibility | '')}
+              >
+                <option value=''>All</option>
+                {ASSET_VISIBILITIES.map((visibility) => (
+                  <option key={visibility} value={visibility}>
+                    {formatEnumLabel(visibility)}
+                  </option>
+                ))}
+              </Select>
+            </AdminFilterField>
+            <AdminFilterField label='Tags' htmlFor='assets-tag-filter'>
+              <Select
+                id='assets-tag-filter'
+                value={filters.tagName ?? ''}
+                onChange={(event) => onTagNameChange(event.target.value === '' ? '' : event.target.value)}
+              >
+                <option value=''>All tags</option>
+                {tagFilterOptions.map((name) => (
+                  <option key={name} value={name}>
+                    {formatAssetTagDisplayName(name)}
+                  </option>
+                ))}
+              </Select>
+            </AdminFilterField>
+          </AdminFilterBar>
+        }
+        head={
+          <tr>
+            <AdminDataTableHeadCell className='w-10' />
+            <AdminDataTableHeadCell>Title</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Tags</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Language</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Visibility</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>File</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Updated</AdminDataTableHeadCell>
+            <AdminDataTableOperationsHeadCell />
+          </tr>
         }
       >
-        <AdminDataTable tableClassName='min-w-[920px]'>
-          <AdminDataTableHead>
-            <tr>
-              <AdminDataTableHeadCell>Title</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Tags</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Language</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Visibility</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>File</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Updated</AdminDataTableHeadCell>
-              <AdminDataTableOperationsHeadCell />
-            </tr>
-          </AdminDataTableHead>
-          <AdminDataTableBody>
-            {isLoadingAssets ? null : assets.length === 0 ? (
-              <tr>
-                <AdminDataTableCell colSpan={7} className='py-8 text-slate-600'>
-                  No assets found for the current filters.
+        {isDraftOpen ? (
+          <AdminExpandableRow
+            id={DRAFT_RECORD_ID}
+            label='new asset'
+            expanded
+            isDraft
+            onToggle={() => onToggle(DRAFT_RECORD_ID)}
+            columnCount={COLUMN_COUNT}
+            cells={
+              <>
+                <AdminDataTableCell className='font-medium text-slate-900'>New asset</AdminDataTableCell>
+                <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                  —
                 </AdminDataTableCell>
-              </tr>
-            ) : (
-              assets.map((asset) => {
-                const isSelected = asset.id === selectedAssetId;
-                const isExpenseLinked = asset.tags.some((tag) =>
-                  isExpenseAttachmentAssetTag(tag.name)
-                );
-                const isInvoiceLinked = asset.tags.some((tag) =>
-                  isCustomerInvoiceAssetTag(tag.name)
-                );
-                const isRestrictedSystemLinked = asset.tags.some((tag) =>
-                  isRestrictedSystemAssetTag(tag.name)
-                );
-                const sortedTags = [...asset.tags].sort((a, b) =>
-                  a.name.localeCompare(b.name)
-                );
-                return (
-                  <tr
-                    key={asset.id}
-                    className={`cursor-pointer transition hover:bg-slate-50 ${
-                      isSelected ? 'bg-slate-100' : ''
-                    }`}
-                    onClick={() => onSelectAsset(asset.id)}
-                    onKeyDown={(event) => handleRowKeyDown(event, asset.id)}
-                    tabIndex={0}
-                    role='row'
-                    aria-selected={isSelected}
-                  >
-                    <AdminDataTableCell>
-                      <p className='font-medium text-slate-900'>{asset.title}</p>
-                      <p className='mt-0.5 text-xs text-slate-500'>{asset.id}</p>
-                    </AdminDataTableCell>
-                    <AdminDataTableCell className='text-slate-700'>
-                      {sortedTags.length === 0 ? (
-                        '—'
-                      ) : (
-                        <div className='flex flex-wrap gap-1'>
-                          {sortedTags.map((tag) => {
-                            const nameLower = tag.name.toLowerCase();
-                            const isExpense = nameLower === EXPENSE_ATTACHMENT_ASSET_TAG;
-                            const isClient = nameLower === CLIENT_DOCUMENT_ASSET_TAG;
-                            const isInvoice = nameLower === CUSTOMER_INVOICE_ASSET_TAG;
-                            const pillClass = isExpense
-                              ? 'rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900'
-                              : isClient
-                                ? 'rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-900'
-                                : isInvoice
-                                  ? 'rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-900'
-                                  : 'rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-800';
-                            return (
-                              <span key={tag.id} className={pillClass}>
-                                {formatAssetTagDisplayName(tag.name)}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </AdminDataTableCell>
-                    <AdminDataTableCell className='text-slate-700'>
-                      {formatAssetContentLanguageLabel(asset.contentLanguage)}
-                    </AdminDataTableCell>
-                    <AdminDataTableCell className='text-slate-700'>
-                      {formatEnumLabel(asset.visibility)}
-                    </AdminDataTableCell>
-                    <AdminDataTableCell className='text-slate-700'>{asset.fileName || '—'}</AdminDataTableCell>
-                    <AdminDataTableCell className='text-slate-700'>{formatDate(asset.updatedAt)}</AdminDataTableCell>
-                    <AdminDataTableCell className='text-right'>
-                      <div className='flex justify-end gap-1'>
-                        <OpenAdminAssetInNewTabButton
-                          assetId={asset.id}
-                          isOpening={openingAssetId === asset.id}
-                          onOpen={(assetId, event) => {
-                            event.stopPropagation();
-                            void openAssetInNewTab(assetId);
-                          }}
-                        />
-                        <Button
-                          type='button'
-                          size='sm'
-                          variant='danger'
-                          onClick={(event) => void handleDeleteAsset(asset, event)}
-                          disabled={isDeletingAssetId === asset.id || isRestrictedSystemLinked}
-                          title={
-                            isInvoiceLinked
-                              ? 'Cannot delete assets linked to customer invoices'
-                              : isExpenseLinked
-                                ? 'Cannot delete assets linked to expenses'
-                                : 'Delete asset'
-                          }
-                          aria-label={
-                            isInvoiceLinked
-                              ? 'Cannot delete: asset is linked to customer invoices'
-                              : isExpenseLinked
-                                ? 'Cannot delete: asset is linked to expenses'
-                                : 'Delete asset'
-                          }
-                        >
-                          <DeleteIcon className='h-4 w-4' />
-                        </Button>
+                <AdminDataTableCell priority='tertiary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='tertiary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='tertiary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+              </>
+            }
+            actions={null}
+            detail={renderDetail(null)}
+          />
+        ) : null}
+        {rows.map((asset) => {
+          const isOpen = expandedId === asset.id;
+          const isDeleting = isDeletingAssetId === asset.id;
+          const isRestrictedSystemLinked = asset.tags.some((tag) => isRestrictedSystemAssetTag(tag.name));
+          const sortedTags = [...asset.tags].sort((a, b) => a.name.localeCompare(b.name));
+          const visibilityLabel = formatEnumLabel(asset.visibility);
+          return (
+            <AdminExpandableRow
+              key={asset.id}
+              id={asset.id}
+              label={asset.title}
+              expanded={isOpen}
+              onToggle={() => onToggle(asset.id)}
+              columnCount={COLUMN_COUNT}
+              cells={
+                <>
+                  <AdminDataTableCell>
+                    <p className='font-medium text-slate-900'>{asset.title}</p>
+                    <p className='mt-0.5 hidden text-xs text-slate-500 md:block'>{asset.id}</p>
+                    <AdminDataTableCellMeta>
+                      {visibilityLabel}
+                      {sortedTags.length > 0
+                        ? ` · ${sortedTags.map((tag) => formatAssetTagDisplayName(tag.name)).join(', ')}`
+                        : ''}
+                    </AdminDataTableCellMeta>
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='secondary' className='text-slate-700'>
+                    {sortedTags.length === 0 ? (
+                      '—'
+                    ) : (
+                      <div className='flex flex-wrap gap-1'>
+                        {sortedTags.map((tag) => (
+                          <span key={tag.id} className={tagPillClass(tag.name)}>
+                            {formatAssetTagDisplayName(tag.name)}
+                          </span>
+                        ))}
                       </div>
-                    </AdminDataTableCell>
-                  </tr>
-                );
-              })
-            )}
-          </AdminDataTableBody>
-        </AdminDataTable>
-      </PaginatedTableCard>
+                    )}
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='tertiary' className='text-slate-700'>
+                    {formatAssetContentLanguageLabel(asset.contentLanguage)}
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='secondary' className='text-slate-700'>
+                    {visibilityLabel}
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='tertiary' className='text-slate-700'>
+                    <span className='wrap-anywhere'>{asset.fileName || '—'}</span>
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='tertiary' className='whitespace-nowrap text-slate-700'>
+                    {formatDate(asset.updatedAt)}
+                  </AdminDataTableCell>
+                </>
+              }
+              actions={
+                <AdminRowActions
+                  actions={[
+                    {
+                      key: 'open',
+                      label: openingAssetId === asset.id ? 'Opening asset' : 'Open asset in new tab',
+                      icon: <OpenInNewTabIcon className='h-4 w-4' />,
+                      disabled: openingAssetId === asset.id,
+                      onClick: () => void openAssetInNewTab(asset.id),
+                    },
+                    {
+                      key: 'delete',
+                      label: deleteLabel(asset, isDeleting),
+                      icon: <DeleteIcon className='h-4 w-4' />,
+                      tone: 'danger',
+                      disabled: isDeleting || isRestrictedSystemLinked,
+                      onClick: () => void handleDeleteAsset(asset),
+                    },
+                  ]}
+                />
+              }
+              detail={isOpen ? renderDetail(asset) : null}
+            />
+          );
+        })}
+      </AdminRecordTable>
       <ConfirmDialog {...confirmDialogProps} />
     </>
   );

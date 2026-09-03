@@ -9,6 +9,7 @@ const {
   mockClearSelectedAssetInList,
   mockResetMutationState,
   mockClearGrantMutationError,
+  mockOpenDraftRow,
   listState,
   mutationState,
   grantsState,
@@ -17,6 +18,7 @@ const {
   const mockClearSelectedAssetInList = vi.fn();
   const mockResetMutationState = vi.fn();
   const mockClearGrantMutationError = vi.fn();
+  const mockOpenDraftRow = vi.fn();
 
   const listState = {
     filters: { query: '', visibility: '', tagName: '' },
@@ -28,6 +30,18 @@ const {
     assetsError: '',
     selectedAssetId: 'asset-1',
     selectedAsset: { id: 'asset-1', title: 'Asset 1' },
+    pinnedAsset: null,
+    expanded: {
+      expandedId: 'asset-1',
+      isDraftOpen: false,
+      isExpanded: vi.fn(),
+      toggle: vi.fn(),
+      expand: vi.fn(),
+      openDraft: mockOpenDraftRow,
+      collapse: vi.fn(),
+      discardPrompt: { open: false, confirm: vi.fn(), cancel: vi.fn() },
+    },
+    setEditorDirty: vi.fn(),
     setQueryFilter: vi.fn(),
     setVisibilityFilter: vi.fn(),
     setTagNameFilter: vi.fn(),
@@ -78,6 +92,7 @@ const {
     mockClearSelectedAssetInList,
     mockResetMutationState,
     mockClearGrantMutationError,
+    mockOpenDraftRow,
     listState,
     mutationState,
     grantsState,
@@ -140,10 +155,24 @@ describe('useAdminAssets', () => {
     expect(mockClearGrantMutationError).toHaveBeenCalledTimes(1);
   });
 
+  it('openDraft opens the draft row and resets mutation and grant error state', () => {
+    const { result } = renderHook(() => useAdminAssets());
+
+    act(() => {
+      result.current.openDraft();
+    });
+
+    expect(mockOpenDraftRow).toHaveBeenCalledTimes(1);
+    expect(mockResetMutationState).toHaveBeenCalledTimes(1);
+    expect(mockClearGrantMutationError).toHaveBeenCalledTimes(1);
+  });
+
   it('returns merged state and actions from composed hooks', () => {
     const { result } = renderHook(() => useAdminAssets());
 
     expect(result.current.filters).toEqual(listState.filters);
+    expect(result.current.expanded).toBe(listState.expanded);
+    expect(result.current.setEditorDirty).toBe(listState.setEditorDirty);
     expect(result.current.assets).toEqual(listState.assets);
     expect(result.current.linkedTagNames).toEqual(listState.linkedTagNames);
     expect(result.current.assetMutationError).toBe(mutationState.assetMutationError);

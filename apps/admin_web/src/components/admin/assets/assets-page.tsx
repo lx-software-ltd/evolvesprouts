@@ -1,12 +1,15 @@
 'use client';
 
+import type { AdminAsset } from '@/types/assets';
+
 import { AssetEditorPanel } from './asset-editor-panel';
 import { AssetGrantsPanel } from './asset-grants-panel';
 import { AssetListPanel } from './asset-list-panel';
 
 import { StatusBanner } from '@/components/status-banner';
-import { AdminCollapsibleSection } from '@/components/ui/admin-collapsible-section';
+import { AdminDiscardChangesDialog } from '@/components/ui/admin-discard-changes-dialog';
 import { useAdminAssets } from '@/hooks/use-admin-assets';
+import { DRAFT_RECORD_ID } from '@/hooks/use-expanded-record';
 import { getApiConfigError } from '@/lib/config';
 
 const DEFAULT_ASSET_TYPE = 'document' as const;
@@ -17,6 +20,7 @@ export function AssetsPage() {
   const {
     filters,
     assets,
+    pinnedAsset,
     linkedTagNames,
     nextCursor,
     isLoadingAssets,
@@ -30,7 +34,8 @@ export function AssetsPage() {
     uploadError,
     hasPendingUpload,
     selectedAssetId,
-    selectedAsset,
+    expanded,
+    setEditorDirty,
     grants,
     isLoadingGrants,
     grantsError,
@@ -43,6 +48,7 @@ export function AssetsPage() {
     loadMoreAssets,
     selectAsset,
     clearSelectedAsset,
+    openDraft,
     createAssetEntry,
     replaceAssetFileEntry,
     updateAssetEntry,
@@ -53,31 +59,36 @@ export function AssetsPage() {
     replaceSuccessNonce,
   } = useAdminAssets();
 
-  return (
-    <div className='space-y-6'>
-      {apiConfigError ? (
-        <StatusBanner variant='error' title='Configuration'>
-          {apiConfigError}
-        </StatusBanner>
-      ) : null}
+  const handleToggle = (id: string) => {
+    if (expanded.expandedId === id) {
+      clearSelectedAsset();
+      return;
+    }
+    if (id === DRAFT_RECORD_ID) {
+      openDraft();
+      return;
+    }
+    selectAsset(id);
+  };
 
+  const renderDetail = (asset: AdminAsset | null) => {
+    const isSelected = asset !== null && asset.id === selectedAssetId;
+    return (
       <AssetEditorPanel
-        key={`${selectedAsset?.id ?? 'new-asset'}-${replaceSuccessNonce}`}
-        selectedAsset={selectedAsset}
+        key={`${asset?.id ?? DRAFT_RECORD_ID}-${replaceSuccessNonce}`}
+        selectedAsset={asset}
         isSavingAsset={isSavingAsset}
-        isDeletingCurrentAsset={Boolean(selectedAssetId) && isDeletingAssetId === selectedAssetId}
+        isDeletingCurrentAsset={asset !== null && isDeletingAssetId === asset.id}
         assetMutationError={assetMutationError}
         uploadState={uploadState}
         uploadPhase={uploadPhase}
         uploadError={uploadError}
         hasPendingUpload={hasPendingUpload}
         onRetryUpload={retryPendingUpload}
-        onReplaceFile={async (file) => {
-          if (!selectedAssetId) {
-            return false;
-          }
-          return replaceAssetFileEntry(selectedAssetId, file, DEFAULT_CONTENT_TYPE);
-        }}
+        onDirtyChange={setEditorDirty}
+        onReplaceFile={
+          asset ? (file) => replaceAssetFileEntry(asset.id, file, DEFAULT_CONTENT_TYPE) : undefined
+        }
         onCreate={async (payload, file) => {
           try {
             await createAssetEntry(
@@ -93,39 +104,51 @@ export function AssetsPage() {
           }
         }}
         onUpdate={async (assetId, payload) => updateAssetEntry(assetId, payload)}
-        onStartCreate={clearSelectedAsset}
-      />
+      >
+        {isSelected ? (
+          <AssetGrantsPanel
+            selectedAsset={asset}
+            grants={grants}
+            isLoadingGrants={isLoadingGrants}
+            grantsError={grantsError}
+            grantMutationError={grantMutationError}
+            isSavingGrant={isSavingGrant}
+            isDeletingGrantId={isDeletingGrantId}
+            onCreateGrant={async (assetId, input) => {
+              try {
+                await createGrantEntry(assetId, input);
+                return true;
+              } catch {
+                // The hook stores the actionable error state for UI display.
+                return false;
+              }
+            }}
+            onDeleteGrant={async (assetId, grantId) => {
+              try {
+                await deleteGrantEntry(assetId, grantId);
+              } catch {
+                // The hook stores the actionable error state for UI display.
+              }
+            }}
+          />
+        ) : null}
+      </AssetEditorPanel>
+    );
+  };
 
-      <AdminCollapsibleSection id='asset-access-grants' title='Access grants'>
-        <AssetGrantsPanel
-          selectedAsset={selectedAsset}
-          grants={grants}
-          isLoadingGrants={isLoadingGrants}
-          grantsError={grantsError}
-          grantMutationError={grantMutationError}
-          isSavingGrant={isSavingGrant}
-          isDeletingGrantId={isDeletingGrantId}
-          onCreateGrant={async (assetId, input) => {
-            try {
-              await createGrantEntry(assetId, input);
-            } catch {
-              // The hook stores the actionable error state for UI display.
-            }
-          }}
-          onDeleteGrant={async (assetId, grantId) => {
-            try {
-              await deleteGrantEntry(assetId, grantId);
-            } catch {
-              // The hook stores the actionable error state for UI display.
-            }
-          }}
-        />
-      </AdminCollapsibleSection>
-
+  return (
+    <div className='space-y-6'>
+      {apiConfigError ? (
+        <StatusBanner variant='error' title='Configuration'>
+          {apiConfigError}
+        </StatusBanner>
+      ) : null}
+      <AdminDiscardChangesDialog prompt={expanded.discardPrompt} />
       <AssetListPanel
         assets={assets}
+        pinnedAsset={pinnedAsset}
         linkedTagNames={linkedTagNames}
-        selectedAssetId={selectedAssetId}
+        expandedId={expanded.expandedId}
         filters={filters}
         isLoadingAssets={isLoadingAssets}
         isLoadingMoreAssets={isLoadingMoreAssets}
@@ -136,7 +159,7 @@ export function AssetsPage() {
         onVisibilityChange={setVisibilityFilter}
         onTagNameChange={setTagNameFilter}
         onLoadMore={loadMoreAssets}
-        onSelectAsset={selectAsset}
+        onToggle={handleToggle}
         onDeleteAsset={async (assetId) => {
           try {
             await deleteAssetEntry(assetId);
@@ -144,6 +167,7 @@ export function AssetsPage() {
             // The hook stores the actionable error state for UI display.
           }
         }}
+        renderDetail={renderDetail}
       />
     </div>
   );
