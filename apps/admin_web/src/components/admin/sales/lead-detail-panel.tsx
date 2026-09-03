@@ -406,7 +406,6 @@ export function LeadDetailPanel({
           <AdminDisclosure id='lead-notes' title='Notes' open={notesOpen} onOpenChange={setNotesOpen}>
             {notesOpen ? (
               <ContactNotesPanel
-                layout='embedded'
                 contact={
                   contactId
                     ? {

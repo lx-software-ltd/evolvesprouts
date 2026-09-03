@@ -267,7 +267,6 @@ export function ContactEditorPanel({
         >
           {notesOpen ? (
             <ContactNotesPanel
-              layout='embedded'
               contact={selected}
               adminUsers={adminUsers}
               onStandaloneNoteCountChange={onPatchStandaloneNoteCount}

@@ -5,9 +5,9 @@ import { clsx } from 'clsx';
 export type DashboardCardWidth = 'half' | 'full';
 
 /**
- * Lightweight dashboard grid tile. Unlike {@link PaginatedTableCard} and {@link AdminEditorCard},
- * this primitive only handles width spanning on the dashboard grid and a titled `<section>` shell
- * with `aria-labelledby` for landmark accessibility (dashboard metrics, not tabular CRUD).
+ * Lightweight dashboard grid tile. Unlike the table-first CRUD primitives (`AdminRecordTable`,
+ * `AdminEditorPanel`), this only handles width spanning on the dashboard grid and a titled
+ * `<section>` shell with `aria-labelledby` for landmark accessibility (dashboard metrics, not CRUD).
  */
 export function DashboardCard({
   width,
