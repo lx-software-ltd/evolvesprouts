@@ -211,7 +211,11 @@ describe('AdminDataTable column priority', () => {
     expect(screen.getByRole('columnheader', { name: 'Email' })).toHaveClass('hidden', 'md:table-cell');
     expect(screen.getByRole('columnheader', { name: 'Type' })).toHaveClass('hidden', 'lg:table-cell');
     expect(screen.getByRole('columnheader', { name: 'Name' })).not.toHaveClass('hidden');
-    expect(screen.getAllByText('ann@example.com')[0]).toHaveClass('md:hidden');
+    const meta = screen.getAllByText('ann@example.com')[0];
+    expect(meta).toHaveClass('md:hidden');
+    // Wraps anywhere instead of truncating so it never widens the column on a phone.
+    expect(meta).toHaveClass('wrap-anywhere');
+    expect(meta).not.toHaveClass('truncate');
   });
 });
 
@@ -365,8 +369,7 @@ describe('AdminExpandableRow', () => {
   it('frames the selected record: summary row top and sides match the detail bottom border', () => {
     const { rerender } = renderRow(false);
     const row = screen.getByTestId('admin-row-c1');
-    expect(row).not.toHaveClass('border-t-2');
-    expect(row).not.toHaveClass('border-x-2');
+    expect(row).not.toHaveClass('admin-row-framed');
 
     rerender(
       <table>
@@ -383,9 +386,11 @@ describe('AdminExpandableRow', () => {
         </tbody>
       </table>
     );
-    expect(row).toHaveClass('border-t-2', 'border-x-2', 'border-t-slate-300', 'border-x-slate-300');
+    // Inset-shadow frame (globals.css): top + sides on the summary cells, sides +
+    // bottom on the detail, so both halves share the same 2px edge.
+    expect(row).toHaveClass('admin-row-framed');
     const detail = screen.getByLabelText('First name').closest('.admin-row-detail');
-    expect(detail).toHaveClass('border-b-2', 'border-x-2', 'border-b-slate-300', 'border-x-slate-300');
+    expect(detail).toHaveClass('admin-row-detail-framed');
   });
 
   it('mounts the detail while expanded and unmounts it after collapsing settles', () => {
