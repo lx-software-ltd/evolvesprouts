@@ -26,6 +26,7 @@ def serialize_sales_daily_plan_job(
         "id": str(job.id),
         "status": job.status.value,
         "error_message": job.error_message,
+        "operator_input": getattr(job, "operator_input", None),
         "plan_id": str(job.plan_id) if job.plan_id else None,
         "created_at": created.isoformat() if created is not None else None,
         "started_at": started.isoformat() if started is not None else None,

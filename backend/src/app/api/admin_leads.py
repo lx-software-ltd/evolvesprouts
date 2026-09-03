@@ -54,6 +54,7 @@ from app.api.admin_leads_analytics import (
 )
 from app.api.admin_sales_daily_plan import (
     create_sales_daily_plan,
+    delete_sales_daily_plan_memory,
     get_sales_daily_plan,
     get_sales_daily_plan_job,
 )
@@ -91,6 +92,8 @@ def handle_admin_leads_request(
             return get_sales_daily_plan(event)
         if method == "POST":
             return create_sales_daily_plan(event, actor_sub=identity.user_sub)
+        if method == "DELETE":
+            return delete_sales_daily_plan_memory(event, actor_sub=identity.user_sub)
         return method_not_allowed(event)
 
     if len(parts) == 5 and parts[2] == "daily-plan" and parts[3] == "jobs":

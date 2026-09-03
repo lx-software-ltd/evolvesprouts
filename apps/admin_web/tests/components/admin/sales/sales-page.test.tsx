@@ -316,6 +316,8 @@ describe('SalesPage', () => {
     expect(screen.getByLabelText('Email the assignee when a lead is assigned to them')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Sale plan memory' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reset sale plan memory' })).toBeInTheDocument();
   });
 
   it('moves KPI cards, funnel, source breakdown, and date filters to analytics without a title or Refresh', async () => {

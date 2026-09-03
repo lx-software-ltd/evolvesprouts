@@ -96,9 +96,11 @@ their primary responsibilities.
   enqueues async generation on `LeadAiSuggestionFunction` via SQS; poll
   `/v1/admin/leads/{id}/ai-suggestion/jobs/{job_id}` for status and timing),
   `/v1/admin/leads/{id}/ai-suggestion/jobs/{job_id}` (GET job status / duration),
-  `/v1/admin/leads/daily-plan` (GET latest stored org-wide sales plan of the day /
-  POST enqueues async generation on `SalesDailyPlanFunction` via SQS; poll
-  `/v1/admin/leads/daily-plan/jobs/{job_id}` for status and timing),
+  `/v1/admin/leads/daily-plan` (GET latest stored org-wide sales plan of the day
+  plus compact memory of the last five plans / POST enqueues async generation on
+  `SalesDailyPlanFunction` via SQS with optional `operator_input`; poll
+  `/v1/admin/leads/daily-plan/jobs/{job_id}` for status and timing /
+  DELETE resets all stored plans, jobs, and refinements),
   `/v1/admin/leads/daily-plan/jobs/{job_id}` (GET job status / duration),
   `/v1/admin/contacts/*` (including `GET /v1/admin/contacts` optional `contact_type` filter;
   list and single-contact responses include read-only `family_location_summary` and
@@ -580,8 +582,10 @@ their primary responsibilities.
   `{ "job_id": "<uuid>" }` (not SNS-wrapped)
 - Purpose: generate an org-wide sales plan of the day from open pipeline, unanswered
   WhatsApp/Meta threads, published catalogue, and recent won/lost leads via OpenRouter
-  (`AwsApiProxyFunction`). Persists `sales_daily_plans` and marks
-  `sales_daily_plan_jobs` `succeeded` or `failed`. Does not send messages.
+  (`AwsApiProxyFunction`) with the last five persisted plans and any
+  `operator_input` as memory. Persists `sales_daily_plans` (including the
+  refinement) and marks `sales_daily_plan_jobs` `succeeded` or `failed`. Does
+  not send messages.
 - DB access: RDS Proxy with IAM auth (`evolvesprouts_admin`)
 - VPC: Yes
 - Permissions: Secrets Manager read for OpenRouter key, Lambda invoke permission

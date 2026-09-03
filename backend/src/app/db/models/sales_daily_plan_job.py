@@ -44,6 +44,7 @@ class SalesDailyPlanJob(Base):
         server_default=text("gen_random_uuid()"),
     )
     created_by: Mapped[str] = mapped_column(Text(), nullable=False)
+    operator_input: Mapped[str | None] = mapped_column(Text(), nullable=True)
     status: Mapped[SalesDailyPlanJobStatus] = mapped_column(
         SAEnum(
             SalesDailyPlanJobStatus,

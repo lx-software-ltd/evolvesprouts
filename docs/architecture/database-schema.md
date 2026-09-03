@@ -590,8 +590,12 @@ maps legacy `note.id` to the **first** inserted row’s UUID.
   `offer_refinements`, `risks`), optional `conversation_watermark_at` (max
   WhatsApp/Meta message `sent_at` at generation), optional
   `pipeline_watermark_at` (max lead create or lead-event time at generation),
-  `generated_at`, `generated_by`, and `model`.
-- Multiple rows are retained (history); admin APIs return the newest.
+  `generated_at`, `generated_by`, `model`, and optional `operator_input`
+  (refinement text that triggered this plan).
+- Multiple rows are retained forever until
+  `DELETE /v1/admin/leads/daily-plan`; the next generation includes the last
+  five plans (plus their `operator_input`) as memory. Admin GET returns the
+  newest plan plus a compact `memory` list.
 - Stale when older than 24 hours, when a newer conversation message exists
   than the conversation watermark, or when a lead was created / a funnel-stage
   event occurred after the pipeline watermark.
@@ -600,6 +604,7 @@ maps legacy `note.id` to the **first** inserted row’s UUID.
 ### `sales_daily_plan_jobs`
 
 - Purpose: async generation jobs for the org-wide sales daily plan (SQS worker).
+- Optional `operator_input` copied onto the resulting `sales_daily_plans` row.
 - Status lifecycle: `pending` → `processing` → `succeeded` | `failed`.
 - Timing columns: `created_at`, `started_at`, `finished_at` (plus `updated_at`) so
   admins can measure queue wait and OpenRouter duration.

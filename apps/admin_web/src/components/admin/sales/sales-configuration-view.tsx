@@ -7,6 +7,7 @@ import { AdminEditorPanel } from '@/components/ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import type { SalesSettings, UpdateSalesSettingsRequest } from '@/lib/sales-settings-api';
@@ -21,6 +22,9 @@ export interface SalesConfigurationViewProps {
   isSaving: boolean;
   error: string;
   onSave: (body: UpdateSalesSettingsRequest) => Promise<void>;
+  onResetMemory: () => Promise<void>;
+  isResettingMemory: boolean;
+  resetError: string;
 }
 
 /**
@@ -34,7 +38,11 @@ export function SalesConfigurationView({
   isSaving,
   error,
   onSave,
+  onResetMemory,
+  isResettingMemory,
+  resetError,
 }: SalesConfigurationViewProps) {
+  const [resetOpen, setResetOpen] = useState(false);
   const [defaultAssignedTo, setDefaultAssignedTo] = useState(
     settings?.default_assigned_to ?? ''
   );
@@ -74,6 +82,7 @@ export function SalesConfigurationView({
   };
 
   return (
+    <div className='space-y-4'>
     <Card aria-label='Sales configuration'>
       <AdminEditorPanel
         status={
@@ -157,5 +166,48 @@ export function SalesConfigurationView({
         )}
       </AdminEditorPanel>
     </Card>
+      <Card aria-label='Sale plan memory'>
+        <AdminEditorPanel
+          status={
+            resetError ? (
+              <StatusBanner variant='error' title='Sale plan memory'>
+                {resetError}
+              </StatusBanner>
+            ) : null
+          }
+          actions={
+            <Button
+              type='button'
+              variant='danger'
+              onClick={() => setResetOpen(true)}
+              loading={isResettingMemory}
+              loadingLabel='Resetting…'
+            >
+              Reset sale plan memory
+            </Button>
+          }
+        >
+          <p className='text-sm text-slate-600'>
+            Permanently delete every saved sale plan insight and refinement. Contacts,
+            leads, and messages are not affected. This cannot be undone.
+          </p>
+        </AdminEditorPanel>
+      </Card>
+      <ConfirmDialog
+        open={resetOpen}
+        title='Reset sale plan memory'
+        description='This permanently deletes every saved sale plan insight and refinement. This cannot be undone. Live contacts, leads, and messages are not affected.'
+        confirmLabel='Reset memory'
+        variant='danger'
+        confirmLoading={isResettingMemory}
+        confirmLoadingLabel='Resetting…'
+        onConfirm={() => {
+          void onResetMemory().then(() => {
+            setResetOpen(false);
+          });
+        }}
+        onCancel={() => setResetOpen(false)}
+      />
+    </div>
   );
 }

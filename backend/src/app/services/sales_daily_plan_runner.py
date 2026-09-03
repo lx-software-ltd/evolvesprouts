@@ -95,6 +95,7 @@ def process_sales_daily_plan_job(job_id: UUID) -> SalesDailyPlanWorkerOutcome:
             return SalesDailyPlanWorkerOutcome(ack_sqs_message=True)
 
         actor_sub = job.created_by
+        operator_input = job.operator_input
         set_audit_context(session, user_id=actor_sub, request_id=req_id)
         job_repo.mark_processing(job)
         session.commit()
@@ -102,7 +103,11 @@ def process_sales_daily_plan_job(job_id: UUID) -> SalesDailyPlanWorkerOutcome:
     try:
         with Session(get_engine()) as session:
             set_audit_context(session, user_id=actor_sub, request_id=req_id)
-            plan = generate_and_store_plan(session, actor_sub=actor_sub)
+            plan = generate_and_store_plan(
+                session,
+                actor_sub=actor_sub,
+                operator_input=operator_input,
+            )
             session.flush()
             job_repo = SalesDailyPlanJobRepository(session)
             job = job_repo.get_by_id(job_id)

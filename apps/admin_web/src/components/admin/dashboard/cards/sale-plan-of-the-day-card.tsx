@@ -1,12 +1,21 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 
 import { DashboardCard } from '@/components/admin/dashboard/dashboard-card';
 import { StatusBanner } from '@/components/status-banner';
+import { AdminDisclosure } from '@/components/ui/admin-disclosure';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useSalesDailyPlan } from '@/hooks/use-sales-daily-plan';
-import type { SalesDailyPlanOutreach, SalesDailyPlanPriority } from '@/types/sales-daily-plan';
+import type {
+  SalesDailyPlanMemoryEntry,
+  SalesDailyPlanOutreach,
+  SalesDailyPlanPriority,
+} from '@/types/sales-daily-plan';
+import { SALES_DAILY_PLAN_OPERATOR_INPUT_MAX } from '@/types/sales-daily-plan';
 
 function formatStaleReasons(reasons: string[]): string {
   return reasons
@@ -77,9 +86,26 @@ function OutreachItem({ item, index }: { item: SalesDailyPlanOutreach; index: nu
   );
 }
 
+function MemoryEntry({ entry }: { entry: SalesDailyPlanMemoryEntry }) {
+  return (
+    <li className='space-y-1 border-t border-slate-200 pt-3 first:border-t-0 first:pt-0'>
+      <p className='text-xs text-slate-500'>
+        {entry.generatedAt ? new Date(entry.generatedAt).toLocaleString() : '—'}
+      </p>
+      <p className='text-sm text-slate-700'>{entry.focus || '—'}</p>
+      {entry.operatorInput ? (
+        <p className='whitespace-pre-wrap text-sm text-slate-600'>
+          Refinement: {entry.operatorInput}
+        </p>
+      ) : null}
+    </li>
+  );
+}
+
 export function SalePlanOfTheDayCard() {
   const {
     plan,
+    memory,
     isLoading,
     loadError,
     generateError,
@@ -87,15 +113,26 @@ export function SalePlanOfTheDayCard() {
     lastJob,
     generate,
   } = useSalesDailyPlan();
+  const [refinement, setRefinement] = useState('');
   const error = generateError || loadError;
   const primaryLabel = plan ? 'Refresh insight' : 'Generate insight';
+  const previousMemory = memory.filter((entry) => entry.id !== plan?.id);
+
+  async function handleGenerate() {
+    const note = refinement.trim();
+    const succeeded = await generate(note || undefined);
+    if (succeeded) {
+      setRefinement('');
+    }
+  }
 
   return (
     <DashboardCard width='full' title='Sale Plan of the Day'>
       <div className='space-y-4' data-testid='sale-plan-of-the-day'>
         <p className='text-xs text-slate-500'>
-          Sales-focused advice for today from your pipeline, unanswered messages, and
-          catalogue. Saved until you regenerate. Suggestions are not sent automatically.
+          Sales-focused advice for today from your pipeline, unanswered messages,
+          catalogue, and saved insights. Refinements stay in memory until you reset
+          them in Sales configuration. Suggestions are not sent automatically.
         </p>
         {error ? (
           <StatusBanner variant='error' title='Sale Plan of the Day'>
@@ -134,6 +171,15 @@ export function SalePlanOfTheDayCard() {
               <StatusBanner variant='info' title='Plan may be stale'>
                 {`This plan looks out of date (${formatStaleReasons(plan.staleReasons)}). Refresh to regenerate.`}
               </StatusBanner>
+            ) : null}
+
+            {plan.operatorInput ? (
+              <div>
+                <h3 className='text-sm font-medium text-slate-900'>Your refinement</h3>
+                <p className='mt-1 whitespace-pre-wrap text-sm text-slate-700'>
+                  {plan.operatorInput}
+                </p>
+              </div>
             ) : null}
 
             <div>
@@ -204,10 +250,37 @@ export function SalePlanOfTheDayCard() {
           </div>
         ) : null}
 
+        {previousMemory.length > 0 ? (
+          <AdminDisclosure
+            id='sale-plan-memory'
+            title='Previous insights'
+            summary={String(previousMemory.length)}
+          >
+            <ul className='space-y-0'>
+              {previousMemory.map((entry) => (
+                <MemoryEntry key={entry.id} entry={entry} />
+              ))}
+            </ul>
+          </AdminDisclosure>
+        ) : null}
+
+        <div className='space-y-2'>
+          <Label htmlFor='sale-plan-refinement'>Refinement for next insight</Label>
+          <Textarea
+            id='sale-plan-refinement'
+            value={refinement}
+            onChange={(event) => setRefinement(event.target.value)}
+            maxLength={SALES_DAILY_PLAN_OPERATOR_INPUT_MAX}
+            rows={3}
+            disabled={isGenerating || isLoading}
+            placeholder='Optional. Saved with the next plan and used as memory from then on.'
+          />
+        </div>
+
         <div className='flex flex-wrap items-center justify-start gap-2'>
           <Button
             type='button'
-            onClick={() => void generate()}
+            onClick={() => void handleGenerate()}
             disabled={isLoading}
             loading={isGenerating}
             loadingLabel='Generating…'
