@@ -117,6 +117,7 @@ describe('AssetListPanel', () => {
     expect(screen.getByRole('columnheader', { name: 'Language' })).toBeInTheDocument();
     expect(screen.getByText('Cantonese (Hong Kong)')).toBeInTheDocument();
     expect(screen.getByText('Infant Nutrition Guide')).toBeInTheDocument();
+    expect(screen.queryByText(FIXTURE_ASSET.id)).not.toBeInTheDocument();
     await user.type(screen.getByLabelText('Search'), 'guide');
     expect(onQueryChange).toHaveBeenCalled();
 

@@ -390,9 +390,12 @@ describe('AssetEditorPanel', () => {
     const disclosure = screen.getByTestId('asset-share-link-asset-1-disclosure');
     expect(within(disclosure).getByLabelText('Share-link domain allowlist')).toBeInTheDocument();
     expect(within(disclosure).getByRole('button', { name: 'Copy link' })).toBeInTheDocument();
+    expect(within(disclosure).getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+    expect(within(disclosure).getByRole('button', { name: 'Delete links' })).toBeInTheDocument();
+    expect(within(disclosure).queryByText('Links', { selector: 'label' })).not.toBeInTheDocument();
   });
 
-  it('removes share-link helper copy and keeps save policy below textarea', async () => {
+  it('removes share-link helper copy and keeps save policy left-aligned below textarea', async () => {
     const user = userEvent.setup();
     renderEditor({ selectedAsset: SELECTED_ASSET });
 
@@ -408,18 +411,22 @@ describe('AssetEditorPanel', () => {
     ).not.toBeInTheDocument();
 
     const allowlistInput = screen.getByLabelText('Share-link domain allowlist');
-    const savePolicyButton = screen.getByRole('button', { name: 'Save domain policy' });
+    const savePolicyButton = screen.getByRole('button', { name: 'Save policy' });
     const savePolicyRow = savePolicyButton.closest('div');
     expect(savePolicyRow).toHaveClass('flex');
-    expect(savePolicyRow).toHaveClass('justify-end');
+    expect(savePolicyRow).toHaveClass('justify-start');
 
     const allDivs = Array.from(document.querySelectorAll('div'));
     const inputIndex = allDivs.findIndex((element) => element.contains(allowlistInput));
     const buttonRowIndex = allDivs.findIndex((element) => element === savePolicyRow);
     expect(buttonRowIndex).toBeGreaterThan(inputIndex);
+
+    const shareSection = savePolicyButton.closest('.space-y-4');
+    expect(shareSection).not.toBeNull();
+    expect(shareSection).toHaveClass('space-y-4');
   });
 
-  it('runs copy, rotate, and revoke share-link actions', async () => {
+  it('runs copy, refresh, and revoke share-link actions', async () => {
     const user = userEvent.setup();
     renderEditor({ selectedAsset: SELECTED_ASSET });
 
@@ -435,7 +442,7 @@ describe('AssetEditorPanel', () => {
       });
     });
 
-    await user.click(screen.getByRole('button', { name: 'Rotate link' }));
+    await user.click(screen.getByRole('button', { name: 'Refresh' }));
     await user.click(screen.getByRole('button', { name: 'Rotate' }));
     await waitFor(() => {
       expect(mockRotateAdminAssetShareLink).toHaveBeenCalledWith('asset-1', {
@@ -443,7 +450,7 @@ describe('AssetEditorPanel', () => {
       });
     });
 
-    await user.click(screen.getByRole('button', { name: 'Delete link' }));
+    await user.click(screen.getByRole('button', { name: 'Delete links' }));
     await user.click(screen.getByRole('button', { name: 'Revoke' }));
     await waitFor(() => {
       expect(mockRevokeAdminAssetShareLink).toHaveBeenCalledWith('asset-1');
