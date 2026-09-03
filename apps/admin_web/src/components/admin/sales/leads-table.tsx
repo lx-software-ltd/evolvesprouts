@@ -136,7 +136,6 @@ export function LeadsTable({
               />
             </AdminDataTableHeadCell>
             <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='secondary'>Email</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>Source</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>Stage</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>Created</AdminDataTableHeadCell>
@@ -157,9 +156,6 @@ export function LeadsTable({
               <>
                 <AdminDataTableCell className='w-10 pr-0' />
                 <AdminDataTableCell className='font-medium text-slate-900'>New lead</AdminDataTableCell>
-                <AdminDataTableCell priority='secondary' className='text-slate-400'>
-                  —
-                </AdminDataTableCell>
                 <AdminDataTableCell priority='tertiary' className='text-slate-400'>
                   —
                 </AdminDataTableCell>

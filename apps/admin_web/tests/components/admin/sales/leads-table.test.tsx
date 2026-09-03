@@ -108,6 +108,8 @@ describe('LeadsTable', () => {
     expect(screen.getByTestId('admin-record-table')).toBeInTheDocument();
     expect(screen.getByTestId('admin-filter-bar')).toBeInTheDocument();
     expect(screen.getByText('Jane Doe')).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Email' })).not.toBeInTheDocument();
+    expect(table).not.toHaveTextContent('jane@example.com');
     expect(table).toHaveTextContent('Manual');
     expect(table).toHaveTextContent('New');
     expect(screen.getByRole('columnheader', { name: 'Operations' })).toBeInTheDocument();

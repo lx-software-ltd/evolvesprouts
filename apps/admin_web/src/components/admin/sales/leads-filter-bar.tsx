@@ -56,8 +56,9 @@ function StageFilterChip({
 
 /**
  * Filters above the leads table. The stage chips take their own line
- * (seven coloured toggles do not fit next to the other controls); the
- * remaining filters sit on one line on desktop and apply on change.
+ * (seven coloured toggles do not fit next to the other controls); Search,
+ * Source, Lead type, Assignee, and the trailing `New lead` button sit on
+ * one line on desktop and apply on change.
  */
 export function LeadsFilterBar({ filters, users, onFilterChange, trailing }: LeadsFilterBarProps) {
   return (
@@ -136,31 +137,6 @@ export function LeadsFilterBar({ filters, users, onFilterChange, trailing }: Lea
           ))}
         </Select>
       </AdminFilterField>
-      <AdminFilterField label='From' htmlFor='leads-filter-date-from' className='sm:basis-36'>
-        <Input
-          id='leads-filter-date-from'
-          type='date'
-          value={filters.dateFrom ?? ''}
-          onChange={(event) => onFilterChange('dateFrom', event.target.value || null)}
-        />
-      </AdminFilterField>
-      <AdminFilterField label='To' htmlFor='leads-filter-date-to' className='sm:basis-36'>
-        <Input
-          id='leads-filter-date-to'
-          type='date'
-          value={filters.dateTo ?? ''}
-          onChange={(event) => onFilterChange('dateTo', event.target.value || null)}
-        />
-      </AdminFilterField>
-      <label className='inline-flex h-10 items-center gap-2 text-sm text-slate-700 sm:h-9'>
-        <input
-          type='checkbox'
-          className='h-4 w-4 rounded border-slate-300 text-slate-900'
-          checked={filters.unassigned}
-          onChange={(event) => onFilterChange('unassigned', event.target.checked)}
-        />
-        Unassigned only
-      </label>
     </AdminFilterBar>
   );
 }

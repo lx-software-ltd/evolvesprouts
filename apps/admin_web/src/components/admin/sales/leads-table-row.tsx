@@ -13,8 +13,8 @@ import { adminContactDeepLink } from '@/lib/inbox-conversation-name';
 
 import { getStageBadgeClass } from './stage-utils';
 
-/** `<td>` count per leads row: expand, checkbox, six data columns, Operations. */
-export const LEADS_TABLE_COLUMN_COUNT = 9;
+/** `<td>` count per leads row: expand, checkbox, five data columns, Operations. */
+export const LEADS_TABLE_COLUMN_COUNT = 8;
 
 export function leadDisplayName(lead: LeadSummary): string {
   return [lead.contact.firstName, lead.contact.lastName].filter(Boolean).join(' ') || 'Unnamed lead';
@@ -60,12 +60,7 @@ export function LeadsTableRow({ lead, expanded, isChecked, onToggle, onCheck, de
           </AdminDataTableCell>
           <AdminDataTableCell className='font-medium text-slate-900'>
             {name}
-            <AdminDataTableCellMeta>
-              {[lead.contact.email, stageLabel].filter(Boolean).join(' · ')}
-            </AdminDataTableCellMeta>
-          </AdminDataTableCell>
-          <AdminDataTableCell priority='secondary' className='text-slate-700'>
-            {lead.contact.email ?? '—'}
+            <AdminDataTableCellMeta>{stageLabel}</AdminDataTableCellMeta>
           </AdminDataTableCell>
           <AdminDataTableCell priority='tertiary' className='text-slate-700'>
             {lead.contact.source ? formatEnumLabel(lead.contact.source) : '—'}

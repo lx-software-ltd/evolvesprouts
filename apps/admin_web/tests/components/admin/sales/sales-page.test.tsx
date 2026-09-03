@@ -243,6 +243,10 @@ describe('SalesPage', () => {
     expect(screen.queryByText('Total leads')).not.toBeInTheDocument();
     expect(screen.queryByText('Source Breakdown')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Date range preset')).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Email' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('From')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('To')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Unassigned only')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Export CSV' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/^First name/)).not.toBeInTheDocument();
@@ -259,6 +263,8 @@ describe('SalesPage', () => {
 
     expect(screen.getByTestId('admin-row-new')).toHaveAttribute('data-draft', 'true');
     expect(screen.getByLabelText(/^First name/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Email')).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Email' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
 
     await user.type(screen.getByLabelText(/^First name/), 'Sam');
