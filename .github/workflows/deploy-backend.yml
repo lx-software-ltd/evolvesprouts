@@ -74,11 +74,30 @@ jobs:
         working-directory: backend/infrastructure
         run: |
           npx cdk acknowledge 34892 || true
-          if [ -n "$CDK_BOOTSTRAP_QUALIFIER" ]; then
-            npx cdk bootstrap --no-notices --qualifier "$CDK_BOOTSTRAP_QUALIFIER" "aws://$AWS_ACCOUNT_ID/$AWS_REGION"
-          else
-            npx cdk bootstrap --no-notices "aws://$AWS_ACCOUNT_ID/$AWS_REGION"
-          fi
+          bootstrap() {
+            if [ -n "$CDK_BOOTSTRAP_QUALIFIER" ]; then
+              npx cdk bootstrap --no-notices --qualifier "$CDK_BOOTSTRAP_QUALIFIER" "aws://$AWS_ACCOUNT_ID/$AWS_REGION"
+            else
+              npx cdk bootstrap --no-notices "aws://$AWS_ACCOUNT_ID/$AWS_REGION"
+            fi
+          }
+          # Synth (via run-cdk-app.sh) pip-installs Lambda wheels from PyPI.
+          # Transient files.pythonhosted.org timeouts should not fail the job.
+          MAX_BOOTSTRAP_ATTEMPTS=3
+          attempt=1
+          while [ "$attempt" -le "$MAX_BOOTSTRAP_ATTEMPTS" ]; do
+            echo "CDK bootstrap attempt ${attempt} of ${MAX_BOOTSTRAP_ATTEMPTS}"
+            if bootstrap; then
+              exit 0
+            fi
+            if [ "$attempt" -eq "$MAX_BOOTSTRAP_ATTEMPTS" ]; then
+              exit 1
+            fi
+            delay=$((20 * attempt))
+            echo "CDK bootstrap failed; waiting ${delay}s before retry..."
+            sleep "$delay"
+            attempt=$((attempt + 1))
+          done
         env:
           AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
           AWS_REGION: ${{ steps.region.outputs.region }}

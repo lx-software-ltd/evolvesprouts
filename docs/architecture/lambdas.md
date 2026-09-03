@@ -16,6 +16,8 @@ their primary responsibilities.
 - Cache retention is bounded (default keeps the 3 most recent keys). Older
   cached dependency keys are pruned automatically by
   `backend/scripts/build_lambda_bundle.py`.
+- `pip install` for that cache uses a 120s read timeout and retries transient
+  PyPI failures (Deploy Backend bootstrap/synth hits `files.pythonhosted.org`).
 
 ### CDK deploy parameter hygiene
 

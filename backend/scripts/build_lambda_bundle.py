@@ -10,9 +10,14 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import time
+from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 _DEFAULT_MAX_CACHE_ENTRIES = 3
+_PIP_MAX_ATTEMPTS = 3
+_PIP_RETRY_BASE_SECONDS = 5
+_PIP_TIMEOUT_SECONDS = 120
 
 
 def _ensure_python_version() -> None:
@@ -20,8 +25,38 @@ def _ensure_python_version() -> None:
         raise SystemExit("Python 3.12 is required to build Lambda bundles.")
 
 
-def _run_pip(command: list[str], cwd: Path, env: dict[str, str]) -> None:
-    subprocess.run(command, check=True, cwd=cwd, env=env)
+def _run_pip(
+    command: list[str],
+    cwd: Path,
+    env: dict[str, str],
+    *,
+    max_attempts: int = _PIP_MAX_ATTEMPTS,
+    sleep: Callable[[float], None] = time.sleep,
+    on_retry: Callable[[], None] | None = None,
+) -> None:
+    """Install Lambda wheels; retry transient PyPI/read timeouts."""
+    last_error: subprocess.CalledProcessError | None = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            subprocess.run(command, check=True, cwd=cwd, env=env)
+            return
+        except subprocess.CalledProcessError as exc:
+            last_error = exc
+            if attempt == max_attempts:
+                raise
+            if on_retry is not None:
+                on_retry()
+            delay = _PIP_RETRY_BASE_SECONDS * attempt
+            logger.warning(
+                "pip install failed (attempt %s/%s, exit %s); retrying in %ss",
+                attempt,
+                max_attempts,
+                exc.returncode,
+                delay,
+            )
+            sleep(delay)
+    if last_error is not None:
+        raise last_error
 
 
 def _copy_tree(source: Path, destination: Path) -> None:
@@ -158,11 +193,25 @@ def _build_dependency_cache(
             "cp",
             "--python-version",
             "3.12",
+            "--timeout",
+            str(_PIP_TIMEOUT_SECONDS),
+            "--retries",
+            "10",
         ]
     )
 
+    def _reset_temp_cache() -> None:
+        if temp_cache_dir.exists():
+            shutil.rmtree(temp_cache_dir)
+        temp_cache_dir.mkdir(parents=True, exist_ok=True)
+
     try:
-        _run_pip(pip_command, cwd=source_root, env=env)
+        _run_pip(
+            pip_command,
+            cwd=source_root,
+            env=env,
+            on_retry=_reset_temp_cache,
+        )
         _cleanup_bundle(temp_cache_dir)
         if cache_dir.exists():
             shutil.rmtree(cache_dir)
@@ -197,6 +246,8 @@ def build_bundle(
         {
             "HOME": "/tmp",
             "PIP_CACHE_DIR": str(pip_cache_dir),
+            "PIP_DEFAULT_TIMEOUT": str(_PIP_TIMEOUT_SECONDS),
+            "PIP_RETRIES": "10",
             "PYTHONUSERBASE": "/tmp/.local",
             "PYTHONDONTWRITEBYTECODE": "1",
             "PYTHONHASHSEED": "0",
