@@ -1,23 +1,25 @@
 """One automated open sales lead per contact.
 
 Adds ``sales_leads.is_manual`` (admin-created leads may share a contact
-with an automated open lead), records ``action_recorded`` on
-``lead_event_type``, merges duplicate open leads for the same contact,
-and adds partial unique index ``sales_leads_one_open_contact_idx``.
+with an automated open lead), merges duplicate open leads for the same
+contact, and adds partial unique index ``sales_leads_one_open_contact_idx``.
+
+``action_recorded`` is added in ``0085_action_recorded_enum`` so that
+label is committed before this revision inserts merge events.
 
 Seed-data assessment (``backend/db/seed/seed_data.sql``):
 1. Compatible: seed SQL does not insert ``sales_leads`` or lead events.
 2. New NOT NULL column ``is_manual`` has server default ``false``.
 3. N/A — no renamed or dropped columns.
 4. N/A — no new table.
-5. Enum ``lead_event_type`` gains ``action_recorded``; no seed rows use it.
+5. Uses ``action_recorded`` from 0085; no seed rows use it.
 6. No FK/cascade changes. Existing open-lead ``lead_id`` pointers
    (notes, events, AI suggestions/jobs, WhatsApp/Meta conversations)
    are reassigned onto the kept lead before extras are deleted.
 
 Result: No seed SQL update.
 
-Revision id: ``0085_one_open_lead_contact`` (26 chars, <= 32).
+Revision id: ``0086_one_open_lead_contact`` (26 chars, <= 32).
 """
 
 from __future__ import annotations
@@ -27,8 +29,8 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0085_one_open_lead_contact"
-down_revision: Union[str, None] = "0084_sales_daily_plans"
+revision: str = "0086_one_open_lead_contact"
+down_revision: Union[str, None] = "0085_action_recorded_enum"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -159,7 +161,6 @@ def upgrade() -> None:
             server_default=sa.text("false"),
         ),
     )
-    op.execute("ALTER TYPE lead_event_type ADD VALUE IF NOT EXISTS 'action_recorded'")
     op.execute(_MERGE_OPEN_DUPLICATES)
     op.execute(
         """
