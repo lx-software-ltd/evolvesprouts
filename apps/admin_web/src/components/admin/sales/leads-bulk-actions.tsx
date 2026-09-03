@@ -104,7 +104,18 @@ export function LeadsBulkActions({
         data-testid='leads-bulk-actions'
       >
         <p className='text-sm text-slate-700'>{selectedCount} lead(s) selected</p>
-        <div className='grid grid-cols-1 gap-2 sm:grid-cols-2'>
+        <div className='flex flex-col gap-2 sm:flex-row sm:items-center'>
+          {canMerge ? (
+            <Button
+              type='button'
+              variant='outline'
+              className='w-full sm:w-auto'
+              disabled={isRunning}
+              onClick={() => setMergeOpen(true)}
+            >
+              Merge leads
+            </Button>
+          ) : null}
           <Select
             aria-label='Bulk assign assignee'
             value={pendingAssigneeValue}
@@ -150,16 +161,6 @@ export function LeadsBulkActions({
             ))}
           </Select>
         </div>
-        {canMerge ? (
-          <Button
-            type='button'
-            variant='secondary'
-            disabled={isRunning}
-            onClick={() => setMergeOpen(true)}
-          >
-            Merge leads
-          </Button>
-        ) : null}
         {pendingAssignee !== undefined ? (
           <div className='flex flex-wrap gap-2'>
             <Button type='button' loading={running === 'assign'} onClick={() => void runAssign()}>
