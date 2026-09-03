@@ -81,19 +81,33 @@ describe('SalePlanOfTheDayCard', () => {
       durationMs: null,
       plan: null,
     });
-    pollSalesDailyPlanJob.mockResolvedValue({
-      id: 'job-1',
-      status: 'succeeded',
-      errorMessage: null,
-      operatorInput: null,
-      planId: 'plan-1',
-      createdAt: '2026-09-01T10:00:00Z',
-      startedAt: '2026-09-01T10:00:01Z',
-      finishedAt: '2026-09-01T10:00:08Z',
-      updatedAt: '2026-09-01T10:00:08Z',
-      queueWaitMs: 1000,
-      durationMs: 7000,
-      plan: samplePlan,
+    pollSalesDailyPlanJob.mockImplementation(async () => {
+      fetchSalesDailyPlan.mockResolvedValue({
+        plan: samplePlan,
+        memory: [
+          {
+            id: samplePlan.id,
+            generatedAt: samplePlan.generatedAt,
+            focus: samplePlan.focus,
+            productFocus: samplePlan.productFocus,
+            operatorInput: samplePlan.operatorInput,
+          },
+        ],
+      });
+      return {
+        id: 'job-1',
+        status: 'succeeded',
+        errorMessage: null,
+        operatorInput: null,
+        planId: 'plan-1',
+        createdAt: '2026-09-01T10:00:00Z',
+        startedAt: '2026-09-01T10:00:01Z',
+        finishedAt: '2026-09-01T10:00:08Z',
+        updatedAt: '2026-09-01T10:00:08Z',
+        queueWaitMs: 1000,
+        durationMs: 7000,
+        plan: samplePlan,
+      };
     });
 
     const user = userEvent.setup();
@@ -211,19 +225,34 @@ describe('SalePlanOfTheDayCard', () => {
       durationMs: null,
       plan: null,
     });
-    pollSalesDailyPlanJob.mockResolvedValue({
-      id: 'job-2',
-      status: 'succeeded',
-      errorMessage: null,
-      operatorInput: 'Focus on MBA this week',
-      planId: 'plan-1',
-      createdAt: '2026-09-01T11:00:00Z',
-      startedAt: '2026-09-01T11:00:01Z',
-      finishedAt: '2026-09-01T11:00:08Z',
-      updatedAt: '2026-09-01T11:00:08Z',
-      queueWaitMs: 1000,
-      durationMs: 7000,
-      plan: { ...samplePlan, operatorInput: 'Focus on MBA this week' },
+    pollSalesDailyPlanJob.mockImplementation(async () => {
+      const nextPlan = { ...samplePlan, operatorInput: 'Focus on MBA this week' };
+      fetchSalesDailyPlan.mockResolvedValue({
+        plan: nextPlan,
+        memory: [
+          {
+            id: nextPlan.id,
+            generatedAt: nextPlan.generatedAt,
+            focus: nextPlan.focus,
+            productFocus: nextPlan.productFocus,
+            operatorInput: nextPlan.operatorInput,
+          },
+        ],
+      });
+      return {
+        id: 'job-2',
+        status: 'succeeded',
+        errorMessage: null,
+        operatorInput: 'Focus on MBA this week',
+        planId: 'plan-1',
+        createdAt: '2026-09-01T11:00:00Z',
+        startedAt: '2026-09-01T11:00:01Z',
+        finishedAt: '2026-09-01T11:00:08Z',
+        updatedAt: '2026-09-01T11:00:08Z',
+        queueWaitMs: 1000,
+        durationMs: 7000,
+        plan: nextPlan,
+      };
     });
 
     const user = userEvent.setup();
