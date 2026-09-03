@@ -9,6 +9,16 @@ const {
   vendorsState,
   mockListAllAdminExpenses,
 } = vi.hoisted(() => {
+  const expanded = {
+    expandedId: null as string | null,
+    isDraftOpen: false,
+    isExpanded: vi.fn(() => false),
+    toggle: vi.fn(),
+    expand: vi.fn(),
+    openDraft: vi.fn(),
+    collapse: vi.fn(),
+    discardPrompt: { open: false, confirm: vi.fn(), cancel: vi.fn() },
+  };
   const state = {
     items: [],
     filters: { query: '', status: '', parseStatus: '' },
@@ -20,6 +30,8 @@ const {
     loadMore: vi.fn(),
     hasMore: false,
     totalCount: 0,
+    expanded,
+    setEditorDirty: vi.fn(),
     selectedExpenseId: null as string | null,
     selectedExpense: null,
     isSaving: false,
@@ -42,6 +54,7 @@ const {
     markPaidExpenseEntry: vi.fn(),
     reparseExpenseEntry: vi.fn(),
     bulkImportFromPdf: vi.fn(),
+    cancelBulkImport: vi.fn(),
   };
   const vendorsState = {
     vendors: [],
@@ -106,6 +119,8 @@ import { FinancePage } from '@/components/admin/finance/finance-page';
 describe('FinancePage', () => {
   beforeEach(() => {
     window.history.replaceState(null, '', '/finance');
+    expensesState.expanded.isDraftOpen = false;
+    expensesState.expanded.expandedId = null;
   });
 
   afterEach(() => {
@@ -120,10 +135,11 @@ describe('FinancePage', () => {
     expect(screen.getByRole('button', { name: 'Vendors' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Client Invoices' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Tax' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Create draft invoice' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Customer invoices' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Vendors' }));
-    expect(screen.getByRole('heading', { name: 'Vendors' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Vendors' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Vendors' })).not.toBeInTheDocument();
     expect(mockListAllAdminExpenses).toHaveBeenCalled();
     expect(window.location.search).toBe('?tab=vendors');
 
@@ -132,11 +148,12 @@ describe('FinancePage', () => {
     expect(window.location.search).toBe('?tab=tax');
 
     await user.click(screen.getByRole('button', { name: 'Expenses' }));
-    expect(screen.getByRole('heading', { name: 'Expense Details' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Expenses' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New expense' })).toBeInTheDocument();
     expect(window.location.search).toBe('?tab=expenses');
 
     await user.click(screen.getByRole('button', { name: 'Client Invoices' }));
-    expect(screen.getByRole('heading', { name: 'Create draft invoice' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Customer invoices' })).toBeInTheDocument();
     expect(window.location.search).toBe('');
   });
 
@@ -144,20 +161,21 @@ describe('FinancePage', () => {
     window.history.replaceState(null, '', '/finance?tab=client-invoices');
     render(<FinancePage />);
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Create draft invoice' })).toBeInTheDocument();
+      expect(screen.getByRole('region', { name: 'Customer invoices' })).toBeInTheDocument();
     });
   });
 
-  it('renders expense editor before bulk PDF import and submitted expenses list', () => {
+  it('renders filters, then the combined-PDF import accordion, then the expenses table', () => {
     window.history.replaceState(null, '', '/finance?tab=expenses');
     render(<FinancePage />);
 
-    const editorHeading = screen.getByRole('heading', { name: 'Expense Details' });
-    const bulkHeading = screen.getByRole('heading', { name: 'Import from combined PDF' });
-    const listHeading = screen.getByRole('heading', { name: 'Submitted Expenses' });
+    const searchFilter = screen.getByLabelText('Search');
+    const bulkTrigger = screen.getByRole('button', { name: /Import from combined PDF/ });
+    const table = screen.getByRole('table');
 
-    expect(editorHeading.compareDocumentPosition(bulkHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(bulkHeading.compareDocumentPosition(listHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(searchFilter.compareDocumentPosition(bulkTrigger) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(bulkTrigger.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(bulkTrigger).toHaveAttribute('aria-expanded', 'false');
   });
 
   it('uses expense hook state', () => {
@@ -168,10 +186,16 @@ describe('FinancePage', () => {
     expect(vendorsState.vendors).toEqual([]);
   });
 
-  it('renders expense currency as a dropdown', () => {
-    window.history.replaceState(null, '', '/finance?tab=expenses');
+  it('renders the draft expense editor in-row with a currency dropdown', () => {
+    window.history.replaceState(null, '', '/finance?tab=expenses&expense=new');
+    expensesState.expanded.isDraftOpen = true;
+    expensesState.expanded.expandedId = 'new';
     render(<FinancePage />);
+
+    expect(screen.queryByRole('heading', { name: 'Expense Details' })).not.toBeInTheDocument();
     const currencyField = screen.getByLabelText('Currency');
     expect(currencyField.tagName).toBe('SELECT');
+    expect(screen.getByRole('button', { name: 'Submit expense' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
   });
 });

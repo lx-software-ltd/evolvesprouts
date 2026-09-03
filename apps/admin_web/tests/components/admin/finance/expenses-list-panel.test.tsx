@@ -33,6 +33,7 @@ vi.mock('@/lib/currency-converter', async (importOriginal) => {
 });
 
 import { ExpensesListPanel } from '@/components/admin/finance/expenses-list-panel';
+import type { UseExpandedRecordReturn } from '@/hooks/use-expanded-record';
 import { clearCurrencyConversionRateCacheForTests } from '@/lib/currency-converter';
 import { formatDateOnly } from '@/lib/format';
 import { formatMoneyLineWithFxToDefault } from '@/lib/vendor-spend';
@@ -67,16 +68,32 @@ const baseExpense: Expense = {
   attachments: [],
 };
 
-function makeRowActions(overrides: {
-  isVoidingId?: string | null;
-  isMarkingPaidId?: string | null;
-  isReparsingId?: string | null;
-  isDeletingDraftId?: string | null;
-  onReparse?: () => Promise<void> | void;
-  onMarkPaid?: () => Promise<void> | void;
-  onVoidExpense?: (expenseId: string, reason: string) => Promise<void> | void;
-  onDeleteDraft?: (expenseId: string) => Promise<void> | void;
-} = {}) {
+function makeExpanded(overrides: Partial<UseExpandedRecordReturn> = {}): UseExpandedRecordReturn {
+  return {
+    expandedId: null,
+    isDraftOpen: false,
+    isExpanded: vi.fn(() => false),
+    toggle: vi.fn(),
+    expand: vi.fn(),
+    openDraft: vi.fn(),
+    collapse: vi.fn(),
+    discardPrompt: { open: false, confirm: vi.fn(), cancel: vi.fn() },
+    ...overrides,
+  };
+}
+
+function makeRowActions(
+  overrides: {
+    isVoidingId?: string | null;
+    isMarkingPaidId?: string | null;
+    isReparsingId?: string | null;
+    isDeletingDraftId?: string | null;
+    onReparse?: () => Promise<void> | void;
+    onMarkPaid?: () => Promise<void> | void;
+    onVoidExpense?: (expenseId: string, reason: string) => Promise<void> | void;
+    onDeleteDraft?: (expenseId: string) => Promise<void> | void;
+  } = {}
+) {
   return {
     isVoidingId: null as string | null,
     isMarkingPaidId: null as string | null,
@@ -92,7 +109,8 @@ function makeRowActions(overrides: {
 
 const listProps = {
   expenses: [baseExpense],
-  selectedExpenseId: null,
+  expanded: makeExpanded(),
+  renderDetail: (expense: Expense | null) => <div data-testid='detail'>{expense ? expense.id : 'new'}</div>,
   query: '',
   status: '' as const,
   parseStatus: '' as const,
@@ -101,11 +119,16 @@ const listProps = {
   hasMore: false,
   error: '',
   onLoadMore: vi.fn(),
-  onSelectExpense: vi.fn(),
   onQueryChange: vi.fn(),
   onStatusChange: vi.fn(),
   onParseStatusChange: vi.fn(),
 };
+
+/** Only the document action is inline; the others live in the More menu. */
+async function openMoreMenu(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: 'More actions' }));
+  return screen.getByRole('menu');
+}
 
 describe('ExpensesListPanel', () => {
   beforeEach(() => {
@@ -114,9 +137,10 @@ describe('ExpensesListPanel', () => {
     clearCurrencyConversionRateCacheForTests();
   });
 
-  it('renders core columns without Invoice or Parse headers', () => {
+  it('renders core columns without a title, Invoice or Parse headers', () => {
     render(<ExpensesListPanel {...listProps} {...makeRowActions()} />);
 
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: 'Invoice' })).not.toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: 'Parse' })).not.toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Operations' })).toBeInTheDocument();
@@ -124,6 +148,41 @@ describe('ExpensesListPanel', () => {
     expect(screen.getByRole('columnheader', { name: 'Total' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Issued' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New expense' })).toBeInTheDocument();
+  });
+
+  it('opens the draft row from New expense and renders the create detail', async () => {
+    const user = userEvent.setup();
+    const expanded = makeExpanded();
+    const { rerender } = render(<ExpensesListPanel {...listProps} expanded={expanded} {...makeRowActions()} />);
+
+    await user.click(screen.getByRole('button', { name: 'New expense' }));
+    expect(expanded.openDraft).toHaveBeenCalled();
+
+    rerender(
+      <ExpensesListPanel {...listProps} expanded={makeExpanded({ isDraftOpen: true })} {...makeRowActions()} />
+    );
+    expect(screen.getByText('New expense', { selector: 'td' })).toBeInTheDocument();
+    expect(screen.getByTestId('detail')).toHaveTextContent('new');
+  });
+
+  it('toggles the row on click and renders the expense detail when expanded', async () => {
+    const user = userEvent.setup();
+    const expanded = makeExpanded();
+    const { rerender } = render(<ExpensesListPanel {...listProps} expanded={expanded} {...makeRowActions()} />);
+
+    expect(screen.queryByTestId('detail')).not.toBeInTheDocument();
+    await user.click(screen.getByText('Acme Co'));
+    expect(expanded.toggle).toHaveBeenCalledWith('exp-1');
+
+    rerender(
+      <ExpensesListPanel
+        {...listProps}
+        expanded={makeExpanded({ expandedId: 'exp-1', isExpanded: (id) => id === 'exp-1' })}
+        {...makeRowActions()}
+      />
+    );
+    expect(screen.getByTestId('detail')).toHaveTextContent('exp-1');
   });
 
   it('opens primary expense attachment in a new tab', async () => {
@@ -184,9 +243,7 @@ describe('ExpensesListPanel', () => {
     );
 
     expect(screen.getByText(formatDateOnly('2026-02-15T14:30:00Z'))).toBeInTheDocument();
-    expect(
-      screen.getByText(formatMoneyLineWithFxToDefault('30.00', undefined, new Map())),
-    ).toBeInTheDocument();
+    expect(screen.getAllByText(formatMoneyLineWithFxToDefault('30.00', undefined, new Map())).length).toBeGreaterThan(0);
     expect(screen.queryByText('No currency code')).not.toBeInTheDocument();
   });
 
@@ -203,86 +260,56 @@ describe('ExpensesListPanel', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(expected)).toBeInTheDocument();
+      expect(screen.getAllByText(expected).length).toBeGreaterThan(0);
     });
   });
 
   it('formats HKD total with locale currency styling', () => {
     render(<ExpensesListPanel {...listProps} {...makeRowActions()} />);
 
-    expect(
-      screen.getByText(formatMoneyLineWithFxToDefault('10.00', 'HKD', new Map())),
-    ).toBeInTheDocument();
+    expect(screen.getAllByText(formatMoneyLineWithFxToDefault('10.00', 'HKD', new Map())).length).toBeGreaterThan(0);
   });
 
-  it('calls onSelectExpense when a row is clicked', async () => {
-    const user = userEvent.setup();
-    const onSelectExpense = vi.fn();
-
-    render(<ExpensesListPanel {...listProps} {...makeRowActions()} onSelectExpense={onSelectExpense} />);
-
-    await user.click(screen.getByText('Acme Co'));
-    expect(onSelectExpense).toHaveBeenCalledWith('exp-1');
-  });
-
-  it('calls onReparse when Reparse is clicked', async () => {
+  it('calls onReparse from the More menu', async () => {
     const user = userEvent.setup();
     const rowActions = makeRowActions();
 
     render(<ExpensesListPanel {...listProps} {...rowActions} />);
 
-    await user.click(screen.getByRole('button', { name: 'Reparse expense' }));
+    await openMoreMenu(user);
+    await user.click(screen.getByRole('menuitem', { name: 'Reparse expense' }));
     expect(rowActions.onReparse).toHaveBeenCalledWith('exp-1');
   });
 
-  it('calls onMarkPaid when Paid is clicked', async () => {
+  it('calls onMarkPaid from the More menu', async () => {
     const user = userEvent.setup();
     const rowActions = makeRowActions();
 
     render(<ExpensesListPanel {...listProps} {...rowActions} />);
 
-    await user.click(screen.getByRole('button', { name: 'Mark expense as paid' }));
+    await openMoreMenu(user);
+    await user.click(screen.getByRole('menuitem', { name: 'Mark expense as paid' }));
     expect(rowActions.onMarkPaid).toHaveBeenCalledWith('exp-1');
   });
 
-  it('disables mark paid when vendor, invoice date, currency, or total is missing', () => {
+  it('disables mark paid when vendor, invoice date, currency, or total is missing', async () => {
+    const user = userEvent.setup();
     const rowActions = makeRowActions();
 
-    const { rerender } = render(
-      <ExpensesListPanel
-        {...listProps}
-        {...rowActions}
-        expenses={[{ ...baseExpense, vendorId: null }]}
-      />
-    );
-    expect(screen.getByRole('button', { name: 'Mark expense as paid' })).toBeDisabled();
-
-    rerender(
-      <ExpensesListPanel
-        {...listProps}
-        {...rowActions}
-        expenses={[{ ...baseExpense, invoiceDate: null }]}
-      />
-    );
-    expect(screen.getByRole('button', { name: 'Mark expense as paid' })).toBeDisabled();
-
-    rerender(
-      <ExpensesListPanel
-        {...listProps}
-        {...rowActions}
-        expenses={[{ ...baseExpense, currency: null }]}
-      />
-    );
-    expect(screen.getByRole('button', { name: 'Mark expense as paid' })).toBeDisabled();
-
-    rerender(
-      <ExpensesListPanel
-        {...listProps}
-        {...rowActions}
-        expenses={[{ ...baseExpense, total: null }]}
-      />
-    );
-    expect(screen.getByRole('button', { name: 'Mark expense as paid' })).toBeDisabled();
+    for (const expense of [
+      { ...baseExpense, vendorId: null },
+      { ...baseExpense, invoiceDate: null },
+      { ...baseExpense, currency: null },
+      { ...baseExpense, total: null },
+    ]) {
+      const view = render(<ExpensesListPanel {...listProps} {...rowActions} expenses={[expense]} />);
+      await openMoreMenu(user);
+      const item = screen.getByRole('menuitem', { name: /required before marking paid/ });
+      expect(item).toHaveAttribute('aria-disabled', 'true');
+      await user.click(item);
+      expect(rowActions.onMarkPaid).not.toHaveBeenCalled();
+      view.unmount();
+    }
   });
 
   it('void dialog requires a reason before confirming', async () => {
@@ -291,7 +318,8 @@ describe('ExpensesListPanel', () => {
 
     render(<ExpensesListPanel {...listProps} {...rowActions} />);
 
-    await user.click(screen.getByRole('button', { name: 'Void' }));
+    await openMoreMenu(user);
+    await user.click(screen.getByRole('menuitem', { name: 'Void expense' }));
     expect(screen.getByRole('alertdialog')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Void expense' }));
@@ -305,7 +333,8 @@ describe('ExpensesListPanel', () => {
 
     render(<ExpensesListPanel {...listProps} {...rowActions} />);
 
-    await user.click(screen.getByRole('button', { name: 'Void' }));
+    await openMoreMenu(user);
+    await user.click(screen.getByRole('menuitem', { name: 'Void expense' }));
     await user.type(screen.getByLabelText('Reason'), 'Duplicate entry');
     await user.click(screen.getByRole('button', { name: 'Void expense' }));
 
@@ -325,7 +354,8 @@ describe('ExpensesListPanel', () => {
 
     render(<ExpensesListPanel {...listProps} {...rowActions} />);
 
-    await user.click(screen.getByRole('button', { name: 'Void' }));
+    await openMoreMenu(user);
+    await user.click(screen.getByRole('menuitem', { name: 'Void expense' }));
     await user.type(screen.getByLabelText('Reason'), 'Bad invoice');
     await user.click(screen.getByRole('button', { name: 'Void expense' }));
 
@@ -340,15 +370,10 @@ describe('ExpensesListPanel', () => {
     const user = userEvent.setup();
     const rowActions = makeRowActions();
 
-    render(
-      <ExpensesListPanel
-        {...listProps}
-        {...rowActions}
-        expenses={[{ ...baseExpense, status: 'draft' }]}
-      />
-    );
+    render(<ExpensesListPanel {...listProps} {...rowActions} expenses={[{ ...baseExpense, status: 'draft' }]} />);
 
-    await user.click(screen.getByRole('button', { name: 'Delete draft expense' }));
+    await openMoreMenu(user);
+    await user.click(screen.getByRole('menuitem', { name: 'Delete draft expense' }));
     expect(screen.getByRole('alertdialog', { name: 'Delete draft expense' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Delete expense' }));
@@ -361,10 +386,12 @@ describe('ExpensesListPanel', () => {
     });
   });
 
-  it('does not render delete for non-draft expenses', () => {
+  it('does not render delete for non-draft expenses', async () => {
+    const user = userEvent.setup();
     render(<ExpensesListPanel {...listProps} {...makeRowActions()} />);
 
-    expect(screen.queryByRole('button', { name: 'Delete draft expense' })).not.toBeInTheDocument();
+    await openMoreMenu(user);
+    expect(screen.queryByRole('menuitem', { name: 'Delete draft expense' })).not.toBeInTheDocument();
   });
 
   it('disables void confirm while void mutation is in flight for that expense', async () => {
@@ -379,16 +406,12 @@ describe('ExpensesListPanel', () => {
       <ExpensesListPanel {...listProps} {...makeRowActions({ onVoidExpense, isVoidingId: null })} />
     );
 
-    await user.click(screen.getByRole('button', { name: 'Void' }));
+    await openMoreMenu(user);
+    await user.click(screen.getByRole('menuitem', { name: 'Void expense' }));
     await user.type(screen.getByLabelText('Reason'), 'Waiting');
     const confirmPromise = user.click(screen.getByRole('button', { name: 'Void expense' }));
 
-    rerender(
-      <ExpensesListPanel
-        {...listProps}
-        {...makeRowActions({ onVoidExpense, isVoidingId: 'exp-1' })}
-      />
-    );
+    rerender(<ExpensesListPanel {...listProps} {...makeRowActions({ onVoidExpense, isVoidingId: 'exp-1' })} />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Voiding…' })).toBeDisabled();

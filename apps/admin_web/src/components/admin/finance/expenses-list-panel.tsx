@@ -1,28 +1,29 @@
 'use client';
 
-import type { KeyboardEvent } from 'react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 
-import { OpenAdminAssetInNewTabButton } from '@/components/admin/shared/open-admin-asset-in-new-tab-button';
+import OpenInNewTabIcon from '@/components/icons/svg/open-in-new-tab-icon.svg';
 import { DeleteIcon, MarkPaidIcon, RotateIcon, VoidExpenseIcon } from '@/components/icons/action-icons';
-import { Button } from '@/components/ui/button';
+import { AdminCreateButton } from '@/components/ui/admin-create-button';
 import {
-  AdminDataTable,
-  AdminDataTableBody,
   AdminDataTableCell,
-  AdminDataTableHead,
+  AdminDataTableCellMeta,
   AdminDataTableHeadCell,
   AdminDataTableOperationsHeadCell,
 } from '@/components/ui/admin-data-table';
+import { AdminDiscardChangesDialog } from '@/components/ui/admin-discard-changes-dialog';
+import { AdminExpandableRow } from '@/components/ui/admin-expandable-row';
+import { AdminFilterBar, AdminFilterField } from '@/components/ui/admin-filter-bar';
+import { AdminInlineError } from '@/components/ui/admin-inline-error';
+import { AdminRecordTable } from '@/components/ui/admin-record-table';
+import { AdminRowActions } from '@/components/ui/admin-row-actions';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
-import { AdminInlineError } from '@/components/ui/admin-inline-error';
 import { Label } from '@/components/ui/label';
-import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
-import { AdminTableToolbar } from '@/components/ui/admin-table-toolbar';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { toErrorMessage } from '@/hooks/hook-errors';
+import { DRAFT_RECORD_ID, type UseExpandedRecordReturn } from '@/hooks/use-expanded-record';
 import { useFxMultipliersForCurrencies } from '@/hooks/use-fx-multipliers-for-currencies';
 import { useOpenAdminAssetInNewTab } from '@/hooks/use-open-admin-asset-in-new-tab';
 import { getAdminDefaultCurrencyCode } from '@/lib/config';
@@ -36,6 +37,8 @@ import {
   type ExpenseParseStatus,
   type ExpenseStatus,
 } from '@/types/expenses';
+
+const COLUMN_COUNT = 6;
 
 function expenseHasRequiredFieldsForMarkPaid(expense: Expense): boolean {
   if (expense.vendorId == null || String(expense.vendorId).trim() === '') {
@@ -53,9 +56,23 @@ function expenseHasRequiredFieldsForMarkPaid(expense: Expense): boolean {
   return true;
 }
 
+function markPaidLabel(expense: Expense, busy: boolean): string {
+  if (busy) {
+    return 'Marking expense as paid';
+  }
+  if (expense.status === 'paid') {
+    return 'Already marked paid';
+  }
+  if (!expenseHasRequiredFieldsForMarkPaid(expense)) {
+    return 'Vendor, invoice date, currency, and total are required before marking paid';
+  }
+  return 'Mark expense as paid';
+}
+
 interface ExpensesListPanelProps {
   expenses: Expense[];
-  selectedExpenseId: string | null;
+  /** Single-open row state from `useExpenses`. */
+  expanded: UseExpandedRecordReturn;
   query: string;
   status: ExpenseStatus | '';
   parseStatus: ExpenseParseStatus | '';
@@ -67,8 +84,11 @@ interface ExpensesListPanelProps {
   isMarkingPaidId: string | null;
   isReparsingId: string | null;
   isDeletingDraftId: string | null;
+  /** Sub-accordion rendered between the filters and the table (combined-PDF import). */
+  importSection?: ReactNode;
+  /** Editor for the open row; `null` for the draft row. */
+  renderDetail: (expense: Expense | null) => ReactNode;
   onLoadMore: () => Promise<void> | void;
-  onSelectExpense: (expenseId: string) => void;
   onQueryChange: (value: string) => void;
   onStatusChange: (value: ExpenseStatus | '') => void;
   onParseStatusChange: (value: ExpenseParseStatus | '') => void;
@@ -78,9 +98,14 @@ interface ExpensesListPanelProps {
   onDeleteDraft: (expenseId: string) => Promise<void> | void;
 }
 
+/**
+ * Table-first expenses list: filters and the create control on top, one
+ * expandable row per expense with its editor beneath, and every row action
+ * in the Operations column (one inline, the rest in the More menu).
+ */
 export function ExpensesListPanel({
   expenses,
-  selectedExpenseId,
+  expanded,
   query,
   status,
   parseStatus,
@@ -92,8 +117,9 @@ export function ExpensesListPanel({
   isMarkingPaidId,
   isReparsingId,
   isDeletingDraftId,
+  importSection,
+  renderDetail,
   onLoadMore,
-  onSelectExpense,
   onQueryChange,
   onStatusChange,
   onParseStatusChange,
@@ -103,10 +129,8 @@ export function ExpensesListPanel({
   onDeleteDraft,
 }: ExpensesListPanelProps) {
   const { openingAssetId, openError: documentOpenError, openAssetInNewTab } = useOpenAdminAssetInNewTab();
-  const [deleteDraftDialogOpen, setDeleteDraftDialogOpen] = useState(false);
   const [deleteDraftExpenseId, setDeleteDraftExpenseId] = useState<string | null>(null);
   const [deleteDraftError, setDeleteDraftError] = useState('');
-  const [voidDialogOpen, setVoidDialogOpen] = useState(false);
   const [voidExpenseId, setVoidExpenseId] = useState<string | null>(null);
   const [voidReason, setVoidReason] = useState('');
   const [voidError, setVoidError] = useState('');
@@ -114,7 +138,7 @@ export function ExpensesListPanel({
   const expensesNeedForeignFx = useMemo(() => {
     const defaultCurrency = getAdminDefaultCurrencyCode();
     return expenses.some(
-      (expense) => (expense.currency?.trim().toUpperCase() || defaultCurrency) !== defaultCurrency,
+      (expense) => (expense.currency?.trim().toUpperCase() || defaultCurrency) !== defaultCurrency
     );
   }, [expenses]);
 
@@ -123,34 +147,13 @@ export function ExpensesListPanel({
       expenses
         .map((expense) => expense.currency?.trim().toUpperCase())
         .filter((code): code is string => Boolean(code)),
-    [expenses],
+    [expenses]
   );
-  const { fxMultipliers, fxError } = useFxMultipliersForCurrencies(
-    expenseFxCurrencyCodes,
-    expensesNeedForeignFx,
-  );
+  const { fxMultipliers, fxError } = useFxMultipliersForCurrencies(expenseFxCurrencyCodes, expensesNeedForeignFx);
 
-  const tableError = [error, expensesNeedForeignFx ? fxError : ''].filter(Boolean).join(' • ');
-
-  const handleRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, expenseId: string) => {
-    if (event.target !== event.currentTarget) {
-      return;
-    }
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      onSelectExpense(expenseId);
-    }
-  };
-
-  const openVoidDialog = (expenseId: string) => {
-    setVoidExpenseId(expenseId);
-    setVoidReason('');
-    setVoidError('');
-    setVoidDialogOpen(true);
-  };
+  const tableError = [error, expensesNeedForeignFx ? fxError : '', documentOpenError].filter(Boolean).join(' • ');
 
   const closeVoidDialog = () => {
-    setVoidDialogOpen(false);
     setVoidExpenseId(null);
     setVoidReason('');
     setVoidError('');
@@ -173,14 +176,7 @@ export function ExpensesListPanel({
     }
   };
 
-  const openDeleteDraftDialog = (expenseId: string) => {
-    setDeleteDraftExpenseId(expenseId);
-    setDeleteDraftError('');
-    setDeleteDraftDialogOpen(true);
-  };
-
   const closeDeleteDraftDialog = () => {
-    setDeleteDraftDialogOpen(false);
     setDeleteDraftExpenseId(null);
     setDeleteDraftError('');
   };
@@ -198,30 +194,52 @@ export function ExpensesListPanel({
     }
   };
 
+  function formatTotal(expense: Expense): string {
+    if (fxMultipliers === null && expensesNeedForeignFx) {
+      return '…';
+    }
+    return formatMoneyLineWithFxToDefault(
+      expense.total?.trim() ?? '',
+      expense.currency ?? undefined,
+      expensesNeedForeignFx ? (fxMultipliers ?? new Map()) : new Map()
+    );
+  }
+
   return (
     <>
-      <PaginatedTableCard
-        title='Submitted Expenses'
+      <AdminDiscardChangesDialog prompt={expanded.discardPrompt} />
+      <AdminRecordTable
+        aria-label='Expenses'
+        columnCount={COLUMN_COUNT}
+        rowCount={expenses.length}
         isLoading={isLoading}
         isLoadingMore={isLoadingMore}
         hasMore={hasMore}
-        error={tableError}
-        loadingLabel='Loading submitted expenses...'
         onLoadMore={onLoadMore}
-        toolbar={
-          <div className='mb-3 space-y-2'>
-            <AdminTableToolbar marginBottom='none'>
-              <div className='min-w-[200px] flex-1'>
-                <Label htmlFor='expenses-query'>Search</Label>
+        error={tableError}
+        errorTitle='Expenses'
+        emptyLabel='No expenses match the current filters.'
+        filters={
+          <>
+            <AdminFilterBar
+              trailing={
+                <AdminCreateButton
+                  label='New expense'
+                  active={expanded.isDraftOpen}
+                  onClick={() => (expanded.isDraftOpen ? expanded.collapse() : expanded.openDraft())}
+                />
+              }
+            >
+              <AdminFilterField label='Search' htmlFor='expenses-query' className='sm:basis-72'>
                 <Input
                   id='expenses-query'
                   placeholder='Vendor or invoice number'
                   value={query}
+                  autoComplete='off'
                   onChange={(event) => onQueryChange(event.target.value)}
                 />
-              </div>
-              <div className='min-w-[140px]'>
-                <Label htmlFor='expenses-status'>Status</Label>
+              </AdminFilterField>
+              <AdminFilterField label='Status' htmlFor='expenses-status' className='sm:basis-40'>
                 <Select
                   id='expenses-status'
                   value={status}
@@ -234,9 +252,8 @@ export function ExpensesListPanel({
                     </option>
                   ))}
                 </Select>
-              </div>
-              <div className='min-w-[160px]'>
-                <Label htmlFor='expenses-parse-status'>Parse status</Label>
+              </AdminFilterField>
+              <AdminFilterField label='Parse status' htmlFor='expenses-parse-status' className='sm:basis-40'>
                 <Select
                   id='expenses-parse-status'
                   value={parseStatus}
@@ -249,180 +266,151 @@ export function ExpensesListPanel({
                     </option>
                   ))}
                 </Select>
-              </div>
-            </AdminTableToolbar>
-            {documentOpenError ? <AdminInlineError>{documentOpenError}</AdminInlineError> : null}
-          </div>
+              </AdminFilterField>
+            </AdminFilterBar>
+            {importSection}
+          </>
+        }
+        head={
+          <tr>
+            <AdminDataTableHeadCell className='w-10' />
+            <AdminDataTableHeadCell>Vendor</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Total</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Status</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Issued</AdminDataTableHeadCell>
+            <AdminDataTableOperationsHeadCell />
+          </tr>
         }
       >
-        <AdminDataTable tableClassName='min-w-[780px]'>
-          <AdminDataTableHead>
-            <tr>
-              <AdminDataTableHeadCell>Vendor</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Total</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Status</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Issued</AdminDataTableHeadCell>
-              <AdminDataTableOperationsHeadCell />
-            </tr>
-          </AdminDataTableHead>
-          <AdminDataTableBody>
-            {expenses.map((expense) => {
-              const isSelected = expense.id === selectedExpenseId;
-              const documentAssetId = primaryExpenseAttachmentAssetId(expense.attachments);
-              return (
-                <tr
-                  key={expense.id}
-                  className={`cursor-pointer transition hover:bg-slate-50 ${
-                    isSelected ? 'bg-slate-100' : ''
-                  }`}
-                  onClick={() => onSelectExpense(expense.id)}
-                  onKeyDown={(event) => handleRowKeyDown(event, expense.id)}
-                  tabIndex={0}
-                  role='row'
-                  aria-selected={isSelected}
-                >
+        {expanded.isDraftOpen ? (
+          <AdminExpandableRow
+            id={DRAFT_RECORD_ID}
+            label='new expense'
+            expanded
+            isDraft
+            onToggle={expanded.collapse}
+            columnCount={COLUMN_COUNT}
+            cells={
+              <>
+                <AdminDataTableCell className='font-medium text-slate-900'>New expense</AdminDataTableCell>
+                <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='tertiary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+              </>
+            }
+            actions={null}
+            detail={renderDetail(null)}
+          />
+        ) : null}
+        {expenses.map((expense) => {
+          const isOpen = expanded.isExpanded(expense.id);
+          const documentAssetId = primaryExpenseAttachmentAssetId(expense.attachments);
+          const isOpeningDocument = Boolean(documentAssetId && openingAssetId === documentAssetId);
+          const isMarkingPaid = isMarkingPaidId === expense.id;
+          const isReparsing = isReparsingId === expense.id;
+          const isVoiding = isVoidingId === expense.id;
+          const isDeletingDraft = isDeletingDraftId === expense.id;
+          const totalLabel = formatTotal(expense);
+          const statusLabel = formatEnumLabel(expense.status);
+          return (
+            <AdminExpandableRow
+              key={expense.id}
+              id={expense.id}
+              label={expense.vendorName ?? expense.invoiceNumber ?? expense.id.slice(0, 8)}
+              expanded={isOpen}
+              onToggle={() => expanded.toggle(expense.id)}
+              columnCount={COLUMN_COUNT}
+              cells={
+                <>
                   <AdminDataTableCell>
                     <p className='font-medium text-slate-900'>{expense.vendorName ?? '—'}</p>
-                    <p className='mt-0.5 text-xs text-slate-500'>
-                      {expense.invoiceNumber ?? expense.id.slice(0, 8)}
-                    </p>
+                    <p className='mt-0.5 text-xs text-slate-500'>{expense.invoiceNumber ?? expense.id.slice(0, 8)}</p>
+                    <AdminDataTableCellMeta>
+                      {totalLabel} · {statusLabel}
+                    </AdminDataTableCellMeta>
                   </AdminDataTableCell>
-                  <AdminDataTableCell>
-                    <span className='tabular-nums'>
-                      {fxMultipliers === null && expensesNeedForeignFx
-                        ? '…'
-                        : formatMoneyLineWithFxToDefault(
-                            expense.total?.trim() ?? '',
-                            expense.currency ?? undefined,
-                            expensesNeedForeignFx ? (fxMultipliers ?? new Map()) : new Map(),
-                          )}
-                    </span>
+                  <AdminDataTableCell priority='secondary' className='tabular-nums'>
+                    {totalLabel}
                   </AdminDataTableCell>
-                  <AdminDataTableCell>{formatEnumLabel(expense.status)}</AdminDataTableCell>
-                  <AdminDataTableCell>{formatDateOnly(expense.invoiceDate)}</AdminDataTableCell>
-                  <AdminDataTableCell className='text-right' onClick={(event) => event.stopPropagation()}>
-                    <div className='flex flex-wrap justify-end gap-1'>
-                      <OpenAdminAssetInNewTabButton
-                        assetId={documentAssetId ?? ''}
-                        isOpening={Boolean(documentAssetId && openingAssetId === documentAssetId)}
-                        disabled={!documentAssetId}
-                        title={
-                          documentAssetId
-                            ? 'Open invoice document in new tab'
-                            : 'No attachment or email body for this expense'
+                  <AdminDataTableCell priority='secondary'>{statusLabel}</AdminDataTableCell>
+                  <AdminDataTableCell priority='tertiary'>{formatDateOnly(expense.invoiceDate)}</AdminDataTableCell>
+                </>
+              }
+              actions={
+                <AdminRowActions
+                  actions={[
+                    {
+                      key: 'open-document',
+                      label: documentAssetId
+                        ? isOpeningDocument
+                          ? 'Opening invoice document'
+                          : 'Open invoice document in new tab'
+                        : 'No invoice document available',
+                      icon: <OpenInNewTabIcon className='h-4 w-4' />,
+                      disabled: !documentAssetId || isOpeningDocument,
+                      onClick: () => {
+                        if (documentAssetId) {
+                          void openAssetInNewTab(documentAssetId);
                         }
-                        ariaLabel={
-                          documentAssetId
-                            ? 'Open invoice document in new tab'
-                            : 'No invoice document available'
-                        }
-                        onOpen={(assetId, event) => {
-                          event.stopPropagation();
-                          if (!assetId) {
-                            return;
-                          }
-                          void openAssetInNewTab(assetId);
-                        }}
-                      />
-                      <Button
-                        type='button'
-                        size='sm'
-                        variant='outline'
-                        disabled={isReparsingId === expense.id}
-                        onClick={() => void onReparse(expense.id)}
-                        aria-label='Reparse expense'
-                        title='Reparse expense'
-                        aria-busy={isReparsingId === expense.id}
-                      >
-                        {isReparsingId === expense.id ? (
-                          <span
-                            className='inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-slate-600 border-t-transparent'
-                            aria-hidden
-                          />
-                        ) : (
-                          <RotateIcon className='h-4 w-4' />
-                        )}
-                      </Button>
-                      <Button
-                        type='button'
-                        size='sm'
-                        variant='success'
-                        disabled={
-                          isMarkingPaidId === expense.id ||
-                          expense.status === 'paid' ||
-                          !expenseHasRequiredFieldsForMarkPaid(expense)
-                        }
-                        onClick={() => void onMarkPaid(expense.id)}
-                        aria-label='Mark expense as paid'
-                        title={
-                          expense.status === 'paid'
-                            ? 'Already marked paid'
-                            : expenseHasRequiredFieldsForMarkPaid(expense)
-                              ? 'Mark expense as paid'
-                              : 'Vendor, invoice date, currency, and total are required before marking paid'
-                        }
-                        aria-busy={isMarkingPaidId === expense.id}
-                      >
-                        {isMarkingPaidId === expense.id ? (
-                          <span
-                            className='inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-white border-t-transparent'
-                            aria-hidden
-                          />
-                        ) : (
-                          <MarkPaidIcon className='h-4 w-4' />
-                        )}
-                      </Button>
-                      <Button
-                        type='button'
-                        size='sm'
-                        variant='danger'
-                        disabled={isVoidingId === expense.id || expense.status === 'voided'}
-                        onClick={() => openVoidDialog(expense.id)}
-                        aria-label='Void'
-                        title='Void expense'
-                        aria-busy={isVoidingId === expense.id}
-                      >
-                        {isVoidingId === expense.id ? (
-                          <span
-                            className='inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-white border-t-transparent'
-                            aria-hidden
-                          />
-                        ) : (
-                          <VoidExpenseIcon className='h-4 w-4' />
-                        )}
-                      </Button>
-                      {expense.status === 'draft' ? (
-                        <Button
-                          type='button'
-                          size='sm'
-                          variant='danger'
-                          disabled={isDeletingDraftId === expense.id}
-                          onClick={() => openDeleteDraftDialog(expense.id)}
-                          aria-label='Delete draft expense'
-                          title='Delete draft expense'
-                          aria-busy={isDeletingDraftId === expense.id}
-                        >
-                          {isDeletingDraftId === expense.id ? (
-                            <span
-                              className='inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-white border-t-transparent'
-                              aria-hidden
-                            />
-                          ) : (
-                            <DeleteIcon className='h-4 w-4' />
-                          )}
-                        </Button>
-                      ) : null}
-                    </div>
-                  </AdminDataTableCell>
-                </tr>
-              );
-            })}
-          </AdminDataTableBody>
-        </AdminDataTable>
-      </PaginatedTableCard>
+                      },
+                    },
+                    {
+                      key: 'mark-paid',
+                      label: markPaidLabel(expense, isMarkingPaid),
+                      icon: <MarkPaidIcon className='h-4 w-4' />,
+                      tone: 'success',
+                      disabled:
+                        isMarkingPaid || expense.status === 'paid' || !expenseHasRequiredFieldsForMarkPaid(expense),
+                      onClick: () => void onMarkPaid(expense.id),
+                    },
+                    {
+                      key: 'reparse',
+                      label: isReparsing ? 'Reparsing expense' : 'Reparse expense',
+                      icon: <RotateIcon className='h-4 w-4' />,
+                      disabled: isReparsing,
+                      onClick: () => void onReparse(expense.id),
+                    },
+                    {
+                      key: 'void',
+                      label: isVoiding ? 'Voiding expense' : 'Void expense',
+                      icon: <VoidExpenseIcon className='h-4 w-4' />,
+                      tone: 'danger',
+                      disabled: isVoiding || expense.status === 'voided',
+                      onClick: () => {
+                        setVoidReason('');
+                        setVoidError('');
+                        setVoidExpenseId(expense.id);
+                      },
+                    },
+                    {
+                      key: 'delete-draft',
+                      label: isDeletingDraft ? 'Deleting draft expense' : 'Delete draft expense',
+                      icon: <DeleteIcon className='h-4 w-4' />,
+                      tone: 'danger',
+                      hidden: expense.status !== 'draft',
+                      disabled: isDeletingDraft,
+                      onClick: () => {
+                        setDeleteDraftError('');
+                        setDeleteDraftExpenseId(expense.id);
+                      },
+                    },
+                  ]}
+                />
+              }
+              detail={isOpen ? renderDetail(expense) : null}
+            />
+          );
+        })}
+      </AdminRecordTable>
 
       <ConfirmDialog
-        open={voidDialogOpen}
+        open={voidExpenseId !== null}
         title='Void expense'
         description='Provide a short reason. Voided expenses cannot be edited as submitted records.'
         confirmLabel='Void expense'
@@ -450,7 +438,7 @@ export function ExpensesListPanel({
       </ConfirmDialog>
 
       <ConfirmDialog
-        open={deleteDraftDialogOpen}
+        open={deleteDraftExpenseId !== null}
         title='Delete draft expense'
         description='This permanently removes the draft from the list. You cannot undo this action.'
         confirmLabel='Delete expense'

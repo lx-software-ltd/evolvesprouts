@@ -60,7 +60,7 @@ function renderEditor(
   const onCreate = vi.fn().mockResolvedValue(undefined);
   const onUpdate = vi.fn().mockResolvedValue(undefined);
   const onAmend = vi.fn().mockResolvedValue(undefined);
-  const onStartCreate = vi.fn();
+  const onDirtyChange = vi.fn();
 
   render(
     <ExpensesEditorPanel
@@ -73,21 +73,31 @@ function renderEditor(
       onCreate={onCreate}
       onUpdate={onUpdate}
       onAmend={onAmend}
-      onStartCreate={onStartCreate}
+      onDirtyChange={onDirtyChange}
       {...overrides}
     />
   );
 
-  return { onCreate, onUpdate, onAmend, onStartCreate };
+  return { onCreate, onUpdate, onAmend, onDirtyChange };
 }
 
 describe('ExpensesEditorPanel', () => {
-  it('requires a vendor before create submit', async () => {
+  it('renders without a title or Cancel button', () => {
+    renderEditor({ selectedExpense: baseExpense });
+
+    // Only sub-accordion triggers (Line items, Attachments) render as headings.
+    expect(screen.queryByRole('heading', { level: 2 })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /expense details/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+  });
+
+  it('requires a vendor before create submit and reports dirty edits', async () => {
     const user = userEvent.setup();
-    const { onCreate } = renderEditor();
+    const { onCreate, onDirtyChange } = renderEditor();
 
     expect(screen.getByRole('button', { name: 'Submit expense' })).toBeDisabled();
     await user.selectOptions(screen.getByLabelText(/^Vendor/), vendor.id);
+    expect(onDirtyChange).toHaveBeenCalledWith(true);
     await user.click(screen.getByRole('button', { name: 'Submit expense' }));
 
     await waitFor(() => {

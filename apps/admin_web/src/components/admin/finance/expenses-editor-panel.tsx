@@ -1,84 +1,51 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { StatusBanner } from '@/components/status-banner';
-import { Button } from '@/components/ui/button';
-import { AdminEditorCard } from '@/components/ui/admin-editor-card';
-import { AdminInlineError } from '@/components/ui/admin-inline-error';
+import { AdminDisclosure } from '@/components/ui/admin-disclosure';
+import { AdminEditorActions, AdminEditorPanel } from '@/components/ui/admin-editor-panel';
+import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { FileUploadButton } from '@/components/ui/file-upload-button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { getAdminDefaultCurrencyCode } from '@/lib/config';
 import { formatEnumLabel, getCurrencyOptions } from '@/lib/format';
-import { EXPENSE_STATUSES, type Expense, type ExpenseLineItem, type ExpenseStatus } from '@/types/expenses';
+import {
+  EXPENSE_STATUSES,
+  type Expense,
+  type ExpenseLineItem,
+  type ExpenseStatus,
+  type UpsertExpenseInput,
+} from '@/types/expenses';
 import type { Vendor } from '@/types/vendors';
 
+type ExpenseEditorInput = Omit<UpsertExpenseInput, 'attachmentAssetIds'>;
+
 interface ExpensesEditorPanelProps {
+  /** `null` renders the draft (create) editor. */
   selectedExpense: Expense | null;
   vendorOptions: Vendor[];
   isLoadingVendors: boolean;
   isSaving: boolean;
   isUploadingFiles: boolean;
   mutationError: string;
-  onCreate: (payload: {
-    input: {
-      status: ExpenseStatus;
-      vendorId: string | null;
-      invoiceNumber: string | null;
-      invoiceDate: string | null;
-      dueDate: string | null;
-      currency: string | null;
-      subtotal: string | null;
-      tax: string | null;
-      total: string | null;
-      notes: string | null;
-      lineItems: ExpenseLineItem[];
-      parseRequested: boolean;
-    };
-    files: File[];
-  }) => Promise<void>;
+  onCreate: (payload: { input: ExpenseEditorInput; files: File[] }) => Promise<void>;
   onUpdate: (payload: {
     expenseId: string;
-    input: {
-      status: ExpenseStatus;
-      vendorId: string | null;
-      invoiceNumber: string | null;
-      invoiceDate: string | null;
-      dueDate: string | null;
-      currency: string | null;
-      subtotal: string | null;
-      tax: string | null;
-      total: string | null;
-      notes: string | null;
-      lineItems: ExpenseLineItem[];
-      parseRequested: boolean;
-    };
+    input: ExpenseEditorInput;
     newFiles: File[];
     existingAttachmentAssetIds: string[];
   }) => Promise<void>;
   onAmend: (payload: {
     expenseId: string;
-    input: {
-      status: ExpenseStatus;
-      vendorId: string | null;
-      invoiceNumber: string | null;
-      invoiceDate: string | null;
-      dueDate: string | null;
-      currency: string | null;
-      subtotal: string | null;
-      tax: string | null;
-      total: string | null;
-      notes: string | null;
-      lineItems: ExpenseLineItem[];
-      parseRequested: boolean;
-    };
+    input: ExpenseEditorInput;
     newFiles: File[];
     existingAttachmentAssetIds: string[];
   }) => Promise<void>;
-  onStartCreate: () => void;
+  /** Reports unsaved edits so the row hook can guard row switches. */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 function toLineItemsJson(value: ExpenseLineItem[]): string {
@@ -130,6 +97,11 @@ function parseLineItemsJson(value: string): ExpenseLineItem[] {
   });
 }
 
+/**
+ * Body of an expanded expense row: fields in 4-per-row grids, then line
+ * items and attachments as sub-accordions. Mounted only while the row is
+ * open, so field state resets naturally between records.
+ */
 export function ExpensesEditorPanel({
   selectedExpense,
   vendorOptions,
@@ -140,7 +112,7 @@ export function ExpensesEditorPanel({
   onCreate,
   onUpdate,
   onAmend,
-  onStartCreate,
+  onDirtyChange,
 }: ExpensesEditorPanelProps) {
   const currencyOptions = getCurrencyOptions();
   const [status, setStatus] = useState<ExpenseStatus>(selectedExpense?.status ?? 'submitted');
@@ -148,23 +120,45 @@ export function ExpensesEditorPanel({
   const [invoiceNumber, setInvoiceNumber] = useState(selectedExpense?.invoiceNumber ?? '');
   const [invoiceDate, setInvoiceDate] = useState(selectedExpense?.invoiceDate ?? '');
   const [dueDate, setDueDate] = useState(selectedExpense?.dueDate ?? '');
-  const [currency, setCurrency] = useState(
-    selectedExpense?.currency ?? getAdminDefaultCurrencyCode()
-  );
+  const [currency, setCurrency] = useState(selectedExpense?.currency ?? getAdminDefaultCurrencyCode());
   const [subtotal, setSubtotal] = useState(selectedExpense?.subtotal ?? '');
   const [tax, setTax] = useState(selectedExpense?.tax ?? '');
   const [total, setTotal] = useState(selectedExpense?.total ?? '');
   const [notes, setNotes] = useState(selectedExpense?.notes ?? '');
-  const [lineItemsJson, setLineItemsJson] = useState(selectedExpense ? toLineItemsJson(selectedExpense.lineItems) : '[]');
+  const [lineItemsJson, setLineItemsJson] = useState(
+    selectedExpense ? toLineItemsJson(selectedExpense.lineItems) : '[]'
+  );
   const [lineItemsError, setLineItemsError] = useState('');
-  const [lineItemsDisclosureOpen, setLineItemsDisclosureOpen] = useState(false);
+  const [lineItemsOpen, setLineItemsOpen] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [parseRequested, setParseRequested] = useState(!selectedExpense);
   const [carryExistingAttachments, setCarryExistingAttachments] = useState(true);
 
+  const dirtyRef = useRef(false);
+  const onDirtyChangeRef = useRef(onDirtyChange);
+  useEffect(() => {
+    onDirtyChangeRef.current = onDirtyChange;
+  });
+  useEffect(() => {
+    return () => {
+      onDirtyChangeRef.current?.(false);
+    };
+  }, []);
+  function touch<TValue>(setter: (value: TValue) => void) {
+    return (value: TValue) => {
+      if (!dirtyRef.current) {
+        dirtyRef.current = true;
+        onDirtyChangeRef.current?.(true);
+      }
+      setter(value);
+    };
+  }
+
   const isEditMode = Boolean(selectedExpense);
   const isTerminal = selectedExpense
-    ? selectedExpense.status === 'paid' || selectedExpense.status === 'voided' || selectedExpense.status === 'amended'
+    ? selectedExpense.status === 'paid' ||
+      selectedExpense.status === 'voided' ||
+      selectedExpense.status === 'amended'
     : false;
   const trimmedVendorId = vendorId.trim();
   const vendorRequired = !isEditMode && trimmedVendorId.length === 0;
@@ -174,6 +168,14 @@ export function ExpensesEditorPanel({
     () => selectedExpense?.attachments.map((attachment) => attachment.assetId) ?? [],
     [selectedExpense]
   );
+  const existingAttachmentCount = selectedExpense?.attachments.length ?? 0;
+  const lineItemCount = useMemo(() => {
+    try {
+      return parseLineItemsJson(lineItemsJson).length;
+    } catch {
+      return null;
+    }
+  }, [lineItemsJson]);
 
   async function handleSave() {
     if (vendorRequired) {
@@ -185,11 +187,11 @@ export function ExpensesEditorPanel({
       setLineItemsError('');
     } catch (error) {
       setLineItemsError(error instanceof Error ? error.message : 'Line items JSON is invalid.');
-      setLineItemsDisclosureOpen(true);
+      setLineItemsOpen(true);
       return;
     }
 
-    const payloadInput = {
+    const payloadInput: ExpenseEditorInput = {
       status,
       vendorId: vendorId.trim() || null,
       invoiceNumber: invoiceNumber.trim() || null,
@@ -206,98 +208,62 @@ export function ExpensesEditorPanel({
 
     try {
       if (!selectedExpense) {
-        await onCreate({
-          input: payloadInput,
-          files,
-        });
-        return;
-      }
-
-      const existingAttachmentAssetIds = carryExistingAttachments ? selectedAttachmentAssetIds : [];
-      if (isTerminal) {
-        await onAmend({
+        await onCreate({ input: payloadInput, files });
+      } else {
+        const existingAttachmentAssetIds = carryExistingAttachments ? selectedAttachmentAssetIds : [];
+        const payload = {
           expenseId: selectedExpense.id,
           input: payloadInput,
           newFiles: files,
           existingAttachmentAssetIds,
-        });
-        return;
+        };
+        if (isTerminal) {
+          await onAmend(payload);
+        } else {
+          await onUpdate(payload);
+        }
       }
-
-      await onUpdate({
-        expenseId: selectedExpense.id,
-        input: payloadInput,
-        newFiles: files,
-        existingAttachmentAssetIds,
-      });
+      dirtyRef.current = false;
+      onDirtyChangeRef.current?.(false);
+      setFiles([]);
     } catch {
       // Errors are handled by hook state for actionable user feedback.
     }
   }
 
-  const primaryLabel = isTerminal
-    ? 'Create amendment'
-    : selectedExpense
-      ? 'Update expense'
-      : 'Submit expense';
+  const primaryLabel = isTerminal ? 'Create amendment' : selectedExpense ? 'Update expense' : 'Submit expense';
+  const attachmentsSummary = [
+    existingAttachmentCount > 0 ? `${existingAttachmentCount} existing` : null,
+    files.length > 0 ? `${files.length} new` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
-    <AdminEditorCard
-      title='Expense Details'
-      description='Upload invoice documents, verify parsed fields, and keep amendment history.'
+    <AdminEditorPanel
+      status={
+        mutationError ? (
+          <StatusBanner variant='error' title='Expense'>
+            {mutationError}
+          </StatusBanner>
+        ) : null
+      }
       actions={
-        <>
-          {selectedExpense ? (
-            <Button type='button' variant='secondary' onClick={onStartCreate} disabled={isSaving || isUploadingFiles}>
-              Cancel
-            </Button>
-          ) : null}
-          <Button
-            type='button'
-            onClick={() => void handleSave()}
-            disabled={isSubmitDisabled}
-            loading={isSaving || isUploadingFiles}
-          >
-            {primaryLabel}
-          </Button>
-        </>
+        <AdminEditorActions
+          mode={isEditMode ? 'edit' : 'create'}
+          onSubmit={() => void handleSave()}
+          isSaving={isSaving || isUploadingFiles}
+          submitDisabled={isSubmitDisabled}
+          submitLabel={primaryLabel}
+        />
       }
     >
-      {mutationError ? (
-        <StatusBanner variant='error' title='Expense'>
-          {mutationError}
-        </StatusBanner>
-      ) : null}
-      {selectedExpense ? (
-        <div className='rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700'>
-          Parse status: {formatEnumLabel(selectedExpense.parseStatus)}
-          {selectedExpense.parseConfidence ? ` (confidence ${selectedExpense.parseConfidence})` : ''}
-        </div>
-      ) : null}
-      <div className='grid grid-cols-1 gap-3 md:grid-cols-3 [&>div]:min-w-0'>
-        <div>
-          <Label htmlFor='expense-status'>Status</Label>
-          <Select id='expense-status' value={status} onChange={(event) => setStatus(event.target.value as ExpenseStatus)}>
-            {EXPENSE_STATUSES.map((entry) => (
-              <option key={entry} value={entry}>
-                {formatEnumLabel(entry)}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor='expense-vendor'>
-            Vendor
-            {!isEditMode ? (
-              <span aria-hidden='true' className='ml-0.5 text-red-600'>
-                *
-              </span>
-            ) : null}
-          </Label>
+      <AdminFieldGrid columns={4}>
+        <AdminField label='Vendor' htmlFor='expense-vendor' span={2} required={!isEditMode}>
           <Select
             id='expense-vendor'
             value={vendorId}
-            onChange={(event) => setVendorId(event.target.value)}
+            onChange={(event) => touch(setVendorId)(event.target.value)}
             required={!isEditMode}
             aria-required={!isEditMode ? true : undefined}
           >
@@ -309,120 +275,186 @@ export function ExpensesEditorPanel({
               </option>
             ))}
           </Select>
-        </div>
-        <div>
-          <Label htmlFor='expense-invoice-number'>Invoice number</Label>
-          <Input id='expense-invoice-number' value={invoiceNumber} onChange={(event) => setInvoiceNumber(event.target.value)} />
-        </div>
-        <div>
-          <Label htmlFor='expense-invoice-date'>Invoice date</Label>
+        </AdminField>
+        <AdminField label='Invoice number' htmlFor='expense-invoice-number'>
+          <Input
+            id='expense-invoice-number'
+            value={invoiceNumber}
+            onChange={(event) => touch(setInvoiceNumber)(event.target.value)}
+          />
+        </AdminField>
+        <AdminField label='Status' htmlFor='expense-status'>
+          <Select
+            id='expense-status'
+            value={status}
+            onChange={(event) => touch(setStatus)(event.target.value as ExpenseStatus)}
+          >
+            {EXPENSE_STATUSES.map((entry) => (
+              <option key={entry} value={entry}>
+                {formatEnumLabel(entry)}
+              </option>
+            ))}
+          </Select>
+        </AdminField>
+      </AdminFieldGrid>
+      <AdminFieldGrid columns={4}>
+        <AdminField label='Invoice date' htmlFor='expense-invoice-date'>
           <Input
             id='expense-invoice-date'
             type='date'
             value={invoiceDate}
-            onChange={(event) => setInvoiceDate(event.target.value)}
+            onChange={(event) => touch(setInvoiceDate)(event.target.value)}
           />
-        </div>
-        <div>
-          <Label htmlFor='expense-due-date'>Due date</Label>
+        </AdminField>
+        <AdminField label='Due date' htmlFor='expense-due-date'>
           <Input
             id='expense-due-date'
             type='date'
             value={dueDate}
-            onChange={(event) => setDueDate(event.target.value)}
+            onChange={(event) => touch(setDueDate)(event.target.value)}
           />
-        </div>
-        <div>
-          <Label htmlFor='expense-currency'>Currency</Label>
-          <Select id='expense-currency' value={currency} onChange={(event) => setCurrency(event.target.value)}>
+        </AdminField>
+        <AdminField label='Currency' htmlFor='expense-currency'>
+          <Select
+            id='expense-currency'
+            value={currency}
+            onChange={(event) => touch(setCurrency)(event.target.value)}
+          >
             {currencyOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
           </Select>
-        </div>
-        <div>
-          <Label htmlFor='expense-subtotal'>Subtotal</Label>
-          <Input id='expense-subtotal' value={subtotal} onChange={(event) => setSubtotal(event.target.value)} />
-        </div>
-        <div>
-          <Label htmlFor='expense-tax'>Tax</Label>
-          <Input id='expense-tax' value={tax} onChange={(event) => setTax(event.target.value)} />
-        </div>
-        <div>
-          <Label htmlFor='expense-total'>Total</Label>
-          <Input id='expense-total' value={total} onChange={(event) => setTotal(event.target.value)} />
-        </div>
-      </div>
-      <div>
-        <Label htmlFor='expense-notes'>Notes</Label>
-        <Textarea id='expense-notes' value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} />
-      </div>
-      <details
-        className='rounded-md border border-slate-200 bg-white'
-        open={lineItemsDisclosureOpen}
-        onToggle={(event) => {
-          setLineItemsDisclosureOpen(event.currentTarget.open);
-        }}
-      >
-        <summary
-          className='cursor-pointer select-none px-3 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50'
-          aria-controls='expense-line-items-panel'
-        >
-          Line items (JSON)
-        </summary>
-        <div className='border-t border-slate-200 px-3 pb-3 pt-2' id='expense-line-items-panel'>
-          <Label htmlFor='expense-line-items'>Line items JSON</Label>
-          <Textarea
-            id='expense-line-items'
-            aria-invalid={lineItemsError ? true : undefined}
-            value={lineItemsJson}
-            onChange={(event) => setLineItemsJson(event.target.value)}
-            rows={6}
+        </AdminField>
+        <AdminField label='Total' htmlFor='expense-total'>
+          <Input
+            id='expense-total'
+            inputMode='decimal'
+            value={total}
+            onChange={(event) => touch(setTotal)(event.target.value)}
           />
-          {lineItemsError ? (
-            <AdminInlineError className='mt-1'>{lineItemsError}</AdminInlineError>
+        </AdminField>
+      </AdminFieldGrid>
+      <AdminFieldGrid columns={4}>
+        <AdminField label='Subtotal' htmlFor='expense-subtotal'>
+          <Input
+            id='expense-subtotal'
+            inputMode='decimal'
+            value={subtotal}
+            onChange={(event) => touch(setSubtotal)(event.target.value)}
+          />
+        </AdminField>
+        <AdminField label='Tax' htmlFor='expense-tax'>
+          <Input
+            id='expense-tax'
+            inputMode='decimal'
+            value={tax}
+            onChange={(event) => touch(setTax)(event.target.value)}
+          />
+        </AdminField>
+        {selectedExpense ? (
+          <AdminField label='Parse status' htmlFor='expense-parse-status' span={2}>
+            <Input
+              id='expense-parse-status'
+              readOnly
+              value={`${formatEnumLabel(selectedExpense.parseStatus)}${
+                selectedExpense.parseConfidence ? ` (confidence ${selectedExpense.parseConfidence})` : ''
+              }`}
+            />
+          </AdminField>
+        ) : null}
+      </AdminFieldGrid>
+      <AdminFieldGrid columns={1}>
+        <AdminField label='Notes' htmlFor='expense-notes'>
+          <Textarea
+            id='expense-notes'
+            value={notes}
+            onChange={(event) => touch(setNotes)(event.target.value)}
+            rows={3}
+          />
+        </AdminField>
+      </AdminFieldGrid>
+
+      <AdminDisclosure
+        id='expense-line-items'
+        title='Line items'
+        summary={lineItemCount === null ? 'Invalid JSON' : `${lineItemCount} line${lineItemCount === 1 ? '' : 's'}`}
+        open={lineItemsOpen}
+        onOpenChange={setLineItemsOpen}
+      >
+        <AdminFieldGrid columns={1}>
+          <AdminField
+            label='Line items JSON'
+            htmlFor='expense-line-items-json'
+            error={lineItemsError || undefined}
+            errorId='expense-line-items-error'
+          >
+            <Textarea
+              id='expense-line-items-json'
+              aria-invalid={lineItemsError ? true : undefined}
+              aria-describedby={lineItemsError ? 'expense-line-items-error' : undefined}
+              value={lineItemsJson}
+              onChange={(event) => touch(setLineItemsJson)(event.target.value)}
+              rows={6}
+              className='font-mono text-xs'
+            />
+          </AdminField>
+        </AdminFieldGrid>
+      </AdminDisclosure>
+
+      <AdminDisclosure
+        id='expense-attachments'
+        title='Attachments'
+        summary={attachmentsSummary || 'None'}
+        defaultOpen={!isEditMode}
+      >
+        <div className='space-y-3'>
+          <AdminFieldGrid columns={1}>
+            <AdminField label='Add files (PDF, PNG, JPG, WEBP; max 15MB each)' htmlFor='expense-files'>
+              <FileUploadButton
+                id='expense-files'
+                accept='application/pdf,image/png,image/jpeg,image/webp'
+                multiple
+                selectedFileName={files.length > 0 ? `${files.length} file(s) selected` : null}
+                emptyLabel='No files selected'
+                buttonLabel='Choose files'
+                onChange={(event) => {
+                  const selectedFiles = event.target.files ? Array.from(event.target.files) : [];
+                  touch(setFiles)(selectedFiles);
+                }}
+              />
+            </AdminField>
+          </AdminFieldGrid>
+          {selectedExpense?.attachments.length ? (
+            <p className='text-sm text-slate-600'>
+              Existing attachments:{' '}
+              {selectedExpense.attachments
+                .map((attachment) => attachment.fileName ?? attachment.assetTitle ?? attachment.assetId)
+                .join(', ')}
+            </p>
+          ) : null}
+          {isEditMode ? (
+            <label className='flex items-center gap-2 text-sm text-slate-700'>
+              <input
+                type='checkbox'
+                checked={carryExistingAttachments}
+                onChange={(event) => touch(setCarryExistingAttachments)(event.target.checked)}
+              />
+              Include existing attachments
+            </label>
           ) : null}
         </div>
-      </details>
-      <div className='space-y-2'>
-        <Label htmlFor='expense-files'>Attachments (PDF, PNG, JPG, WEBP; max 15MB each)</Label>
-        <FileUploadButton
-          id='expense-files'
-          accept='application/pdf,image/png,image/jpeg,image/webp'
-          multiple
-          selectedFileName={files.length > 0 ? `${files.length} file(s) selected` : null}
-          emptyLabel='No files selected'
-          buttonLabel='Choose files'
-          onChange={(event) => {
-            const selectedFiles = event.target.files ? Array.from(event.target.files) : [];
-            setFiles(selectedFiles);
-          }}
-        />
-        {selectedExpense?.attachments.length ? (
-          <p className='text-sm text-slate-600'>
-            Existing attachments:{' '}
-            {selectedExpense.attachments
-              .map((attachment) => attachment.fileName ?? attachment.assetTitle ?? attachment.assetId)
-              .join(', ')}
-          </p>
-        ) : null}
-      </div>
-      {isEditMode ? (
-        <label className='flex items-center gap-2 text-sm text-slate-700'>
-          <input
-            type='checkbox'
-            checked={carryExistingAttachments}
-            onChange={(event) => setCarryExistingAttachments(event.target.checked)}
-          />
-          Include existing attachments
-        </label>
-      ) : null}
+      </AdminDisclosure>
+
       <label className='flex items-center gap-2 text-sm text-slate-700'>
-        <input type='checkbox' checked={parseRequested} onChange={(event) => setParseRequested(event.target.checked)} />
+        <input
+          type='checkbox'
+          checked={parseRequested}
+          onChange={(event) => touch(setParseRequested)(event.target.checked)}
+        />
         Queue parse after save
       </label>
-    </AdminEditorCard>
+    </AdminEditorPanel>
   );
 }
