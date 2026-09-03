@@ -1406,6 +1406,116 @@ export interface paths {
         };
         trace?: never;
     };
+    "/v1/admin/leads/daily-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get latest org-wide sales plan of the day
+         * @description Returns the newest stored org-wide AI sales daily plan, including staleness metadata. `plan` is null when none has been generated yet. A plan is stale when it is older than 24 hours, when a newer WhatsApp/Meta message exists after the stored conversation watermark, or when a lead was created or a funnel-stage event occurred after the stored pipeline watermark.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Latest daily plan payload (or null). */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SalesDailyPlanResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        put?: never;
+        /**
+         * Queue org-wide sales plan of the day generation
+         * @description Enqueues an asynchronous job that generates a sales-focused plan of the day via the shared OpenRouter pipeline (same Secrets Manager key, allow-listed chat-completions URL, and AWS HTTP proxy as lead AI suggestions). Poll `GET /v1/admin/leads/daily-plan/jobs/{job_id}` for status, timing (`queue_wait_ms`, `duration_ms`), and the resulting plan. Does not send messages.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Generation job accepted. */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SalesDailyPlanJobResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/leads/daily-plan/jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Get sales daily plan job status
+         * @description Returns job status and timing. When `status` is `succeeded`, includes the serialized plan. Use `queue_wait_ms` (created→started) and `duration_ms` (started→finished) to time OpenRouter runs.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    job_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Job status payload. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SalesDailyPlanJobResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/whatsapp/conversations": {
         parameters: {
             query?: never;
@@ -6897,6 +7007,76 @@ export interface components {
         };
         LeadAiSuggestionJobResponse: {
             job: components["schemas"]["LeadAiSuggestionJob"];
+        };
+        SalesDailyPlanPriority: {
+            title: string;
+            why?: string;
+            action?: string;
+            /** Format: uuid */
+            lead_id?: string | null;
+        };
+        SalesDailyPlanOutreach: {
+            channel: string;
+            /** Format: uuid */
+            lead_id?: string | null;
+            message_excerpt?: string;
+            draft_reply?: string;
+            rationale?: string;
+        };
+        SalesDailyPlan: {
+            /** Format: uuid */
+            id: string;
+            focus: string;
+            priorities: components["schemas"]["SalesDailyPlanPriority"][];
+            outreach: components["schemas"]["SalesDailyPlanOutreach"][];
+            product_focus: string;
+            offer_refinements: string[];
+            risks: string[];
+            /** Format: date-time */
+            generated_at: string;
+            generated_by?: string | null;
+            model?: string | null;
+            /** Format: date-time */
+            conversation_watermark_at?: string | null;
+            /** Format: date-time */
+            pipeline_watermark_at?: string | null;
+            is_stale: boolean;
+            stale_reasons: ("age" | "new_conversation" | "pipeline_changed")[];
+            /**
+             * Format: date-time
+             * @description Timestamp when the plan becomes age-stale (generated_at + 24h).
+             */
+            stale_after: string;
+            /** Format: date-time */
+            latest_message_at?: string | null;
+            /** Format: date-time */
+            latest_pipeline_at?: string | null;
+        };
+        SalesDailyPlanResponse: {
+            plan: components["schemas"]["SalesDailyPlan"] | null;
+        };
+        SalesDailyPlanJob: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "pending" | "processing" | "succeeded" | "failed";
+            error_message?: string | null;
+            /** Format: uuid */
+            plan_id?: string | null;
+            /** Format: date-time */
+            created_at?: string | null;
+            /** Format: date-time */
+            started_at?: string | null;
+            /** Format: date-time */
+            finished_at?: string | null;
+            /** Format: date-time */
+            updated_at?: string | null;
+            queue_wait_ms?: number | null;
+            duration_ms?: number | null;
+            plan?: components["schemas"]["SalesDailyPlan"] | null;
+        };
+        SalesDailyPlanJobResponse: {
+            job: components["schemas"]["SalesDailyPlanJob"];
         };
         WhatsAppConversationSummary: {
             /** Format: uuid */

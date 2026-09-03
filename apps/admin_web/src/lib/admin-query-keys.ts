@@ -38,6 +38,9 @@ export const adminQueryKeys = {
   calendarBlocks: resource('calendar-blocks'),
   tags: resource('tags'),
   conversations: resource('conversations'),
+  salesDailyPlan: {
+    latest: () => [ROOT, 'sales-daily-plan', 'latest'] as const,
+  },
   catalog: {
     entityTags: () => [ROOT, 'catalog', 'entity-tags'] as const,
     adminUsers: () => [ROOT, 'catalog', 'admin-users'] as const,

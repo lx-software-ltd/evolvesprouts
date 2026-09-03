@@ -264,3 +264,85 @@ def test_parse_lead_filters_rejects_cursor_for_non_created_sort(
 
     with pytest.raises(ValidationError, match="cursor is only supported"):
         parse_lead_filters(event)
+
+
+def test_handle_admin_leads_dispatches_daily_plan_get(
+    monkeypatch: Any,
+    api_gateway_event: Any,
+    admin_identity: dict[str, str],
+) -> None:
+    marker = {"statusCode": 200, "body": "{}"}
+    monkeypatch.setattr(
+        admin_leads,
+        "require_admin_identity",
+        lambda _: _build_admin_identity(admin_identity),
+    )
+    monkeypatch.setattr(
+        admin_leads, "get_sales_daily_plan", lambda *_args, **_kwargs: marker
+    )
+
+    response = admin_leads.handle_admin_leads_request(
+        api_gateway_event(method="GET", path="/v1/admin/leads/daily-plan"),
+        "GET",
+        "/v1/admin/leads/daily-plan",
+    )
+
+    assert response is marker
+
+
+def test_handle_admin_leads_dispatches_daily_plan_post(
+    monkeypatch: Any,
+    api_gateway_event: Any,
+    admin_identity: dict[str, str],
+) -> None:
+    marker = {"statusCode": 202, "body": "{}"}
+    captured: dict[str, Any] = {}
+    monkeypatch.setattr(
+        admin_leads,
+        "require_admin_identity",
+        lambda _: _build_admin_identity(admin_identity),
+    )
+
+    def _fake_create(event: Any, *, actor_sub: str) -> dict[str, Any]:
+        captured["actor_sub"] = actor_sub
+        captured["event"] = event
+        return marker
+
+    monkeypatch.setattr(admin_leads, "create_sales_daily_plan", _fake_create)
+
+    response = admin_leads.handle_admin_leads_request(
+        api_gateway_event(method="POST", path="/v1/admin/leads/daily-plan"),
+        "POST",
+        "/v1/admin/leads/daily-plan",
+    )
+
+    assert response is marker
+    assert captured["actor_sub"] == admin_identity["userSub"]
+
+
+def test_handle_admin_leads_dispatches_daily_plan_job_get(
+    monkeypatch: Any,
+    api_gateway_event: Any,
+    admin_identity: dict[str, str],
+) -> None:
+    marker = {"statusCode": 200, "body": "{}"}
+    monkeypatch.setattr(
+        admin_leads,
+        "require_admin_identity",
+        lambda _: _build_admin_identity(admin_identity),
+    )
+    monkeypatch.setattr(
+        admin_leads, "get_sales_daily_plan_job", lambda *_args, **_kwargs: marker
+    )
+    job_id = str(uuid4())
+
+    response = admin_leads.handle_admin_leads_request(
+        api_gateway_event(
+            method="GET",
+            path=f"/v1/admin/leads/daily-plan/jobs/{job_id}",
+        ),
+        "GET",
+        f"/v1/admin/leads/daily-plan/jobs/{job_id}",
+    )
+
+    assert response is marker

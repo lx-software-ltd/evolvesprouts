@@ -17,6 +17,12 @@ vi.mock('@/lib/config', () => ({
   getAdminDefaultCurrencyCode: vi.fn(() => 'HKD'),
 }));
 
+vi.mock('@/lib/sales-daily-plan-api', () => ({
+  fetchSalesDailyPlan: vi.fn(() => Promise.resolve(null)),
+  enqueueSalesDailyPlanJob: vi.fn(),
+  pollSalesDailyPlanJob: vi.fn(),
+}));
+
 import DashboardRoutePage from '@/app/(dashboard)/dashboard/page';
 
 describe('DashboardRoutePage', () => {

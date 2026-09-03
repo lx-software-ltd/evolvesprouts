@@ -583,6 +583,30 @@ maps legacy `note.id` to the **first** inserted row’s UUID.
 - FK `lead_id` → `sales_leads.id` with `ON DELETE CASCADE`.
 - No seed rows (created on demand).
 
+### `sales_daily_plans`
+
+- Purpose: persisted org-wide AI sales plan of the day (OpenRouter).
+- Stores structured JSON (`focus`, `priorities`, `outreach`, `product_focus`,
+  `offer_refinements`, `risks`), optional `conversation_watermark_at` (max
+  WhatsApp/Meta message `sent_at` at generation), optional
+  `pipeline_watermark_at` (max lead create or lead-event time at generation),
+  `generated_at`, `generated_by`, and `model`.
+- Multiple rows are retained (history); admin APIs return the newest.
+- Stale when older than 24 hours, when a newer conversation message exists
+  than the conversation watermark, or when a lead was created / a funnel-stage
+  event occurred after the pipeline watermark.
+- No seed rows (generated on demand).
+
+### `sales_daily_plan_jobs`
+
+- Purpose: async generation jobs for the org-wide sales daily plan (SQS worker).
+- Status lifecycle: `pending` → `processing` → `succeeded` | `failed`.
+- Timing columns: `created_at`, `started_at`, `finished_at` (plus `updated_at`) so
+  admins can measure queue wait and OpenRouter duration.
+- Optional `plan_id` FK → `sales_daily_plans.id` (`ON DELETE SET NULL`)
+  when the job succeeds.
+- No seed rows (created on demand).
+
 ### `whatsapp_conversations`
 
 - Purpose: one WhatsApp Cloud API thread per counterparty `wa_id`.

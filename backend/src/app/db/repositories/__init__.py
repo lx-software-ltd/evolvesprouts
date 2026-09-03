@@ -20,6 +20,7 @@ from app.db.repositories.inbound_email import InboundEmailRepository
 from app.db.repositories.location import LocationRepository
 from app.db.repositories.note import NoteRepository
 from app.db.repositories.organization import OrganizationRepository
+from app.db.repositories.sales_daily_plan_job import SalesDailyPlanJobRepository
 from app.db.repositories.sales_lead import SalesLeadRepository
 from app.db.repositories.sales_lead_ai_suggestion_job import (
     SalesLeadAiSuggestionJobRepository,
@@ -35,6 +36,7 @@ __all__ = [
     "ApiKeyRepository",
     "AssetRepository",
     "BulkExpenseImportJobRepository",
+    "SalesDailyPlanJobRepository",
     "SalesLeadAiSuggestionJobRepository",
     "ContactRepository",
     "CustomerInvoiceRepository",
