@@ -20,6 +20,7 @@ import { usePaginatedList } from './use-paginated-list';
 type Filters = Pick<ListAdminAssetsInput, 'query' | 'visibility' | 'tagName'>;
 
 const ASSET_LIST_TYPE_FILTER = 'document' as const;
+const ASSET_LIST_DEBOUNCE_KEYS: (keyof Filters)[] = ['query'];
 
 /** Query parameter that mirrors the expanded asset row (`?asset=<id>` or `?asset=new`). */
 export const ADMIN_ASSET_QUERY_PARAM = 'asset';
@@ -95,7 +96,7 @@ export function useAssetList(): UseAssetListReturn {
     limit: ADMIN_LIST_PAGE_SIZE,
     errorPrefix: 'Failed to load assets',
     queryKey: adminQueryKeys.assets.lists(),
-    debounceKeys: ['query'],
+    debounceKeys: ASSET_LIST_DEBOUNCE_KEYS,
     debounceMs: 350,
   });
 
@@ -136,19 +137,33 @@ export function useAssetList(): UseAssetListReturn {
   );
   const resolvedSelectedAssetId = selectedAsset?.id ?? null;
 
-  const currentQuery = filters.query;
-  const currentTagName = filters.tagName;
+  const filtersRef = useRef(filters);
+  const lastUrlFiltersRef = useRef({ query: urlQuery, tag: urlTag });
 
   useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
+
+  // Apply inbound deep-links (`?tag=` / `?query=`) only when those URL params
+  // change. An empty URL tag still means "default to Client" for deep-links,
+  // but a later effect run (for example after a filter update) must not treat
+  // the still-empty URL as a request to overwrite the user's selection.
+  useEffect(() => {
+    const urlChanged =
+      lastUrlFiltersRef.current.query !== urlQuery || lastUrlFiltersRef.current.tag !== urlTag;
+    lastUrlFiltersRef.current = { query: urlQuery, tag: urlTag };
+    if (!urlChanged) {
+      return;
+    }
     const nextQuery = urlQuery;
     const nextTag = urlTag || CLIENT_DOCUMENT_ASSET_TAG;
-    if (nextQuery !== currentQuery) {
+    if (nextQuery !== filtersRef.current.query) {
       setFilter('query', nextQuery);
     }
-    if (nextTag !== currentTagName) {
+    if (nextTag !== filtersRef.current.tagName) {
       setFilter('tagName', nextTag);
     }
-  }, [currentQuery, currentTagName, setFilter, urlQuery, urlTag]);
+  }, [setFilter, urlQuery, urlTag]);
 
   const refreshAssets = useCallback(
     async (nextFilters?: Partial<Filters>) => {

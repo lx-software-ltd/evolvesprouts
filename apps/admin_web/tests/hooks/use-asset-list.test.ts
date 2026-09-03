@@ -87,6 +87,66 @@ describe('useAssetList', () => {
     );
   });
 
+  it('applies a user-selected tag filter without resetting to the Client default', async () => {
+    const { result } = renderHook(() => useAssetList());
+
+    await waitFor(() => {
+      expect(mockListAdminAssets).toHaveBeenCalled();
+    });
+
+    mockListAdminAssets.mockClear();
+    act(() => {
+      result.current.setTagNameFilter(CUSTOMER_INVOICE_ASSET_TAG);
+    });
+
+    await waitFor(() => {
+      expect(result.current.filters.tagName).toBe(CUSTOMER_INVOICE_ASSET_TAG);
+    });
+    expect(mockListAdminAssets).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tagName: CUSTOMER_INVOICE_ASSET_TAG,
+      })
+    );
+  });
+
+  it('lists all tags when the user clears the tag filter', async () => {
+    const { result } = renderHook(() => useAssetList());
+
+    await waitFor(() => {
+      expect(result.current.filters.tagName).toBe(CLIENT_DOCUMENT_ASSET_TAG);
+    });
+
+    mockListAdminAssets.mockClear();
+    act(() => {
+      result.current.setTagNameFilter('');
+    });
+
+    await waitFor(() => {
+      expect(result.current.filters.tagName).toBe('');
+    });
+    expect(mockListAdminAssets).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tagName: '',
+      })
+    );
+  });
+
+  it('keeps a user-typed search query when the URL has no query param', async () => {
+    const { result } = renderHook(() => useAssetList());
+
+    await waitFor(() => {
+      expect(mockListAdminAssets).toHaveBeenCalled();
+    });
+
+    act(() => {
+      result.current.setQueryFilter('nutrition');
+    });
+
+    await waitFor(() => {
+      expect(result.current.filters.query).toBe('nutrition');
+    });
+  });
+
   it('applies a later URL change to tag and query', async () => {
     const { result } = renderHook(() => useAssetList());
 
