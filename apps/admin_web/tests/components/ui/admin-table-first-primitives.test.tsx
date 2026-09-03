@@ -148,12 +148,12 @@ describe('AdminFilterBar / AdminCreateButton', () => {
     expect(screen.getByLabelText('Search')).toBeInTheDocument();
     expect(screen.getByText('2 of 40')).toBeInTheDocument();
     const create = screen.getByRole('button', { name: 'New contact' });
-    expect(create).toHaveAttribute('title', 'New contact');
     expect(create).toHaveAttribute('aria-pressed', 'true');
-    // Square and input-height on desktop; full-width with the label on phones.
-    expect(create).toHaveClass('h-10', 'w-full', 'sm:h-9', 'sm:w-9', 'rounded-md', 'border');
+    // Spelled-out label, no plus icon; input-height on desktop, full-width on phones.
     expect(create).toHaveTextContent('New contact');
-    expect(create.querySelector('span')).toHaveClass('sm:hidden');
+    expect(create.querySelector('svg')).toBeNull();
+    expect(create).toHaveClass('h-10', 'w-full', 'sm:h-9', 'sm:w-auto', 'rounded-md', 'border');
+    expect(create).not.toHaveClass('sm:w-9');
     expect(create.parentElement).toHaveClass('order-first', 'w-full', 'sm:order-none', 'sm:w-auto');
     fireEvent.click(create);
     expect(onCreate).toHaveBeenCalledTimes(1);

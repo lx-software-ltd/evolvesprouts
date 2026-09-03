@@ -20,7 +20,6 @@ export { default as ConversationIcon } from './svg/conversation-icon.svg';
 export { default as ContactIcon } from './svg/contact-icon.svg';
 export { default as ServiceInstanceIcon } from './svg/service-instance-icon.svg';
 export { default as InvoiceIcon } from './svg/invoice-icon.svg';
-export { default as PlusIcon } from './svg/plus-icon.svg';
 export { default as MoreHorizontalIcon } from './svg/more-horizontal-icon.svg';
 export { default as ChevronDownIcon } from './svg/chevron-down-icon.svg';
 export { default as SpinnerIcon } from './svg/spinner-icon.svg';
