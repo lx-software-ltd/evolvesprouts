@@ -1119,7 +1119,7 @@ requests stay idempotent via `sales_leads_guide_dedup_idx`. Reservation
 retries that do not create an enrollment do not write a lead. Admin
 **New lead** still inserts a parallel row with `is_manual = true`.
 Partial unique index `sales_leads_one_open_contact_idx` enforces at most
-one non-manual open lead per `contact_id`. Migration `0084` merges
+one non-manual open lead per `contact_id`. Migration `0085` merges
 existing open duplicates onto the most advanced / recently updated row
 and re-points notes, events, AI suggestion rows/jobs, and inbox
 conversations.

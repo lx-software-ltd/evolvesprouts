@@ -17,7 +17,7 @@ Seed-data assessment (``backend/db/seed/seed_data.sql``):
 
 Result: No seed SQL update.
 
-Revision id: ``0084_one_open_lead_contact`` (26 chars, <= 32).
+Revision id: ``0085_one_open_lead_contact`` (26 chars, <= 32).
 """
 
 from __future__ import annotations
@@ -27,8 +27,8 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0084_one_open_lead_contact"
-down_revision: Union[str, None] = "0083_contact_job_title"
+revision: str = "0085_one_open_lead_contact"
+down_revision: Union[str, None] = "0084_sales_daily_plans"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
