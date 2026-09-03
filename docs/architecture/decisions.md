@@ -475,9 +475,20 @@ a pinned row, and collapses unresolvable ids.
   - Nested draft rows use their own id (`note-draft`, `grant-draft`) instead
     of `DRAFT_RECORD_ID` so test ids and panel ids never collide with the
     parent table's draft row.
-  - Sections with several list filters that must apply together (audit logs)
-    keep an explicit **Apply filters** / **Clear** pair in the filter bar's
-    trailing slot instead of refetching on every keystroke.
+  - Filters apply on change everywhere, including audit logs: selects commit
+    immediately and the free-text actor filter is debounced through
+    `usePaginatedList` `debounceKeys`. The earlier Apply / Clear pair and the
+    record ID filter (which was only valid together with a table) were
+    removed so the four remaining filters sit on one line.
+  - Short single-value notes (calendar block note) use a one-line `Input`;
+    `Textarea` is reserved for multi-paragraph content such as contact notes.
+- Below `md`, `AdminDataTableHeadCell` / `AdminDataTableCell` set
+  `overflow-wrap: anywhere`. The auto table layout cannot shrink a column
+  below its longest unbreakable token, so a single `snake_case` table name,
+  UUID, or unspaced key name would otherwise widen the table past its card
+  and force sideways scrolling on a phone even when column priorities are
+  correct. Counting those break opportunities in the min-content width keeps
+  every record table at its container width; desktop layout is unchanged.
 - Read-only editor values (for example the contact's Mailchimp sync status)
   render as a `readOnly` `Input` so the field grid keeps one control shape.
 - Nested record lists inside an open editor (contact notes, family and
