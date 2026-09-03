@@ -46,6 +46,7 @@ describe('LeadsFilterBar', () => {
 
     expect(screen.getByRole('group', { name: 'Filter by stage' })).toBeInTheDocument();
     expect(screen.getByLabelText('Search')).toHaveAttribute('placeholder', 'Search by name or email');
+    expect(screen.getByLabelText('Search').parentElement).toHaveClass('sm:basis-[11.9rem]');
     expect(screen.getByLabelText('Source')).toBeInTheDocument();
     expect(screen.getByLabelText('Lead type')).toBeInTheDocument();
     expect(screen.getByLabelText('Assignee')).toHaveDisplayValue('All assignees');

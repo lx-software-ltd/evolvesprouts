@@ -543,6 +543,9 @@ describe('InstanceDetailPanel', () => {
     expect(screen.getByLabelText('Price')).toHaveValue('99');
     expect(screen.getByLabelText('Currency')).toHaveValue('USD');
     expect(screen.getByLabelText('Cohort')).toHaveValue('spring-2026');
+    const notes = screen.getByLabelText('Notes');
+    expect(notes).toHaveValue('Note text');
+    expect(notes.tagName).toBe('INPUT');
 
     await user.click(screen.getByRole('button', { name: 'Create instance' }));
     expect(onCreate).toHaveBeenCalledWith(

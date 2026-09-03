@@ -83,7 +83,7 @@ export function LeadsFilterBar({ filters, users, onFilterChange, trailing }: Lea
           ))}
         </div>
       </div>
-      <AdminFilterField label='Search' htmlFor='leads-filter-search' className='sm:basis-56'>
+      <AdminFilterField label='Search' htmlFor='leads-filter-search' className='sm:basis-[11.9rem]'>
         <Input
           id='leads-filter-search'
           value={filters.search}

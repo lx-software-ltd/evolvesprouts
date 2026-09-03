@@ -85,6 +85,7 @@ describe('InstanceListPanel', () => {
     expect(screen.queryByRole('heading')).toBeNull();
     expect(screen.getByRole('button', { name: 'New instance' })).toBeInTheDocument();
     expect(screen.getByLabelText('Search')).toBeInTheDocument();
+    expect(screen.getByLabelText('Search').parentElement).toHaveClass('sm:basis-[14.4rem]');
     expect(screen.getByLabelText('Type')).toBeInTheDocument();
     expect(screen.getByLabelText('Status')).toBeInTheDocument();
     expect(screen.getByLabelText('Service')).toBeInTheDocument();

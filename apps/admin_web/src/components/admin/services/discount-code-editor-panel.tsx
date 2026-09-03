@@ -64,12 +64,7 @@ export function DiscountCodeEditorPanel({ editor }: DiscountCodeEditorPanelProps
         }}
       >
         <AdminFieldGrid columns={4}>
-          <AdminField
-            label='Code'
-            htmlFor='discount-code'
-            required
-            hint={editorMode === 'edit' ? 'Codes cannot be changed after creation.' : undefined}
-          >
+          <AdminField label='Code' htmlFor='discount-code' required>
             <Input
               id='discount-code'
               value={fields.code}

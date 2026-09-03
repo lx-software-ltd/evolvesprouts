@@ -8,7 +8,6 @@ import { AdminEditorActions, AdminEditorPanel } from '@/components/ui/admin-edit
 import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { AdminInlineError } from '@/components/ui/admin-inline-error';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { formatEnumLabel } from '@/lib/format';
 import type { EntityTagRef } from '@/lib/entity-api';
 
@@ -216,7 +215,7 @@ export function InstanceDetailPanel({
 
         <AdminFieldGrid columns={mode === 'edit' ? 4 : 1}>
           <AdminField label='Notes' htmlFor='instance-notes' span={mode === 'edit' ? 2 : 1}>
-            <Textarea
+            <Input
               id='instance-notes'
               value={panel.instanceForm.notes}
               disabled={panel.typeFieldsLocked}
@@ -224,7 +223,7 @@ export function InstanceDetailPanel({
                 markDirty();
                 panel.handleInstanceFormChange({ ...panel.instanceForm, notes: event.target.value });
               }}
-              rows={2}
+              autoComplete='off'
             />
           </AdminField>
           {mode === 'edit' && instance ? (
