@@ -40,7 +40,36 @@ describe('AuditLogsPage', () => {
       expect(screen.getByRole('table')).toBeInTheDocument();
     });
     expect(screen.queryByRole('heading')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Apply filters' })).toBeInTheDocument();
+  });
+
+  it('shows four filters that apply on change, with no Apply, Clear, or Record ID controls', async () => {
+    const user = userEvent.setup();
+    render(<AuditLogsPage />);
+    await waitFor(() => {
+      expect(mockListAuditLogs).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.getByLabelText('Action')).toBeInTheDocument();
+    expect(screen.getByLabelText('Table')).toBeInTheDocument();
+    expect(screen.getByLabelText('Time range')).toBeInTheDocument();
+    expect(screen.getByLabelText('Actor')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Record ID')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Apply filters' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Clear' })).toBeNull();
+
+    await user.selectOptions(screen.getByLabelText('Action'), 'UPDATE');
+
+    await waitFor(() => {
+      expect(mockListAuditLogs).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'UPDATE' }),
+        undefined,
+        25
+      );
+    });
+    expect(mockListAuditLogs).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ record_id: expect.anything() }),
+      undefined,
+      25
+    );
   });
 
   it('expands a log row into its detail instead of opening a dialog', async () => {
@@ -151,7 +180,7 @@ describe('AuditLogsPage', () => {
     });
   });
 
-  it('passes email filter to listAuditLogs when user types email and applies', async () => {
+  it('passes the actor filter to listAuditLogs after typing, without an Apply step', async () => {
     const user = userEvent.setup();
     render(<AuditLogsPage />);
     await waitFor(() => {
@@ -159,7 +188,6 @@ describe('AuditLogsPage', () => {
     });
 
     await user.type(screen.getByLabelText('Actor'), 'ops@example.com');
-    await user.click(screen.getByRole('button', { name: 'Apply filters' }));
 
     await waitFor(() => {
       expect(mockListAuditLogs).toHaveBeenCalledWith(

@@ -55,6 +55,27 @@ describe('AdminDataTableCell', () => {
     expect(cell.className).toContain('px-4');
     expect(cell.className).toContain('py-3');
   });
+
+  it('lets long tokens break below md so one value never widens the table on a phone', () => {
+    render(
+      <table>
+        <thead>
+          <tr>
+            <AdminDataTableHeadCell>Table</AdminDataTableHeadCell>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <AdminDataTableCell>service_instance_participants</AdminDataTableCell>
+          </tr>
+        </tbody>
+      </table>
+    );
+    expect(screen.getByRole('columnheader', { name: 'Table' }).className).toContain('max-md:wrap-anywhere');
+    expect(screen.getByRole('cell', { name: 'service_instance_participants' }).className).toContain(
+      'max-md:wrap-anywhere'
+    );
+  });
 });
 
 describe('AdminDataTableOperationsHeadCell', () => {

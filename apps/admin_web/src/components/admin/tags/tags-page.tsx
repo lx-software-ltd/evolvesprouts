@@ -142,7 +142,12 @@ export function TagsPage() {
                   <AdminDataTableCell className='font-medium text-slate-900'>
                     {row.name}
                     {row.is_system ? (
-                      <span className='ml-2 text-xs font-normal text-slate-500'>(system)</span>
+                      // The leading space is a real break opportunity so the
+                      // name and the marker never form one unbreakable token.
+                      <>
+                        {' '}
+                        <span className='ml-1 text-xs font-normal text-slate-500'>(system)</span>
+                      </>
                     ) : null}
                     <AdminDataTableCellMeta>
                       {row.usage_count} use{row.usage_count === 1 ? '' : 's'} · {status}

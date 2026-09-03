@@ -1,29 +1,27 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { ADMIN_LIST_PAGE_SIZE } from '@/lib/admin-list-query';
 import { AdminApiError } from '@/lib/api-admin-client';
-import { listAuditLogs, type AuditLogsFilters } from '@/lib/audit-logs-api';
+import { listAuditLogs, type AuditLog, type AuditLogsFilters } from '@/lib/audit-logs-api';
 import { adminQueryKeys } from '@/lib/admin-query-keys';
 
-import { usePaginatedList } from './use-paginated-list';
+import { usePaginatedList, type PaginatedFetcherParams } from './use-paginated-list';
 
 export type AuditActionFilter = 'all' | 'INSERT' | 'UPDATE' | 'DELETE';
 
-export type AuditLogsDraftFilters = {
+export type AuditLogsListFilters = {
   action: AuditActionFilter;
   table: string;
   email: string;
-  recordId: string;
   timeRange: string;
 };
 
-const DEFAULT_DRAFT: AuditLogsDraftFilters = {
+const DEFAULT_FILTERS: AuditLogsListFilters = {
   action: 'all',
   table: 'all',
   email: '',
-  recordId: '',
   timeRange: '24h',
 };
 
@@ -46,42 +44,35 @@ function timestampFromRange(range: string): string | undefined {
   }
 }
 
-function toApiFilters(draft: AuditLogsDraftFilters): AuditLogsFilters {
-  const filters: AuditLogsFilters = {};
-  if (draft.action !== 'all') {
-    filters.action = draft.action;
+function toApiFilters(filters: AuditLogsListFilters): AuditLogsFilters {
+  const apiFilters: AuditLogsFilters = {};
+  if (filters.action !== 'all') {
+    apiFilters.action = filters.action;
   }
-  if (draft.table !== 'all') {
-    filters.table = draft.table;
+  if (filters.table !== 'all') {
+    apiFilters.table = filters.table;
   }
-  const email = draft.email.trim();
+  const email = filters.email.trim();
   if (email) {
-    filters.email = email;
+    apiFilters.email = email;
   }
-  if (draft.recordId.trim()) {
-    filters.record_id = draft.recordId.trim();
-  }
-  const since = timestampFromRange(draft.timeRange);
+  const since = timestampFromRange(filters.timeRange);
   if (since) {
-    filters.since = since;
+    apiFilters.since = since;
   }
-  return filters;
+  return apiFilters;
 }
 
+/**
+ * Audit log list whose filters apply as soon as they change, like every other
+ * admin list: selects commit immediately and the free-text actor filter is
+ * debounced by `usePaginatedList`.
+ */
 export function useAuditLogsList() {
-  const [draft, setDraft] = useState<AuditLogsDraftFilters>(DEFAULT_DRAFT);
-  const appliedRef = useRef<AuditLogsDraftFilters>(DEFAULT_DRAFT);
-
-  const filtersInvalid = Boolean(draft.recordId.trim() && draft.table === 'all');
-
   const fetcher = useCallback(
-    async (params: { cursor: string | null; limit: number; signal: AbortSignal }) => {
-      const applied = appliedRef.current;
-      if (applied.recordId.trim() && applied.table === 'all') {
-        return { items: [], nextCursor: null };
-      }
+    async ({ cursor, limit, signal: _signal, ...filters }: PaginatedFetcherParams<AuditLogsListFilters>) => {
       try {
-        const response = await listAuditLogs(toApiFilters(applied), params.cursor ?? undefined, params.limit);
+        const response = await listAuditLogs(toApiFilters(filters), cursor ?? undefined, limit);
         return { items: response.items, nextCursor: response.next_cursor ?? null };
       } catch (error) {
         if (error instanceof AdminApiError) {
@@ -93,35 +84,15 @@ export function useAuditLogsList() {
     []
   );
 
-  const list = usePaginatedList({
+  const list = usePaginatedList<AuditLog, AuditLogsListFilters>({
     fetcher,
-    defaultFilters: {},
+    defaultFilters: DEFAULT_FILTERS,
     limit: ADMIN_LIST_PAGE_SIZE,
     errorPrefix: 'Failed to load audit logs',
+    debounceKeys: ['email'],
     queryKey: adminQueryKeys.auditLogs.lists(),
   });
-  const { items, isLoading, isLoadingMore, hasMore, error, loadMore, refetch } = list;
-
-  const applyFilters = useCallback(() => {
-    if (filtersInvalid) {
-      return;
-    }
-    appliedRef.current = draft;
-    void refetch();
-  }, [draft, filtersInvalid, refetch]);
-
-  const clearFilters = useCallback(() => {
-    setDraft(DEFAULT_DRAFT);
-    appliedRef.current = DEFAULT_DRAFT;
-    void refetch();
-  }, [refetch]);
-
-  const setDraftField = useCallback(
-    <TKey extends keyof AuditLogsDraftFilters>(key: TKey, value: AuditLogsDraftFilters[TKey]) => {
-      setDraft((current) => ({ ...current, [key]: value }));
-    },
-    []
-  );
+  const { items, isLoading, isLoadingMore, hasMore, error, loadMore, filters, setFilter } = list;
 
   return useMemo(
     () => ({
@@ -131,24 +102,9 @@ export function useAuditLogsList() {
       hasMore,
       error,
       loadMore,
-      draft,
-      setDraftField,
-      filtersInvalid,
-      applyFilters,
-      clearFilters,
+      filters,
+      setFilter,
     }),
-    [
-      applyFilters,
-      clearFilters,
-      draft,
-      error,
-      filtersInvalid,
-      hasMore,
-      isLoading,
-      isLoadingMore,
-      items,
-      loadMore,
-      setDraftField,
-    ]
+    [error, filters, hasMore, isLoading, isLoadingMore, items, loadMore, setFilter]
   );
 }
