@@ -448,15 +448,20 @@ a pinned row, and collapses unresolvable ids.
 - Exceptions to the field grid or editor shape are allowed only where the data
   model forces them and must be commented at the site (for example the contact
   phone number renders region + national number as two controls in one field).
-- Legacy screens still on `AdminEditorCard` + `PaginatedTableCard` are
-  migrated screen by screen; new screens must not use them. Migrated so far:
-  Contacts (contacts, families, organisations tabs), Tags, Calendar manual
-  blocks, Audit (audit logs and API keys), Assets, Finance (expenses,
-  vendors, tax, client invoices and payments), and Sales (pipeline, WhatsApp /
-  Instagram / Messenger inboxes, configuration, analytics filters). The
-  Mailchimp tab, a tool panel with no table, follows the same shape: untitled
-  `Card`, `AdminDisclosure` sections, no manual refresh (status refetches
-  after each run). Still on the legacy layout: Services and Website.
+- Every admin screen is now on this pattern: Contacts (contacts, families,
+  organisations tabs), Tags, Calendar manual blocks, Audit (audit logs and
+  API keys), Assets, Finance (expenses, vendors, tax, client invoices and
+  payments), Sales (pipeline, WhatsApp / Instagram / Messenger inboxes,
+  configuration, analytics filters), Services (catalogue, instances with
+  nested enrollments, discount codes, venues, partners, certificates), and
+  Website (QR codes, form and poll answers). Tool panels with no table (the
+  Mailchimp tab, Website QR codes) follow the same shape: untitled `Card`,
+  `AdminEditorPanel` / `AdminDisclosure` content, no manual refresh. The
+  legacy `AdminEditorCard`, `PaginatedTableCard`, `AdminTableToolbar`, and
+  `AdminCollapsibleSection` primitives (and the `ContactNotesPanel` card
+  layout that was their last consumer) were deleted once the migration
+  completed, so the standard is enforced by the absence of the old
+  building blocks rather than by review alone.
 - Variations the migrated screens establish:
   - **Read-only records** (audit log entries, issued API keys) expand into a
     detail panel laid out on the same `AdminFieldGrid` with `readOnly`
@@ -519,6 +524,41 @@ a pinned row, and collapses unresolvable ids.
     untitled `Card` holding an `AdminFilterBar` (preset, from, to); the
     manual Refresh button is gone because the analytics query re-runs as the
     range changes.
+  - **Lazy full records** (service catalogue): the list row carries the
+    summary and the editor needs the full service, so the detail is fetched
+    when the row expands and `AdminEditorSkeleton` fills the expansion until
+    it arrives. Rows that are not open never fetch their detail, and the
+    table never waits on one.
+  - **Duplicate as draft** (services, instances): the Duplicate row action
+    opens the draft row seeded from the source through
+    `useDuplicateDraftTemplate`, so the copy is edited and saved with the
+    normal create editor. The template is staged before the draft opens so
+    the dirty-row prompt can still cancel it, and it is dropped as soon as
+    any other row is expanded so a later `New …` starts blank.
+  - **Instances** keep the server-side scope filters (service, type, related
+    party) and narrow lifecycle status and free text on the client
+    (`filterInstancesForTable`, default `Not completed`) so those apply
+    instantly to loaded pages; an expanded instance the client filter would
+    hide is pinned above the rows. The Service field is `readOnly` once an
+    instance exists. **Enrollments** are a lazy disclosure on the instance
+    editor (count from `capacityEnrolledCount` in the summary) hosting a
+    nested `AdminRecordTable embedded` with its own draft row and in-row
+    editor (`InstanceEnrollmentsSection`); party deep links open that
+    disclosure and select the party's enrollment once. Section state lives in
+    `useServiceCatalogSection` / `useInstancesSection` (`?service=`,
+    `?instance=`) composed by `useServicesPage`.
+  - **Certificates** issue through a draft row (`Issue certificate`) whose
+    form cascades service → instance → completed enrollment with a debounced
+    PDF preview; issued rows expand read-only, and Download, Void, and Delete
+    sit in Operations.
+  - **Discount codes** collapse Link/QR and Delete into the overflow menu
+    behind Copy; **venues** and **partners** expand into editors with
+    Location (and Tags) as disclosures.
+  - **Read-only answer tables** (Website form and poll answers) use the form
+    or poll picker as the only filter, put `Export answers` and `Clear
+    answers` in the filter bar's trailing slot, and expand each row into the
+    full answer on the field grid with no Operations column. The QR tool is
+    an untitled `Card` with `AdminEditorPanel` fields on a 4-column grid.
 - Below `md`, `AdminDataTableHeadCell` / `AdminDataTableCell` set
   `overflow-wrap: anywhere`. The auto table layout cannot shrink a column
   below its longest unbreakable token, so a single `snake_case` table name,
