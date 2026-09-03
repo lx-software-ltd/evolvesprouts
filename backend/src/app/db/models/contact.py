@@ -116,6 +116,7 @@ class Contact(Base):
         nullable=False,
     )
     source_detail: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    job_title: Mapped[str | None] = mapped_column(String(200), nullable=True)
     source_metadata: Mapped[dict[str, object] | None] = mapped_column(
         JSONB(),
         nullable=True,

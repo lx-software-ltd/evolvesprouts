@@ -9622,6 +9622,11 @@ components:
         source_detail:
           type: string
           nullable: true
+        job_title:
+          type: string
+          nullable: true
+          maxLength: 200
+          description: Optional job title (persons only; shown next to source detail in the admin editor).
         referral_contact_id:
           type: string
           format: uuid
@@ -9909,6 +9914,10 @@ components:
         source_detail:
           type: string
           nullable: true
+        job_title:
+          type: string
+          nullable: true
+          maxLength: 200
         date_of_birth:
           type: string
           format: date
@@ -9980,6 +9989,10 @@ components:
         source_detail:
           type: string
           nullable: true
+        job_title:
+          type: string
+          nullable: true
+          maxLength: 200
         date_of_birth:
           type: string
           format: date
