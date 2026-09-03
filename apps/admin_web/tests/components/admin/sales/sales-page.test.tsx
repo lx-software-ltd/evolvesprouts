@@ -202,6 +202,10 @@ describe('SalesPage', () => {
     expect(screen.getByRole('heading', { name: 'Lead' })).toBeInTheDocument();
     expect(screen.getByLabelText('First name')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create lead' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New lead' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('From')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('To')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Unassigned only')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Export CSV' })).not.toBeInTheDocument();
   });
@@ -217,6 +221,16 @@ describe('SalesPage', () => {
     expect(screen.getByRole('button', { name: 'Import export' })).toBeDisabled();
 
     state.activeView = 'pipeline';
+  });
+
+  it('starts create from the pipeline New lead button', async () => {
+    const user = userEvent.setup();
+    state.activeView = 'pipeline';
+    state.isCreateMode = false;
+    render(<SalesPage />);
+
+    await user.click(screen.getByRole('button', { name: 'New lead' }));
+    expect(state.startCreateLead).toHaveBeenCalledTimes(1);
   });
 
   it('starts inline create-lead flow from the existing-lead editor', async () => {

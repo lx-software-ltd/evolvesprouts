@@ -28,6 +28,8 @@ export interface LeadsTableProps {
   error: string;
   hasMore: boolean;
   onLoadMore: () => Promise<void>;
+  isCreateMode?: boolean;
+  onCreateLead: () => void;
   onSelectLead: (leadId: string) => void;
   onFilterChange: <TKey extends keyof LeadListFilters>(
     key: TKey,
@@ -51,6 +53,8 @@ export function LeadsTable({
   error,
   hasMore,
   onLoadMore,
+  isCreateMode = false,
+  onCreateLead,
   onSelectLead,
   onFilterChange,
   onBulkAssign,
@@ -76,7 +80,13 @@ export function LeadsTable({
       onLoadMore={onLoadMore}
       toolbar={
         <div className='mb-3 space-y-3'>
-          <LeadsFilterBar filters={filters} users={users} onFilterChange={onFilterChange} />
+          <LeadsFilterBar
+            filters={filters}
+            users={users}
+            isCreateMode={isCreateMode}
+            onCreateLead={onCreateLead}
+            onFilterChange={onFilterChange}
+          />
           <LeadsBulkActions
             selectedCount={selectedIds.length}
             users={users}

@@ -3,7 +3,8 @@
 import type { AdminUser, ContactSource, FunnelStage, LeadListFilters, LeadType } from '@/types/leads';
 import { CONTACT_SOURCES, FUNNEL_STAGES, LEAD_TYPES } from '@/types/leads';
 
-import { AdminTableToolbar } from '@/components/ui/admin-table-toolbar';
+import { AdminCreateButton } from '@/components/ui/admin-create-button';
+import { AdminFilterBar, AdminFilterField } from '@/components/ui/admin-filter-bar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
@@ -14,6 +15,8 @@ import { getStageBadgeClass } from './stage-utils';
 export interface LeadsFilterBarProps {
   filters: LeadListFilters;
   users: AdminUser[];
+  isCreateMode?: boolean;
+  onCreateLead: () => void;
   onFilterChange: <TKey extends keyof LeadListFilters>(
     key: TKey,
     value: LeadListFilters[TKey]
@@ -50,10 +53,16 @@ function StageFilterChip({
   );
 }
 
-export function LeadsFilterBar({ filters, users, onFilterChange }: LeadsFilterBarProps) {
+export function LeadsFilterBar({
+  filters,
+  users,
+  isCreateMode = false,
+  onCreateLead,
+  onFilterChange,
+}: LeadsFilterBarProps) {
   return (
-    <AdminTableToolbar marginBottom='none'>
-      <div className='w-full'>
+    <div className='w-full space-y-3'>
+      <div>
         <Label>Stage</Label>
         <div className='flex flex-wrap items-center gap-2' role='group' aria-label='Filter by stage'>
           <StageFilterChip
@@ -73,90 +82,67 @@ export function LeadsFilterBar({ filters, users, onFilterChange }: LeadsFilterBa
           ))}
         </div>
       </div>
-      <div className='min-w-[200px] flex-1'>
-        <Label htmlFor='leads-filter-search'>Search</Label>
-        <Input
-          id='leads-filter-search'
-          value={filters.search}
-          onChange={(event) => onFilterChange('search', event.target.value)}
-          placeholder='Search by name or email'
-        />
-      </div>
-      <div className='min-w-[150px]'>
-        <Label htmlFor='leads-filter-source'>Source</Label>
-        <Select
-          id='leads-filter-source'
-          value={filters.source[0] ?? ''}
-          onChange={(event) =>
-            onFilterChange('source', event.target.value ? [event.target.value as ContactSource] : [])
-          }
-        >
-          <option value=''>All sources</option>
-          {CONTACT_SOURCES.map((source) => (
-            <option key={source} value={source}>
-              {formatEnumLabel(source)}
-            </option>
-          ))}
-        </Select>
-      </div>
-      <div className='min-w-[150px]'>
-        <Label htmlFor='leads-filter-lead-type'>Lead type</Label>
-        <Select
-          id='leads-filter-lead-type'
-          value={filters.leadType[0] ?? ''}
-          onChange={(event) =>
-            onFilterChange('leadType', event.target.value ? [event.target.value as LeadType] : [])
-          }
-        >
-          <option value=''>All lead types</option>
-          {LEAD_TYPES.map((leadType) => (
-            <option key={leadType} value={leadType}>
-              {formatEnumLabel(leadType)}
-            </option>
-          ))}
-        </Select>
-      </div>
-      <div className='min-w-[160px]'>
-        <Label htmlFor='leads-filter-assignee'>Assignee</Label>
-        <Select
-          id='leads-filter-assignee'
-          value={filters.assignedTo ?? ''}
-          onChange={(event) => onFilterChange('assignedTo', event.target.value || null)}
-        >
-          <option value=''>All assignees</option>
-          {users.map((user) => (
-            <option key={user.sub} value={user.sub}>
-              {user.name || user.email || user.sub}
-            </option>
-          ))}
-        </Select>
-      </div>
-      <div>
-        <Label htmlFor='leads-filter-date-from'>From</Label>
-        <Input
-          id='leads-filter-date-from'
-          type='date'
-          value={filters.dateFrom ?? ''}
-          onChange={(event) => onFilterChange('dateFrom', event.target.value || null)}
-        />
-      </div>
-      <div>
-        <Label htmlFor='leads-filter-date-to'>To</Label>
-        <Input
-          id='leads-filter-date-to'
-          type='date'
-          value={filters.dateTo ?? ''}
-          onChange={(event) => onFilterChange('dateTo', event.target.value || null)}
-        />
-      </div>
-      <label className='inline-flex h-10 items-center gap-2 text-sm text-slate-700'>
-        <input
-          type='checkbox'
-          checked={filters.unassigned}
-          onChange={(event) => onFilterChange('unassigned', event.target.checked)}
-        />
-        Unassigned only
-      </label>
-    </AdminTableToolbar>
+      <AdminFilterBar
+        className='mb-0'
+        trailing={
+          <AdminCreateButton label='New lead' active={isCreateMode} onClick={onCreateLead} />
+        }
+      >
+        <AdminFilterField label='Search' htmlFor='leads-filter-search' className='sm:basis-56'>
+          <Input
+            id='leads-filter-search'
+            value={filters.search}
+            onChange={(event) => onFilterChange('search', event.target.value)}
+            placeholder='Search by name or email'
+          />
+        </AdminFilterField>
+        <AdminFilterField label='Source' htmlFor='leads-filter-source'>
+          <Select
+            id='leads-filter-source'
+            value={filters.source[0] ?? ''}
+            onChange={(event) =>
+              onFilterChange('source', event.target.value ? [event.target.value as ContactSource] : [])
+            }
+          >
+            <option value=''>All sources</option>
+            {CONTACT_SOURCES.map((source) => (
+              <option key={source} value={source}>
+                {formatEnumLabel(source)}
+              </option>
+            ))}
+          </Select>
+        </AdminFilterField>
+        <AdminFilterField label='Lead type' htmlFor='leads-filter-lead-type'>
+          <Select
+            id='leads-filter-lead-type'
+            value={filters.leadType[0] ?? ''}
+            onChange={(event) =>
+              onFilterChange('leadType', event.target.value ? [event.target.value as LeadType] : [])
+            }
+          >
+            <option value=''>All lead types</option>
+            {LEAD_TYPES.map((leadType) => (
+              <option key={leadType} value={leadType}>
+                {formatEnumLabel(leadType)}
+              </option>
+            ))}
+          </Select>
+        </AdminFilterField>
+        <AdminFilterField label='Assignee' htmlFor='leads-filter-assignee'>
+          <Select
+            id='leads-filter-assignee'
+            value={filters.assignedTo ?? ''}
+            onChange={(event) => onFilterChange('assignedTo', event.target.value || null)}
+          >
+            <option value=''>All assignees</option>
+            {users.map((user) => (
+              <option key={user.sub} value={user.sub}>
+                {user.name || user.email || user.sub}
+              </option>
+            ))}
+          </Select>
+        </AdminFilterField>
+      </AdminFilterBar>
+    </div>
   );
 }

@@ -53,6 +53,7 @@ const LEAD_FIXTURE: LeadSummary = {
 
 function renderComponent(overrides: Partial<ComponentProps<typeof LeadsTable>> = {}) {
   const onLoadMore = vi.fn().mockResolvedValue(undefined);
+  const onCreateLead = vi.fn();
   const onSelectLead = vi.fn();
   const onFilterChange = vi.fn();
   const onBulkAssign = vi.fn().mockResolvedValue(undefined);
@@ -80,6 +81,7 @@ function renderComponent(overrides: Partial<ComponentProps<typeof LeadsTable>> =
       error=''
       hasMore={true}
       onLoadMore={onLoadMore}
+      onCreateLead={onCreateLead}
       onSelectLead={onSelectLead}
       onFilterChange={onFilterChange}
       onBulkAssign={onBulkAssign}
