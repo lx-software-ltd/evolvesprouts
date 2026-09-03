@@ -1187,7 +1187,9 @@ paths:
       description: >
         Accepts contact-us, community newsletter, and event-notification signups from
         `public_www`. Requires Turnstile. Persists to Aurora (contact; sales lead
-        for `contact_inquiry` only), then runs best-effort SES confirmation (skipped
+        for `contact_inquiry`, `community_newsletter`, and `event_notification`,
+        reusing or reopening the contact's existing lead when one exists),
+        then runs best-effort SES confirmation (skipped
         for newsletter/event-notification intents), optional Mailchimp subscribe,
         sales recap, and `SUPPORT_EMAIL` notification for `contact_inquiry`.
         Returns **500** when persistence fails. If hooks fail after commit, the API
@@ -1272,8 +1274,9 @@ paths:
       description: >
         Submit a public reservation from `public_www` (execute-api origin).
 
-        Persists the attendee as a CRM contact, creates a program-enrollment
-        sales lead (lead event metadata may include `discount_code` and
+        Persists the attendee as a CRM contact. When a new enrollment is
+        created, reuses or reopens the contact's sales lead (or creates one)
+        as `program_enrollment` (lead event metadata may include `discount_code` and
         `discount_code_id` when a valid non-referral code was supplied), and when
         `serviceInstanceSlug` resolves to a `service_instances` row and the contact has no
         existing enrollment on the **target booking instance** (for consultation-booking and
@@ -3037,7 +3040,8 @@ components:
             Distinguishes contact-us submissions for Mailchimp tagging and Aurora `source_detail`.
             For community_newsletter and event_notification, the matching public-www-* tag is used when
             marketing_opt_in is true. Intents community_newsletter and event_notification skip the SES
-            contact confirmation email. contact_inquiry creates a sales lead and triggers SUPPORT_EMAIL
+            contact confirmation email. All intents reuse or reopen the contact's
+            sales lead (or create one). contact_inquiry triggers SUPPORT_EMAIL
             notification when configured.
           enum:
             - contact_inquiry

@@ -126,6 +126,11 @@ def _patch_public_reservation_db_helpers(monkeypatch: pytest.MonkeyPatch) -> Non
         def decrement_uses(self, _code_id: object) -> bool:
             return True
 
+    monkeypatch.setattr(
+        "app.api.public_reservations.ensure_contact_lead",
+        lambda *a, **k: (SimpleNamespace(id=uuid4()), True),
+    )
+
     class _FakeInstanceRepo:
         def __init__(self, _session: object) -> None:
             pass
@@ -395,6 +400,77 @@ def test_handle_public_reservation_accepts_free_payment_zero_total(
     hooks.assert_called_once()
     payload = hooks.call_args[0][0]
     assert payload["payment_method"] == "free"
+
+
+def test_handle_public_reservation_skips_lead_when_enrollment_exists(
+    api_gateway_event: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "app.api.public_reservations.verify_turnstile_token",
+        lambda *_a, **_k: True,
+    )
+    _patch_public_reservation_db_helpers(monkeypatch)
+    monkeypatch.setattr(
+        "app.api.public_reservations._run_reservation_post_success_hooks",
+        MagicMock(),
+    )
+    ensure = MagicMock()
+    monkeypatch.setattr("app.api.public_reservations.ensure_contact_lead", ensure)
+
+    class _FakeContactRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def upsert_by_email(self, _email: str, **kwargs: object) -> tuple[object, bool]:
+            c = MagicMock()
+            c.id = uuid4()
+            c.phone_region = None
+            c.phone_national_number = None
+            return c, True
+
+        def update(self, *_a: object, **_k: object) -> None:
+            return None
+
+    class _FakeEnrollmentRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def contact_has_enrollment_for_instance(self, **_kwargs: object) -> bool:
+            return True
+
+    class _FakeSession:
+        def begin(self) -> _FakeBeginNestedCM:
+            return _FakeBeginNestedCM()
+
+    class _FakeSessionCM:
+        def __enter__(self) -> _FakeSession:
+            return _FakeSession()
+
+        def __exit__(self, *_a: object) -> bool:
+            return False
+
+    monkeypatch.setattr(
+        "app.api.public_reservations.ContactRepository",
+        _FakeContactRepo,
+    )
+    monkeypatch.setattr(
+        "app.api.public_reservations.EnrollmentRepository",
+        _FakeEnrollmentRepo,
+    )
+    monkeypatch.setattr(
+        "app.api.public_reservations.Session",
+        lambda _e: _FakeSessionCM(),
+    )
+    monkeypatch.setattr(
+        "app.api.public_reservations.get_engine",
+        lambda: object(),
+    )
+
+    event = _post_event(api_gateway_event, _reservation_body())
+    resp = _handle_public_reservation(event, "POST")
+    assert resp["statusCode"] == 202
+    ensure.assert_not_called()
 
 
 def test_handle_public_reservation_rejects_free_with_nonzero_total(
@@ -1224,20 +1300,13 @@ def test_handle_public_reservation_writes_discount_metadata_and_creates_enrollme
 
     lead_calls: list[dict[str, object]] = []
 
-    class _FakeLeadRepo:
-        def __init__(self, _session: object) -> None:
-            pass
-
-        def create_with_event(self, *_a: object, **kwargs: object) -> None:
-            lead_calls.append(kwargs)
-
-    class _FakeSalesLead:
-        def __init__(self, **kwargs: object) -> None:
-            pass
+    def _fake_ensure(*_a: object, **kwargs: object) -> tuple[SimpleNamespace, bool]:
+        lead_calls.append(kwargs)
+        return SimpleNamespace(id=uuid4()), True
 
     monkeypatch.setattr(
-        "app.api.public_reservations.SalesLead",
-        _FakeSalesLead,
+        "app.api.public_reservations.ensure_contact_lead",
+        _fake_ensure,
     )
 
     class _FakeSession:
@@ -1266,10 +1335,6 @@ def test_handle_public_reservation_writes_discount_metadata_and_creates_enrollme
     monkeypatch.setattr(
         "app.api.public_reservations.ContactRepository",
         _FakeContactRepo,
-    )
-    monkeypatch.setattr(
-        "app.api.public_reservations.SalesLeadRepository",
-        _FakeLeadRepo,
     )
     monkeypatch.setattr(
         "app.api.public_reservations.Session",
@@ -1418,20 +1483,9 @@ def test_intro_call_new_enrollment_persists_slot_before_free_payment_record(
         def update(self, *_a: object, **_k: object) -> None:
             return None
 
-    class _FakeLeadRepo:
-        def __init__(self, _session: object) -> None:
-            pass
-
-        def create_with_event(self, *_a: object, **_k: object) -> None:
-            return None
-
-    class _FakeSalesLead:
-        def __init__(self, **kwargs: object) -> None:
-            pass
-
     monkeypatch.setattr(
-        "app.api.public_reservations.SalesLead",
-        _FakeSalesLead,
+        "app.api.public_reservations.ensure_contact_lead",
+        lambda *_a, **_k: (SimpleNamespace(id=uuid4()), True),
     )
 
     class _FakeTxn:
@@ -1482,10 +1536,6 @@ def test_intro_call_new_enrollment_persists_slot_before_free_payment_record(
     monkeypatch.setattr(
         "app.api.public_reservations.ContactRepository",
         _FakeContactRepo,
-    )
-    monkeypatch.setattr(
-        "app.api.public_reservations.SalesLeadRepository",
-        _FakeLeadRepo,
     )
     monkeypatch.setattr(
         "app.api.public_reservations.Session",
@@ -1628,20 +1678,9 @@ def test_handle_public_reservation_consultation_booking_accepts_extra_slot_start
         def update(self, *_a: object, **_k: object) -> None:
             return None
 
-    class _FakeLeadRepo:
-        def __init__(self, _session: object) -> None:
-            pass
-
-        def create_with_event(self, *_a: object, **_k: object) -> None:
-            return None
-
-    class _FakeSalesLead:
-        def __init__(self, **kwargs: object) -> None:
-            pass
-
     monkeypatch.setattr(
-        "app.api.public_reservations.SalesLead",
-        _FakeSalesLead,
+        "app.api.public_reservations.ensure_contact_lead",
+        lambda *_a, **_k: (SimpleNamespace(id=uuid4()), True),
     )
 
     class _FakeTxn:
@@ -1689,10 +1728,6 @@ def test_handle_public_reservation_consultation_booking_accepts_extra_slot_start
     monkeypatch.setattr(
         "app.api.public_reservations.ContactRepository",
         _FakeContactRepo,
-    )
-    monkeypatch.setattr(
-        "app.api.public_reservations.SalesLeadRepository",
-        _FakeLeadRepo,
     )
     monkeypatch.setattr(
         "app.api.public_reservations.Session",

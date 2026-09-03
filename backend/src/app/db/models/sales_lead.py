@@ -8,7 +8,7 @@ from uuid import UUID
 
 from collections.abc import Iterable
 
-from sqlalchemy import CheckConstraint, Enum, ForeignKey, Index, String, text
+from sqlalchemy import Boolean, CheckConstraint, Enum, ForeignKey, Index, String, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -51,6 +51,16 @@ class SalesLead(Base):
             "asset_id",
             unique=True,
             postgresql_where=text("asset_id IS NOT NULL"),
+        ),
+        Index(
+            "sales_leads_one_open_contact_idx",
+            "contact_id",
+            unique=True,
+            postgresql_where=text(
+                "contact_id IS NOT NULL AND is_manual IS NOT TRUE "
+                "AND funnel_stage IN "
+                "('new', 'contacted', 'engaged', 'qualified', 'unqualified')"
+            ),
         ),
     )
 
@@ -99,6 +109,11 @@ class SalesLead(Base):
         nullable=True,
     )
     assigned_to: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    is_manual: Mapped[bool] = mapped_column(
+        Boolean(),
+        nullable=False,
+        server_default=text("false"),
+    )
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         nullable=False,

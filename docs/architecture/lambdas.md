@@ -330,9 +330,9 @@ their primary responsibilities.
   `/v1/assets/free/request`, Mailchimp webhook ingestion and contact sync-status
   reconciliation on `/v1/mailchimp/webhook`, native public contact-us on
   `/v1/contact-us` (Turnstile + Aurora contact upsert; sales lead for
-  `contact_inquiry`, `community_newsletter`, and `event_notification` when no
-  open lead exists; post-success SES + Mailchimp + recaps via
-  `run_contact_us_post_success`),
+  `contact_inquiry`, `community_newsletter`, and `event_notification` reuses
+  or reopens the contact's existing lead, otherwise creates one; post-success
+  SES + Mailchimp + recaps via `run_contact_us_post_success`),
   WhatsApp Cloud API webhook ingestion on `/v1/whatsapp/webhook`
   (including coexistence `history` chunks when Meta sends them),
   Messenger and Instagram webhook ingestion on `/v1/meta/webhook`,
@@ -529,7 +529,9 @@ their primary responsibilities.
 - Purpose: process media lead captures and fan out actions (including Mailchimp
   free-resource journey re-trigger on repeat requests during the transition
   period, and optional welcome journey for opted-in contacts)
-- Actions: contact upsert in DB, idempotent sales lead creation, SES templated
+- Actions: contact upsert in DB, idempotent same-guide skip, otherwise reuse
+  or reopen the contact's sales lead (additional guides record
+  `guide_downloaded`), SES templated
   download-link email to the submitter, Mailchimp sync (merge fields + tag +
   optional free-resource Customer Journey trigger; consent-gated when
   `MAILCHIMP_REQUIRE_MARKETING_CONSENT=true`), optional welcome journey for

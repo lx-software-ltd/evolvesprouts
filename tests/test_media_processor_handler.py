@@ -390,6 +390,15 @@ def test_process_message_require_consent_skips_mailchimp_without_opt_in(
         def create_with_event(self, *args: Any, **kwargs: Any) -> Any:
             return SimpleNamespace(id=UUID("dddddddd-dddd-dddd-dddd-dddddddddddd"))
 
+    monkeypatch.setattr(
+        handler,
+        "ensure_contact_lead",
+        lambda **_k: (
+            SimpleNamespace(id=UUID("dddddddd-dddd-dddd-dddd-dddddddddddd")),
+            True,
+        ),
+    )
+
     def _fake_sync(**kwargs: Any) -> tuple[str, int | None]:
         sync_calls.append(kwargs)
         return "synced", None

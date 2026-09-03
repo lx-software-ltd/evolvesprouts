@@ -17,6 +17,19 @@ from app.db.repositories.base import BaseRepository
 
 FilterCondition = ColumnElement[bool]
 
+OPEN_FUNNEL_STAGES: tuple[FunnelStage, ...] = (
+    FunnelStage.NEW,
+    FunnelStage.CONTACTED,
+    FunnelStage.ENGAGED,
+    FunnelStage.QUALIFIED,
+    FunnelStage.UNQUALIFIED,
+)
+
+CLOSED_FUNNEL_STAGES: tuple[FunnelStage, ...] = (
+    FunnelStage.CONVERTED,
+    FunnelStage.LOST,
+)
+
 
 def _escape_like_pattern(pattern: str) -> str:
     """Escape LIKE pattern special characters."""
@@ -51,17 +64,22 @@ class SalesLeadRepository(BaseRepository[SalesLead]):
             select(SalesLead)
             .where(
                 SalesLead.contact_id == contact_id,
-                SalesLead.funnel_stage.in_(
-                    (
-                        FunnelStage.NEW,
-                        FunnelStage.CONTACTED,
-                        FunnelStage.ENGAGED,
-                        FunnelStage.QUALIFIED,
-                        FunnelStage.UNQUALIFIED,
-                    )
-                ),
+                SalesLead.funnel_stage.in_(OPEN_FUNNEL_STAGES),
             )
             .order_by(SalesLead.created_at.desc())
+            .limit(1)
+        )
+        return self._session.execute(statement).scalar_one_or_none()
+
+    def find_reusable_by_contact(self, contact_id: UUID) -> SalesLead | None:
+        """Return an open lead, else the most recently updated lead for a contact."""
+        open_lead = self.find_open_by_contact(contact_id)
+        if open_lead is not None:
+            return open_lead
+        statement = (
+            select(SalesLead)
+            .where(SalesLead.contact_id == contact_id)
+            .order_by(SalesLead.updated_at.desc(), SalesLead.created_at.desc())
             .limit(1)
         )
         return self._session.execute(statement).scalar_one_or_none()

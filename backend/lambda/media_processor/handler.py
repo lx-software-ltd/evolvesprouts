@@ -15,10 +15,8 @@ from app.db.models import (
     ContactSource,
     ContactTag,
     ContactType,
-    FunnelStage,
     LeadEventType,
     LeadType,
-    SalesLead,
     SalesLeadEvent,
     Tag,
 )
@@ -30,12 +28,7 @@ from app.api.assets.share_links import (
 from app.db.repositories.asset import AssetRepository
 from app.db.repositories.contact import ContactRepository
 from app.db.repositories.sales_lead import SalesLeadRepository
-from app.services.helper_detector import maybe_apply_helper_detector
-from app.services.sales_assignment import (
-    notify_lead_assignee,
-    record_new_lead_assignment_event,
-    resolve_create_assignee,
-)
+from app.services.lead_funnel_automation import ensure_contact_lead
 from app.services.email import send_templated_email
 from app.templates.transactional_shell_data import (
     merge_transactional_shell_template_data,
@@ -194,29 +187,15 @@ def _process_message(message: dict[str, Any]) -> bool:
         if request_id:
             metadata["request_id"] = request_id
 
-        assigned_to = resolve_create_assignee(session)
-        lead = SalesLead(
+        lead, _created = ensure_contact_lead(
+            session,
             contact_id=contact.id,
+            contact=contact,
             lead_type=LeadType.FREE_GUIDE,
-            funnel_stage=FunnelStage.NEW,
+            metadata=metadata,
             asset_id=asset_id,
-            assigned_to=assigned_to,
+            attach_event_type=LeadEventType.GUIDE_DOWNLOADED,
         )
-        lead = sales_lead_repo.create_with_event(
-            lead,
-            LeadEventType.CREATED,
-            metadata,
-            to_stage=FunnelStage.NEW,
-            created_by=_SYSTEM_ACTOR,
-        )
-        record_new_lead_assignment_event(
-            sales_lead_repo,
-            lead_id=getattr(lead, "id", None),
-            assigned_to=assigned_to,
-            actor_sub=_SYSTEM_ACTOR,
-        )
-        maybe_apply_helper_detector(session, contact, lead, created_by=_SYSTEM_ACTOR)
-        notify_lead_assignee(session, lead, previous=None)
 
         _ensure_contact_tag(
             session=session,

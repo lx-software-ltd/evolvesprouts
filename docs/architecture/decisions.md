@@ -1104,6 +1104,34 @@ pulling history inline on the admin Lambda. Jobs live in `inbox_import_jobs`.
 - Reusing persist + unique message ids keeps webhook and import idempotent.
 - Historical inbound must not flood the Sales pipeline with `NEW` leads.
 
+## One automated sales lead per contact
+
+**Decision:** Automated sales paths (public contact-us, public reservations
+when a new enrollment is created, free-guide media processing, live
+WhatsApp/Meta webhooks) treat the pipeline as **one person, one working
+lead**. They call `ensure_contact_lead`: reuse the contact's open lead,
+otherwise reopen the most recent converted/lost lead to `new` (clearing
+`converted_at` / `lost_at` / `lost_reason`), otherwise create a lead.
+Further actions append `sales_lead_events` (`guide_downloaded` or
+`action_recorded`) and may promote `lead_type` when the new action is
+higher intent (`program_enrollment` over `free_guide`). Same-guide media
+requests stay idempotent via `sales_leads_guide_dedup_idx`. Reservation
+retries that do not create an enrollment do not write a lead. Admin
+**New lead** still inserts a parallel row with `is_manual = true`.
+Partial unique index `sales_leads_one_open_contact_idx` enforces at most
+one non-manual open lead per `contact_id`. Migration `0084` merges
+existing open duplicates onto the most advanced / recently updated row
+and re-points notes, events, AI suggestion rows/jobs, and inbox
+conversations.
+
+**Why:**
+- Operators were seeing the same contact name repeated for each action
+  (guide then booking, two guides, form then chat).
+- Contact-us and inbox already reused an open lead; bookings and media
+  did not, so the pipeline lied about how many people were in play.
+- Reopening a closed lead keeps history on one record when the same
+  person comes back.
+
 ## Helper Detector for automated sales leads
 
 **Decision:** Persist a `helper_detector_enabled` flag on the singleton

@@ -45,19 +45,15 @@ from app.db.models.enums import (
     ContactSource,
     ContactType,
     EnrollmentStatus,
-    FunnelStage,
     LeadEventType,
     LeadType,
 )
-from app.db.models.sales_lead import SalesLead
 from app.db.repositories import DiscountCodeRepository, EnrollmentRepository
 from app.db.repositories.contact import ContactRepository
-from app.db.repositories.sales_lead import SalesLeadRepository
 from app.db.repositories.service_instance import ServiceInstanceRepository
 from app.exceptions import ConflictError, ValidationError
 from app.services.customer_billing import record_reservation_customer_payment
-from app.services import sales_assignment
-from app.services.helper_detector import maybe_apply_helper_detector
+from app.services.lead_funnel_automation import ensure_contact_lead
 from app.services.turnstile import (
     extract_client_ip,
     extract_turnstile_token,
@@ -200,7 +196,6 @@ def _handle_public_reservation(
 
                 if not skip_persistence:
                     contact_repo = ContactRepository(session)
-                    lead_repo = SalesLeadRepository(session)
                     src_detail = "public-www-booking"
                     ma_obj = reservation_payload.get("marketing_attribution")
                     if booking_system == "intro-call-booking":
@@ -390,32 +385,20 @@ def _handle_public_reservation(
                                 stripe_pi_idempotent_hit = True
                                 stripe_pi_existing_payment_id = _pay.id
 
-                    assigned_to = sales_assignment.resolve_create_assignee(session)
-                    lead = SalesLead(
-                        contact_id=contact.id,
-                        lead_type=LeadType.PROGRAM_ENROLLMENT,
-                        funnel_stage=FunnelStage.NEW,
-                        assigned_to=assigned_to,
-                    )
-                    lead_repo.create_with_event(
-                        lead,
-                        LeadEventType.CREATED,
-                        metadata=_build_reservation_lead_metadata(
-                            reservation_payload,
-                            booking_instance_slug_for_lead=booking_instance_slug_for_lead,
-                            dc_text=dc_text,
-                            dc_row=dc_row,
-                        ),
-                    )
-                    sales_assignment.record_new_lead_assignment_event(
-                        lead_repo,
-                        lead_id=getattr(lead, "id", None),
-                        assigned_to=assigned_to,
-                        actor_sub=None,
-                    )
-                    maybe_apply_helper_detector(session, contact, lead)
-                    sales_assignment.notify_lead_assignee(session, lead, previous=None)
                     if created_enrollment_id is not None:
+                        ensure_contact_lead(
+                            session,
+                            contact_id=contact.id,
+                            contact=contact,
+                            lead_type=LeadType.PROGRAM_ENROLLMENT,
+                            metadata=_build_reservation_lead_metadata(
+                                reservation_payload,
+                                booking_instance_slug_for_lead=booking_instance_slug_for_lead,
+                                dc_text=dc_text,
+                                dc_row=dc_row,
+                            ),
+                            attach_event_type=LeadEventType.ACTION_RECORDED,
+                        )
                         audit = AuditService(
                             session,
                             user_id=None,
