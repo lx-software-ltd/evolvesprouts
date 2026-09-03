@@ -403,6 +403,7 @@ Each Lambda function created by `PythonLambda` construct includes:
 | `MediaRequestProcessor` | `lambda/media_processor/handler.lambda_handler` | 512 MB | 30s | Yes | SQS-triggered media processor (nested stack `evolvesprouts-Messaging`) |
 | `ExpenseParserFunction` | `lambda/expense_parser/handler.lambda_handler` | 512 MB | 90s | Yes | SQS-triggered expense invoice parser (nested stack `evolvesprouts-Messaging`) |
 | `SalesDailyPlanFunction` | `lambda/sales_daily_plan/handler.lambda_handler` | 512 MB | 120s | Yes | SQS-triggered org-wide sales daily plan (nested stack `evolvesprouts-Messaging`) |
+| `SalesDailyPlanSchedulerFunction` | `lambda/sales_daily_plan_scheduler/handler.lambda_handler` | 256 MB | 30s | Yes | EventBridge 06:00 HKT enqueue for sales daily plan (nested stack `evolvesprouts-Messaging`) |
 | `InboundInvoiceEmailProcessor` | `lambda/inbound_invoice_email/handler.lambda_handler` | 512 MB | 30s | Yes | SQS-triggered inbound invoice email processor |
 | `EventbriteSyncProcessor` | `lambda/eventbrite_sync_processor/handler.lambda_handler` | 512 MB | 60s | Yes | SQS-triggered Eventbrite sync processor |
 
@@ -445,6 +446,7 @@ For each function above, the following resources are created:
 | `SesTemplateManagerFunction` | SES template CRUD (`CreateTemplate`, `UpdateTemplate`, `DeleteTemplate`, `GetTemplate`) for CloudFormation custom resource `SesEmailTemplates` (nested stack `evolvesprouts-Messaging`) |
 | `ExpenseParserFunction` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, S3 read for the assets bucket, read OpenRouter API secret (Secrets Manager + KMS decrypt on the `secrets-encryption-key` CMK), invoke `AwsApiProxyFunction` |
 | `SalesDailyPlanFunction` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, read OpenRouter API secret (Secrets Manager + KMS decrypt on the `secrets-encryption-key` CMK), invoke `AwsApiProxyFunction` |
+| `SalesDailyPlanSchedulerFunction` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, SQS send on `evolvesprouts-sales-daily-plan-queue` |
 | `InboundInvoiceEmailProcessor` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, S3 read/write for the assets bucket (including the `inbound-email/raw/` prefix), publish to the expense parser SNS topic |
 | `EventbriteSyncProcessor` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, read Eventbrite token secret, invoke `AwsApiProxyFunction` |
 | `InboxImportFunction` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, S3 read on the assets bucket, invoke `AwsApiProxyFunction` for Graph HTTP; Graph token is `META_PAGE_ACCESS_TOKEN` from `MetaPageAccessToken`; `PUBLIC_WWW_INSTAGRAM_URL` from `PublicWwwInstagramUrl` skips Graph threads whose participant username is the business Instagram handle |
@@ -502,7 +504,7 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | `/v1/admin/locations/{id}` | PUT, PATCH, DELETE | Admin Group | `EvolvesproutsAdminFunction` | |
 | `/v1/admin/users` | GET | Admin Group | `EvolvesproutsAdminFunction` | Assignee lookup for sales lead workflows |
 | `/v1/admin/instructors` | GET | Admin Group | `EvolvesproutsAdminFunction` | Instructor Cognito group listing for service instance assignment |
-| `/v1/admin/audit-logs` | GET | Admin Group | `EvolvesproutsAdminFunction` | Paginated `audit_log` listing (filters: `table`, `record_id`, `user_id`, `email`, `action`, `since`, `cursor`, `limit`); `email` resolves to a Cognito sub via proxy `list_users`, a known system actor (`system`, `webhook:whatsapp`, `webhook:meta`, `alembic`), or `api-key:<id>` via `api_keys.name`; optional `user_email` is a Cognito email, API key name, or system-actor label |
+| `/v1/admin/audit-logs` | GET | Admin Group | `EvolvesproutsAdminFunction` | Paginated `audit_log` listing (filters: `table`, `record_id`, `user_id`, `email`, `action`, `since`, `cursor`, `limit`); `email` resolves to a Cognito sub via proxy `list_users`, a known system actor (`system`, `webhook:whatsapp`, `webhook:meta`, `alembic`, `system:sales-daily-plan`), or `api-key:<id>` via `api_keys.name`; optional `user_email` is a Cognito email, API key name, or system-actor label |
 | `/v1/admin/tags` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | CRM tag catalog; GET supports `include_archived` and `archived_only` (mutually exclusive) |
 | `/v1/admin/calendar/manual-blocks` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | Manual blocks; GET requires `purpose`, `from`, `to`; writes append `audit_log` rows |
 | `/v1/admin/calendar/manual-blocks/{id}` | PATCH, DELETE | Admin Group | `EvolvesproutsAdminFunction` | Manual block update/delete; PATCH/DELETE append `audit_log` rows |

@@ -154,9 +154,10 @@ export function SalePlanOfTheDayCard() {
       <div className='space-y-4' data-testid='sale-plan-of-the-day'>
         <p className='text-xs text-slate-500'>
           Sales-focused advice for today from your pipeline, unanswered messages,
-          unpaid invoices, catalogue, and saved insights. Refinements stay in
-          memory until you reset them in Sales configuration. Suggestions are not
-          sent automatically.
+          unpaid invoices, catalogue, and saved insights. A new plan is generated
+          every morning at 6:00 HKT. You can also refresh it here. Refinements stay
+          in memory until you reset them in Sales configuration. Suggestions are
+          not sent automatically.
         </p>
         {error ? (
           <StatusBanner variant='error' title='Sale Plan of the Day'>
@@ -185,7 +186,8 @@ export function SalePlanOfTheDayCard() {
 
         {!isLoading && !plan ? (
           <p className='text-sm text-slate-600'>
-            No plan yet. Generate insight to get a saved sales plan for today.
+            No plan yet. One is generated every morning at 6:00 HKT, or generate
+            insight now.
           </p>
         ) : null}
 

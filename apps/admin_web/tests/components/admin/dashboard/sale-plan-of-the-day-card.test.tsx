@@ -117,6 +117,7 @@ describe('SalePlanOfTheDayCard', () => {
     await waitFor(() => {
       expect(screen.getByText(/No plan yet/i)).toBeInTheDocument();
     });
+    expect(screen.getAllByText(/every morning at 6:00 HKT/i).length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole('button', { name: 'Generate insight' }));
 

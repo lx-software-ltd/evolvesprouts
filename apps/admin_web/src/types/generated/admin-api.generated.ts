@@ -1051,7 +1051,7 @@ export interface paths {
         };
         /**
          * List audit log entries
-         * @description Returns database audit history (trigger- and application-sourced rows in `audit_log`). Optional filters combine as in the admin Lambda handler: when `record_id` is set, `table` is required; `user_id` is a Cognito subject (sub), `api-key:<id>`, or a system actor (`system`, `webhook:whatsapp`, `webhook:meta`, `alembic`). Use `email` to filter by Cognito email, API key name, or system-actor label (server resolves to sub, `api-key:<id>`, or the system `user_id`); do not pass `user_id` together with `email`.
+         * @description Returns database audit history (trigger- and application-sourced rows in `audit_log`). Optional filters combine as in the admin Lambda handler: when `record_id` is set, `table` is required; `user_id` is a Cognito subject (sub), `api-key:<id>`, or a system actor (`system`, `webhook:whatsapp`, `webhook:meta`, `alembic`, `system:sales-daily-plan`). Use `email` to filter by Cognito email, API key name, or system-actor label (server resolves to sub, `api-key:<id>`, or the system `user_id`); do not pass `user_id` together with `email`.
          */
         get: {
             parameters: {
@@ -1062,7 +1062,7 @@ export interface paths {
                     table?: "api_keys" | "asset_access_grants" | "asset_share_links" | "asset_tags" | "assets" | "bulk_expense_import_jobs" | "calendar_manual_blocks" | "completion_certificates" | "consultation_details" | "contact_tags" | "contacts" | "customer_invoice_lines" | "customer_invoices" | "customer_payments" | "customer_receipts" | "discount_codes" | "document_counters" | "enrollments" | "event_details" | "event_ticket_tiers" | "expense_attachments" | "expenses" | "families" | "family_members" | "family_tags" | "geographic_areas" | "inbound_emails" | "instance_session_slots" | "legacy_import_refs" | "locations" | "meta_conversations" | "meta_messages" | "notes" | "organization_members" | "organization_tags" | "organizations" | "payment_allocations" | "sales_lead_events" | "sales_leads" | "service_assets" | "service_instance_organizations" | "service_instance_tags" | "service_instances" | "service_tags" | "services" | "tags" | "training_course_details" | "training_instance_details" | "whatsapp_conversations" | "whatsapp_messages";
                     record_id?: string;
                     user_id?: string;
-                    /** @description Filter by Cognito email, API key name, or system-actor label. Values containing `@` resolve to a Cognito `sub` via `list_users`. Other values first match known system actors (`System`, `WhatsApp webhook`, `Meta webhook`, `Alembic`, or stored ids `system`, `webhook:whatsapp`, `webhook:meta`, `alembic`), then `api_keys.name` (case-insensitive) which becomes `api-key:<id>`. Mutually exclusive with `user_id`. When no actor matches, the response is an empty list. */
+                    /** @description Filter by Cognito email, API key name, or system-actor label. Values containing `@` resolve to a Cognito `sub` via `list_users`. Other values first match known system actors (`System`, `WhatsApp webhook`, `Meta webhook`, `Alembic`, `Sales daily plan schedule`, or stored ids `system`, `webhook:whatsapp`, `webhook:meta`, `alembic`, `system:sales-daily-plan`), then `api_keys.name` (case-insensitive) which becomes `api-key:<id>`. Mutually exclusive with `user_id`. When no actor matches, the response is an empty list. */
                     email?: string;
                     action?: "INSERT" | "UPDATE" | "DELETE";
                     /** @description ISO 8601 timestamp; only entries at or after this time are returned where applicable. */
@@ -1464,7 +1464,7 @@ export interface paths {
         };
         /**
          * Get latest org-wide sales plan of the day
-         * @description Returns the newest stored org-wide AI sales daily plan, including staleness metadata, plus `memory` (up to the five newest stored plans, including the latest). `plan` is null when none has been generated yet. A plan is stale when it is older than 24 hours, when a newer WhatsApp/Meta message exists after the stored conversation watermark, or when a lead was created or a funnel-stage event occurred after the stored pipeline watermark. All stored plans are retained until `DELETE /v1/admin/leads/daily-plan`.
+         * @description Returns the newest stored org-wide AI sales daily plan, including staleness metadata, plus `memory` (up to the five newest stored plans, including the latest). `plan` is null when none has been generated yet. A scheduled job also generates a new plan every day at 06:00 HKT. A plan is stale when it is older than 24 hours, when a newer WhatsApp/Meta message exists after the stored conversation watermark, or when a lead was created or a funnel-stage event occurred after the stored pipeline watermark. All stored plans are retained until `DELETE /v1/admin/leads/daily-plan`.
          */
         get: {
             parameters: {
@@ -7961,7 +7961,7 @@ export interface components {
             record_id: string;
             /** @enum {string} */
             action: "INSERT" | "UPDATE" | "DELETE";
-            /** @description Cognito subject, `api-key:<id>` for token writes, or a system actor (`system`, `webhook:whatsapp`, `webhook:meta`, `alembic`). */
+            /** @description Cognito subject, `api-key:<id>` for token writes, or a system actor (`system`, `webhook:whatsapp`, `webhook:meta`, `alembic`, `system:sales-daily-plan`). */
             user_id?: string | null;
             /** @description Display label for the actor: Cognito email, API key `name` when `user_id` is `api-key:<id>`, or a system-actor label such as `WhatsApp webhook` (optional). */
             user_email?: string | null;

@@ -102,7 +102,8 @@ their primary responsibilities.
   plus compact memory of the last five plans / POST enqueues async generation on
   `SalesDailyPlanFunction` via SQS with optional `operator_input`; poll
   `/v1/admin/leads/daily-plan/jobs/{job_id}` for status and timing /
-  DELETE resets all stored plans, jobs, and refinements),
+  DELETE resets all stored plans, jobs, and refinements; EventBridge also
+  enqueues a new plan daily at 06:00 HKT via `SalesDailyPlanSchedulerFunction`),
   `/v1/admin/leads/daily-plan/jobs/{job_id}` (GET job status / duration),
   `/v1/admin/contacts/*` (including `GET /v1/admin/contacts` optional `contact_type` filter;
   list and single-contact responses include read-only `family_location_summary` and
@@ -603,6 +604,25 @@ their primary responsibilities.
   - `AWS_PROXY_FUNCTION_ARN`
   - `SALES_DAILY_PLAN_LAMBDA_TIMEOUT_SECONDS` (120),
     `SALES_DAILY_PLAN_OPENROUTER_TIMEOUT_SECONDS` (90)
+
+### Sales daily plan scheduler
+- Function: SalesDailyPlanSchedulerFunction
+- Handler: backend/lambda/sales_daily_plan_scheduler/handler.py
+- Stack: nested stack `evolvesprouts-Messaging`
+- Trigger: EventBridge scheduled rule `evolvesprouts-sales-daily-plan-schedule`
+  (`cron(0 22 * * ? *)` UTC = 06:00 HKT every day; Hong Kong has no DST)
+- Purpose: insert a `sales_daily_plan_jobs` row as audit actor
+  `system:sales-daily-plan` and send `{ "job_id" }` to
+  `evolvesprouts-sales-daily-plan-queue`. Skips when another job is already
+  `pending` or `processing`. Does not call OpenRouter or send messages.
+- DB access: RDS Proxy with IAM auth (`evolvesprouts_admin`)
+- VPC: Yes
+- Permissions: Secrets Manager read for the admin DB secret, SQS send on the
+  sales daily plan queue
+- Environment:
+  - `DATABASE_SECRET_ARN`, `DATABASE_NAME`, `DATABASE_USERNAME`,
+    `DATABASE_PROXY_ENDPOINT`, `DATABASE_IAM_AUTH`
+  - `SALES_DAILY_PLAN_QUEUE_URL`
 
 ### Expense parser processor
 - Function: ExpenseParserFunction
