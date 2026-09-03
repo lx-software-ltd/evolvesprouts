@@ -450,10 +450,34 @@ a pinned row, and collapses unresolvable ids.
   phone number renders region + national number as two controls in one field).
 - Legacy screens still on `AdminEditorCard` + `PaginatedTableCard` are
   migrated screen by screen; new screens must not use them. Migrated so far:
-  Contacts (contacts, families, organisations tabs). The Mailchimp tab, a tool
-  panel with no table, follows the same shape: untitled `Card`,
+  Contacts (contacts, families, organisations tabs), Tags, Calendar manual
+  blocks, Audit (audit logs and API keys), and Assets. The Mailchimp tab, a
+  tool panel with no table, follows the same shape: untitled `Card`,
   `AdminDisclosure` sections, no manual refresh (status refetches after each
-  run).
+  run). Still on the legacy layout: Finance, Sales, Services, and Website.
+- Variations the migrated screens establish:
+  - **Read-only records** (audit log entries, issued API keys) expand into a
+    detail panel laid out on the same `AdminFieldGrid` with `readOnly`
+    inputs or plain values; there is no save action. A table with no
+    row-scoped actions (audit logs) omits the Operations column entirely
+    rather than rendering an empty one.
+  - **Create-only records** (API keys, access grants) get a draft row and
+    editor like any other record, but existing rows open read-only or, when
+    there is nothing more to show than the summary cells (grants), stay
+    plain rows with an empty expand cell so the columns line up.
+  - **One-shot secrets** (the API key token shown once after creation) render
+    in a status banner above the table, not inside the row, so they survive
+    the draft row closing.
+  - **Sub-accordions on complex editors** (Assets: Share link, Access grants)
+    keep the main field grid short; the grants disclosure hosts a nested
+    `AdminRecordTable embedded` with its own `New grant` draft row and Revoke
+    in Operations, the same shape as contact notes.
+  - Nested draft rows use their own id (`note-draft`, `grant-draft`) instead
+    of `DRAFT_RECORD_ID` so test ids and panel ids never collide with the
+    parent table's draft row.
+  - Sections with several list filters that must apply together (audit logs)
+    keep an explicit **Apply filters** / **Clear** pair in the filter bar's
+    trailing slot instead of refetching on every keystroke.
 - Read-only editor values (for example the contact's Mailchimp sync status)
   render as a `readOnly` `Input` so the field grid keeps one control shape.
 - Nested record lists inside an open editor (contact notes, family and
