@@ -92,6 +92,22 @@ describe('TagsPage', () => {
     expect(cell.className).toContain('max-md:wrap-anywhere');
   });
 
+  it('shows no operations for system tags (no Archive, Restore, or Delete)', async () => {
+    mockListAdminTags.mockResolvedValue([
+      { ...tagAlpha, id: 't-sys', name: 'client_document', is_system: true, usage_count: 3 },
+      tagAlpha,
+    ]);
+    render(<TagsPage />);
+
+    const systemRow = (await screen.findByRole('cell', { name: /client_document/ })).closest('tr') as HTMLElement;
+    expect(within(systemRow).queryByRole('button', { name: /delete/i })).toBeNull();
+    expect(within(systemRow).queryByRole('button', { name: /archive/i })).toBeNull();
+    expect(within(systemRow).queryByRole('button', { name: /restore/i })).toBeNull();
+    expect(within(systemRow).getAllByRole('button')).toHaveLength(1); // expand only
+
+    expect(within(rowNamed(/Alpha/)).getByRole('button', { name: 'Delete tag' })).toBeInTheDocument();
+  });
+
   it('disables delete when usage is greater than zero and offers Archive', async () => {
     render(<TagsPage />);
     await screen.findByRole('cell', { name: /Alpha/ });

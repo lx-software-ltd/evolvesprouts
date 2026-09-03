@@ -24,9 +24,6 @@ import type { AdminTagListFilter, AdminTagRow } from '@/lib/tags-api';
 const COLUMN_COUNT = 6;
 
 function deleteLabel(row: AdminTagRow): string {
-  if (row.is_system) {
-    return 'System tag';
-  }
   if (row.usage_count > 0) {
     return 'Cannot delete tag while it is in use';
   }
@@ -186,7 +183,9 @@ export function TagsPage() {
                       label: deleteLabel(row),
                       icon: <DeleteIcon className='h-4 w-4' />,
                       tone: 'danger',
-                      disabled: page.editorIsBusy || row.is_system || row.usage_count > 0,
+                      // System tags cannot be archived, restored, or deleted, so they show no operations at all.
+                      hidden: row.is_system,
+                      disabled: page.editorIsBusy || row.usage_count > 0,
                       onClick: () => void page.handleDeleteRow(row),
                     },
                   ]}
