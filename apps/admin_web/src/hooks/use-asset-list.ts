@@ -138,8 +138,11 @@ export function useAssetList(): UseAssetListReturn {
   const resolvedSelectedAssetId = selectedAsset?.id ?? null;
 
   const filtersRef = useRef(filters);
-  filtersRef.current = filters;
   const lastUrlFiltersRef = useRef({ query: urlQuery, tag: urlTag });
+
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
 
   // Apply inbound deep-links (`?tag=` / `?query=`) only when those URL params
   // change. An empty URL tag still means "default to Client" for deep-links,
