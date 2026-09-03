@@ -20,7 +20,7 @@ from app.db.models.enums import (
 from app.db.models.meta import MetaConversation, MetaMessage
 from app.db.models.sales_lead import SalesLead, SalesLeadEvent
 from app.db.models.service import Service
-from app.db.models.service_instance import ServiceInstance
+from app.db.models.service_instance import InstanceSessionSlot, ServiceInstance
 from app.db.models.whatsapp import WhatsAppConversation, WhatsAppMessage
 from app.utils.logging import mask_email, mask_pii
 
@@ -128,19 +128,32 @@ def _load_upcoming_instances(
     session: Session, *, now: datetime
 ) -> list[dict[str, Any]]:
     horizon = now + timedelta(days=INSTANCE_HORIZON_DAYS)
+    earliest_slot = (
+        select(func.min(InstanceSessionSlot.starts_at))
+        .where(InstanceSessionSlot.instance_id == ServiceInstance.id)
+        .where(InstanceSessionSlot.starts_at >= now)
+        .where(InstanceSessionSlot.starts_at <= horizon)
+        .correlate(ServiceInstance)
+        .scalar_subquery()
+    )
     statement: Select[tuple[ServiceInstance]] = (
         select(ServiceInstance)
-        .options(selectinload(ServiceInstance.service))
-        .where(ServiceInstance.starts_at >= now)
-        .where(ServiceInstance.starts_at <= horizon)
+        .options(
+            selectinload(ServiceInstance.service),
+            selectinload(ServiceInstance.session_slots),
+        )
         .where(ServiceInstance.status.in_(_INSTANCE_STATUSES))
-        .order_by(ServiceInstance.starts_at.asc())
+        .where(earliest_slot.is_not(None))
+        .order_by(earliest_slot.asc())
         .limit(MAX_INSTANCES)
     )
     rows = list(session.scalars(statement).all())
     results: list[dict[str, Any]] = []
     for instance in rows:
         service = instance.service
+        starts_at = _earliest_slot_start(
+            instance.session_slots, now=now, horizon=horizon
+        )
         results.append(
             {
                 "id": str(instance.id),
@@ -149,12 +162,30 @@ def _load_upcoming_instances(
                 "service_type": (
                     _enum_value(service.service_type) if service else None
                 ),
-                "starts_at": _iso(instance.starts_at),
+                "starts_at": _iso(starts_at),
                 "status": _enum_value(instance.status),
                 "max_capacity": instance.max_capacity,
             }
         )
     return results
+
+
+def _earliest_slot_start(
+    slots: list[InstanceSessionSlot] | None,
+    *,
+    now: datetime,
+    horizon: datetime,
+) -> datetime | None:
+    starts: list[datetime] = []
+    for slot in slots or []:
+        if slot.starts_at is None:
+            continue
+        starts_at = _as_utc(slot.starts_at)
+        if now <= starts_at <= horizon:
+            starts.append(starts_at)
+    if not starts:
+        return None
+    return min(starts)
 
 
 def _load_funnel_snapshot(session: Session, *, now: datetime) -> dict[str, Any]:

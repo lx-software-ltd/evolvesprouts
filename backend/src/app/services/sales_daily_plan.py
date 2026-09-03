@@ -86,9 +86,9 @@ def _openrouter_timeout_seconds() -> int:
 
 def get_latest_plan(session: Session) -> SalesDailyPlan | None:
     """Return the newest stored org-wide daily plan, if any."""
-    statement: Select[tuple[SalesDailyPlan]] = select(SalesDailyPlan).order_by(
-        SalesDailyPlan.generated_at.desc()
-    ).limit(1)
+    statement: Select[tuple[SalesDailyPlan]] = (
+        select(SalesDailyPlan).order_by(SalesDailyPlan.generated_at.desc()).limit(1)
+    )
     return session.scalars(statement).first()
 
 

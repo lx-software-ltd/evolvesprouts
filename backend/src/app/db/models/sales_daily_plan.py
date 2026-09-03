@@ -19,9 +19,7 @@ class SalesDailyPlan(Base):
     """One generated org-wide sales plan of the day."""
 
     __tablename__ = "sales_daily_plans"
-    __table_args__ = (
-        Index("sales_daily_plans_generated_idx", "generated_at"),
-    )
+    __table_args__ = (Index("sales_daily_plans_generated_idx", "generated_at"),)
 
     id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
