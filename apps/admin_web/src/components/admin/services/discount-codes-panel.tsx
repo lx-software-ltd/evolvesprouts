@@ -1,63 +1,37 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { DiscountCodeEditorPanel } from '@/components/admin/services/discount-code-editor-panel';
+import { ReferralLinkQrDialog } from '@/components/admin/services/referral-link-qr-dialog';
+import { CheckIcon, CopyIcon, DeleteIcon, QrLinkIcon } from '@/components/icons/action-icons';
+import { AdminCreateButton } from '@/components/ui/admin-create-button';
 import {
-  AdminDataTable,
-  AdminDataTableBody,
   AdminDataTableCell,
-  AdminDataTableHead,
+  AdminDataTableCellMeta,
   AdminDataTableHeadCell,
   AdminDataTableOperationsHeadCell,
 } from '@/components/ui/admin-data-table';
-import { AdminEditorCard } from '@/components/ui/admin-editor-card';
+import { AdminDiscardChangesDialog } from '@/components/ui/admin-discard-changes-dialog';
+import { AdminExpandableRow } from '@/components/ui/admin-expandable-row';
+import { AdminFilterBar, AdminFilterField } from '@/components/ui/admin-filter-bar';
+import { AdminRecordTable } from '@/components/ui/admin-record-table';
+import { AdminRowActions } from '@/components/ui/admin-row-actions';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
-import { AdminTableToolbar } from '@/components/ui/admin-table-toolbar';
 import { Select } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { DeleteIcon, QrLinkIcon } from '@/components/icons/action-icons';
-import { CopyFeedbackIconButton } from '@/components/ui/copy-feedback-icon-button';
-import { ReferralLinkQrDialog } from '@/components/admin/services/referral-link-qr-dialog';
-import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { useCopyFeedback } from '@/hooks/use-copy-feedback';
-import { toErrorMessage } from '@/hooks/hook-errors';
-import { useServiceInstanceOptions } from '@/hooks/use-service-instance-options';
-import { isAdminApiConflictOnField } from '@/lib/admin-api-conflict-messages';
+import { useDiscountCodeEditor } from '@/hooks/use-discount-code-editor';
+import { DRAFT_RECORD_ID } from '@/hooks/use-expanded-record';
 import { tryCopyTextToClipboard } from '@/lib/clipboard';
-import {
-  bumpDuplicateDiscountCode,
-  DISCOUNT_CODE_ALLOCATION_FAILED_MESSAGE,
-  MAX_DISCOUNT_CODE_DUPLICATE_CREATE_RETRIES,
-} from '@/lib/discount-code-duplicate';
-import {
-  DISCOUNT_VALIDITY_RANGE_INVERTED_MESSAGE,
-  isDiscountValidityRangeInverted,
-} from '@/lib/discount-validity';
 import { formatDiscountRowValue } from '@/lib/discount-row-format';
-import {
-  formatDate,
-  formatDiscountCodeInstanceOptionLabel,
-  formatEnumLabel,
-  formatIsoForDatetimeLocalInput,
-  formatServiceTitleWithTier,
-  getCurrencyOptions,
-  parseAdminDateTimeInputToIsoUtc,
-} from '@/lib/format';
-
+import { formatDate } from '@/lib/format';
 import type { components } from '@/types/generated/admin-api.generated';
-import {
-  DISCOUNT_TYPES,
-  normalizeDiscountTypeFromApi,
-  REFERRAL_DEFAULT_CURRENCY,
-  REFERRAL_DEFAULT_DISCOUNT_VALUE,
-} from '@/types/services';
 import type { DiscountCode, DiscountCodeFilters, DiscountType, ServiceSummary } from '@/types/services';
 
 type ApiSchemas = components['schemas'];
+
+const COLUMN_COUNT = 8;
 
 export interface DiscountCodesPanelProps {
   codes: DiscountCode[];
@@ -73,24 +47,23 @@ export interface DiscountCodesPanelProps {
   serviceDirectoryForDisplay?: ServiceSummary[];
   /** Bumps to clear cached instance options after mutations. */
   instanceOptionsRefreshKey?: unknown;
-  onFilterChange: <TKey extends keyof DiscountCodeFilters>(
-    key: TKey,
-    value: DiscountCodeFilters[TKey]
-  ) => void;
+  onFilterChange: <TKey extends keyof DiscountCodeFilters>(key: TKey, value: DiscountCodeFilters[TKey]) => void;
   onLoadMore: () => Promise<void> | void;
   onCreate: (
     payload: ApiSchemas['CreateDiscountCodeRequest'],
-    options?: { batchSaving?: boolean },
+    options?: { batchSaving?: boolean }
   ) => Promise<unknown> | void;
-  onUpdate: (
-    codeId: string,
-    payload: ApiSchemas['UpdateDiscountCodeRequest']
-  ) => Promise<unknown> | void;
+  onUpdate: (codeId: string, payload: ApiSchemas['UpdateDiscountCodeRequest']) => Promise<unknown> | void;
   onDelete: (codeId: string) => Promise<void> | void;
   /** Optional refresh after a failed duplicate-retry batch (intermediate attempts skip refetch). */
   onDiscountCodesRefresh?: () => void | Promise<void>;
 }
 
+/**
+ * Table-first discount codes: filters and `New code` on top, one expandable
+ * row per code with its editor beneath, and Copy, Link/QR, and Delete in the
+ * Operations column (Link/QR and Delete collapse into the overflow menu).
+ */
 export function DiscountCodesPanel({
   codes,
   filters,
@@ -109,35 +82,13 @@ export function DiscountCodesPanel({
   onDelete,
   onDiscountCodesRefresh,
 }: DiscountCodesPanelProps) {
-  const [confirmDialogProps, requestConfirm] = useConfirmDialog();
-  const [scopeConfirmProps, requestScopeConfirm] = useConfirmDialog();
-  const [editorMode, setEditorMode] = useState<'create' | 'edit'>('create');
-  const [selectedCodeId, setSelectedCodeId] = useState<string | null>(null);
-  const [code, setCode] = useState('');
-  const [description, setDescription] = useState('');
-  const [discountType, setDiscountType] = useState<ApiSchemas['DiscountType']>('percentage');
-  const [discountValue, setDiscountValue] = useState('');
-  const [currency, setCurrency] = useState('HKD');
-  const [maxUses, setMaxUses] = useState('');
-  const [active, setActive] = useState(true);
-  const [validFromLocal, setValidFromLocal] = useState('');
-  const [validUntilLocal, setValidUntilLocal] = useState('');
-  const [validityRangeError, setValidityRangeError] = useState('');
-  const [saveError, setSaveError] = useState('');
-  const [serviceId, setServiceId] = useState('');
-  const [instanceId, setInstanceId] = useState('');
-  const [referralOpen, setReferralOpen] = useState(false);
-  const [referralCode, setReferralCode] = useState('');
-  const [referralServiceKey, setReferralServiceKey] = useState<string | null>(null);
-  const [referralDiscountType, setReferralDiscountType] = useState<DiscountType>('percentage');
-  const [isBatchCreating, setIsBatchCreating] = useState(false);
+  const [referralTarget, setReferralTarget] = useState<{
+    code: string;
+    serviceKey: string | null;
+    discountType: DiscountType;
+  } | null>(null);
   const { copiedKey: copiedDiscountCodeId, markCopied: markDiscountCodeCopied } = useCopyFeedback(1000);
   const directoryList = serviceDirectoryForDisplay ?? serviceOptions;
-  const { instances, isLoading: instancesLoading, error: instancesError, loadForService } =
-    useServiceInstanceOptions(instanceOptionsRefreshKey);
-  const currencyOptions = getCurrencyOptions();
-  const discountTypeSelectValue = normalizeDiscountTypeFromApi(discountType);
-  const isReferral = discountTypeSelectValue === 'referral';
 
   const serviceById = useMemo(() => {
     const map = new Map<string, ServiceSummary>();
@@ -147,179 +98,19 @@ export function DiscountCodesPanel({
     return map;
   }, [directoryList]);
 
-  /** “Applies to service” picker: published only, plus current selection if not published (edit legacy rows). */
-  const serviceSelectOptions = useMemo(() => {
-    const published = serviceOptions.filter((svc) => svc.status === 'published');
-    if (!serviceId.trim()) {
-      return published;
-    }
-    const selected = serviceById.get(serviceId.trim());
-    if (!selected || selected.status === 'published') {
-      return published;
-    }
-    const ids = new Set(published.map((s) => s.id));
-    return ids.has(selected.id) ? published : [...published, selected];
-  }, [serviceById, serviceId, serviceOptions]);
-
-  const selectedCode = useMemo(
-    () => codes.find((entry) => entry.id === selectedCodeId) ?? null,
-    [codes, selectedCodeId]
-  );
-
-  useEffect(() => {
-    void loadForService(serviceId.trim() || null);
-  }, [loadForService, serviceId]);
-
-  const resetCreateForm = () => {
-    setEditorMode('create');
-    setSelectedCodeId(null);
-    setCode('');
-    setDescription('');
-    setDiscountType('percentage');
-    setDiscountValue('');
-    setCurrency('HKD');
-    setMaxUses('');
-    setActive(true);
-    setValidFromLocal('');
-    setValidUntilLocal('');
-    setValidityRangeError('');
-    setSaveError('');
-    setServiceId('');
-    setInstanceId('');
-    setIsBatchCreating(false);
-  };
-
-  const handleSubmit = async () => {
-    if (isDiscountValidityRangeInverted(validFromLocal, validUntilLocal)) {
-      setValidityRangeError(DISCOUNT_VALIDITY_RANGE_INVERTED_MESSAGE);
-      return;
-    }
-    setValidityRangeError('');
-    setSaveError('');
-    const validFromIso = parseAdminDateTimeInputToIsoUtc(validFromLocal);
-    const validUntilIso = parseAdminDateTimeInputToIsoUtc(validUntilLocal);
-    const serviceUuid = serviceId.trim() || null;
-    const instanceUuid = serviceUuid && instanceId.trim() ? instanceId.trim() : null;
-    const createPayload: ApiSchemas['CreateDiscountCodeRequest'] = {
-      code: code.trim().toUpperCase(),
-      description: description.trim() || null,
-      discount_type: discountTypeSelectValue,
-      discount_value: isReferral ? REFERRAL_DEFAULT_DISCOUNT_VALUE : discountValue.trim(),
-      currency: isReferral ? REFERRAL_DEFAULT_CURRENCY : currency.trim() || null,
-      valid_from: validFromIso,
-      valid_until: validUntilIso,
-      max_uses: maxUses ? Number(maxUses) : null,
-      active,
-      service_id: serviceUuid,
-      instance_id: instanceUuid,
-    };
-    const isDuplicateCodeError = (err: unknown) => isAdminApiConflictOnField(err, 'code');
-
-    try {
-      if (editorMode === 'create') {
-        let attemptCode = createPayload.code;
-        const maxDuplicateRetries = MAX_DISCOUNT_CODE_DUPLICATE_CREATE_RETRIES;
-        setIsBatchCreating(true);
-        try {
-          for (let round = 0; round < maxDuplicateRetries; round += 1) {
-            try {
-              const isLastAttempt = round === maxDuplicateRetries - 1;
-              await onCreate(
-                { ...createPayload, code: attemptCode },
-                { batchSaving: !isLastAttempt },
-              );
-              resetCreateForm();
-              return;
-            } catch (err) {
-              if (!isDuplicateCodeError(err)) {
-                throw err;
-              }
-              const nextCode = bumpDuplicateDiscountCode(attemptCode);
-              if (nextCode === attemptCode) {
-                throw err;
-              }
-              attemptCode = nextCode;
-              setCode(nextCode);
-            }
-          }
-          setSaveError(DISCOUNT_CODE_ALLOCATION_FAILED_MESSAGE);
-          void onDiscountCodesRefresh?.();
-          return;
-        } finally {
-          setIsBatchCreating(false);
-        }
-      }
-      if (!selectedCode) {
-        return;
-      }
-      const prevService = selectedCode.serviceId ?? null;
-      const prevInstance = selectedCode.instanceId ?? null;
-      const scopeChanged =
-        (serviceUuid ?? null) !== (prevService ?? null) ||
-        (instanceUuid ?? null) !== (prevInstance ?? null);
-      if (selectedCode.currentUses > 0 && scopeChanged) {
-        const ok = await requestScopeConfirm({
-          title: 'Change discount scope?',
-          description: `This code has been used ${selectedCode.currentUses} times. Changing scope won't retroactively affect past bookings, but future validations and redemptions will follow the new scope. Continue?`,
-          confirmLabel: 'Continue',
-          cancelLabel: 'Cancel',
-          variant: 'default',
-        });
-        if (!ok) {
-          return;
-        }
-      }
-      await onUpdate(selectedCode.id, {
-        description: description.trim() || null,
-        discount_type: discountTypeSelectValue,
-        discount_value: isReferral ? REFERRAL_DEFAULT_DISCOUNT_VALUE : discountValue.trim(),
-        currency: isReferral ? REFERRAL_DEFAULT_CURRENCY : currency.trim() || null,
-        valid_from: validFromIso,
-        valid_until: validUntilIso,
-        max_uses: maxUses ? Number(maxUses) : null,
-        active,
-        service_id: serviceUuid,
-        instance_id: instanceUuid,
-      });
-    } catch (err) {
-      setSaveError(toErrorMessage(err, 'Save failed.'));
-    }
-  };
-
-  const applyCodeSelection = (entry: DiscountCode) => {
-    setSelectedCodeId(entry.id);
-    setEditorMode('edit');
-    setCode(entry.code);
-    setDescription(entry.description ?? '');
-    setDiscountType(normalizeDiscountTypeFromApi(entry.discountType));
-    setDiscountValue(entry.discountValue);
-    setCurrency(entry.currency ?? 'HKD');
-    setMaxUses(entry.maxUses?.toString() ?? '');
-    setActive(entry.active);
-    setValidFromLocal(formatIsoForDatetimeLocalInput(entry.validFrom));
-    setValidUntilLocal(formatIsoForDatetimeLocalInput(entry.validUntil));
-    setValidityRangeError('');
-    setSaveError('');
-    setServiceId(entry.serviceId ?? '');
-    setInstanceId(entry.instanceId ?? '');
-  };
-
-  const handleDeleteCode = async (entry: DiscountCode) => {
-    const confirmed = await requestConfirm({
-      title: 'Delete discount code',
-      description: `Delete "${entry.code}"? This action cannot be undone.`,
-      confirmLabel: 'Delete',
-      cancelLabel: 'Cancel',
-      variant: 'danger',
-    });
-    if (!confirmed) {
-      return;
-    }
-    await onDelete(entry.id);
-    if (selectedCodeId === entry.id) {
-      resetCreateForm();
-    }
-  };
+  const editor = useDiscountCodeEditor({
+    codes,
+    isLoading,
+    isSaving,
+    serviceOptions,
+    serviceById,
+    instanceOptionsRefreshKey,
+    onCreate,
+    onUpdate,
+    onDelete,
+    onDiscountCodesRefresh,
+  });
+  const { expanded, editorIsBusy, deletingCodeId, handleDeleteCode } = editor;
 
   async function handleCopyDiscountCode(rowId: string, value: string) {
     const ok = await tryCopyTextToClipboard(value.trim().toUpperCase());
@@ -329,217 +120,53 @@ export function DiscountCodesPanel({
   }
 
   function openReferralDialog(entry: DiscountCode) {
-    setReferralCode(entry.code);
-    setReferralDiscountType(entry.discountType);
-    const slug = entry.serviceId ? serviceById.get(entry.serviceId)?.serviceKey?.trim() ?? null : null;
-    setReferralServiceKey(slug && slug.length ? slug : null);
-    setReferralOpen(true);
+    const slug = entry.serviceId ? (serviceById.get(entry.serviceId)?.serviceKey?.trim() ?? null) : null;
+    setReferralTarget({
+      code: entry.code,
+      discountType: entry.discountType,
+      serviceKey: slug && slug.length ? slug : null,
+    });
   }
 
-  const editorIsBusy = isSaving || isBatchCreating;
+  const detail = <DiscountCodeEditorPanel editor={editor} />;
+  const listError = [error, editor.shell.deleteActionError].filter(Boolean).join(' • ');
 
   return (
-    <div className='space-y-6'>
-      <AdminEditorCard
-        title='Discount Code'
-        description='Create a new code or select a row below to update. Codes cannot be changed after creation.'
-        actions={
-          <>
-            {editorMode === 'edit' ? (
-              <Button type='button' variant='secondary' onClick={resetCreateForm} disabled={editorIsBusy}>
-                Cancel
-              </Button>
-            ) : null}
-            <Button
-              type='button'
-              disabled={
-                editorIsBusy ||
-                !code.trim() ||
-                (!isReferral && !discountValue.trim()) ||
-                isDiscountValidityRangeInverted(validFromLocal, validUntilLocal)
-              }
-              onClick={() => void handleSubmit()}
-            >
-              {editorMode === 'create' ? 'Create code' : 'Update code'}
-            </Button>
-          </>
-        }
-      >
-        <div className='grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4'>
-          <div>
-            <Label htmlFor='discount-code'>Code</Label>
-            <Input
-              id='discount-code'
-              value={code}
-              onChange={(event) => {
-                setSaveError('');
-                setCode(event.target.value.toUpperCase());
-              }}
-              disabled={editorMode === 'edit'}
-            />
-          </div>
-          <div>
-            <Label htmlFor='discount-type'>Type</Label>
-            <Select
-              id='discount-type'
-              value={discountTypeSelectValue}
-              onChange={(event) => {
-                const next = event.target.value as ApiSchemas['DiscountType'];
-                const prev = discountTypeSelectValue;
-                setDiscountType(next);
-                if (next === 'referral') {
-                  setDiscountValue(REFERRAL_DEFAULT_DISCOUNT_VALUE);
-                  setCurrency(REFERRAL_DEFAULT_CURRENCY);
-                } else if (prev === 'referral') {
-                  setDiscountValue('');
-                }
-              }}
-            >
-              {DISCOUNT_TYPES.map((entry) => (
-                <option key={entry} value={entry}>
-                  {formatEnumLabel(entry)}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor='discount-valid-from'>Valid from</Label>
-            <Input
-              id='discount-valid-from'
-              type='datetime-local'
-              value={validFromLocal}
-              onChange={(event) => {
-                setValidFromLocal(event.target.value);
-                setValidityRangeError('');
-              }}
-            />
-          </div>
-          <div>
-            <Label htmlFor='discount-valid-until'>Valid until</Label>
-            <Input
-              id='discount-valid-until'
-              type='datetime-local'
-              value={validUntilLocal}
-              onChange={(event) => {
-                setValidUntilLocal(event.target.value);
-                setValidityRangeError('');
-              }}
-            />
-          </div>
-        </div>
-        {validityRangeError ? <p className='text-sm text-red-600'>{validityRangeError}</p> : null}
-        {saveError ? <p className='text-sm text-red-600'>{saveError}</p> : null}
-        <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
-          <div>
-            <Label htmlFor='discount-service'>Applies to service</Label>
-            <Select
-              id='discount-service'
-              value={serviceId}
-              onChange={(event) => {
-                setServiceId(event.target.value);
-                setInstanceId('');
-              }}
-            >
-              <option value=''>All services</option>
-              {serviceSelectOptions.map((svc) => (
-                <option key={svc.id} value={svc.id}>
-                  {formatServiceTitleWithTier(svc.title, svc.serviceTier)}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor='discount-instance'>Applies to instance</Label>
-            <Select
-              id='discount-instance'
-              value={instanceId}
-              onChange={(event) => setInstanceId(event.target.value)}
-              disabled={!serviceId.trim()}
-            >
-              <option value=''>All instances</option>
-              {instances.map((inst) => (
-                <option key={inst.id} value={inst.id}>
-                  {formatDiscountCodeInstanceOptionLabel(inst)}
-                </option>
-              ))}
-            </Select>
-            {instancesLoading ? <p className='text-xs text-slate-500'>Loading instances…</p> : null}
-            {instancesError ? <p className='text-xs text-red-600'>{instancesError}</p> : null}
-          </div>
-        </div>
-        <div className='grid grid-cols-1 gap-3 sm:grid-cols-4'>
-          <div>
-            <Label htmlFor='discount-value'>Value</Label>
-            <Input
-              id='discount-value'
-              value={discountValue}
-              onChange={(event) => setDiscountValue(event.target.value)}
-              disabled={isReferral}
-            />
-          </div>
-          <div>
-            <Label htmlFor='discount-currency'>Currency</Label>
-            <Select
-              id='discount-currency'
-              value={currency}
-              onChange={(event) => setCurrency(event.target.value)}
-              disabled={discountTypeSelectValue === 'percentage' || isReferral}
-            >
-              {currencyOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor='discount-max-uses'>Max uses</Label>
-            <Input id='discount-max-uses' value={maxUses} onChange={(event) => setMaxUses(event.target.value)} />
-          </div>
-          <div>
-            <Label htmlFor='discount-status'>Status</Label>
-            <Select
-              id='discount-status'
-              value={active ? 'true' : 'false'}
-              onChange={(event) => setActive(event.target.value === 'true')}
-            >
-              <option value='true'>Enabled</option>
-              <option value='false'>Disabled</option>
-            </Select>
-          </div>
-        </div>
-        <div>
-          <Label htmlFor='discount-description'>Description</Label>
-          <Textarea
-            id='discount-description'
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            rows={2}
-          />
-        </div>
-      </AdminEditorCard>
-
-      <PaginatedTableCard
-        title='Discount Codes'
+    <>
+      <ConfirmDialog {...editor.shell.confirmDialogProps} />
+      <ConfirmDialog {...editor.scopeConfirmProps} />
+      <AdminDiscardChangesDialog prompt={expanded.discardPrompt} />
+      <AdminRecordTable
+        aria-label='Discount codes'
+        columnCount={COLUMN_COUNT}
+        rowCount={codes.length}
         isLoading={isLoading}
         isLoadingMore={isLoadingMore}
         hasMore={hasMore}
-        error={error}
-        loadingLabel='Loading discount codes...'
         onLoadMore={onLoadMore}
-        toolbar={
-          <AdminTableToolbar>
-            <div className='min-w-[200px] flex-1'>
-              <Label htmlFor='discount-filter-search'>Search</Label>
+        error={listError}
+        errorTitle='Discount codes'
+        emptyLabel='No discount codes match the current filters.'
+        filters={
+          <AdminFilterBar
+            trailing={
+              <AdminCreateButton
+                label='New code'
+                active={expanded.isDraftOpen}
+                onClick={() => (expanded.isDraftOpen ? expanded.collapse() : expanded.openDraft())}
+              />
+            }
+          >
+            <AdminFilterField label='Search' htmlFor='discount-filter-search' className='sm:basis-64'>
               <Input
                 id='discount-filter-search'
                 value={filters.search}
+                autoComplete='off'
                 onChange={(event) => onFilterChange('search', event.target.value)}
                 placeholder='Code'
               />
-            </div>
-            <div className='min-w-[140px]'>
-              <Label htmlFor='discount-filter-active'>Status</Label>
+            </AdminFilterField>
+            <AdminFilterField label='Status' htmlFor='discount-filter-active'>
               <Select
                 id='discount-filter-active'
                 value={filters.active}
@@ -549,110 +176,147 @@ export function DiscountCodesPanel({
                 <option value='true'>Enabled</option>
                 <option value='false'>Disabled</option>
               </Select>
-            </div>
-            <div className='min-w-[180px]'>
-              <Label htmlFor='discount-filter-scope'>Scope</Label>
+            </AdminFilterField>
+            <AdminFilterField label='Scope' htmlFor='discount-filter-scope' className='sm:basis-44'>
               <Select
                 id='discount-filter-scope'
                 value={filters.scope}
-                onChange={(event) =>
-                  onFilterChange('scope', event.target.value as DiscountCodeFilters['scope'])
-                }
+                onChange={(event) => onFilterChange('scope', event.target.value as DiscountCodeFilters['scope'])}
               >
                 <option value=''>All scopes</option>
                 <option value='unscoped'>All services</option>
                 <option value='service'>Service only</option>
                 <option value='instance'>Instance-scoped</option>
               </Select>
-            </div>
-          </AdminTableToolbar>
+            </AdminFilterField>
+          </AdminFilterBar>
+        }
+        head={
+          <tr>
+            <AdminDataTableHeadCell className='w-10' />
+            <AdminDataTableHeadCell>Code</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Valid from</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Valid until</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Value</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Uses</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Status</AdminDataTableHeadCell>
+            <AdminDataTableOperationsHeadCell />
+          </tr>
         }
       >
-        <AdminDataTable tableClassName='min-w-[880px]'>
-          <AdminDataTableHead>
-            <tr>
-              <AdminDataTableHeadCell>Code</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Valid from</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Valid until</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Value</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Uses</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Status</AdminDataTableHeadCell>
-              <AdminDataTableOperationsHeadCell />
-            </tr>
-          </AdminDataTableHead>
-          <AdminDataTableBody>
-            {codes.map((row) => (
-              <tr
-                key={row.id}
-                className={`cursor-pointer transition ${
-                  selectedCodeId === row.id ? 'bg-slate-100' : 'hover:bg-slate-50'
-                }`}
-                onClick={() => applyCodeSelection(row)}
-              >
-                <AdminDataTableCell>{row.code}</AdminDataTableCell>
-                <AdminDataTableCell>{formatDate(row.validFrom)}</AdminDataTableCell>
-                <AdminDataTableCell>{formatDate(row.validUntil)}</AdminDataTableCell>
-                <AdminDataTableCell>{formatDiscountRowValue(row)}</AdminDataTableCell>
-                <AdminDataTableCell>
-                  {row.currentUses}/{row.maxUses ?? '∞'}
+        {expanded.isDraftOpen ? (
+          <AdminExpandableRow
+            id={DRAFT_RECORD_ID}
+            label='new discount code'
+            expanded
+            isDraft
+            onToggle={expanded.collapse}
+            columnCount={COLUMN_COUNT}
+            cells={
+              <>
+                <AdminDataTableCell className='font-medium text-slate-900'>New code</AdminDataTableCell>
+                <AdminDataTableCell priority='tertiary' className='text-slate-400'>
+                  —
                 </AdminDataTableCell>
-                <AdminDataTableCell>{row.active ? 'Enabled' : 'Disabled'}</AdminDataTableCell>
-                <AdminDataTableCell className='text-right' onClick={(event) => event.stopPropagation()}>
-                  <div className='flex justify-end gap-1'>
-                    <Button
-                      type='button'
-                      size='sm'
-                      variant='secondary'
-                      disabled={editorIsBusy}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        openReferralDialog(row);
-                      }}
-                      aria-label='Link and QR'
-                      title='Link and QR'
-                    >
-                      <QrLinkIcon className='h-4 w-4' />
-                    </Button>
-                    <CopyFeedbackIconButton
-                      copied={copiedDiscountCodeId === row.id}
-                      disabled={editorIsBusy}
-                      idleVariant='secondary'
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void handleCopyDiscountCode(row.id, row.code);
-                      }}
-                      idleLabel='Copy discount code'
-                      copiedLabel='Discount code copied'
-                      idleTitle='Copy code'
-                      copiedTitle='Copied'
-                    />
-                    <Button
-                      type='button'
-                      size='sm'
-                      variant='danger'
-                      disabled={editorIsBusy}
-                      onClick={() => void handleDeleteCode(row)}
-                      aria-label='Delete discount code'
-                      title='Delete discount code'
-                    >
-                      <DeleteIcon className='h-4 w-4' />
-                    </Button>
-                  </div>
+                <AdminDataTableCell priority='tertiary' className='text-slate-400'>
+                  —
                 </AdminDataTableCell>
-              </tr>
-            ))}
-          </AdminDataTableBody>
-        </AdminDataTable>
-      </PaginatedTableCard>
-      <ConfirmDialog {...confirmDialogProps} />
-      <ConfirmDialog {...scopeConfirmProps} />
+                <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='tertiary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+              </>
+            }
+            actions={null}
+            detail={detail}
+          />
+        ) : null}
+        {codes.map((row) => {
+          const isOpen = expanded.isExpanded(row.id);
+          const valueLabel = formatDiscountRowValue(row);
+          const usesLabel = `${row.currentUses}/${row.maxUses ?? '∞'}`;
+          const statusLabel = row.active ? 'Enabled' : 'Disabled';
+          const isCopied = copiedDiscountCodeId === row.id;
+          const isDeleting = deletingCodeId === row.id;
+          return (
+            <AdminExpandableRow
+              key={row.id}
+              id={row.id}
+              label={row.code}
+              expanded={isOpen}
+              onToggle={() => expanded.toggle(row.id)}
+              columnCount={COLUMN_COUNT}
+              cells={
+                <>
+                  <AdminDataTableCell className='font-medium text-slate-900'>
+                    {row.code}
+                    <AdminDataTableCellMeta>
+                      {valueLabel} · {usesLabel} uses · {statusLabel}
+                    </AdminDataTableCellMeta>
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='tertiary' className='text-slate-700'>
+                    {formatDate(row.validFrom)}
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='tertiary' className='text-slate-700'>
+                    {formatDate(row.validUntil)}
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='secondary' className='text-slate-700'>
+                    {valueLabel}
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='secondary' className='text-slate-700'>
+                    {usesLabel}
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='tertiary' className='text-slate-700'>
+                    {statusLabel}
+                  </AdminDataTableCell>
+                </>
+              }
+              actions={
+                <AdminRowActions
+                  actions={[
+                    {
+                      key: 'copy',
+                      label: isCopied ? 'Discount code copied' : 'Copy discount code',
+                      icon: isCopied ? <CheckIcon className='h-4 w-4' /> : <CopyIcon className='h-4 w-4' />,
+                      tone: isCopied ? 'success' : 'default',
+                      disabled: editorIsBusy,
+                      onClick: () => void handleCopyDiscountCode(row.id, row.code),
+                    },
+                    {
+                      key: 'qr',
+                      label: 'Link and QR',
+                      icon: <QrLinkIcon className='h-4 w-4' />,
+                      disabled: editorIsBusy,
+                      onClick: () => openReferralDialog(row),
+                    },
+                    {
+                      key: 'delete',
+                      label: isDeleting ? 'Deleting discount code' : 'Delete discount code',
+                      icon: <DeleteIcon className='h-4 w-4' />,
+                      tone: 'danger',
+                      disabled: editorIsBusy || isDeleting,
+                      onClick: () => void handleDeleteCode(row),
+                    },
+                  ]}
+                />
+              }
+              detail={isOpen ? detail : null}
+            />
+          );
+        })}
+      </AdminRecordTable>
       <ReferralLinkQrDialog
-        open={referralOpen}
-        discountCode={referralCode}
-        serviceKey={referralServiceKey}
-        discountType={referralDiscountType}
-        onClose={() => setReferralOpen(false)}
+        open={referralTarget !== null}
+        discountCode={referralTarget?.code ?? ''}
+        serviceKey={referralTarget?.serviceKey ?? null}
+        discountType={referralTarget?.discountType ?? 'percentage'}
+        onClose={() => setReferralTarget(null)}
       />
-    </div>
+    </>
   );
 }
