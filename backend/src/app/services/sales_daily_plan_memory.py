@@ -22,9 +22,7 @@ def list_recent_plans(
 ) -> list[SalesDailyPlan]:
     """Return the newest stored plans, newest first."""
     statement: Select[tuple[SalesDailyPlan]] = (
-        select(SalesDailyPlan)
-        .order_by(SalesDailyPlan.generated_at.desc())
-        .limit(limit)
+        select(SalesDailyPlan).order_by(SalesDailyPlan.generated_at.desc()).limit(limit)
     )
     return list(session.scalars(statement).all())
 
