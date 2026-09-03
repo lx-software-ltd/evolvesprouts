@@ -7,14 +7,20 @@ import { FUNNEL_STAGES, LOST_REASON_LABELS, LOST_REASONS } from '@/types/leads';
 
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
+import { formatEnumLabel } from '@/lib/format';
 
 export interface LeadsBulkActionsProps {
   selectedCount: number;
   users: AdminUser[];
-  onBulkAssign: (assignedTo: string | null) => void;
-  onBulkStageChange: (stage: FunnelStage, lostReason?: LostReason) => void;
+  onBulkAssign: (assignedTo: string | null) => Promise<void> | void;
+  onBulkStageChange: (stage: FunnelStage, lostReason?: LostReason) => Promise<void> | void;
 }
 
+/**
+ * Bulk toolbar shown between the filters and the table once rows are
+ * checked. Assign and "lost" stage changes confirm before running; the
+ * confirm buttons show the shared in-flight state while the batch runs.
+ */
 export function LeadsBulkActions({
   selectedCount,
   users,
@@ -24,6 +30,7 @@ export function LeadsBulkActions({
   const [pendingAssignee, setPendingAssignee] = useState<string | null | undefined>(undefined);
   const [pendingStage, setPendingStage] = useState<FunnelStage | ''>('');
   const [lostReason, setLostReason] = useState<LostReason | ''>('');
+  const [running, setRunning] = useState<'assign' | 'stage' | null>(null);
 
   if (selectedCount <= 0) {
     return null;
@@ -31,14 +38,43 @@ export function LeadsBulkActions({
 
   const pendingAssigneeValue =
     pendingAssignee === undefined ? '' : pendingAssignee === null ? '__none__' : pendingAssignee;
+  const isRunning = running !== null;
+
+  async function runAssign() {
+    if (pendingAssignee === undefined) {
+      return;
+    }
+    setRunning('assign');
+    try {
+      await onBulkAssign(pendingAssignee);
+      setPendingAssignee(undefined);
+    } finally {
+      setRunning(null);
+    }
+  }
+
+  async function runStage(stage: FunnelStage, reason?: LostReason) {
+    setRunning('stage');
+    try {
+      await onBulkStageChange(stage, reason);
+      setPendingStage('');
+      setLostReason('');
+    } finally {
+      setRunning(null);
+    }
+  }
 
   return (
-    <div className='flex flex-col gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 md:flex-row md:items-center md:justify-between'>
+    <div
+      className='mb-3 flex flex-col gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 md:flex-row md:items-center md:justify-between'
+      data-testid='leads-bulk-actions'
+    >
       <p className='text-sm text-slate-700'>{selectedCount} lead(s) selected</p>
-      <div className='grid grid-cols-1 gap-2 md:grid-cols-3'>
+      <div className='grid grid-cols-1 gap-2 sm:grid-cols-2'>
         <Select
           aria-label='Bulk assign assignee'
           value={pendingAssigneeValue}
+          disabled={isRunning}
           onChange={(event) => {
             const value = event.target.value;
             if (!value) {
@@ -59,6 +95,7 @@ export function LeadsBulkActions({
         <Select
           aria-label='Bulk set stage'
           value={pendingStage}
+          disabled={isRunning}
           onChange={(event) => {
             const stage = event.target.value as FunnelStage | '';
             if (!stage) {
@@ -67,43 +104,27 @@ export function LeadsBulkActions({
             }
             setPendingStage(stage);
             if (stage !== 'lost') {
-              onBulkStageChange(stage);
-              setPendingStage('');
-              setLostReason('');
+              void runStage(stage);
             }
           }}
         >
           <option value=''>Set stage...</option>
           {FUNNEL_STAGES.map((stage) => (
             <option key={stage} value={stage}>
-              {stage}
+              {formatEnumLabel(stage)}
             </option>
           ))}
         </Select>
-        <Button
-          type='button'
-          variant='outline'
-          onClick={() => {
-            setPendingAssignee(null);
-          }}
-        >
-          Clear assignee
-        </Button>
       </div>
       {pendingAssignee !== undefined ? (
-        <div className='mt-2 flex flex-wrap gap-2'>
-          <Button
-            type='button'
-            onClick={() => {
-              onBulkAssign(pendingAssignee);
-              setPendingAssignee(undefined);
-            }}
-          >
+        <div className='flex flex-wrap gap-2'>
+          <Button type='button' loading={running === 'assign'} onClick={() => void runAssign()}>
             Confirm assign
           </Button>
           <Button
             type='button'
             variant='ghost'
+            disabled={isRunning}
             onClick={() => {
               setPendingAssignee(undefined);
             }}
@@ -113,10 +134,11 @@ export function LeadsBulkActions({
         </div>
       ) : null}
       {pendingStage === 'lost' ? (
-        <div className='mt-2 space-y-2'>
+        <div className='flex flex-col gap-2 sm:flex-row sm:items-center'>
           <Select
             aria-label='Bulk lost reason'
             value={lostReason}
+            disabled={isRunning}
             onChange={(event) => setLostReason(event.target.value as LostReason | '')}
           >
             <option value=''>Select a lost reason</option>
@@ -130,13 +152,11 @@ export function LeadsBulkActions({
             <Button
               type='button'
               disabled={lostReason === ''}
+              loading={running === 'stage'}
               onClick={() => {
-                if (!lostReason) {
-                  return;
+                if (lostReason) {
+                  void runStage('lost', lostReason);
                 }
-                onBulkStageChange('lost', lostReason);
-                setLostReason('');
-                setPendingStage('');
               }}
             >
               Confirm lost stage
@@ -144,6 +164,7 @@ export function LeadsBulkActions({
             <Button
               type='button'
               variant='ghost'
+              disabled={isRunning}
               onClick={() => {
                 setLostReason('');
                 setPendingStage('');
