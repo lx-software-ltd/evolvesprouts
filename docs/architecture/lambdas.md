@@ -581,9 +581,11 @@ their primary responsibilities.
 - Trigger: SQS queue (`evolvesprouts-sales-daily-plan-queue`) with plain JSON bodies
   `{ "job_id": "<uuid>" }` (not SNS-wrapped)
 - Purpose: generate an org-wide sales plan of the day from open pipeline, unanswered
-  WhatsApp/Meta threads, published catalogue, and recent won/lost leads via OpenRouter
+  WhatsApp/Meta threads, unpaid issued invoices, published catalogue, and recent
+  won/lost leads via OpenRouter
   (`AwsApiProxyFunction`). Persists `sales_daily_plans` and marks
-  `sales_daily_plan_jobs` `succeeded` or `failed`. Does not send messages.
+  `sales_daily_plan_jobs` `succeeded` or `failed`. Does not send messages or
+  payment reminders.
 - DB access: RDS Proxy with IAM auth (`evolvesprouts_admin`)
 - VPC: Yes
 - Permissions: Secrets Manager read for OpenRouter key, Lambda invoke permission
