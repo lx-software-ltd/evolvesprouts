@@ -1,11 +1,10 @@
 'use client';
 
-import type { FormEvent } from 'react';
+import type { ReactNode } from 'react';
 
-import { Button } from '@/components/ui/button';
-import { AdminEditorCard } from '@/components/ui/admin-editor-card';
+import { AdminEditorActions, AdminEditorPanel } from '@/components/ui/admin-editor-panel';
+import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import {
   MANUAL_PAYMENT_FORM_ID,
@@ -23,17 +22,25 @@ export interface ClientInvoicesManualPaymentEditorProps {
   currency: ClientInvoicesPanelCurrency;
   busy: ClientInvoicesPanelBusy;
   manualPayment: ClientInvoicesManualPaymentEditorSlice;
+  /** Extra sections (allocations, allocate form) rendered under the fields. */
+  children?: ReactNode;
 }
 
+/**
+ * Manual inbound payment editor rendered inside the expanded payments-table
+ * row: the draft row creates a payment, an editable record row updates it.
+ * Pick a recent enrollment to attribute the payment, or (none) to record it
+ * without one (for example before allocating to a customized invoice).
+ */
 export function ClientInvoicesManualPaymentEditor({
   currency,
   busy,
   manualPayment,
+  children,
 }: ClientInvoicesManualPaymentEditorProps) {
   const { currencyOptions } = currency;
   const { busyAction, editorBusy } = busy;
   const {
-    createPaymentEnrollmentId,
     setCreatePaymentEnrollmentId,
     createPaymentEnrollmentPickerValue,
     createPaymentAmount,
@@ -49,67 +56,60 @@ export function ClientInvoicesManualPaymentEditor({
     manualPaymentIsUpdate,
     manualPaymentSucceededReadOnly,
     manualPaymentEnrollmentEditLabel,
-    handleCancelManualPayment,
     handleManualPaymentFormSubmit,
+    setPaymentEditorDirty,
     enrollmentPickerRows,
   } = manualPayment;
 
+  const touch = <T,>(setter: (value: T) => void) => {
+    return (value: T) => {
+      setPaymentEditorDirty(true);
+      setter(value);
+    };
+  };
+  const setAmount = touch(setCreatePaymentAmount);
+  const setCurrency = touch(setCreatePaymentCurrency);
+  const setMethod = touch(setCreatePaymentMethod);
+  const setStatus = touch(setCreatePaymentStatus);
+  const setExternalRef = touch(setCreatePaymentExternalRef);
+
+  const isSaving = busyAction === 'create-payment' || busyAction === 'update-payment';
+
   return (
-    <AdminEditorCard
-      title='Customer payment'
-      description='Pick a recent enrollment to attribute this payment, or choose (none) to record a payment with no enrollment (for example before allocating to a customized invoice). With an enrollment, currency must match it; without one, set currency explicitly. Use Pending until funds clear.'
+    <AdminEditorPanel
       actions={
-        <>
-          {manualPaymentIsUpdate ? (
-            <Button
-              type='button'
-              variant='secondary'
-              onClick={handleCancelManualPayment}
-              disabled={editorBusy}
-            >
-              Cancel
-            </Button>
-          ) : null}
-          <Button
-            type='submit'
-            form={MANUAL_PAYMENT_FORM_ID}
-            disabled={editorBusy}
-            loading={busyAction === 'create-payment' || busyAction === 'update-payment'}
-            aria-label={
-              manualPaymentIsUpdate
-                ? 'Update customer payment'
-                : 'Create customer payment'
-            }
-          >
-            {manualPaymentIsUpdate ? 'Update payment' : 'Create payment'}
-          </Button>
-        </>
+        <AdminEditorActions
+          mode={manualPaymentIsUpdate ? 'edit' : 'create'}
+          formId={MANUAL_PAYMENT_FORM_ID}
+          isSaving={isSaving}
+          submitDisabled={editorBusy}
+          submitLabel={manualPaymentIsUpdate ? 'Update customer payment' : 'Create customer payment'}
+        />
       }
     >
       <form
         id={MANUAL_PAYMENT_FORM_ID}
-        className='flex max-w-full flex-col gap-3'
+        className='space-y-4'
         onSubmit={(e) => void handleManualPaymentFormSubmit(e)}
       >
-        <div className='grid gap-3 min-[780px]:grid-cols-2 min-[780px]:items-end'>
-          <div className='min-w-0'>
+        <AdminFieldGrid columns={4}>
+          <AdminField
+            label='Enrollment'
+            htmlFor='billing-create-pay-enrollment-select'
+            span={2}
+            hint={
+              manualPaymentIsUpdate
+                ? undefined
+                : 'With an enrollment the currency follows it; without one, set the currency explicitly.'
+            }
+          >
             {manualPaymentIsUpdate ? (
-              <span className='block text-sm font-medium text-slate-800'>
-                Enrollment
-              </span>
-            ) : (
-              <Label htmlFor='billing-create-pay-enrollment-select'>
-                Enrollment
-              </Label>
-            )}
-            {manualPaymentIsUpdate ? (
-              <div className='mt-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800'>
-                <p className='m-0'>
-                  {manualPaymentEnrollmentEditLabel !== ''
-                    ? manualPaymentEnrollmentEditLabel
-                    : '—'}
-                </p>
-              </div>
+              <Input
+                id='billing-create-pay-enrollment-select'
+                className='mt-1 w-full'
+                value={manualPaymentEnrollmentEditLabel !== '' ? manualPaymentEnrollmentEditLabel : '—'}
+                readOnly
+              />
             ) : (
               <Select
                 id='billing-create-pay-enrollment-select'
@@ -117,13 +117,12 @@ export function ClientInvoicesManualPaymentEditor({
                 value={createPaymentEnrollmentPickerValue}
                 onChange={(e) => {
                   const v = e.target.value;
+                  setPaymentEditorDirty(true);
                   setCreatePaymentEnrollmentId(v);
                   if (v === NO_ENROLLMENT_OPTION_VALUE) {
                     return;
                   }
-                  const row = enrollmentPickerRows.find(
-                    (r) => r.enrollmentId === v,
-                  );
+                  const row = enrollmentPickerRows.find((r) => r.enrollmentId === v);
                   if (row?.currency) {
                     setCreatePaymentCurrency(row.currency);
                   }
@@ -131,9 +130,7 @@ export function ClientInvoicesManualPaymentEditor({
                 disabled={editorBusy}
               >
                 <option value=''>Choose from recent enrollments…</option>
-                <option value={NO_ENROLLMENT_OPTION_VALUE}>
-                  (none — record without enrollment)
-                </option>
+                <option value={NO_ENROLLMENT_OPTION_VALUE}>(none — record without enrollment)</option>
                 {enrollmentPickerRows.map((row) => (
                   <option key={row.enrollmentId} value={row.enrollmentId}>
                     {formatRecentEnrollmentPaymentSelectLabel(row)}
@@ -141,43 +138,35 @@ export function ClientInvoicesManualPaymentEditor({
                 ))}
               </Select>
             )}
-          </div>
-          <div className='min-w-0'>
-            <Label htmlFor='billing-create-pay-status'>Payment status</Label>
+          </AdminField>
+          <AdminField label='Payment status' htmlFor='billing-create-pay-status'>
             <Select
               id='billing-create-pay-status'
               className='mt-1 w-full min-w-0'
               value={createPaymentStatus}
-              onChange={(e) =>
-                setCreatePaymentStatus(
-                  e.target.value as 'pending' | 'succeeded',
-                )
-              }
+              onChange={(e) => setStatus(e.target.value as 'pending' | 'succeeded')}
               disabled={editorBusy || manualPaymentSucceededReadOnly}
             >
               <option value='pending'>Pending (awaiting clearance)</option>
               <option value='succeeded'>Succeeded (funds received)</option>
             </Select>
-          </div>
-        </div>
-        <div className='grid gap-3 min-[780px]:grid-cols-4 min-[780px]:items-end'>
-          <div className='min-w-0'>
-            <Label htmlFor='billing-create-pay-amount'>Amount</Label>
+          </AdminField>
+          <AdminField label='Amount' htmlFor='billing-create-pay-amount'>
             <Input
               id='billing-create-pay-amount'
               value={createPaymentAmount}
-              onChange={(e) => setCreatePaymentAmount(e.target.value)}
-              className='mt-1 w-full min-w-0 max-w-xs min-[780px]:max-w-none'
+              onChange={(e) => setAmount(e.target.value)}
+              className='mt-1 w-full min-w-0 tabular-nums'
+              inputMode='decimal'
               disabled={editorBusy || manualPaymentSucceededReadOnly}
             />
-          </div>
-          <div className='min-w-0'>
-            <Label htmlFor='billing-create-pay-currency'>Currency</Label>
+          </AdminField>
+          <AdminField label='Currency' htmlFor='billing-create-pay-currency'>
             <Select
               id='billing-create-pay-currency'
-              className='mt-1 w-full min-w-0 max-w-xs min-[780px]:max-w-none'
+              className='mt-1 w-full min-w-0'
               value={createPaymentCurrency}
-              onChange={(e) => setCreatePaymentCurrency(e.target.value)}
+              onChange={(e) => setCurrency(e.target.value)}
               disabled={editorBusy || manualPaymentSucceededReadOnly}
             >
               {currencyOptions.map((option) => (
@@ -186,14 +175,13 @@ export function ClientInvoicesManualPaymentEditor({
                 </option>
               ))}
             </Select>
-          </div>
-          <div className='min-w-0'>
-            <Label htmlFor='billing-create-pay-method'>Method</Label>
+          </AdminField>
+          <AdminField label='Method' htmlFor='billing-create-pay-method'>
             <Select
               id='billing-create-pay-method'
               className='mt-1 w-full min-w-0'
               value={createPaymentMethod}
-              onChange={(e) => setCreatePaymentMethod(e.target.value)}
+              onChange={(e) => setMethod(e.target.value)}
               disabled={editorBusy}
             >
               <option value='bank_transfer'>Bank transfer</option>
@@ -204,21 +192,19 @@ export function ClientInvoicesManualPaymentEditor({
               <option value='adjustment'>Adjustment</option>
               <option value='free'>Free (zero amount)</option>
             </Select>
-          </div>
-          <div className='min-w-0'>
-            <Label htmlFor='billing-create-pay-external-ref'>
-              Bank / external reference
-            </Label>
+          </AdminField>
+          <AdminField label='Bank / external reference' htmlFor='billing-create-pay-external-ref' span={2}>
             <Input
               id='billing-create-pay-external-ref'
               value={createPaymentExternalRef}
-              onChange={(e) => setCreatePaymentExternalRef(e.target.value)}
+              onChange={(e) => setExternalRef(e.target.value)}
               className='mt-1 w-full min-w-0'
               disabled={editorBusy}
             />
-          </div>
-        </div>
+          </AdminField>
+        </AdminFieldGrid>
       </form>
-    </AdminEditorCard>
+      {children}
+    </AdminEditorPanel>
   );
 }

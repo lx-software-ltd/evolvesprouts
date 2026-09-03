@@ -24,8 +24,12 @@ export function useClientInvoicesDraft({
   billingRefresh,
 }: ClientInvoicesDraftInput) {
   const { setActionMessage, setActionError, setBusy } = shared;
-  const { setSelectedInvoiceId, setAllocateInvoiceId, setAllocateLineId } =
-    selection;
+  const {
+    setSelectedInvoiceId,
+    setInvoiceEditorDirty,
+    setAllocateInvoiceId,
+    setAllocateLineId,
+  } = selection;
 
   const [draftCreationMode, setDraftCreationMode] = useState<
     'enrollment' | 'customized'
@@ -223,6 +227,10 @@ export function useClientInvoicesDraft({
         body.invoiceDate = draftInvoiceDate.trim();
       }
       const result = await createDraftInvoice(body);
+      setSelectedEnrollmentIds(new Set());
+      setLineOverrideByEnrollmentId({});
+      // The draft row is replaced by the created invoice; nothing left to keep.
+      setInvoiceEditorDirty(false);
       setSelectedInvoiceId(result.invoiceId);
       setAllocateInvoiceId('');
       setAllocateLineId('');
@@ -243,6 +251,28 @@ export function useClientInvoicesDraft({
       setBusy(null);
     }
   };
+
+  const handleCustomizedCreated = useCallback(
+    async (invoiceId: string) => {
+      setActionError('');
+      setInvoiceEditorDirty(false);
+      setSelectedInvoiceId(invoiceId);
+      setAllocateInvoiceId('');
+      setAllocateLineId('');
+      setActionMessage(`Draft invoice created: ${invoiceId}`);
+      setDraftInvoiceDate(localTodayYmd());
+      await billingRefresh.refreshBillingLists();
+    },
+    [
+      billingRefresh,
+      setActionError,
+      setActionMessage,
+      setAllocateInvoiceId,
+      setAllocateLineId,
+      setInvoiceEditorDirty,
+      setSelectedInvoiceId,
+    ],
+  );
 
   return {
     draftCreationMode,
@@ -268,6 +298,7 @@ export function useClientInvoicesDraft({
     draftSelectionIssue,
     draftAmountIssue,
     handleCreateDraft,
+    handleCustomizedCreated,
     loadEnrollmentPicker,
   };
 }

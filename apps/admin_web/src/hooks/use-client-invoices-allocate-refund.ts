@@ -53,7 +53,6 @@ export function useClientInvoicesAllocateRefund({
   const [allocateInvoiceLinesError, setAllocateInvoiceLinesError] =
     useState('');
 
-  const [refundInvoiceId, setRefundInvoiceId] = useState('');
   const [refundPaymentSelectId, setRefundPaymentSelectId] = useState('');
   const [refundPaymentsForInvoice, setRefundPaymentsForInvoice] = useState<
     CustomerPaymentSummary[]
@@ -68,16 +67,39 @@ export function useClientInvoicesAllocateRefund({
   const [refundStripeId, setRefundStripeId] = useState('');
 
   const lastPaymentSeedIdRef = useRef<string | null>(null);
+  const lastAllocateSeedInvoiceIdRef = useRef<string | null>(null);
 
+  // Refunds live in the expanded invoice's row, so the refund target is always
+  // that invoice (when issued); there is no separate invoice picker.
+  const refundInvoiceId = useMemo(() => {
+    if (!selectedInvoiceId) {
+      return '';
+    }
+    const inv = invoices.find((i) => i.id === selectedInvoiceId);
+    return inv?.status === 'issued' ? selectedInvoiceId : '';
+  }, [selectedInvoiceId, invoices]);
+
+  // Expanding an issued invoice pre-fills the allocation target so opening a
+  // payment afterwards allocates to it by default. Seed once per invoice so a
+  // list refetch does not wipe a line the operator already picked.
   useEffect(() => {
     if (!selectedInvoiceId) {
+      lastAllocateSeedInvoiceIdRef.current = null;
+      return;
+    }
+    if (lastAllocateSeedInvoiceIdRef.current === selectedInvoiceId) {
       return;
     }
     const inv = invoices.find((i) => i.id === selectedInvoiceId);
-    if (inv?.status === 'issued') {
-      setRefundInvoiceId(selectedInvoiceId);
+    if (!inv) {
+      return;
     }
-  }, [selectedInvoiceId, invoices]);
+    lastAllocateSeedInvoiceIdRef.current = selectedInvoiceId;
+    if (inv.status === 'issued') {
+      setAllocateInvoiceId(selectedInvoiceId);
+      setAllocateLineId('');
+    }
+  }, [selectedInvoiceId, invoices, setAllocateInvoiceId, setAllocateLineId]);
 
   const allocateLinesOrdered = useMemo(
     () =>
@@ -183,27 +205,6 @@ export function useClientInvoicesAllocateRefund({
       currencySelectValue(cur, currencyOptions, defaultCurrency),
     );
   }, [selectedId, detail, currencyOptions, defaultCurrency]);
-
-  useEffect(() => {
-    if (!selectedId || !detail) {
-      return;
-    }
-    const refs = detail.allocationInvoices ?? [];
-    if (refs.length === 0) {
-      return;
-    }
-    const ids = new Set(refs.map((r) => r.invoiceId));
-    setRefundInvoiceId((prev) => {
-      if (prev && ids.has(prev)) {
-        return prev;
-      }
-      const preferred = allocateInvoiceId.trim();
-      if (preferred && ids.has(preferred)) {
-        return preferred;
-      }
-      return refs[0]?.invoiceId ?? '';
-    });
-  }, [selectedId, detail, allocateInvoiceId]);
 
   useEffect(() => {
     const trimmed = refundInvoiceId.trim();
@@ -378,7 +379,6 @@ export function useClientInvoicesAllocateRefund({
     allocateLinesOrdered,
     allocateLineDescriptionCounts,
     refundInvoiceId,
-    setRefundInvoiceId,
     refundPaymentSelectId,
     setRefundPaymentSelectId,
     refundPaymentsLoading,
