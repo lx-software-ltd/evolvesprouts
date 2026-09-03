@@ -15,7 +15,7 @@ import { StatusBanner } from '@/components/status-banner';
 import { AdminTabStrip } from '@/components/ui/admin-tab-strip';
 import { type SalesView, useSalesPage } from '@/hooks/use-sales-page';
 import { formatBulkLeadFailureSummary, runBulkLeadOps } from '@/lib/bulk-lead-ops';
-import { updateLead } from '@/lib/leads-api';
+import { mergeLeads, updateLead } from '@/lib/leads-api';
 
 const AnalyticsView = dynamic(
   () => import('./analytics-view').then((module) => module.AnalyticsView),
@@ -131,6 +131,25 @@ export function SalesPage() {
             await refreshAfterBulk();
             if (failed.length > 0) {
               setBulkActionError(formatBulkLeadFailureSummary(failed));
+            }
+          }}
+          onBulkMerge={async (leadIds, keeperLeadId) => {
+            setBulkActionError('');
+            try {
+              await mergeLeads({ leadIds, keeperLeadId });
+              if (
+                state.expanded.expandedId &&
+                leadIds.includes(state.expanded.expandedId) &&
+                state.expanded.expandedId !== keeperLeadId
+              ) {
+                state.expanded.expand(keeperLeadId);
+              }
+              await refreshAfterBulk();
+            } catch (error) {
+              const message =
+                error instanceof Error ? error.message : 'Lead merge failed. Try again.';
+              setBulkActionError(message);
+              throw error;
             }
           }}
           renderDetail={(lead) => (

@@ -41,6 +41,7 @@ export interface LeadsTableProps {
     stage: FunnelStage,
     lostReason?: LostReason
   ) => Promise<void> | void;
+  onBulkMerge: (leadIds: string[], keeperLeadId: string) => Promise<void> | void;
   /** Editor for the open row (draft or lead); mounted only while that row is expanded. */
   renderDetail: (lead: LeadSummary | null) => ReactNode;
 }
@@ -64,6 +65,7 @@ export function LeadsTable({
   onFilterChange,
   onBulkAssign,
   onBulkStageChange,
+  onBulkMerge,
   renderDetail,
 }: LeadsTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -72,6 +74,10 @@ export function LeadsTable({
   const rows = useMemo(
     () => (pinnedLead && !leads.some((lead) => lead.id === pinnedLead.id) ? [pinnedLead, ...leads] : leads),
     [leads, pinnedLead]
+  );
+  const selectedLeads = useMemo(
+    () => rows.filter((lead) => selectedSet.has(lead.id)),
+    [rows, selectedSet]
   );
   const allChecked = rows.length > 0 && rows.every((lead) => selectedSet.has(lead.id));
 
@@ -111,6 +117,7 @@ export function LeadsTable({
             />
             <LeadsBulkActions
               selectedCount={selectedIds.length}
+              selectedLeads={selectedLeads}
               users={users}
               onBulkAssign={async (assignedTo) => {
                 await onBulkAssign(selectedIds, assignedTo);
@@ -118,6 +125,10 @@ export function LeadsTable({
               }}
               onBulkStageChange={async (stage, lostReason) => {
                 await onBulkStageChange(selectedIds, stage, lostReason);
+                setSelectedIds([]);
+              }}
+              onBulkMerge={async (leadIds, keeperLeadId) => {
+                await onBulkMerge(leadIds, keeperLeadId);
                 setSelectedIds([]);
               }}
             />

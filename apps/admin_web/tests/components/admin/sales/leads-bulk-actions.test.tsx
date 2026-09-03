@@ -3,6 +3,66 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { LeadsBulkActions } from '@/components/admin/sales/leads-bulk-actions';
+import type { LeadSummary } from '@/types/leads';
+
+const sampleLeads: LeadSummary[] = [
+  {
+    id: 'lead-1',
+    contact: {
+      id: 'contact-1',
+      firstName: 'Alex',
+      lastName: 'One',
+      email: 'alex@example.com',
+      phoneRegion: null,
+      phoneNationalNumber: null,
+      phoneE164: null,
+      instagramHandle: null,
+      source: 'manual',
+      sourceDetail: null,
+      contactType: 'parent',
+      relationshipType: 'prospect',
+    },
+    leadType: 'consultation',
+    funnelStage: 'new',
+    assignedTo: null,
+    createdAt: null,
+    updatedAt: null,
+    convertedAt: null,
+    lostAt: null,
+    lostReason: null,
+    daysInStage: 0,
+    lastActivityAt: null,
+    tags: [],
+  },
+  {
+    id: 'lead-2',
+    contact: {
+      id: 'contact-2',
+      firstName: 'Blake',
+      lastName: 'Two',
+      email: 'blake@example.com',
+      phoneRegion: null,
+      phoneNationalNumber: null,
+      phoneE164: null,
+      instagramHandle: null,
+      source: 'manual',
+      sourceDetail: null,
+      contactType: 'parent',
+      relationshipType: 'prospect',
+    },
+    leadType: 'other',
+    funnelStage: 'contacted',
+    assignedTo: null,
+    createdAt: null,
+    updatedAt: null,
+    convertedAt: null,
+    lostAt: null,
+    lostReason: null,
+    daysInStage: 1,
+    lastActivityAt: null,
+    tags: [],
+  },
+];
 
 describe('LeadsBulkActions', () => {
   it('requires confirmation before bulk assign', async () => {
@@ -12,9 +72,11 @@ describe('LeadsBulkActions', () => {
     render(
       <LeadsBulkActions
         selectedCount={2}
+        selectedLeads={sampleLeads}
         users={[{ sub: 'user-1', name: 'Alex', email: 'alex@example.com' }]}
         onBulkAssign={onBulkAssign}
         onBulkStageChange={vi.fn()}
+        onBulkMerge={vi.fn()}
       />
     );
 
@@ -34,9 +96,11 @@ describe('LeadsBulkActions', () => {
     render(
       <LeadsBulkActions
         selectedCount={1}
+        selectedLeads={[sampleLeads[0]!]}
         users={[{ sub: 'user-1', name: 'Alex', email: 'alex@example.com' }]}
         onBulkAssign={vi.fn()}
         onBulkStageChange={vi.fn()}
+        onBulkMerge={vi.fn()}
       />
     );
 
@@ -53,9 +117,11 @@ describe('LeadsBulkActions', () => {
     render(
       <LeadsBulkActions
         selectedCount={2}
+        selectedLeads={sampleLeads}
         users={[{ sub: 'user-1', name: 'Alex', email: 'alex@example.com' }]}
         onBulkAssign={vi.fn()}
         onBulkStageChange={onBulkStageChange}
+        onBulkMerge={vi.fn()}
       />
     );
 
@@ -70,5 +136,28 @@ describe('LeadsBulkActions', () => {
     await user.click(screen.getByRole('button', { name: 'Confirm lost stage' }));
 
     expect(onBulkStageChange).toHaveBeenCalledWith('lost', 'price_too_high');
+  });
+
+  it('merges selected leads after choosing a keeper', async () => {
+    const user = userEvent.setup();
+    const onBulkMerge = vi.fn();
+
+    render(
+      <LeadsBulkActions
+        selectedCount={2}
+        selectedLeads={sampleLeads}
+        users={[{ sub: 'user-1', name: 'Alex', email: 'alex@example.com' }]}
+        onBulkAssign={vi.fn()}
+        onBulkStageChange={vi.fn()}
+        onBulkMerge={onBulkMerge}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Merge leads' }));
+    await user.click(screen.getByRole('radio', { name: /Blake Two/i }));
+    const confirmMerge = screen.getAllByRole('button', { name: 'Merge leads' })[1];
+    await user.click(confirmMerge!);
+
+    expect(onBulkMerge).toHaveBeenCalledWith(['lead-1', 'lead-2'], 'lead-2');
   });
 });
