@@ -109,57 +109,61 @@ export function LeadsBulkActions({
             <Button
               type='button'
               variant='outline'
-              className='w-full sm:w-auto'
+              className='w-full shrink-0 self-start whitespace-nowrap sm:w-auto sm:self-auto'
               disabled={isRunning}
               onClick={() => setMergeOpen(true)}
             >
               Merge leads
             </Button>
           ) : null}
-          <Select
-            aria-label='Bulk assign assignee'
-            value={pendingAssigneeValue}
-            disabled={isRunning}
-            onChange={(event) => {
-              const value = event.target.value;
-              if (!value) {
-                setPendingAssignee(undefined);
-                return;
-              }
-              setPendingAssignee(value === '__none__' ? null : value);
-            }}
-          >
-            <option value=''>Assign to...</option>
-            <option value='__none__'>Unassign</option>
-            {users.map((user) => (
-              <option key={user.sub} value={user.sub}>
-                {user.name || user.email || user.sub}
-              </option>
-            ))}
-          </Select>
-          <Select
-            aria-label='Bulk set stage'
-            value={pendingStage}
-            disabled={isRunning}
-            onChange={(event) => {
-              const stage = event.target.value as FunnelStage | '';
-              if (!stage) {
-                setPendingStage('');
-                return;
-              }
-              setPendingStage(stage);
-              if (stage !== 'lost') {
-                void runStage(stage);
-              }
-            }}
-          >
-            <option value=''>Set stage...</option>
-            {FUNNEL_STAGES.map((stage) => (
-              <option key={stage} value={stage}>
-                {formatEnumLabel(stage)}
-              </option>
-            ))}
-          </Select>
+          <div className='grid w-full shrink-0 grid-cols-1 gap-2 sm:w-auto sm:grid-cols-2'>
+            <Select
+              aria-label='Bulk assign assignee'
+              className='sm:w-40'
+              value={pendingAssigneeValue}
+              disabled={isRunning}
+              onChange={(event) => {
+                const value = event.target.value;
+                if (!value) {
+                  setPendingAssignee(undefined);
+                  return;
+                }
+                setPendingAssignee(value === '__none__' ? null : value);
+              }}
+            >
+              <option value=''>Assign to...</option>
+              <option value='__none__'>Unassign</option>
+              {users.map((user) => (
+                <option key={user.sub} value={user.sub}>
+                  {user.name || user.email || user.sub}
+                </option>
+              ))}
+            </Select>
+            <Select
+              aria-label='Bulk set stage'
+              className='sm:w-40'
+              value={pendingStage}
+              disabled={isRunning}
+              onChange={(event) => {
+                const stage = event.target.value as FunnelStage | '';
+                if (!stage) {
+                  setPendingStage('');
+                  return;
+                }
+                setPendingStage(stage);
+                if (stage !== 'lost') {
+                  void runStage(stage);
+                }
+              }}
+            >
+              <option value=''>Set stage...</option>
+              {FUNNEL_STAGES.map((stage) => (
+                <option key={stage} value={stage}>
+                  {formatEnumLabel(stage)}
+                </option>
+              ))}
+            </Select>
+          </div>
         </div>
         {pendingAssignee !== undefined ? (
           <div className='flex flex-wrap gap-2'>
