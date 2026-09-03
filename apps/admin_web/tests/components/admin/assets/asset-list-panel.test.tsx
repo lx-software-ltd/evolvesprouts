@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AssetListPanel } from '@/components/admin/assets/asset-list-panel';
 import { DRAFT_RECORD_ID } from '@/hooks/use-expanded-record';
-import { CLIENT_DOCUMENT_ASSET_TAG } from '@/types/assets';
+import { CLIENT_DOCUMENT_ASSET_TAG, CUSTOMER_INVOICE_ASSET_TAG } from '@/types/assets';
 import { createAdminAssetFixture } from '../../../fixtures/assets';
 
 const { mockGetUserAssetDownloadUrl } = vi.hoisted(() => ({
@@ -91,6 +91,18 @@ describe('AssetListPanel', () => {
     expect(screen.getByLabelText('Tags')).toBeInTheDocument();
     expect(screen.getByRole('table')).toBeInTheDocument();
     expect(screen.queryByTestId('asset-detail')).not.toBeInTheDocument();
+  });
+
+  it('notifies the parent when the tag filter changes', async () => {
+    const user = userEvent.setup();
+    const { onTagNameChange } = renderPanel({
+      linkedTagNames: [CLIENT_DOCUMENT_ASSET_TAG, CUSTOMER_INVOICE_ASSET_TAG],
+      filters: { query: '', visibility: '', tagName: CLIENT_DOCUMENT_ASSET_TAG },
+    });
+
+    await user.selectOptions(screen.getByLabelText('Tags'), CUSTOMER_INVOICE_ASSET_TAG);
+
+    expect(onTagNameChange).toHaveBeenCalledWith(CUSTOMER_INVOICE_ASSET_TAG);
   });
 
   it('opens asset in a new tab from the Operations column', async () => {
