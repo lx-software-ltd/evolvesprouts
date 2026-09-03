@@ -72,8 +72,8 @@ export function SalesConfigurationView({
       title='Sales configuration'
       description='Choose who receives new leads, assignment email notifications, and Helper Detector.'
       actions={
-        <Button type='submit' form={SETTINGS_FORM_ID} disabled={isLoading || isSaving}>
-          {isSaving ? 'Saving...' : 'Save'}
+        <Button type='submit' form={SETTINGS_FORM_ID} disabled={isLoading} loading={isSaving}>
+          Save
         </Button>
       }
     >

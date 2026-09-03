@@ -243,16 +243,12 @@ export function VenuesPanel({
             <Button
               type='button'
               variant='secondary'
-              disabled={
-                isSaving ||
-                isGeocoding ||
-                !areasReady ||
-                !areaId ||
-                !address.trim()
-              }
+              disabled={isSaving || !areasReady || !areaId || !address.trim()}
+              loading={isGeocoding}
+              loadingLabel='Looking up…'
               onClick={() => void fillCoordinatesFromAddress()}
             >
-              {isGeocoding ? 'Looking up…' : 'Fill coordinates from address'}
+              Fill coordinates from address
             </Button>
             {editorMode === 'edit' ? (
               <Button type='button' variant='secondary' onClick={resetCreateForm} disabled={isSaving}>

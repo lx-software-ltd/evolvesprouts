@@ -96,11 +96,12 @@ export function InstanceDetailPanel({
                     panel.eventPriceMissing ||
                     panel.cohortInvalid
                   }
+                  loading={isLoading}
                   onClick={() => {
                     void panel.runUpdate();
                   }}
                 >
-                  {isLoading ? 'Updating...' : 'Update instance'}
+                  Update instance
                 </Button>
               </>
             ) : (

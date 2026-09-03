@@ -230,20 +230,12 @@ export function AssetEditorPanel({
     : 'Create a new PDF asset or select a row below to edit. Upload starts automatically with a presigned URL.';
 
   const submitLabel = useMemo(() => {
-    if (isSavingAsset) {
-      if (!isEditMode) {
-        return 'Creating...';
-      }
-      if (!replacementFile) {
-        return 'Saving...';
-      }
-      return hasMetadataChangesForSubmit ? 'Save and replace...' : 'Replacing...';
-    }
     if (isEditMode && replacementFile) {
       return hasMetadataChangesForSubmit ? 'Save and replace' : 'Replace file';
     }
     return isEditMode ? 'Save changes' : 'Create asset';
-  }, [isEditMode, isSavingAsset, replacementFile, hasMetadataChangesForSubmit]);
+  }, [isEditMode, replacementFile, hasMetadataChangesForSubmit]);
+  const submitLoadingLabel = isEditMode && replacementFile ? 'Replacing…' : 'Saving…';
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -383,11 +375,9 @@ export function AssetEditorPanel({
           <Button
             type='submit'
             form={ASSET_EDITOR_FORM_ID}
-            disabled={
-              isSavingAsset ||
-              isDeletingCurrentAsset ||
-              (hasPendingUpload && uploadState === 'failed')
-            }
+            disabled={isDeletingCurrentAsset || (hasPendingUpload && uploadState === 'failed')}
+            loading={isSavingAsset}
+            loadingLabel={submitLoadingLabel}
           >
             {submitLabel}
           </Button>

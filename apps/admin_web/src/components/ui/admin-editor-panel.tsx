@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 
 import { clsx } from 'clsx';
 
-import { Button } from './button';
+import { BUTTON_DEFAULT_LOADING_LABEL, Button } from './button';
 
 export interface AdminEditorPanelProps {
   /** Field area, usually `AdminFieldGrid` rows and `AdminDisclosure` sections. */
@@ -59,7 +59,7 @@ export function AdminEditorActions({
   isSaving = false,
   submitDisabled = false,
   submitLabel,
-  savingLabel = 'Saving...',
+  savingLabel = BUTTON_DEFAULT_LOADING_LABEL,
   children,
 }: AdminEditorActionsProps) {
   const label = submitLabel ?? (mode === 'create' ? 'Create' : 'Update');
@@ -69,9 +69,11 @@ export function AdminEditorActions({
         type={formId ? 'submit' : 'button'}
         form={formId}
         onClick={formId ? undefined : onSubmit}
-        disabled={isSaving || submitDisabled}
+        disabled={submitDisabled}
+        loading={isSaving}
+        loadingLabel={savingLabel}
       >
-        {isSaving ? savingLabel : label}
+        {label}
       </Button>
       {children}
     </>

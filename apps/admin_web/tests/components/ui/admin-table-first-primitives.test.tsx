@@ -90,7 +90,10 @@ describe('AdminEditorPanel / AdminEditorActions', () => {
         <p>body</p>
       </AdminEditorPanel>
     );
-    expect(screen.getByRole('button', { name: 'Saving...' })).toBeDisabled();
+    const saving = screen.getByRole('button', { name: 'Saving…' });
+    expect(saving).toBeDisabled();
+    expect(saving).toHaveAttribute('aria-busy', 'true');
+    expect(saving.querySelector('svg.animate-spin')).not.toBeNull();
     expect(screen.getAllByRole('button')).toHaveLength(1);
   });
 });

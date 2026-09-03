@@ -74,17 +74,14 @@ export function ClientInvoicesManualPaymentEditor({
             type='submit'
             form={MANUAL_PAYMENT_FORM_ID}
             disabled={editorBusy}
+            loading={busyAction === 'create-payment' || busyAction === 'update-payment'}
             aria-label={
               manualPaymentIsUpdate
                 ? 'Update customer payment'
                 : 'Create customer payment'
             }
           >
-            {busyAction === 'create-payment' || busyAction === 'update-payment'
-              ? 'Saving…'
-              : manualPaymentIsUpdate
-                ? 'Update payment'
-                : 'Create payment'}
+            {manualPaymentIsUpdate ? 'Update payment' : 'Create payment'}
           </Button>
         </>
       }

@@ -338,10 +338,11 @@ export function EnrollmentListPanel({
             {isEditMode ? (
               <Button
                 type='button'
-                disabled={isMutating || !selectedEnrollment}
+                disabled={!selectedEnrollment}
+                loading={isMutating}
                 onClick={() => void handleSave()}
               >
-                {isMutating ? 'Updating...' : 'Update enrollment'}
+                Update enrollment
               </Button>
             ) : (
               <Button

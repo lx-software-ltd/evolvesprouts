@@ -391,8 +391,9 @@ describe('ExpensesListPanel', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Void expense' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Voiding…' })).toBeDisabled();
     });
+    expect(screen.queryByRole('button', { name: 'Void expense' })).toBeNull();
 
     resolveVoid!();
     await confirmPromise;

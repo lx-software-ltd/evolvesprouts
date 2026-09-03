@@ -125,8 +125,14 @@ export function AdminRecordTable({
       ) : null}
       {hasMore && onLoadMore ? (
         <div className='mt-3'>
-          <Button type='button' variant='outline' onClick={() => void onLoadMore()} disabled={isLoadingMore}>
-            {isLoadingMore ? 'Loading...' : 'Load more'}
+          <Button
+            type='button'
+            variant='outline'
+            onClick={() => void onLoadMore()}
+            loading={isLoadingMore}
+            loadingLabel='Loading…'
+          >
+            Load more
           </Button>
         </div>
       ) : null}
