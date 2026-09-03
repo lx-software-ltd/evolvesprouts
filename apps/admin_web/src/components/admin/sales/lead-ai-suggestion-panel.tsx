@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { StatusBanner } from '@/components/status-banner';
-import { AdminEditorCard } from '@/components/ui/admin-editor-card';
 import { Button } from '@/components/ui/button';
 import { AdminApiError } from '@/lib/api-admin-client';
 import {
@@ -111,18 +110,13 @@ export function LeadAiSuggestionPanel({ leadId }: LeadAiSuggestionPanelProps) {
   }
 
   const primaryLabel = suggestion ? 'Refresh suggestion' : 'Generate suggestion';
-  const busy = isLoading || isGenerating;
 
   return (
-    <AdminEditorCard
-      title='AI Suggestion'
-      description='Advisor comment on how to close this lead, including message-specific follow-ups. Suggestions are not sent automatically.'
-      actions={
-        <Button type='button' onClick={() => void handleGenerate()} disabled={busy}>
-          {isGenerating ? 'Generating…' : primaryLabel}
-        </Button>
-      }
-    >
+    <div className='space-y-4' data-testid='lead-ai-suggestion'>
+      <p className='text-xs text-slate-500'>
+        Advisor comment on how to close this lead, including message-specific follow-ups.
+        Suggestions are not sent automatically.
+      </p>
       {error ? (
         <StatusBanner variant='error' title='AI suggestion'>
           {error}
@@ -226,6 +220,18 @@ export function LeadAiSuggestionPanel({ leadId }: LeadAiSuggestionPanelProps) {
           </p>
         </div>
       ) : null}
-    </AdminEditorCard>
+
+      <div className='flex flex-wrap items-center justify-start gap-2'>
+        <Button
+          type='button'
+          onClick={() => void handleGenerate()}
+          disabled={isLoading}
+          loading={isGenerating}
+          loadingLabel='Generating…'
+        >
+          {primaryLabel}
+        </Button>
+      </div>
+    </div>
   );
 }
