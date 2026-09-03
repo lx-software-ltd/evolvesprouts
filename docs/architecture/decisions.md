@@ -451,10 +451,12 @@ a pinned row, and collapses unresolvable ids.
 - Legacy screens still on `AdminEditorCard` + `PaginatedTableCard` are
   migrated screen by screen; new screens must not use them. Migrated so far:
   Contacts (contacts, families, organisations tabs), Tags, Calendar manual
-  blocks, Audit (audit logs and API keys), and Assets. The Mailchimp tab, a
-  tool panel with no table, follows the same shape: untitled `Card`,
-  `AdminDisclosure` sections, no manual refresh (status refetches after each
-  run). Still on the legacy layout: Finance, Sales, Services, and Website.
+  blocks, Audit (audit logs and API keys), Assets, Finance (expenses,
+  vendors, tax, client invoices and payments), and Sales (pipeline, WhatsApp /
+  Instagram / Messenger inboxes, configuration, analytics filters). The
+  Mailchimp tab, a tool panel with no table, follows the same shape: untitled
+  `Card`, `AdminDisclosure` sections, no manual refresh (status refetches
+  after each run). Still on the legacy layout: Services and Website.
 - Variations the migrated screens establish:
   - **Read-only records** (audit log entries, issued API keys) expand into a
     detail panel laid out on the same `AdminFieldGrid` with `readOnly`
@@ -482,6 +484,41 @@ a pinned row, and collapses unresolvable ids.
     removed so the four remaining filters sit on one line.
   - Short single-value notes (calendar block note) use a one-line `Input`;
     `Textarea` is reserved for multi-paragraph content such as contact notes.
+  - **Two record tables on one view** (client invoices and payments) each
+    own a `useExpandedRecord` with a distinct parameter (`?invoice=`,
+    `?payment=`) so a deep link can open one row in each.
+  - **Imports attached to a table** (combined-PDF expenses, WhatsApp chat
+    export) are an `AdminDisclosure` between the filter bar and the table,
+    collapsed by default, with the form on `AdminFieldGrid`, the submit on
+    `Button loading`, and the latest job status inside the accordion. A
+    one-click import (Meta `Import recent history`) is a `Button` in the
+    filter bar's trailing slot; its status banner renders above the table.
+    The earlier `<details>`-based `AdminCollapsibleSection` and the toolbar
+    button with a hand-rolled `Importing…` ternary are gone from these
+    screens.
+  - **Read-only threads** (inbox conversations) expand into the message list
+    beneath the row (`?conversation=<id>`), newest first, and omit the
+    Operations column because the only link (the contact) lives in the Name
+    cell. Party deep links (`?contact=`, `?family=`, `?organization=`)
+    auto-expand the first conversation once per party through
+    `useAutoExpandPartyConversation`; collapsing does not re-open it. All
+    three inboxes share `InboxConversationsTable` and
+    `InboxConversationThread`.
+  - **Lead editor**: the pipeline row expands into contact and lead fields on
+    the 4-column grid, then disclosures for Notes, AI suggestion, Activity,
+    and Conversation. Notes, AI, and Conversation mount their content only
+    when opened, so expanding a lead costs one detail request; Activity shows
+    the event count (or `Loading…`) in its summary. The bulk toolbar appears
+    between the filters and the table once rows are checked, the checkbox
+    cell stops row toggling, and a deep-linked lead outside the loaded pages
+    is fetched and pinned above the list.
+  - **Many-valued toggle filters** (the seven funnel-stage chips) take their
+    own full-width line (`basis-full`) above the other filters instead of
+    wrapping among them; the remaining filters keep to one line.
+  - **Analytics** keeps its KPI and chart cards but its header became an
+    untitled `Card` holding an `AdminFilterBar` (preset, from, to); the
+    manual Refresh button is gone because the analytics query re-runs as the
+    range changes.
 - Below `md`, `AdminDataTableHeadCell` / `AdminDataTableCell` set
   `overflow-wrap: anywhere`. The auto table layout cannot shrink a column
   below its longest unbreakable token, so a single `snake_case` table name,
