@@ -2,20 +2,21 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { DeleteIcon, RotateIcon, ViewIcon } from '@/components/icons/action-icons';
-import { Button } from '@/components/ui/button';
+import { DeleteIcon, RotateIcon } from '@/components/icons/action-icons';
 import {
-  AdminDataTable,
-  AdminDataTableBody,
   AdminDataTableCell,
-  AdminDataTableHead,
+  AdminDataTableCellMeta,
   AdminDataTableHeadCell,
   AdminDataTableOperationsHeadCell,
 } from '@/components/ui/admin-data-table';
+import { AdminEditorPanel } from '@/components/ui/admin-editor-panel';
+import { AdminExpandableRow } from '@/components/ui/admin-expandable-row';
+import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { AdminInlineError } from '@/components/ui/admin-inline-error';
-import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
-import { AdminDialog } from '@/components/ui/admin-dialog';
+import { AdminRecordTable } from '@/components/ui/admin-record-table';
+import { AdminRowActions } from '@/components/ui/admin-row-actions';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Input } from '@/components/ui/input';
 import { toErrorMessage } from '@/hooks/hook-errors';
 import {
   deleteAdminBulkExpenseImportJob,
@@ -27,6 +28,7 @@ import {
 import { ADMIN_LIST_PAGE_SIZE } from '@/lib/admin-list-query';
 import { formatEnumLabel } from '@/lib/format';
 
+const COLUMN_COUNT = 6;
 
 function formatWhen(iso: string): string {
   const trimmed = iso.trim();
@@ -43,10 +45,87 @@ function formatWhen(iso: string): string {
   }).format(new Date(parsed));
 }
 
+function canRetry(row: BulkImportJobSummary): boolean {
+  return row.status === 'failed' || row.status === 'succeeded_with_errors';
+}
+
+interface JobDetail {
+  status: string;
+  createdCount: string;
+  message: string;
+  expensesReturned: string;
+}
+
+/**
+ * Read-only snapshot of one job, fetched when its row opens. Mount it with
+ * `key={jobId}` so a different job starts from a fresh loading state.
+ */
+function BulkImportJobDetail({ jobId }: { jobId: string }) {
+  const [detail, setDetail] = useState<JobDetail | null>(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { bulkImportJob } = await getAdminBulkExpenseImportJob(jobId);
+        if (cancelled) {
+          return;
+        }
+        setDetail({
+          status: formatEnumLabel(bulkImportJob.status),
+          createdCount: bulkImportJob.createdCount === null ? '—' : String(bulkImportJob.createdCount),
+          message: bulkImportJob.errorMessage?.trim() || '—',
+          expensesReturned: String(bulkImportJob.expenses?.length ?? 0),
+        });
+      } catch (caught) {
+        if (!cancelled) {
+          setError(toErrorMessage(caught, 'Could not load job details.'));
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId]);
+
+  if (error) {
+    return <AdminInlineError>{error}</AdminInlineError>;
+  }
+  const loading = detail === null;
+  return (
+    <AdminEditorPanel>
+      <AdminFieldGrid columns={4}>
+        <AdminField label='Status' htmlFor={`bulk-job-${jobId}-status`}>
+          <Input id={`bulk-job-${jobId}-status`} readOnly value={loading ? 'Loading…' : detail.status} />
+        </AdminField>
+        <AdminField label='Expenses created' htmlFor={`bulk-job-${jobId}-created`}>
+          <Input id={`bulk-job-${jobId}-created`} readOnly value={loading ? '…' : detail.createdCount} />
+        </AdminField>
+        <AdminField label='Expenses returned' htmlFor={`bulk-job-${jobId}-returned`}>
+          <Input id={`bulk-job-${jobId}-returned`} readOnly value={loading ? '…' : detail.expensesReturned} />
+        </AdminField>
+        <AdminField label='Job id' htmlFor={`bulk-job-${jobId}-id`}>
+          <Input id={`bulk-job-${jobId}-id`} readOnly value={jobId} className='font-mono text-xs' />
+        </AdminField>
+      </AdminFieldGrid>
+      <AdminFieldGrid columns={1}>
+        <AdminField label='Message' htmlFor={`bulk-job-${jobId}-message`}>
+          <Input id={`bulk-job-${jobId}-message`} readOnly value={loading ? '…' : detail.message} />
+        </AdminField>
+      </AdminFieldGrid>
+    </AdminEditorPanel>
+  );
+}
+
 interface BulkExpenseImportJobsPanelProps {
   onAfterMutation?: () => void;
 }
 
+/**
+ * Recent combined-PDF import jobs as a nested record table: a row opens to
+ * show the job snapshot; Retry and Delete live in the Operations column.
+ */
 export function BulkExpenseImportJobsPanel({ onAfterMutation }: BulkExpenseImportJobsPanelProps) {
   const [items, setItems] = useState<BulkImportJobSummary[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -54,10 +133,7 @@ export function BulkExpenseImportJobsPanel({ onAfterMutation }: BulkExpenseImpor
   const [loadError, setLoadError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [detailTitle, setDetailTitle] = useState('');
-  const [detailBody, setDetailBody] = useState('');
-  const [detailLoading, setDetailLoading] = useState(false);
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [retryTarget, setRetryTarget] = useState<BulkImportJobSummary | null>(null);
   const [retryBusy, setRetryBusy] = useState(false);
   const [retryError, setRetryError] = useState('');
@@ -108,43 +184,6 @@ export function BulkExpenseImportJobsPanel({ onAfterMutation }: BulkExpenseImpor
     }
   }, [isLoadingMore, nextCursor]);
 
-  const openView = useCallback(async (jobId: string) => {
-    setDetailOpen(true);
-    setDetailTitle('Bulk import job');
-    setDetailBody('');
-    setDetailLoading(true);
-    try {
-      const { bulkImportJob } = await getAdminBulkExpenseImportJob(jobId);
-      const lines = [
-        `Status: ${formatEnumLabel(bulkImportJob.status)}`,
-        `Created count: ${bulkImportJob.createdCount ?? '—'}`,
-      ];
-      if (bulkImportJob.errorMessage?.trim()) {
-        lines.push(`Message: ${bulkImportJob.errorMessage.trim()}`);
-      }
-      if (bulkImportJob.expenses?.length) {
-        lines.push(`Expenses returned: ${bulkImportJob.expenses.length}`);
-      }
-      setDetailBody(lines.join('\n'));
-    } catch (error) {
-      setDetailBody(toErrorMessage(error, 'Could not load job details.'));
-    } finally {
-      setDetailLoading(false);
-    }
-  }, []);
-
-  const closeDetail = useCallback(() => {
-    setDetailOpen(false);
-    setDetailTitle('');
-    setDetailBody('');
-    setDetailLoading(false);
-  }, []);
-
-  const startRetry = useCallback((row: BulkImportJobSummary) => {
-    setRetryError('');
-    setRetryTarget(row);
-  }, []);
-
   const closeRetry = useCallback(() => {
     if (retryBusy) {
       return;
@@ -152,11 +191,6 @@ export function BulkExpenseImportJobsPanel({ onAfterMutation }: BulkExpenseImpor
     setRetryTarget(null);
     setRetryError('');
   }, [retryBusy]);
-
-  const startDelete = useCallback((row: BulkImportJobSummary) => {
-    setDeleteError('');
-    setDeleteTarget(row);
-  }, []);
 
   const closeDelete = useCallback(() => {
     if (deleteBusy) {
@@ -175,6 +209,7 @@ export function BulkExpenseImportJobsPanel({ onAfterMutation }: BulkExpenseImpor
     try {
       await deleteAdminBulkExpenseImportJob(deleteTarget.id);
       setDeleteTarget(null);
+      setExpandedJobId((current) => (current === deleteTarget.id ? null : current));
       await loadFirstPage();
       onAfterMutation?.();
     } catch (error) {
@@ -206,112 +241,92 @@ export function BulkExpenseImportJobsPanel({ onAfterMutation }: BulkExpenseImpor
     }
   }, [loadFirstPage, onAfterMutation, retryTarget]);
 
-  const canRetry = (row: BulkImportJobSummary) =>
-    row.status === 'failed' || row.status === 'succeeded_with_errors';
-
   return (
     <>
-      <PaginatedTableCard
-        title='Recent combined-PDF imports'
-        description={`${totalCount} job${totalCount === 1 ? '' : 's'} for your account (newest first).`}
+      <AdminRecordTable
+        embedded
+        aria-label='Recent combined-PDF imports'
+        columnCount={COLUMN_COUNT}
+        rowCount={items.length}
         isLoading={isLoading}
         isLoadingMore={isLoadingMore}
         hasMore={Boolean(nextCursor)}
-        error={loadError}
-        loadingLabel='Loading jobs…'
         onLoadMore={loadMore}
+        error={loadError}
+        errorTitle='Bulk import jobs'
+        emptyLabel='No bulk import jobs yet.'
+        footer={totalCount > 0 ? `${totalCount} job${totalCount === 1 ? '' : 's'}, newest first` : null}
+        head={
+          <tr>
+            <AdminDataTableHeadCell className='w-10' />
+            <AdminDataTableHeadCell>Started</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell>Status</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Created</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Message</AdminDataTableHeadCell>
+            <AdminDataTableOperationsHeadCell />
+          </tr>
+        }
       >
-        <div className='overflow-x-auto'>
-          <AdminDataTable tableClassName='min-w-[720px]'>
-            <AdminDataTableHead>
-              <tr>
-                <AdminDataTableHeadCell>Started</AdminDataTableHeadCell>
-                <AdminDataTableHeadCell>Status</AdminDataTableHeadCell>
-                <AdminDataTableHeadCell>Created</AdminDataTableHeadCell>
-                <AdminDataTableHeadCell>Message</AdminDataTableHeadCell>
-                <AdminDataTableOperationsHeadCell />
-              </tr>
-            </AdminDataTableHead>
-            <AdminDataTableBody>
-              {!isLoading && items.length === 0 ? (
-                <tr>
-                  <AdminDataTableCell colSpan={5}>No bulk import jobs yet.</AdminDataTableCell>
-                </tr>
-              ) : null}
-              {items.map((row) => (
-                <tr key={row.id}>
-                  <AdminDataTableCell className='whitespace-nowrap'>
+        {items.map((row) => {
+          const isOpen = expandedJobId === row.id;
+          return (
+            <AdminExpandableRow
+              key={row.id}
+              id={`bulk-job-${row.id}`}
+              label={`import started ${formatWhen(row.createdAt)}`}
+              expanded={isOpen}
+              onToggle={() => setExpandedJobId(isOpen ? null : row.id)}
+              columnCount={COLUMN_COUNT}
+              autoFocusDetail={false}
+              cells={
+                <>
+                  <AdminDataTableCell className='text-slate-900'>
                     {formatWhen(row.createdAt)}
+                    <AdminDataTableCellMeta>
+                      {row.createdCount ?? '—'} created
+                      {row.errorMessage?.trim() ? ` · ${row.errorMessage.trim()}` : ''}
+                    </AdminDataTableCellMeta>
                   </AdminDataTableCell>
                   <AdminDataTableCell>{formatEnumLabel(row.status)}</AdminDataTableCell>
-                  <AdminDataTableCell className='tabular-nums'>
+                  <AdminDataTableCell priority='secondary' className='tabular-nums'>
                     {row.createdCount ?? '—'}
                   </AdminDataTableCell>
-                  <AdminDataTableCell className='max-w-[280px] truncate text-slate-600'>
-                    {row.errorMessage?.trim() || '—'}
+                  <AdminDataTableCell priority='tertiary' className='text-slate-600'>
+                    <span className='line-clamp-2 wrap-anywhere'>{row.errorMessage?.trim() || '—'}</span>
                   </AdminDataTableCell>
-                  <AdminDataTableCell className='text-right'>
-                    <div className='flex flex-wrap justify-end gap-1'>
-                      <Button
-                        type='button'
-                        size='sm'
-                        variant='outline'
-                        aria-label='View result'
-                        title='View result'
-                        onClick={() => void openView(row.id)}
-                      >
-                        <ViewIcon className='h-4 w-4' aria-hidden />
-                      </Button>
-                      <Button
-                        type='button'
-                        size='sm'
-                        variant='outline'
-                        disabled={!canRetry(row)}
-                        aria-label={
-                          canRetry(row)
-                            ? 'Retry import with the same PDF and vendor defaults'
-                            : 'Retry unavailable for this job status'
-                        }
-                        title={
-                          canRetry(row)
-                            ? 'Queue a new import using the same PDF and vendor defaults'
-                            : 'Retry is only available for failed or partially failed jobs'
-                        }
-                        onClick={() => startRetry(row)}
-                      >
-                        <RotateIcon className='h-4 w-4' aria-hidden />
-                      </Button>
-                      <Button
-                        type='button'
-                        size='sm'
-                        variant='danger'
-                        aria-label='Delete bulk import job'
-                        title='Remove this job from your recent imports list'
-                        onClick={() => startDelete(row)}
-                      >
-                        <DeleteIcon className='h-4 w-4' aria-hidden />
-                      </Button>
-                    </div>
-                  </AdminDataTableCell>
-                </tr>
-              ))}
-            </AdminDataTableBody>
-          </AdminDataTable>
-        </div>
-      </PaginatedTableCard>
-
-      <AdminDialog
-        open={detailOpen}
-        title={detailTitle}
-        description={detailLoading ? 'Loading job details…' : 'Current job snapshot.'}
-        onClose={closeDetail}
-      >
-        {detailLoading ? null : (
-          <pre className='mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-800'>
-            {detailBody}
-          </pre>
-        )}
-      </AdminDialog>
+                </>
+              }
+              actions={
+                <AdminRowActions
+                  actions={[
+                    {
+                      key: 'retry',
+                      label: 'Retry import with the same PDF and vendor defaults',
+                      icon: <RotateIcon className='h-4 w-4' aria-hidden />,
+                      hidden: !canRetry(row),
+                      onClick: () => {
+                        setRetryError('');
+                        setRetryTarget(row);
+                      },
+                    },
+                    {
+                      key: 'delete',
+                      label: 'Delete bulk import job',
+                      icon: <DeleteIcon className='h-4 w-4' aria-hidden />,
+                      tone: 'danger',
+                      onClick: () => {
+                        setDeleteError('');
+                        setDeleteTarget(row);
+                      },
+                    },
+                  ]}
+                />
+              }
+              detail={isOpen ? <BulkImportJobDetail key={row.id} jobId={row.id} /> : null}
+            />
+          );
+        })}
+      </AdminRecordTable>
 
       <ConfirmDialog
         open={retryTarget !== null}
