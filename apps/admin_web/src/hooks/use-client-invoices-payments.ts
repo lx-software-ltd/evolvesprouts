@@ -46,7 +46,12 @@ export function useClientInvoicesPayments({
     setActionError,
     setBusy,
   } = shared;
-  const { selectedInvoiceId } = selection;
+  const {
+    selectedInvoiceId,
+    selectedPaymentId: selectedId,
+    setSelectedPaymentId: setSelectedId,
+    setPaymentEditorDirty,
+  } = selection;
 
   const fetchPayments = useCallback(
     async ({ cursor, limit, signal }: PaginatedFetcherParams<object>) => {
@@ -76,9 +81,6 @@ export function useClientInvoicesPayments({
   // its own abort controller, so the loader deliberately ignores that argument.
   const loadPayments = useCallback(() => refetchPayments(), [refetchPayments]);
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [manualPaymentPreferCreateForm, setManualPaymentPreferCreateForm] =
-    useState(false);
   const [detail, setDetail] = useState<CustomerPaymentDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState('');
@@ -168,15 +170,8 @@ export function useClientInvoicesPayments({
   }, [selectedId, loadDetail]);
 
   useEffect(() => {
-    setManualPaymentPreferCreateForm(false);
-  }, [selectedId]);
-
-  useEffect(() => {
     if (!selectedId) {
       resetManualPaymentCreateFields();
-      return;
-    }
-    if (manualPaymentPreferCreateForm) {
       return;
     }
     const row = payments.find((p) => p.id === selectedId) ?? null;
@@ -228,7 +223,6 @@ export function useClientInvoicesPayments({
     defaultCurrency,
     currencyOptions,
     resetManualPaymentCreateFields,
-    manualPaymentPreferCreateForm,
   ]);
 
   const openConfirmPaymentDialog = (paymentId: string) => {
@@ -300,6 +294,7 @@ export function useClientInvoicesPayments({
       closeDeletePaymentDialog();
       await loadPayments();
       if (selectedId === id) {
+        setPaymentEditorDirty(false);
         setSelectedId(null);
         setDetail(null);
       }
@@ -313,12 +308,12 @@ export function useClientInvoicesPayments({
   };
 
   const manualPaymentIsUpdate = useMemo(() => {
-    if (!selectedId || manualPaymentPreferCreateForm) {
+    if (!selectedId) {
       return false;
     }
     const row = payments.find((p) => p.id === selectedId);
     return isManualInboundPaymentEditable(row);
-  }, [payments, selectedId, manualPaymentPreferCreateForm]);
+  }, [payments, selectedId]);
 
   const manualPaymentSucceededReadOnly = Boolean(
     manualPaymentIsUpdate &&
@@ -355,12 +350,6 @@ export function useClientInvoicesPayments({
     enrollmentPickerRows,
   ]);
 
-  const handleCancelManualPayment = () => {
-    setActionError('');
-    setManualPaymentPreferCreateForm(true);
-    resetManualPaymentCreateFields();
-  };
-
   const handleManualPaymentFormSubmit = async (
     event: FormEvent<HTMLFormElement>,
   ) => {
@@ -391,6 +380,7 @@ export function useClientInvoicesPayments({
               : createPaymentExternalRef.trim(),
         });
         setActionMessage('Customer payment updated.');
+        setPaymentEditorDirty(false);
         await loadPayments();
         const ac = new AbortController();
         await loadDetail(id, ac.signal);
@@ -430,9 +420,11 @@ export function useClientInvoicesPayments({
       });
       setActionMessage('Customer payment recorded.');
       resetManualPaymentCreateFields();
+      setPaymentEditorDirty(false);
       await loadPayments();
       const pid = pay.id?.trim() ?? '';
       if (pid) {
+        // Replace the draft row with the recorded payment's row.
         setSelectedId(pid);
         const ac = new AbortController();
         await loadDetail(pid, ac.signal);
@@ -456,8 +448,6 @@ export function useClientInvoicesPayments({
     listError,
     loadMorePayments,
     selectedId,
-    setSelectedId,
-    setManualPaymentPreferCreateForm,
     detail,
     detailLoading,
     detailError,
@@ -479,7 +469,6 @@ export function useClientInvoicesPayments({
     manualPaymentIsUpdate,
     manualPaymentSucceededReadOnly,
     manualPaymentEnrollmentEditLabel,
-    handleCancelManualPayment,
     handleManualPaymentFormSubmit,
     openConfirmPaymentDialog,
     openDeletePaymentDialog,

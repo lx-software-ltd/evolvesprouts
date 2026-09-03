@@ -58,6 +58,8 @@ export interface BillToPartySearchOrCreateFieldProps {
   enabled?: boolean;
   value: BillToPartyValue;
   onChange: (value: BillToPartyValue) => void;
+  /** Wrapper classes, for example a grid span inside `AdminFieldGrid`. */
+  className?: string;
 }
 
 export function BillToPartySearchOrCreateField({
@@ -67,6 +69,7 @@ export function BillToPartySearchOrCreateField({
   enabled = true,
   value,
   onChange,
+  className,
 }: BillToPartySearchOrCreateFieldProps) {
   const listboxId = useId();
   const noun = billToPartyKindNoun(kind);
@@ -196,7 +199,7 @@ export function BillToPartySearchOrCreateField({
   };
 
   return (
-    <div className='min-w-[260px] flex-1'>
+    <div className={clsx('min-w-0', className ?? 'min-w-[260px] flex-1')}>
       <div className='mb-1 flex items-center gap-2'>
         <Label htmlFor={inputId} className='mb-0'>
           {label}

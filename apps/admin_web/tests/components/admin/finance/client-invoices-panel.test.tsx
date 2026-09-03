@@ -66,20 +66,81 @@ import {
   ClientInvoicesPanel,
   NO_ENROLLMENT_OPTION_VALUE,
 } from '@/components/admin/finance/client-invoices-panel';
+import { resetAdminQueryClientForTests } from '@/lib/admin-query-client';
 import { formatDateOnly, formatYmdAsLocalDate } from '@/lib/format';
 
-function firstCustomerInvoiceDataRow(invoiceTable: HTMLElement): HTMLElement {
-  const rows = within(invoiceTable).getAllByRole('row');
-  return rows[1] as HTMLElement;
+function invoiceTable(): HTMLElement {
+  return within(screen.getByRole('region', { name: 'Customer invoices' })).getByRole('table');
 }
 
-function firstCustomerPaymentDataRow(paymentTable: HTMLElement): HTMLElement {
-  const rows = within(paymentTable).getAllByRole('row');
-  return rows[1] as HTMLElement;
+function paymentTable(): HTMLElement {
+  return within(screen.getByRole('region', { name: 'Customer payments' })).getByRole('table');
 }
+
+/** Summary rows only; each expandable record also renders a detail `<tr>`. */
+function recordRows(table: HTMLElement): HTMLElement[] {
+  return within(table)
+    .getAllByRole('row')
+    .filter((row) => row.hasAttribute('aria-expanded'));
+}
+
+/** Expands the first record row (the chevron button) of a record table. */
+async function expandFirstRow(table: HTMLElement) {
+  const trigger = await within(table).findByRole('button', { name: /^Expand / });
+  await userEvent.click(trigger);
+}
+
+/** Draft rows keep Preview inline; Issue, Void and Delete sit in the overflow menu. */
+async function issueFirstDraftInvoice() {
+  await userEvent.click(await within(invoiceTable()).findByRole('button', { name: /more actions/i }));
+  await userEvent.click(await screen.findByRole('menuitem', { name: /issue invoice/i }));
+}
+
+async function openNewInvoice() {
+  await userEvent.click(await screen.findByRole('button', { name: 'New invoice' }));
+  await screen.findByLabelText(/^Draft type$/i);
+}
+
+async function openNewPayment() {
+  await userEvent.click(await screen.findByRole('button', { name: 'New payment' }));
+  await waitFor(() => {
+    expect(document.getElementById('billing-create-pay-amount')).toBeTruthy();
+  });
+}
+
+const issuedInvoice = {
+  id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+  status: 'issued' as const,
+  invoiceNumber: 'INV-42',
+  currency: 'HKD',
+  total: '100',
+  amountAllocated: '0',
+  balanceDue: '100',
+  paidAt: null,
+  isPaid: false,
+  lineCount: 1,
+  billToDisplayName: 'Pat',
+  createdAt: '2026-01-01T00:00:00+00:00',
+};
+
+const manualPendingPayment = {
+  id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+  direction: 'inbound' as const,
+  status: 'pending' as const,
+  method: 'bank_transfer',
+  amount: '10',
+  currency: 'HKD',
+  enrollmentId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+  stripePaymentIntentId: null,
+  party: 'Pat',
+  unappliedAmount: '10',
+  createdAt: '2026-01-01T00:00:00+00:00',
+  orphanPaymentDeletable: false,
+};
 
 describe('ClientInvoicesPanel', () => {
   beforeEach(() => {
+    resetAdminQueryClientForTests();
     window.history.replaceState(null, '', '/finance?tab=client-invoices');
     for (const key of Object.keys(billingMocks) as (keyof typeof billingMocks)[]) {
       billingMocks[key].mockReset();
@@ -136,49 +197,42 @@ describe('ClientInvoicesPanel', () => {
     vi.clearAllMocks();
   });
 
-  it('selecting an issued invoice row seeds allocate invoice select', async () => {
-    const invId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
-    billingMocks.listCustomerInvoices.mockResolvedValue({
-      items: [
-        {
-          id: invId,
-          status: 'issued',
-          invoiceNumber: 'INV-42',
-          currency: 'HKD',
-          total: '100',
-          amountAllocated: '0',
-          balanceDue: '100',
-          paidAt: null,
-          isPaid: false,
-          lineCount: 1,
-          billToDisplayName: 'Pat',
-          createdAt: '2026-01-01T00:00:00+00:00',
-        },
-      ],
-      next_cursor: null,
-    });
+  it('renders both record tables without titles and with the create buttons in the filter bars', async () => {
+    render(<ClientInvoicesPanel />);
+    await waitFor(() => expect(billingMocks.listCustomerInvoices).toHaveBeenCalled());
+
+    expect(screen.queryByRole('heading', { name: /customer invoices/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /customer payments/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New invoice' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New payment' })).toBeInTheDocument();
+    expect(within(invoiceTable()).queryByRole('columnheader', { name: 'Invoice' })).not.toBeInTheDocument();
+    expect(within(invoiceTable()).getByRole('columnheader', { name: 'Settlement' })).toBeInTheDocument();
+    expect(within(paymentTable()).getByRole('columnheader', { name: 'Party' })).toBeInTheDocument();
+  });
+
+  it('expanding an issued invoice seeds the allocation target of an expanded payment', async () => {
+    billingMocks.listCustomerInvoices.mockResolvedValue({ items: [issuedInvoice], next_cursor: null });
     billingMocks.getCustomerInvoice.mockResolvedValue({
-      id: invId,
+      id: issuedInvoice.id,
       status: 'issued',
       lines: [{ id: 'line-1-uuid-1111-1111-111111111111', description: 'Tuition', lineOrder: 0 }],
     });
+    billingMocks.listCustomerPayments.mockResolvedValue({ items: [manualPendingPayment], next_cursor: null });
+    billingMocks.getCustomerPayment.mockResolvedValue(manualPendingPayment);
 
     render(<ClientInvoicesPanel />);
 
+    await waitFor(() => expect(within(invoiceTable()).getAllByText('Open').length).toBeGreaterThan(0));
+    await expandFirstRow(invoiceTable());
     await waitFor(() => {
-      expect(billingMocks.listCustomerInvoices).toHaveBeenCalled();
+      expect(billingMocks.getCustomerInvoice).toHaveBeenCalledWith(issuedInvoice.id, expect.any(AbortSignal));
     });
 
-    const invoiceRegion = screen.getByRole('region', { name: /customer invoices list/i });
-    const invoiceTable = within(invoiceRegion).getByRole('table');
-    expect(within(invoiceTable).queryByRole('columnheader', { name: 'Invoice' })).not.toBeInTheDocument();
-    expect(within(invoiceTable).getByRole('columnheader', { name: 'Settlement' })).toBeInTheDocument();
-    expect(within(invoiceTable).getByText('Open')).toBeInTheDocument();
-    await userEvent.click(firstCustomerInvoiceDataRow(invoiceTable));
+    await expandFirstRow(paymentTable());
 
     await waitFor(() => {
       const sel = document.getElementById('billing-allocate-invoice') as HTMLSelectElement;
-      expect(sel.value).toBe(invId);
+      expect(sel.value).toBe(issuedInvoice.id);
     });
   });
 
@@ -213,14 +267,10 @@ describe('ClientInvoicesPanel', () => {
 
     render(<ClientInvoicesPanel />);
 
-    await waitFor(() => {
-      expect(billingMocks.listCustomerInvoices).toHaveBeenCalled();
-    });
+    await waitFor(() => expect(recordRows(invoiceTable())).toHaveLength(2));
 
-    const invoiceRegion = screen.getByRole('region', { name: /customer invoices list/i });
-    const invoiceTable = within(invoiceRegion).getByRole('table');
-    expect(within(invoiceTable).getByRole('columnheader', { name: 'Invoice date' })).toBeInTheDocument();
-    const dataRows = within(invoiceTable).getAllByRole('row').slice(1);
+    expect(within(invoiceTable()).getByRole('columnheader', { name: 'Invoice date' })).toBeInTheDocument();
+    const dataRows = recordRows(invoiceTable());
     const row1cells = within(dataRows[0]).getAllByRole('cell');
     const row2cells = within(dataRows[1]).getAllByRole('cell');
     expect(row1cells[5]).toHaveTextContent(formatYmdAsLocalDate('2025-05-15'));
@@ -228,15 +278,12 @@ describe('ClientInvoicesPanel', () => {
   });
 
   it('passes status filter to listCustomerInvoices', async () => {
-    billingMocks.listCustomerInvoices.mockResolvedValue({ items: [], next_cursor: null });
     render(<ClientInvoicesPanel />);
 
     await waitFor(() => expect(billingMocks.listCustomerInvoices).toHaveBeenCalled());
 
     const user = userEvent.setup();
-    const invoiceStatusSelect = document.getElementById(
-      'billing-invoice-status-filter',
-    ) as HTMLSelectElement;
+    const invoiceStatusSelect = document.getElementById('billing-invoice-status-filter') as HTMLSelectElement;
     await user.selectOptions(invoiceStatusSelect, 'issued');
 
     await waitFor(() => {
@@ -248,7 +295,6 @@ describe('ClientInvoicesPanel', () => {
   });
 
   it('defaults settlement filter to Not completed and passes it to listCustomerInvoices', async () => {
-    billingMocks.listCustomerInvoices.mockResolvedValue({ items: [], next_cursor: null });
     render(<ClientInvoicesPanel />);
 
     await waitFor(() => {
@@ -262,7 +308,7 @@ describe('ClientInvoicesPanel', () => {
     expect(settlementSelect.value).toBe('not_completed');
   });
 
-  it('record customer payment editor calls createManualInboundCustomerPayment', async () => {
+  it('New payment draft row calls createManualInboundCustomerPayment', async () => {
     const eid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
     billingMocks.listRecentEnrollmentsForInvoicing.mockResolvedValue({
       items: [
@@ -285,13 +331,11 @@ describe('ClientInvoicesPanel', () => {
     });
     render(<ClientInvoicesPanel />);
 
-    await waitFor(() => expect(billingMocks.listCustomerInvoices).toHaveBeenCalled());
     await waitFor(() => expect(billingMocks.listRecentEnrollmentsForInvoicing).toHaveBeenCalled());
+    await openNewPayment();
 
     const user = userEvent.setup();
-    const enrollmentSelect = document.getElementById(
-      'billing-create-pay-enrollment-select',
-    ) as HTMLSelectElement;
+    const enrollmentSelect = document.getElementById('billing-create-pay-enrollment-select') as HTMLSelectElement;
     await user.selectOptions(enrollmentSelect, eid);
     const amountInput = document.getElementById('billing-create-pay-amount') as HTMLInputElement;
     await user.clear(amountInput);
@@ -312,26 +356,15 @@ describe('ClientInvoicesPanel', () => {
     });
   });
 
-  it('record customer payment editor creates manual inbound payment without an enrollment', async () => {
-    billingMocks.listRecentEnrollmentsForInvoicing.mockResolvedValue({
-      items: [],
-      truncated: false,
-    });
+  it('New payment draft row creates manual inbound payment without an enrollment', async () => {
     render(<ClientInvoicesPanel />);
 
-    await waitFor(() => expect(billingMocks.listCustomerInvoices).toHaveBeenCalled());
     await waitFor(() => expect(billingMocks.listRecentEnrollmentsForInvoicing).toHaveBeenCalled());
+    await openNewPayment();
 
     const user = userEvent.setup();
-    const enrollmentSelect = document.getElementById(
-      'billing-create-pay-enrollment-select',
-    ) as HTMLSelectElement;
-    await waitFor(() => {
-      expect(enrollmentSelect).toBeTruthy();
-      expect(
-        Array.from(enrollmentSelect.options).some((o) => o.value === NO_ENROLLMENT_OPTION_VALUE),
-      ).toBe(true);
-    });
+    const enrollmentSelect = document.getElementById('billing-create-pay-enrollment-select') as HTMLSelectElement;
+    expect(Array.from(enrollmentSelect.options).some((o) => o.value === NO_ENROLLMENT_OPTION_VALUE)).toBe(true);
     await user.selectOptions(enrollmentSelect, NO_ENROLLMENT_OPTION_VALUE);
     const amountInput = document.getElementById('billing-create-pay-amount') as HTMLInputElement;
     await user.clear(amountInput);
@@ -352,15 +385,11 @@ describe('ClientInvoicesPanel', () => {
     });
   });
 
-  it('record customer payment editor shows error when creating with empty enrollment selection', async () => {
-    billingMocks.listRecentEnrollmentsForInvoicing.mockResolvedValue({
-      items: [],
-      truncated: false,
-    });
+  it('New payment draft row shows error when creating with empty enrollment selection', async () => {
     render(<ClientInvoicesPanel />);
 
-    await waitFor(() => expect(billingMocks.listCustomerInvoices).toHaveBeenCalled());
     await waitFor(() => expect(billingMocks.listRecentEnrollmentsForInvoicing).toHaveBeenCalled());
+    await openNewPayment();
 
     const user = userEvent.setup();
     const amountInput = document.getElementById('billing-create-pay-amount') as HTMLInputElement;
@@ -371,15 +400,13 @@ describe('ClientInvoicesPanel', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(
-          'Select a recent enrollment or choose none to record without an enrollment.',
-        ),
+        screen.getByText('Select a recent enrollment or choose none to record without an enrollment.'),
       ).toBeInTheDocument();
     });
     expect(billingMocks.createManualInboundCustomerPayment).not.toHaveBeenCalled();
   });
 
-  it('record customer payment editor shows error when createManualInboundCustomerPayment fails', async () => {
+  it('New payment draft row shows error when createManualInboundCustomerPayment fails', async () => {
     const eid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
     billingMocks.listRecentEnrollmentsForInvoicing.mockResolvedValue({
       items: [
@@ -404,13 +431,11 @@ describe('ClientInvoicesPanel', () => {
 
     render(<ClientInvoicesPanel />);
 
-    await waitFor(() => expect(billingMocks.listCustomerInvoices).toHaveBeenCalled());
     await waitFor(() => expect(billingMocks.listRecentEnrollmentsForInvoicing).toHaveBeenCalled());
+    await openNewPayment();
 
     const user = userEvent.setup();
-    const enrollmentSelect = document.getElementById(
-      'billing-create-pay-enrollment-select',
-    ) as HTMLSelectElement;
+    const enrollmentSelect = document.getElementById('billing-create-pay-enrollment-select') as HTMLSelectElement;
     await user.selectOptions(enrollmentSelect, eid);
     const amountInput = document.getElementById('billing-create-pay-amount') as HTMLInputElement;
     await user.clear(amountInput);
@@ -423,42 +448,10 @@ describe('ClientInvoicesPanel', () => {
     });
   });
 
-  it('manual payment editor Cancel keeps payment row selected for allocation', async () => {
-    const payId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  it('expanding a manual inbound payment opens the update editor seeded from the record', async () => {
     const eid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
-    billingMocks.listCustomerPayments.mockResolvedValue({
-      items: [
-        {
-          id: payId,
-          direction: 'inbound',
-          status: 'pending',
-          method: 'bank_transfer',
-          amount: '10',
-          currency: 'HKD',
-          enrollmentId: eid,
-          stripePaymentIntentId: null,
-          party: 'Pat',
-          unappliedAmount: '10',
-          createdAt: '2026-01-01T00:00:00+00:00',
-          orphanPaymentDeletable: false,
-        },
-      ],
-      next_cursor: null,
-    });
-    billingMocks.getCustomerPayment.mockResolvedValue({
-      id: payId,
-      direction: 'inbound',
-      status: 'pending',
-      method: 'bank_transfer',
-      amount: '10',
-      currency: 'HKD',
-      enrollmentId: eid,
-      stripePaymentIntentId: null,
-      party: 'Pat',
-      unappliedAmount: '10',
-      createdAt: '2026-01-01T00:00:00+00:00',
-      orphanPaymentDeletable: false,
-    });
+    billingMocks.listCustomerPayments.mockResolvedValue({ items: [manualPendingPayment], next_cursor: null });
+    billingMocks.getCustomerPayment.mockResolvedValue(manualPendingPayment);
     billingMocks.listRecentEnrollmentsForInvoicing.mockResolvedValue({
       items: [
         {
@@ -479,38 +472,67 @@ describe('ClientInvoicesPanel', () => {
       ],
       truncated: false,
     });
-    billingMocks.listCustomerInvoices.mockResolvedValue({
-      items: [],
-      next_cursor: null,
-    });
 
     render(<ClientInvoicesPanel />);
 
-    const paymentTable = screen.getAllByRole('table').at(-1) as HTMLElement;
-    await waitFor(() => expect(within(paymentTable).getAllByRole('row').length).toBeGreaterThan(1));
-
-    await userEvent.click(firstCustomerPaymentDataRow(paymentTable));
+    await expandFirstRow(paymentTable());
     await waitFor(() => {
-      expect(billingMocks.getCustomerPayment).toHaveBeenCalledWith(payId, expect.any(AbortSignal));
+      expect(billingMocks.getCustomerPayment).toHaveBeenCalledWith(manualPendingPayment.id, expect.any(AbortSignal));
     });
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Update customer payment' })).toBeInTheDocument();
     });
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
 
-    expect(
-      screen.getByText('Pat · Spring Workshop · Standard · Group A'),
-    ).toBeInTheDocument();
-    expect(
-      (document.getElementById('billing-create-pay-amount') as HTMLInputElement).value,
-    ).toBe('10.00');
+    const enrollmentField = document.getElementById('billing-create-pay-enrollment-select') as HTMLInputElement;
+    expect(enrollmentField.value).toBe('Pat · Spring Workshop · Standard · Group A');
+    expect(enrollmentField).toHaveAttribute('readonly');
+    expect((document.getElementById('billing-create-pay-amount') as HTMLInputElement).value).toBe('10.00');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    const user = userEvent.setup();
+    const refInput = document.getElementById('billing-create-pay-external-ref') as HTMLInputElement;
+    await user.type(refInput, 'REF');
+    await user.click(screen.getByRole('button', { name: 'Update customer payment' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Create customer payment' })).toBeInTheDocument();
+      expect(billingMocks.updateManualInboundCustomerPayment).toHaveBeenCalledWith(manualPendingPayment.id, {
+        amount: '10.00',
+        currency: 'HKD',
+        method: 'bank_transfer',
+        status: 'pending',
+        externalReference: 'REF',
+      });
     });
-    const row = firstCustomerPaymentDataRow(paymentTable);
-    expect(row.className).toContain('bg-sky-50');
+  });
+
+  it('expanding a Stripe payment shows read-only fields instead of the editor', async () => {
+    const stripePayment = {
+      ...manualPendingPayment,
+      id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+      status: 'succeeded' as const,
+      method: 'stripe_card',
+      stripePaymentIntentId: 'pi_123',
+    };
+    billingMocks.listCustomerPayments.mockResolvedValue({ items: [stripePayment], next_cursor: null });
+    billingMocks.getCustomerPayment.mockResolvedValue({
+      ...stripePayment,
+      allocationInvoices: [{ invoiceId: 'inv-1', invoiceNumber: 'INV-7' }],
+    });
+
+    render(<ClientInvoicesPanel />);
+
+    await expandFirstRow(paymentTable());
+
+    await waitFor(() => {
+      expect(document.getElementById(`billing-payment-${stripePayment.id}-stripe-ref`)).toBeTruthy();
+    });
+    expect(screen.queryByRole('button', { name: /customer payment$/ })).not.toBeInTheDocument();
+    expect((document.getElementById(`billing-payment-${stripePayment.id}-stripe-ref`) as HTMLInputElement).value).toBe(
+      'pi_123',
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /^Allocated invoices/ }));
+    await waitFor(() => expect(screen.getByText('INV-7')).toBeInTheDocument());
   });
 
   it('load more uses cursor from previous response', async () => {
@@ -542,9 +564,7 @@ describe('ClientInvoicesPanel', () => {
     await waitFor(() => {
       const calls = billingMocks.listCustomerInvoices.mock.calls;
       const last = calls[calls.length - 1];
-      expect(last[0]).toEqual(
-        expect.objectContaining({ cursor: 'cursor-token' }),
-      );
+      expect(last[0]).toEqual(expect.objectContaining({ cursor: 'cursor-token' }));
     });
   });
 
@@ -567,9 +587,7 @@ describe('ClientInvoicesPanel', () => {
 
     render(<ClientInvoicesPanel />);
 
-    await waitFor(() => screen.getByRole('button', { name: /issue invoice/i }));
-
-    await userEvent.click(screen.getByRole('button', { name: /issue invoice/i }));
+    await issueFirstDraftInvoice();
 
     await waitFor(() => {
       expect(billingMocks.issueInvoice).toHaveBeenCalledWith(invId);
@@ -597,24 +615,11 @@ describe('ClientInvoicesPanel', () => {
 
     render(<ClientInvoicesPanel />);
 
-    const invoiceRegion = screen.getByRole('region', { name: /customer invoices list/i });
-    const invoiceTable = within(invoiceRegion).getByRole('table');
-
-    await waitFor(() =>
-      within(invoiceTable).getByRole('button', { name: /preview invoice pdf/i }),
-    );
-
-    await userEvent.click(
-      within(invoiceTable).getByRole('button', { name: /preview invoice pdf/i }),
-    );
+    await userEvent.click(await within(invoiceTable()).findByRole('button', { name: /preview invoice pdf/i }));
 
     await waitFor(() => {
       expect(billingMocks.getCustomerInvoicePdfDownload).toHaveBeenCalledWith(invId);
-      expect(openSpy).toHaveBeenCalledWith(
-        'https://example.com/signed.pdf',
-        '_blank',
-        'noopener,noreferrer',
-      );
+      expect(openSpy).toHaveBeenCalledWith('https://example.com/signed.pdf', '_blank', 'noopener,noreferrer');
     });
 
     openSpy.mockRestore();
@@ -639,20 +644,13 @@ describe('ClientInvoicesPanel', () => {
 
     render(<ClientInvoicesPanel />);
 
-    const invoiceRegion = screen.getByRole('region', { name: /customer invoices list/i });
-    const invoiceTable = within(invoiceRegion).getByRole('table');
-
-    await waitFor(() =>
-      within(invoiceTable).getByRole('button', { name: /void invoice/i }),
-    );
-
-    await userEvent.click(within(invoiceTable).getByRole('button', { name: /void invoice/i }));
+    // Draft rows have three actions besides preview, so Void lives in the overflow menu.
+    await userEvent.click(await within(invoiceTable()).findByRole('button', { name: /more actions/i }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: /void invoice/i }));
 
     await userEvent.type(screen.getByLabelText(/reason/i), 'Customer cancelled');
     const voidDialog = screen.getByRole('alertdialog');
-    await userEvent.click(
-      within(voidDialog).getByRole('button', { name: /^void invoice$/i }),
-    );
+    await userEvent.click(within(voidDialog).getByRole('button', { name: /^void invoice$/i }));
 
     await waitFor(() => {
       expect(billingMocks.voidInvoice).toHaveBeenCalledWith(invId, 'Customer cancelled');
@@ -679,7 +677,6 @@ describe('ClientInvoicesPanel', () => {
   });
 
   it('passes currency filter to listCustomerInvoices', async () => {
-    billingMocks.listCustomerInvoices.mockResolvedValue({ items: [], next_cursor: null });
     render(<ClientInvoicesPanel />);
 
     await waitFor(() => expect(billingMocks.listCustomerInvoices).toHaveBeenCalled());
@@ -697,7 +694,6 @@ describe('ClientInvoicesPanel', () => {
   });
 
   it('passes debounced text filter q to listCustomerInvoices', async () => {
-    billingMocks.listCustomerInvoices.mockResolvedValue({ items: [], next_cursor: null });
     render(<ClientInvoicesPanel />);
 
     await waitFor(() => expect(billingMocks.listCustomerInvoices).toHaveBeenCalled());
@@ -715,7 +711,7 @@ describe('ClientInvoicesPanel', () => {
     );
   });
 
-  it('issued invoice toolbar send email calls emailInvoice with comma-separated recipients', async () => {
+  it('expanded issued invoice sends email with comma-separated recipients', async () => {
     const invId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
     billingMocks.listCustomerInvoices.mockResolvedValue({
       items: [
@@ -735,11 +731,7 @@ describe('ClientInvoicesPanel', () => {
 
     render(<ClientInvoicesPanel />);
 
-    await waitFor(() => screen.getAllByRole('table'));
-
-    const invoiceRegion = screen.getByRole('region', { name: /customer invoices list/i });
-    const invoiceTable = within(invoiceRegion).getByRole('table');
-    await userEvent.click(firstCustomerInvoiceDataRow(invoiceTable));
+    await expandFirstRow(invoiceTable());
 
     await waitFor(() => {
       expect(screen.getByLabelText(/email recipients/i)).toBeInTheDocument();
@@ -756,7 +748,7 @@ describe('ClientInvoicesPanel', () => {
     });
   });
 
-  it('issued invoice toolbar shows error when recipients empty', async () => {
+  it('expanded issued invoice shows error when recipients empty', async () => {
     const invId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
     billingMocks.listCustomerInvoices.mockResolvedValue({
       items: [
@@ -775,11 +767,7 @@ describe('ClientInvoicesPanel', () => {
 
     render(<ClientInvoicesPanel />);
 
-    await waitFor(() => screen.getAllByRole('table'));
-
-    const invoiceRegion = screen.getByRole('region', { name: /customer invoices list/i });
-    const invoiceTable = within(invoiceRegion).getByRole('table');
-    await userEvent.click(firstCustomerInvoiceDataRow(invoiceTable));
+    await expandFirstRow(invoiceTable());
 
     await waitFor(() => {
       expect(screen.getByLabelText(/email recipients/i)).toBeInTheDocument();
@@ -836,10 +824,7 @@ describe('ClientInvoicesPanel', () => {
 
     render(<ClientInvoicesPanel />);
 
-    const paymentTable = screen.getAllByRole('table').at(-1) as HTMLElement;
-    await waitFor(() => within(paymentTable).getByRole('button', { name: /confirm pending payment/i }));
-
-    await userEvent.click(within(paymentTable).getByRole('button', { name: /confirm pending payment/i }));
+    await userEvent.click(await within(paymentTable()).findByRole('button', { name: /confirm pending payment/i }));
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /confirm payment/i })).toBeInTheDocument();
@@ -878,12 +863,7 @@ describe('ClientInvoicesPanel', () => {
 
     render(<ClientInvoicesPanel />);
 
-    const paymentTable = screen.getAllByRole('table').at(-1) as HTMLElement;
-    await waitFor(() =>
-      within(paymentTable).getByRole('button', { name: /delete customer payment/i }),
-    );
-
-    await userEvent.click(within(paymentTable).getByRole('button', { name: /delete customer payment/i }));
+    await userEvent.click(await within(paymentTable()).findByRole('button', { name: /delete customer payment/i }));
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /delete customer payment/i })).toBeInTheDocument();
@@ -917,16 +897,11 @@ describe('ClientInvoicesPanel', () => {
 
     render(<ClientInvoicesPanel />);
 
-    const invoiceRegion = screen.getByRole('region', { name: /customer invoices list/i });
-    const invoiceTable = within(invoiceRegion).getByRole('table');
-    await waitFor(() =>
-      within(invoiceTable).getByRole('button', { name: /delete draft invoice/i }),
-    );
+    await within(invoiceTable()).findByRole('button', { name: /more actions/i });
+    const enrollmentFetchCountBefore = billingMocks.listRecentEnrollmentsForInvoicing.mock.calls.length;
 
-    const enrollmentFetchCountBefore =
-      billingMocks.listRecentEnrollmentsForInvoicing.mock.calls.length;
-
-    await userEvent.click(within(invoiceTable).getByRole('button', { name: /delete draft invoice/i }));
+    await userEvent.click(within(invoiceTable()).getByRole('button', { name: /more actions/i }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: /delete draft invoice/i }));
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /delete draft invoice/i })).toBeInTheDocument();
@@ -946,7 +921,6 @@ describe('ClientInvoicesPanel', () => {
   });
 
   it('does not render Customer payments Refresh control', async () => {
-    billingMocks.listCustomerPayments.mockResolvedValue({ items: [], next_cursor: null });
     render(<ClientInvoicesPanel />);
     await waitFor(() => expect(billingMocks.listCustomerPayments).toHaveBeenCalled());
     expect(screen.queryByRole('button', { name: /^refresh$/i })).not.toBeInTheDocument();
@@ -977,15 +951,14 @@ describe('ClientInvoicesPanel', () => {
       next_cursor: null,
     });
     render(<ClientInvoicesPanel />);
-    const paymentTable = screen.getAllByRole('table').at(-1) as HTMLElement;
     await waitFor(() => {
-      const cells = within(paymentTable).getAllByRole('cell');
+      const cells = within(paymentTable()).getAllByRole('cell');
       expect(cells.some((c) => c.textContent === 'FPS')).toBe(true);
       expect(cells.some((c) => c.textContent === 'Bank FPS')).toBe(true);
     });
   });
 
-  it('submitting allocate form calls createPaymentAllocation', async () => {
+  it('submitting the allocate disclosure of an expanded payment calls createPaymentAllocation', async () => {
     const invId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
     const lineId = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
     const payId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
@@ -1008,31 +981,10 @@ describe('ClientInvoicesPanel', () => {
       id: invId,
       lines: [{ id: lineId, description: 'Service fee', lineOrder: 0 }],
     });
-
-    billingMocks.listCustomerPayments.mockResolvedValue({
-      items: [
-        {
-          id: payId,
-          direction: 'inbound',
-          status: 'succeeded',
-          method: 'bank_transfer',
-          amount: '100',
-          currency: 'HKD',
-          enrollmentId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
-          stripePaymentIntentId: null,
-          party: 'Pat · Service',
-          externalReference: 'WIRE-999',
-          unappliedAmount: '100',
-          createdAt: '2026-01-01T00:00:00+00:00',
-          orphanPaymentDeletable: false,
-        },
-      ],
-      next_cursor: null,
-    });
-    billingMocks.getCustomerPayment.mockResolvedValue({
+    const payment = {
       id: payId,
-      direction: 'inbound',
-      status: 'succeeded',
+      direction: 'inbound' as const,
+      status: 'succeeded' as const,
       method: 'bank_transfer',
       amount: '100',
       currency: 'HKD',
@@ -1042,29 +994,20 @@ describe('ClientInvoicesPanel', () => {
       externalReference: 'WIRE-999',
       unappliedAmount: '100',
       createdAt: '2026-01-01T00:00:00+00:00',
-      allocationInvoices: [],
       orphanPaymentDeletable: false,
-    });
+    };
+    billingMocks.listCustomerPayments.mockResolvedValue({ items: [payment], next_cursor: null });
+    billingMocks.getCustomerPayment.mockResolvedValue({ ...payment, allocationInvoices: [] });
     billingMocks.createPaymentAllocation.mockResolvedValue({ allocationId: 'dddddddd-dddd-dddd-dddd-dddddddddddd' });
 
     render(<ClientInvoicesPanel />);
 
-    const invoiceRegion = screen.getByRole('region', { name: /customer invoices list/i });
-    const invoiceTable = within(invoiceRegion).getByRole('table');
-    await waitFor(() => {
-      expect(within(invoiceTable).getAllByRole('button').length).toBeGreaterThan(0);
-    });
-    await userEvent.click(firstCustomerInvoiceDataRow(invoiceTable));
+    await expandFirstRow(invoiceTable());
     await waitFor(() => {
       expect(billingMocks.getCustomerInvoice).toHaveBeenCalledWith(invId, expect.any(AbortSignal));
     });
 
-    const paymentTable = screen.getAllByRole('table').at(-1) as HTMLElement;
-    await waitFor(() => {
-      expect(within(paymentTable).getAllByRole('row').length).toBeGreaterThan(1);
-    });
-    await userEvent.click(firstCustomerPaymentDataRow(paymentTable));
-
+    await expandFirstRow(paymentTable());
     await waitFor(() => {
       expect(billingMocks.getCustomerPayment).toHaveBeenCalledWith(payId, expect.any(AbortSignal));
     });
@@ -1074,6 +1017,9 @@ describe('ClientInvoicesPanel', () => {
     });
 
     const user = userEvent.setup();
+    await waitFor(() => {
+      expect(within(screen.getByLabelText(/invoice line/i)).getByRole('option', { name: /Service fee/ })).toBeTruthy();
+    });
     await user.selectOptions(screen.getByLabelText(/invoice line/i), lineId);
 
     const amountField = document.getElementById('billing-allocate-amount') as HTMLInputElement;
@@ -1093,7 +1039,7 @@ describe('ClientInvoicesPanel', () => {
     });
   });
 
-  it('submitting refund form calls createCustomerRefund', async () => {
+  it('submitting the refund disclosure of an expanded issued invoice calls createCustomerRefund', async () => {
     const invId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
     const payId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
     billingMocks.listCustomerInvoices.mockResolvedValue({
@@ -1110,44 +1056,16 @@ describe('ClientInvoicesPanel', () => {
       ],
       next_cursor: null,
     });
-    billingMocks.listCustomerPayments.mockImplementation(async (params?: { invoiceId?: string }) => {
-      const filtered =
-        params?.invoiceId === invId
-          ? [
-              {
-                id: payId,
-                direction: 'inbound' as const,
-                status: 'succeeded' as const,
-                method: 'stripe_card',
-                amount: '100',
-                currency: 'HKD',
-                createdAt: '2026-01-01T00:00:00+00:00',
-              },
-            ]
-          : [
-              {
-                id: payId,
-                direction: 'inbound' as const,
-                status: 'succeeded' as const,
-                method: 'stripe_card',
-                amount: '100',
-                currency: 'HKD',
-                createdAt: '2026-01-01T00:00:00+00:00',
-              },
-            ];
-      return { items: filtered, next_cursor: null };
-    });
-    billingMocks.getCustomerPayment.mockResolvedValue({
+    const succeededStripePayment = {
       id: payId,
-      direction: 'inbound',
-      status: 'succeeded',
+      direction: 'inbound' as const,
+      status: 'succeeded' as const,
       method: 'stripe_card',
       amount: '100',
       currency: 'HKD',
-      unappliedAmount: '0',
       createdAt: '2026-01-01T00:00:00+00:00',
-      allocationInvoices: [{ invoiceId: invId, invoiceNumber: 'INV-10' }],
-    });
+    };
+    billingMocks.listCustomerPayments.mockResolvedValue({ items: [succeededStripePayment], next_cursor: null });
     billingMocks.createCustomerRefund.mockResolvedValue({
       id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
       direction: 'refund',
@@ -1159,22 +1077,19 @@ describe('ClientInvoicesPanel', () => {
 
     render(<ClientInvoicesPanel />);
 
-    const invoiceRegion = screen.getByRole('region', { name: /customer invoices list/i });
-    const invoiceTable = within(invoiceRegion).getByRole('table');
-    await waitFor(() => {
-      expect(within(invoiceTable).getAllByRole('button').length).toBeGreaterThan(0);
-    });
-    await userEvent.click(firstCustomerInvoiceDataRow(invoiceTable));
-
-    const paymentTable = screen.getAllByRole('table').at(-1) as HTMLElement;
-    await waitFor(() => {
-      expect(within(paymentTable).getAllByRole('row').length).toBeGreaterThan(1);
-    });
-    await userEvent.click(firstCustomerPaymentDataRow(paymentTable));
+    await expandFirstRow(invoiceTable());
 
     await waitFor(() => {
-      const invoiceSelect = document.getElementById('billing-refund-invoice') as HTMLSelectElement;
-      expect(invoiceSelect.value).toBe(invId);
+      expect(billingMocks.listCustomerPayments).toHaveBeenCalledWith(
+        expect.objectContaining({ invoiceId: invId }),
+        expect.any(AbortSignal),
+      );
+    });
+    await userEvent.click(await screen.findByRole('button', { name: /^Refund/ }));
+
+    await waitFor(() => {
+      const paymentSelect = document.getElementById('billing-refund-payment') as HTMLSelectElement;
+      expect(paymentSelect.value).toBe(payId);
     });
 
     const refundAmount = document.getElementById('billing-refund-amount') as HTMLInputElement;
@@ -1214,8 +1129,7 @@ describe('ClientInvoicesPanel', () => {
 
     render(<ClientInvoicesPanel />);
 
-    await waitFor(() => screen.getByRole('button', { name: /issue invoice/i }));
-    await userEvent.click(screen.getByRole('button', { name: /issue invoice/i }));
+    await issueFirstDraftInvoice();
 
     await waitFor(() => {
       expect(screen.getByText('Invoice is not draft')).toBeInTheDocument();
@@ -1225,12 +1139,8 @@ describe('ClientInvoicesPanel', () => {
   it('shows billing error when create draft submitted with no enrollments selected', async () => {
     render(<ClientInvoicesPanel />);
 
-    await waitFor(() =>
-      screen.getByRole('button', { name: 'Create draft invoice from selected enrollments' }),
-    );
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Create draft invoice from selected enrollments' }),
-    );
+    await openNewInvoice();
+    await userEvent.click(screen.getByRole('button', { name: 'Create draft invoice' }));
 
     await waitFor(() => {
       expect(screen.getByText('Select at least one enrollment.')).toBeInTheDocument();
@@ -1267,14 +1177,8 @@ describe('ClientInvoicesPanel', () => {
     billingMocks.listRecentEnrollmentsForInvoicing.mockImplementation(async (_signal, params) => {
       const q = (params?.q ?? '').trim();
       const all = [
-        pickerRow({
-          enrollmentId: '11111111-1111-1111-1111-111111111111',
-          partyDisplayName: 'Alice Alpha',
-        }),
-        pickerRow({
-          enrollmentId: '22222222-2222-2222-2222-222222222222',
-          partyDisplayName: 'Bob Beta',
-        }),
+        pickerRow({ enrollmentId: '11111111-1111-1111-1111-111111111111', partyDisplayName: 'Alice Alpha' }),
+        pickerRow({ enrollmentId: '22222222-2222-2222-2222-222222222222', partyDisplayName: 'Bob Beta' }),
       ];
       if (!q) {
         return { items: all, truncated: false };
@@ -1282,25 +1186,17 @@ describe('ClientInvoicesPanel', () => {
       const needle = q.toLowerCase();
       return {
         items: all.filter(
-          (r) =>
-            r.partyDisplayName.toLowerCase().includes(needle) ||
-            r.enrollmentId.toLowerCase().includes(needle),
+          (r) => r.partyDisplayName.toLowerCase().includes(needle) || r.enrollmentId.toLowerCase().includes(needle),
         ),
         truncated: false,
       };
     });
     render(<ClientInvoicesPanel />);
 
-    await waitFor(() => {
-      expect(document.querySelectorAll('[aria-label="Enrollment picker"]').length).toBeGreaterThan(0);
-    });
-    const enrollmentPickerSection = document.querySelector(
-      '[aria-label="Enrollment picker"]',
-    ) as HTMLElement;
+    await openNewInvoice();
+    const enrollmentPickerSection = await screen.findByRole('region', { name: 'Enrollment picker' });
 
-    await waitFor(() =>
-      expect(within(enrollmentPickerSection).getByText(/Alice Alpha/)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(within(enrollmentPickerSection).getByText(/Alice Alpha/)).toBeInTheDocument());
 
     const filterInput = screen.getByPlaceholderText(/Search name, email, title, tier, cohort/i);
     await userEvent.type(filterInput, 'Bob');
@@ -1324,14 +1220,8 @@ describe('ClientInvoicesPanel', () => {
     billingMocks.listRecentEnrollmentsForInvoicing.mockImplementation(async (_signal, params) => {
       const q = (params?.q ?? '').trim();
       const all = [
-        pickerRow({
-          enrollmentId: 'aaaaaaaa-bbbb-cccc-dddd-111111111111',
-          partyDisplayName: 'Alice Alpha',
-        }),
-        pickerRow({
-          enrollmentId: 'bbbbbbbb-bbbb-bbbb-bbbb-222222222222',
-          partyDisplayName: 'Bob Beta',
-        }),
+        pickerRow({ enrollmentId: 'aaaaaaaa-bbbb-cccc-dddd-111111111111', partyDisplayName: 'Alice Alpha' }),
+        pickerRow({ enrollmentId: 'bbbbbbbb-bbbb-bbbb-bbbb-222222222222', partyDisplayName: 'Bob Beta' }),
       ];
       if (!q) {
         return { items: all, truncated: false };
@@ -1347,16 +1237,10 @@ describe('ClientInvoicesPanel', () => {
     });
     render(<ClientInvoicesPanel />);
 
-    await waitFor(() => {
-      expect(document.querySelectorAll('[aria-label="Enrollment picker"]').length).toBeGreaterThan(0);
-    });
-    const enrollmentPickerSection = document.querySelector(
-      '[aria-label="Enrollment picker"]',
-    ) as HTMLElement;
+    await openNewInvoice();
+    const enrollmentPickerSection = await screen.findByRole('region', { name: 'Enrollment picker' });
 
-    await waitFor(() =>
-      expect(within(enrollmentPickerSection).getByText(/Alice Alpha/)).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(within(enrollmentPickerSection).getByText(/Alice Alpha/)).toBeInTheDocument());
 
     const filterInput = screen.getByPlaceholderText(/Search name, email, title, tier, cohort/i);
     await userEvent.type(filterInput, '22222222');
@@ -1376,21 +1260,13 @@ describe('ClientInvoicesPanel', () => {
     expect(within(enrollmentPickerSection).getByText(/Bob Beta/)).toBeInTheDocument();
   });
 
-  it('create draft omits currency when selection is valid', async () => {
+  it('create draft omits currency when selection is valid and collapses the draft row', async () => {
     const id1 = 'aaaaaaaa-bbbb-cccc-dddd-111111111111';
     const id2 = 'aaaaaaaa-bbbb-cccc-dddd-222222222222';
     billingMocks.listRecentEnrollmentsForInvoicing.mockResolvedValue({
       items: [
-        pickerRow({
-          enrollmentId: id1,
-          billToMergeKey: 'family||fam-1||',
-          amountPaid: '50.00',
-        }),
-        pickerRow({
-          enrollmentId: id2,
-          billToMergeKey: 'family||fam-1||',
-          amountPaid: '50.00',
-        }),
+        pickerRow({ enrollmentId: id1, billToMergeKey: 'family||fam-1||', amountPaid: '50.00' }),
+        pickerRow({ enrollmentId: id2, billToMergeKey: 'family||fam-1||', amountPaid: '50.00' }),
       ],
       truncated: false,
     });
@@ -1398,15 +1274,12 @@ describe('ClientInvoicesPanel', () => {
 
     render(<ClientInvoicesPanel />);
 
-    await waitFor(() => screen.getAllByRole('checkbox', { name: /Select enrollment/i }));
-
-    const checks = screen.getAllByRole('checkbox', { name: /Select enrollment/i });
+    await openNewInvoice();
+    const checks = await screen.findAllByRole('checkbox', { name: /Select enrollment/i });
     await userEvent.click(checks[0]);
     await userEvent.click(checks[1]);
 
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Create draft invoice from selected enrollments' }),
-    );
+    await userEvent.click(screen.getByRole('button', { name: 'Create draft invoice' }));
 
     await waitFor(() => {
       expect(billingMocks.createDraftInvoice).toHaveBeenCalled();
@@ -1417,30 +1290,26 @@ describe('ClientInvoicesPanel', () => {
     expect(arg.enrollmentIds).toEqual([id1, id2]);
     expect(arg.lineTotalsByEnrollmentId).toBeUndefined();
     expect(arg.invoiceDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+
+    await waitFor(() => {
+      expect(screen.queryByLabelText(/^Draft type$/i)).not.toBeInTheDocument();
+    });
   });
 
   it('create draft allows zero-dollar enrollments with recorded amount 0', async () => {
     const id1 = 'aaaaaaaa-bbbb-cccc-dddd-111111111111';
     billingMocks.listRecentEnrollmentsForInvoicing.mockResolvedValue({
-      items: [
-        pickerRow({
-          enrollmentId: id1,
-          billToMergeKey: 'family||fam-1||',
-          amountPaid: '0',
-        }),
-      ],
+      items: [pickerRow({ enrollmentId: id1, billToMergeKey: 'family||fam-1||', amountPaid: '0' })],
       truncated: false,
     });
     billingMocks.createDraftInvoice.mockResolvedValue({ invoiceId: 'inv-zero', status: 'draft' });
 
     render(<ClientInvoicesPanel />);
 
-    await waitFor(() => screen.getByRole('checkbox', { name: /Select enrollment/i }));
-    await userEvent.click(screen.getByRole('checkbox', { name: /Select enrollment/i }));
+    await openNewInvoice();
+    await userEvent.click(await screen.findByRole('checkbox', { name: /Select enrollment/i }));
 
-    const createBtn = screen.getByRole('button', {
-      name: 'Create draft invoice from selected enrollments',
-    });
+    const createBtn = screen.getByRole('button', { name: 'Create draft invoice' });
     expect(createBtn).not.toBeDisabled();
 
     await userEvent.click(createBtn);
@@ -1452,34 +1321,25 @@ describe('ClientInvoicesPanel', () => {
     expect(arg.draftKind).toBe('enrollment_merge');
     expect(arg.enrollmentIds).toEqual([id1]);
     expect(arg.lineTotalsByEnrollmentId).toBeUndefined();
-    expect(arg.invoiceDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   it('create draft is disabled when line total override is not a valid number', async () => {
     const id1 = 'aaaaaaaa-bbbb-cccc-dddd-111111111111';
     billingMocks.listRecentEnrollmentsForInvoicing.mockResolvedValue({
-      items: [
-        pickerRow({
-          enrollmentId: id1,
-          billToMergeKey: 'family||fam-1||',
-          amountPaid: '50.00',
-        }),
-      ],
+      items: [pickerRow({ enrollmentId: id1, billToMergeKey: 'family||fam-1||', amountPaid: '50.00' })],
       truncated: false,
     });
 
     render(<ClientInvoicesPanel />);
 
-    await waitFor(() => screen.getByRole('checkbox', { name: /Select enrollment/i }));
-    await userEvent.click(screen.getByRole('checkbox', { name: /Select enrollment/i }));
+    await openNewInvoice();
+    await userEvent.click(await screen.findByRole('checkbox', { name: /Select enrollment/i }));
 
     const override1 = document.getElementById(`billing-line-override-${id1}`) as HTMLInputElement;
     await userEvent.clear(override1);
     await userEvent.type(override1, 'not-a-number');
 
-    expect(
-      screen.getByRole('button', { name: 'Create draft invoice from selected enrollments' }),
-    ).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Create draft invoice' })).toBeDisabled();
     expect(screen.getByText(/Enter a valid number for every line total/i)).toBeInTheDocument();
     expect(billingMocks.createDraftInvoice).not.toHaveBeenCalled();
   });
@@ -1487,29 +1347,21 @@ describe('ClientInvoicesPanel', () => {
   it('create draft sends lineTotalsByEnrollmentId when override differs', async () => {
     const id1 = 'aaaaaaaa-bbbb-cccc-dddd-111111111111';
     billingMocks.listRecentEnrollmentsForInvoicing.mockResolvedValue({
-      items: [
-        pickerRow({
-          enrollmentId: id1,
-          billToMergeKey: 'family||fam-1||',
-          amountPaid: '50.00',
-        }),
-      ],
+      items: [pickerRow({ enrollmentId: id1, billToMergeKey: 'family||fam-1||', amountPaid: '50.00' })],
       truncated: false,
     });
     billingMocks.createDraftInvoice.mockResolvedValue({ invoiceId: 'inv-2', status: 'draft' });
 
     render(<ClientInvoicesPanel />);
 
-    await waitFor(() => screen.getByRole('checkbox', { name: /Select enrollment/i }));
-    await userEvent.click(screen.getByRole('checkbox', { name: /Select enrollment/i }));
+    await openNewInvoice();
+    await userEvent.click(await screen.findByRole('checkbox', { name: /Select enrollment/i }));
 
     const override1 = document.getElementById(`billing-line-override-${id1}`) as HTMLInputElement;
     await userEvent.clear(override1);
     await userEvent.type(override1, '99');
 
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Create draft invoice from selected enrollments' }),
-    );
+    await userEvent.click(screen.getByRole('button', { name: 'Create draft invoice' }));
 
     await waitFor(() => {
       expect(billingMocks.createDraftInvoice).toHaveBeenCalled();
@@ -1518,34 +1370,25 @@ describe('ClientInvoicesPanel', () => {
     expect(arg.draftKind).toBe('enrollment_merge');
     expect(arg.currency).toBeUndefined();
     expect(arg.lineTotalsByEnrollmentId).toEqual({ [id1]: '99' });
-    expect(arg.invoiceDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    cleanup();
+  });
+
+  it('create draft is disabled when selected enrollments have different bill-to parties', async () => {
     billingMocks.listRecentEnrollmentsForInvoicing.mockResolvedValue({
       items: [
-        pickerRow({
-          enrollmentId: 'aaaaaaaa-bbbb-cccc-dddd-111111111111',
-          billToMergeKey: 'k1',
-        }),
-        pickerRow({
-          enrollmentId: 'aaaaaaaa-bbbb-cccc-dddd-222222222222',
-          billToMergeKey: 'k2',
-        }),
+        pickerRow({ enrollmentId: 'aaaaaaaa-bbbb-cccc-dddd-111111111111', billToMergeKey: 'k1' }),
+        pickerRow({ enrollmentId: 'aaaaaaaa-bbbb-cccc-dddd-222222222222', billToMergeKey: 'k2' }),
       ],
       truncated: false,
     });
     render(<ClientInvoicesPanel />);
 
-    await waitFor(() => screen.getAllByRole('checkbox', { name: /Select enrollment/i }));
-    const checks = screen.getAllByRole('checkbox', { name: /Select enrollment/i });
+    await openNewInvoice();
+    const checks = await screen.findAllByRole('checkbox', { name: /Select enrollment/i });
     await userEvent.click(checks[0]);
     await userEvent.click(checks[1]);
 
-    expect(
-      screen.getByText(/must share the same bill-to/i),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Create draft invoice from selected enrollments' }),
-    ).toBeDisabled();
+    expect(screen.getByText(/must share the same bill-to/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create draft invoice' })).toBeDisabled();
   });
 
   it('create customized draft posts billTo, currency, and lines', async () => {
@@ -1553,10 +1396,7 @@ describe('ClientInvoicesPanel', () => {
 
     render(<ClientInvoicesPanel />);
 
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Create draft invoice' })).toBeInTheDocument();
-    });
-
+    await openNewInvoice();
     await userEvent.selectOptions(screen.getByLabelText(/^Draft type$/i), 'customized');
 
     const customizedForm = document.getElementById('client-billing-customized-draft-form');
@@ -1572,7 +1412,7 @@ describe('ClientInvoicesPanel', () => {
     await userEvent.type(screen.getByLabelText(/^Contact$/i), 'Pa');
     await userEvent.click(await screen.findByRole('option', { name: 'Pat Contact' }));
 
-    await userEvent.click(screen.getByRole('button', { name: 'Create draft invoice from custom lines' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Create draft invoice' }));
 
     await waitFor(() => {
       expect(billingMocks.createDraftInvoice).toHaveBeenCalled();
@@ -1594,10 +1434,7 @@ describe('ClientInvoicesPanel', () => {
     try {
       render(<ClientInvoicesPanel />);
 
-      await waitFor(() => {
-        expect(screen.getByRole('heading', { name: 'Create draft invoice' })).toBeInTheDocument();
-      });
-
+      await openNewInvoice();
       await userEvent.selectOptions(screen.getByLabelText(/^Draft type$/i), 'customized');
 
       const dateInput = screen.getByLabelText(/^Invoice date$/i) as HTMLInputElement;
@@ -1616,7 +1453,7 @@ describe('ClientInvoicesPanel', () => {
       await userEvent.type(screen.getByLabelText(/^Contact$/i), 'Pa');
       await userEvent.click(await screen.findByRole('option', { name: 'Pat Contact' }));
 
-      await userEvent.click(screen.getByRole('button', { name: 'Create draft invoice from custom lines' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Create draft invoice' }));
 
       await waitFor(() => {
         expect(billingMocks.createDraftInvoice).toHaveBeenCalled();
@@ -1637,6 +1474,7 @@ describe('ClientInvoicesPanel', () => {
     });
     render(<ClientInvoicesPanel />);
 
+    await openNewInvoice();
     await waitFor(() =>
       expect(
         screen.getByText(/All matching enrollments are already on a draft or issued invoice/i),
@@ -1655,6 +1493,7 @@ describe('ClientInvoicesPanel', () => {
     });
     render(<ClientInvoicesPanel />);
 
+    await openNewInvoice();
     await waitFor(() =>
       expect(screen.getByRole('checkbox', { name: /Select enrollment cccccccc/i })).toBeInTheDocument(),
     );
@@ -1672,9 +1511,8 @@ describe('ClientInvoicesPanel', () => {
     });
     render(<ClientInvoicesPanel />);
 
-    await waitFor(() => screen.getByRole('checkbox', { name: /Select all visible enrollments/i }));
-
-    await userEvent.click(screen.getByRole('checkbox', { name: /Select all visible enrollments/i }));
+    await openNewInvoice();
+    await userEvent.click(await screen.findByRole('checkbox', { name: /Select all visible enrollments/i }));
 
     await waitFor(() => {
       const rowChecks = screen.getAllByRole('checkbox', { name: /^Select enrollment /i });
@@ -1701,6 +1539,7 @@ describe('ClientInvoicesPanel', () => {
     });
     render(<ClientInvoicesPanel />);
 
+    await openNewInvoice();
     await waitFor(() => {
       expect(screen.getByText('Sam Sample · sam@example.com')).toBeInTheDocument();
     });
@@ -1724,6 +1563,7 @@ describe('ClientInvoicesPanel', () => {
     });
     render(<ClientInvoicesPanel />);
 
+    await openNewInvoice();
     await waitFor(() => {
       expect(screen.getByText('Smith Family · Jane Primary')).toBeInTheDocument();
     });

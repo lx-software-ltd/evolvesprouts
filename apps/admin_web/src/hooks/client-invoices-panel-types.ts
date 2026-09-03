@@ -16,6 +16,7 @@ import type {
   InvoiceSettlementFilter,
   InvoiceStatusFilter,
 } from '@/hooks/use-client-invoices-invoice-list';
+import type { UseExpandedRecordReturn } from '@/hooks/use-expanded-record';
 
 export interface ClientInvoicesPanelShared {
   draftFilterId: string;
@@ -36,9 +37,18 @@ export interface ClientInvoicesPanelShared {
   setBusy: (key: string | null) => void;
 }
 
+/**
+ * Row selection for both record tables. The selected invoice/payment is the
+ * expanded row (mirrored in `?invoice=` / `?payment=`); the dirty setters feed
+ * the discard-changes guard of the corresponding table.
+ */
 export interface ClientInvoicesSelectionState {
   selectedInvoiceId: string | null;
-  setSelectedInvoiceId: Dispatch<SetStateAction<string | null>>;
+  setSelectedInvoiceId: (id: string | null) => void;
+  setInvoiceEditorDirty: (dirty: boolean) => void;
+  selectedPaymentId: string | null;
+  setSelectedPaymentId: (id: string | null) => void;
+  setPaymentEditorDirty: (dirty: boolean) => void;
   allocateInvoiceId: string;
   setAllocateInvoiceId: Dispatch<SetStateAction<string>>;
   allocateLineId: string;
@@ -132,16 +142,17 @@ export interface ClientInvoicesDraftEditorSlice {
   draftSelectionIssue: string;
   draftAmountIssue: string;
   handleCreateDraft: (event: FormEvent<HTMLFormElement>) => Promise<void>;
-  refreshBillingLists: (signal?: AbortSignal) => Promise<void>;
+  /** Runs after the customized (manual lines) draft has been created. */
+  handleCustomizedCreated: (invoiceId: string) => Promise<void>;
+  /** Flags unsaved draft input so switching rows asks before discarding. */
+  setInvoiceEditorDirty: (dirty: boolean) => void;
   setBusy: (key: string | null) => void;
   setActionError: Dispatch<SetStateAction<string>>;
-  setSelectedInvoiceId: Dispatch<SetStateAction<string | null>>;
-  setAllocateInvoiceId: Dispatch<SetStateAction<string>>;
-  setAllocateLineId: Dispatch<SetStateAction<string>>;
-  setActionMessage: Dispatch<SetStateAction<string>>;
 }
 
 export interface ClientInvoicesInvoicesTableSlice {
+  /** Single-open row state for the invoices table (`?invoice=`). */
+  expanded: UseExpandedRecordReturn;
   invoices: CustomerInvoiceSummary[];
   invoiceListLoading: boolean;
   invoiceListLoadingMore: boolean;
@@ -156,13 +167,13 @@ export interface ClientInvoicesInvoicesTableSlice {
   invoiceSearchInput: string;
   setInvoiceSearchInput: (value: string) => void;
   selectedInvoiceId: string | null;
-  setSelectedInvoiceId: Dispatch<SetStateAction<string | null>>;
   selectedIssuedInvoice: CustomerInvoiceSummary | null;
   issuedInvoiceEmailCsv: string;
   setIssuedInvoiceEmailCsv: Dispatch<SetStateAction<string>>;
   issuedInvoiceEmailError: string;
   setIssuedInvoiceEmailError: Dispatch<SetStateAction<string>>;
   issuedInvoiceEmailDirtyRef: MutableRefObject<boolean>;
+  setInvoiceEditorDirty: (dirty: boolean) => void;
   handleEmailIssuedInvoice: () => Promise<void>;
   loadMoreInvoices: () => Promise<void>;
   handleOpenInvoicePdfPreview: (invoiceId: string) => Promise<void>;
@@ -171,8 +182,6 @@ export interface ClientInvoicesInvoicesTableSlice {
   openDeleteDraftInvoiceDialog: (invoiceId: string) => void;
   deleteDraftDialogOpen: boolean;
   voidDialogOpen: boolean;
-  setAllocateInvoiceId: Dispatch<SetStateAction<string>>;
-  setAllocateLineId: Dispatch<SetStateAction<string>>;
 }
 
 export interface ClientInvoicesManualPaymentEditorSlice {
@@ -192,14 +201,17 @@ export interface ClientInvoicesManualPaymentEditorSlice {
   manualPaymentIsUpdate: boolean;
   manualPaymentSucceededReadOnly: boolean;
   manualPaymentEnrollmentEditLabel: string;
-  handleCancelManualPayment: () => void;
   handleManualPaymentFormSubmit: (
     event: FormEvent<HTMLFormElement>,
   ) => Promise<void>;
+  /** Flags unsaved payment input so switching rows asks before discarding. */
+  setPaymentEditorDirty: (dirty: boolean) => void;
   enrollmentPickerRows: BillingEnrollmentPickerRow[];
 }
 
 export interface ClientInvoicesPaymentsTableSlice {
+  /** Single-open row state for the payments table (`?payment=`). */
+  expanded: UseExpandedRecordReturn;
   payments: CustomerPaymentSummary[];
   listLoading: boolean;
   listLoadingMore: boolean;
@@ -207,8 +219,9 @@ export interface ClientInvoicesPaymentsTableSlice {
   listError: string;
   loadMorePayments: () => Promise<void>;
   selectedId: string | null;
-  setSelectedId: Dispatch<SetStateAction<string | null>>;
-  setManualPaymentPreferCreateForm: Dispatch<SetStateAction<boolean>>;
+  /** Full record of the expanded payment (allocations); `null` until loaded. */
+  detail: CustomerPaymentDetail | null;
+  detailError: string;
   exportBusy: boolean;
   handleExport: () => Promise<void>;
   openConfirmPaymentDialog: (paymentId: string) => void;
@@ -237,8 +250,8 @@ export interface ClientInvoicesAllocateEditorSlice {
 }
 
 export interface ClientInvoicesRefundEditorSlice {
+  /** The expanded issued invoice; refunds always target one of its payments. */
   refundInvoiceId: string;
-  setRefundInvoiceId: Dispatch<SetStateAction<string>>;
   refundPaymentSelectId: string;
   setRefundPaymentSelectId: Dispatch<SetStateAction<string>>;
   refundPaymentsLoading: boolean;
@@ -252,7 +265,6 @@ export interface ClientInvoicesRefundEditorSlice {
   setRefundMethod: Dispatch<SetStateAction<string>>;
   refundStripeId: string;
   setRefundStripeId: Dispatch<SetStateAction<string>>;
-  issuedInvoicesForAllocate: CustomerInvoiceSummary[];
   handleRefund: (event: FormEvent<HTMLFormElement>) => Promise<void>;
 }
 
