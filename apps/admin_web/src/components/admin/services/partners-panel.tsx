@@ -56,8 +56,8 @@ export interface PartnersPanelProps {
 }
 
 /**
- * Table-first partner organisations (Services only; not shown under Contacts ?
- * Organisations or Finance ? Vendors). Each row expands into its editor with
+ * Table-first partner organisations (Services only; not shown under Contacts â†’
+ * Organisations or Finance â†’ Vendors). Each row expands into its editor with
  * Location and Tags as disclosures; Delete lives in the Operations column.
  */
 export function PartnersPanel({
@@ -102,7 +102,7 @@ export function PartnersPanel({
   } = editor;
 
   // Client-side sort over the loaded page set only (same pattern as other admin panels).
-  // Search/status filters still narrow results via the API; pagination order is not global A–Z.
+  // Search/status filters still narrow results via the API; pagination order is not global Aâ€“Z.
   const sortedRows = useMemo(
     () => [...rows].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })),
     [rows]
@@ -238,7 +238,7 @@ export function PartnersPanel({
     </AdminEditorPanel>
   );
 
-  const listError = [error, editor.deleteActionError, tagsLoadError].filter(Boolean).join(' • ');
+  const listError = [error, editor.deleteActionError, tagsLoadError].filter(Boolean).join(' â€¢ ');
 
   return (
     <>
@@ -315,10 +315,10 @@ export function PartnersPanel({
               <>
                 <AdminDataTableCell className='font-medium text-slate-900'>New partner</AdminDataTableCell>
                 <AdminDataTableCell priority='secondary' className='text-slate-400'>
-                  —
+                  â€”
                 </AdminDataTableCell>
                 <AdminDataTableCell priority='tertiary' className='text-slate-400'>
-                  —
+                  â€”
                 </AdminDataTableCell>
               </>
             }
@@ -343,7 +343,7 @@ export function PartnersPanel({
                   <AdminDataTableCell className='font-medium text-slate-900'>
                     {row.name}
                     <AdminDataTableCellMeta>
-                      {typeLabel} · {statusLabel}
+                      {typeLabel} Â· {statusLabel}
                     </AdminDataTableCellMeta>
                   </AdminDataTableCell>
                   <AdminDataTableCell priority='secondary' className='text-slate-700'>
