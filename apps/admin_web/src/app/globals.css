@@ -132,6 +132,34 @@
     width: var(--admin-table-viewport);
     max-width: 100%;
   }
+  /*
+   * Selected-record frame. Drawn with inset shadows rather than borders: in a
+   * collapsed-border table only half of an outer row border is visible (the
+   * other half is clipped by the scroll wrapper), so a border on the summary
+   * <tr> never lined up with the border on the detail region. Inset shadows
+   * sit fully inside the cells, so the summary row and the detail share the
+   * same 2px edge on every side.
+   */
+  .admin-row-framed > :first-child {
+    box-shadow: inset 2px 2px 0 0 var(--color-slate-300);
+  }
+  .admin-row-framed > :not(:first-child):not(:last-child) {
+    box-shadow: inset 0 2px 0 0 var(--color-slate-300);
+  }
+  .admin-row-framed > :last-child {
+    box-shadow: inset -2px 2px 0 0 var(--color-slate-300);
+  }
+  .admin-row-framed > :first-child:last-child {
+    box-shadow:
+      inset 2px 2px 0 0 var(--color-slate-300),
+      inset -2px 2px 0 0 var(--color-slate-300);
+  }
+  .admin-row-detail-framed {
+    box-shadow:
+      inset 2px 0 0 0 var(--color-slate-300),
+      inset -2px 0 0 0 var(--color-slate-300),
+      inset 0 -2px 0 0 var(--color-slate-300);
+  }
   [aria-expanded="true"] > .admin-chevron {
     transform: rotate(180deg);
   }

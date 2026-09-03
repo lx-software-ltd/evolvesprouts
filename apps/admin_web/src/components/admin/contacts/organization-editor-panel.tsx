@@ -182,7 +182,6 @@ export function OrganizationEditorPanel({
           sectionId='crm-org-members'
           contactSelectId='crm-org-member-contact'
           entityLabel='organisation'
-          helpText='Role for each member follows the contact type set on the contact record.'
           members={selected.members}
           memberContactId={memberContactId}
           memberContactOptions={memberContactOptions}

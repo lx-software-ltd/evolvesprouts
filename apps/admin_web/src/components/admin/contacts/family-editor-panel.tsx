@@ -128,7 +128,6 @@ export function FamilyEditorPanel({ editor, tags, geographicAreas, areasLoading 
           sectionId='crm-family-members'
           contactSelectId='crm-family-member-contact'
           entityLabel='family'
-          helpText='Role is stored on each membership and matches the contact type when the member is added or when the contact type is changed on the contact record.'
           members={selected.members}
           memberContactId={memberContactId}
           memberContactOptions={memberContactOptions}

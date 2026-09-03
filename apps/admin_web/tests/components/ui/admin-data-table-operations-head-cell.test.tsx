@@ -18,4 +18,18 @@ describe('AdminDataTableOperationsHeadCell', () => {
     expect(header.className).toContain('font-normal');
     expect(header.className).not.toContain('font-semibold');
   });
+
+  it('keeps the label for screen readers but hides it visually below md so it never widens the column', () => {
+    render(
+      <table>
+        <thead>
+          <tr>
+            <AdminDataTableOperationsHeadCell />
+          </tr>
+        </thead>
+      </table>
+    );
+    const header = screen.getByRole('columnheader', { name: 'Operations' });
+    expect(header.querySelector('span')).toHaveClass('sr-only', 'md:not-sr-only');
+  });
 });

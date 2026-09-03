@@ -38,7 +38,6 @@ export interface EntityMembersSectionProps {
   sectionId: string;
   contactSelectId: string;
   entityLabel: string;
-  helpText: string;
   members: EntityMemberRow[];
   memberContactId: string;
   memberContactOptions: { id: string; label: string }[];
@@ -51,14 +50,13 @@ export interface EntityMembersSectionProps {
 
 /**
  * Members as a nested table-first list inside the family / organisation
- * editor: `+` opens a draft row with the contact picker, clicking a member
+ * editor: `New member` opens a draft row with the contact picker, clicking a member
  * opens its editor (primary-contact flag), Remove stays in Operations.
  */
 export function EntityMembersSection({
   sectionId,
   contactSelectId,
   entityLabel,
-  helpText,
   members,
   memberContactId,
   memberContactOptions,
@@ -105,7 +103,7 @@ export function EntityMembersSection({
         }}
       >
         <AdminFieldGrid columns={2}>
-          <AdminField label='Contact' htmlFor={contactSelectId} hint={helpText}>
+          <AdminField label='Contact' htmlFor={contactSelectId}>
             <Select
               id={contactSelectId}
               value={memberContactId}
@@ -132,7 +130,7 @@ export function EntityMembersSection({
           <AdminField label='Contact' htmlFor={`${sectionId}-${member.id}-contact`} span={2}>
             <Input id={`${sectionId}-${member.id}-contact`} value={label} readOnly aria-readonly='true' />
           </AdminField>
-          <AdminField label='Role' htmlFor={`${sectionId}-${member.id}-role`} hint={helpText}>
+          <AdminField label='Role' htmlFor={`${sectionId}-${member.id}-role`}>
             <Input
               id={`${sectionId}-${member.id}-role`}
               value={formatEnumLabel(member.role)}
@@ -140,7 +138,7 @@ export function EntityMembersSection({
               aria-readonly='true'
             />
           </AdminField>
-          <AdminField label='Primary contact' hint='Saved immediately.'>
+          <AdminField label='Primary contact'>
             <label className='flex h-10 items-center gap-2 text-sm text-slate-800 sm:h-9' htmlFor={primaryId}>
               <input
                 id={primaryId}

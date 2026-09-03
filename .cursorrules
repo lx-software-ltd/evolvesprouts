@@ -313,15 +313,24 @@ so on) follows the same shape, built from the shared primitives in
   surface the most useful hidden value under the identifying cell with
   `AdminDataTableCellMeta` (visible only while its column is hidden). The
   Operations column is always `primary`; `AdminRowActions` already caps the
-  inline controls at two.
+  inline controls at two. **Nothing in a cell may set a nowrap minimum
+  width on a phone**: meta lines use `wrap-anywhere` (never `truncate`), long
+  free text uses `wrap-anywhere` with `line-clamp-*`, and
+  `AdminDataTableOperationsHeadCell` keeps its label `sr-only` below `md`. This
+  applies equally to **nested tables** (notes, members): a sub-table must fit
+  inside the open editor at 390px with no horizontal scrolling.
 - **Rows expand in place** (`AdminRecordTable` + `AdminExpandableRow` from
   `admin-record-table.tsx` / `admin-expandable-row.tsx`). Clicking a row opens
   an animated detail region directly beneath that row containing the editor.
-  The selected record is **framed on all four sides** by one rule of the same
-  colour and weight (`border-2 border-slate-300`, built into
-  `AdminExpandableRow`): the summary row carries the **top** and side borders,
-  the detail region the side and **bottom** borders, so the open record reads
-  as one card and the operator can see where it ends and the next row begins.
+  The selected record is **framed on all four sides** by one 2px `slate-300`
+  rule built into `AdminExpandableRow`: the summary row carries the **top** and
+  side edges, the detail region the side and **bottom** edges, so the open
+  record reads as one card and the operator can see where it ends and the next
+  row begins. The frame is drawn with **inset box-shadows**
+  (`.admin-row-framed` / `.admin-row-detail-framed` in `globals.css`), not
+  borders: in a collapsed-border table only half of an outer row border is
+  visible, so a border on the `<tr>` never lines up with the detail's edge. Do
+  not reintroduce `border-x-*` on expandable rows.
 - **Nested record lists** inside an open editor (contact notes, family and
   organisation members) reuse the same pattern with
   `AdminRecordTable embedded` (no inner card): an `AdminCreateButton`
