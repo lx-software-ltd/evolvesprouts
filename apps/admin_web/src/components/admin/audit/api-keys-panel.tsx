@@ -1,340 +1,248 @@
 'use client';
 
-import type { FormEvent } from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-
 import { DeleteIcon } from '@/components/icons/action-icons';
-import { Button } from '@/components/ui/button';
+import { StatusBanner } from '@/components/status-banner';
+import { AdminCreateButton } from '@/components/ui/admin-create-button';
 import {
-  AdminDataTable,
-  AdminDataTableBody,
   AdminDataTableCell,
-  AdminDataTableHead,
+  AdminDataTableCellMeta,
   AdminDataTableHeadCell,
   AdminDataTableOperationsHeadCell,
 } from '@/components/ui/admin-data-table';
-import { AdminEditorCard } from '@/components/ui/admin-editor-card';
+import { AdminDiscardChangesDialog } from '@/components/ui/admin-discard-changes-dialog';
+import { AdminEditorActions, AdminEditorPanel } from '@/components/ui/admin-editor-panel';
+import { AdminExpandableRow } from '@/components/ui/admin-expandable-row';
+import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
+import { AdminFilterBar, AdminFilterField } from '@/components/ui/admin-filter-bar';
+import { AdminInlineError } from '@/components/ui/admin-inline-error';
+import { AdminRecordTable } from '@/components/ui/admin-record-table';
+import { AdminRowActions } from '@/components/ui/admin-row-actions';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { PaginatedTableCard } from '@/components/ui/paginated-table-card';
-import { AdminTableToolbar } from '@/components/ui/admin-table-toolbar';
 import { Select } from '@/components/ui/select';
-import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
-import { toErrorMessage } from '@/hooks/hook-errors';
+import { useApiKeysPanel } from '@/hooks/use-api-keys-panel';
+import { DRAFT_RECORD_ID } from '@/hooks/use-expanded-record';
+import type { AdminApiKeySummary } from '@/lib/api-keys-api';
 import { formatDate } from '@/lib/format';
-import {
-  createAdminApiKey,
-  listAdminApiKeys,
-  revokeAdminApiKey,
-  type AdminApiKeySummary,
-} from '@/lib/api-keys-api';
-import { StatusBanner } from '@/components/status-banner';
 
 const EDITOR_FORM_ID = 'api-keys-editor-form';
+const COLUMN_COUNT = 7;
 
 function formatWhen(value: string | null | undefined): string {
-  if (!value) {
-    return '—';
-  }
-  return formatDate(value);
+  return value ? formatDate(value) : '—';
 }
 
-function toIsoExpiry(value: string): string | null {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-  const parsed = new Date(trimmed);
-  if (Number.isNaN(parsed.getTime())) {
-    return trimmed;
-  }
-  return parsed.toISOString();
+function scopeLabel(scope: AdminApiKeySummary['scope']): string {
+  return scope === 'admin' ? 'Admin' : 'User';
+}
+
+function ApiKeyDraftEditor({ page }: { page: ReturnType<typeof useApiKeysPanel> }) {
+  return (
+    <AdminEditorPanel
+      status={page.saveError ? <AdminInlineError>{page.saveError}</AdminInlineError> : null}
+      actions={
+        <AdminEditorActions
+          mode='create'
+          formId={EDITOR_FORM_ID}
+          isSaving={page.isSaving}
+          savingLabel='Creating…'
+          submitDisabled={!page.name.trim()}
+          submitLabel='Create API key'
+        />
+      }
+    >
+      <form
+        id={EDITOR_FORM_ID}
+        onSubmit={(event) => {
+          event.preventDefault();
+          void page.handleCreate();
+        }}
+      >
+        <AdminFieldGrid columns={4}>
+          <AdminField label='Name' htmlFor='api-key-name' span={2}>
+            <Input id='api-key-name' value={page.name} onChange={(event) => page.setName(event.target.value)} />
+          </AdminField>
+          <AdminField
+            label='Scope'
+            htmlFor='api-key-scope'
+            hint='Admin tokens have full access to /v1/public routes; User tokens are read-only.'
+          >
+            <Select
+              id='api-key-scope'
+              value={page.scope}
+              onChange={(event) => page.setScope(event.target.value === 'admin' ? 'admin' : 'user')}
+            >
+              <option value='user'>User (read-only)</option>
+              <option value='admin'>Admin (full access)</option>
+            </Select>
+          </AdminField>
+          <AdminField label='Expires at (optional)' htmlFor='api-key-expires'>
+            <Input
+              id='api-key-expires'
+              type='datetime-local'
+              value={page.expiresAt}
+              onChange={(event) => page.setExpiresAt(event.target.value)}
+            />
+          </AdminField>
+        </AdminFieldGrid>
+      </form>
+    </AdminEditorPanel>
+  );
+}
+
+/** Keys cannot be edited after creation, so an open row is a read-only view. */
+function ApiKeyDetails({ row }: { row: AdminApiKeySummary }) {
+  const field = (label: string, id: string, value: string, span?: 2) => (
+    <AdminField label={label} htmlFor={id} span={span}>
+      <Input id={id} value={value} readOnly aria-readonly='true' />
+    </AdminField>
+  );
+  return (
+    <AdminEditorPanel>
+      <AdminFieldGrid columns={4}>
+        {field('Name', `api-key-${row.id}-name`, row.name, 2)}
+        {field('Scope', `api-key-${row.id}-scope`, scopeLabel(row.scope))}
+        {field('Expires at', `api-key-${row.id}-expires`, formatWhen(row.expires_at))}
+        {field('Prefix', `api-key-${row.id}-prefix`, row.key_prefix)}
+        {field('Status', `api-key-${row.id}-status`, row.status)}
+        {field('Created', `api-key-${row.id}-created`, formatWhen(row.created_at))}
+        {field('Last used', `api-key-${row.id}-last-used`, formatWhen(row.last_used_at))}
+      </AdminFieldGrid>
+    </AdminEditorPanel>
+  );
 }
 
 export function ApiKeysPanel() {
-  const [confirmDialogProps, requestConfirm] = useConfirmDialog();
-  const [keys, setKeys] = useState<AdminApiKeySummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [saveError, setSaveError] = useState('');
-  const [editorMode, setEditorMode] = useState<'create' | 'view'>('create');
-  const [selectedKeyId, setSelectedKeyId] = useState<string | null>(null);
-  const [name, setName] = useState('');
-  const [scope, setScope] = useState<'admin' | 'user'>('user');
-  const [expiresAt, setExpiresAt] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [revokeBusyId, setRevokeBusyId] = useState<string | null>(null);
-  const [listSearchQuery, setListSearchQuery] = useState('');
-  const [createdToken, setCreatedToken] = useState('');
-
-  const selectedRow = useMemo(
-    () => keys.find((row) => row.id === selectedKeyId) ?? null,
-    [keys, selectedKeyId]
-  );
-
-  const filteredKeys = useMemo(() => {
-    const q = listSearchQuery.trim().toLowerCase();
-    if (!q) {
-      return keys;
-    }
-    return keys.filter(
-      (row) =>
-        row.name.toLowerCase().includes(q) ||
-        row.key_prefix.toLowerCase().includes(q) ||
-        row.scope.toLowerCase().includes(q)
-    );
-  }, [keys, listSearchQuery]);
-
-  const loadKeys = useCallback(async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      setKeys(await listAdminApiKeys());
-    } catch (caught) {
-      setError(toErrorMessage(caught, 'Failed to load API keys.', { honorBackendMessage: true }));
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadKeys();
-  }, [loadKeys]);
-
-  const resetCreateForm = () => {
-    setEditorMode('create');
-    setSelectedKeyId(null);
-    setName('');
-    setScope('user');
-    setExpiresAt('');
-    setSaveError('');
-  };
-
-  const applyRowSelection = (row: AdminApiKeySummary) => {
-    setEditorMode('view');
-    setSelectedKeyId(row.id);
-    setName(row.name);
-    setScope(row.scope);
-    setExpiresAt(row.expires_at ?? '');
-    setSaveError('');
-  };
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (editorMode !== 'create') {
-      return;
-    }
-    setIsSaving(true);
-    setSaveError('');
-    try {
-      const created = await createAdminApiKey({
-        name: name.trim(),
-        scope,
-        expires_at: toIsoExpiry(expiresAt),
-      });
-      setCreatedToken(created.api_token);
-      await loadKeys();
-      resetCreateForm();
-    } catch (caught) {
-      setSaveError(toErrorMessage(caught, 'Create failed.', { honorBackendMessage: true }));
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleRevoke = async (row: AdminApiKeySummary) => {
-    if (row.status === 'revoked') {
-      return;
-    }
-    const confirmed = await requestConfirm({
-      title: 'Revoke API key?',
-      description: `“${row.name}” (${row.key_prefix}…) will stop working within five minutes.`,
-      confirmLabel: 'Revoke',
-      variant: 'danger',
-    });
-    if (!confirmed) {
-      return;
-    }
-    setRevokeBusyId(row.id);
-    setError('');
-    try {
-      const updated = await revokeAdminApiKey(row.id);
-      await loadKeys();
-      if (selectedKeyId === row.id) {
-        applyRowSelection(updated);
-      }
-    } catch (caught) {
-      setError(toErrorMessage(caught, 'Revoke failed.', { honorBackendMessage: true }));
-    } finally {
-      setRevokeBusyId(null);
-    }
-  };
+  const page = useApiKeysPanel();
+  const { expanded } = page;
 
   return (
     <div className='space-y-6'>
-      <ConfirmDialog {...confirmDialogProps} />
-      {createdToken ? (
+      <ConfirmDialog {...page.confirmDialogProps} />
+      <AdminDiscardChangesDialog prompt={expanded.discardPrompt} />
+      {page.createdToken ? (
         <StatusBanner variant='success' title='Copy this token now'>
-          {createdToken} This value is shown once and cannot be retrieved again.
+          {page.createdToken} This value is shown once and cannot be retrieved again.
         </StatusBanner>
       ) : null}
-      {error ? (
-        <StatusBanner variant='error' title='API keys'>
-          {error}
-        </StatusBanner>
-      ) : null}
-
-      <AdminEditorCard
-        title={editorMode === 'create' ? 'New API key' : 'API key'}
-        description='Tokens authenticate /v1/public routes via the x-api-token header. Admin tokens have full access; User tokens are read-only.'
-        actions={
-          editorMode === 'view' ? (
-            <Button type='button' variant='secondary' onClick={resetCreateForm}>
-              Cancel
-            </Button>
-          ) : (
-            <Button type='submit' form={EDITOR_FORM_ID} disabled={isSaving || !name.trim()}>
-              {isSaving ? 'Creating…' : 'Create API key'}
-            </Button>
-          )
+      <AdminRecordTable
+        aria-label='API keys'
+        columnCount={COLUMN_COUNT}
+        rowCount={page.filteredKeys.length}
+        isLoading={page.isLoading}
+        error={page.error || page.deleteActionError}
+        errorTitle='API keys'
+        emptyLabel='No API keys match the current filters.'
+        filters={
+          <AdminFilterBar
+            trailing={
+              <AdminCreateButton
+                label='New API key'
+                active={expanded.isDraftOpen}
+                onClick={() => (expanded.isDraftOpen ? expanded.collapse() : expanded.openDraft())}
+              />
+            }
+          >
+            <AdminFilterField label='Search' htmlFor='api-key-search' className='sm:basis-72'>
+              <Input
+                id='api-key-search'
+                value={page.listSearchQuery}
+                onChange={(event) => {
+                  page.setDeleteActionError('');
+                  page.setListSearchQuery(event.target.value);
+                }}
+                placeholder='Name, prefix, or scope'
+                autoComplete='off'
+              />
+            </AdminFilterField>
+          </AdminFilterBar>
+        }
+        head={
+          <tr>
+            <AdminDataTableHeadCell className='w-10' />
+            <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Prefix</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Scope</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Status</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Created</AdminDataTableHeadCell>
+            <AdminDataTableOperationsHeadCell />
+          </tr>
         }
       >
-        {saveError ? (
-          <StatusBanner variant='error' title='Save'>
-            {saveError}
-          </StatusBanner>
+        {expanded.isDraftOpen ? (
+          <AdminExpandableRow
+            id={DRAFT_RECORD_ID}
+            label='new API key'
+            expanded
+            isDraft
+            onToggle={expanded.collapse}
+            columnCount={COLUMN_COUNT}
+            cells={
+              <>
+                <AdminDataTableCell className='font-medium text-slate-900'>New API key</AdminDataTableCell>
+                <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='secondary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='tertiary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='tertiary' className='text-slate-400'>
+                  —
+                </AdminDataTableCell>
+              </>
+            }
+            actions={null}
+            detail={<ApiKeyDraftEditor page={page} />}
+          />
         ) : null}
-        <form id={EDITOR_FORM_ID} className='space-y-4' onSubmit={(event) => void handleSubmit(event)}>
-          <div>
-            <Label htmlFor='api-key-name'>Name</Label>
-            <Input
-              id='api-key-name'
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              disabled={editorMode === 'view'}
-              required
-            />
-          </div>
-          <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
-            <div>
-              <Label htmlFor='api-key-scope'>Scope</Label>
-              <Select
-                id='api-key-scope'
-                value={scope}
-                onChange={(event) => setScope(event.target.value === 'admin' ? 'admin' : 'user')}
-                disabled={editorMode === 'view'}
-              >
-                <option value='user'>User (read-only)</option>
-                <option value='admin'>Admin (full access)</option>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor='api-key-expires'>
-                {editorMode === 'create' ? 'Expires at (optional)' : 'Expires at'}
-              </Label>
-              {editorMode === 'create' ? (
-                <Input
-                  id='api-key-expires'
-                  type='datetime-local'
-                  value={expiresAt}
-                  onChange={(event) => setExpiresAt(event.target.value)}
-                />
-              ) : (
-                <Input id='api-key-expires' value={formatWhen(selectedRow?.expires_at)} disabled readOnly />
-              )}
-            </div>
-          </div>
-          {editorMode === 'view' ? (
-            <div className='space-y-1 text-sm text-slate-600'>
-              <p>Prefix: {selectedRow?.key_prefix ?? '—'}</p>
-              <p>Status: {selectedRow?.status ?? '—'}</p>
-              <p>Created: {formatWhen(selectedRow?.created_at)}</p>
-              <p>Last used: {formatWhen(selectedRow?.last_used_at)}</p>
-            </div>
-          ) : null}
-        </form>
-      </AdminEditorCard>
-
-      <PaginatedTableCard
-        title='API keys'
-        description='Hashed tokens for public integrations. Revoke from Operations.'
-        isLoading={isLoading}
-        isLoadingMore={false}
-        hasMore={false}
-        error=''
-        loadingLabel='Loading API keys...'
-        onLoadMore={() => {}}
-        toolbar={
-          <AdminTableToolbar>
-            <Label htmlFor='api-key-search'>Search</Label>
-            <Input
-              id='api-key-search'
-              value={listSearchQuery}
-              onChange={(event) => setListSearchQuery(event.target.value)}
-            />
-          </AdminTableToolbar>
-        }
-      >
-        <AdminDataTable>
-          <AdminDataTableHead>
-            <tr>
-              <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Prefix</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Scope</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Status</AdminDataTableHeadCell>
-              <AdminDataTableHeadCell>Created</AdminDataTableHeadCell>
-              <AdminDataTableOperationsHeadCell />
-            </tr>
-          </AdminDataTableHead>
-          <AdminDataTableBody>
-            {filteredKeys.map((row) => (
-              <tr key={row.id}>
-                <AdminDataTableCell>
-                  <button
-                    type='button'
-                    className='text-left font-medium text-slate-900 underline-offset-2 hover:underline'
-                    onClick={() => applyRowSelection(row)}
-                  >
+        {page.filteredKeys.map((row) => {
+          const isOpen = expanded.isExpanded(row.id);
+          return (
+            <AdminExpandableRow
+              key={row.id}
+              id={row.id}
+              label={row.name}
+              expanded={isOpen}
+              onToggle={() => expanded.toggle(row.id)}
+              columnCount={COLUMN_COUNT}
+              cells={
+                <>
+                  <AdminDataTableCell className='font-medium text-slate-900'>
                     {row.name}
-                  </button>
-                </AdminDataTableCell>
-                <AdminDataTableCell>{row.key_prefix}</AdminDataTableCell>
-                <AdminDataTableCell>{row.scope === 'admin' ? 'Admin' : 'User'}</AdminDataTableCell>
-                <AdminDataTableCell>{row.status}</AdminDataTableCell>
-                <AdminDataTableCell>{formatWhen(row.created_at)}</AdminDataTableCell>
-                <AdminDataTableCell>
-                  <div className='flex justify-end'>
-                    <Button
-                      type='button'
-                      size='sm'
-                      variant='danger'
-                      className='h-8 min-w-8 px-0'
-                      disabled={row.status === 'revoked' || revokeBusyId === row.id}
-                      onClick={() => void handleRevoke(row)}
-                      aria-label='Revoke API key'
-                      title='Revoke API key'
-                      aria-busy={revokeBusyId === row.id}
-                    >
-                      {revokeBusyId === row.id ? (
-                        <span
-                          className='inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-white border-t-transparent'
-                          aria-hidden
-                        />
-                      ) : (
-                        <DeleteIcon className='h-4 w-4 shrink-0' aria-hidden />
-                      )}
-                    </Button>
-                  </div>
-                </AdminDataTableCell>
-              </tr>
-            ))}
-          </AdminDataTableBody>
-        </AdminDataTable>
-        {!isLoading && filteredKeys.length === 0 ? (
-          <p className='text-sm text-slate-600'>No API keys match the current filters.</p>
-        ) : null}
-      </PaginatedTableCard>
+                    <AdminDataTableCellMeta>
+                      {row.key_prefix} · {scopeLabel(row.scope)} · {row.status}
+                    </AdminDataTableCellMeta>
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='secondary' className='font-mono text-sm'>
+                    {row.key_prefix}
+                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='secondary'>{scopeLabel(row.scope)}</AdminDataTableCell>
+                  <AdminDataTableCell priority='tertiary'>{row.status}</AdminDataTableCell>
+                  <AdminDataTableCell priority='tertiary'>{formatWhen(row.created_at)}</AdminDataTableCell>
+                </>
+              }
+              actions={
+                <AdminRowActions
+                  actions={[
+                    {
+                      key: 'revoke',
+                      label: page.revokeBusyId === row.id ? 'Revoking API key' : 'Revoke API key',
+                      icon: <DeleteIcon className='h-4 w-4' />,
+                      tone: 'danger',
+                      disabled: row.status === 'revoked' || page.revokeBusyId === row.id,
+                      onClick: () => void page.handleRevoke(row),
+                    },
+                  ]}
+                />
+              }
+              detail={isOpen ? <ApiKeyDetails row={row} /> : null}
+            />
+          );
+        })}
+      </AdminRecordTable>
     </div>
   );
 }

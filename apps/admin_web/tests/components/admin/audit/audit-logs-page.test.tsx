@@ -30,15 +30,51 @@ describe('AuditLogsPage', () => {
     const user = userEvent.setup();
     render(<AuditLogsPage />);
     await user.click(screen.getByRole('button', { name: 'API keys' }));
-    expect(await screen.findByRole('heading', { name: 'New API key' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'New API key' })).toBeInTheDocument();
     expect(mockListApiKeys).toHaveBeenCalled();
   });
 
-  it('renders audit logs heading', async () => {
+  it('renders the audit log table first, without a listing title', async () => {
     render(<AuditLogsPage />);
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Audit logs' })).toBeInTheDocument();
+      expect(screen.getByRole('table')).toBeInTheDocument();
     });
+    expect(screen.queryByRole('heading')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Apply filters' })).toBeInTheDocument();
+  });
+
+  it('expands a log row into its detail instead of opening a dialog', async () => {
+    const user = userEvent.setup();
+    mockListAuditLogs.mockResolvedValue({
+      items: [
+        {
+          id: '00000000-0000-4000-8000-000000000007',
+          table_name: 'contacts',
+          record_id: 'c-77',
+          action: 'UPDATE' as const,
+          timestamp: '2024-01-07T00:00:00.000Z',
+          source: 'trigger',
+          user_email: 'ops@example.com',
+          changed_fields: ['first_name'],
+          old_values: { first_name: 'Ann' },
+          new_values: { first_name: 'Anne' },
+          request_id: 'req-1',
+        },
+      ],
+      next_cursor: null,
+    });
+    render(<AuditLogsPage />);
+    const table = await screen.findByRole('table');
+    const expandButton = await within(table).findByRole('button', { name: /^Expand contacts UPDATE/ });
+    expect(within(table).queryByRole('button', { name: 'View details' })).toBeNull();
+
+    await user.click(expandButton);
+
+    expect(await screen.findByText('Old values')).toBeInTheDocument();
+    expect(screen.getByText('New values')).toBeInTheDocument();
+    expect(screen.getByText('c-77')).toBeInTheDocument();
+    expect(screen.getByText('req-1')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('shows API key name in the Actor column', async () => {
@@ -60,7 +96,7 @@ describe('AuditLogsPage', () => {
     render(<AuditLogsPage />);
     await waitFor(() => {
       const table = screen.getByRole('table');
-      expect(within(table).getByText('Prod CRM full access')).toBeInTheDocument();
+      expect(within(table).getAllByText('Prod CRM full access').length).toBeGreaterThan(0);
       expect(within(table).getByText('contacts')).toBeInTheDocument();
     });
   });
@@ -110,7 +146,7 @@ describe('AuditLogsPage', () => {
     render(<AuditLogsPage />);
     await waitFor(() => {
       const table = screen.getByRole('table');
-      expect(within(table).getByText('WhatsApp webhook')).toBeInTheDocument();
+      expect(within(table).getAllByText('WhatsApp webhook').length).toBeGreaterThan(0);
       expect(within(table).getByText('whatsapp_conversations')).toBeInTheDocument();
     });
   });

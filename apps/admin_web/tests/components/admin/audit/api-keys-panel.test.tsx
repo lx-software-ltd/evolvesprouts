@@ -31,13 +31,14 @@ const sampleKey = {
 
 describe('ApiKeysPanel', () => {
   beforeEach(() => {
+    window.history.replaceState(null, '', '/audit?view=api-keys');
     mockList.mockReset();
     mockCreate.mockReset();
     mockRevoke.mockReset();
     mockList.mockResolvedValue([sampleKey]);
   });
 
-  it('lists keys and creates a token shown once', async () => {
+  it('lists keys and creates a token shown once from the draft row', async () => {
     mockCreate.mockResolvedValue({
       ...sampleKey,
       id: '22222222-2222-4222-8222-222222222222',
@@ -49,9 +50,10 @@ describe('ApiKeysPanel', () => {
     render(<ApiKeysPanel />);
 
     expect(await screen.findByText('Partner read')).toBeInTheDocument();
-    expect(screen.getByText('esk_testdisp')).toBeInTheDocument();
+    expect(screen.getAllByText('esk_testdisp').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('heading')).toBeNull();
 
-    await user.clear(screen.getByLabelText('Name'));
+    await user.click(screen.getByRole('button', { name: 'New API key' }));
     await user.type(screen.getByLabelText('Name'), 'New key');
     await user.selectOptions(screen.getByLabelText('Scope'), 'admin');
     await user.click(screen.getByRole('button', { name: 'Create API key' }));
@@ -64,25 +66,47 @@ describe('ApiKeysPanel', () => {
       });
     });
     expect(await screen.findByText(/esk_shown_once/)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole('cell', { name: 'New API key' })).toBeNull();
+    });
   });
 
-  it('places scope and expires at on the same editor row', async () => {
+  it('lays the draft out as Name 2/4, Scope 1/4, Expires at 1/4 in one field grid', async () => {
+    const user = userEvent.setup();
     render(<ApiKeysPanel />);
     expect(await screen.findByText('Partner read')).toBeInTheDocument();
 
+    await user.click(screen.getByRole('button', { name: 'New API key' }));
+    const name = screen.getByLabelText('Name');
     const scope = screen.getByLabelText('Scope');
     const expires = screen.getByLabelText('Expires at (optional)');
-    const row = scope.closest('div.grid');
-    expect(row).toBe(expires.closest('div.grid'));
-    expect(row).toHaveClass('sm:grid-cols-2');
+    const grid = scope.closest('.grid');
+    expect(grid).not.toBeNull();
+    expect(expires.closest('.grid')).toBe(grid);
+    expect(name.closest('.grid')).toBe(grid);
+    expect(name.parentElement).toHaveClass('sm:col-span-2');
   });
 
-  it('styles the Operations revoke action as a danger icon button', async () => {
+  it('opens an existing key as a read-only view with no save action', async () => {
+    const user = userEvent.setup();
+    render(<ApiKeysPanel />);
+    expect(await screen.findByText('Partner read')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Expand Partner read' }));
+    const nameField = await screen.findByLabelText('Name');
+    expect(nameField).toHaveValue('Partner read');
+    expect(nameField).toHaveAttribute('readonly');
+    expect(screen.getByLabelText('Prefix')).toHaveValue('esk_testdisp');
+    expect(screen.getByLabelText('Status')).toHaveValue('active');
+    expect(screen.queryByRole('button', { name: /Create API key|Update/ })).toBeNull();
+  });
+
+  it('renders the Operations revoke action as a bordered danger icon button', async () => {
     render(<ApiKeysPanel />);
     expect(await screen.findByText('Partner read')).toBeInTheDocument();
 
     const revoke = screen.getByRole('button', { name: 'Revoke API key' });
-    expect(revoke).toHaveClass('bg-red-600', 'h-8', 'min-w-8', 'px-0');
+    expect(revoke).toHaveClass('h-8', 'w-8', 'border', 'bg-white', 'text-red-600');
     expect(revoke).toHaveAttribute('title', 'Revoke API key');
   });
 
