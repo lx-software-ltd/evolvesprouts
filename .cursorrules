@@ -305,6 +305,13 @@ so on) follows the same shape, built from the shared primitives in
   Filter controls, like every `Input`, `Select`, and `Textarea`, have a
   **white background** (`bg-white` is part of the shared control primitives;
   do not override it with tinted backgrounds).
+  **Filters apply as soon as they change**: selects and dates commit
+  immediately and free-text filters are debounced (`usePaginatedList`
+  `debounceKeys`). Never render an **Apply filters** or **Clear** button in
+  the filter bar, and never hold filter values in a separate draft state that
+  waits for a button. Keep the filter set small enough to sit on **one line on
+  desktop** (drop filters that need a second control to be valid, such as a
+  record ID that only works together with a table).
 - **Mobile-ready tables:** a record table must never need horizontal
   scrolling on a phone to read the identifying column and Operations. Do not
   set a `min-w-*` on the table. Mark non-essential columns with
@@ -314,11 +321,17 @@ so on) follows the same shape, built from the shared primitives in
   `AdminDataTableCellMeta` (visible only while its column is hidden). The
   Operations column is always `primary`; `AdminRowActions` already caps the
   inline controls at two. **Nothing in a cell may set a nowrap minimum
-  width on a phone**: meta lines use `wrap-anywhere` (never `truncate`), long
-  free text uses `wrap-anywhere` with `line-clamp-*`, and
-  `AdminDataTableOperationsHeadCell` keeps its label `sr-only` below `md`. This
-  applies equally to **nested tables** (notes, members): a sub-table must fit
-  inside the open editor at 390px with no horizontal scrolling.
+  width on a phone**: `AdminDataTableHeadCell` / `AdminDataTableCell` apply
+  `max-md:wrap-anywhere` themselves so a long `snake_case` name, UUID, or
+  timestamp can never make a column wider than the card (do not add
+  `whitespace-nowrap` to a `primary` cell, and do not render raw `<td>`s in a
+  record table); meta lines use `wrap-anywhere` (never `truncate`), long free
+  text uses `wrap-anywhere` with `line-clamp-*`, adjacent inline fragments
+  in one cell (a name and a `(system)` marker) are separated by a real space
+  rather than a margin alone, and `AdminDataTableOperationsHeadCell` keeps its
+  label `sr-only` below `md`. This applies equally to **nested tables** (notes,
+  members): a sub-table must fit inside the open editor at 390px with no
+  horizontal scrolling.
 - **Rows expand in place** (`AdminRecordTable` + `AdminExpandableRow` from
   `admin-record-table.tsx` / `admin-expandable-row.tsx`). Clicking a row opens
   an animated detail region directly beneath that row containing the editor.
