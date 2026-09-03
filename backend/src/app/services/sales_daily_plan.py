@@ -37,8 +37,9 @@ _INVALID_JSON_USER_MESSAGE = "The AI returned an invalid response. Please try ag
 
 _SYSTEM_PROMPT = """
 You are a sales coach for Evolve Sprouts (Hong Kong). Given brand context, the
-live service catalogue, open pipeline, unanswered inbound threads, and recent
-won/lost leads, return strict JSON only (no markdown) with this shape:
+live service catalogue, open pipeline, unanswered inbound threads, unpaid issued
+invoices (balance due), and recent won/lost leads, return strict JSON only (no
+markdown) with this shape:
 {
   "focus": "string — one-sentence sales focus for today",
   "priorities": [
@@ -46,7 +47,8 @@ won/lost leads, return strict JSON only (no markdown) with this shape:
       "title": "short activity title",
       "why": "why this matters today",
       "action": "concrete next step the admin should do",
-      "lead_id": "uuid of an open lead when the action is about one, else null"
+      "lead_id": "uuid of an open lead when the action is about one, else null",
+      "invoice_id": "uuid of an unpaid issued invoice when the action is about one, else null"
     }
   ],
   "outreach": [
@@ -65,10 +67,13 @@ won/lost leads, return strict JSON only (no markdown) with this shape:
   "risks": ["string — cautions or things to avoid"]
 }
 Rules:
-- Advise only; never claim a message was sent.
-- Be sales-focused: close, follow up, book, or improve the offer.
-- Reference specific inbound messages and lead ids when present.
-- Prefer unanswered threads and late-stage open leads.
+- Advise only; never claim a message was sent or a payment was collected.
+- Be sales-focused: close, follow up, book, chase payment, or improve the offer.
+- Reference specific inbound messages, lead ids, and invoice ids when present.
+- Prefer unanswered threads, late-stage open leads, and overdue or large unpaid
+  invoices.
+- Include at least one payment-follow-up priority when unpaid invoices are in
+  context unless every listed invoice was already chased very recently in notes.
 - Treat prior_plans as persisted memory of earlier insights and refinements.
 - Follow operator_input when present; it is an instruction from the admin.
 - Prefer live CRM context when it disagrees with older plans.
@@ -204,6 +209,7 @@ def generate_and_store_plan(
             "open_lead_count": len(context.get("open_leads") or []),
             "needs_reply_count": len(context.get("needs_reply_threads") or []),
             "catalogue_count": len(context.get("catalogue") or []),
+            "unpaid_invoice_count": len(context.get("unpaid_invoices") or []),
         },
     )
     try:
@@ -271,6 +277,7 @@ def _priorities(value: Any) -> list[dict[str, str | None]]:
                 "why": str(entry.get("why") or "").strip(),
                 "action": str(entry.get("action") or "").strip(),
                 "lead_id": _optional_uuid(entry.get("lead_id")),
+                "invoice_id": _optional_uuid(entry.get("invoice_id")),
             }
         )
     return items

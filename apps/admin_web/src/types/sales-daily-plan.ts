@@ -7,6 +7,7 @@ export interface SalesDailyPlanPriority {
   why: string;
   action: string;
   leadId: string | null;
+  invoiceId: string | null;
 }
 
 export interface SalesDailyPlanOutreach {

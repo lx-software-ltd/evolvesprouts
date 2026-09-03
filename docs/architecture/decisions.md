@@ -1167,8 +1167,8 @@ rows are kept until Sales → Configuration resets memory
 **Why:**
 - Operators need a saved plan they can reopen without paying for another model
   call, and they need prior insights plus refinements to steer the next run.
-- Org-wide context (pipeline, unanswered threads, catalogue) exceeds API
-  Gateway time limits, so generation stays off the request path.
+- Org-wide context (pipeline, unanswered threads, catalogue, unpaid invoices)
+  exceeds API Gateway time limits, so generation stays off the request path.
 - Reusing the lead-AI OpenRouter / proxy / job-timing pattern keeps secrets and
   failure handling consistent.
 - Reset is an explicit admin action so memory is durable until the operator

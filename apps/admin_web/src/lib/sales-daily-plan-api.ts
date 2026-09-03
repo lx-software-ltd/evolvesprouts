@@ -23,6 +23,7 @@ function parsePriority(value: unknown): SalesDailyPlan['priorities'][number] | n
     why: asNullableString(value.why) ?? '',
     action: asNullableString(value.action) ?? '',
     leadId: asNullableString(value.lead_id),
+    invoiceId: asNullableString(value.invoice_id),
   };
 }
 

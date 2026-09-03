@@ -1444,7 +1444,7 @@ export interface paths {
         put?: never;
         /**
          * Queue org-wide sales plan of the day generation
-         * @description Enqueues an asynchronous job that generates a sales-focused plan of the day via the shared OpenRouter pipeline (same Secrets Manager key, allow-listed chat-completions URL, and AWS HTTP proxy as lead AI suggestions). Optional `operator_input` is stored on the job and the resulting plan and is included in later generations as memory, along with the last five persisted plans. Poll `GET /v1/admin/leads/daily-plan/jobs/{job_id}` for status, timing (`queue_wait_ms`, `duration_ms`), and the resulting plan. Does not send messages.
+         * @description Enqueues an asynchronous job that generates a sales-focused plan of the day via the shared OpenRouter pipeline (same Secrets Manager key, allow-listed chat-completions URL, and AWS HTTP proxy as lead AI suggestions). Context includes open pipeline, unanswered threads, unpaid issued invoices, and the published catalogue. Optional `operator_input` is stored on the job and the resulting plan and is included in later generations as memory, along with the last five persisted plans. Poll `GET /v1/admin/leads/daily-plan/jobs/{job_id}` for status, timing (`queue_wait_ms`, `duration_ms`), and the resulting plan. Does not send messages or payment reminders.
          */
         post: {
             parameters: {
@@ -7043,6 +7043,11 @@ export interface components {
             action?: string;
             /** Format: uuid */
             lead_id?: string | null;
+            /**
+             * Format: uuid
+             * @description Unpaid issued invoice when the priority is a payment follow-up.
+             */
+            invoice_id?: string | null;
         };
         SalesDailyPlanOutreach: {
             channel: string;

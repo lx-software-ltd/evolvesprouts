@@ -4,13 +4,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.db.models.contact import Contact
+from app.db.models.customer_invoice import CustomerInvoice
 from app.db.models.enums import (
+    BillingInvoiceStatus,
     FunnelStage,
     InstanceStatus,
     MetaMessageDirection,
@@ -30,6 +33,7 @@ MAX_INSTANCES = 15
 MAX_OPEN_LEADS = 25
 MAX_CLOSED_LEADS = 8
 MAX_NEEDS_REPLY = 15
+MAX_UNPAID_INVOICES = 20
 MAX_NOTE_CHARS = 240
 MAX_DESCRIPTION_CHARS = 400
 MAX_MESSAGE_CHARS = 1000
@@ -67,6 +71,8 @@ def build_sales_daily_plan_context(
     closed_leads = _load_recent_closed_leads(session)
     needs_reply, conversation_watermark = _load_needs_reply_threads(session)
     pipeline_watermark = _latest_pipeline_activity_at(session)
+    unpaid_invoices = _load_unpaid_invoices(session, now=now)
+    unpaid_invoice_summary = _summarize_unpaid_invoices(unpaid_invoices)
     prior_plans = load_prior_plans_for_context(session)
     context = {
         "generated_for": "org_wide_sales_plan_of_the_day",
@@ -77,16 +83,20 @@ def build_sales_daily_plan_context(
         "open_leads": open_leads,
         "recent_closed_leads": closed_leads,
         "needs_reply_threads": needs_reply,
+        "unpaid_invoices": unpaid_invoices,
+        "unpaid_invoice_summary": unpaid_invoice_summary,
         "prior_plans": prior_plans,
         "guidance": (
-            "Prioritize unanswered inbound threads and late-stage open leads. "
-            "Suggest concrete activities for today. Recommend which published "
-            "service to push and any offer-wording tweaks grounded in message "
-            "feedback. Treat prior_plans as persisted memory of earlier insights "
-            "and operator refinements; follow operator_input when present. Prefer "
-            "live CRM context when it disagrees with older plans. Do not invent "
-            "pricing, schedules, or guarantees. If context is thin, say what to "
-            "gather next."
+            "Prioritize unanswered inbound threads, late-stage open leads, and "
+            "issued invoices with a balance due (especially overdue ones). "
+            "Suggest concrete activities for today, including payment "
+            "follow-ups when unpaid invoices are present. Recommend which "
+            "published service to push and any offer-wording tweaks grounded in "
+            "message feedback. Treat prior_plans as persisted memory of earlier "
+            "insights and operator refinements; follow operator_input when "
+            "present. Prefer live CRM context when it disagrees with older "
+            "plans. Do not invent pricing, schedules, or guarantees. If context "
+            "is thin, say what to gather next."
         ),
     }
     return context, SalesDailyPlanWatermarks(
@@ -105,6 +115,98 @@ def latest_conversation_at(session: Session) -> datetime | None:
 def latest_pipeline_activity_at(session: Session) -> datetime | None:
     """Newest lead create or funnel-stage event time."""
     return _latest_pipeline_activity_at(session)
+
+
+def _latest_pipeline_activity_at(session: Session) -> datetime | None:
+    lead_created = session.scalar(select(func.max(SalesLead.created_at)))
+    event_created = session.scalar(select(func.max(SalesLeadEvent.created_at)))
+    return _max_dt(lead_created, event_created)
+
+
+def _load_unpaid_invoices(session: Session, *, now: datetime) -> list[dict[str, Any]]:
+    """Issued invoices with balance due, overdue first then largest balance."""
+    today = now.date()
+    rows = list(
+        session.scalars(
+            select(CustomerInvoice)
+            .where(CustomerInvoice.status == BillingInvoiceStatus.ISSUED)
+            .where(CustomerInvoice.balance_due > 0)
+            .order_by(
+                CustomerInvoice.due_date.asc().nulls_last(),
+                CustomerInvoice.balance_due.desc(),
+                CustomerInvoice.updated_at.desc(),
+            )
+            .limit(MAX_UNPAID_INVOICES)
+        ).all()
+    )
+    serialized = [_serialize_unpaid_invoice(invoice, today=today) for invoice in rows]
+    serialized.sort(
+        key=lambda item: (
+            0 if item.get("is_overdue") else 1,
+            -(item.get("_balance_due_sort") or 0),
+            item.get("due_date") or "9999-12-31",
+        )
+    )
+    for item in serialized:
+        item.pop("_balance_due_sort", None)
+    return serialized
+
+
+def _serialize_unpaid_invoice(
+    invoice: CustomerInvoice, *, today: date
+) -> dict[str, Any]:
+    balance_due = Decimal(str(invoice.balance_due))
+    amount_allocated = Decimal(str(invoice.amount_allocated))
+    due_date = invoice.due_date
+    days_overdue: int | None = None
+    is_overdue = False
+    if due_date is not None and due_date < today:
+        is_overdue = True
+        days_overdue = (today - due_date).days
+    return {
+        "id": str(invoice.id),
+        "invoice_number": invoice.invoice_number,
+        "bill_to_display_name": invoice.bill_to_display_name,
+        "bill_to_email": (
+            mask_email(invoice.bill_to_email) if invoice.bill_to_email else None
+        ),
+        "currency": invoice.currency,
+        "total": str(invoice.total),
+        "amount_allocated": str(amount_allocated),
+        "balance_due": str(balance_due),
+        "issued_at": _iso(invoice.issued_at),
+        "due_date": due_date.isoformat() if due_date is not None else None,
+        "days_overdue": days_overdue,
+        "is_overdue": is_overdue,
+        "is_partially_paid": amount_allocated > 0,
+        "_balance_due_sort": float(balance_due),
+    }
+
+
+def _summarize_unpaid_invoices(invoices: list[dict[str, Any]]) -> dict[str, Any]:
+    totals_by_currency: dict[str, Decimal] = {}
+    overdue_count = 0
+    for invoice in invoices:
+        if invoice.get("is_overdue"):
+            overdue_count += 1
+        currency = str(invoice.get("currency") or "").strip().upper()
+        if not currency:
+            continue
+        try:
+            balance = Decimal(str(invoice.get("balance_due") or "0"))
+        except ArithmeticError:
+            continue
+        totals_by_currency[currency] = (
+            totals_by_currency.get(currency, Decimal("0")) + balance
+        )
+    return {
+        "count": len(invoices),
+        "overdue_count": overdue_count,
+        "total_balance_due_by_currency": {
+            currency: str(amount)
+            for currency, amount in sorted(totals_by_currency.items())
+        },
+    }
 
 
 def _load_catalogue(session: Session) -> list[dict[str, Any]]:
@@ -430,12 +532,6 @@ def _latest_inbound_meta(session: Session) -> list[dict[str, Any]]:
             }
         )
     return results
-
-
-def _latest_pipeline_activity_at(session: Session) -> datetime | None:
-    lead_created = session.scalar(select(func.max(SalesLead.created_at)))
-    event_created = session.scalar(select(func.max(SalesLeadEvent.created_at)))
-    return _max_dt(lead_created, event_created)
 
 
 def _display_name(

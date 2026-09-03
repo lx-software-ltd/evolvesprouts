@@ -16,6 +16,7 @@ describe('parseSalesDailyPlan', () => {
           why: 'Qualified',
           action: 'Book a slot',
           lead_id: 'lead-1',
+          invoice_id: 'inv-1',
         },
       ],
       outreach: [
@@ -52,6 +53,7 @@ describe('parseSalesDailyPlan', () => {
       operatorInput: 'Focus on MBA',
     });
     expect(plan?.priorities[0]?.leadId).toBe('lead-1');
+    expect(plan?.priorities[0]?.invoiceId).toBe('inv-1');
     expect(plan?.outreach[0]?.draftReply).toBe('Tue or Thu?');
   });
 
