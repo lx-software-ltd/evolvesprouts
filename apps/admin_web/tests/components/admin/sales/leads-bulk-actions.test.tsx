@@ -157,12 +157,16 @@ describe('LeadsBulkActions', () => {
     const mergeButton = screen.getByRole('button', { name: 'Merge leads' });
     const assignSelect = screen.getByRole('combobox', { name: 'Bulk assign assignee' });
     const stageSelect = screen.getByRole('combobox', { name: 'Bulk set stage' });
+    const selectGrid = assignSelect.closest('.grid');
 
     expect(mergeButton).toHaveClass('bg-white');
-    expect(
-      Array.from(controls!.children).map((element) => element.getAttribute('aria-label') ?? element.textContent)
-    ).toEqual(['Merge leads', 'Bulk assign assignee', 'Bulk set stage']);
-    expect(assignSelect.compareDocumentPosition(stageSelect) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(mergeButton).toHaveClass('shrink-0');
+    expect(mergeButton).toHaveClass('whitespace-nowrap');
+    expect(assignSelect).toHaveClass('sm:w-40');
+    expect(stageSelect).toHaveClass('sm:w-40');
+    expect(selectGrid).toHaveClass('shrink-0');
+    expect(controls!.children[0]).toBe(mergeButton);
+    expect(controls!.children[1]).toBe(selectGrid);
   });
 
   it('merges selected leads after choosing a keeper', async () => {
