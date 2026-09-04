@@ -458,6 +458,16 @@ For each function above, the following resources are created:
 - Naming: `/aws/lambda/{function-name}` (e.g., `/aws/lambda/evolvesprouts-EvolvesproutsAdminFunction`)
 - 90-day retention policy
 
+**Mailchimp webhook CloudWatch monitoring (Admin Lambda):**
+
+| Resource | Logical ID | Physical name | Notes |
+|----------|------------|---------------|-------|
+| Metric filter | `MailchimpWebhookMetricFilter` | (unnamed) | On Admin Lambda log group; JSON `$.message = "Received Mailchimp webhook"`; emits `{resourcePrefix}/Mailchimp` / `WebhookReceived` = 1 |
+| Alarm | `MailchimpWebhookInactivityAlarm` | `{resourcePrefix}-mailchimp-webhook-inactivity-alarm` | Sum &lt; 1 for 7 days; `TreatMissingData=breaching` |
+
+After an API host change, update the Mailchimp audience webhook URL
+(`docs/deployment/backend.md`).
+
 ---
 
 ## API Gateway

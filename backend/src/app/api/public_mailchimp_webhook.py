@@ -22,6 +22,8 @@ logger = get_logger(__name__)
 _SUPPORTED_EVENT_TYPES = frozenset(
     {"subscribe", "unsubscribe", "cleaned", "profile", "upemail"}
 )
+# Keep this message in sync with the Admin Lambda metric filter in api-stack.ts.
+_RECEIVED_WEBHOOK_LOG_MESSAGE = "Received Mailchimp webhook"
 _WEBHOOK_TOKEN_QUERY_KEY = "token"  # nosec B105 - static query parameter name
 _WEBHOOK_SECRET_ENV_NAME = (  # nosec B105 - env var key, not a secret value
     "MAILCHIMP_WEBHOOK_SECRET"
@@ -55,6 +57,10 @@ def handle_mailchimp_webhook(
 
     payload = _parse_form_payload(event)
     event_type = _optional_text(payload.get("type"))
+    logger.info(
+        _RECEIVED_WEBHOOK_LOG_MESSAGE,
+        extra={"event_type": event_type},
+    )
     if event_type not in _SUPPORTED_EVENT_TYPES:
         logger.info(
             "Ignoring unsupported Mailchimp webhook event",

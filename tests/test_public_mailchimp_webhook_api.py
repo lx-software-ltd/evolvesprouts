@@ -24,6 +24,29 @@ def test_mailchimp_webhook_rejects_unsupported_method(api_gateway_event: Any) ->
     assert response["statusCode"] == 405
 
 
+def test_mailchimp_webhook_logs_received_after_auth(
+    api_gateway_event: Any,
+    monkeypatch: Any,
+    caplog: Any,
+) -> None:
+    _patch_contact_lookup(monkeypatch, {})
+    monkeypatch.setenv("MAILCHIMP_WEBHOOK_SECRET", "correct-secret")
+
+    event = api_gateway_event(
+        method="POST",
+        path="/v1/mailchimp/webhook",
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        query_params={"token": "correct-secret"},
+        body=urlencode({"type": "subscribe", "data[email]": "nobody@example.com"}),
+    )
+
+    with caplog.at_level("INFO"):
+        response = handle_mailchimp_webhook(event, "POST")
+
+    assert response["statusCode"] == 200
+    assert "Received Mailchimp webhook" in caplog.text
+
+
 def test_mailchimp_webhook_rejects_invalid_secret(
     api_gateway_event: Any,
     monkeypatch: Any,

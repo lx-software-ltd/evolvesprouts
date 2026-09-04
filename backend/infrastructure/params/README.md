@@ -61,7 +61,10 @@ The backend stack also requires Mailchimp/media lead parameters:
 - `MailchimpApiSecretArn`
 - `MailchimpListId`
 - `MailchimpServerPrefix`
-- `MailchimpWebhookSecret`
+- `MailchimpWebhookSecret` (query `token` on `/v1/mailchimp/webhook`; after
+  `ApiCustomDomainName` or execute-api URL changes, update the Mailchimp
+  audience webhook to `{api-origin}/v1/mailchimp/webhook?token=...` — see
+  `docs/deployment/backend.md`)
 - `MetaAppSecret`
 - `WhatsappWebhookVerifyToken`
 - `MetaPageAccessToken` (Graph Page / system-user token for inbox import)

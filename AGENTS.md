@@ -104,7 +104,7 @@ mandatory `.cursorrules` integration anchors are removed or weakened.
   `next dev --webpack` / `next build --webpack`.
 - The backend has no running server locally; it is Lambda-based. Tests use
   `unittest.mock` and optional Postgres (`TEST_DATABASE_URL`) for integration cases.
-- `backend/infrastructure` has a `postinstall` script that patches bundled CDK
-  dependencies; `npm ci` is sufficient.
+- `backend/infrastructure` install is a normal `npm ci` (no postinstall
+  patcher for bundled `aws-cdk-lib` dependencies).
 - Python formatting must use `pre-commit run ruff-format --all-files` before
   committing any Python changes (per `.cursorrules`).

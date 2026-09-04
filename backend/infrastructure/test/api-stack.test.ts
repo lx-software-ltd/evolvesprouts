@@ -316,6 +316,61 @@ function assertSalesDailyPlanSchedule(stack: cdk.Stack): void {
   }
 }
 
+function assertMailchimpWebhookInactivityAlarm(template: Template): void {
+  const filters = template.findResources("AWS::Logs::MetricFilter");
+  const filter = Object.entries(filters).find(([, resource]) => {
+    const transform = ((resource.Properties ?? {}).MetricTransformations ?? [])[0] as
+      | Record<string, unknown>
+      | undefined;
+    return (
+      transform?.MetricNamespace === "evolvesprouts/Mailchimp" &&
+      transform?.MetricName === "WebhookReceived"
+    );
+  });
+  if (!filter) {
+    throw new Error(
+      "Expected AWS::Logs::MetricFilter for evolvesprouts/Mailchimp WebhookReceived",
+    );
+  }
+  const pattern = (filter[1].Properties ?? {}).FilterPattern;
+  if (pattern !== '{ $.message = "Received Mailchimp webhook" }') {
+    throw new Error(
+      `Mailchimp webhook metric filter must match $.message = Received Mailchimp webhook; found ${JSON.stringify(pattern)}`,
+    );
+  }
+
+  const alarms = template.findResources("AWS::CloudWatch::Alarm");
+  const alarm = Object.entries(alarms).find(([, resource]) => {
+    return (resource.Properties ?? {}).AlarmName === "evolvesprouts-mailchimp-webhook-inactivity-alarm";
+  });
+  if (!alarm) {
+    throw new Error(
+      "Expected CloudWatch alarm evolvesprouts-mailchimp-webhook-inactivity-alarm",
+    );
+  }
+  const props = alarm[1].Properties ?? {};
+  if (props.ComparisonOperator !== "LessThanThreshold") {
+    throw new Error(
+      `Mailchimp webhook inactivity alarm must use LessThanThreshold; found ${JSON.stringify(props.ComparisonOperator)}`,
+    );
+  }
+  if (props.Threshold !== 1) {
+    throw new Error(
+      `Mailchimp webhook inactivity alarm threshold must be 1; found ${JSON.stringify(props.Threshold)}`,
+    );
+  }
+  if (props.EvaluationPeriods !== 7) {
+    throw new Error(
+      `Mailchimp webhook inactivity alarm must evaluate 7 days; found ${JSON.stringify(props.EvaluationPeriods)}`,
+    );
+  }
+  if (props.TreatMissingData !== "breaching") {
+    throw new Error(
+      `Mailchimp webhook inactivity alarm must treat missing data as breaching; found ${JSON.stringify(props.TreatMissingData)}`,
+    );
+  }
+}
+
 function assertApiTokenAuthorizerHasNoReservedConcurrency(template: Template): void {
   const functions = template.findResources("AWS::Lambda::Function");
   const match = Object.entries(functions).find(([, resource]) => {
@@ -349,6 +404,7 @@ function main(): void {
   assertPollResponsesTableHasExpiresAtTtl(template);
   assertCognitoClientAllowlistWiring(template);
   assertApiTokenAuthorizerHasNoReservedConcurrency(template);
+  assertMailchimpWebhookInactivityAlarm(template);
   assertInboxImportHasNoReservedConcurrency(stack);
   assertInboxImportUsesDedicatedPageToken(stack);
   assertSalesDailyPlanSchedule(stack);

@@ -3326,6 +3326,41 @@ export class ApiStack extends cdk.Stack {
       "Public Mailchimp webhook endpoint; access is validated via MAILCHIMP_WEBHOOK_SECRET in Lambda handler.");
     addCheckovMethodSuppression(mailchimpWebhookGetMethod, "CKV_AWS_59",
       "Public Mailchimp webhook verification endpoint; access is validated via MAILCHIMP_WEBHOOK_SECRET in Lambda handler.");
+
+    // Must match _RECEIVED_WEBHOOK_LOG_MESSAGE in public_mailchimp_webhook.py.
+    const mailchimpWebhookReceivedFilter = new logs.MetricFilter(
+      this,
+      "MailchimpWebhookMetricFilter",
+      {
+        logGroup: adminFunction.logGroup,
+        filterPattern: logs.FilterPattern.stringValue(
+          "$.message",
+          "=",
+          "Received Mailchimp webhook"
+        ),
+        metricNamespace: `${resourcePrefix}/Mailchimp`,
+        metricName: "WebhookReceived",
+        metricValue: "1",
+      }
+    );
+    new cdk.aws_cloudwatch.Alarm(this, "MailchimpWebhookInactivityAlarm", {
+      alarmName: name("mailchimp-webhook-inactivity-alarm"),
+      alarmDescription:
+        "No authenticated Mailchimp webhook POSTs in 7 days. " +
+        "Mailchimp may still be calling a previous API host after an " +
+        "ApiCustomDomainName change.",
+      metric: mailchimpWebhookReceivedFilter.metric({
+        period: cdk.Duration.days(1),
+        statistic: "Sum",
+      }),
+      threshold: 1,
+      comparisonOperator:
+        cdk.aws_cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
+      evaluationPeriods: 7,
+      datapointsToAlarm: 7,
+      treatMissingData: cdk.aws_cloudwatch.TreatMissingData.BREACHING,
+    });
+
     const whatsappWebhook = v1.addResource("whatsapp").addResource("webhook");
     const whatsappWebhookPostMethod = whatsappWebhook.addMethod("POST", adminIntegration, {
       authorizationType: apigateway.AuthorizationType.NONE,
