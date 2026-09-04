@@ -38,9 +38,7 @@ def test_public_families_requires_token(api_gateway_event: Any) -> None:
 
 
 @pytest.mark.parametrize("method", ["POST", "PATCH", "DELETE"])
-def test_public_families_user_cannot_write(
-    api_gateway_event: Any, method: str
-) -> None:
+def test_public_families_user_cannot_write(api_gateway_event: Any, method: str) -> None:
     family_id = uuid4()
     path = (
         "/v1/public/families"
