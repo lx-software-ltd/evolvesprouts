@@ -158,7 +158,7 @@ describe('LeadDetailPanel', () => {
     // Notes are fetched only once the operator opens the disclosure.
     expect(listAdminContactNotes).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole('button', { name: 'Notes' }));
+    await user.click(screen.getByRole('button', { name: /Notes/ }));
     await waitFor(() => {
       expect(screen.getByText('Called the parent.')).toBeInTheDocument();
     });
