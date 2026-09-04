@@ -20,6 +20,16 @@ vi.mock('@/lib/assets-api', () => ({
   getOrCreateAdminAssetShareLink: mockGetOrCreateAdminAssetShareLink,
   rotateAdminAssetShareLink: mockRotateAdminAssetShareLink,
   revokeAdminAssetShareLink: mockRevokeAdminAssetShareLink,
+  buildAssetEmailDownloadUrlFromShareUrl: (shareUrl: string) =>
+    shareUrl.replace('/share/', '/email-download/'),
+}));
+
+vi.mock('@/lib/clipboard', () => ({
+  copyTextToClipboard: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('@/lib/config', () => ({
+  getPublicSiteHostname: () => 'www.example.com',
 }));
 
 import { AssetEditorPanel } from '@/components/admin/assets/asset-editor-panel';
@@ -461,5 +471,43 @@ describe('AssetEditorPanel', () => {
     await waitFor(() => {
       expect(mockRevokeAdminAssetShareLink).toHaveBeenCalledWith('asset-1');
     });
+  });
+
+  it('prefills the public-site hostname when a public asset has no share-link policy', async () => {
+    const user = userEvent.setup();
+    mockGetAdminAssetShareLink.mockResolvedValue(null);
+    renderEditor({
+      selectedAsset: createAdminAssetFixture({
+        id: 'public-asset-1',
+        visibility: 'public',
+      }),
+    });
+
+    await user.click(screen.getByRole('button', { name: /Share link/ }));
+    await waitFor(() => {
+      expect(mockGetAdminAssetShareLink).toHaveBeenCalledWith('public-asset-1');
+    });
+
+    expect(screen.getByLabelText('Share-link domain allowlist')).toHaveValue('www.example.com');
+
+    await user.click(screen.getByRole('button', { name: 'Link for Email' }));
+    await waitFor(() => {
+      expect(mockGetOrCreateAdminAssetShareLink).toHaveBeenCalledWith('public-asset-1', {
+        allowedDomains: ['www.example.com'],
+      });
+    });
+  });
+
+  it('keeps the allowlist empty for a restricted asset without a saved share link', async () => {
+    const user = userEvent.setup();
+    mockGetAdminAssetShareLink.mockResolvedValue(null);
+    renderEditor({ selectedAsset: SELECTED_ASSET });
+
+    await user.click(screen.getByRole('button', { name: /Share link/ }));
+    await waitFor(() => {
+      expect(mockGetAdminAssetShareLink).toHaveBeenCalledWith('asset-1');
+    });
+
+    expect(screen.getByLabelText('Share-link domain allowlist')).toHaveValue('');
   });
 });

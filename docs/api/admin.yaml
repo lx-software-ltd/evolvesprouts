@@ -212,7 +212,12 @@ paths:
           $ref: "#/components/responses/NotFound"
     post:
       summary: Create admin asset
-      description: Admin-only route for creating an asset.
+      description: >
+        Admin-only route for creating an asset. When `visibility` is `public`, the
+        handler also creates a share-link row seeded from
+        `ASSET_SHARE_LINK_DEFAULT_ALLOWED_DOMAINS` (public website hostnames from
+        stack parameters). Restricted assets do not receive a share link until an
+        operator creates one.
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -8252,6 +8257,10 @@ components:
         visibility:
           type: string
           enum: [public, restricted]
+          description: >
+            `public` also seeds a share-link domain allowlist from
+            `ASSET_SHARE_LINK_DEFAULT_ALLOWED_DOMAINS`. Restricted assets do not
+            receive a share link on create.
         client_tag:
           type: string
           nullable: true
@@ -8299,7 +8308,9 @@ components:
           enum: [public, restricted]
           description: >
             Must remain `restricted` for assets tagged `expense_attachment` or `customer_invoice` (400
-            if set to `public`).
+            if set to `public`). Changing a non-system asset to `public` seeds a
+            share-link allowlist from `ASSET_SHARE_LINK_DEFAULT_ALLOWED_DOMAINS`
+            when the asset does not already have a share link.
         client_tag:
           type: string
           nullable: true

@@ -20,6 +20,7 @@ from app.api.assets.admin_assets_content_replace import (
     init_asset_content_replace,
 )
 from app.api.assets.admin_share_links import (
+    ensure_default_share_link_for_public_asset,
     get_or_create_share_link,
     get_share_link,
     revoke_share_link,
@@ -209,6 +210,12 @@ def _create_asset(event: Mapping[str, Any], created_by: str) -> dict[str, Any]:
         )
         if payload.get("client_tag") == CLIENT_DOCUMENT_TAG_NAME:
             repository.set_client_document_tag_link(asset_id, link=True)
+        ensure_default_share_link_for_public_asset(
+            repository,
+            asset_id=asset_id,
+            visibility=payload["visibility"],
+            created_by=created_by,
+        )
         session.commit()
         loaded = repository.get_with_asset_tags(asset_id) or asset
         return json_response(
@@ -274,6 +281,12 @@ def _update_asset(
                 asset_id,
                 link=payload.get("client_tag") == CLIENT_DOCUMENT_TAG_NAME,
             )
+        ensure_default_share_link_for_public_asset(
+            repository,
+            asset_id=asset_id,
+            visibility=updated.visibility,
+            created_by=identity.user_sub or "",
+        )
         session.commit()
         refreshed = repository.get_with_asset_tags(asset_id)
         return json_response(

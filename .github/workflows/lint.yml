@@ -95,7 +95,41 @@ jobs:
 
       - name: Run React lint
         run: |
-          set -e
+          set -euo pipefail
+
+          # Retry only npm-registry audit outages (HTTP 503). Real high-severity
+          # findings still fail immediately.
+          run_npm_audit() {
+            local dir="$1"
+            local attempt=1
+            local max_attempts=4
+            local delay=8
+            local audit_output
+            local audit_status
+
+            while [ "$attempt" -le "$max_attempts" ]; do
+              echo "npm audit (attempt ${attempt}/${max_attempts}) in ${dir}"
+              set +e
+              audit_output="$(cd "$dir" && npm audit --omit=dev --audit-level=high 2>&1)"
+              audit_status=$?
+              set -e
+              printf '%s\n' "$audit_output"
+              if [ "$audit_status" -eq 0 ]; then
+                return 0
+              fi
+              if printf '%s' "$audit_output" | grep -Eq '503 Service Unavailable|audit endpoint returned an error'; then
+                if [ "$attempt" -lt "$max_attempts" ]; then
+                  echo "npm audit registry unavailable; retrying in ${delay}s..."
+                  sleep "$delay"
+                  delay=$((delay * 2))
+                  attempt=$((attempt + 1))
+                  continue
+                fi
+              fi
+              return "$audit_status"
+            done
+          }
+
           for dir in apps/admin_web apps/public_www apps/training; do
             if [ -f "$dir/package.json" ]; then
               echo "Linting React in $dir"
@@ -106,7 +140,7 @@ jobs:
               fi
               (cd "$dir" && npm run lint --if-present)
               if [ "$dir" = "apps/admin_web" ] || [ "$dir" = "apps/training" ]; then
-                (cd "$dir" && npm audit --omit=dev --audit-level=high)
+                run_npm_audit "$dir"
               fi
             else
               echo "Skipping missing $dir"

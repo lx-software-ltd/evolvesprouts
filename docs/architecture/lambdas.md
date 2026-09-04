@@ -85,7 +85,10 @@ their primary responsibilities.
   while preserving the asset id; complete validates the pending key segment
   (`UUID-` prefix + filename), enforces PDF `Content-Type` and max upload size on
   S3 head, and logs a warning with `outcome=replace_delete_failed` if deleting the
-  previous object fails after commit). Expense- and customer-invoice-tagged assets
+  previous object fails after commit). Creating or updating an asset to
+  `visibility=public` also creates a share-link row (when none exists) using
+  `ASSET_SHARE_LINK_DEFAULT_ALLOWED_DOMAINS`; missing defaults are logged and
+  the asset write still succeeds. Expense- and customer-invoice-tagged assets
   reject replace and delete (400) and must remain restricted. **Operational caveats:** concurrent replaces
   are last-writer-wins; abandoned `complete` calls can leave orphan objects under
   `assets/{id}/`; failed old-key deletes are log-only until a follow-up lifecycle or

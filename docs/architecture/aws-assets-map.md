@@ -207,7 +207,9 @@ The share path enforces per-link Referer/Origin allowlists in
 token DB records; restricted assets still require JWT).
 Default share-link allowlist values are injected into
 `ASSET_SHARE_LINK_DEFAULT_ALLOWED_DOMAINS` from
-`PublicWwwDomainName,PublicWwwStagingDomainName` stack parameters.
+`PublicWwwDomainName,PublicWwwStagingDomainName` stack parameters. Creating or
+updating an asset to `visibility=public` seeds a share-link row from that
+allowlist when one does not already exist.
 
 ---
 

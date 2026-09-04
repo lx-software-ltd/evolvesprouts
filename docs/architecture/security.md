@@ -463,7 +463,10 @@ Requirements:
   secrets when shared externally.
 - Share-link tokens are random URL-safe values persisted in
   `asset_share_links`; admin APIs support rotate, revoke, and per-asset
-  source-domain allowlist updates to recover from leaks.
+  source-domain allowlist updates to recover from leaks. Creating or updating
+  an asset to `visibility=public` seeds that allowlist from
+  `ASSET_SHARE_LINK_DEFAULT_ALLOWED_DOMAINS` (public website hostnames from
+  stack parameters) when the asset does not already have a share link.
 - Download URLs returned to clients are CloudFront-signed URLs generated on
   demand by Lambda.
 - Share-token redirects and download-link JSON responses set strict no-store

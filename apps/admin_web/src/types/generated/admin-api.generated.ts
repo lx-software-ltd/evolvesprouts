@@ -98,7 +98,7 @@ export interface paths {
         put?: never;
         /**
          * Create admin asset
-         * @description Admin-only route for creating an asset.
+         * @description Admin-only route for creating an asset. When `visibility` is `public`, the handler also creates a share-link row seeded from `ASSET_SHARE_LINK_DEFAULT_ALLOWED_DOMAINS` (public website hostnames from stack parameters). Restricted assets do not receive a share link until an operator creates one.
          */
         post: {
             parameters: {
@@ -8093,7 +8093,10 @@ export interface components {
              * @enum {string|null}
              */
             content_language?: "en" | "zh-CN" | "zh-HK" | null;
-            /** @enum {string} */
+            /**
+             * @description `public` also seeds a share-link domain allowlist from `ASSET_SHARE_LINK_DEFAULT_ALLOWED_DOMAINS`. Restricted assets do not receive a share link on create.
+             * @enum {string}
+             */
             visibility: "public" | "restricted";
             /**
              * @description Optional. When set to client_document, links the asset to the client_document tag after create. When omitted or null, no client tag is linked.
@@ -8116,7 +8119,7 @@ export interface components {
              */
             content_language?: "en" | "zh-CN" | "zh-HK" | null;
             /**
-             * @description Must remain `restricted` for assets tagged `expense_attachment` or `customer_invoice` (400 if set to `public`).
+             * @description Must remain `restricted` for assets tagged `expense_attachment` or `customer_invoice` (400 if set to `public`). Changing a non-system asset to `public` seeds a share-link allowlist from `ASSET_SHARE_LINK_DEFAULT_ALLOWED_DOMAINS` when the asset does not already have a share link.
              * @enum {string}
              */
             visibility?: "public" | "restricted";

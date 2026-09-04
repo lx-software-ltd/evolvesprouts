@@ -18,9 +18,40 @@ from app.api.assets.share_links import (
 )
 from app.db.audit import set_audit_context
 from app.db.engine import get_engine
+from app.db.models import AssetVisibility
 from app.db.repositories.asset import AssetRepository
 from app.exceptions import NotFoundError, ValidationError
-from app.utils import json_response
+from app.utils import get_logger, json_response
+
+logger = get_logger(__name__)
+
+
+def ensure_default_share_link_for_public_asset(
+    repository: AssetRepository,
+    *,
+    asset_id: UUID,
+    visibility: AssetVisibility | None,
+    created_by: str,
+) -> None:
+    """Create a share link with env default domains for a newly public asset."""
+    if visibility != AssetVisibility.PUBLIC:
+        return
+    if repository.get_share_link(asset_id=asset_id) is not None:
+        return
+    try:
+        allowed_domains = resolve_default_allowed_domains()
+    except RuntimeError:
+        logger.warning(
+            "Share link defaults unavailable; public asset created without allowlist",
+            extra={"asset_id": str(asset_id)},
+        )
+        return
+    repository.create_share_link(
+        asset_id=asset_id,
+        share_token=generate_share_token(),
+        allowed_domains=allowed_domains,
+        created_by=created_by,
+    )
 
 
 def parse_optional_json_body(event: Mapping[str, Any]) -> Mapping[str, Any] | None:

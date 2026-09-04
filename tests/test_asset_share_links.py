@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 from typing import Any
+from uuid import uuid4
 
 import pytest
 
 from app.auth.authorizer_utils import extract_bearer_token
 from app.api.assets import share_assets
 from app.api.assets.assets_storage import signed_link_no_cache_headers
+from app.api.assets.admin_share_links import (
+    ensure_default_share_link_for_public_asset,
+)
 from app.api.assets.share_links import (
     extract_request_source_domain,
     build_configured_email_download_url,
@@ -146,6 +150,101 @@ def test_normalize_allowed_domains_accepts_urls_and_deduplicates() -> None:
 def test_normalize_allowed_domains_rejects_invalid_input() -> None:
     with pytest.raises(ValidationError):
         normalize_allowed_domains(["not a domain"])
+
+
+def test_ensure_default_share_link_creates_public_allowlist(monkeypatch: Any) -> None:
+    from app.db.models import AssetVisibility
+
+    monkeypatch.setenv(
+        "ASSET_SHARE_LINK_DEFAULT_ALLOWED_DOMAINS",
+        "www.example.com,www-staging.example.com",
+    )
+    created: dict[str, Any] = {}
+
+    class _Repo:
+        def get_share_link(self, *, asset_id: Any) -> None:
+            return None
+
+        def create_share_link(self, **kwargs: Any) -> None:
+            created.update(kwargs)
+
+    asset_id = uuid4()
+    ensure_default_share_link_for_public_asset(
+        _Repo(),  # type: ignore[arg-type]
+        asset_id=asset_id,
+        visibility=AssetVisibility.PUBLIC,
+        created_by="admin-sub",
+    )
+
+    assert created["asset_id"] == asset_id
+    assert created["allowed_domains"] == [
+        "www.example.com",
+        "www-staging.example.com",
+    ]
+    assert created["created_by"] == "admin-sub"
+    assert created["share_token"]
+
+
+def test_ensure_default_share_link_skips_restricted_assets() -> None:
+    from app.db.models import AssetVisibility
+
+    class _Repo:
+        def get_share_link(self, *, asset_id: Any) -> None:
+            raise AssertionError("restricted assets must not look up share links")
+
+        def create_share_link(self, **kwargs: Any) -> None:
+            raise AssertionError("restricted assets must not create share links")
+
+    ensure_default_share_link_for_public_asset(
+        _Repo(),  # type: ignore[arg-type]
+        asset_id=uuid4(),
+        visibility=AssetVisibility.RESTRICTED,
+        created_by="admin-sub",
+    )
+
+
+def test_ensure_default_share_link_skips_existing_link(monkeypatch: Any) -> None:
+    from types import SimpleNamespace
+
+    from app.db.models import AssetVisibility
+
+    monkeypatch.setenv("ASSET_SHARE_LINK_DEFAULT_ALLOWED_DOMAINS", "www.example.com")
+
+    class _Repo:
+        def get_share_link(self, *, asset_id: Any) -> object:
+            return SimpleNamespace(asset_id=asset_id)
+
+        def create_share_link(self, **kwargs: Any) -> None:
+            raise AssertionError("existing share links must not be replaced")
+
+    ensure_default_share_link_for_public_asset(
+        _Repo(),  # type: ignore[arg-type]
+        asset_id=uuid4(),
+        visibility=AssetVisibility.PUBLIC,
+        created_by="admin-sub",
+    )
+
+
+def test_ensure_default_share_link_skips_when_defaults_missing(
+    monkeypatch: Any,
+) -> None:
+    from app.db.models import AssetVisibility
+
+    monkeypatch.delenv("ASSET_SHARE_LINK_DEFAULT_ALLOWED_DOMAINS", raising=False)
+
+    class _Repo:
+        def get_share_link(self, *, asset_id: Any) -> None:
+            return None
+
+        def create_share_link(self, **kwargs: Any) -> None:
+            raise AssertionError("missing defaults must not create a share link")
+
+    ensure_default_share_link_for_public_asset(
+        _Repo(),  # type: ignore[arg-type]
+        asset_id=uuid4(),
+        visibility=AssetVisibility.PUBLIC,
+        created_by="admin-sub",
+    )
 
 
 def test_extract_request_source_domain_prefers_referer() -> None:
