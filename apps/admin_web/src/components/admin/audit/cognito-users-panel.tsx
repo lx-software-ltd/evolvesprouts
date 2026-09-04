@@ -34,7 +34,16 @@ const GROUP_LABELS: Record<CognitoStaffGroup, string> = {
 };
 
 function formatWhen(value: string | null | undefined): string {
-  return value ? formatDate(value) : '—';
+  if (!value) {
+    return '—';
+  }
+  const trimmed = value.trim();
+  if (/^\d+$/.test(trimmed)) {
+    const epoch = Number(trimmed);
+    const ms = trimmed.length <= 10 ? epoch * 1000 : epoch;
+    return formatDate(new Date(ms).toISOString());
+  }
+  return formatDate(trimmed);
 }
 
 function groupLabel(groups: readonly string[]): string {
@@ -268,7 +277,7 @@ export function CognitoUsersPanel() {
             <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>Email</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>Group</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='tertiary'>Status</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='tertiary'>Last sign-in</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>Created</AdminDataTableHeadCell>
             <AdminDataTableOperationsHeadCell />
           </tr>
@@ -319,14 +328,12 @@ export function CognitoUsersPanel() {
                   <AdminDataTableCell className='font-medium text-slate-900'>
                     {displayName}
                     <AdminDataTableCellMeta>
-                      {row.email || row.username} · {groupLabel(row.groups)} · {enabledLabel(row.enabled)}
+                      {row.email || row.username} · {groupLabel(row.groups)} · {formatWhen(row.last_auth_time)}
                     </AdminDataTableCellMeta>
                   </AdminDataTableCell>
                   <AdminDataTableCell priority='secondary'>{row.email || '—'}</AdminDataTableCell>
                   <AdminDataTableCell priority='secondary'>{groupLabel(row.groups)}</AdminDataTableCell>
-                  <AdminDataTableCell priority='tertiary'>
-                    {row.enabled ? statusLabel(row.status) : 'Disabled'}
-                  </AdminDataTableCell>
+                  <AdminDataTableCell priority='tertiary'>{formatWhen(row.last_auth_time)}</AdminDataTableCell>
                   <AdminDataTableCell priority='tertiary'>{formatWhen(row.created_at)}</AdminDataTableCell>
                 </>
               }
