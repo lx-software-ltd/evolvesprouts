@@ -296,6 +296,9 @@ describe('PartnersPanel', () => {
         location_id: locId,
       })
     );
+
+    await user.click(screen.getByRole('button', { name: 'Collapse Venue Owner' }));
+    expect(screen.queryByRole('alertdialog', { name: 'Discard unsaved changes?' })).not.toBeInTheDocument();
   });
 
   it('deletes partner after confirmation from table', async () => {
