@@ -27,6 +27,7 @@ vi.mock('@/lib/cognito-users-api', async () => {
 });
 
 import { CognitoUsersPanel } from '@/components/admin/audit/cognito-users-panel';
+import { formatDate } from '@/lib/format';
 
 const sampleUser = {
   id: 'ada@example.com',
@@ -40,7 +41,7 @@ const sampleUser = {
   groups: ['admin'],
   created_at: '2026-01-01T00:00:00+00:00',
   updated_at: '2026-01-02T00:00:00+00:00',
-  last_auth_time: null,
+  last_auth_time: '1700000000',
 };
 
 describe('CognitoUsersPanel', () => {
@@ -69,6 +70,11 @@ describe('CognitoUsersPanel', () => {
     expect(await screen.findByText('Ada Lovelace')).toBeInTheDocument();
     expect(screen.getAllByText('ada@example.com').length).toBeGreaterThan(0);
     expect(screen.queryByRole('heading')).toBeNull();
+    const table = screen.getByRole('table');
+    expect(within(table).getByRole('columnheader', { name: 'Last sign-in' })).toBeInTheDocument();
+    expect(within(table).queryByRole('columnheader', { name: 'Status' })).toBeNull();
+    const lastSignIn = formatDate(new Date(1700000000 * 1000).toISOString());
+    expect(within(table).getAllByText(lastSignIn).length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole('button', { name: 'New user' }));
     const editor = screen.getByTestId('admin-editor-panel');
@@ -87,6 +93,23 @@ describe('CognitoUsersPanel', () => {
     await waitFor(() => {
       expect(screen.queryByRole('cell', { name: 'New user' })).toBeNull();
     });
+  });
+
+  it('shows Last sign-in in the table using the same datetime format as Created', async () => {
+    const isoLastAuth = '2026-03-01T10:00:00Z';
+    mockList.mockResolvedValue({
+      items: [{ ...sampleUser, last_auth_time: isoLastAuth }],
+      next_cursor: null,
+    });
+    render(<CognitoUsersPanel />);
+    expect(await screen.findByText('Ada Lovelace')).toBeInTheDocument();
+    const table = screen.getByRole('table');
+    const expectedLastSignIn = formatDate(isoLastAuth);
+    const expectedCreated = formatDate(sampleUser.created_at);
+    expect(within(table).getByRole('columnheader', { name: 'Last sign-in' })).toBeInTheDocument();
+    expect(within(table).queryByRole('columnheader', { name: 'Status' })).toBeNull();
+    expect(within(table).getAllByText(expectedLastSignIn).length).toBeGreaterThan(0);
+    expect(within(table).getAllByText(expectedCreated).length).toBeGreaterThan(0);
   });
 
   it('filters by name and email without an Apply button', async () => {
