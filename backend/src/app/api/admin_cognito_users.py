@@ -17,7 +17,11 @@ from app.api.admin_request import (
     split_route_parts,
 )
 from app.api.admin_users import _extract_cognito_attribute
-from app.api.admin_validators import MAX_NAME_LENGTH, validate_email, validate_string_length
+from app.api.admin_validators import (
+    MAX_NAME_LENGTH,
+    validate_email,
+    validate_string_length,
+)
 from app.exceptions import ConflictError, NotFoundError, ValidationError
 from app.services import aws_proxy
 from app.services.aws_proxy import AwsProxyError
@@ -68,7 +72,9 @@ def _list_cognito_users(event: Mapping[str, Any]) -> dict[str, Any]:
 
     params: dict[str, Any] = {
         "UserPoolId": user_pool_id,
-        "Limit": _COGNITO_PAGE_LIMIT if apply_name_locally else min(limit, _COGNITO_PAGE_LIMIT),
+        "Limit": _COGNITO_PAGE_LIMIT
+        if apply_name_locally
+        else min(limit, _COGNITO_PAGE_LIMIT),
     }
     if cognito_filter:
         params["Filter"] = cognito_filter
@@ -132,7 +138,9 @@ def _create_cognito_user(event: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _get_cognito_user(event: Mapping[str, Any], username: str) -> dict[str, Any]:
-    return json_response(200, _load_user(_require_user_pool_id(), username), event=event)
+    return json_response(
+        200, _load_user(_require_user_pool_id(), username), event=event
+    )
 
 
 def _update_cognito_user(
@@ -167,7 +175,9 @@ def _update_cognito_user(
     if "group" in body:
         next_group = _parse_group(body.get("group"), required=False)
         _reject_self_lockout(current, actor_sub, next_group=next_group)
-        _replace_staff_groups(user_pool_id, username, current.get("groups") or [], next_group)
+        _replace_staff_groups(
+            user_pool_id, username, current.get("groups") or [], next_group
+        )
     if "enabled" in body:
         enabled = body.get("enabled")
         if not isinstance(enabled, bool):
@@ -191,13 +201,18 @@ def _delete_cognito_user(
     current = _load_user(user_pool_id, username)
     _reject_self_mutation(current, actor_sub)
     _invoke("admin_delete_user", {"UserPoolId": user_pool_id, "Username": username})
-    logger.info("Deleted Cognito user", extra={"user": mask_email(current.get("email") or username)})
+    logger.info(
+        "Deleted Cognito user",
+        extra={"user": mask_email(current.get("email") or username)},
+    )
     return json_response(200, {"deleted": True, "username": username}, event=event)
 
 
 def _load_user(user_pool_id: str, username: str) -> dict[str, Any]:
     try:
-        raw = _invoke("admin_get_user", {"UserPoolId": user_pool_id, "Username": username})
+        raw = _invoke(
+            "admin_get_user", {"UserPoolId": user_pool_id, "Username": username}
+        )
     except AwsProxyError as exc:
         _raise_proxy_error(exc, username=username)
     groups: list[str] = []
@@ -218,7 +233,9 @@ def _load_user(user_pool_id: str, username: str) -> dict[str, Any]:
     return _serialize_admin_user(raw, groups)
 
 
-def _serialize_list_user(raw: Mapping[str, Any], group_map: Mapping[str, list[str]]) -> dict[str, Any]:
+def _serialize_list_user(
+    raw: Mapping[str, Any], group_map: Mapping[str, list[str]]
+) -> dict[str, Any]:
     username = raw.get("Username")
     username_value = username if isinstance(username, str) else ""
     attributes = raw.get("Attributes")
@@ -262,13 +279,16 @@ def _serialize_user(
         "sub": sub,
         "email": _extract_cognito_attribute(attributes, "email"),
         "name": _extract_cognito_attribute(attributes, "name"),
-        "email_verified": _extract_cognito_attribute(attributes, "email_verified") == "true",
+        "email_verified": _extract_cognito_attribute(attributes, "email_verified")
+        == "true",
         "enabled": enabled is not False,
         "status": status if isinstance(status, str) else "UNKNOWN",
         "groups": groups,
         "created_at": _as_iso(created_at),
         "updated_at": _as_iso(updated_at),
-        "last_auth_time": _extract_cognito_attribute(attributes, "custom:last_auth_time"),
+        "last_auth_time": _extract_cognito_attribute(
+            attributes, "custom:last_auth_time"
+        ),
     }
 
 
@@ -330,7 +350,9 @@ def _add_to_group(user_pool_id: str, username: str, group_name: str) -> None:
         _raise_proxy_error(exc, username=username)
 
 
-def _update_attributes(user_pool_id: str, username: str, attributes: list[dict[str, str]]) -> None:
+def _update_attributes(
+    user_pool_id: str, username: str, attributes: list[dict[str, str]]
+) -> None:
     try:
         _invoke(
             "admin_update_user_attributes",
@@ -387,7 +409,10 @@ def _parse_group(value: Any, *, required: bool) -> str | None:
 
 def _staff_groups() -> tuple[str, ...]:
     admin = os.getenv("ADMIN_GROUP", "admin").strip() or "admin"
-    manager = os.getenv("MANAGER_GROUP", _DEFAULT_MANAGER_GROUP).strip() or _DEFAULT_MANAGER_GROUP
+    manager = (
+        os.getenv("MANAGER_GROUP", _DEFAULT_MANAGER_GROUP).strip()
+        or _DEFAULT_MANAGER_GROUP
+    )
     instructor = os.getenv("INSTRUCTOR_GROUP", "instructor").strip() or "instructor"
     return (admin, manager, instructor)
 
@@ -437,9 +462,13 @@ def _invoke(action: str, params: dict[str, Any]) -> dict[str, Any]:
 
 def _raise_proxy_error(exc: AwsProxyError, *, username: str) -> NoReturn:
     if exc.code == "UsernameExistsException":
-        raise ConflictError("A user with this email already exists", field="email") from exc
+        raise ConflictError(
+            "A user with this email already exists", field="email"
+        ) from exc
     if exc.code == "AliasExistsException":
-        raise ConflictError("A user with this email already exists", field="email") from exc
+        raise ConflictError(
+            "A user with this email already exists", field="email"
+        ) from exc
     if exc.code == "UserNotFoundException":
         raise NotFoundError("Cognito user", username) from exc
     logger.warning("Cognito proxy error", extra={"code": exc.code})

@@ -35,7 +35,9 @@ def _list_user(
     }
 
 
-def _admin_user(username: str, *, sub: str, email: str, name: str = "Ada") -> dict[str, Any]:
+def _admin_user(
+    username: str, *, sub: str, email: str, name: str = "Ada"
+) -> dict[str, Any]:
     return {
         "Username": username,
         "UserAttributes": _attrs(
@@ -98,13 +100,22 @@ def test_list_maps_users_and_staff_groups(
 ) -> None:
     calls: list[tuple[str, dict[str, Any]]] = []
 
-    def fake_invoke(_service: str, action: str, params: dict[str, Any]) -> dict[str, Any]:
+    def fake_invoke(
+        _service: str, action: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
         calls.append((action, params))
         if action == "list_users":
             return {
                 "Users": [
-                    _list_user("ada@example.com", sub="sub-ada", email="ada@example.com", name="Ada"),
-                    _list_user("pat@example.com", sub="sub-pat", email="pat@example.com"),
+                    _list_user(
+                        "ada@example.com",
+                        sub="sub-ada",
+                        email="ada@example.com",
+                        name="Ada",
+                    ),
+                    _list_user(
+                        "pat@example.com", sub="sub-pat", email="pat@example.com"
+                    ),
                 ]
             }
         if action == "list_users_in_group":
@@ -135,7 +146,9 @@ def test_list_maps_users_and_staff_groups(
     assert payload["items"][0]["groups"] == ["admin"]
     assert payload["items"][1]["groups"] == []
     assert payload["items"][0]["name"] == "Ada"
-    assert any(action == "list_users" and "Filter" not in params for action, params in calls)
+    assert any(
+        action == "list_users" and "Filter" not in params for action, params in calls
+    )
 
 
 def test_list_uses_email_filter(
@@ -146,7 +159,9 @@ def test_list_uses_email_filter(
 ) -> None:
     seen: list[dict[str, Any]] = []
 
-    def fake_invoke(_service: str, action: str, params: dict[str, Any]) -> dict[str, Any]:
+    def fake_invoke(
+        _service: str, action: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
         if action == "list_users":
             seen.append(params)
             return {"Users": []}
@@ -178,7 +193,9 @@ def test_create_user_adds_group(
 ) -> None:
     actions: list[str] = []
 
-    def fake_invoke(_service: str, action: str, params: dict[str, Any]) -> dict[str, Any]:
+    def fake_invoke(
+        _service: str, action: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
         actions.append(action)
         if action == "admin_create_user":
             assert params["Username"] == "ada@example.com"
@@ -189,7 +206,9 @@ def test_create_user_adds_group(
             assert params["GroupName"] == "manager"
             return {}
         if action == "admin_get_user":
-            return _admin_user("ada@example.com", sub="sub-ada", email="ada@example.com")
+            return _admin_user(
+                "ada@example.com", sub="sub-ada", email="ada@example.com"
+            )
         if action == "admin_list_groups_for_user":
             return {"Groups": [{"GroupName": "manager"}]}
         raise AssertionError(action)
@@ -221,7 +240,9 @@ def test_create_duplicate_email_returns_409(
     admin_identity: dict[str, str],
     cognito_env: None,
 ) -> None:
-    def fake_invoke(_service: str, action: str, _params: dict[str, Any]) -> dict[str, Any]:
+    def fake_invoke(
+        _service: str, action: str, _params: dict[str, Any]
+    ) -> dict[str, Any]:
         if action == "admin_create_user":
             raise AwsProxyError("UsernameExistsException", "exists")
         raise AssertionError(action)
@@ -251,10 +272,14 @@ def test_patch_updates_attributes_and_group(
 ) -> None:
     actions: list[tuple[str, dict[str, Any]]] = []
 
-    def fake_invoke(_service: str, action: str, params: dict[str, Any]) -> dict[str, Any]:
+    def fake_invoke(
+        _service: str, action: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
         actions.append((action, params))
         if action == "admin_get_user":
-            return _admin_user("ada@example.com", sub="sub-ada", email="ada@example.com")
+            return _admin_user(
+                "ada@example.com", sub="sub-ada", email="ada@example.com"
+            )
         if action == "admin_list_groups_for_user":
             if any(name == "admin_add_user_to_group" for name, _ in actions):
                 return {"Groups": [{"GroupName": "instructor"}]}
@@ -292,7 +317,9 @@ def test_cannot_disable_self(
     admin_identity: dict[str, str],
     cognito_env: None,
 ) -> None:
-    def fake_invoke(_service: str, action: str, _params: dict[str, Any]) -> dict[str, Any]:
+    def fake_invoke(
+        _service: str, action: str, _params: dict[str, Any]
+    ) -> dict[str, Any]:
         if action == "admin_get_user":
             return _admin_user(
                 "admin@example.com",
@@ -324,7 +351,9 @@ def test_cannot_delete_self(
     admin_identity: dict[str, str],
     cognito_env: None,
 ) -> None:
-    def fake_invoke(_service: str, action: str, _params: dict[str, Any]) -> dict[str, Any]:
+    def fake_invoke(
+        _service: str, action: str, _params: dict[str, Any]
+    ) -> dict[str, Any]:
         if action == "admin_get_user":
             return _admin_user(
                 "admin@example.com",
@@ -355,9 +384,13 @@ def test_delete_user(
     admin_identity: dict[str, str],
     cognito_env: None,
 ) -> None:
-    def fake_invoke(_service: str, action: str, params: dict[str, Any]) -> dict[str, Any]:
+    def fake_invoke(
+        _service: str, action: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
         if action == "admin_get_user":
-            return _admin_user("ada@example.com", sub="sub-ada", email="ada@example.com")
+            return _admin_user(
+                "ada@example.com", sub="sub-ada", email="ada@example.com"
+            )
         if action == "admin_list_groups_for_user":
             return {"Groups": []}
         if action == "admin_delete_user":
@@ -377,7 +410,10 @@ def test_delete_user(
         "/v1/admin/cognito-users/ada@example.com",
     )
     assert response["statusCode"] == 200
-    assert json.loads(response["body"]) == {"deleted": True, "username": "ada@example.com"}
+    assert json.loads(response["body"]) == {
+        "deleted": True,
+        "username": "ada@example.com",
+    }
 
 
 def test_get_missing_user(
@@ -386,7 +422,9 @@ def test_get_missing_user(
     admin_identity: dict[str, str],
     cognito_env: None,
 ) -> None:
-    def fake_invoke(_service: str, action: str, _params: dict[str, Any]) -> dict[str, Any]:
+    def fake_invoke(
+        _service: str, action: str, _params: dict[str, Any]
+    ) -> dict[str, Any]:
         if action == "admin_get_user":
             raise AwsProxyError("UserNotFoundException", "missing")
         raise AssertionError(action)
