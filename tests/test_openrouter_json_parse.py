@@ -67,6 +67,20 @@ def test_loads_openrouter_json_repairs_broken_payload(
     assert call_count["n"] == 1
 
 
+def test_loads_openrouter_json_rejects_safety_stub_without_repair(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _fake_repair(_broken_text: str, _parse_error: str, *, timeout: int) -> str:
+        raise AssertionError("safety stubs must not invoke JSON repair")
+
+    monkeypatch.setattr(json_parse, "repair_openrouter_json_text", _fake_repair)
+
+    with pytest.raises(RuntimeError, match="no JSON object"):
+        json_parse.loads_openrouter_json(
+            "User Safety: safe", context="sales daily plan"
+        )
+
+
 def test_loads_openrouter_json_raises_when_repair_still_invalid(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

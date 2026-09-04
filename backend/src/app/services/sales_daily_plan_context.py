@@ -16,23 +16,27 @@ from app.db.models.enums import (
     BillingInvoiceStatus,
     FunnelStage,
     InstanceStatus,
-    MetaMessageDirection,
     ServiceStatus,
-    WhatsAppMessageDirection,
 )
-from app.db.models.meta import MetaConversation, MetaMessage
+from app.db.models.meta import MetaMessage
 from app.db.models.sales_lead import SalesLead, SalesLeadEvent
 from app.db.models.service import Service
 from app.db.models.service_instance import InstanceSessionSlot, ServiceInstance
-from app.db.models.whatsapp import WhatsAppConversation, WhatsAppMessage
+from app.db.models.whatsapp import WhatsAppMessage
+from app.services.sales_daily_plan_completions import (
+    load_recent_completions_for_context,
+)
+from app.services.sales_daily_plan_context_inbox import load_needs_reply_threads
 from app.services.sales_daily_plan_memory import load_prior_plans_for_context
 from app.utils.logging import mask_email, mask_pii
+
+MAX_RECENT_CONTACTS = 15
+MAX_NURTURE_CONVERTED = 8
 
 MAX_SERVICES = 20
 MAX_INSTANCES = 15
 MAX_OPEN_LEADS = 25
 MAX_CLOSED_LEADS = 8
-MAX_NEEDS_REPLY = 15
 MAX_UNPAID_INVOICES = 20
 MAX_NOTE_CHARS = 240
 MAX_DESCRIPTION_CHARS = 400
@@ -57,6 +61,7 @@ _INSTANCE_STATUSES = (
 class SalesDailyPlanWatermarks:
     conversation_watermark_at: datetime | None
     pipeline_watermark_at: datetime | None
+    contact_watermark_at: datetime | None
 
 
 def build_sales_daily_plan_context(
@@ -69,11 +74,18 @@ def build_sales_daily_plan_context(
     funnel = _load_funnel_snapshot(session, now=now)
     open_leads = _load_open_leads(session)
     closed_leads = _load_recent_closed_leads(session)
-    needs_reply, conversation_watermark = _load_needs_reply_threads(session)
+    conversation_watermark = latest_conversation_at(session)
+    needs_reply, conversation_watermark = load_needs_reply_threads(
+        session, conversation_watermark=conversation_watermark
+    )
     pipeline_watermark = _latest_pipeline_activity_at(session)
     unpaid_invoices = _load_unpaid_invoices(session, now=now)
     unpaid_invoice_summary = _summarize_unpaid_invoices(unpaid_invoices)
     prior_plans = load_prior_plans_for_context(session)
+    recent_contacts = _load_recent_contacts(session)
+    converted_nurture = _load_converted_nurture(session)
+    completed_priorities = load_recent_completions_for_context(session)
+    contact_watermark = latest_contact_activity_at(session)
     context = {
         "generated_for": "org_wide_sales_plan_of_the_day",
         "as_of": now.isoformat(),
@@ -86,22 +98,28 @@ def build_sales_daily_plan_context(
         "unpaid_invoices": unpaid_invoices,
         "unpaid_invoice_summary": unpaid_invoice_summary,
         "prior_plans": prior_plans,
+        "recent_contacts": recent_contacts,
+        "converted_nurture": converted_nurture,
+        "completed_priorities": completed_priorities,
         "guidance": (
             "Prioritize unanswered inbound threads, late-stage open leads, and "
             "issued invoices with a balance due (especially overdue ones). "
             "Suggest concrete activities for today, including payment "
             "follow-ups when unpaid invoices are present. Recommend which "
             "published service to push and any offer-wording tweaks grounded in "
-            "message feedback. Treat prior_plans as persisted memory of earlier "
-            "insights and operator refinements; follow operator_input when "
-            "present. Prefer live CRM context when it disagrees with older "
-            "plans. Do not invent pricing, schedules, or guarantees. If context "
-            "is thin, say what to gather next."
+            "message feedback. Treat prior_plans as memory of earlier "
+            "suggestions, not the source of truth. Prefer live CRM "
+            "(open_leads, recent_contacts, converted_nurture, unpaid invoices) "
+            "when it disagrees. Do not repeat completed_priorities unless the "
+            "live CRM still needs the work. Address generated_by_name; never "
+            "say operator. Do not invent pricing, schedules, or guarantees. If "
+            "context is thin, say what to gather next."
         ),
     }
     return context, SalesDailyPlanWatermarks(
         conversation_watermark_at=conversation_watermark,
         pipeline_watermark_at=pipeline_watermark,
+        contact_watermark_at=contact_watermark,
     )
 
 
@@ -115,6 +133,37 @@ def latest_conversation_at(session: Session) -> datetime | None:
 def latest_pipeline_activity_at(session: Session) -> datetime | None:
     """Newest lead create or funnel-stage event time."""
     return _latest_pipeline_activity_at(session)
+
+
+def latest_contact_activity_at(session: Session) -> datetime | None:
+    """Newest contact create or update time."""
+    created = session.scalar(select(func.max(Contact.created_at)))
+    updated = session.scalar(select(func.max(Contact.updated_at)))
+    return _max_dt(created, updated)
+
+
+def _load_recent_contacts(session: Session) -> list[dict[str, Any]]:
+    rows = list(
+        session.scalars(
+            select(Contact)
+            .order_by(Contact.updated_at.desc(), Contact.created_at.desc())
+            .limit(MAX_RECENT_CONTACTS)
+        ).all()
+    )
+    return [_serialize_contact(contact) for contact in rows]
+
+
+def _load_converted_nurture(session: Session) -> list[dict[str, Any]]:
+    statement: Select[tuple[SalesLead]] = (
+        select(SalesLead)
+        .options(selectinload(SalesLead.contact), selectinload(SalesLead.notes))
+        .where(SalesLead.funnel_stage == FunnelStage.CONVERTED)
+        .order_by(
+            SalesLead.converted_at.desc().nulls_last(), SalesLead.updated_at.desc()
+        )
+        .limit(MAX_NURTURE_CONVERTED)
+    )
+    return [_serialize_lead_summary(lead) for lead in session.scalars(statement).all()]
 
 
 def _latest_pipeline_activity_at(session: Session) -> datetime | None:
@@ -388,6 +437,7 @@ def _serialize_lead_summary(lead: SalesLead) -> dict[str, Any]:
 
 def _serialize_contact(contact: Contact) -> dict[str, Any]:
     return {
+        "id": str(contact.id),
         "first_name": contact.first_name,
         "last_name": contact.last_name,
         "email": mask_email(contact.email) if contact.email else None,
@@ -396,153 +446,6 @@ def _serialize_contact(contact: Contact) -> dict[str, Any]:
         "source": _enum_value(contact.source),
         "source_detail": contact.source_detail,
     }
-
-
-def _load_needs_reply_threads(
-    session: Session,
-) -> tuple[list[dict[str, Any]], datetime | None]:
-    conversation_watermark = latest_conversation_at(session)
-    combined = [
-        *_latest_inbound_whatsapp(session),
-        *_latest_inbound_meta(session),
-    ]
-    combined.sort(
-        key=lambda item: item["_sent_at"] or datetime.min.replace(tzinfo=UTC),
-        reverse=True,
-    )
-    trimmed = combined[:MAX_NEEDS_REPLY]
-    results: list[dict[str, Any]] = []
-    for item in trimmed:
-        sent_at = item.pop("_sent_at")
-        item["sent_at"] = _iso(sent_at) if isinstance(sent_at, datetime) else None
-        results.append(item)
-    return results, conversation_watermark
-
-
-def _latest_inbound_whatsapp(session: Session) -> list[dict[str, Any]]:
-    ranked = (
-        select(
-            WhatsAppMessage.conversation_id,
-            WhatsAppMessage.body,
-            WhatsAppMessage.direction,
-            WhatsAppMessage.sent_at,
-            func.row_number()
-            .over(
-                partition_by=WhatsAppMessage.conversation_id,
-                order_by=WhatsAppMessage.sent_at.desc(),
-            )
-            .label("rn"),
-        )
-    ).subquery()
-    rows = session.execute(
-        select(
-            ranked.c.body,
-            ranked.c.sent_at,
-            WhatsAppConversation.contact_id,
-            WhatsAppConversation.lead_id,
-            WhatsAppConversation.profile_name,
-            Contact.first_name,
-            Contact.last_name,
-        )
-        .join(
-            WhatsAppConversation,
-            WhatsAppConversation.id == ranked.c.conversation_id,
-        )
-        .outerjoin(Contact, Contact.id == WhatsAppConversation.contact_id)
-        .where(ranked.c.rn == 1)
-        .where(ranked.c.direction == WhatsAppMessageDirection.INBOUND)
-        .order_by(ranked.c.sent_at.desc())
-        .limit(MAX_NEEDS_REPLY)
-    ).all()
-    results: list[dict[str, Any]] = []
-    for body, sent_at, contact_id, lead_id, profile_name, first_name, last_name in rows:
-        results.append(
-            {
-                "channel": "whatsapp",
-                "lead_id": str(lead_id) if lead_id else None,
-                "contact_name": _display_name(first_name, last_name, profile_name),
-                "body": _truncate(body, MAX_MESSAGE_CHARS),
-                "_sent_at": _as_utc(sent_at) if sent_at is not None else None,
-                "contact_id": str(contact_id) if contact_id else None,
-            }
-        )
-    return results
-
-
-def _latest_inbound_meta(session: Session) -> list[dict[str, Any]]:
-    ranked = (
-        select(
-            MetaMessage.conversation_id,
-            MetaMessage.body,
-            MetaMessage.direction,
-            MetaMessage.sent_at,
-            func.row_number()
-            .over(
-                partition_by=MetaMessage.conversation_id,
-                order_by=MetaMessage.sent_at.desc(),
-            )
-            .label("rn"),
-        )
-    ).subquery()
-    rows = session.execute(
-        select(
-            ranked.c.body,
-            ranked.c.sent_at,
-            MetaConversation.channel,
-            MetaConversation.contact_id,
-            MetaConversation.lead_id,
-            MetaConversation.profile_name,
-            Contact.first_name,
-            Contact.last_name,
-        )
-        .join(MetaConversation, MetaConversation.id == ranked.c.conversation_id)
-        .outerjoin(Contact, Contact.id == MetaConversation.contact_id)
-        .where(ranked.c.rn == 1)
-        .where(ranked.c.direction == MetaMessageDirection.INBOUND)
-        .order_by(ranked.c.sent_at.desc())
-        .limit(MAX_NEEDS_REPLY)
-    ).all()
-    results: list[dict[str, Any]] = []
-    for (
-        body,
-        sent_at,
-        channel,
-        contact_id,
-        lead_id,
-        profile_name,
-        first_name,
-        last_name,
-    ) in rows:
-        channel_value = _enum_value(channel)
-        mapped = (
-            "instagram"
-            if channel_value == "instagram"
-            else "messenger"
-            if channel_value == "facebook"
-            else channel_value or "unknown"
-        )
-        results.append(
-            {
-                "channel": mapped,
-                "lead_id": str(lead_id) if lead_id else None,
-                "contact_name": _display_name(first_name, last_name, profile_name),
-                "body": _truncate(body, MAX_MESSAGE_CHARS),
-                "_sent_at": _as_utc(sent_at) if sent_at is not None else None,
-                "contact_id": str(contact_id) if contact_id else None,
-            }
-        )
-    return results
-
-
-def _display_name(
-    first_name: str | None,
-    last_name: str | None,
-    profile_name: str | None,
-) -> str | None:
-    parts = [part for part in (first_name, last_name) if part]
-    if parts:
-        return " ".join(parts)
-    return profile_name or None
 
 
 def _enum_value(value: Any) -> str | None:

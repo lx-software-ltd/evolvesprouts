@@ -1113,6 +1113,7 @@ def test_system_actor_labels_skip_cognito(
             "system",
             "alembic",
             "system:sales-daily-plan",
+            "system:invoice-paid",
         ],
         user_pool_id="pool-1",
     )
@@ -1122,6 +1123,7 @@ def test_system_actor_labels_skip_cognito(
         "system": "System",
         "alembic": "Alembic",
         "system:sales-daily-plan": "Sales daily plan schedule",
+        "system:invoice-paid": "Invoice paid",
     }
     assert cognito_calls == []
 

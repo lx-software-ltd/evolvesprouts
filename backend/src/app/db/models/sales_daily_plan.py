@@ -9,7 +9,7 @@ from uuid import UUID
 from sqlalchemy import Index, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import TIMESTAMP
 
 from app.db.base import Base
@@ -41,5 +41,14 @@ class SalesDailyPlan(Base):
         server_default=text("now()"),
     )
     generated_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    generated_by_name: Mapped[str | None] = mapped_column(String(256), nullable=True)
     model: Mapped[str | None] = mapped_column(String(256), nullable=True)
     operator_input: Mapped[str | None] = mapped_column(Text(), nullable=True)
+
+    priority_completions: Mapped[list["SalesDailyPlanPriorityCompletion"]] = (  # noqa: F821
+        relationship(
+            "SalesDailyPlanPriorityCompletion",
+            back_populates="plan",
+            cascade="all, delete-orphan",
+        )
+    )

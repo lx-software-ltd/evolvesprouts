@@ -19,6 +19,14 @@ class SalesDailyPlanJobRepository(BaseRepository[SalesDailyPlanJob]):
     def __init__(self, session: Session) -> None:
         super().__init__(session, SalesDailyPlanJob)
 
+    def latest(self) -> SalesDailyPlanJob | None:
+        """Return the newest job by created_at, if any."""
+        return self.session.scalars(
+            select(SalesDailyPlanJob)
+            .order_by(SalesDailyPlanJob.created_at.desc())
+            .limit(1)
+        ).first()
+
     def find_in_flight(self) -> SalesDailyPlanJob | None:
         """Return one pending or processing job, if any."""
         return self.session.scalars(

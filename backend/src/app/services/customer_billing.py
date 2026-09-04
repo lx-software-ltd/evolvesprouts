@@ -572,6 +572,10 @@ def recompute_invoice_settlement(session: Session, invoice: CustomerInvoice) -> 
 
     transition_to_paid = prev_paid_at is None and inv.paid_at is not None
     transition_to_unpaid = prev_paid_at is not None and inv.paid_at is None
+    if transition_to_paid:
+        from app.services.lead_invoice_convert import convert_leads_for_paid_invoice
+
+        convert_leads_for_paid_invoice(session, inv)
     pdf_key = (inv.issued_pdf_s3_key or "").strip()
     if pdf_key and (transition_to_paid or transition_to_unpaid):
         logger.info(
