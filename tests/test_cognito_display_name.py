@@ -33,7 +33,9 @@ def test_display_name_prefers_name_then_given_then_email_local() -> None:
         == "Luca"
     )
     assert (
-        display_name_from_cognito_attributes([{"Name": "email", "Value": "ops@example.com"}])
+        display_name_from_cognito_attributes(
+            [{"Name": "email", "Value": "ops@example.com"}]
+        )
         == "ops"
     )
     assert display_name_from_cognito_attributes([]) is None

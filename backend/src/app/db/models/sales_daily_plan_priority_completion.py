@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import ForeignKey, Index, Text, UniqueConstraint, text
@@ -11,6 +12,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import TIMESTAMP
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.db.models.sales_daily_plan import SalesDailyPlan
 
 
 class SalesDailyPlanPriorityCompletion(Base):
@@ -49,7 +53,7 @@ class SalesDailyPlanPriorityCompletion(Base):
         server_default=text("now()"),
     )
 
-    plan: Mapped["SalesDailyPlan"] = relationship(  # noqa: F821
+    plan: Mapped["SalesDailyPlan"] = relationship(
         "SalesDailyPlan",
         back_populates="priority_completions",
     )

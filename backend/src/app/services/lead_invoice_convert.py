@@ -120,10 +120,10 @@ def _contact_ids_for_invoice(session: Session, invoice: CustomerInvoice) -> list
         if getattr(line, "enrollment_id", None) is not None
     ]
     if enrollment_ids:
-        for contact_id in session.scalars(
+        for enrollment_contact_id in session.scalars(
             select(Enrollment.contact_id).where(Enrollment.id.in_(enrollment_ids))
         ):
-            _add(contact_id)
+            _add(enrollment_contact_id)
     return ids
 
 

@@ -327,10 +327,10 @@ def normalize_plan_payload(parsed: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _priorities(value: Any) -> list[dict[str, str | None]]:
+def _priorities(value: Any) -> list[dict[str, Any]]:
     if not isinstance(value, list):
         return []
-    items: list[dict[str, str | None]] = []
+    items: list[dict[str, Any]] = []
     for entry in value:
         if not isinstance(entry, dict):
             continue
