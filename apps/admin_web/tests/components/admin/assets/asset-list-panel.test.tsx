@@ -126,6 +126,7 @@ describe('AssetListPanel', () => {
       assets: [createAdminAssetFixture({ ...FIXTURE_ASSET, contentLanguage: 'zh-HK' })],
     });
 
+    expect(screen.queryByRole('columnheader', { name: 'File' })).not.toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Language' })).toBeInTheDocument();
     expect(screen.getByText('Cantonese (Hong Kong)')).toBeInTheDocument();
     expect(screen.getByText('Infant Nutrition Guide')).toBeInTheDocument();
@@ -239,7 +240,7 @@ describe('AssetListPanel', () => {
     expect(deleteButton).toBeDisabled();
   });
 
-  it('hides Tags, Language, File, and Updated columns on phones and keeps them in a meta line', () => {
+  it('hides Tags, Language, and Updated columns on phones and keeps visibility and tags in a meta line', () => {
     const clientAsset = createAdminAssetFixture({
       title: 'Client-facing PDF',
       visibility: 'public',
@@ -247,9 +248,10 @@ describe('AssetListPanel', () => {
     });
     renderPanel({ assets: [clientAsset] });
 
+    expect(screen.queryByRole('columnheader', { name: 'File' })).not.toBeInTheDocument();
+    expect(screen.queryByText(clientAsset.fileName)).not.toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Tags' })).toHaveClass('hidden', 'md:table-cell');
     expect(screen.getByRole('columnheader', { name: 'Language' })).toHaveClass('hidden', 'lg:table-cell');
-    expect(screen.getByRole('columnheader', { name: 'File' })).toHaveClass('hidden', 'lg:table-cell');
     expect(screen.getByRole('columnheader', { name: 'Updated' })).toHaveClass('hidden', 'lg:table-cell');
     expect(screen.getByText('Public · Client')).toHaveClass('md:hidden');
   });
