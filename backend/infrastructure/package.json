@@ -11,18 +11,14 @@
     "deploy": "cdk deploy",
     "test:infra": "ts-node --prefer-ts-exts scripts/assert-existing-db.ts && ts-node --prefer-ts-exts test/cloudfront-www-proxy-functions.test.ts && ts-node --prefer-ts-exts test/public-www-stack.test.ts && ts-node --prefer-ts-exts test/training-stack.test.ts && ts-node --prefer-ts-exts test/api-stack.test.ts && ts-node --prefer-ts-exts test/admin-env-size.test.ts && ts-node --prefer-ts-exts test/public-www-config-secret.test.ts",
     "test:admin-web-stack": "ts-node --prefer-ts-exts test/admin-web-stack.test.ts",
-    "lint": "eslint --max-warnings=0 .",
-    "postinstall": "node scripts/patch-bundled-aws-cdk-lib-deps.js"
+    "lint": "eslint --max-warnings=0 ."
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "aws-cdk-lib": "^2.266.0",
-    "brace-expansion": "5.0.9",
-    "constructs": "^10.8.1",
-    "minimatch": "10.2.6",
-    "yaml": "1.10.3"
+    "constructs": "^10.8.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
