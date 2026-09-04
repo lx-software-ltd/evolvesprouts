@@ -67,7 +67,7 @@ This ensures:
 | `table_name` | TEXT | Name of the modified table |
 | `record_id` | TEXT | Primary key of the modified record |
 | `action` | TEXT | INSERT, UPDATE, or DELETE |
-| `user_id` | TEXT | Cognito user sub, `api-key:<id>` for token writes, or a system actor (`system`, `webhook:whatsapp`, `webhook:meta`, `alembic`, `system:sales-daily-plan`) |
+| `user_id` | TEXT | Cognito user sub, `api-key:<id>` for token writes, or a system actor (`system`, `webhook:whatsapp`, `webhook:meta`, `alembic`, `system:sales-daily-plan`, `system:invoice-paid`) |
 | `request_id` | TEXT | Lambda request ID for log correlation |
 | `old_values` | JSONB | Previous values (UPDATE/DELETE) |
 | `new_values` | JSONB | New values (INSERT/UPDATE) |
@@ -215,7 +215,8 @@ The admin UI Actor filter uses the `email` query parameter. Values containing
 'list_users', ...)`. Other values first match known system-actor labels or
 stored ids (`System` / `system`, `WhatsApp webhook` / `webhook:whatsapp`,
 `Meta webhook` / `webhook:meta`, `Alembic` / `alembic`,
-`Sales daily plan schedule` / `system:sales-daily-plan`), then `api_keys.name`
+`Sales daily plan schedule` / `system:sales-daily-plan`,
+`Invoice paid` / `system:invoice-paid`), then `api_keys.name`
 (case-insensitive) which becomes `user_id = api-key:<id>`. The response is an
 empty list when no actor matches. List and detail responses may include
 optional `user_email`: Cognito email for human actors, the API key `name`
@@ -230,6 +231,8 @@ ingest already stores `user_id = system`. Deploy-time Alembic DML, seed SQL,
 and migrations-Lambda country sync set `user_id = alembic` (display label
 **Alembic**). The 06:00 HKT sales daily plan scheduler sets
 `user_id = system:sales-daily-plan` (display label **Sales daily plan schedule**).
+Fully paid invoices that auto-convert matching leads set
+`user_id = system:invoice-paid` (display label **Invoice paid**).
 
 For full endpoint details (parameters, request/response schemas), see the
 OpenAPI spec: [`docs/api/admin.yaml`](../api/admin.yaml) — search for

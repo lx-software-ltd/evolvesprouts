@@ -99,6 +99,7 @@ info:
     - `GET|POST /v1/admin/leads/{id}/ai-suggestion` (POST queues async job; poll `.../ai-suggestion/jobs/{job_id}`)
     - `GET /v1/admin/leads/analytics`
     - `GET|POST|DELETE /v1/admin/leads/daily-plan` (POST queues async job with optional `operator_input`; poll `.../daily-plan/jobs/{job_id}`; DELETE resets stored memory)
+    - `POST /v1/admin/leads/daily-plan/priority-completions` (tick or untick a priority on the latest insight)
     - `GET|PATCH /v1/admin/leads/settings`
     - `GET /v1/admin/whatsapp/conversations`
     - `GET /v1/admin/whatsapp/conversations/{id}/messages`
@@ -1283,8 +1284,10 @@ paths:
         A scheduled job also generates a new plan every day at 06:00 HKT.
         A plan is stale when it is older than 24 hours, when a newer
         WhatsApp/Meta message exists after the stored conversation watermark,
-        or when a lead was created or a funnel-stage event occurred after the
-        stored pipeline watermark. All stored plans are retained until
+        when a lead was created or a funnel-stage event occurred after the
+        stored pipeline watermark, or when a contact was created or updated
+        after that watermark. `job` is the newest generation job (including a
+        failed 06:00 HKT run). All stored plans are retained until
         `DELETE /v1/admin/leads/daily-plan`.
       security:
         - AdminBearerAuth: []
@@ -1366,6 +1369,35 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SalesDailyPlanJobResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/admin/leads/daily-plan/priority-completions:
+    post:
+      summary: Mark or unmark an insight priority as done
+      description: >
+        Ticks or unticks one priority on the latest stored sales daily plan.
+        Completions are stored and included in later generations so the model
+        can skip finished work. `done: false` removes the tick.
+      security:
+        - AdminBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SalesDailyPlanPriorityCompletionRequest"
+      responses:
+        "200":
+          description: Updated plan plus the completion row (null when undone).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesDailyPlanPriorityCompletionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -5726,6 +5758,7 @@ components:
         - contact
         - lead_type
         - funnel_stage
+        - note_count
         - tags
       properties:
         id:
@@ -5766,6 +5799,9 @@ components:
           type: string
           format: date-time
           nullable: true
+        note_count:
+          type: integer
+          description: Standalone contact notes for the lead's contact (same notes the pipeline Notes accordion shows).
         tags:
           type: array
           items:
@@ -5952,6 +5988,9 @@ components:
           format: uuid
           nullable: true
           description: Unpaid issued invoice when the priority is a payment follow-up.
+        done:
+          type: boolean
+          description: True when an admin has ticked this priority on this plan.
     SalesDailyPlanOutreach:
       type: object
       required: [channel]
@@ -6012,6 +6051,10 @@ components:
         generated_by:
           type: string
           nullable: true
+        generated_by_name:
+          type: string
+          nullable: true
+          description: Display name of the person this insight addresses (logged-in admin, or Sales default assignee for the 06:00 HKT run).
         model:
           type: string
           nullable: true
@@ -6033,7 +6076,7 @@ components:
           type: array
           items:
             type: string
-            enum: [age, new_conversation, pipeline_changed]
+            enum: [age, new_conversation, pipeline_changed, contacts_changed]
         stale_after:
           type: string
           format: date-time
@@ -6043,6 +6086,10 @@ components:
           format: date-time
           nullable: true
         latest_pipeline_at:
+          type: string
+          format: date-time
+          nullable: true
+        latest_contact_at:
           type: string
           format: date-time
           nullable: true
@@ -6076,6 +6123,53 @@ components:
           description: Up to the five newest stored plans, newest first (including the latest).
           items:
             $ref: "#/components/schemas/SalesDailyPlanMemoryEntry"
+        job:
+          allOf:
+            - $ref: "#/components/schemas/SalesDailyPlanJob"
+          nullable: true
+          description: Newest generation job, including a failed scheduled run.
+    SalesDailyPlanPriorityCompletionRequest:
+      type: object
+      required: [title, done]
+      properties:
+        title:
+          type: string
+        lead_id:
+          type: string
+          format: uuid
+          nullable: true
+        invoice_id:
+          type: string
+          format: uuid
+          nullable: true
+        done:
+          type: boolean
+    SalesDailyPlanPriorityCompletionResponse:
+      type: object
+      required: [plan]
+      properties:
+        plan:
+          $ref: "#/components/schemas/SalesDailyPlan"
+        completion:
+          type: object
+          nullable: true
+          properties:
+            title:
+              type: string
+            lead_id:
+              type: string
+              format: uuid
+              nullable: true
+            invoice_id:
+              type: string
+              format: uuid
+              nullable: true
+            done_at:
+              type: string
+              format: date-time
+              nullable: true
+            done_by:
+              type: string
     SalesDailyPlanGenerateRequest:
       type: object
       properties:
@@ -6636,7 +6730,10 @@ components:
         default_assigned_to:
           type: string
           nullable: true
-          description: Cognito `sub` applied to new leads when create omits `assigned_to`.
+          description: >
+            Cognito `sub` applied to new leads when create omits `assigned_to`.
+            The scheduled 06:00 HKT insight is addressed to this person's
+            Cognito name.
           maxLength: 128
         notify_assignee_on_assignment:
           type: boolean
