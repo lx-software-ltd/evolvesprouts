@@ -958,6 +958,206 @@ export interface paths {
         };
         trace?: never;
     };
+    "/v1/admin/cognito-users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Cognito users
+         * @description Returns a page of users from the Cognito user pool. Optional `name` and `email` filters use Cognito `ListUsers` prefix/exact match (`email` with `@` is exact). When both are set, `email` is applied in Cognito and `name` is a case-insensitive substring on that page. Staff groups (`admin`, `manager`, `instructor`) are attached from `ListUsersInGroup`.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    /** @description Opaque continuation token from `next_cursor`. */
+                    cursor?: string;
+                    name?: string;
+                    email?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated Cognito user list. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CognitoUserListResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        put?: never;
+        /**
+         * Create a Cognito user
+         * @description Creates a user in the Cognito user pool (username is the email). Passwordless sign-in is unchanged: Cognito's temporary-password email is suppressed. Optional `group` must be a staff group (`admin`, `manager`, or `instructor`).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateCognitoUserRequest"];
+                };
+            };
+            responses: {
+                /** @description Created Cognito user. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CognitoUser"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+                /** @description A user with this email already exists. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/cognito-users/{username}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Get a Cognito user
+         * @description Returns one user from the Cognito user pool by username.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    username: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Cognito user. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CognitoUser"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        put?: never;
+        post?: never;
+        /**
+         * Delete a Cognito user
+         * @description Permanently deletes the user from the Cognito user pool. Callers cannot delete themselves.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    username: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Delete confirmation. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DeleteCognitoUserResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Update a Cognito user
+         * @description Updates email, name, staff group, and/or enabled state. Omitting a field leaves it unchanged. `group` of `null` removes staff groups. Callers cannot disable themselves or remove their own staff group.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    username: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateCognitoUserRequest"];
+                };
+            };
+            responses: {
+                /** @description Updated Cognito user. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CognitoUser"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+                /** @description A user with this email already exists. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
     "/v1/admin/users": {
         parameters: {
             query?: never;
@@ -7991,6 +8191,40 @@ export interface components {
         };
         AdminUserListResponse: {
             items: components["schemas"]["AdminUser"][];
+        };
+        /** @enum {string} */
+        CognitoStaffGroup: "admin" | "manager" | "instructor";
+        CognitoUser: {
+            username: string;
+            sub: string;
+            email?: string | null;
+            name?: string | null;
+            email_verified: boolean;
+            enabled: boolean;
+            status: string;
+            groups: string[];
+            created_at?: string | null;
+            updated_at?: string | null;
+            last_auth_time?: string | null;
+        };
+        CognitoUserListResponse: {
+            items: components["schemas"]["CognitoUser"][];
+            next_cursor?: string | null;
+        };
+        CreateCognitoUserRequest: {
+            email: string;
+            name?: string;
+            group?: components["schemas"]["CognitoStaffGroup"];
+        };
+        UpdateCognitoUserRequest: {
+            email?: string;
+            name?: string;
+            group?: components["schemas"]["CognitoStaffGroup"] | null;
+            enabled?: boolean;
+        };
+        DeleteCognitoUserResponse: {
+            deleted: boolean;
+            username: string;
         };
         GeographicArea: {
             /** Format: uuid */

@@ -22,6 +22,7 @@ from app.api.admin_expenses import handle_admin_expenses_request
 from app.api.admin_leads import handle_admin_leads_request
 from app.api.admin_locations import handle_admin_locations_request
 from app.api.admin_services import handle_admin_services_request
+from app.api.admin_cognito_users import handle_admin_cognito_users_request
 from app.api.admin_users import (
     handle_admin_instructors_request,
     handle_admin_users_request,
@@ -269,6 +270,11 @@ _ROUTES: tuple[
         "/v1/admin/leads",
         False,
         handle_admin_leads_request,
+    ),
+    (
+        "/v1/admin/cognito-users",
+        False,
+        handle_admin_cognito_users_request,
     ),
     (
         "/v1/admin/users",

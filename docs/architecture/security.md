@@ -119,6 +119,12 @@ Admin API handlers call `require_admin_identity()` after the authorizer accepts
 the request. A missing `user_sub` fails closed as `AuthorizationError` (HTTP 403)
 rather than a 400 validation error.
 
+Staff can list and provision Cognito user-pool accounts from Audit → Users
+(`GET|POST /v1/admin/cognito-users` and `GET|PATCH|DELETE
+/v1/admin/cognito-users/{username}`). Create suppresses Cognito's
+temporary-password email (the pool is passwordless). Callers cannot disable,
+delete, or remove their own staff group.
+
 Cognito session tokens (access, id, and refresh) are never written to
 `localStorage` in clear text. `apps/admin_web/src/lib/auth.ts` serializes the
 token bundle and encrypts it with AES-GCM via

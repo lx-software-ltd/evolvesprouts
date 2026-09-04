@@ -35,6 +35,7 @@ export const adminQueryKeys = {
   assets: resource('assets'),
   auditLogs: resource('audit-logs'),
   apiKeys: resource('api-keys'),
+  cognitoUsers: resource('cognito-users'),
   calendarBlocks: resource('calendar-blocks'),
   tags: resource('tags'),
   conversations: resource('conversations'),

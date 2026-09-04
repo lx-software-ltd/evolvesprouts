@@ -176,7 +176,11 @@ their primary responsibilities.
   `/v1/admin/polls/{poll_slug}/answers/export` (`GET`; CSV export),
   `/v1/admin/leads/*` (including `GET|PATCH /v1/admin/leads/settings` for the
   default new-lead assignee, assignee-notification toggle, and Helper Detector
-  toggle), `/v1/admin/users`, `/v1/admin/instructors`,
+  toggle),   `/v1/admin/users`, `/v1/admin/instructors`,
+  `GET|POST /v1/admin/cognito-users` and `GET|PATCH|DELETE /v1/admin/cognito-users/{username}`
+  (paginated Cognito user-pool listing with `name` / `email` filters; create,
+  update email/name/staff group/enabled, and delete via the AWS proxy;
+  callers cannot disable, delete, or remove their own staff group),
   `GET /v1/admin/audit-logs` (read-only `audit_log` history; supports filters `table`, `record_id`, `user_id`, `email`, `action`, `since`, `cursor`, `limit`; `email` resolves via Cognito `list_users`, known system-actor labels/`user_id` values, or `api_keys.name`; optional `user_email` is a Cognito email, API key name, or system-actor label),
   `/v1/admin/services/*` (including `GET /v1/admin/services/instances` for
   cross-service instance listing with optional `service_id` / `service_type` /
@@ -835,7 +839,9 @@ their primary responsibilities.
 - VPC: **No** (runs outside VPC for internet access)
 - Allow-lists:
   - `ALLOWED_ACTIONS`: comma-separated `service:action` pairs for AWS
-    API calls (e.g. `cognito-idp:list_users`, `cognito-idp:list_users_in_group`)
+    API calls (e.g. `cognito-idp:list_users`, `cognito-idp:list_users_in_group`,
+    `cognito-idp:admin_create_user`, `cognito-idp:admin_disable_user`,
+    `cognito-idp:admin_enable_user`)
   - `ALLOWED_HTTP_URLS`: comma-separated URL prefixes for outbound HTTP
     requests (e.g. `https://api.example.com/v1/`)
 - Security: only invocable by Lambdas granted `lambda:InvokeFunction`;

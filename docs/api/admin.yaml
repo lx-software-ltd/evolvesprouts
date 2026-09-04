@@ -14,6 +14,8 @@ info:
     - `PUT|PATCH|DELETE /v1/admin/locations/{id}`
     - `GET /v1/admin/users`
     - `GET /v1/admin/instructors`
+    - `GET|POST /v1/admin/cognito-users` (paginated user-pool listing; create)
+    - `GET|PATCH|DELETE /v1/admin/cognito-users/{username}`
     - `GET /v1/admin/audit-logs` (optional `table`, `record_id`, `user_id`, `email`, `action`, `since`, `cursor`, `limit`)
     - `GET|POST /v1/admin/api-keys` (create returns plaintext `api_token` once)
     - `DELETE /v1/admin/api-keys/{id}` (revokes the token)
@@ -785,6 +787,163 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
+  /v1/admin/cognito-users:
+    get:
+      summary: List Cognito users
+      description: >
+        Returns a page of users from the Cognito user pool. Optional `name` and
+        `email` filters use Cognito `ListUsers` prefix/exact match (`email` with
+        `@` is exact). When both are set, `email` is applied in Cognito and
+        `name` is a case-insensitive substring on that page. Staff groups
+        (`admin`, `manager`, `instructor`) are attached from `ListUsersInGroup`.
+      security:
+        - AdminBearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          required: false
+          description: Opaque continuation token from `next_cursor`.
+          schema:
+            type: string
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: email
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated Cognito user list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CognitoUserListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      summary: Create a Cognito user
+      description: >
+        Creates a user in the Cognito user pool (username is the email).
+        Passwordless sign-in is unchanged: Cognito's temporary-password email
+        is suppressed. Optional `group` must be a staff group
+        (`admin`, `manager`, or `instructor`).
+      security:
+        - AdminBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCognitoUserRequest"
+      responses:
+        "201":
+          description: Created Cognito user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CognitoUser"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: A user with this email already exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /v1/admin/cognito-users/{username}:
+    parameters:
+      - name: username
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get a Cognito user
+      description: Returns one user from the Cognito user pool by username.
+      security:
+        - AdminBearerAuth: []
+      responses:
+        "200":
+          description: Cognito user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CognitoUser"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      summary: Update a Cognito user
+      description: >
+        Updates email, name, staff group, and/or enabled state. Omitting a
+        field leaves it unchanged. `group` of `null` removes staff groups.
+        Callers cannot disable themselves or remove their own staff group.
+      security:
+        - AdminBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCognitoUserRequest"
+      responses:
+        "200":
+          description: Updated Cognito user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CognitoUser"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: A user with this email already exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: Delete a Cognito user
+      description: Permanently deletes the user from the Cognito user pool. Callers cannot delete themselves.
+      security:
+        - AdminBearerAuth: []
+      responses:
+        "200":
+          description: Delete confirmation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteCognitoUserResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /v1/admin/users:
     get:
@@ -8001,6 +8160,97 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AdminUser"
+    CognitoStaffGroup:
+      type: string
+      enum:
+        - admin
+        - manager
+        - instructor
+    CognitoUser:
+      type: object
+      required:
+        - username
+        - sub
+        - email_verified
+        - enabled
+        - status
+        - groups
+      properties:
+        username:
+          type: string
+        sub:
+          type: string
+        email:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        email_verified:
+          type: boolean
+        enabled:
+          type: boolean
+        status:
+          type: string
+        groups:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          nullable: true
+        last_auth_time:
+          type: string
+          nullable: true
+    CognitoUserListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CognitoUser"
+        next_cursor:
+          type: string
+          nullable: true
+    CreateCognitoUserRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+        group:
+          $ref: "#/components/schemas/CognitoStaffGroup"
+    UpdateCognitoUserRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+        group:
+          allOf:
+            - $ref: "#/components/schemas/CognitoStaffGroup"
+          nullable: true
+        enabled:
+          type: boolean
+    DeleteCognitoUserResponse:
+      type: object
+      required:
+        - deleted
+        - username
+      properties:
+        deleted:
+          type: boolean
+        username:
+          type: string
     GeographicArea:
       type: object
       required:
