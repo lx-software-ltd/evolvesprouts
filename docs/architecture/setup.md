@@ -129,6 +129,8 @@ For the OIDC provider itself, add the same tags:
 - `CDK_PARAM_TURNSTILE_SECRET_KEY`
 - `CDK_PARAM_MAILCHIMP_API_SECRET_ARN`
 - `CDK_PARAM_MAILCHIMP_WEBHOOK_SECRET`
+  (Mailchimp audience webhook `token`; after `ApiCustomDomainName` / `ApiUrl`
+  changes, update the Mailchimp webhook URL — see `docs/deployment/backend.md`)
 - `CDK_PARAM_META_APP_SECRET` (Meta app secret; HMAC for `POST /v1/whatsapp/webhook` and `POST /v1/meta/webhook`)
 - `CDK_PARAM_WHATSAPP_WEBHOOK_VERIFY_TOKEN` (Meta webhook handshake string for WhatsApp and Messenger/Instagram `hub.verify_token`; not a Graph access token)
 - `CDK_PARAM_META_PAGE_ACCESS_TOKEN` (Graph Page or system-user access token for Instagram/Messenger inbox history import)
