@@ -6,16 +6,19 @@ const {
   fetchSalesDailyPlan,
   enqueueSalesDailyPlanJob,
   pollSalesDailyPlanJob,
+  upsertSalesDailyPlanPriorityCompletion,
 } = vi.hoisted(() => ({
   fetchSalesDailyPlan: vi.fn(),
   enqueueSalesDailyPlanJob: vi.fn(),
   pollSalesDailyPlanJob: vi.fn(),
+  upsertSalesDailyPlanPriorityCompletion: vi.fn(),
 }));
 
 vi.mock('@/lib/sales-daily-plan-api', () => ({
   fetchSalesDailyPlan,
   enqueueSalesDailyPlanJob,
   pollSalesDailyPlanJob,
+  upsertSalesDailyPlanPriorityCompletion,
   resetSalesDailyPlanMemory: vi.fn(),
 }));
 
@@ -32,6 +35,7 @@ const samplePlan = {
       action: 'Send a consult CTA on WhatsApp.',
       leadId: 'lead-1',
       invoiceId: null,
+      done: false,
     },
   ],
   outreach: [
@@ -48,6 +52,7 @@ const samplePlan = {
   risks: ['Do not invent pricing'],
   generatedAt: '2026-09-01T10:00:00Z',
   generatedBy: 'user-1',
+  generatedByName: 'Ida',
   model: 'test-model',
   operatorInput: null,
   conversationWatermarkAt: '2026-09-01T09:00:00Z',
@@ -57,6 +62,7 @@ const samplePlan = {
   staleAfter: '2026-09-02T10:00:00Z',
   latestMessageAt: '2026-09-01T09:00:00Z',
   latestPipelineAt: '2026-09-01T09:00:00Z',
+  latestContactAt: '2026-09-01T09:00:00Z',
 };
 
 describe('SalePlanOfTheDayCard', () => {
@@ -64,10 +70,11 @@ describe('SalePlanOfTheDayCard', () => {
     fetchSalesDailyPlan.mockReset();
     enqueueSalesDailyPlanJob.mockReset();
     pollSalesDailyPlanJob.mockReset();
+    upsertSalesDailyPlanPriorityCompletion.mockReset();
   });
 
   it('loads empty state and generates a plan on demand', async () => {
-    fetchSalesDailyPlan.mockResolvedValue({ plan: null, memory: [] });
+    fetchSalesDailyPlan.mockResolvedValue({ plan: null, memory: [], job: null });
     enqueueSalesDailyPlanJob.mockResolvedValue({
       id: 'job-1',
       status: 'pending',
@@ -125,6 +132,7 @@ describe('SalePlanOfTheDayCard', () => {
       expect(screen.getByText('Close Family Consultation conversations.')).toBeInTheDocument();
     });
     expect(screen.getByText('Reply to Mei')).toBeInTheDocument();
+    expect(screen.getByText(/Generated for Ida/i)).toBeInTheDocument();
     const leadLinks = screen.getAllByRole('link', { name: 'Open lead' });
     expect(leadLinks.length).toBeGreaterThan(0);
     expect(leadLinks[0]).toHaveAttribute('href', '/sales?lead=lead-1');
@@ -144,6 +152,7 @@ describe('SalePlanOfTheDayCard', () => {
             action: 'Send a polite payment reminder.',
             leadId: null,
             invoiceId: 'inv-1001',
+            done: false,
           },
         ],
         outreach: [],
@@ -174,7 +183,7 @@ describe('SalePlanOfTheDayCard', () => {
         offerRefinements: [],
         risks: [],
         isStale: true,
-        staleReasons: ['age', 'new_conversation', 'pipeline_changed'],
+        staleReasons: ['age', 'new_conversation', 'pipeline_changed', 'contacts_changed'],
       },
       memory: [
         {
@@ -202,12 +211,13 @@ describe('SalePlanOfTheDayCard', () => {
     expect(screen.getByText(/older than 24 hours/i)).toBeInTheDocument();
     expect(screen.getByText(/newer conversation messages/i)).toBeInTheDocument();
     expect(screen.getByText(/pipeline activity since this plan/i)).toBeInTheDocument();
+    expect(screen.getByText(/contact changes since this plan/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Refresh insight' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Previous insights/i })).toBeInTheDocument();
   });
 
   it('shows a friendly message when generation hits a gateway timeout', async () => {
-    fetchSalesDailyPlan.mockResolvedValue({ plan: null, memory: [] });
+    fetchSalesDailyPlan.mockResolvedValue({ plan: null, memory: [], job: null });
     enqueueSalesDailyPlanJob.mockRejectedValue(
       new AdminApiError({
         statusCode: 504,
@@ -303,5 +313,61 @@ describe('SalePlanOfTheDayCard', () => {
     await waitFor(() => {
       expect(enqueueSalesDailyPlanJob).toHaveBeenCalledWith('Focus on MBA this week');
     });
+  });
+
+  it('ticks a priority and persists the completion', async () => {
+    fetchSalesDailyPlan.mockResolvedValue({ plan: samplePlan, memory: [], job: null });
+    upsertSalesDailyPlanPriorityCompletion.mockResolvedValue({
+      ...samplePlan,
+      priorities: [{ ...samplePlan.priorities[0], done: true }],
+    });
+
+    const user = userEvent.setup();
+    render(<SalePlanOfTheDayCard />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Reply to Mei')).toBeInTheDocument();
+    });
+    await user.click(screen.getByLabelText('Reply to Mei'));
+
+    await waitFor(() => {
+      expect(upsertSalesDailyPlanPriorityCompletion).toHaveBeenCalledWith({
+        title: 'Reply to Mei',
+        leadId: 'lead-1',
+        invoiceId: null,
+        done: true,
+      });
+    });
+    expect(screen.getByLabelText('Reply to Mei')).toBeChecked();
+  });
+
+  it('shows a failed scheduled job when no plan was stored', async () => {
+    fetchSalesDailyPlan.mockResolvedValue({
+      plan: null,
+      memory: [],
+      job: {
+        id: 'job-fail',
+        status: 'failed',
+        errorMessage: 'The AI returned an invalid response. Please try again.',
+        operatorInput: null,
+        planId: null,
+        createdAt: '2026-09-03T22:00:00Z',
+        startedAt: '2026-09-03T22:00:01Z',
+        finishedAt: '2026-09-03T22:00:16Z',
+        updatedAt: '2026-09-03T22:00:16Z',
+        queueWaitMs: 1000,
+        durationMs: 15000,
+        plan: null,
+      },
+    });
+
+    render(<SalePlanOfTheDayCard />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('The AI returned an invalid response. Please try again.'),
+      ).toBeInTheDocument();
+    });
+    expect(screen.getByText(/No plan yet/i)).toBeInTheDocument();
   });
 });

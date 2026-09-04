@@ -6,6 +6,8 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from uuid import uuid4
 
+import pytest
+
 from app.services.aws_proxy import AwsProxyError
 from app.services.sales_daily_plan import (
     PLAN_STALE_AFTER,
@@ -96,6 +98,10 @@ def test_evaluate_staleness_age_conversation_and_pipeline(monkeypatch: object) -
         "app.services.sales_daily_plan.latest_pipeline_activity_at",
         lambda _session: now - timedelta(minutes=10),
     )
+    monkeypatch.setattr(
+        "app.services.sales_daily_plan.latest_contact_activity_at",
+        lambda _session: now - timedelta(hours=4),
+    )
 
     result = evaluate_staleness(
         session=SimpleNamespace(),
@@ -121,6 +127,10 @@ def test_evaluate_staleness_fresh_plan(monkeypatch: object) -> None:
         "app.services.sales_daily_plan.latest_pipeline_activity_at",
         lambda _session: now - timedelta(minutes=30),
     )
+    monkeypatch.setattr(
+        "app.services.sales_daily_plan.latest_contact_activity_at",
+        lambda _session: now - timedelta(minutes=40),
+    )
     result = evaluate_staleness(
         session=SimpleNamespace(),
         plan=plan,  # type: ignore[arg-type]
@@ -128,6 +138,35 @@ def test_evaluate_staleness_fresh_plan(monkeypatch: object) -> None:
     )
     assert result["is_stale"] is False
     assert result["stale_reasons"] == []
+
+
+def test_evaluate_staleness_contacts_changed(monkeypatch: object) -> None:
+    now = datetime(2026, 9, 1, 12, 0, tzinfo=UTC)
+    plan = SimpleNamespace(
+        generated_at=now - timedelta(hours=1),
+        conversation_watermark_at=now - timedelta(minutes=10),
+        pipeline_watermark_at=now - timedelta(minutes=10),
+    )
+    monkeypatch.setattr(
+        "app.services.sales_daily_plan.latest_conversation_at",
+        lambda _session: now - timedelta(minutes=20),
+    )
+    monkeypatch.setattr(
+        "app.services.sales_daily_plan.latest_pipeline_activity_at",
+        lambda _session: now - timedelta(minutes=30),
+    )
+    monkeypatch.setattr(
+        "app.services.sales_daily_plan.latest_contact_activity_at",
+        lambda _session: now - timedelta(minutes=5),
+    )
+    result = evaluate_staleness(
+        session=SimpleNamespace(),
+        plan=plan,  # type: ignore[arg-type]
+        now=now,
+    )
+    assert result["is_stale"] is True
+    assert result["stale_reasons"] == ["contacts_changed"]
+    assert result["latest_contact_at"] is not None
 
 
 def test_serialize_plan_includes_operator_input(monkeypatch: object) -> None:
@@ -139,6 +178,7 @@ def test_serialize_plan_includes_operator_input(monkeypatch: object) -> None:
             "stale_after": "2026-09-02T10:00:00+00:00",
             "latest_message_at": None,
             "latest_pipeline_at": None,
+            "latest_contact_at": None,
         },
     )
     plan_id = uuid4()
@@ -156,6 +196,7 @@ def test_serialize_plan_includes_operator_input(monkeypatch: object) -> None:
             },
             generated_at=datetime(2026, 9, 1, 10, 0, tzinfo=UTC),
             generated_by="user-1",
+            generated_by_name="Ida",
             model="test-model",
             operator_input="Focus on MBA",
             conversation_watermark_at=None,
@@ -164,6 +205,7 @@ def test_serialize_plan_includes_operator_input(monkeypatch: object) -> None:
     )
     assert payload["id"] == str(plan_id)
     assert payload["operator_input"] == "Focus on MBA"
+    assert payload["generated_by_name"] == "Ida"
 
 
 def test_generate_and_store_plan_persists_operator_input(monkeypatch: object) -> None:
@@ -176,8 +218,13 @@ def test_generate_and_store_plan_persists_operator_input(monkeypatch: object) ->
             SimpleNamespace(
                 conversation_watermark_at=None,
                 pipeline_watermark_at=None,
+                contact_watermark_at=None,
             ),
         ),
+    )
+    monkeypatch.setattr(
+        "app.services.sales_daily_plan.resolve_insight_generated_by_name",
+        lambda _session, *, actor_sub=None: "Ida",
     )
     monkeypatch.setattr(
         "app.services.sales_daily_plan.openrouter_chat_completion",
@@ -200,7 +247,40 @@ def test_generate_and_store_plan_persists_operator_input(monkeypatch: object) ->
         operator_input="  Focus on MBA  ",
     )
     assert row.operator_input == "Focus on MBA"
+    assert row.generated_by_name == "Ida"
     assert added[0] is row
+
+
+def test_generate_and_store_plan_rejects_empty_payload(monkeypatch: object) -> None:
+    session = SimpleNamespace(add=lambda _row: None, flush=lambda: None)
+    monkeypatch.setattr(
+        "app.services.sales_daily_plan.build_sales_daily_plan_context",
+        lambda _session: (
+            {"open_leads": [], "needs_reply_threads": [], "catalogue": []},
+            SimpleNamespace(
+                conversation_watermark_at=None,
+                pipeline_watermark_at=None,
+                contact_watermark_at=None,
+            ),
+        ),
+    )
+    monkeypatch.setattr(
+        "app.services.sales_daily_plan.resolve_insight_generated_by_name",
+        lambda _session, *, actor_sub=None: "Ida",
+    )
+    monkeypatch.setattr(
+        "app.services.sales_daily_plan.openrouter_chat_completion",
+        lambda **_kwargs: {},
+    )
+    monkeypatch.setattr(
+        "app.services.sales_daily_plan.extract_message_text",
+        lambda _body: (
+            '{"focus": "", "priorities": [], "outreach": [],'
+            ' "product_focus": "", "offer_refinements": [], "risks": []}'
+        ),
+    )
+    with pytest.raises(RuntimeError, match="empty"):
+        generate_and_store_plan(session, actor_sub="user-1")  # type: ignore[arg-type]
 
 
 def test_format_openrouter_failure_maps_timeout() -> None:
@@ -209,4 +289,12 @@ def test_format_openrouter_failure_maps_timeout() -> None:
     message = _format_openrouter_failure(AwsProxyError("TimeoutError", "boom"))
     assert "too long to respond" in message
     message = _format_openrouter_failure(RuntimeError("Model JSON must be an object"))
+    assert "invalid response" in message
+    message = _format_openrouter_failure(
+        RuntimeError("Model returned no JSON object for sales daily plan")
+    )
+    assert "invalid response" in message
+    message = _format_openrouter_failure(
+        RuntimeError("Model returned an empty sales daily plan")
+    )
     assert "invalid response" in message

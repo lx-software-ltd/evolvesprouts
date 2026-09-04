@@ -12,9 +12,11 @@ import {
   fetchSalesDailyPlan,
   pollSalesDailyPlanJob,
   resetSalesDailyPlanMemory,
+  upsertSalesDailyPlanPriorityCompletion,
 } from '@/lib/sales-daily-plan-api';
 import type {
   SalesDailyPlanJob,
+  SalesDailyPlanPriority,
   SalesDailyPlanSnapshot,
 } from '@/types/sales-daily-plan';
 
@@ -29,7 +31,7 @@ function formatDailyPlanError(error: unknown, fallback: string): string {
   return toErrorMessage(error, fallback);
 }
 
-const EMPTY_SNAPSHOT: SalesDailyPlanSnapshot = { plan: null, memory: [] };
+const EMPTY_SNAPSHOT: SalesDailyPlanSnapshot = { plan: null, memory: [], job: null };
 
 export function useSalesDailyPlan() {
   const queryClient = getAdminQueryClient();
@@ -63,6 +65,7 @@ export function useSalesDailyPlan() {
           queryClient.setQueryData<SalesDailyPlanSnapshot>(queryKey, (current) => ({
             plan: finished.plan,
             memory: current?.memory ?? [],
+            job: finished,
           }));
         }
         await queryClient.invalidateQueries({ queryKey });
@@ -90,6 +93,23 @@ export function useSalesDailyPlan() {
     };
   }, []);
 
+  const setPriorityDone = useCallback(
+    async (item: SalesDailyPlanPriority, done: boolean) => {
+      const plan = await upsertSalesDailyPlanPriorityCompletion({
+        title: item.title,
+        leadId: item.leadId,
+        invoiceId: item.invoiceId,
+        done,
+      });
+      queryClient.setQueryData<SalesDailyPlanSnapshot>(queryKey, (current) => ({
+        plan,
+        memory: current?.memory ?? [],
+        job: current?.job ?? null,
+      }));
+    },
+    [queryClient, queryKey]
+  );
+
   const snapshot = query.data ?? EMPTY_SNAPSHOT;
 
   return {
@@ -101,8 +121,9 @@ export function useSalesDailyPlan() {
       : '',
     generateError,
     isGenerating,
-    lastJob,
+    lastJob: lastJob ?? snapshot.job,
     generate,
+    setPriorityDone,
     cancel,
   };
 }

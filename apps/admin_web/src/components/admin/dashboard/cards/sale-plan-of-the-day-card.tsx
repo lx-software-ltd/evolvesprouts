@@ -29,6 +29,9 @@ function formatStaleReasons(reasons: string[]): string {
       if (reason === 'pipeline_changed') {
         return 'pipeline activity since this plan';
       }
+      if (reason === 'contacts_changed') {
+        return 'contact changes since this plan';
+      }
       return reason;
     })
     .join('; ');
@@ -78,15 +81,49 @@ function InvoiceLink({
   );
 }
 
-function PriorityItem({ item }: { item: SalesDailyPlanPriority }) {
+function PriorityItem({
+  item,
+  disabled,
+  onDoneChange,
+}: {
+  item: SalesDailyPlanPriority;
+  disabled: boolean;
+  onDoneChange: (item: SalesDailyPlanPriority, done: boolean) => void;
+}) {
+  const checkboxId = `insight-priority-${item.title}-${item.leadId ?? ''}-${item.invoiceId ?? ''}`;
   return (
     <li className='space-y-1'>
-      <p className='text-sm font-medium text-slate-900'>{item.title}</p>
-      {item.why ? <p className='text-sm text-slate-600'>{item.why}</p> : null}
-      {item.action ? <p className='text-sm text-slate-700'>{item.action}</p> : null}
-      {item.leadId ? <LeadLink leadId={item.leadId}>Open lead</LeadLink> : null}
+      <div className='flex items-start gap-2'>
+        <input
+          id={checkboxId}
+          type='checkbox'
+          className='mt-0.5 h-4 w-4 rounded border-slate-300 text-slate-900'
+          checked={item.done}
+          disabled={disabled}
+          onChange={(event) => onDoneChange(item, event.target.checked)}
+        />
+        <label
+          htmlFor={checkboxId}
+          className={
+            item.done
+              ? 'text-sm font-medium text-slate-500 line-through'
+              : 'text-sm font-medium text-slate-900'
+          }
+        >
+          {item.title}
+        </label>
+      </div>
+      {item.why ? <p className='pl-6 text-sm text-slate-600'>{item.why}</p> : null}
+      {item.action ? <p className='pl-6 text-sm text-slate-700'>{item.action}</p> : null}
+      {item.leadId ? (
+        <span className='pl-6'>
+          <LeadLink leadId={item.leadId}>Open lead</LeadLink>
+        </span>
+      ) : null}
       {item.invoiceId ? (
-        <InvoiceLink invoiceId={item.invoiceId}>Open invoice</InvoiceLink>
+        <span className='pl-6'>
+          <InvoiceLink invoiceId={item.invoiceId}>Open invoice</InvoiceLink>
+        </span>
       ) : null}
     </li>
   );
@@ -135,9 +172,13 @@ export function SalePlanOfTheDayCard() {
     isGenerating,
     lastJob,
     generate,
+    setPriorityDone,
   } = useSalesDailyPlan();
   const [refinement, setRefinement] = useState('');
-  const error = generateError || loadError;
+  const [pendingPriorityKey, setPendingPriorityKey] = useState<string | null>(null);
+  const scheduledJobError =
+    lastJob?.status === 'failed' ? lastJob.errorMessage?.trim() || 'Insight generation failed.' : '';
+  const error = generateError || loadError || scheduledJobError;
   const primaryLabel = plan ? 'Refresh insight' : 'Generate insight';
   const previousMemory = memory.filter((entry) => entry.id !== plan?.id);
 
@@ -146,6 +187,16 @@ export function SalePlanOfTheDayCard() {
     const succeeded = await generate(note || undefined);
     if (succeeded) {
       setRefinement('');
+    }
+  }
+
+  async function handlePriorityDone(item: SalesDailyPlanPriority, done: boolean) {
+    const key = `${item.title}:${item.leadId ?? ''}:${item.invoiceId ?? ''}`;
+    setPendingPriorityKey(key);
+    try {
+      await setPriorityDone(item, done);
+    } finally {
+      setPendingPriorityKey(null);
     }
   }
 
@@ -218,9 +269,20 @@ export function SalePlanOfTheDayCard() {
             {plan.priorities.length > 0 ? (
               <div>
                 <h3 className='text-sm font-medium text-slate-900'>Priorities</h3>
-                <ul className='mt-2 list-disc space-y-3 pl-5 text-sm text-slate-700'>
+                <ul className='mt-2 space-y-3 text-sm text-slate-700'>
                   {plan.priorities.map((item) => (
-                    <PriorityItem key={`${item.title}-${item.leadId ?? ''}`} item={item} />
+                    <PriorityItem
+                      key={`${item.title}-${item.leadId ?? ''}-${item.invoiceId ?? ''}`}
+                      item={item}
+                      disabled={
+                        isGenerating ||
+                        pendingPriorityKey ===
+                          `${item.title}:${item.leadId ?? ''}:${item.invoiceId ?? ''}`
+                      }
+                      onDoneChange={(nextItem, done) => {
+                        void handlePriorityDone(nextItem, done);
+                      }}
+                    />
                   ))}
                 </ul>
               </div>
@@ -267,7 +329,8 @@ export function SalePlanOfTheDayCard() {
             ) : null}
 
             <p className='text-xs text-slate-500'>
-              Generated{' '}
+              Generated
+              {plan.generatedByName ? ` for ${plan.generatedByName}` : ''}{' '}
               {plan.generatedAt ? new Date(plan.generatedAt).toLocaleString() : '—'}
               {plan.staleAfter
                 ? ` · Age-stale after ${new Date(plan.staleAfter).toLocaleString()}`

@@ -101,6 +101,7 @@ export interface LeadSummary {
   lostReason: LostReason | null;
   daysInStage: number;
   lastActivityAt: string | null;
+  noteCount: number;
   tags: string[];
 }
 

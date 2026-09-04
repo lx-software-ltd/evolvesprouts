@@ -32,6 +32,7 @@ const sampleLeads: LeadSummary[] = [
     lostReason: null,
     daysInStage: 0,
     lastActivityAt: null,
+    noteCount: 0,
     tags: [],
   },
   {
@@ -60,6 +61,7 @@ const sampleLeads: LeadSummary[] = [
     lostReason: null,
     daysInStage: 1,
     lastActivityAt: null,
+    noteCount: 0,
     tags: [],
   },
 ];

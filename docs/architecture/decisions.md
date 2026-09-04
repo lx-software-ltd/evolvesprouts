@@ -1163,24 +1163,33 @@ detector.
 generate them through the same async OpenRouter + SQS worker pattern as
 per-lead AI suggestions. An EventBridge rule queues a new plan every day at
 06:00 HKT (22:00 UTC; Hong Kong has no DST). The admin dashboard card loads
-the newest saved plan, shows a 24-hour (plus pipeline/inbox watermark) stale
-flag, and still lets the operator Generate / Refresh insight. Optional
-`operator_input` on refresh is stored on the new plan. The last five plans
-(and their refinements) are sent back as memory on the next generation. All
-rows are kept until Sales → Configuration resets memory
-(`DELETE /v1/admin/leads/daily-plan`). Scheduled jobs use audit actor
-`system:sales-daily-plan` and skip enqueue when another job is already
-`pending` or `processing`.
+the newest saved plan (and the newest job, so a failed 06:00 run is visible),
+shows a 24-hour (plus pipeline / inbox / contact watermark) stale flag, and
+still lets the assignee Generate / Refresh insight. Optional `operator_input`
+on refresh is stored on the new plan. The last five plans (and their
+refinements), recent contacts, converted-client nurture rows, and ticked
+priorities are sent back as memory on the next generation. Empty or non-JSON
+model output fails the job instead of storing a blank plan. Scheduled jobs
+address Sales config `default_assigned_to` by Cognito name; manual runs
+address the logged-in admin. All rows are kept until Sales → Configuration
+resets memory (`DELETE /v1/admin/leads/daily-plan`). Scheduled jobs use audit
+actor `system:sales-daily-plan` and skip enqueue when another job is already
+`pending` or `processing`. Fully paid invoices convert matching open or lost
+leads (`system:invoice-paid`); already-converted leads stay converted, and
+unallocating a payment does not reopen them.
 
 **Why:**
-- Operators need a saved plan they can reopen without paying for another model
-  call, and they need prior insights plus refinements to steer the next run.
+- Assignees need a saved plan they can reopen without paying for another model
+  call, and they need prior insights, refinements, new contacts, and finished
+  priorities to steer the next run.
+- A safety-filter stub or empty JSON must not wipe the dashboard to “—”.
 - Org-wide context (pipeline, unanswered threads, catalogue, unpaid invoices)
   exceeds API Gateway time limits, so generation stays off the request path.
 - Reusing the lead-AI OpenRouter / proxy / job-timing pattern keeps secrets and
   failure handling consistent.
-- Reset is an explicit admin action so memory is durable until the operator
+- Reset is an explicit admin action so memory is durable until the assignee
   clears it.
+- Paid invoices are the convert signal; lost-then-paid still counts as won.
 
 ## API route module conventions
 

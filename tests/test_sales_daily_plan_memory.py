@@ -61,7 +61,7 @@ def test_reset_sales_daily_plan_memory_deletes_jobs_then_plans() -> None:
     executed: list[object] = []
     session = SimpleNamespace(execute=lambda statement: executed.append(statement))
     reset_sales_daily_plan_memory(session)
-    assert len(executed) == 2
+    assert len(executed) == 3
 
 
 def test_parse_daily_plan_operator_input_allows_empty_body() -> None:

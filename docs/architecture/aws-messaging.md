@@ -420,9 +420,10 @@ Admin `POST /v1/admin/leads/daily-plan` (optional `operator_input` refinement)
 and the daily EventBridge schedule both enqueue work on a **direct** SQS queue
 (no SNS) so OpenRouter can run longer than API Gateway limits while the
 dashboard card polls `GET /v1/admin/leads/daily-plan/jobs/{job_id}`. The worker
-includes the last five stored plans and refinements as memory.
-`DELETE /v1/admin/leads/daily-plan` clears that memory (plans and jobs); live
-CRM rows are untouched.
+includes the last five stored plans and refinements, recent contacts, converted
+nurture rows, and completed priorities as memory. Empty or non-JSON OpenRouter
+output fails the job. `DELETE /v1/admin/leads/daily-plan` clears that memory
+(plans, jobs, and priority ticks); live CRM rows are untouched.
 
 **Schedule:** EventBridge rule `evolvesprouts-sales-daily-plan-schedule` runs
 `cron(0 22 * * ? *)` UTC (06:00 HKT every day; Hong Kong has no DST) and
@@ -455,8 +456,10 @@ new job; GET returns the newest stored plan.
 
 - Triggered by `evolvesprouts-sales-daily-plan-queue`.
 - Loads `sales_daily_plan_jobs` rows, assembles org-wide pipeline / catalogue /
-  inbox context, calls OpenRouter via `AwsApiProxyFunction`, then persists
-  `sales_daily_plans` and marks the job succeeded or failed.
+  inbox / recent-contact context, resolves `generated_by_name` (logged-in
+  admin or Sales default assignee for the 06:00 HKT run), calls OpenRouter via
+  `AwsApiProxyFunction`, then persists `sales_daily_plans` and marks the job
+  succeeded or failed. Safety stubs and empty plans fail the job.
 - Uses the same OpenRouter + Secrets + proxy wiring as `LeadAiSuggestionFunction`.
 
 ### Scheduler Lambda: `SalesDailyPlanSchedulerFunction`

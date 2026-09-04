@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models.sales_daily_plan import SalesDailyPlan
 from app.db.models.sales_daily_plan_job import SalesDailyPlanJob
+from app.services.sales_daily_plan_completions import delete_completions_for_reset
 
 MEMORY_PLAN_LIMIT = 5
 MAX_OPERATOR_INPUT_LENGTH = 4000
@@ -61,6 +62,7 @@ def load_prior_plans_for_context(
 
 def reset_sales_daily_plan_memory(session: Session) -> None:
     """Delete every stored daily plan, job, and refinement."""
+    delete_completions_for_reset(session)
     session.execute(delete(SalesDailyPlanJob))
     session.execute(delete(SalesDailyPlan))
 

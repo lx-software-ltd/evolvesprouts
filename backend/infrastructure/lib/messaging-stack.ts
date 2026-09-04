@@ -688,6 +688,8 @@ export class MessagingNestedStack extends cdk.NestedStack {
         OPENROUTER_CHAT_COMPLETIONS_URL: props.openrouterChatCompletionsUrl,
         OPENROUTER_MODEL: props.openrouterModel,
         AWS_PROXY_FUNCTION_ARN: props.awsProxyFunctionArn,
+        COGNITO_USER_POOL_ID: props.cognitoUserPoolId,
+        ADMIN_GROUP: props.adminGroupName,
       },
     });
 

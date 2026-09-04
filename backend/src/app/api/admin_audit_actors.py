@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.db.audit import (
     ALEMBIC_AUDIT_USER_ID,
+    INVOICE_PAID_AUDIT_USER_ID,
     SALES_DAILY_PLAN_SCHEDULE_AUDIT_USER_ID,
     SYSTEM_AUDIT_USER_ID,
     WEBHOOK_META_AUDIT_USER_ID,
@@ -30,6 +31,7 @@ SYSTEM_ACTOR_LABELS: dict[str, str] = {
     WEBHOOK_META_AUDIT_USER_ID: "Meta webhook",
     ALEMBIC_AUDIT_USER_ID: "Alembic",
     SALES_DAILY_PLAN_SCHEDULE_AUDIT_USER_ID: "Sales daily plan schedule",
+    INVOICE_PAID_AUDIT_USER_ID: "Invoice paid",
 }
 
 

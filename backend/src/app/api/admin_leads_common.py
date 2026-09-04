@@ -200,7 +200,7 @@ def merge_leads_payload_from(body: Mapping[str, Any]) -> tuple[list[UUID], UUID]
     return lead_ids, keeper_lead_id
 
 
-def serialize_lead_summary(lead: SalesLead) -> dict[str, Any]:
+def serialize_lead_summary(lead: SalesLead, *, note_count: int = 0) -> dict[str, Any]:
     """Serialize lead list row payload."""
     computed_days_in_stage = getattr(lead, "_computed_days_in_stage", None)
     computed_last_activity_at = getattr(lead, "_computed_last_activity_at", None)
@@ -235,11 +235,12 @@ def serialize_lead_summary(lead: SalesLead) -> dict[str, Any]:
         "lost_reason": lead.lost_reason.value if lead.lost_reason else None,
         "days_in_stage": days_in_stage,
         "last_activity_at": last_activity_at,
+        "note_count": note_count,
         "tags": _extract_contact_tags(lead.contact),
     }
 
 
-def serialize_lead_detail(lead: SalesLead) -> dict[str, Any]:
+def serialize_lead_detail(lead: SalesLead, *, note_count: int = 0) -> dict[str, Any]:
     """Serialize lead detail payload including events and notes."""
     events = sorted(
         lead.events,
@@ -251,7 +252,7 @@ def serialize_lead_detail(lead: SalesLead) -> dict[str, Any]:
         key=lambda item: item.created_at or datetime.min.replace(tzinfo=UTC),
         reverse=True,
     )
-    summary = serialize_lead_summary(lead)
+    summary = serialize_lead_summary(lead, note_count=note_count)
     summary["events"] = [_serialize_event(item) for item in events]
     summary["notes"] = [serialize_note(item) for item in notes]
     summary["family"] = None

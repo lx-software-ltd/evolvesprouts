@@ -79,7 +79,8 @@ def _list_users_in_cognito_group(
                 {
                     "sub": sub,
                     "email": _extract_cognito_attribute(attrs, "email"),
-                    "name": _extract_cognito_attribute(attrs, "name"),
+                    "name": _extract_cognito_attribute(attrs, "name")
+                    or _extract_cognito_attribute(attrs, "given_name"),
                 }
             )
         next_token = response.get("NextToken")

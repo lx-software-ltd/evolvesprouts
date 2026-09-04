@@ -40,7 +40,7 @@ import {
   formatEnumLabel,
 } from '@/lib/format';
 
-const COLUMN_COUNT = 8;
+const COLUMN_COUNT = 7;
 
 export interface AssetListPanelProps {
   assets: AdminAsset[];
@@ -219,7 +219,6 @@ export function AssetListPanel({
             <AdminDataTableHeadCell priority='secondary'>Tags</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>Language</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>Visibility</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='tertiary'>File</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>Updated</AdminDataTableHeadCell>
             <AdminDataTableOperationsHeadCell />
           </tr>
@@ -243,9 +242,6 @@ export function AssetListPanel({
                   —
                 </AdminDataTableCell>
                 <AdminDataTableCell priority='secondary' className='text-slate-400'>
-                  —
-                </AdminDataTableCell>
-                <AdminDataTableCell priority='tertiary' className='text-slate-400'>
                   —
                 </AdminDataTableCell>
                 <AdminDataTableCell priority='tertiary' className='text-slate-400'>
@@ -300,9 +296,6 @@ export function AssetListPanel({
                   </AdminDataTableCell>
                   <AdminDataTableCell priority='secondary' className='text-slate-700'>
                     {visibilityLabel}
-                  </AdminDataTableCell>
-                  <AdminDataTableCell priority='tertiary' className='text-slate-700'>
-                    <span className='wrap-anywhere'>{asset.fileName || '—'}</span>
                   </AdminDataTableCell>
                   <AdminDataTableCell priority='tertiary' className='whitespace-nowrap text-slate-700'>
                     {formatDate(asset.updatedAt)}

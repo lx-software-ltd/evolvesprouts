@@ -6,12 +6,12 @@ from types import SimpleNamespace
 
 from app.services.sales_daily_plan_context import (
     MAX_MESSAGE_CHARS,
-    _display_name,
     _earliest_slot_start,
     _serialize_unpaid_invoice,
     _summarize_unpaid_invoices,
     _truncate,
 )
+from app.services.sales_daily_plan_context_inbox import display_name as _display_name
 
 
 def test_truncate_adds_ellipsis_when_over_limit() -> None:

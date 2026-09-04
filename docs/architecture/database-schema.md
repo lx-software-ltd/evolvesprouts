@@ -557,7 +557,8 @@ maps legacy `note.id` to the **first** inserted row’s UUID.
 - Purpose: singleton sales configuration (always `id = 1`).
 - `default_assigned_to` is an optional Cognito `sub` applied when a new lead is
   created without an explicit assignee (admin create, public forms, inbox ingest,
-  and media/free-guide leads).
+  and media/free-guide leads). The 06:00 HKT insight is addressed to this
+  person's Cognito name.
 - `notify_assignee_on_assignment` emails the new assignee on first assignment and
   reassignment. Unassign does not send mail.
 - `helper_detector_enabled` toggles AI Helper Detector on automated new leads
@@ -600,17 +601,28 @@ maps legacy `note.id` to the **first** inserted row’s UUID.
 - Stores structured JSON (`focus`, `priorities`, `outreach`, `product_focus`,
   `offer_refinements`, `risks`), optional `conversation_watermark_at` (max
   WhatsApp/Meta message `sent_at` at generation), optional
-  `pipeline_watermark_at` (max lead create or lead-event time at generation),
-  `generated_at`, `generated_by`, `model`, and optional `operator_input`
-  (refinement text that triggered this plan).
+  `pipeline_watermark_at` (max lead create, lead-event, or contact
+  create/update time at generation),
+  `generated_at`, `generated_by`, optional `generated_by_name`, `model`, and
+  optional `operator_input` (refinement text that triggered this plan).
 - Multiple rows are retained forever until
   `DELETE /v1/admin/leads/daily-plan`; the next generation includes the last
-  five plans (plus their `operator_input`) as memory. Admin GET returns the
-  newest plan plus a compact `memory` list.
+  five plans (plus their `operator_input`) as memory, recent contacts, and
+  completed priorities. Admin GET returns the newest plan plus a compact
+  `memory` list and the newest generation `job`.
 - Stale when older than 24 hours, when a newer conversation message exists
-  than the conversation watermark, or when a lead was created / a funnel-stage
-  event occurred after the pipeline watermark.
+  than the conversation watermark, when a lead was created / a funnel-stage
+  event occurred after the pipeline watermark, or when a contact was created
+  or updated after that watermark.
 - No seed rows (generated on the 06:00 HKT schedule and on demand).
+
+### `sales_daily_plan_priority_completions`
+
+- Purpose: admin ticks on insight priorities so the next generation can skip
+  finished work.
+- Unique on `(plan_id, priority_key)`; `ON DELETE CASCADE` from
+  `sales_daily_plans`.
+- No seed rows (created when an admin ticks a priority).
 
 ### `sales_daily_plan_jobs`
 

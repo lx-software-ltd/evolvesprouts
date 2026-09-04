@@ -121,6 +121,8 @@ their primary responsibilities.
   DELETE resets all stored plans, jobs, and refinements; EventBridge also
   enqueues a new plan daily at 06:00 HKT via `SalesDailyPlanSchedulerFunction`),
   `/v1/admin/leads/daily-plan/jobs/{job_id}` (GET job status / duration),
+  `/v1/admin/leads/daily-plan/priority-completions` (POST ticks or unticks a
+  priority on the latest insight so later generations skip finished work),
   `/v1/admin/contacts/*` (including `GET /v1/admin/contacts` optional `contact_type` filter;
   list and single-contact responses include read-only `family_location_summary` and
   `organization_location_summary` when the contact is linked to a family or organisation that has a venue location,
@@ -608,10 +610,13 @@ their primary responsibilities.
 - Purpose: generate an org-wide sales plan of the day from open pipeline, unanswered
   WhatsApp/Meta threads, unpaid issued invoices, published catalogue, and recent
   won/lost leads via OpenRouter
-  (`AwsApiProxyFunction`) with the last five persisted plans and any
-  `operator_input` as memory. Persists `sales_daily_plans` (including the
-  refinement) and marks `sales_daily_plan_jobs` `succeeded` or `failed`. Does
-  not send messages or payment reminders.
+  (`AwsApiProxyFunction`) with the last five persisted plans, recent contacts,
+  converted-client nurture rows, completed priorities, and any
+  `operator_input` as memory. Addresses the logged-in admin or, for the 06:00
+  HKT run, the Sales default assignee. Empty or non-JSON model output fails the
+  job instead of storing a blank plan. Persists `sales_daily_plans` (including
+  the refinement and `generated_by_name`) and marks `sales_daily_plan_jobs`
+  `succeeded` or `failed`. Does not send messages or payment reminders.
 - DB access: RDS Proxy with IAM auth (`evolvesprouts_admin`)
 - VPC: Yes
 - Permissions: Secrets Manager read for OpenRouter key, Lambda invoke permission
@@ -622,6 +627,7 @@ their primary responsibilities.
   - `OPENROUTER_API_KEY_SECRET_ARN`, `OPENROUTER_CHAT_COMPLETIONS_URL`,
     `OPENROUTER_MODEL`
   - `AWS_PROXY_FUNCTION_ARN`
+  - `COGNITO_USER_POOL_ID`, `ADMIN_GROUP`
   - `SALES_DAILY_PLAN_LAMBDA_TIMEOUT_SECONDS` (120),
     `SALES_DAILY_PLAN_OPENROUTER_TIMEOUT_SECONDS` (90)
 

@@ -61,6 +61,7 @@ from app.api.admin_sales_daily_plan import (
     delete_sales_daily_plan_memory,
     get_sales_daily_plan,
     get_sales_daily_plan_job,
+    upsert_sales_daily_plan_priority_completion,
 )
 
 
@@ -109,6 +110,17 @@ def handle_admin_leads_request(
         job_id = parse_uuid(parts[4])
         if method == "GET":
             return get_sales_daily_plan_job(event, job_id=job_id)
+        return method_not_allowed(event)
+
+    if (
+        len(parts) == 4
+        and parts[2] == "daily-plan"
+        and parts[3] == "priority-completions"
+    ):
+        if method == "POST":
+            return upsert_sales_daily_plan_priority_completion(
+                event, actor_sub=identity.user_sub
+            )
         return method_not_allowed(event)
 
     lead_id = parse_uuid(parts[2])
@@ -178,15 +190,37 @@ def _list_leads(event: Mapping[str, Any]) -> dict[str, Any]:
         next_cursor = None
         if has_more and page_rows and filters["sort"] == "created_at":
             next_cursor = encode_lead_cursor(page_rows[-1])
+        note_counts = ContactRepository(session).count_standalone_notes_for_contacts(
+            [lead.contact_id for lead in page_rows if lead.contact_id]
+        )
         return json_response(
             200,
             {
-                "items": [serialize_lead_summary(lead) for lead in page_rows],
+                "items": [
+                    serialize_lead_summary(
+                        lead,
+                        note_count=note_counts.get(lead.contact_id, 0)
+                        if lead.contact_id
+                        else 0,
+                    )
+                    for lead in page_rows
+                ],
                 "next_cursor": next_cursor,
                 "total_count": total_count,
             },
             event=event,
         )
+
+
+def _note_count_for_lead(session: Session, lead: SalesLead) -> int:
+    contact_id = getattr(lead, "contact_id", None)
+    if contact_id is None:
+        return 0
+    return (
+        ContactRepository(session)
+        .count_standalone_notes_for_contacts([contact_id])
+        .get(contact_id, 0)
+    )
 
 
 def _get_lead(event: Mapping[str, Any], *, lead_id: UUID) -> dict[str, Any]:
@@ -197,7 +231,11 @@ def _get_lead(event: Mapping[str, Any], *, lead_id: UUID) -> dict[str, Any]:
             raise NotFoundError("SalesLead", str(lead_id))
         return json_response(
             200,
-            {"lead": serialize_lead_detail(lead)},
+            {
+                "lead": serialize_lead_detail(
+                    lead, note_count=_note_count_for_lead(session, lead)
+                )
+            },
             event=event,
         )
 
@@ -291,7 +329,11 @@ def _create_lead(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, Any]:
         notify_lead_assignee(session, created, previous=None)
         return json_response(
             201,
-            {"lead": serialize_lead_detail(created)},
+            {
+                "lead": serialize_lead_detail(
+                    created, note_count=_note_count_for_lead(session, created)
+                )
+            },
             event=event,
         )
 
@@ -365,7 +407,15 @@ def _update_lead(
             raise NotFoundError("SalesLead", str(lead.id))
         if assignment_changed:
             notify_lead_assignee(session, updated, previous=previous_assignee)
-        return json_response(200, {"lead": serialize_lead_detail(updated)}, event=event)
+        return json_response(
+            200,
+            {
+                "lead": serialize_lead_detail(
+                    updated, note_count=_note_count_for_lead(session, updated)
+                )
+            },
+            event=event,
+        )
 
 
 def _create_lead_note(
@@ -439,6 +489,7 @@ def _merge_leads(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, Any]:
         detail = lead_repo.get_by_id_with_details(keeper.id)
         if detail is None:
             raise NotFoundError("SalesLead", str(keeper.id))
+        note_count = _note_count_for_lead(session, detail)
 
     for email in mailchimp_archive_emails:
         removal = remove_contact_from_mailchimp(
@@ -452,4 +503,8 @@ def _merge_leads(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, Any]:
                 extra={"lead_email": mask_email(email)},
             )
 
-    return json_response(200, {"lead": serialize_lead_detail(detail)}, event=event)
+    return json_response(
+        200,
+        {"lead": serialize_lead_detail(detail, note_count=note_count)},
+        event=event,
+    )

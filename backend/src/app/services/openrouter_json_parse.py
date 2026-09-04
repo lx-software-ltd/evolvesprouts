@@ -93,6 +93,14 @@ def loads_openrouter_json(
     ``context`` is a short label for logs and error messages (for example
     ``"lead close suggestion"`` or ``"single invoice"``).
     """
+    cleaned = prepare_openrouter_json_text(text)
+    if "{" not in cleaned:
+        logger.warning(
+            "OpenRouter response contained no JSON object",
+            extra={"context": context, "length": len(cleaned)},
+        )
+        raise RuntimeError(f"Model returned no JSON object for {context}")
+
     candidates = openrouter_json_text_candidates(text)
     last_error: json.JSONDecodeError | None = None
     repair_source = candidates[-1]

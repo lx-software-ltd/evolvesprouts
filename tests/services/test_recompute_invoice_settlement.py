@@ -210,6 +210,85 @@ def test_recompute_triggers_refresh_invoice_pdf_on_transition_to_paid(
     assert refreshed == [inv_id]
 
 
+def test_recompute_converts_leads_on_transition_to_paid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    inv_id = uuid4()
+    inv = SimpleNamespace(
+        id=inv_id,
+        status=BillingInvoiceStatus.ISSUED,
+        currency="HKD",
+        total=Decimal("100"),
+        amount_allocated=Decimal("0"),
+        balance_due=Decimal("0"),
+        paid_at=None,
+        issued_pdf_s3_key=None,
+    )
+    converted: list[object] = []
+
+    def _spy_convert(_session, invoice):
+        converted.append(invoice.id)
+
+    monkeypatch.setattr(
+        "app.services.lead_invoice_convert.convert_leads_for_paid_invoice",
+        _spy_convert,
+    )
+
+    session = MagicMock()
+    calls = {"n": 0}
+
+    def _exec_counted(_stmt, *_a, **_k):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return _mock_result(inv)
+        return _mock_result(Decimal("100"))
+
+    session.execute.side_effect = _exec_counted
+
+    recompute_invoice_settlement(session, inv)
+
+    assert inv.paid_at is not None
+    assert converted == [inv_id]
+
+
+def test_recompute_does_not_convert_on_transition_to_unpaid(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    inv_id = uuid4()
+    ts = datetime(2026, 1, 1, tzinfo=UTC)
+    inv = SimpleNamespace(
+        id=inv_id,
+        status=BillingInvoiceStatus.VOID,
+        currency="HKD",
+        total=Decimal("100"),
+        amount_allocated=Decimal("100"),
+        balance_due=Decimal("0"),
+        paid_at=ts,
+        issued_pdf_s3_key=None,
+    )
+    converted: list[object] = []
+    monkeypatch.setattr(
+        "app.services.lead_invoice_convert.convert_leads_for_paid_invoice",
+        lambda *_a, **_k: converted.append("called"),
+    )
+
+    calls = {"n": 0}
+
+    def _exec(_stmt, *_a, **_k):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return _mock_result(inv)
+        return _mock_result(Decimal("100"))
+
+    session = MagicMock()
+    session.execute.side_effect = _exec
+
+    recompute_invoice_settlement(session, inv)
+
+    assert inv.paid_at is None
+    assert converted == []
+
+
 def test_recompute_triggers_refresh_invoice_pdf_on_transition_to_unpaid_via_void(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
