@@ -1011,7 +1011,12 @@ conversation reads live at `GET /v1/public/whatsapp/conversations` and
 `GET /v1/public/whatsapp/conversations/{id}/messages` and omit phone numbers
 and `wa_id`. CRM contacts live at `GET|POST /v1/public/contacts` and
 `GET|PATCH|DELETE /v1/public/contacts/{id}` with the admin contact payload
-(including PII). Notes, services, and Mailchimp jobs stay on Cognito admin
+(including PII), plus standalone notes at `/v1/public/contacts/{id}/notes`.
+The same token scopes cover families, organisations, locations, and
+geographic-area reads under `/v1/public/families`, `/v1/public/organizations`,
+`/v1/public/locations`, and `/v1/public/geographic-areas` (payloads match the
+corresponding admin contracts; family/organisation services and location
+delete stay on Cognito admin routes). Mailchimp jobs stay on Cognito admin
 routes. Admins create and revoke tokens from Audit → API keys.
 
 **Why:**

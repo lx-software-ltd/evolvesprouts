@@ -298,8 +298,10 @@ distinct from the browser-visible website `x-api-key`.
 - Public Meta payloads omit Page-scoped user ids (`platform_user_id`) and
   page ids.
 - Public contact payloads match the admin contact contract (including email,
-  phone, and date of birth). Notes, services, and Mailchimp sync jobs stay on
-  Cognito admin routes.
+  phone, and date of birth). Standalone contact notes, families,
+  organisations, locations, and geographic-area reads are also on
+  `x-api-token` routes. Family/organisation services, location delete, and
+  Mailchimp sync jobs stay on Cognito admin routes.
 
 ### Public WWW API key model
 

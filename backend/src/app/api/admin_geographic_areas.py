@@ -96,3 +96,6 @@ def _parse_optional_uuid(value: str | None, field: str) -> UUID | None:
         return parse_uuid(value.strip())
     except ValidationError as exc:
         raise ValidationError(exc.message, field=field) from exc
+
+
+list_geographic_areas = _list_geographic_areas
