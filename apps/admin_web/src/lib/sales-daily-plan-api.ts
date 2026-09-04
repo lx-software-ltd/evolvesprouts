@@ -24,6 +24,7 @@ function parsePriority(value: unknown): SalesDailyPlan['priorities'][number] | n
     action: asNullableString(value.action) ?? '',
     leadId: asNullableString(value.lead_id),
     invoiceId: asNullableString(value.invoice_id),
+    done: Boolean(value.done),
   };
 }
 
@@ -74,6 +75,7 @@ export function parseSalesDailyPlan(value: unknown): SalesDailyPlan | null {
     risks: parseStringList(value.risks),
     generatedAt: asNullableString(value.generated_at),
     generatedBy: asNullableString(value.generated_by),
+    generatedByName: asNullableString(value.generated_by_name),
     model: asNullableString(value.model),
     operatorInput: asNullableString(value.operator_input),
     conversationWatermarkAt: asNullableString(value.conversation_watermark_at),
@@ -83,6 +85,7 @@ export function parseSalesDailyPlan(value: unknown): SalesDailyPlan | null {
     staleAfter: asNullableString(value.stale_after),
     latestMessageAt: asNullableString(value.latest_message_at),
     latestPipelineAt: asNullableString(value.latest_pipeline_at),
+    latestContactAt: asNullableString(value.latest_contact_at),
   };
 }
 
@@ -129,7 +132,7 @@ export function parseSalesDailyPlanMemoryEntry(
 
 export function parseSalesDailyPlanSnapshot(value: unknown): SalesDailyPlanSnapshot {
   if (!isRecord(value)) {
-    return { plan: null, memory: [] };
+    return { plan: null, memory: [], job: null };
   }
   const memory = Array.isArray(value.memory)
     ? value.memory
@@ -139,6 +142,7 @@ export function parseSalesDailyPlanSnapshot(value: unknown): SalesDailyPlanSnaps
   return {
     plan: parseSalesDailyPlan(value.plan),
     memory,
+    job: parseSalesDailyPlanJob(value.job),
   };
 }
 
@@ -210,6 +214,29 @@ export async function pollSalesDailyPlanJob(
   throw new Error(
     'Daily plan is taking longer than expected; refresh the dashboard to check again.',
   );
+}
+
+export async function upsertSalesDailyPlanPriorityCompletion(input: {
+  title: string;
+  leadId?: string | null;
+  invoiceId?: string | null;
+  done: boolean;
+}): Promise<SalesDailyPlan> {
+  const payload = await adminApiRequest<{ plan?: unknown }>({
+    endpointPath: '/v1/admin/leads/daily-plan/priority-completions',
+    method: 'POST',
+    body: {
+      title: input.title,
+      lead_id: input.leadId ?? null,
+      invoice_id: input.invoiceId ?? null,
+      done: input.done,
+    },
+  });
+  const plan = parseSalesDailyPlan(payload.plan);
+  if (!plan) {
+    throw new Error('Priority completion response was empty.');
+  }
+  return plan;
 }
 
 export async function resetSalesDailyPlanMemory(): Promise<void> {

@@ -125,6 +125,7 @@ function parseLeadSummary(value: unknown): LeadSummary {
     lostReason: parseLostReason(lead.lost_reason),
     daysInStage: asNumber(lead.days_in_stage, 0),
     lastActivityAt: asNullableString(lead.last_activity_at),
+    noteCount: asNumber(lead.note_count, 0),
     tags,
   };
 }

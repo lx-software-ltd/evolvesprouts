@@ -63,6 +63,7 @@ const LEAD_FIXTURE: LeadDetail = {
   lostReason: null,
   daysInStage: 4,
   lastActivityAt: '2026-03-02T10:00:00Z',
+  noteCount: 2,
   tags: [],
   family: null,
   organization: null,
@@ -149,6 +150,7 @@ describe('LeadDetailPanel', () => {
     expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
 
     expect(screen.getByTestId('lead-notes-disclosure')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Notes/ })).toHaveTextContent('2');
     expect(screen.getByTestId('lead-ai-suggestion-disclosure')).toBeInTheDocument();
     expect(screen.getByTestId('lead-activity-disclosure')).toBeInTheDocument();
     expect(screen.getByTestId('lead-conversation-disclosure')).toBeInTheDocument();

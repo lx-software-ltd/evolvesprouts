@@ -403,7 +403,13 @@ export function LeadDetailPanel({
 
       {mode === 'edit' && lead ? (
         <>
-          <AdminDisclosure id='lead-notes' title='Notes' open={notesOpen} onOpenChange={setNotesOpen}>
+          <AdminDisclosure
+            id='lead-notes'
+            title='Notes'
+            summary={lead.noteCount}
+            open={notesOpen}
+            onOpenChange={setNotesOpen}
+          >
             {notesOpen ? (
               <ContactNotesPanel
                 contact={

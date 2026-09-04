@@ -114,7 +114,7 @@ export function SalesConfigurationView({
                 label='Default assignee'
                 htmlFor='sales-settings-default-assignee'
                 span={2}
-                hint='Applied to new leads when no assignee is chosen. Pipeline create pre-fills this value; choosing Unassigned there leaves the lead unassigned.'
+                hint='Applied to new leads when no assignee is chosen. Pipeline create pre-fills this value; choosing Unassigned there leaves the lead unassigned. The scheduled 6:00 HKT insight is addressed to this person.'
               >
                 <Select
                   id='sales-settings-default-assignee'

@@ -50,6 +50,7 @@ const LEAD_FIXTURE: LeadSummary = {
   lostReason: null,
   daysInStage: 4,
   lastActivityAt: '2026-03-02T10:00:00Z',
+  noteCount: 0,
   tags: [],
 };
 

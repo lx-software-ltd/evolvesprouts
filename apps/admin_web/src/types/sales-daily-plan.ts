@@ -1,6 +1,10 @@
 export type SalesDailyPlanJobStatus = 'pending' | 'processing' | 'succeeded' | 'failed';
 
-export type SalesDailyPlanStaleReason = 'age' | 'new_conversation' | 'pipeline_changed';
+export type SalesDailyPlanStaleReason =
+  | 'age'
+  | 'new_conversation'
+  | 'pipeline_changed'
+  | 'contacts_changed';
 
 export interface SalesDailyPlanPriority {
   title: string;
@@ -8,6 +12,7 @@ export interface SalesDailyPlanPriority {
   action: string;
   leadId: string | null;
   invoiceId: string | null;
+  done: boolean;
 }
 
 export interface SalesDailyPlanOutreach {
@@ -28,6 +33,7 @@ export interface SalesDailyPlan {
   risks: string[];
   generatedAt: string | null;
   generatedBy: string | null;
+  generatedByName: string | null;
   model: string | null;
   operatorInput: string | null;
   conversationWatermarkAt: string | null;
@@ -37,6 +43,7 @@ export interface SalesDailyPlan {
   staleAfter: string | null;
   latestMessageAt: string | null;
   latestPipelineAt: string | null;
+  latestContactAt: string | null;
 }
 
 export interface SalesDailyPlanMemoryEntry {
@@ -50,6 +57,7 @@ export interface SalesDailyPlanMemoryEntry {
 export interface SalesDailyPlanSnapshot {
   plan: SalesDailyPlan | null;
   memory: SalesDailyPlanMemoryEntry[];
+  job: SalesDailyPlanJob | null;
 }
 
 export const SALES_DAILY_PLAN_OPERATOR_INPUT_MAX = 4000;

@@ -1464,7 +1464,7 @@ export interface paths {
         };
         /**
          * Get latest org-wide sales plan of the day
-         * @description Returns the newest stored org-wide AI sales daily plan, including staleness metadata, plus `memory` (up to the five newest stored plans, including the latest). `plan` is null when none has been generated yet. A scheduled job also generates a new plan every day at 06:00 HKT. A plan is stale when it is older than 24 hours, when a newer WhatsApp/Meta message exists after the stored conversation watermark, or when a lead was created or a funnel-stage event occurred after the stored pipeline watermark. All stored plans are retained until `DELETE /v1/admin/leads/daily-plan`.
+         * @description Returns the newest stored org-wide AI sales daily plan, including staleness metadata, plus `memory` (up to the five newest stored plans, including the latest). `plan` is null when none has been generated yet. A scheduled job also generates a new plan every day at 06:00 HKT. A plan is stale when it is older than 24 hours, when a newer WhatsApp/Meta message exists after the stored conversation watermark, when a lead was created or a funnel-stage event occurred after the stored pipeline watermark, or when a contact was created or updated after that watermark. `job` is the newest generation job (including a failed 06:00 HKT run). All stored plans are retained until `DELETE /v1/admin/leads/daily-plan`.
          */
         get: {
             parameters: {
@@ -1585,6 +1585,52 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/leads/daily-plan/priority-completions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark or unmark an insight priority as done
+         * @description Ticks or unticks one priority on the latest stored sales daily plan. Completions are stored and included in later generations so the model can skip finished work. `done: false` removes the tick.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SalesDailyPlanPriorityCompletionRequest"];
+                };
+            };
+            responses: {
+                /** @description Updated plan plus the completion row (null when undone). */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SalesDailyPlanPriorityCompletionResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -7007,6 +7053,8 @@ export interface components {
             days_in_stage?: number;
             /** Format: date-time */
             last_activity_at?: string | null;
+            /** @description Standalone contact notes for the lead's contact (same notes the pipeline Notes accordion shows). */
+            note_count: number;
             tags: string[];
         };
         LeadDetail: components["schemas"]["LeadSummary"] & {
@@ -7094,6 +7142,8 @@ export interface components {
              * @description Unpaid issued invoice when the priority is a payment follow-up.
              */
             invoice_id?: string | null;
+            /** @description True when an admin has ticked this priority on this plan. */
+            done?: boolean;
         };
         SalesDailyPlanOutreach: {
             channel: string;
@@ -7115,6 +7165,8 @@ export interface components {
             /** Format: date-time */
             generated_at: string;
             generated_by?: string | null;
+            /** @description Display name of the person this insight addresses (logged-in admin, or Sales default assignee for the 06:00 HKT run). */
+            generated_by_name?: string | null;
             model?: string | null;
             /** @description Operator refinement stored with this plan and used as later memory. */
             operator_input?: string | null;
@@ -7123,7 +7175,7 @@ export interface components {
             /** Format: date-time */
             pipeline_watermark_at?: string | null;
             is_stale: boolean;
-            stale_reasons: ("age" | "new_conversation" | "pipeline_changed")[];
+            stale_reasons: ("age" | "new_conversation" | "pipeline_changed" | "contacts_changed")[];
             /**
              * Format: date-time
              * @description Timestamp when the plan becomes age-stale (generated_at + 24h).
@@ -7133,6 +7185,8 @@ export interface components {
             latest_message_at?: string | null;
             /** Format: date-time */
             latest_pipeline_at?: string | null;
+            /** Format: date-time */
+            latest_contact_at?: string | null;
         };
         SalesDailyPlanMemoryEntry: {
             /** Format: uuid */
@@ -7147,6 +7201,29 @@ export interface components {
             plan: components["schemas"]["SalesDailyPlan"] | null;
             /** @description Up to the five newest stored plans, newest first (including the latest). */
             memory: components["schemas"]["SalesDailyPlanMemoryEntry"][];
+            /** @description Newest generation job, including a failed scheduled run. */
+            job?: components["schemas"]["SalesDailyPlanJob"] | null;
+        };
+        SalesDailyPlanPriorityCompletionRequest: {
+            title: string;
+            /** Format: uuid */
+            lead_id?: string | null;
+            /** Format: uuid */
+            invoice_id?: string | null;
+            done: boolean;
+        };
+        SalesDailyPlanPriorityCompletionResponse: {
+            plan: components["schemas"]["SalesDailyPlan"];
+            completion?: {
+                title?: string;
+                /** Format: uuid */
+                lead_id?: string | null;
+                /** Format: uuid */
+                invoice_id?: string | null;
+                /** Format: date-time */
+                done_at?: string | null;
+                done_by?: string;
+            } | null;
         };
         SalesDailyPlanGenerateRequest: {
             /** @description Optional refinement used for this generation and stored as memory. */
@@ -7387,7 +7464,7 @@ export interface components {
             lost_reason?: components["schemas"]["LeadLostReason"] | null;
         };
         SalesSettings: {
-            /** @description Cognito `sub` applied to new leads when create omits `assigned_to`. */
+            /** @description Cognito `sub` applied to new leads when create omits `assigned_to`. The scheduled 06:00 HKT insight is addressed to this person's Cognito name. */
             default_assigned_to: string | null;
             /** @description When true, email the new assignee on first assignment and reassignment. Unassign does not send mail. */
             notify_assignee_on_assignment: boolean;
