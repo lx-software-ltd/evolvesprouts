@@ -2,9 +2,11 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockListAuditLogs, mockListApiKeys } = vi.hoisted(() => ({
+const { mockListAuditLogs, mockListApiKeys, mockListCognitoUsers, mockUseAuth } = vi.hoisted(() => ({
   mockListAuditLogs: vi.fn(),
   mockListApiKeys: vi.fn(),
+  mockListCognitoUsers: vi.fn(),
+  mockUseAuth: vi.fn(),
 }));
 
 vi.mock('@/lib/audit-logs-api', () => ({
@@ -17,13 +19,36 @@ vi.mock('@/lib/api-keys-api', () => ({
   revokeAdminApiKey: vi.fn(),
 }));
 
+vi.mock('@/lib/cognito-users-api', () => ({
+  listCognitoUsers: (...args: unknown[]) => mockListCognitoUsers(...args),
+  createCognitoUser: vi.fn(),
+  updateCognitoUser: vi.fn(),
+  deleteCognitoUser: vi.fn(),
+  getCognitoUser: vi.fn(),
+  primaryStaffGroup: () => '',
+}));
+
+vi.mock('@/components/auth-provider', () => ({
+  useAuth: mockUseAuth,
+}));
+
 import { AuditLogsPage } from '@/components/admin/audit/audit-logs-page';
 
 describe('AuditLogsPage', () => {
   beforeEach(() => {
     window.history.replaceState(null, '', '/audit');
+    mockUseAuth.mockReturnValue({ user: { subject: 'me-sub' } });
     mockListAuditLogs.mockResolvedValue({ items: [], next_cursor: null });
     mockListApiKeys.mockResolvedValue([]);
+    mockListCognitoUsers.mockResolvedValue({ items: [], next_cursor: null });
+  });
+
+  it('switches to the Users tab', async () => {
+    const user = userEvent.setup();
+    render(<AuditLogsPage />);
+    await user.click(screen.getByRole('button', { name: 'Users' }));
+    expect(await screen.findByRole('button', { name: 'New user' })).toBeInTheDocument();
+    expect(mockListCognitoUsers).toHaveBeenCalled();
   });
 
   it('switches to the API keys tab', async () => {
