@@ -49,3 +49,8 @@ def require_api_token(event: Mapping[str, Any], method: str) -> ApiTokenContext:
     if context.scope == SCOPE_USER and method != "GET":
         raise AuthorizationError("Read-only API token")
     return context
+
+
+def token_actor_sub(token: ApiTokenContext) -> str:
+    """Audit actor id for writes performed by a hashed API token."""
+    return f"api-key:{token.api_key_id}"

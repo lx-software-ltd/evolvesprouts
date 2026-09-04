@@ -2,7 +2,8 @@
 
 ``user`` tokens may GET only. ``admin`` tokens may create, update, and delete.
 Payloads match the admin contact contract, including email, phone, and date of
-birth. Notes, services, and Mailchimp sync jobs are not exposed here.
+birth. Standalone contact notes are exposed. Services and Mailchimp sync jobs
+are not.
 """
 
 from __future__ import annotations
@@ -13,6 +14,12 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.api.admin_contact_notes import (
+    create_contact_note,
+    delete_contact_note,
+    list_contact_notes,
+    update_contact_note,
+)
 from app.api.admin_contacts_mutations import (
     create_contact,
     update_contact,
@@ -28,7 +35,7 @@ from app.api.admin_entities_serializers import serialize_contact_summary
 from app.api.admin_request import encode_cursor, parse_cursor, parse_uuid, query_param
 from app.api.admin_validators import validate_string_length
 from app.api.shared_request import route_has_prefix, split_route_parts
-from app.api.public.token_auth import require_api_token
+from app.api.public.token_auth import require_api_token, token_actor_sub
 from app.db.engine import get_engine
 from app.db.repositories import ContactRepository
 from app.exceptions import NotFoundError
@@ -52,7 +59,7 @@ def handle_public_contacts_request(
         return not_found(event)
 
     token = require_api_token(event, method)
-    actor_sub = f"api-key:{token.api_key_id}"
+    actor_sub = token_actor_sub(token)
 
     if len(parts) == 2:
         if method == "GET":
@@ -61,17 +68,44 @@ def handle_public_contacts_request(
             return create_contact(event, actor_sub=actor_sub)
         return method_not_allowed(event)
 
-    if len(parts) != 3:
-        return not_found(event)
-
     contact_id = parse_uuid(parts[2])
-    if method == "GET":
-        return _get_contact(event, contact_id=contact_id)
-    if method == "PATCH":
-        return update_contact(event, contact_id=contact_id, actor_sub=actor_sub)
-    if method == "DELETE":
-        return delete_contact(event, contact_id=contact_id, actor_sub=actor_sub)
-    return method_not_allowed(event)
+    if len(parts) == 3:
+        if method == "GET":
+            return _get_contact(event, contact_id=contact_id)
+        if method == "PATCH":
+            return update_contact(event, contact_id=contact_id, actor_sub=actor_sub)
+        if method == "DELETE":
+            return delete_contact(event, contact_id=contact_id, actor_sub=actor_sub)
+        return method_not_allowed(event)
+
+    if len(parts) == 4 and parts[3] == "notes":
+        if method == "GET":
+            return list_contact_notes(event, contact_id=contact_id, actor_sub=actor_sub)
+        if method == "POST":
+            return create_contact_note(
+                event, contact_id=contact_id, actor_sub=actor_sub
+            )
+        return method_not_allowed(event)
+
+    if len(parts) == 5 and parts[3] == "notes":
+        note_id = parse_uuid(parts[4])
+        if method == "PATCH":
+            return update_contact_note(
+                event,
+                contact_id=contact_id,
+                note_id=note_id,
+                actor_sub=actor_sub,
+            )
+        if method == "DELETE":
+            return delete_contact_note(
+                event,
+                contact_id=contact_id,
+                note_id=note_id,
+                actor_sub=actor_sub,
+            )
+        return method_not_allowed(event)
+
+    return not_found(event)
 
 
 def _list_contacts(event: Mapping[str, Any]) -> dict[str, Any]:

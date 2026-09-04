@@ -3382,6 +3382,50 @@ export class ApiStack extends cdk.Stack {
     addPublicTokenMethod(publicContactById, "GET");
     addPublicTokenMethod(publicContactById, "PATCH");
     addPublicTokenMethod(publicContactById, "DELETE");
+    const publicContactNotes = publicContactById.addResource("notes");
+    addPublicTokenMethod(publicContactNotes, "GET");
+    addPublicTokenMethod(publicContactNotes, "POST");
+    const publicContactNoteById = publicContactNotes.addResource("{note_id}");
+    addPublicTokenMethod(publicContactNoteById, "PATCH");
+    addPublicTokenMethod(publicContactNoteById, "DELETE");
+
+    const publicFamilies = publicRoot.addResource("families");
+    addPublicTokenMethod(publicFamilies, "GET");
+    addPublicTokenMethod(publicFamilies, "POST");
+    const publicFamilyById = publicFamilies.addResource("{id}");
+    addPublicTokenMethod(publicFamilyById, "GET");
+    addPublicTokenMethod(publicFamilyById, "PATCH");
+    addPublicTokenMethod(publicFamilyById, "DELETE");
+    const publicFamilyMembers = publicFamilyById.addResource("members");
+    addPublicTokenMethod(publicFamilyMembers, "POST");
+    const publicFamilyMemberById = publicFamilyMembers.addResource("{member_id}");
+    addPublicTokenMethod(publicFamilyMemberById, "PATCH");
+    addPublicTokenMethod(publicFamilyMemberById, "DELETE");
+
+    const publicOrganizations = publicRoot.addResource("organizations");
+    addPublicTokenMethod(publicOrganizations, "GET");
+    addPublicTokenMethod(publicOrganizations, "POST");
+    const publicOrganizationById = publicOrganizations.addResource("{id}");
+    addPublicTokenMethod(publicOrganizationById, "GET");
+    addPublicTokenMethod(publicOrganizationById, "PATCH");
+    addPublicTokenMethod(publicOrganizationById, "DELETE");
+    const publicOrganizationMembers = publicOrganizationById.addResource("members");
+    addPublicTokenMethod(publicOrganizationMembers, "POST");
+    const publicOrganizationMemberById = publicOrganizationMembers.addResource(
+      "{member_id}"
+    );
+    addPublicTokenMethod(publicOrganizationMemberById, "PATCH");
+    addPublicTokenMethod(publicOrganizationMemberById, "DELETE");
+
+    const publicLocations = publicRoot.addResource("locations");
+    addPublicTokenMethod(publicLocations, "GET");
+    addPublicTokenMethod(publicLocations, "POST");
+    addPublicTokenMethod(publicLocations.addResource("geocode"), "POST");
+    const publicLocationById = publicLocations.addResource("{id}");
+    addPublicTokenMethod(publicLocationById, "GET");
+    addPublicTokenMethod(publicLocationById, "PATCH");
+
+    addPublicTokenMethod(publicRoot.addResource("geographic-areas"), "GET");
 
     // Admin asset routes
     const admin = v1.addResource("admin");

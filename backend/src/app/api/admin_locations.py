@@ -436,3 +436,10 @@ def _validate_coordinates(*, lat: Any, lng: Any) -> None:
         raise ValidationError("lat must be between -90 and 90", field="lat")
     if lng is not None and (lng < -180 or lng > 180):
         raise ValidationError("lng must be between -180 and 180", field="lng")
+
+
+list_locations = _list_locations
+create_location = _create_location
+update_location = _update_location
+geocode_location = _geocode_location
+serialize_location = _serialize_location

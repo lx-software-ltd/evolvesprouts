@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Public API
-  version: 0.5.0
+  version: 0.6.0
   description: |
     Public endpoint contract.
 
@@ -50,7 +50,16 @@ info:
       `GET|PATCH|DELETE /v1/public/contacts/{id}`) using `x-api-token`.
       `user` tokens are GET only; `admin` tokens may create, update, and delete.
       Payloads match the admin contact contract (including email, phone, and
-      date of birth). Notes, services, and Mailchimp sync jobs are not exposed.
+      date of birth). Standalone contact notes are exposed at
+      `/v1/public/contacts/{id}/notes`. Services and Mailchimp sync jobs are
+      not exposed.
+    - Token-authenticated CRM families, organisations, locations, and
+      geographic areas under `/v1/public/families`, `/v1/public/organizations`,
+      `/v1/public/locations`, and `/v1/public/geographic-areas`. Same
+      `x-api-token` scopes as contacts (`user` GET only; `admin` may write).
+      Payloads match the corresponding admin contracts. Family/organisation
+      services and location delete are not exposed. Geographic areas are
+      GET only.
 
 servers:
   - url: https://api.evolvesprouts.com
@@ -734,6 +743,875 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /v1/public/contacts/{id}/notes:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: List standalone notes for a contact (token API)
+      description: |
+        Returns notes stored on the contact that are not tied to a sales lead
+        (`lead_id` is null), newest first. `user` and `admin` tokens may read.
+      security:
+        - ApiTokenAuth: []
+      responses:
+        "200":
+          description: Note list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicNoteListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      summary: Add a standalone note to a contact (token API)
+      description: Requires an `admin` scoped API token. `user` tokens receive `403`.
+      security:
+        - ApiTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePublicNoteRequest"
+      responses:
+        "201":
+          description: Note created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicNoteResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/public/contacts/{id}/notes/{note_id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: note_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      summary: Update a standalone note on a contact (token API)
+      description: Requires an `admin` scoped API token.
+      security:
+        - ApiTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePublicNoteRequest"
+      responses:
+        "200":
+          description: Note updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicNoteResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Delete a standalone note on a contact (token API)
+      description: Requires an `admin` scoped API token.
+      security:
+        - ApiTokenAuth: []
+      responses:
+        "204":
+          description: Note deleted.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/public/families:
+    get:
+      summary: List CRM families (token API)
+      description: |
+        Returns CRM families for a hashed API token (`x-api-token`).
+        Payloads match the admin family contract.
+      security:
+        - ApiTokenAuth: []
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: active
+          in: query
+          schema:
+            type: boolean
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: Family list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicFamilyListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      summary: Create CRM family (token API)
+      description: Requires an `admin` scoped API token.
+      security:
+        - ApiTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePublicFamilyRequest"
+      responses:
+        "201":
+          description: Family created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicFamilyResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/public/families/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get CRM family (token API)
+      security:
+        - ApiTokenAuth: []
+      responses:
+        "200":
+          description: Family response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicFamilyResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      summary: Update CRM family (token API)
+      description: Requires an `admin` scoped API token.
+      security:
+        - ApiTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePublicFamilyRequest"
+      responses:
+        "200":
+          description: Family response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicFamilyResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Delete CRM family (token API)
+      description: Requires an `admin` scoped API token.
+      security:
+        - ApiTokenAuth: []
+      responses:
+        "204":
+          description: Family deleted.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/public/families/{id}/members:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Add family member (token API)
+      description: Requires an `admin` scoped API token.
+      security:
+        - ApiTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddPublicFamilyMemberRequest"
+      responses:
+        "201":
+          description: Family with updated members.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicFamilyResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/public/families/{id}/members/{member_id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: member_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      summary: Update family member (token API)
+      description: Requires an `admin` scoped API token. Toggles primary contact.
+      security:
+        - ApiTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePublicFamilyMemberRequest"
+      responses:
+        "200":
+          description: Family with updated members.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicFamilyResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Remove family member (token API)
+      description: Requires an `admin` scoped API token.
+      security:
+        - ApiTokenAuth: []
+      responses:
+        "200":
+          description: Family with updated members.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicFamilyResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/public/organizations:
+    get:
+      summary: List CRM organisations (token API)
+      security:
+        - ApiTokenAuth: []
+      parameters:
+        - name: query
+          in: query
+          schema:
+            type: string
+        - name: active
+          in: query
+          schema:
+            type: boolean
+        - name: relationship_type
+          in: query
+          schema:
+            $ref: "#/components/schemas/PublicRelationshipType"
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [name]
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: Organisation list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicOrganizationListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      summary: Create CRM organisation (token API)
+      description: Requires an `admin` scoped API token.
+      security:
+        - ApiTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePublicOrganizationRequest"
+      responses:
+        "201":
+          description: Organisation created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicOrganizationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/public/organizations/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get CRM organisation (token API)
+      security:
+        - ApiTokenAuth: []
+      responses:
+        "200":
+          description: Organisation response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicOrganizationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      summary: Update CRM organisation (token API)
+      description: Requires an `admin` scoped API token.
+      security:
+        - ApiTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePublicOrganizationRequest"
+      responses:
+        "200":
+          description: Organisation response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicOrganizationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Delete CRM organisation (token API)
+      description: Requires an `admin` scoped API token.
+      security:
+        - ApiTokenAuth: []
+      responses:
+        "204":
+          description: Organisation deleted.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/public/organizations/{id}/members:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Add organisation member (token API)
+      description: Requires an `admin` scoped API token.
+      security:
+        - ApiTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddPublicOrganizationMemberRequest"
+      responses:
+        "201":
+          description: Organisation with updated members.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicOrganizationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/public/organizations/{id}/members/{member_id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: member_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      summary: Update organisation member (token API)
+      description: Requires an `admin` scoped API token.
+      security:
+        - ApiTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePublicOrganizationMemberRequest"
+      responses:
+        "200":
+          description: Organisation with updated members.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicOrganizationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      summary: Remove organisation member (token API)
+      description: Requires an `admin` scoped API token.
+      security:
+        - ApiTokenAuth: []
+      responses:
+        "200":
+          description: Organisation with updated members.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicOrganizationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/public/locations:
+    get:
+      summary: List locations (token API)
+      security:
+        - ApiTokenAuth: []
+      parameters:
+        - name: area_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: exclude_addresses
+          in: query
+          schema:
+            type: boolean
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: Location list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicLocationListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      summary: Create location (token API)
+      description: Requires an `admin` scoped API token.
+      security:
+        - ApiTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePublicLocationRequest"
+      responses:
+        "201":
+          description: Location created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicLocationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/public/locations/geocode:
+    post:
+      summary: Geocode a location address (token API)
+      description: Requires an `admin` scoped API token.
+      security:
+        - ApiTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GeocodePublicLocationRequest"
+      responses:
+        "200":
+          description: Geocoding result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeocodePublicLocationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/public/locations/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get location (token API)
+      security:
+        - ApiTokenAuth: []
+      responses:
+        "200":
+          description: Location response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicLocationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      summary: Update location (token API)
+      description: Requires an `admin` scoped API token.
+      security:
+        - ApiTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePublicLocationRequest"
+      responses:
+        "200":
+          description: Location response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicLocationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/public/geographic-areas:
+    get:
+      summary: List geographic areas (token API)
+      description: GET only for both `user` and `admin` tokens. Payloads match admin.
+      security:
+        - ApiTokenAuth: []
+      parameters:
+        - name: parent_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: flat
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: active_only
+          in: query
+          schema:
+            type: boolean
+            default: true
+      responses:
+        "200":
+          description: Geographic area list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicGeographicAreaListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /v1/assets/free:
     get:
@@ -3914,6 +4792,542 @@ components:
           type: string
           format: uuid
           nullable: true
+    PublicNote:
+      type: object
+      required: [id, content, created_by, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        content:
+          type: string
+        created_by:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    PublicNoteListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicNote"
+    PublicNoteResponse:
+      type: object
+      required: [note]
+      properties:
+        note:
+          $ref: "#/components/schemas/PublicNote"
+    CreatePublicNoteRequest:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+    PublicFamilyRelationshipType:
+      type: string
+      enum: [prospect, client, other]
+    PublicFamilyRole:
+      type: string
+      enum: [parent, child, helper, guardian, other]
+    PublicFamilyMember:
+      type: object
+      required: [id, contact_id, contact_label, role, is_primary_contact]
+      properties:
+        id:
+          type: string
+          format: uuid
+        contact_id:
+          type: string
+          format: uuid
+        contact_label:
+          type: string
+        role:
+          $ref: "#/components/schemas/PublicFamilyRole"
+        is_primary_contact:
+          type: boolean
+    PublicFamily:
+      type: object
+      required:
+        - id
+        - family_name
+        - relationship_type
+        - active
+        - tag_ids
+        - tags
+        - members
+        - has_sales_conversation
+        - has_service_instance
+        - has_invoice
+      properties:
+        id:
+          type: string
+          format: uuid
+        family_name:
+          type: string
+        relationship_type:
+          $ref: "#/components/schemas/PublicRelationshipType"
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        location_summary:
+          allOf:
+            - $ref: "#/components/schemas/PublicLocationVenueSummary"
+          nullable: true
+        active:
+          type: boolean
+        archived_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicTagRef"
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicFamilyMember"
+        has_sales_conversation:
+          type: boolean
+        sales_conversation_channel:
+          type: string
+          nullable: true
+          enum: [whatsapp, instagram, messenger]
+        has_service_instance:
+          type: boolean
+        has_invoice:
+          type: boolean
+    PublicFamilyListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicFamily"
+        next_cursor:
+          type: string
+          nullable: true
+        total_count:
+          type: integer
+          minimum: 0
+    PublicFamilyResponse:
+      type: object
+      required: [family]
+      properties:
+        family:
+          $ref: "#/components/schemas/PublicFamily"
+    CreatePublicFamilyRequest:
+      type: object
+      required: [family_name]
+      properties:
+        family_name:
+          type: string
+          maxLength: 150
+        relationship_type:
+          $ref: "#/components/schemas/PublicFamilyRelationshipType"
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+    UpdatePublicFamilyRequest:
+      type: object
+      properties:
+        family_name:
+          type: string
+          maxLength: 150
+        relationship_type:
+          $ref: "#/components/schemas/PublicFamilyRelationshipType"
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        active:
+          type: boolean
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+    AddPublicFamilyMemberRequest:
+      type: object
+      required: [contact_id]
+      properties:
+        contact_id:
+          type: string
+          format: uuid
+        is_primary_contact:
+          type: boolean
+    UpdatePublicFamilyMemberRequest:
+      type: object
+      required: [is_primary_contact]
+      properties:
+        is_primary_contact:
+          type: boolean
+    PublicOrganizationType:
+      type: string
+      enum: [school, company, community_group, ngo, other]
+    PublicOrganizationMember:
+      type: object
+      required: [id, contact_id, contact_label, role, is_primary_contact]
+      properties:
+        id:
+          type: string
+          format: uuid
+        contact_id:
+          type: string
+          format: uuid
+        contact_label:
+          type: string
+        role:
+          type: string
+        is_primary_contact:
+          type: boolean
+    PublicOrganization:
+      type: object
+      required:
+        - id
+        - name
+        - organization_type
+        - relationship_type
+        - active
+        - tag_ids
+        - tags
+        - members
+        - has_sales_conversation
+        - has_service_instance
+        - has_invoice
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        organization_type:
+          $ref: "#/components/schemas/PublicOrganizationType"
+        relationship_type:
+          $ref: "#/components/schemas/PublicRelationshipType"
+        partner_key:
+          type: string
+          nullable: true
+        legal_name:
+          type: string
+          nullable: true
+        website:
+          type: string
+          nullable: true
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        location_summary:
+          allOf:
+            - $ref: "#/components/schemas/PublicLocationVenueSummary"
+          nullable: true
+        active:
+          type: boolean
+        archived_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicTagRef"
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicOrganizationMember"
+        has_sales_conversation:
+          type: boolean
+        sales_conversation_channel:
+          type: string
+          nullable: true
+          enum: [whatsapp, instagram, messenger]
+        has_service_instance:
+          type: boolean
+        has_invoice:
+          type: boolean
+    PublicOrganizationListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicOrganization"
+        next_cursor:
+          type: string
+          nullable: true
+        total_count:
+          type: integer
+          minimum: 0
+    PublicOrganizationResponse:
+      type: object
+      required: [organization]
+      properties:
+        organization:
+          $ref: "#/components/schemas/PublicOrganization"
+    CreatePublicOrganizationRequest:
+      type: object
+      required: [name, organization_type]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        organization_type:
+          $ref: "#/components/schemas/PublicOrganizationType"
+        relationship_type:
+          $ref: "#/components/schemas/PublicRelationshipType"
+        website:
+          type: string
+          nullable: true
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        partner_key:
+          type: string
+          nullable: true
+        legal_name:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+    UpdatePublicOrganizationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        organization_type:
+          $ref: "#/components/schemas/PublicOrganizationType"
+        relationship_type:
+          $ref: "#/components/schemas/PublicRelationshipType"
+        website:
+          type: string
+          nullable: true
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        partner_key:
+          type: string
+          nullable: true
+        legal_name:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+    AddPublicOrganizationMemberRequest:
+      type: object
+      required: [contact_id]
+      properties:
+        contact_id:
+          type: string
+          format: uuid
+        is_primary_contact:
+          type: boolean
+    UpdatePublicOrganizationMemberRequest:
+      type: object
+      required: [is_primary_contact]
+      properties:
+        is_primary_contact:
+          type: boolean
+    PublicLocation:
+      type: object
+      required:
+        - id
+        - area_id
+        - locked_from_partner_org
+        - partner_organization_labels
+        - partner_organization_ids
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          nullable: true
+        area_id:
+          type: string
+          format: uuid
+        address:
+          type: string
+          nullable: true
+        lat:
+          type: number
+          format: double
+          nullable: true
+        lng:
+          type: number
+          format: double
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        locked_from_partner_org:
+          type: boolean
+        partner_organization_labels:
+          type: array
+          items:
+            type: string
+        partner_organization_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+    PublicLocationListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicLocation"
+        next_cursor:
+          type: string
+          nullable: true
+        total_count:
+          type: integer
+          minimum: 0
+    PublicLocationResponse:
+      type: object
+      required: [location]
+      properties:
+        location:
+          $ref: "#/components/schemas/PublicLocation"
+    CreatePublicLocationRequest:
+      type: object
+      required: [area_id]
+      properties:
+        area_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 200
+          nullable: true
+        address:
+          type: string
+          maxLength: 500
+          nullable: true
+        lat:
+          type: number
+          format: double
+          nullable: true
+        lng:
+          type: number
+          format: double
+          nullable: true
+    GeocodePublicLocationRequest:
+      type: object
+      required: [area_id, address]
+      properties:
+        area_id:
+          type: string
+          format: uuid
+        address:
+          type: string
+    GeocodePublicLocationResponse:
+      type: object
+      required: [lat, lng]
+      properties:
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        display_name:
+          type: string
+          nullable: true
+    PublicGeographicArea:
+      type: object
+      required: [id, name, name_translations, level, active, display_order]
+      properties:
+        id:
+          type: string
+          format: uuid
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+        name_translations:
+          type: object
+          additionalProperties:
+            type: string
+        level:
+          type: string
+          enum: [country, region, city, district]
+        code:
+          type: string
+          nullable: true
+        sovereign_country_id:
+          type: string
+          format: uuid
+          nullable: true
+        active:
+          type: boolean
+        display_order:
+          type: integer
+    PublicGeographicAreaListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicGeographicArea"
     ReservationSubmissionAccepted:
       type: object
       required:

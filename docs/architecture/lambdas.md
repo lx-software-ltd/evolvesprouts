@@ -74,8 +74,19 @@ their primary responsibilities.
   reads; name/dates/text only),
   `/v1/public/contacts` and `/v1/public/contacts/{id}` (hashed `x-api-token` CRM
   contact list/get for `user` and `admin` scopes; create/update/delete for `admin`
-  only; payloads match `/v1/admin/contacts`; notes, services, and Mailchimp sync
-  jobs are not exposed),
+  only; payloads match `/v1/admin/contacts`; standalone notes at
+  `/v1/public/contacts/{id}/notes`; services and Mailchimp sync jobs are not
+  exposed),
+  `/v1/public/families` and `/v1/public/families/{id}` plus `{id}/members`
+  (hashed `x-api-token`; payloads match `/v1/admin/families`; includes GET by
+  id; services are not exposed),
+  `/v1/public/organizations` and `/v1/public/organizations/{id}` plus
+  `{id}/members` (hashed `x-api-token`; payloads match `/v1/admin/organizations`;
+  includes GET by id; services are not exposed),
+  `/v1/public/locations` (list/create/get/patch and `POST .../geocode`; hashed
+  `x-api-token`; payloads match `/v1/admin/locations`; delete is not exposed),
+  `/v1/public/geographic-areas` (GET only; hashed `x-api-token`; payloads match
+  `/v1/admin/geographic-areas`),
   `/v1/admin/locations/*` (including `GET /v1/admin/locations?exclude_addresses=true`
   to list service venues without family/organisation home addresses, and
   `POST /v1/admin/locations/geocode` for

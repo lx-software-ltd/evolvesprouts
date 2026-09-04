@@ -37,7 +37,11 @@ from app.api.admin_api_keys import handle_admin_api_keys_request
 from app.api.admin_meta import handle_admin_meta_request
 from app.api.admin_whatsapp import handle_admin_whatsapp_request
 from app.api.public.contacts import handle_public_contacts_request
+from app.api.public.families import handle_public_families_request
+from app.api.public.geographic_areas import handle_public_geographic_areas_request
+from app.api.public.locations import handle_public_locations_request
 from app.api.public.meta_conversations import handle_public_meta_request
+from app.api.public.organizations import handle_public_organizations_request
 from app.api.public.whatsapp_conversations import handle_public_whatsapp_request
 from app.api.assets.public_media_assets import handle_media_request
 from app.api.public_mailchimp_webhook import handle_mailchimp_webhook
@@ -227,10 +231,14 @@ _ROUTES: tuple[
         False,
         handle_public_meta_request,
     ),
+    ("/v1/public/contacts", False, handle_public_contacts_request),
+    ("/v1/public/families", False, handle_public_families_request),
+    ("/v1/public/organizations", False, handle_public_organizations_request),
+    ("/v1/public/locations", False, handle_public_locations_request),
     (
-        "/v1/public/contacts",
+        "/v1/public/geographic-areas",
         False,
-        handle_public_contacts_request,
+        handle_public_geographic_areas_request,
     ),
     (
         "/v1/admin/api-keys",

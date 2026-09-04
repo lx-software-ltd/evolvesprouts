@@ -280,18 +280,9 @@ def test_public_contacts_admin_update_and_delete_use_token_actor(
     assert captured["delete_id"] == str(contact_id)
 
 
-def test_public_contacts_rejects_nested_and_unknown_methods(
+def test_public_contacts_rejects_unknown_methods(
     api_gateway_event: Any,
 ) -> None:
-    contact_id = uuid4()
-    notes_path = f"/v1/public/contacts/{contact_id}/notes"
-    notes_response = pcontacts.handle_public_contacts_request(
-        _token_event(api_gateway_event, notes_path),
-        "GET",
-        notes_path,
-    )
-    assert notes_response["statusCode"] == 404
-
     put_response = pcontacts.handle_public_contacts_request(
         _token_event(
             api_gateway_event,
@@ -303,3 +294,42 @@ def test_public_contacts_rejects_nested_and_unknown_methods(
         "/v1/public/contacts",
     )
     assert put_response["statusCode"] == 405
+
+
+def test_public_contact_notes_user_cannot_write(api_gateway_event: Any) -> None:
+    contact_id = uuid4()
+    path = f"/v1/public/contacts/{contact_id}/notes"
+    event = _token_event(api_gateway_event, path, scope="user", method="POST")
+    with pytest.raises(AuthorizationError, match="Read-only API token"):
+        pcontacts.handle_public_contacts_request(event, "POST", path)
+
+
+def test_public_contact_notes_admin_create_uses_token_actor(
+    api_gateway_event: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    api_key_id = str(uuid4())
+    contact_id = uuid4()
+    captured: dict[str, str] = {}
+
+    def _create(event: object, *, contact_id: object, actor_sub: str) -> dict[str, Any]:
+        captured["actor_sub"] = actor_sub
+        captured["contact_id"] = str(contact_id)
+        return {"statusCode": 201, "body": "{}"}
+
+    monkeypatch.setattr(pcontacts, "create_contact_note", _create)
+    path = f"/v1/public/contacts/{contact_id}/notes"
+    response = pcontacts.handle_public_contacts_request(
+        _token_event(
+            api_gateway_event,
+            path,
+            scope="admin",
+            method="POST",
+            api_key_id=api_key_id,
+        ),
+        "POST",
+        path,
+    )
+    assert response["statusCode"] == 201
+    assert captured["actor_sub"] == f"api-key:{api_key_id}"
+    assert captured["contact_id"] == str(contact_id)
