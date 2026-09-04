@@ -217,6 +217,10 @@ describe('FamiliesPanel', () => {
         location_id: 'loc-1',
       })
     );
+
+    await user.click(screen.getByRole('button', { name: 'Collapse Smith' }));
+    expect(screen.queryByRole('alertdialog', { name: 'Discard unsaved changes?' })).not.toBeInTheDocument();
+    expect(window.location.search).toBe('');
   });
 
   it('toggles primary contact from the members table', async () => {

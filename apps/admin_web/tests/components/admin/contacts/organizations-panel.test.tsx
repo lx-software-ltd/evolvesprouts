@@ -294,6 +294,10 @@ describe('OrganizationsPanel', () => {
         location_id: 'loc-2',
       })
     );
+
+    await user.click(screen.getByRole('button', { name: 'Collapse School Co' }));
+    expect(screen.queryByRole('alertdialog', { name: 'Discard unsaved changes?' })).not.toBeInTheDocument();
+    expect(window.location.search).toBe('');
   });
 
   it('deletes an organisation after confirmation', async () => {

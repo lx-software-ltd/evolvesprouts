@@ -298,6 +298,10 @@ export function useContactsPanelEditor({
       }
       await updateContact(selected.id, body);
       await refreshFamilyOrgLists?.();
+      // Location edits stay in the inline draft after persist; remount so the
+      // close-row guard no longer treats the saved address as unsaved.
+      externalDirtyRef.current = () => false;
+      location.resetLocationDraft();
       clearDirty();
     } catch {
       // Retry with form state preserved.

@@ -631,6 +631,72 @@ describe('ContactsPanel', () => {
     expect(window.location.search).toBe(`?contact=${row.id}`);
   });
 
+  it('does not ask to discard after saving a location change', async () => {
+    const user = userEvent.setup();
+    const updateContact = vi.fn().mockResolvedValue(null);
+    const row = buildContact({
+      id: '22222222-2222-2222-2222-222222222222',
+      first_name: 'Bob',
+      last_name: null,
+      location_id: 'loc-1',
+      location_summary: {
+        id: 'loc-1',
+        name: null,
+        area_id: 'area-hk',
+        area_name: 'Hong Kong',
+        address: '1 Old',
+        lat: null,
+        lng: null,
+      },
+    });
+    renderPanel({
+      contacts: buildContactsHook({ updateContact, contacts: [row] }),
+      locations: [
+        {
+          id: 'loc-1',
+          name: null,
+          areaId: 'area-hk',
+          address: '1 Old',
+          lat: null,
+          lng: null,
+          createdAt: null,
+          updatedAt: null,
+          lockedFromPartnerOrg: false,
+          partnerOrganizationLabels: [],
+          partnerOrganizationIds: [],
+        },
+      ],
+      geographicAreas: [hkArea],
+    });
+
+    await user.click(screen.getByText('Bob'));
+    await user.click(screen.getByRole('button', { name: /^Location/ }));
+    await user.click(screen.getByRole('button', { name: 'Change' }));
+    await user.clear(screen.getByLabelText('Address'));
+    await user.type(screen.getByLabelText('Address'), '2 New St');
+    await user.click(screen.getByRole('button', { name: 'Update contact' }));
+
+    await waitFor(() => {
+      expect(updateLocationPartial).toHaveBeenCalledWith('loc-1', {
+        area_id: 'area-hk',
+        address: '2 New St',
+        lat: null,
+        lng: null,
+      });
+    });
+    expect(updateContact).toHaveBeenCalledWith(
+      row.id,
+      expect.objectContaining({
+        location_id: 'loc-1',
+      })
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Collapse Bob' }));
+
+    expect(screen.queryByRole('alertdialog', { name: 'Discard unsaved changes?' })).not.toBeInTheDocument();
+    expect(window.location.search).toBe('');
+  });
+
   it('does not render the Mailchimp sync card on the contacts list', () => {
     renderPanel({ refreshFamilyOrgLists: vi.fn() });
     expect(screen.queryByTestId('mailchimp-sync-card')).not.toBeInTheDocument();

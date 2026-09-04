@@ -213,6 +213,10 @@ export function useOrganizationPanelEditor({
         active,
         tag_ids: tagIds,
       });
+      // Location edits stay in the inline draft after persist; remount so the
+      // close-row guard no longer treats the saved address as unsaved.
+      externalDirtyRef.current = () => false;
+      resetLocationDraft();
       clearDirty();
     } catch {
       // Retry preserved.
