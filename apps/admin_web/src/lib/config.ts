@@ -115,6 +115,19 @@ export function getPublicSiteBaseUrl(): string {
   return normalizeSiteBaseUrl(appConfig.publicSiteBaseUrl);
 }
 
+/** Hostname from `NEXT_PUBLIC_PUBLIC_SITE_BASE_URL` (empty when unset/invalid). */
+export function getPublicSiteHostname(): string {
+  const baseUrl = getPublicSiteBaseUrl();
+  if (!baseUrl) {
+    return '';
+  }
+  try {
+    return new URL(baseUrl).hostname.toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
 export function getTrainingSiteBaseUrl(): string {
   return normalizeSiteBaseUrl(appConfig.trainingSiteBaseUrl);
 }

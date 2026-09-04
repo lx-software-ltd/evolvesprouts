@@ -13,6 +13,7 @@ import {
   type AssetShareLink,
 } from '@/lib/assets-api';
 import { copyTextToClipboard } from '@/lib/clipboard';
+import { getPublicSiteHostname } from '@/lib/config';
 
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { useCopyFeedback } from '@/hooks/use-copy-feedback';
@@ -22,15 +23,28 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
-const DEFAULT_ALLOWED_SHARE_DOMAINS = '';
+function publicShareLinkFallbackDomains(visibility: AdminAsset['visibility']): string[] {
+  if (visibility !== 'public') {
+    return [];
+  }
+  const hostname = getPublicSiteHostname();
+  return hostname ? [hostname] : [];
+}
 
-function parseAllowedDomainList(input: string): string[] {
+function defaultAllowedDomainsInput(visibility: AdminAsset['visibility']): string {
+  return publicShareLinkFallbackDomains(visibility).join('\n');
+}
+
+function parseAllowedDomainList(input: string, fallbackDomains: string[]): string[] {
   const rawEntries = input
     .split(/[\n,]/)
     .map((entry) => entry.trim().toLowerCase())
     .filter((entry) => entry.length > 0);
   const uniqueEntries = Array.from(new Set(rawEntries));
   if (uniqueEntries.length === 0) {
+    if (fallbackDomains.length > 0) {
+      return fallbackDomains;
+    }
     throw new Error('Add at least one allowed domain before creating or rotating a share link.');
   }
   return uniqueEntries;
@@ -45,8 +59,8 @@ export function AssetShareLinkSection({ selectedAsset }: { selectedAsset: AdminA
   const [isSavingLinkPolicy, setIsSavingLinkPolicy] = useState(false);
   const [linkError, setLinkError] = useState('');
   const [linkNotice, setLinkNotice] = useState('');
-  const [allowedDomainsInput, setAllowedDomainsInput] = useState<string>(
-    DEFAULT_ALLOWED_SHARE_DOMAINS
+  const [allowedDomainsInput, setAllowedDomainsInput] = useState<string>(() =>
+    defaultAllowedDomainsInput(selectedAsset.visibility)
   );
   const { copiedKey: copiedLinkFeedbackKey, markCopied: markShareLinkCopied } = useCopyFeedback(1000);
   const { copiedKey: copiedEmailLinkFeedbackKey, markCopied: markEmailLinkCopied } =
@@ -64,13 +78,13 @@ export function AssetShareLinkSection({ selectedAsset }: { selectedAsset: AdminA
         if (existingShareLink?.allowedDomains.length) {
           setAllowedDomainsInput(existingShareLink.allowedDomains.join('\n'));
         } else {
-          setAllowedDomainsInput(DEFAULT_ALLOWED_SHARE_DOMAINS);
+          setAllowedDomainsInput(defaultAllowedDomainsInput(selectedAsset.visibility));
         }
       } catch {
         if (isCancelled) {
           return;
         }
-        setAllowedDomainsInput(DEFAULT_ALLOWED_SHARE_DOMAINS);
+        setAllowedDomainsInput(defaultAllowedDomainsInput(selectedAsset.visibility));
       }
     };
 
@@ -78,10 +92,13 @@ export function AssetShareLinkSection({ selectedAsset }: { selectedAsset: AdminA
     return () => {
       isCancelled = true;
     };
-  }, [selectedAsset.id]);
+  }, [selectedAsset.id, selectedAsset.visibility]);
 
   const buildSharePolicyInput = () => ({
-    allowedDomains: parseAllowedDomainList(allowedDomainsInput),
+    allowedDomains: parseAllowedDomainList(
+      allowedDomainsInput,
+      publicShareLinkFallbackDomains(selectedAsset.visibility)
+    ),
   });
 
   const applyShareLinkCopiedUi = async (link: AssetShareLink) => {

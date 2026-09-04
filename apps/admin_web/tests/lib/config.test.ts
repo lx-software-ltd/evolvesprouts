@@ -114,4 +114,18 @@ describe('config helpers', () => {
     const { getAdminDefaultCurrencyCode } = await import('@/lib/config');
     expect(getAdminDefaultCurrencyCode()).toBe('USD');
   });
+
+  it('extracts the public site hostname from the configured base URL', async () => {
+    process.env.NEXT_PUBLIC_PUBLIC_SITE_BASE_URL = 'https://www.example.com/path/';
+    vi.resetModules();
+    const { getPublicSiteHostname } = await import('@/lib/config');
+    expect(getPublicSiteHostname()).toBe('www.example.com');
+  });
+
+  it('returns an empty public site hostname when the base URL is missing', async () => {
+    delete process.env.NEXT_PUBLIC_PUBLIC_SITE_BASE_URL;
+    vi.resetModules();
+    const { getPublicSiteHostname } = await import('@/lib/config');
+    expect(getPublicSiteHostname()).toBe('');
+  });
 });
