@@ -770,6 +770,20 @@ export class ApiStack extends cdk.Stack {
           "Empty disables allowlisting.",
       }
     );
+    const sharedInboundReceiptRuleSetName = new cdk.CfnParameter(
+      this,
+      "SharedInboundReceiptRuleSetName",
+      {
+        type: "String",
+        default: "lxsoftware-inbound-mail",
+        description:
+          "Account-wide SES receipt rule set that hosts this invoice rule after " +
+          "cutover. SES allows only one active set per region. This stack keeps " +
+          "its legacy set but must not activate it; the owning stack activates " +
+          "the shared set. Bucket, receipt-role, and KMS policies allow both " +
+          "SourceArns during the cutover.",
+      }
+    );
     const turnstileSecretKey = new cdk.CfnParameter(
       this,
       "TurnstileSecretKey",
@@ -2423,7 +2437,19 @@ export class ApiStack extends cdk.Stack {
       "inbound-invoice-email-rule-set"
     );
     const inboundInvoiceReceiptRuleName = name("inbound-invoice-email-rule");
-    const inboundInvoiceReceiptRuleSourceArn = `arn:${cdk.Aws.PARTITION}:ses:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:receipt-rule-set/${inboundInvoiceReceiptRuleSetName}:receipt-rule/${inboundInvoiceReceiptRuleName}`;
+    const inboundInvoiceReceiptRuleSourceArn = (
+      ruleSetName: string
+    ): string =>
+      `arn:${cdk.Aws.PARTITION}:ses:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:receipt-rule-set/${ruleSetName}:receipt-rule/${inboundInvoiceReceiptRuleName}`;
+    // Dual SourceArns: the legacy set stays until the lxsoftware stack
+    // activates the shared set. Activating this stack's set hid hillmarton
+    // and Siu Tin Dei board mail (one active receipt rule set per region).
+    const inboundInvoiceReceiptRuleSourceArns = [
+      inboundInvoiceReceiptRuleSourceArn(inboundInvoiceReceiptRuleSetName),
+      inboundInvoiceReceiptRuleSourceArn(
+        sharedInboundReceiptRuleSetName.valueAsString
+      ),
+    ];
     sqsEncryptionKey.addToResourcePolicy(
       new iam.PolicyStatement({
         sid: "AllowSesInboundInvoiceTopicEncryption",
@@ -2434,7 +2460,7 @@ export class ApiStack extends cdk.Stack {
         conditions: {
           StringEquals: {
             "AWS:SourceAccount": cdk.Aws.ACCOUNT_ID,
-            "AWS:SourceArn": inboundInvoiceReceiptRuleSourceArn,
+            "AWS:SourceArn": inboundInvoiceReceiptRuleSourceArns,
           },
         },
       })
@@ -2449,7 +2475,7 @@ export class ApiStack extends cdk.Stack {
               "AWS:SourceAccount": cdk.Aws.ACCOUNT_ID,
             },
             ArnLike: {
-              "AWS:SourceArn": inboundInvoiceReceiptRuleSourceArn,
+              "AWS:SourceArn": inboundInvoiceReceiptRuleSourceArns,
             },
           },
         }),
@@ -2482,7 +2508,7 @@ export class ApiStack extends cdk.Stack {
         conditions: {
           StringEquals: {
             "AWS:SourceAccount": cdk.Aws.ACCOUNT_ID,
-            "AWS:SourceArn": inboundInvoiceReceiptRuleSourceArn,
+            "AWS:SourceArn": inboundInvoiceReceiptRuleSourceArns,
           },
         },
       })
@@ -2529,46 +2555,6 @@ export class ApiStack extends cdk.Stack {
     if (receiptRoleDefaultPolicy) {
       inboundInvoiceReceiptRule.node.addDependency(receiptRoleDefaultPolicy);
     }
-
-    const activateInboundInvoiceReceiptRuleSetPolicy =
-      customresources.AwsCustomResourcePolicy.fromStatements([
-        new iam.PolicyStatement({
-          actions: ["ses:SetActiveReceiptRuleSet"],
-          resources: ["*"],
-        }),
-      ]);
-    const activateInboundInvoiceReceiptRuleSet =
-      new customresources.AwsCustomResource(
-        this,
-        "ActivateInboundInvoiceReceiptRuleSet",
-        {
-          policy: activateInboundInvoiceReceiptRuleSetPolicy,
-          installLatestAwsSdk: false,
-          onCreate: {
-            service: "SES",
-            action: "setActiveReceiptRuleSet",
-            parameters: {
-              RuleSetName: inboundInvoiceReceiptRuleSet.ref,
-            },
-            physicalResourceId: customresources.PhysicalResourceId.of(
-              `${name("inbound-invoice-email-rule-set")}-active`
-            ),
-          },
-          onUpdate: {
-            service: "SES",
-            action: "setActiveReceiptRuleSet",
-            parameters: {
-              RuleSetName: inboundInvoiceReceiptRuleSet.ref,
-            },
-            physicalResourceId: customresources.PhysicalResourceId.of(
-              `${name("inbound-invoice-email-rule-set")}-active`
-            ),
-          },
-        }
-      );
-    activateInboundInvoiceReceiptRuleSet.node.addDependency(
-      inboundInvoiceReceiptRule
-    );
 
     // Migration function
     const migrationFunction = createPythonFunction("EvolvesproutsMigrationFunction", {
@@ -3941,6 +3927,11 @@ export class ApiStack extends cdk.Stack {
     new cdk.CfnOutput(this, "InboundInvoiceMxTarget", {
       value: `10 inbound-smtp.${cdk.Stack.of(this).region}.amazonaws.com`,
       description: "MX target to configure for the SES inbound email subdomain",
+    });
+    new cdk.CfnOutput(this, "SharedInboundReceiptRuleSetName", {
+      value: sharedInboundReceiptRuleSetName.valueAsString,
+      description:
+        "Shared SES receipt rule set that must be active in this region. This stack no longer calls SetActiveReceiptRuleSet.",
     });
 
     const customAuthDomainOutput = new cdk.CfnOutput(

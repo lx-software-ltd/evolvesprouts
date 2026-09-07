@@ -350,7 +350,8 @@ API Lambda
                        └─▶ Lambda DLQ: evolvesprouts-eventbrite-sync-processor-lambda-dlq
 
 SES inbound (inbound.evolvesprouts.com)
-    │
+    │  shared active set: lxsoftware-inbound-mail
+    │  (legacy evolvesprouts-inbound-invoice-email-rule-set kept, not activated)
     └─▶ S3: evolvesprouts-assets-*/inbound-email/raw/*
              └─▶ SNS: evolvesprouts-inbound-invoice-email-events
                       └─▶ SQS: evolvesprouts-inbound-invoice-email-queue

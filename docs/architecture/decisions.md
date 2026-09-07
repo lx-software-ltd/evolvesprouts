@@ -1292,6 +1292,23 @@ fallbacks. Putting each concern in one module keeps the handlers readable,
 lets repository tests assert the compiled SQL directly, and makes new routes
 extend an existing repository instead of re-deriving queries.
 
+## Shared inbound SES receipt rule set
+
+**Decision:** SES allows only one active receipt rule set per region. The
+`lxsoftware` stack owns and activates `lxsoftware-inbound-mail` (parameter
+`SharedInboundReceiptRuleSetName`). This stack keeps the invoice processor,
+assets prefix, SNS topic, SQS queue, and receipt IAM role, and keeps the
+legacy `evolvesprouts-inbound-invoice-email-rule-set` for rollback, but
+does **not** call `SetActiveReceiptRuleSet`.
+
+**Why:** Activating the Evolve Sprouts set hid hillmarton statement mail and
+Siu Tin Dei board mail on the same account. The invoice rule name stays
+`evolvesprouts-inbound-invoice-email-rule` so bucket, receipt-role, and KMS
+policies can allow both SourceArns during cutover.
+
+**Deploy order:** deploy this companion first so writes from the shared set
+are allowed, then deploy `lxsoftware` to activate the shared set.
+
 ## Keeping Documentation Up to Date
 
 **Decision:** Architecture documentation in `docs/architecture/` describes
