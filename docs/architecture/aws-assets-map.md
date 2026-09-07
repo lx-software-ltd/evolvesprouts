@@ -674,6 +674,7 @@ configured by stack custom resources (including retention and KMS association).
 | `InboundEmailDomainName` | String | Yes | No | SES-verified inbound email subdomain for invoice ingestion |
 | `InboundInvoiceRecipientLocalPart` | String | No | No | Local-part for the SES-managed invoice mailbox (default: `invoices`) |
 | `InboundInvoiceAllowedSenderPatterns` | String | No | No | Comma-separated sender substrings; empty disables allowlisting (GitHub var `CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS`) |
+| `SharedInboundReceiptRuleSetName` | String | No | No | Shared SES receipt rule set that must stay active in the region (default: `lxsoftware-inbound-mail`). Invoice bucket/role/KMS policies allow this SourceArn plus the legacy Evolve Sprouts set. This stack does not call `SetActiveReceiptRuleSet`. |
 | `TurnstileSecretKey` | String | No | Yes | Cloudflare Turnstile secret key |
 | `MailchimpApiSecretArn` | String | Yes | Yes | Existing Secrets Manager ARN for Mailchimp API key |
 | `MailchimpListId` | String | Yes | No | Mailchimp audience/list ID |
@@ -765,6 +766,7 @@ These raster files ship with `EvolvesproutsAdminFunction` under `backend/src/app
 | `InboundInvoiceQueueUrl` | SQS queue URL | Inbound invoice email processing queue |
 | `InboundInvoiceDLQUrl` | SQS DLQ URL | Failed inbound invoice email messages |
 | `InboundInvoiceMxTarget` | MX record target | SES inbound SMTP target for the invoice subdomain |
+| `InboundInvoiceSharedReceiptRuleSetName` | SES receipt rule set name | Shared set that the `lxsoftware` stack activates; this stack no longer activates its own set |
 | `CognitoCustomDomainCloudFront` | CloudFront distribution | Custom auth domain target (conditional) |
 | `ApiCustomDomainTarget` | CNAME target | API custom domain DNS target (conditional) |
 | `ApiCustomDomainUrl` | Custom domain URL | API custom domain URL (conditional) |

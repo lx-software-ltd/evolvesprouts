@@ -271,6 +271,15 @@ topic so machine-only mailbox traffic can land directly in the expenses domain.
 - Public-facing mailbox stays `invoices@evolvesprouts.com` in iCloud Mail.
 - iCloud forwards invoice mail to the SES-managed address on
   `inbound.evolvesprouts.com`.
+- SES allows only one active receipt rule set per region. The invoice
+  recipient is hosted on the shared `lxsoftware-inbound-mail` set (owned
+  and activated by the `lxsoftware` stack) as
+  `evolvesprouts-inbound-invoice-email-rule`. This stack keeps the legacy
+  `evolvesprouts-inbound-invoice-email-rule-set` for rollback but must
+  **not** call `SetActiveReceiptRuleSet`.
+- Bucket, receipt-role, and KMS policies allow both SourceArns during
+  cutover: the legacy set and
+  `…:receipt-rule-set/<SharedInboundReceiptRuleSetName>:receipt-rule/evolvesprouts-inbound-invoice-email-rule`.
 - SES receipt rules match the inbound recipient and store the raw `.eml` in
   `AssetsBucket` under a reserved prefix.
 
@@ -493,6 +502,7 @@ new job; GET returns the newest stored plan.
 | `InboundInvoiceQueueUrl` | SQS queue URL for inbound invoice email processing |
 | `InboundInvoiceDLQUrl` | Dead letter queue URL for failed inbound invoice emails |
 | `InboundInvoiceMxTarget` | MX target for the SES inbound subdomain |
+| `InboundInvoiceSharedReceiptRuleSetName` | Shared SES receipt rule set that must be active in the region |
 
 ## Monitoring
 

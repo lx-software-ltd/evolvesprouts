@@ -371,6 +371,134 @@ function assertMailchimpWebhookInactivityAlarm(template: Template): void {
   }
 }
 
+function sourceArnValuesAllowLegacyAndShared(sourceArn: unknown): boolean {
+  const serialized = JSON.stringify(sourceArn);
+  const hasLegacy = serialized.includes(
+    "receipt-rule-set/evolvesprouts-inbound-invoice-email-rule-set:receipt-rule/evolvesprouts-inbound-invoice-email-rule",
+  );
+  const hasShared =
+    serialized.includes("SharedInboundReceiptRuleSetName") &&
+    serialized.includes(
+      ":receipt-rule/evolvesprouts-inbound-invoice-email-rule",
+    );
+  return hasLegacy && hasShared;
+}
+
+function assertInboundInvoiceSharesReceiptRuleSet(template: Template): void {
+  const serialized = JSON.stringify(template.toJSON());
+  if (serialized.includes("setActiveReceiptRuleSet")) {
+    throw new Error(
+      "ApiStack must not call ses:SetActiveReceiptRuleSet; SES allows one active receipt rule set per region and the shared lxsoftware set owns activation",
+    );
+  }
+  if (serialized.includes("ActivateInboundInvoiceReceiptRuleSet")) {
+    throw new Error(
+      "ApiStack must not define ActivateInboundInvoiceReceiptRuleSet",
+    );
+  }
+
+  const parameters = template.findParameters("SharedInboundReceiptRuleSetName");
+  const sharedParam = parameters.SharedInboundReceiptRuleSetName;
+  if (!sharedParam || sharedParam.Default !== "lxsoftware-inbound-mail") {
+    throw new Error(
+      `Expected SharedInboundReceiptRuleSetName default lxsoftware-inbound-mail; found ${JSON.stringify(sharedParam)}`,
+    );
+  }
+
+  const ruleSets = template.findResources("AWS::SES::ReceiptRuleSet");
+  const ruleSet = Object.values(ruleSets).find((resource) => {
+    return (
+      (resource.Properties ?? {}).RuleSetName ===
+      "evolvesprouts-inbound-invoice-email-rule-set"
+    );
+  });
+  if (!ruleSet) {
+    throw new Error(
+      "Expected to keep AWS::SES::ReceiptRuleSet evolvesprouts-inbound-invoice-email-rule-set during the shared-set cutover",
+    );
+  }
+
+  const rules = template.findResources("AWS::SES::ReceiptRule");
+  const invoiceRule = Object.values(rules).find((resource) => {
+    return (
+      ((resource.Properties ?? {}).Rule ?? {}).Name ===
+      "evolvesprouts-inbound-invoice-email-rule"
+    );
+  });
+  if (!invoiceRule) {
+    throw new Error(
+      "Expected to keep AWS::SES::ReceiptRule evolvesprouts-inbound-invoice-email-rule",
+    );
+  }
+
+  const roles = template.findResources("AWS::IAM::Role");
+  const receiptRole = Object.values(roles).find((resource) => {
+    return ((resource.Properties ?? {}).Description as string | undefined)?.includes(
+      "raw invoice emails",
+    );
+  });
+  if (!receiptRole) {
+    throw new Error("Expected InboundInvoiceReceiptRole");
+  }
+  const assumeStatements =
+    ((receiptRole.Properties ?? {}).AssumeRolePolicyDocument as { Statement?: unknown[] })
+      ?.Statement ?? [];
+  const sesAssume = assumeStatements.find((statement) => {
+    const item = statement as { Principal?: { Service?: unknown } };
+    return item.Principal?.Service === "ses.amazonaws.com";
+  }) as { Condition?: { ArnLike?: { "AWS:SourceArn"?: unknown } } } | undefined;
+  if (!sourceArnValuesAllowLegacyAndShared(sesAssume?.Condition?.ArnLike?.["AWS:SourceArn"])) {
+    throw new Error(
+      `InboundInvoiceReceiptRole must trust both receipt-rule SourceArns; found ${JSON.stringify(sesAssume)}`,
+    );
+  }
+
+  const buckets = template.findResources("AWS::S3::BucketPolicy");
+  const assetsPolicy = Object.values(buckets).find((resource) => {
+    return JSON.stringify(resource).includes("AllowSesInboundInvoiceWrites");
+  });
+  if (!assetsPolicy) {
+    throw new Error("Expected AssetsBucket policy AllowSesInboundInvoiceWrites");
+  }
+  const bucketStatements =
+    ((assetsPolicy.Properties ?? {}).PolicyDocument as { Statement?: unknown[] })
+      ?.Statement ?? [];
+  const sesWrite = bucketStatements.find((statement) => {
+    return (statement as { Sid?: string }).Sid === "AllowSesInboundInvoiceWrites";
+  }) as { Condition?: { StringEquals?: { "AWS:SourceArn"?: unknown } } } | undefined;
+  if (
+    !sourceArnValuesAllowLegacyAndShared(
+      sesWrite?.Condition?.StringEquals?.["AWS:SourceArn"],
+    )
+  ) {
+    throw new Error(
+      `AssetsBucket SES write policy must allow both receipt-rule SourceArns; found ${JSON.stringify(sesWrite)}`,
+    );
+  }
+
+  const keys = template.findResources("AWS::KMS::Key");
+  const sqsKey = Object.values(keys).find((resource) => {
+    return JSON.stringify(resource).includes("AllowSesInboundInvoiceTopicEncryption");
+  });
+  if (!sqsKey) {
+    throw new Error("Expected SQS KMS key policy AllowSesInboundInvoiceTopicEncryption");
+  }
+  const keyStatements =
+    ((sqsKey.Properties ?? {}).KeyPolicy as { Statement?: unknown[] })?.Statement ?? [];
+  const sesKms = keyStatements.find((statement) => {
+    return (statement as { Sid?: string }).Sid === "AllowSesInboundInvoiceTopicEncryption";
+  }) as { Condition?: { StringEquals?: { "AWS:SourceArn"?: unknown } } } | undefined;
+  if (
+    !sourceArnValuesAllowLegacyAndShared(
+      sesKms?.Condition?.StringEquals?.["AWS:SourceArn"],
+    )
+  ) {
+    throw new Error(
+      `SQS KMS key must allow both receipt-rule SourceArns; found ${JSON.stringify(sesKms)}`,
+    );
+  }
+}
+
 function assertApiTokenAuthorizerHasNoReservedConcurrency(template: Template): void {
   const functions = template.findResources("AWS::Lambda::Function");
   const match = Object.entries(functions).find(([, resource]) => {
@@ -408,6 +536,7 @@ function main(): void {
   assertInboxImportHasNoReservedConcurrency(stack);
   assertInboxImportUsesDedicatedPageToken(stack);
   assertSalesDailyPlanSchedule(stack);
+  assertInboundInvoiceSharesReceiptRuleSet(template);
 
   console.log("api-stack API Gateway stage cache assertions passed.");
 }

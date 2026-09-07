@@ -451,6 +451,12 @@ Requirements:
   failed in `inbound_emails` and are not ingested as expenses.
 - Keep SES receipt processing least-privilege: only the configured receipt role
   can write raw email objects and publish the notification topic.
+- SES SourceArn conditions on the assets bucket, receipt role, and SNS KMS
+  key allow both the legacy
+  `evolvesprouts-inbound-invoice-email-rule-set` rule and the shared
+  `SharedInboundReceiptRuleSetName` rule (`lxsoftware-inbound-mail` by
+  default). This stack does not activate a receipt rule set; activating
+  the Evolve Sprouts set hid other account mailboxes in the region.
 - Keep inbound attachments `visibility=restricted` when they are promoted into
   the assets bucket for expense parsing and admin review.
 

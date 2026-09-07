@@ -762,7 +762,9 @@ their primary responsibilities.
 - Function: InboundInvoiceEmailProcessor
 - Handler: backend/lambda/inbound_invoice_email/handler.py
 - Trigger: SQS queue (`evolvesprouts-inbound-invoice-email-queue`) fed by SES
-  receipt-rule notifications through SNS
+  receipt-rule notifications through SNS. The active receipt rule lives on
+  the shared `lxsoftware-inbound-mail` set after cutover; this stack does
+  not activate its legacy set.
 - Purpose: convert inbound invoice email attachments (or synthetic body text
   when there are no supported files) into `assets`, `expenses`, and
   `expense_attachments` rows, then enqueue the existing expense parser workflow
