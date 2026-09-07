@@ -3928,7 +3928,7 @@ export class ApiStack extends cdk.Stack {
       value: `10 inbound-smtp.${cdk.Stack.of(this).region}.amazonaws.com`,
       description: "MX target to configure for the SES inbound email subdomain",
     });
-    new cdk.CfnOutput(this, "SharedInboundReceiptRuleSetName", {
+    new cdk.CfnOutput(this, "InboundInvoiceSharedReceiptRuleSetName", {
       value: sharedInboundReceiptRuleSetName.valueAsString,
       description:
         "Shared SES receipt rule set that must be active in this region. This stack no longer calls SetActiveReceiptRuleSet.",

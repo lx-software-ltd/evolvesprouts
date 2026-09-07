@@ -766,7 +766,7 @@ These raster files ship with `EvolvesproutsAdminFunction` under `backend/src/app
 | `InboundInvoiceQueueUrl` | SQS queue URL | Inbound invoice email processing queue |
 | `InboundInvoiceDLQUrl` | SQS DLQ URL | Failed inbound invoice email messages |
 | `InboundInvoiceMxTarget` | MX record target | SES inbound SMTP target for the invoice subdomain |
-| `SharedInboundReceiptRuleSetName` | SES receipt rule set name | Shared set that the `lxsoftware` stack activates; this stack no longer activates its own set |
+| `InboundInvoiceSharedReceiptRuleSetName` | SES receipt rule set name | Shared set that the `lxsoftware` stack activates; this stack no longer activates its own set |
 | `CognitoCustomDomainCloudFront` | CloudFront distribution | Custom auth domain target (conditional) |
 | `ApiCustomDomainTarget` | CNAME target | API custom domain DNS target (conditional) |
 | `ApiCustomDomainUrl` | Custom domain URL | API custom domain URL (conditional) |

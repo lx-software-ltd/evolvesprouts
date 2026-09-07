@@ -502,7 +502,7 @@ new job; GET returns the newest stored plan.
 | `InboundInvoiceQueueUrl` | SQS queue URL for inbound invoice email processing |
 | `InboundInvoiceDLQUrl` | Dead letter queue URL for failed inbound invoice emails |
 | `InboundInvoiceMxTarget` | MX target for the SES inbound subdomain |
-| `SharedInboundReceiptRuleSetName` | Shared SES receipt rule set that must be active in the region |
+| `InboundInvoiceSharedReceiptRuleSetName` | Shared SES receipt rule set that must be active in the region |
 
 ## Monitoring
 
