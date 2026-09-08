@@ -1053,6 +1053,38 @@ def test_openrouter_chat_completion_retries_once_on_429_then_succeeds(
     assert '"ok": true' in parser._extract_message_text(body)
 
 
+def test_openrouter_chat_completion_tags_hidden_app_and_workload(
+    monkeypatch: Any,
+) -> None:
+    _set_common_env(monkeypatch)
+    _mock_secrets(monkeypatch)
+    captured: dict[str, Any] = {}
+
+    def _fake_http_invoke(**kwargs: Any) -> dict[str, Any]:
+        captured.update(kwargs)
+        return {
+            "status": 200,
+            "body": _bulk_chat_completion_body('{"ok": true}'),
+        }
+
+    monkeypatch.setattr(parser, "http_invoke", _fake_http_invoke)
+
+    parser._openrouter_chat_completion(
+        system_prompt="s",
+        user_content_blocks=[{"type": "text", "text": "t"}],
+        has_pdf_attachment=False,
+        timeout=5,
+        workload="helper-detector",
+    )
+
+    headers = captured["headers"]
+    assert headers["HTTP-Referer"] == "https://evolvesprouts.com"
+    assert headers["X-OpenRouter-Title"] == "Evolve Sprouts"
+    assert headers["X-OpenRouter-App-Visibility"] == "hidden"
+    payload = json.loads(captured["body"])
+    assert payload["user"] == "evolvesprouts:helper-detector"
+
+
 def test_openrouter_chat_completion_retries_on_envelope_504_in_2xx(
     monkeypatch: Any,
 ) -> None:

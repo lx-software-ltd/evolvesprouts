@@ -114,8 +114,11 @@ def test_parse_json_object_repairs_broken_model_json(monkeypatch: object) -> Non
         '"follow_ups": [], "risks": []'  # missing closing brace
     )
 
-    def _fake_loads(text: str, *, context: str, timeout: int) -> dict[str, Any]:
+    def _fake_loads(
+        text: str, *, context: str, timeout: int, workload: str
+    ) -> dict[str, Any]:
         assert context == "lead close suggestion"
+        assert workload == "lead-close-suggestion"
         return valid
 
     monkeypatch.setattr(

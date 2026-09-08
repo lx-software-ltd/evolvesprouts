@@ -89,6 +89,16 @@ The backend stack requires these OpenRouter parameters:
 - `OpenRouterChatCompletionsUrl`
 - `OpenRouterModel`
 
+`OpenRouterApiKey` must be the named key `lxsoftware:evolvesprouts` minted
+on the LX Software OpenRouter account (see lx-software
+`scripts/mint-openrouter-app-keys.py`). Store the plaintext in GitHub secret
+`CDK_PARAM_OPENROUTER_API_KEY`. A plain string is enough; this stack does not
+read the LX Software admin JSON secret.
+
+Chat-completions requests are tagged as hidden app Evolve Sprouts
+(`HTTP-Referer` `https://evolvesprouts.com`, matching the lx-software
+OpenRouter catalog) with `user` `evolvesprouts:{workload}`.
+
 For CI deployments using placeholder resolution:
 
 - set `OpenRouterApiKey` to `<FROM_GITHUB_SECRET: CDK_PARAM_OPENROUTER_API_KEY>`

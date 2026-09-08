@@ -733,6 +733,11 @@ their primary responsibilities.
   call timed out). `Retry-After` headers are honored, capped to 5s.
   Non-retryable statuses (4xx other than 408/425/429) propagate
   immediately. The same retry policy applies to the JSON-repair sub-call.
+- App attribution: every chat-completions request (invoice parse, helper
+  detector, lead AI, sales daily plan, JSON repair) is tagged as the hidden
+  Evolve Sprouts OpenRouter app with `user` `evolvesprouts:{workload}` so
+  the shared LX Software invoice can group spend. The named key is
+  `lxsoftware:evolvesprouts`.
 - Single-invoice fallback: when the one bulk attempt produces no usable
   rows for any reason (empty model response, refusal, JSON parse failure,
   HTTP error including 4xx/5xx after retries, or zero rows after coercion),

@@ -49,11 +49,14 @@ def test_loads_openrouter_json_repairs_broken_payload(
     )
     call_count = {"n": 0}
 
-    def _fake_repair(broken_text: str, parse_error: str, *, timeout: int) -> str:
+    def _fake_repair(
+        broken_text: str, parse_error: str, *, timeout: int, workload: str
+    ) -> str:
         call_count["n"] += 1
         assert broken_text == broken
         assert "Expecting" in parse_error or "delimiter" in parse_error
         assert timeout == 45
+        assert workload == "json-repair"
         return json.dumps(valid)
 
     monkeypatch.setattr(json_parse, "repair_openrouter_json_text", _fake_repair)
@@ -70,7 +73,9 @@ def test_loads_openrouter_json_repairs_broken_payload(
 def test_loads_openrouter_json_rejects_safety_stub_without_repair(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    def _fake_repair(_broken_text: str, _parse_error: str, *, timeout: int) -> str:
+    def _fake_repair(
+        _broken_text: str, _parse_error: str, *, timeout: int, workload: str
+    ) -> str:
         raise AssertionError("safety stubs must not invoke JSON repair")
 
     monkeypatch.setattr(json_parse, "repair_openrouter_json_text", _fake_repair)
@@ -86,7 +91,9 @@ def test_loads_openrouter_json_raises_when_repair_still_invalid(
 ) -> None:
     broken = '{"summary": "broken "quote""}'
 
-    def _fake_repair(_broken_text: str, _parse_error: str, *, timeout: int) -> str:
+    def _fake_repair(
+        _broken_text: str, _parse_error: str, *, timeout: int, workload: str
+    ) -> str:
         return '{"still": broken}'
 
     monkeypatch.setattr(json_parse, "repair_openrouter_json_text", _fake_repair)

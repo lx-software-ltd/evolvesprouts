@@ -12,6 +12,11 @@ from typing import Any
 from collections.abc import Mapping, Sequence
 
 from app.services.aws_clients import get_s3_client, get_secretsmanager_client
+from app.services.openrouter_client import (
+    WORKLOAD_EXPENSE_PARSER,
+    attribution_headers,
+    attribution_user,
+)
 from app.services.openrouter_json_parse import loads_openrouter_json
 from app.services.secrets import SECRETS_CACHE_TTL_SECONDS
 from app.services.aws_proxy import http_invoke
@@ -166,6 +171,7 @@ def _openrouter_chat_completion(
     user_content_blocks: list[dict[str, Any]],
     has_pdf_attachment: bool,
     timeout: int,
+    workload: str = WORKLOAD_EXPENSE_PARSER,
 ) -> str:
     """POST to OpenRouter and return the raw HTTP response body string.
 
@@ -190,6 +196,7 @@ def _openrouter_chat_completion(
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_content_blocks},
         ],
+        "user": attribution_user(workload),
     }
     if has_pdf_attachment:
         payload["plugins"] = [
@@ -203,6 +210,7 @@ def _openrouter_chat_completion(
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
+        **attribution_headers(),
     }
 
     last_status: int = 0
@@ -549,7 +557,9 @@ def _empty_response_error(
 
 def _parse_completion_body(body: str) -> dict[str, Any]:
     cleaned = _extract_message_text(body)
-    parsed = loads_openrouter_json(cleaned, context="single invoice")
+    parsed = loads_openrouter_json(
+        cleaned, context="single invoice", workload=WORKLOAD_EXPENSE_PARSER
+    )
     if not isinstance(parsed, dict):
         raise RuntimeError("Parser response payload is not an object")
     return parsed
@@ -652,7 +662,9 @@ def _coerce_bulk_invoice_list(parsed: Any) -> list[Any]:
 def _parse_bulk_invoices_payload(body: str) -> list[dict[str, Any]]:
     """Parse OpenRouter envelope and return raw invoice objects for bulk import."""
     cleaned = _extract_message_text(body)
-    parsed = loads_openrouter_json(cleaned, context="bulk invoices")
+    parsed = loads_openrouter_json(
+        cleaned, context="bulk invoices", workload=WORKLOAD_EXPENSE_PARSER
+    )
     raw_list = _coerce_bulk_invoice_list(parsed)
 
     invoices: list[dict[str, Any]] = []

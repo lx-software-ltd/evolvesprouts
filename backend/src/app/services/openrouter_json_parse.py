@@ -11,6 +11,7 @@ import re
 from typing import Any
 
 from app.services.openrouter_client import (
+    WORKLOAD_JSON_REPAIR,
     extract_message_text,
     openrouter_chat_completion,
 )
@@ -60,6 +61,7 @@ def repair_openrouter_json_text(
     parse_error: str,
     *,
     timeout: int = DEFAULT_JSON_REPAIR_TIMEOUT_SECONDS,
+    workload: str = WORKLOAD_JSON_REPAIR,
 ) -> str:
     """Ask OpenRouter to rewrite ``broken_text`` as valid JSON."""
     repair_user = (
@@ -77,6 +79,7 @@ def repair_openrouter_json_text(
         system_prompt="You repair malformed JSON documents and return strict JSON only.",
         user_content=repair_user,
         timeout=timeout,
+        workload=workload,
         temperature=0,
     )
     return extract_message_text(body)
@@ -87,6 +90,7 @@ def loads_openrouter_json(
     *,
     context: str,
     timeout: int = DEFAULT_JSON_REPAIR_TIMEOUT_SECONDS,
+    workload: str = WORKLOAD_JSON_REPAIR,
 ) -> Any:
     """Parse JSON from OpenRouter assistant text, repairing once on failure.
 
@@ -130,6 +134,7 @@ def loads_openrouter_json(
             repair_source,
             str(last_error),
             timeout=timeout,
+            workload=workload,
         )
     except Exception as repair_exc:
         logger.warning(
