@@ -1017,7 +1017,10 @@ export class ApiStack extends cdk.Stack {
       {
         type: "String",
         noEcho: true,
-        description: "OpenRouter API key value (stored in Secrets Manager by CDK)",
+        description:
+          "Named OpenRouter API key for this product (lxsoftware:evolvesprouts). " +
+          "Mint on the LX Software OpenRouter account and store the plaintext " +
+          "in GitHub secret CDK_PARAM_OPENROUTER_API_KEY.",
       }
     );
     const openrouterChatCompletionsUrl = new cdk.CfnParameter(
@@ -2086,7 +2089,7 @@ export class ApiStack extends cdk.Stack {
       "OpenRouterApiSecret",
       {
         secretName: name("openrouter-api-secret"),
-        description: "OpenRouter API key for invoice parsing",
+        description: "Named OpenRouter API key (lxsoftware:evolvesprouts) for invoice parsing",
         secretStringValue: cdk.SecretValue.unsafePlainText(
           openrouterApiKey.valueAsString
         ),

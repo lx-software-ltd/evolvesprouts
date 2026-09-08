@@ -2,12 +2,16 @@
 
 Used by invoice parsing and lead close suggestions. In-VPC Lambdas must not
 call OpenRouter directly; all traffic goes through ``http_invoke``.
+
+Requests are tagged as the hidden Evolve Sprouts OpenRouter app so the
+shared LX Software invoice can group spend by product and workload.
 """
 
 from __future__ import annotations
 
 import json
 import os
+import re
 import time
 from typing import Any
 from collections.abc import Mapping, Sequence
@@ -27,6 +31,22 @@ _MAX_RETRY_ATTEMPTS = 3
 _RETRY_BACKOFF_SCHEDULE_SECONDS: tuple[float, ...] = (2.0, 4.0)
 _MAX_RETRY_AFTER_SECONDS = 5.0
 
+# OpenRouter app identity for the shared LX Software invoice. Values match
+# lx-software ``contracts/openrouter-apps.json`` (app id ``evolvesprouts``)
+# so Activity groups this product as one app. This is not a deploy origin.
+OPENROUTER_APP_ID = "evolvesprouts"
+OPENROUTER_APP_TITLE = "Evolve Sprouts"
+OPENROUTER_APP_REFERER = "https://evolvesprouts.com"
+OPENROUTER_NAMED_KEY = "lxsoftware:evolvesprouts"
+
+WORKLOAD_EXPENSE_PARSER = "expense-parser"
+WORKLOAD_LEAD_CLOSE_SUGGESTION = "lead-close-suggestion"
+WORKLOAD_SALES_DAILY_PLAN = "sales-daily-plan"
+WORKLOAD_HELPER_DETECTOR = "helper-detector"
+WORKLOAD_JSON_REPAIR = "json-repair"
+
+_WORKLOAD_SAFE_RE = re.compile(r"[^a-z0-9-]+")
+
 
 def require_env(name: str) -> str:
     """Return a required non-empty environment variable."""
@@ -34,6 +54,23 @@ def require_env(name: str) -> str:
     if not value:
         raise RuntimeError(f"{name} is not configured")
     return value
+
+
+def attribution_headers() -> dict[str, str]:
+    """Headers OpenRouter uses to split Activity / Analytics by app."""
+    return {
+        "HTTP-Referer": OPENROUTER_APP_REFERER,
+        "X-OpenRouter-Title": OPENROUTER_APP_TITLE,
+        "X-Title": OPENROUTER_APP_TITLE,
+        "X-OpenRouter-App-Visibility": "hidden",
+    }
+
+
+def attribution_user(workload: str) -> str:
+    """Stable OpenRouter ``user`` id: ``evolvesprouts:{workload}`` (no PII)."""
+    raw = (workload or "").strip().lower()
+    safe = _WORKLOAD_SAFE_RE.sub("-", raw)[:40].strip("-") or "unknown"
+    return f"{OPENROUTER_APP_ID}:{safe}"
 
 
 def get_openrouter_api_key() -> str:
@@ -63,6 +100,7 @@ def openrouter_chat_completion(
     system_prompt: str,
     user_content: str | Sequence[Mapping[str, Any]],
     timeout: int,
+    workload: str,
     temperature: float = 0,
     plugins: Sequence[Mapping[str, Any]] | None = None,
     max_attempts: int | None = None,
@@ -89,6 +127,7 @@ def openrouter_chat_completion(
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message_content},
         ],
+        "user": attribution_user(workload),
     }
     if plugins:
         payload["plugins"] = list(plugins)
@@ -97,6 +136,7 @@ def openrouter_chat_completion(
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
+        **attribution_headers(),
     }
 
     attempts = max_attempts if max_attempts is not None else _MAX_RETRY_ATTEMPTS

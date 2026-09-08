@@ -19,6 +19,7 @@ from app.db.models.whatsapp import WhatsAppConversation, WhatsAppMessage
 from app.services.lead_close_brand_context import EVOLVESPROUTS_BRAND_CONTEXT
 from app.services.aws_proxy import AwsProxyError
 from app.services.openrouter_client import (
+    WORKLOAD_LEAD_CLOSE_SUGGESTION,
     configured_model_name,
     extract_message_text,
     openrouter_chat_completion,
@@ -182,6 +183,7 @@ def generate_and_store_suggestion(
             system_prompt=_SYSTEM_PROMPT,
             user_content=user_prompt,
             timeout=_openrouter_timeout_seconds(),
+            workload=WORKLOAD_LEAD_CLOSE_SUGGESTION,
             temperature=0.2,
         )
     except AwsProxyError as exc:
@@ -417,6 +419,7 @@ def _parse_json_object(text: str) -> dict[str, Any]:
         text,
         context="lead close suggestion",
         timeout=_openrouter_timeout_seconds(),
+        workload=WORKLOAD_LEAD_CLOSE_SUGGESTION,
     )
     if not isinstance(parsed, dict):
         raise RuntimeError("Model JSON must be an object")

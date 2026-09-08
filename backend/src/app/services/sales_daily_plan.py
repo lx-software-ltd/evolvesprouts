@@ -15,6 +15,7 @@ from app.db.models.sales_daily_plan import SalesDailyPlan
 from app.services.aws_proxy import AwsProxyError
 from app.services.lead_close_brand_context import EVOLVESPROUTS_BRAND_CONTEXT
 from app.services.openrouter_client import (
+    WORKLOAD_SALES_DAILY_PLAN,
     configured_model_name,
     extract_message_text,
     openrouter_chat_completion,
@@ -245,6 +246,7 @@ def generate_and_store_plan(
             system_prompt=_SYSTEM_PROMPT,
             user_content=user_prompt,
             timeout=_openrouter_timeout_seconds(),
+            workload=WORKLOAD_SALES_DAILY_PLAN,
             temperature=0.2,
         )
         text = extract_message_text(raw_body)
@@ -283,6 +285,7 @@ def parse_plan_json_object(text: str) -> dict[str, Any]:
         text,
         context="sales daily plan",
         timeout=min(_JSON_REPAIR_TIMEOUT_SECONDS, _openrouter_timeout_seconds()),
+        workload=WORKLOAD_SALES_DAILY_PLAN,
     )
     if not isinstance(parsed, dict):
         raise RuntimeError("Model JSON must be an object")

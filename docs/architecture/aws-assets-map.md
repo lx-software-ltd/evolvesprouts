@@ -700,7 +700,7 @@ configured by stack custom resources (including retention and KMS association).
 | `AssetDownloadCustomDomainName` | String | Yes | No | Custom domain used in signed asset download links (for example `media.example.com`) |
 | `AssetDownloadCustomDomainCertificateArn` | String | Yes | No | ACM certificate ARN for the asset custom domain (must be in `us-east-1`) |
 | `AssetDownloadWafWebAclArn` | String | No | No | Optional WAF WebACL ARN for the asset download CloudFront distribution (must be in `us-east-1`) |
-| `OpenRouterApiKey` | String | Yes | Yes | OpenRouter API key value passed at deploy time and stored in Secrets Manager by CDK |
+| `OpenRouterApiKey` | String | Yes | Yes | Named OpenRouter API key `lxsoftware:evolvesprouts` (GitHub secret `CDK_PARAM_OPENROUTER_API_KEY`), stored in Secrets Manager by CDK |
 | `OpenRouterChatCompletionsUrl` | String | Yes | No | OpenRouter chat completions URL used for invoice parsing |
 | `OpenRouterModel` | String | Yes | No | OpenRouter model identifier for invoice parsing |
 | `OpenRouterMaxFileBytes` | String | No | No | Maximum attachment size (bytes) sent to OpenRouter parser (default: 15728640) |
