@@ -2033,7 +2033,8 @@ export class ApiStack extends cdk.Stack {
     const awsProxyFunction = createPythonFunction("AwsApiProxyFunction", {
       handler: "lambda/aws_proxy/handler.lambda_handler",
       memorySize: 256,
-      timeout: cdk.Duration.seconds(90),
+      // 120s so 90s OpenRouter waits from sales daily plan / lead AI can return.
+      timeout: cdk.Duration.seconds(120),
       noVpc: true,
       environment: {
         ALLOWED_ACTIONS: allowedProxyActions.join(","),

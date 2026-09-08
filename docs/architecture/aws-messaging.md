@@ -431,7 +431,9 @@ and the daily EventBridge schedule both enqueue work on a **direct** SQS queue
 dashboard card polls `GET /v1/admin/leads/daily-plan/jobs/{job_id}`. The worker
 includes the last five stored plans and refinements, recent contacts, converted
 nurture rows, and completed priorities as memory. Empty or non-JSON OpenRouter
-output fails the job. `DELETE /v1/admin/leads/daily-plan` clears that memory
+output fails the job. Failed jobs store a short user-safe error (not a raw
+`JSONDecodeError`) so the 06:00 HKT run is visible on the dashboard card.
+`DELETE /v1/admin/leads/daily-plan` clears that memory
 (plans, jobs, and priority ticks); live CRM rows are untouched.
 
 **Schedule:** EventBridge rule `evolvesprouts-sales-daily-plan-schedule` runs

@@ -493,6 +493,10 @@ def _format_openrouter_failure(exc: BaseException) -> str:
         "parser returned invalid json",
         "jsondecodeerror",
         "no json object found",
+        "openrouter response was not valid json",
+        "openrouter response was empty",
+        "invalid json",
+        "expecting value",
     )
     if any(marker in lowered for marker in invalid_json_markers):
         return _INVALID_JSON_USER_MESSAGE

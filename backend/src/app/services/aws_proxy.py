@@ -46,6 +46,10 @@ logger = get_logger(__name__)
 _ALLOWED_ACTIONS: set[str] | None = None
 _ALLOWED_HTTP_URLS: list[str] | None = None
 _HTTP_PROXY_USER_AGENT = "EvolveSproutsProxy/1.0"
+# Sales daily plan / lead AI request a 90s OpenRouter wait. Cap at 90s so those
+# calls are not clipped to 60s, and keep headroom under AwsApiProxyFunction's
+# 120s Lambda timeout so the proxy can still return a payload.
+_MAX_HTTP_TIMEOUT_SECONDS = 90
 
 
 def _get_allowed_actions() -> set[str]:
@@ -137,7 +141,7 @@ def _handle_http(event: Mapping[str, Any]) -> dict[str, Any]:
         url:     Full URL
         headers: Optional dict of request headers
         body:    Optional request body (string)
-        timeout: Optional timeout in seconds (default 10, max 60)
+        timeout: Optional timeout in seconds (default 10, max 90)
     """
     import urllib.request
     import urllib.error
@@ -146,7 +150,7 @@ def _handle_http(event: Mapping[str, Any]) -> dict[str, Any]:
     url: str = event.get("url") or ""
     headers: dict[str, str] = event.get("headers") or {}
     body: str | None = event.get("body")
-    timeout: int = min(int(event.get("timeout") or 10), 60)
+    timeout: int = min(int(event.get("timeout") or 10), _MAX_HTTP_TIMEOUT_SECONDS)
 
     if not any(k.lower() == "user-agent" for k in headers):
         headers["User-Agent"] = _HTTP_PROXY_USER_AGENT
@@ -261,7 +265,21 @@ def _invoke_proxy(payload: dict[str, Any]) -> dict[str, Any]:
         Payload=json.dumps(payload).encode(),
     )
 
-    body = json.loads(resp["Payload"].read())
+    raw_payload = resp["Payload"].read()
+    if not raw_payload:
+        raise AwsProxyError("EmptyProxyResponse", "AWS proxy returned an empty payload")
+    try:
+        body = json.loads(raw_payload)
+    except json.JSONDecodeError as exc:
+        raise AwsProxyError(
+            "InvalidProxyResponse",
+            f"AWS proxy returned invalid JSON: {exc}",
+        ) from exc
+    if not isinstance(body, dict):
+        raise AwsProxyError(
+            "InvalidProxyResponse",
+            "AWS proxy response must be a JSON object",
+        )
 
     if resp.get("FunctionError"):
         raise AwsProxyError("LambdaInvocationError", str(body))
