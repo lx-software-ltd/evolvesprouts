@@ -279,7 +279,34 @@ def test_generate_and_store_plan_rejects_empty_payload(monkeypatch: object) -> N
             ' "product_focus": "", "offer_refinements": [], "risks": []}'
         ),
     )
-    with pytest.raises(RuntimeError, match="empty"):
+    with pytest.raises(RuntimeError, match="invalid response"):
+        generate_and_store_plan(session, actor_sub="user-1")  # type: ignore[arg-type]
+
+
+def test_generate_and_store_plan_maps_invalid_json_to_user_message(
+    monkeypatch: object,
+) -> None:
+    session = SimpleNamespace(add=lambda _row: None, flush=lambda: None)
+    monkeypatch.setattr(
+        "app.services.sales_daily_plan.build_sales_daily_plan_context",
+        lambda _session: (
+            {"open_leads": [], "needs_reply_threads": [], "catalogue": []},
+            SimpleNamespace(
+                conversation_watermark_at=None,
+                pipeline_watermark_at=None,
+                contact_watermark_at=None,
+            ),
+        ),
+    )
+    monkeypatch.setattr(
+        "app.services.sales_daily_plan.resolve_insight_generated_by_name",
+        lambda _session, *, actor_sub=None: "Ida",
+    )
+    monkeypatch.setattr(
+        "app.services.sales_daily_plan.openrouter_chat_completion",
+        lambda **_kwargs: "<html>502 Bad Gateway</html>",
+    )
+    with pytest.raises(RuntimeError, match="invalid response"):
         generate_and_store_plan(session, actor_sub="user-1")  # type: ignore[arg-type]
 
 
@@ -296,5 +323,13 @@ def test_format_openrouter_failure_maps_timeout() -> None:
     assert "invalid response" in message
     message = _format_openrouter_failure(
         RuntimeError("Model returned an empty sales daily plan")
+    )
+    assert "invalid response" in message
+    message = _format_openrouter_failure(
+        RuntimeError("OpenRouter response was not valid JSON: Expecting value")
+    )
+    assert "invalid response" in message
+    message = _format_openrouter_failure(
+        AwsProxyError("EmptyProxyResponse", "AWS proxy returned an empty payload")
     )
     assert "invalid response" in message

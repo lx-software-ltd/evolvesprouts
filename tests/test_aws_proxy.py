@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from io import BytesIO
 from typing import Any
+
+import pytest
 
 from app.services import aws_proxy
 
@@ -121,7 +124,7 @@ def test_handle_http_preserves_caller_user_agent(monkeypatch: Any) -> None:
     assert captured_headers["User-agent"] == "CustomAgent/2.0"
 
 
-def test_handle_http_caps_timeout_at_60_seconds(monkeypatch: Any) -> None:
+def test_handle_http_caps_timeout_at_90_seconds(monkeypatch: Any) -> None:
     monkeypatch.setenv("ALLOWED_HTTP_URLS", "https://api.example.com/")
     aws_proxy._ALLOWED_HTTP_URLS = None
     captured: dict[str, int] = {}
@@ -154,11 +157,12 @@ def test_handle_http_caps_timeout_at_60_seconds(monkeypatch: Any) -> None:
             "type": "http",
             "method": "GET",
             "url": "https://api.example.com/v1/test",
-            "timeout": 90,
+            "timeout": 240,
         }
     )
 
-    assert captured["timeout"] == 60
+    assert captured["timeout"] == aws_proxy._MAX_HTTP_TIMEOUT_SECONDS
+    assert captured["timeout"] == 90
 
 
 def test_proxy_handler_routes_http_requests(monkeypatch: Any) -> None:
@@ -167,3 +171,34 @@ def test_proxy_handler_routes_http_requests(monkeypatch: Any) -> None:
 
     response = aws_proxy.proxy_handler({"type": "http", "url": "https://a"}, None)
     assert response is marker
+
+
+def test_invoke_proxy_rejects_empty_payload(monkeypatch: Any) -> None:
+    class _FakeLambda:
+        def invoke(self, **_kwargs: Any) -> dict[str, Any]:
+            return {"Payload": BytesIO(b"")}
+
+    monkeypatch.setattr(aws_proxy, "_lambda_client", _FakeLambda())
+    monkeypatch.setattr(
+        aws_proxy, "_proxy_arn", "arn:aws:lambda:us-east-1:1:function:proxy"
+    )
+
+    with pytest.raises(aws_proxy.AwsProxyError) as exc_info:
+        aws_proxy._invoke_proxy({"type": "http"})
+    assert exc_info.value.code == "EmptyProxyResponse"
+
+
+def test_invoke_proxy_rejects_invalid_json_payload(monkeypatch: Any) -> None:
+    class _FakeLambda:
+        def invoke(self, **_kwargs: Any) -> dict[str, Any]:
+            return {"Payload": BytesIO(b"<html>timeout</html>")}
+
+    monkeypatch.setattr(aws_proxy, "_lambda_client", _FakeLambda())
+    monkeypatch.setattr(
+        aws_proxy, "_proxy_arn", "arn:aws:lambda:us-east-1:1:function:proxy"
+    )
+
+    with pytest.raises(aws_proxy.AwsProxyError) as exc_info:
+        aws_proxy._invoke_proxy({"type": "http"})
+    assert exc_info.value.code == "InvalidProxyResponse"
+    assert "invalid JSON" in str(exc_info.value)

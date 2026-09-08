@@ -614,7 +614,9 @@ their primary responsibilities.
   converted-client nurture rows, completed priorities, and any
   `operator_input` as memory. Addresses the logged-in admin or, for the 06:00
   HKT run, the Sales default assignee. Empty or non-JSON model output fails the
-  job instead of storing a blank plan. Persists `sales_daily_plans` (including
+  job instead of storing a blank plan; the dashboard shows a short "invalid
+  response" message rather than a raw `JSONDecodeError`. Persists
+  `sales_daily_plans` (including
   the refinement and `generated_by_name`) and marks `sales_daily_plan_jobs`
   `succeeded` or `failed`. Does not send messages or payment reminders.
 - DB access: RDS Proxy with IAM auth (`evolvesprouts_admin`)
@@ -841,9 +843,9 @@ their primary responsibilities.
 - Trigger: Lambda-to-Lambda invocation (from in-VPC Lambdas)
 - Purpose: generic proxy for AWS API calls and outbound HTTP requests
   that cannot be made from inside the VPC
-- Timeout: 90s (aligned with `ExpenseParserFunction`, which invokes this Lambda for OpenRouter).
-  Outbound HTTP `timeout` is capped at 60s so Graph inbox import can wait
-  longer than the previous 30s urllib cap without exceeding this Lambda.
+- Timeout: 120s (above the 90s OpenRouter wait used by `SalesDailyPlanFunction`
+  and `LeadAiSuggestionFunction`). Outbound HTTP `timeout` is capped at 90s so
+  those workers can use their configured wait without exceeding this Lambda.
 - VPC: **No** (runs outside VPC for internet access)
 - Allow-lists:
   - `ALLOWED_ACTIONS`: comma-separated `service:action` pairs for AWS

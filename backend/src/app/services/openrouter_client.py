@@ -171,7 +171,12 @@ def openrouter_chat_completion(
 
 def extract_message_text(body: str) -> str:
     """Pull assistant text from an OpenRouter chat completion response body."""
-    payload = json.loads(body)
+    if not isinstance(body, str) or not body.strip():
+        raise RuntimeError("OpenRouter response was empty")
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"OpenRouter response was not valid JSON: {exc}") from exc
     if not isinstance(payload, dict):
         raise RuntimeError("OpenRouter response must be a JSON object")
 

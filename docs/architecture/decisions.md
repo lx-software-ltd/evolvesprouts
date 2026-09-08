@@ -1185,6 +1185,9 @@ unallocating a payment does not reopen them.
 - A safety-filter stub or empty JSON must not wipe the dashboard to “—”.
 - Org-wide context (pipeline, unanswered threads, catalogue, unpaid invoices)
   exceeds API Gateway time limits, so generation stays off the request path.
+- Parse failures (empty OpenRouter HTTP bodies, malformed model JSON, failed
+  repair) are mapped to a short admin-safe message so the 06:00 HKT job does
+  not surface a raw `JSONDecodeError` on the dashboard.
 - Reusing the lead-AI OpenRouter / proxy / job-timing pattern keeps secrets and
   failure handling consistent.
 - Reset is an explicit admin action so memory is durable until the assignee

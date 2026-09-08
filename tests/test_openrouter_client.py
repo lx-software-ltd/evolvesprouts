@@ -70,3 +70,25 @@ def test_openrouter_chat_completion_defaults_to_three_attempts(
         )
 
     assert len(calls) == 3
+
+
+def test_extract_message_text_rejects_empty_body() -> None:
+    with pytest.raises(RuntimeError, match="OpenRouter response was empty"):
+        client.extract_message_text("")
+    with pytest.raises(RuntimeError, match="OpenRouter response was empty"):
+        client.extract_message_text("   ")
+
+
+def test_extract_message_text_rejects_invalid_json() -> None:
+    with pytest.raises(RuntimeError, match="not valid JSON"):
+        client.extract_message_text("Expecting value")
+    with pytest.raises(RuntimeError, match="not valid JSON"):
+        client.extract_message_text("<html>gateway timeout</html>")
+
+
+def test_extract_message_text_reads_assistant_content() -> None:
+    body = (
+        '{"choices":[{"message":{"content":"{\\"focus\\":\\"Go\\"}"},'
+        '"finish_reason":"stop"}]}'
+    )
+    assert client.extract_message_text(body) == '{"focus":"Go"}'

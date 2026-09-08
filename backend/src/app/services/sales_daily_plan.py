@@ -40,6 +40,9 @@ _SLOW_OPENROUTER_USER_MESSAGE = (
     "The AI model took too long to respond. Please try again in a moment."
 )
 _INVALID_JSON_USER_MESSAGE = "The AI returned an invalid response. Please try again."
+# Repair must finish inside the remaining worker Lambda budget after the
+# primary OpenRouter call (typically 90s of a 120s timeout).
+_JSON_REPAIR_TIMEOUT_SECONDS = 25
 
 _SYSTEM_PROMPT = """
 You are a sales coach for Evolve Sprouts (Hong Kong). Given brand context, the
@@ -244,14 +247,18 @@ def generate_and_store_plan(
             timeout=_openrouter_timeout_seconds(),
             temperature=0.2,
         )
-    except AwsProxyError as exc:
+        text = extract_message_text(raw_body)
+        payload = normalize_plan_payload(parse_plan_json_object(text))
+        if plan_payload_is_empty(payload):
+            raise RuntimeError("Model returned an empty sales daily plan")
+    except (
+        AwsProxyError,
+        RuntimeError,
+        json.JSONDecodeError,
+        TypeError,
+        ValueError,
+    ) as exc:
         raise RuntimeError(_format_openrouter_failure(exc)) from exc
-    except RuntimeError as exc:
-        raise RuntimeError(_format_openrouter_failure(exc)) from exc
-    text = extract_message_text(raw_body)
-    payload = normalize_plan_payload(parse_plan_json_object(text))
-    if plan_payload_is_empty(payload):
-        raise RuntimeError("Model returned an empty sales daily plan")
     pipeline_watermark = _max_watermark(
         getattr(watermarks, "pipeline_watermark_at", None),
         getattr(watermarks, "contact_watermark_at", None),
@@ -275,7 +282,7 @@ def parse_plan_json_object(text: str) -> dict[str, Any]:
     parsed = loads_openrouter_json(
         text,
         context="sales daily plan",
-        timeout=_openrouter_timeout_seconds(),
+        timeout=min(_JSON_REPAIR_TIMEOUT_SECONDS, _openrouter_timeout_seconds()),
     )
     if not isinstance(parsed, dict):
         raise RuntimeError("Model JSON must be an object")
@@ -420,6 +427,14 @@ def _format_openrouter_failure(exc: BaseException) -> str:
         "no json object found",
         "returned no json object",
         "empty sales daily plan",
+        "openrouter response was not valid json",
+        "openrouter response was empty",
+        "openrouter response must be a json object",
+        "invalid json",
+        "expecting value",
+        "unterminated string",
+        "emptyproxyresponse",
+        "empty payload",
     )
     if any(marker in lowered for marker in invalid_json_markers):
         return _INVALID_JSON_USER_MESSAGE
