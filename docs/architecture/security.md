@@ -425,7 +425,14 @@ fail-closed outbound policy:
   include only the configured OpenRouter chat-completions URL.
 - OpenRouter API keys are loaded from AWS Secrets Manager
   (`OPENROUTER_API_KEY_SECRET_ARN`); keys are never hardcoded in source or
-  committed to git.
+  committed to git. The deployed value must be the named key
+  `lxsoftware:evolvesprouts` on the LX Software OpenRouter account so the
+  shared invoice can be split by product.
+- Chat-completions requests send hidden-app headers (`HTTP-Referer`,
+  `X-OpenRouter-Title`, `X-OpenRouter-App-Visibility`) and a non-PII
+  `user` of `evolvesprouts:{workload}` (`expense-parser`,
+  `sales-daily-plan`, `helper-detector`, `lead-close-suggestion`,
+  `json-repair`).
 - Parser enforces per-file size limits (`OPENROUTER_MAX_FILE_BYTES`) before
   forwarding payloads.
 - Parser updates expense parse status to `failed` on upstream/service errors so

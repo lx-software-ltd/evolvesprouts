@@ -413,7 +413,7 @@ SQS retries or mailbox forwarding duplicates.
 | `MAILCHIMP_WELCOME_JOURNEY_STEP_ID` | Optional welcome journey entry step ID (empty disables) |
 | `PUBLIC_WWW_CONFIG_SECRET_ARN` | Secrets Manager JSON object shared with the admin Lambda; supplies `BASE_URL` (HTTPS origin of the public website) for SES HTML shell logo/footer links and optional `INSTAGRAM_URL` / `LINKEDIN_URL` / `WHATSAPP_URL` / `BUSINESS_PHONE_NUMBER` for the same shell. Loaded once per cold start and cached for five minutes (`app.config.public_www`). |
 | `AWS_PROXY_FUNCTION_ARN` | Lambda ARN for AWS proxy (`ListUsersInGroup` for sales recap recipients) |
-| `OPENROUTER_API_KEY_SECRET_ARN` | Existing secret ARN for OpenRouter API key |
+| `OPENROUTER_API_KEY_SECRET_ARN` | Existing secret ARN for the named OpenRouter key `lxsoftware:evolvesprouts` |
 | `OPENROUTER_CHAT_COMPLETIONS_URL` | OpenRouter chat completion URL |
 | `OPENROUTER_MODEL` | OpenRouter model identifier |
 | `OPENROUTER_MAX_FILE_BYTES` | Attachment size limit for parser |

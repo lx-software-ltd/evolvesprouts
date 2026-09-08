@@ -1309,6 +1309,20 @@ policies can allow both SourceArns during cutover.
 **Deploy order:** deploy this companion first so writes from the shared set
 are allowed, then deploy `lxsoftware` to activate the shared set.
 
+## OpenRouter app attribution (shared invoice)
+
+**Decision:** Tag every OpenRouter chat-completions request as the hidden
+Evolve Sprouts app (`HTTP-Referer` / `X-OpenRouter-Title` matching
+lx-software `contracts/openrouter-apps.json`) and set `user` to
+`evolvesprouts:{workload}` with a non-PII workload (`expense-parser`,
+`sales-daily-plan`, `helper-detector`, `lead-close-suggestion`,
+`json-repair`). Store the named key `lxsoftware:evolvesprouts` in
+`CDK_PARAM_OPENROUTER_API_KEY`.
+
+**Why:** LX Software pays one OpenRouter invoice. Distinct hidden apps and
+named keys let OpenRouter Activity group spend by product immediately;
+workloads split usage inside this product without sending PII.
+
 ## Keeping Documentation Up to Date
 
 **Decision:** Architecture documentation in `docs/architecture/` describes

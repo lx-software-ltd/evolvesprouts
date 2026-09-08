@@ -16,6 +16,7 @@ from app.db.models.sales_lead import SalesLead
 from app.db.models.sales_settings import SalesSettings
 from app.db.repositories.sales_lead import SalesLeadRepository
 from app.services import openrouter_expense_parser as openrouter
+from app.services.openrouter_client import WORKLOAD_HELPER_DETECTOR
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -77,6 +78,7 @@ def detect_helper_language_signal(
             user_content_blocks=[{"type": "text", "text": user_prompt}],
             has_pdf_attachment=False,
             timeout=_DETECTOR_TIMEOUT_SECONDS,
+            workload=WORKLOAD_HELPER_DETECTOR,
         )
         parsed = openrouter._parse_completion_body(body)
     except Exception:
