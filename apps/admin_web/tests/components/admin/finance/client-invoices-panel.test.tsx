@@ -677,7 +677,8 @@ describe('ClientInvoicesPanel', () => {
     expect(screen.getByRole('button', { name: /^Allocated invoices/ })).toHaveAttribute('aria-expanded', 'false');
   });
 
-  it('opens allocated invoices by default for an in-full payment and links them in a new tab', async () => {
+  it('opens allocated invoices by default for an in-full payment and opens the PDF in a new tab', async () => {
+    const invId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
     const fullPayment = {
       ...manualPendingPayment,
       id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
@@ -689,8 +690,9 @@ describe('ClientInvoicesPanel', () => {
     billingMocks.listCustomerPayments.mockResolvedValue({ items: [fullPayment], next_cursor: null });
     billingMocks.getCustomerPayment.mockResolvedValue({
       ...fullPayment,
-      allocationInvoices: [{ invoiceId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', invoiceNumber: 'INV-42' }],
+      allocationInvoices: [{ invoiceId: invId, invoiceNumber: 'INV-42' }],
     });
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
 
     render(<ClientInvoicesPanel />);
 
@@ -699,13 +701,14 @@ describe('ClientInvoicesPanel', () => {
       expect(screen.getByRole('button', { name: /^Allocated invoices/ })).toHaveAttribute('aria-expanded', 'true');
     });
     expect(screen.getByRole('button', { name: /^Allocate to invoice/ })).toHaveAttribute('aria-expanded', 'false');
-    const invoiceLink = screen.getByRole('link', { name: 'INV-42' });
-    expect(invoiceLink).toHaveAttribute(
-      'href',
-      '/finance?tab=client-invoices&invoice=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
-    );
-    expect(invoiceLink).toHaveAttribute('target', '_blank');
-    expect(invoiceLink).toHaveAttribute('rel', 'noopener noreferrer');
+    const invoiceLink = screen.getByRole('button', { name: 'INV-42' });
+    expect(invoiceLink.className).toContain('underline');
+    await userEvent.click(invoiceLink);
+    await waitFor(() => {
+      expect(billingMocks.getCustomerInvoicePdfDownload).toHaveBeenCalledWith(invId);
+      expect(openSpy).toHaveBeenCalledWith('https://example.com/signed.pdf', '_blank', 'noopener,noreferrer');
+    });
+    openSpy.mockRestore();
   });
 
   it('load more uses cursor from previous response', async () => {
