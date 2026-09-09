@@ -356,6 +356,8 @@ describe('ClientInvoicesPanel', () => {
       const sel = document.getElementById('billing-allocate-invoice') as HTMLSelectElement;
       expect(sel.value).toBe(issuedInvoice.id);
     });
+    const allocateHeader = screen.getByRole('button', { name: /^Allocate to invoice/ });
+    expect(allocateHeader.textContent ?? '').not.toContain('INV-42');
   });
 
   it('invoice list shows Invoice date column and prefers invoiceDate over createdAt', async () => {
