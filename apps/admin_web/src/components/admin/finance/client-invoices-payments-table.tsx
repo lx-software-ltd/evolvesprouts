@@ -51,14 +51,20 @@ function formatMoney(value: string | null | undefined, currencyCode: string): st
   return raw !== '' && Number.isFinite(parsed) ? formatAmountInCurrency(parsed, currencyCode) : '—';
 }
 
-function PaymentAllocationBadge({ status }: { status: PaymentAllocationStatus | null }) {
+function PaymentAllocationBadge({
+  status,
+  paymentStatus,
+}: {
+  status: PaymentAllocationStatus | null;
+  paymentStatus?: string | null;
+}) {
   const label = getPaymentAllocationStatusLabel(status);
   if (status == null) {
     return label;
   }
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${paymentAllocationBadgeClassName(status)}`}
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${paymentAllocationBadgeClassName(status, paymentStatus)}`}
     >
       {label}
     </span>
@@ -196,6 +202,7 @@ export function ClientInvoicesPaymentsTable({
             amount: p.amount,
             unappliedAmount: p.unappliedAmount,
             direction: p.direction,
+            status: p.status,
           });
           const allocationLabel = getPaymentAllocationStatusLabel(allocationStatus);
           const confirming = busyAction === 'confirm' && confirmPaymentId === id;
@@ -223,7 +230,7 @@ export function ClientInvoicesPaymentsTable({
                     </AdminDataTableCellMeta>
                   </AdminDataTableCell>
                   <AdminDataTableCell priority='secondary'>
-                    <PaymentAllocationBadge status={allocationStatus} />
+                    <PaymentAllocationBadge status={allocationStatus} paymentStatus={p.status} />
                   </AdminDataTableCell>
                   <AdminDataTableCell priority='secondary'>{statusLabel}</AdminDataTableCell>
                   <AdminDataTableCell priority='tertiary'>{methodLabel}</AdminDataTableCell>

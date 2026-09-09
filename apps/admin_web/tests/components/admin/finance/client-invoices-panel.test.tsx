@@ -212,11 +212,35 @@ describe('ClientInvoicesPanel', () => {
     expect(within(paymentTable()).queryByRole('columnheader', { name: 'Direction' })).not.toBeInTheDocument();
   });
 
-  it('renders allocation chips for less, in full, more, and a dash for refunds', async () => {
+  it('renders allocation chips for none, less, in full, more, and a dash for refunds', async () => {
     billingMocks.listCustomerPayments.mockResolvedValue({
       items: [
         {
           id: '11111111-1111-1111-1111-111111111111',
+          direction: 'inbound',
+          status: 'pending',
+          method: 'bank_transfer',
+          amount: '100',
+          currency: 'HKD',
+          party: 'None Pending Party',
+          unappliedAmount: '100',
+          createdAt: '2026-01-01T00:00:00+00:00',
+          orphanPaymentDeletable: false,
+        },
+        {
+          id: '55555555-5555-5555-5555-555555555555',
+          direction: 'inbound',
+          status: 'succeeded',
+          method: 'bank_transfer',
+          amount: '80',
+          currency: 'HKD',
+          party: 'None Succeeded Party',
+          unappliedAmount: '80',
+          createdAt: '2026-01-01T01:00:00+00:00',
+          orphanPaymentDeletable: false,
+        },
+        {
+          id: '66666666-6666-6666-6666-666666666666',
           direction: 'inbound',
           status: 'succeeded',
           method: 'bank_transfer',
@@ -224,7 +248,7 @@ describe('ClientInvoicesPanel', () => {
           currency: 'HKD',
           party: 'Less Party',
           unappliedAmount: '40',
-          createdAt: '2026-01-01T00:00:00+00:00',
+          createdAt: '2026-01-01T02:00:00+00:00',
           orphanPaymentDeletable: false,
         },
         {
@@ -275,6 +299,18 @@ describe('ClientInvoicesPanel', () => {
       return t;
     });
 
+    const nonePendingRow = within(table).getByText('None Pending Party').closest('tr');
+    expect(nonePendingRow).not.toBeNull();
+    const nonePendingChip = within(nonePendingRow as HTMLElement).getByText('None');
+    expect(nonePendingChip.className).toContain('bg-yellow-100');
+    expect(nonePendingChip.className).toContain('text-yellow-800');
+
+    const noneSucceededRow = within(table).getByText('None Succeeded Party').closest('tr');
+    expect(noneSucceededRow).not.toBeNull();
+    const noneSucceededChip = within(noneSucceededRow as HTMLElement).getByText('None');
+    expect(noneSucceededChip.className).toContain('bg-red-100');
+    expect(noneSucceededChip.className).toContain('text-red-800');
+
     const lessChip = within(table).getByText('Less');
     expect(lessChip.className).toContain('bg-yellow-100');
     expect(lessChip.className).toContain('text-yellow-800');
@@ -290,6 +326,7 @@ describe('ClientInvoicesPanel', () => {
 
     const refundRow = within(table).getByText('Refund Party').closest('tr');
     expect(refundRow).not.toBeNull();
+    expect(within(refundRow as HTMLElement).queryByText('None')).not.toBeInTheDocument();
     expect(within(refundRow as HTMLElement).queryByText('Less')).not.toBeInTheDocument();
     expect(within(refundRow as HTMLElement).queryByText('In full')).not.toBeInTheDocument();
     expect(within(refundRow as HTMLElement).queryByText('More')).not.toBeInTheDocument();
@@ -618,6 +655,57 @@ describe('ClientInvoicesPanel', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /^Allocated invoices/ }));
     await waitFor(() => expect(screen.getByText('INV-7')).toBeInTheDocument());
+  });
+
+  it('opens allocate accordion by default for a none payment', async () => {
+    const nonePayment = {
+      ...manualPendingPayment,
+      id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      status: 'pending' as const,
+      amount: '10',
+      unappliedAmount: '10',
+    };
+    billingMocks.listCustomerPayments.mockResolvedValue({ items: [nonePayment], next_cursor: null });
+    billingMocks.getCustomerPayment.mockResolvedValue({ ...nonePayment, allocationInvoices: [] });
+
+    render(<ClientInvoicesPanel />);
+
+    await expandFirstRow(paymentTable());
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^Allocate to invoice/ })).toHaveAttribute('aria-expanded', 'true');
+    });
+    expect(screen.getByRole('button', { name: /^Allocated invoices/ })).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('opens allocated invoices by default for an in-full payment and links them in a new tab', async () => {
+    const fullPayment = {
+      ...manualPendingPayment,
+      id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      status: 'succeeded' as const,
+      amount: '100',
+      unappliedAmount: '0',
+      stripePaymentIntentId: 'pi_full',
+    };
+    billingMocks.listCustomerPayments.mockResolvedValue({ items: [fullPayment], next_cursor: null });
+    billingMocks.getCustomerPayment.mockResolvedValue({
+      ...fullPayment,
+      allocationInvoices: [{ invoiceId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', invoiceNumber: 'INV-42' }],
+    });
+
+    render(<ClientInvoicesPanel />);
+
+    await expandFirstRow(paymentTable());
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^Allocated invoices/ })).toHaveAttribute('aria-expanded', 'true');
+    });
+    expect(screen.getByRole('button', { name: /^Allocate to invoice/ })).toHaveAttribute('aria-expanded', 'false');
+    const invoiceLink = screen.getByRole('link', { name: 'INV-42' });
+    expect(invoiceLink).toHaveAttribute(
+      'href',
+      '/finance?tab=client-invoices&invoice=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+    );
+    expect(invoiceLink).toHaveAttribute('target', '_blank');
+    expect(invoiceLink).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
   it('load more uses cursor from previous response', async () => {
