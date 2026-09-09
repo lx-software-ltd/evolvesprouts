@@ -19,6 +19,12 @@ import { ClientInvoicesManualPaymentEditor } from '@/components/admin/finance/cl
 import { ClientInvoicesPaymentDetail } from '@/components/admin/finance/client-invoices-payment-detail';
 import { DRAFT_RECORD_ID } from '@/hooks/use-expanded-record';
 import { formatEnumLabel } from '@/lib/format';
+import {
+  getPaymentAllocationStatus,
+  getPaymentAllocationStatusLabel,
+  paymentAllocationBadgeClassName,
+  type PaymentAllocationStatus,
+} from '@/lib/payment-allocation-display';
 import { formatAmountInCurrency } from '@/lib/vendor-spend';
 
 import type {
@@ -43,6 +49,20 @@ function formatMoney(value: string | null | undefined, currencyCode: string): st
   const raw = value?.trim() ?? '';
   const parsed = Number.parseFloat(raw);
   return raw !== '' && Number.isFinite(parsed) ? formatAmountInCurrency(parsed, currencyCode) : '—';
+}
+
+function PaymentAllocationBadge({ status }: { status: PaymentAllocationStatus | null }) {
+  const label = getPaymentAllocationStatusLabel(status);
+  if (status == null) {
+    return label;
+  }
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${paymentAllocationBadgeClassName(status)}`}
+    >
+      {label}
+    </span>
+  );
 }
 
 export function ClientInvoicesPaymentsTable({
@@ -116,7 +136,7 @@ export function ClientInvoicesPaymentsTable({
           <tr>
             <AdminDataTableHeadCell className='w-10' />
             <AdminDataTableHeadCell>Party</AdminDataTableHeadCell>
-            <AdminDataTableHeadCell priority='secondary'>Direction</AdminDataTableHeadCell>
+            <AdminDataTableHeadCell priority='secondary'>Allocation</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary'>Status</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='tertiary'>Method</AdminDataTableHeadCell>
             <AdminDataTableHeadCell priority='secondary' className='text-right'>
@@ -141,7 +161,7 @@ export function ClientInvoicesPaymentsTable({
               <>
                 <AdminDataTableCell className='font-medium text-slate-900'>New payment</AdminDataTableCell>
                 <AdminDataTableCell priority='secondary' className='text-slate-400'>
-                  Inbound
+                  —
                 </AdminDataTableCell>
                 <AdminDataTableCell priority='secondary' className='text-slate-400'>
                   —
@@ -172,6 +192,12 @@ export function ClientInvoicesPaymentsTable({
           const directionLabel = formatEnumLabel(p.direction ?? '');
           const statusLabel = formatEnumLabel(p.status ?? '');
           const methodLabel = formatPaymentMethodLabel(p.method);
+          const allocationStatus = getPaymentAllocationStatus({
+            amount: p.amount,
+            unappliedAmount: p.unappliedAmount,
+            direction: p.direction,
+          });
+          const allocationLabel = getPaymentAllocationStatusLabel(allocationStatus);
           const confirming = busyAction === 'confirm' && confirmPaymentId === id;
           return (
             <AdminExpandableRow
@@ -190,13 +216,15 @@ export function ClientInvoicesPaymentsTable({
                   <AdminDataTableCell>
                     <p className='font-medium text-slate-900 wrap-anywhere'>{partyDisplay}</p>
                     <AdminDataTableCellMeta>
-                      {amountDisplay} · {directionLabel} · {statusLabel}
+                      {amountDisplay} · {allocationLabel} · {statusLabel}
                     </AdminDataTableCellMeta>
                     <AdminDataTableCellMeta until='tertiary'>
                       {methodLabel} · Unapplied {unappliedDisplay}
                     </AdminDataTableCellMeta>
                   </AdminDataTableCell>
-                  <AdminDataTableCell priority='secondary'>{directionLabel}</AdminDataTableCell>
+                  <AdminDataTableCell priority='secondary'>
+                    <PaymentAllocationBadge status={allocationStatus} />
+                  </AdminDataTableCell>
                   <AdminDataTableCell priority='secondary'>{statusLabel}</AdminDataTableCell>
                   <AdminDataTableCell priority='tertiary'>{methodLabel}</AdminDataTableCell>
                   <AdminDataTableCell priority='secondary' className='text-right tabular-nums'>
