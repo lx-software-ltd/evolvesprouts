@@ -18,9 +18,13 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Select } from '@/components/ui/select';
 import { toErrorMessage } from '@/hooks/hook-errors';
+import { useCopyFeedback } from '@/hooks/use-copy-feedback';
 import { useExpandedRecord } from '@/hooks/use-expanded-record';
 import { usePaginatedList } from '@/hooks/use-paginated-list';
+import { copyTextToClipboard } from '@/lib/clipboard';
+import { getTrainingSiteBaseUrl } from '@/lib/config';
 import { formatDate } from '@/lib/format';
+import { buildTrainingFormOrPollPageUrl } from '@/lib/public-site-page-urls';
 
 export interface WebsiteAnswersSummary {
   slug: string;
@@ -88,6 +92,9 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
   const [clearing, setClearing] = useState(false);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const expanded = useExpandedRecord({ paramName: `${lowerNoun}-answer` });
+  const trainingSiteBaseUrl = useMemo(() => getTrainingSiteBaseUrl(), []);
+  const { copiedKey: copiedLinkFeedbackKey, markCopied: markPageLinkCopied } = useCopyFeedback(1000);
+  const isLinkCopied = copiedLinkFeedbackKey === 'page-link';
 
   const selectedSummary = useMemo(
     () => summaries.find((item) => item.slug === selectedSlug) ?? null,
@@ -160,6 +167,32 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
     void refetch({ slug: selectedSlug });
   }, [refetch, selectedSlug]);
 
+  const handleCopyLink = async () => {
+    if (!selectedSlug) {
+      return;
+    }
+    setActionError('');
+    const url = buildTrainingFormOrPollPageUrl({
+      baseUrl: trainingSiteBaseUrl,
+      noun,
+      slug: selectedSlug,
+    });
+    if (!url) {
+      setActionError(
+        trainingSiteBaseUrl
+          ? `Unable to build a ${lowerNoun} link for "${selectedSlug}".`
+          : 'Set NEXT_PUBLIC_TRAINING_SITE_BASE_URL to copy training site links.'
+      );
+      return;
+    }
+    try {
+      await copyTextToClipboard(url);
+      markPageLinkCopied('page-link');
+    } catch (error) {
+      setActionError(toErrorMessage(error, 'Unable to copy the link to clipboard.'));
+    }
+  };
+
   const handleExport = async () => {
     if (!selectedSlug) {
       return;
@@ -230,6 +263,14 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
             }
             trailing={
               <>
+                <Button
+                  type='button'
+                  variant={isLinkCopied ? 'success' : 'outline'}
+                  onClick={() => void handleCopyLink()}
+                  disabled={!selectedSlug || !trainingSiteBaseUrl}
+                >
+                  {isLinkCopied ? 'Link copied' : 'Copy link'}
+                </Button>
                 <Button
                   type='button'
                   variant='outline'

@@ -120,6 +120,29 @@ export function buildSitePageUrl(input: BuildSitePageUrlInput): string {
   return url.toString();
 }
 
+export interface BuildTrainingFormOrPollPageUrlInput {
+  baseUrl: string;
+  noun: 'form' | 'poll';
+  slug: string;
+}
+
+/**
+ * Builds an absolute training-site URL for a form (`/forms/{slug}/`) or poll
+ * (`/polls/{slug}/`). Returns empty when the base URL or slug is invalid.
+ */
+export function buildTrainingFormOrPollPageUrl(input: BuildTrainingFormOrPollPageUrlInput): string {
+  const slug = input.slug.trim();
+  if (!slug) {
+    return '';
+  }
+  const prefix = input.noun === 'form' ? 'forms' : 'polls';
+  const normalized = normalizePublicSitePathInput(`/${prefix}/${slug}`);
+  if (normalized.error || !normalized.path) {
+    return '';
+  }
+  return buildSitePageUrl({ baseUrl: input.baseUrl, path: normalized.path });
+}
+
 export function buildLocalizedPublicPageUrl(input: BuildLocalizedPublicPageUrlInput): string {
   const base = trimTrailingSlashes(input.baseUrl.trim());
   if (!base) {
