@@ -2,6 +2,8 @@
 
 import type { ReactNode } from 'react';
 
+import Link from 'next/link';
+
 import { AdminDisclosure } from '@/components/ui/admin-disclosure';
 import { AdminEditorPanel } from '@/components/ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
@@ -15,6 +17,12 @@ import {
 import { ClientInvoicesManualPaymentEditor } from '@/components/admin/finance/client-invoices-manual-payment-editor';
 import type { CustomerPaymentSummary } from '@/lib/billing-api';
 import { formatDate, formatEnumLabel } from '@/lib/format';
+import {
+  financeClientInvoiceHref,
+  getPaymentAllocationStatus,
+  shouldOpenAllocateDisclosure,
+  shouldOpenAllocatedInvoicesDisclosure,
+} from '@/lib/payment-allocation-display';
 import { formatAmountInCurrency } from '@/lib/vendor-spend';
 
 import type {
@@ -61,6 +69,14 @@ export function ClientInvoicesPaymentDetail({
   const currencyCode = (payment.currency ?? defaultCurrency).trim().toUpperCase() || defaultCurrency;
   const canAllocate = payment.direction === 'inbound' && payment.status !== 'failed';
   const allocations = detailForRow?.allocationInvoices ?? [];
+  const allocationStatus = getPaymentAllocationStatus({
+    amount: payment.amount,
+    unappliedAmount: payment.unappliedAmount,
+    direction: payment.direction,
+    status: payment.status,
+  });
+  const openAllocatedInvoices = shouldOpenAllocatedInvoicesDisclosure(allocationStatus);
+  const openAllocate = shouldOpenAllocateDisclosure(allocationStatus);
 
   const sections: ReactNode = (
     <>
@@ -69,6 +85,7 @@ export function ClientInvoicesPaymentDetail({
         id={`billing-payment-${id}-allocations`}
         title='Allocated invoices'
         summary={detailForRow ? `${allocations.length}` : 'Loading…'}
+        defaultOpen={openAllocatedInvoices}
       >
         {allocations.length === 0 ? (
           <p className='text-sm text-slate-500'>
@@ -76,15 +93,40 @@ export function ClientInvoicesPaymentDetail({
           </p>
         ) : (
           <ul className='space-y-1 text-sm text-slate-700'>
-            {allocations.map((a) => (
-              <li key={a.invoiceId} className='wrap-anywhere'>
-                {a.invoiceNumber?.trim() || formatTruncatedId(a.invoiceId)}
-              </li>
-            ))}
+            {allocations.map((a) => {
+              const invoiceId = a.invoiceId?.trim() ?? '';
+              const label = a.invoiceNumber?.trim() || formatTruncatedId(invoiceId);
+              if (invoiceId === '') {
+                return (
+                  <li key={label} className='wrap-anywhere'>
+                    {label}
+                  </li>
+                );
+              }
+              return (
+                <li key={invoiceId} className='wrap-anywhere'>
+                  <Link
+                    href={financeClientInvoiceHref(invoiceId)}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='font-medium text-slate-900 underline-offset-2 hover:underline'
+                  >
+                    {label}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
       </AdminDisclosure>
-      {canAllocate ? <ClientInvoicesAllocateEditor currency={currency} busy={busy} allocate={allocate} /> : null}
+      {canAllocate ? (
+        <ClientInvoicesAllocateEditor
+          currency={currency}
+          busy={busy}
+          allocate={allocate}
+          defaultOpen={openAllocate}
+        />
+      ) : null}
     </>
   );
 

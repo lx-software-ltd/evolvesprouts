@@ -18,6 +18,7 @@ export interface ClientInvoicesAllocateEditorProps {
   currency: ClientInvoicesPanelCurrency;
   busy: ClientInvoicesPanelBusy;
   allocate: ClientInvoicesAllocateEditorSlice;
+  defaultOpen?: boolean;
 }
 
 /**
@@ -25,7 +26,12 @@ export interface ClientInvoicesAllocateEditorProps {
  * expanded payment is the allocation source; an issued invoice expanded in
  * the invoices table above pre-fills the target.
  */
-export function ClientInvoicesAllocateEditor({ currency, busy, allocate }: ClientInvoicesAllocateEditorProps) {
+export function ClientInvoicesAllocateEditor({
+  currency,
+  busy,
+  allocate,
+  defaultOpen = false,
+}: ClientInvoicesAllocateEditorProps) {
   const { currencyOptions } = currency;
   const { busyAction, editorBusy } = busy;
   const {
@@ -58,7 +64,7 @@ export function ClientInvoicesAllocateEditor({ currency, busy, allocate }: Clien
       : (issuedInvoicesForAllocate.find((i) => i.id === invoiceSelectValue)?.invoiceNumber ?? 'Invoice selected');
 
   return (
-    <AdminDisclosure id='billing-allocate' title='Allocate to invoice' summary={summary} defaultOpen>
+    <AdminDisclosure id='billing-allocate' title='Allocate to invoice' summary={summary} defaultOpen={defaultOpen}>
       <form id={ALLOCATE_FORM_ID} className='space-y-4' onSubmit={(e) => void handleAllocate(e)}>
         <AdminFieldGrid columns={4}>
           <AdminField
