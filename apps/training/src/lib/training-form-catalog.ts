@@ -3,6 +3,7 @@
  * Admin Website Forms / QR import this module via `@shared-training/*`
  * so `requiresContact` stays aligned with `apps/training` content.
  */
+import preSessionCheckInJson from '../content/forms/pre-session-check-in.json';
 import workshopExitFeedbackJson from '../content/forms/workshop-exit-feedback.json';
 import workshopFeedbackJson from '../content/forms/workshop-feedback.json';
 
@@ -14,6 +15,7 @@ interface FormContactFlag {
 const FORM_CONTACT_FLAGS: readonly FormContactFlag[] = [
   workshopFeedbackJson as FormContactFlag,
   workshopExitFeedbackJson as FormContactFlag,
+  preSessionCheckInJson as FormContactFlag,
 ];
 
 const FORM_SLUG_PATH = /^\/forms\/([a-z0-9]+(?:-[a-z0-9]+)*)$/;

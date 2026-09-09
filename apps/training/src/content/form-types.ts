@@ -1,4 +1,5 @@
 import formsCommonJson from '@/content/forms-common.json';
+import preSessionCheckInJson from '@/content/forms/pre-session-check-in.json';
 import workshopExitFeedbackJson from '@/content/forms/workshop-exit-feedback.json';
 import workshopFeedbackJson from '@/content/forms/workshop-feedback.json';
 
@@ -114,10 +115,12 @@ export const FORMS_COMMON = formsCommonJson as FormsCommonContent;
 
 const workshopFeedback = workshopFeedbackJson as FormContent;
 const workshopExitFeedback = workshopExitFeedbackJson as FormContent;
+const preSessionCheckIn = preSessionCheckInJson as FormContent;
 
 const FORMS = {
   'workshop-feedback': workshopFeedback,
   'workshop-exit-feedback': workshopExitFeedback,
+  'pre-session-check-in': preSessionCheckIn,
 } satisfies Record<string, FormContent>;
 
 export type FormSlug = keyof typeof FORMS;
