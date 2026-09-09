@@ -244,4 +244,30 @@ describe('WebsiteQrPage', () => {
       ).toBeInTheDocument();
     });
   });
+
+  it('places Contact on the Site and Page row when Locale is hidden', async () => {
+    render(<WebsiteQrPage />);
+
+    fireEvent.change(screen.getByLabelText('Site'), { target: { value: 'training' } });
+    fireEvent.change(screen.getByLabelText('Page'), {
+      target: { value: '/forms/workshop-feedback' },
+    });
+
+    const contactInput = await screen.findByLabelText('Contact');
+    const row = screen.getByLabelText('Site').closest('[data-columns="4"]');
+    expect(row).toBeTruthy();
+    expect(screen.queryByLabelText('Locale')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Page').closest('[data-columns="4"]')).toBe(row);
+    expect(contactInput.closest('[data-columns="4"]')).toBe(row);
+  });
+
+  it('keeps Locale on the Site and Page row for the public site', () => {
+    render(<WebsiteQrPage />);
+
+    const row = screen.getByLabelText('Site').closest('[data-columns="4"]');
+    expect(row).toBeTruthy();
+    expect(screen.getByLabelText('Page').closest('[data-columns="4"]')).toBe(row);
+    expect(screen.getByLabelText('Locale').closest('[data-columns="4"]')).toBe(row);
+    expect(screen.queryByLabelText('Contact')).not.toBeInTheDocument();
+  });
 });
