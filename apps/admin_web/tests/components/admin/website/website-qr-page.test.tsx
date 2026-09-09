@@ -230,6 +230,8 @@ describe('WebsiteQrPage', () => {
       }),
     ).not.toBeInTheDocument();
 
+    fireEvent.change(contactInput, { target: { value: 'j' } });
+    expect(contactInput).toHaveValue('j');
     fireEvent.change(contactInput, { target: { value: 'ja' } });
     const option = await screen.findByRole('option', { name: 'Jane Doe · jane@example.com' });
     fireEvent.click(option);
