@@ -8,6 +8,7 @@ import {
   getAllFormSlugs,
   getFormContent,
   isValidFormSlug,
+  resolveFormDocumentTitle,
 } from '@/lib/forms';
 import { trainingFormRequiresContact } from '@/lib/training-form-catalog';
 
@@ -47,6 +48,19 @@ describe('forms registry', () => {
       expect(raw.slug).toBe(slug);
       expect(trainingFormRequiresContact(slug)).toBe(raw.requiresContact === true);
     }
+  });
+
+  it('uses pageTitle for the browser tab when set', () => {
+    const form = getFormContent('pre-session-check-in');
+    expect(form?.pageTitle).toBe('Pre Session Check In');
+    expect(form ? resolveFormDocumentTitle(form) : '').toBe('Pre Session Check In');
+    expect(form?.title).toContain('{contactFirstName}');
+  });
+
+  it('falls back to title for the browser tab when pageTitle is omitted', () => {
+    const form = getFormContent('workshop-feedback');
+    expect(form?.pageTitle).toBeUndefined();
+    expect(form ? resolveFormDocumentTitle(form) : '').toBe('Workshop feedback');
   });
 
   it('uses dynamic form route page', () => {

@@ -78,6 +78,8 @@ export type FormQuestion =
 export interface FormContent {
   title: string;
   slug: string;
+  /** Browser tab title. Falls back to `title` when omitted. */
+  pageTitle?: string;
   /** When true, admin Copy link / QR require a CRM contact and the page fills `{contactName}` tokens. */
   requiresContact?: boolean;
   questions: FormQuestion[];
@@ -148,4 +150,9 @@ export function buildFormPath(slug: FormSlug | string): string {
 
 export function isQuestionRequired(question: FormQuestion): boolean {
   return question.required !== false;
+}
+
+export function resolveFormDocumentTitle(form: FormContent): string {
+  const pageTitle = form.pageTitle?.trim();
+  return pageTitle || form.title;
 }

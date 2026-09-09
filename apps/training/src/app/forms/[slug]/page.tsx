@@ -8,6 +8,7 @@ import {
   getAllFormSlugs,
   getFormContent,
   isValidFormSlug,
+  resolveFormDocumentTitle,
 } from '@/lib/forms';
 
 interface FormRouteProps {
@@ -28,7 +29,7 @@ export async function generateMetadata({ params }: FormRouteProps): Promise<Meta
     return {};
   }
   return {
-    title: form.title,
+    title: resolveFormDocumentTitle(form),
     robots: {
       index: false,
       follow: false,
