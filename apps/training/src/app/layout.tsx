@@ -26,8 +26,8 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: SITE_COMMON.metadata.title,
   icons: {
-    icon: '/images/evolvesprouts-logo.svg',
-    shortcut: '/images/evolvesprouts-logo.svg',
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
   },
   robots: {
     index: false,
