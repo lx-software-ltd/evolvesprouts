@@ -54,6 +54,11 @@ def handle_admin_all_service_instances_request(
     if method != "GET":
         return method_not_allowed(event)
 
+    return list_instances_global(event)
+
+
+def list_instances_global(event: Mapping[str, Any]) -> dict[str, Any]:
+    """List service instances across services (shared by admin and token APIs)."""
     filters = parse_global_instance_list_filters(event)
     limit = filters["limit"]
     service_id_filter = filters["service_id"]

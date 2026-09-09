@@ -89,6 +89,11 @@ their primary responsibilities.
   `x-api-token`; payloads match `/v1/admin/locations`; delete is not exposed),
   `/v1/public/geographic-areas` (GET only; hashed `x-api-token`; payloads match
   `/v1/admin/geographic-areas`),
+  `/v1/public/instances` and `/v1/public/instances/{id}` (hashed `x-api-token`
+  instance list/get for `user` and `admin` scopes; create/update/delete for
+  `admin` only; payloads match `/v1/admin/services/instances` and nested
+  instance CRUD; create requires `service_id` in the body; enrollments are
+  not exposed),
   `/v1/admin/locations/*` (including `GET /v1/admin/locations?exclude_addresses=true`
   to list service venues without family/organisation home addresses, and
   `POST /v1/admin/locations/geocode` for

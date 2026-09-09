@@ -539,6 +539,8 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | `/v1/public/meta/conversations/{id}/messages` | GET | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token message reads without scoped ids |
 | `/v1/public/contacts` | GET, POST | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token contact list/create; `user` GET only |
 | `/v1/public/contacts/{id}` | GET, PATCH, DELETE | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token contact get/update/delete; `user` GET only |
+| `/v1/public/instances` | GET, POST | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token instance list/create; `user` GET only; create requires `service_id` |
+| `/v1/public/instances/{id}` | GET, PUT, DELETE | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token instance get/update/delete; `user` GET only |
 | `/v1/admin/assets` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | |
 | `/v1/admin/assets/{id}` | GET, PUT, PATCH, DELETE | Admin Group | `EvolvesproutsAdminFunction` | |
 | `/v1/admin/assets/{id}/grants` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | |

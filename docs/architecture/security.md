@@ -305,9 +305,10 @@ distinct from the browser-visible website `x-api-key`.
   page ids.
 - Public contact payloads match the admin contact contract (including email,
   phone, and date of birth). Standalone contact notes, families,
-  organisations, locations, and geographic-area reads are also on
-  `x-api-token` routes. Family/organisation services, location delete, and
-  Mailchimp sync jobs stay on Cognito admin routes.
+  organisations, locations, geographic-area reads, and service instances are
+  also on `x-api-token` routes. Family/organisation services, instance
+  enrollments, location delete, and Mailchimp sync jobs stay on Cognito
+  admin routes.
 
 ### Public WWW API key model
 
