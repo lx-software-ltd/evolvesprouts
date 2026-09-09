@@ -8,7 +8,12 @@ from uuid import uuid4
 import pytest
 
 from app.api.public import instances as pinstances
-from app.exceptions import AuthenticationError, AuthorizationError, NotFoundError, ValidationError
+from app.exceptions import (
+    AuthenticationError,
+    AuthorizationError,
+    NotFoundError,
+    ValidationError,
+)
 
 
 def _token_event(
@@ -47,9 +52,7 @@ class _FakeSessionCM:
 def test_public_instances_requires_token(api_gateway_event: Any) -> None:
     event = api_gateway_event(method="GET", path="/v1/public/instances")
     with pytest.raises(AuthenticationError):
-        pinstances.handle_public_instances_request(
-            event, "GET", "/v1/public/instances"
-        )
+        pinstances.handle_public_instances_request(event, "GET", "/v1/public/instances")
 
 
 @pytest.mark.parametrize("method", ["POST", "PUT", "DELETE"])
@@ -127,9 +130,7 @@ def test_public_instances_admin_create_uses_token_actor(
     service_id = uuid4()
     captured: dict[str, str] = {}
 
-    def _create(
-        event: object, *, service_id: object, actor_sub: str
-    ) -> dict[str, Any]:
+    def _create(event: object, *, service_id: object, actor_sub: str) -> dict[str, Any]:
         captured["actor_sub"] = actor_sub
         captured["service_id"] = str(service_id)
         return {"statusCode": 201, "body": "{}"}
@@ -267,9 +268,7 @@ def test_public_instances_update_missing_raises(
     path = f"/v1/public/instances/{instance_id}"
     with pytest.raises(NotFoundError):
         pinstances.handle_public_instances_request(
-            _token_event(
-                api_gateway_event, path, scope="admin", method="PUT"
-            ),
+            _token_event(api_gateway_event, path, scope="admin", method="PUT"),
             "PUT",
             path,
         )
@@ -291,9 +290,7 @@ def test_public_instances_rejects_unknown_methods(api_gateway_event: Any) -> Non
     instance_id = uuid4()
     path = f"/v1/public/instances/{instance_id}"
     patch_one = pinstances.handle_public_instances_request(
-        _token_event(
-            api_gateway_event, path, scope="admin", method="PATCH"
-        ),
+        _token_event(api_gateway_event, path, scope="admin", method="PATCH"),
         "PATCH",
         path,
     )

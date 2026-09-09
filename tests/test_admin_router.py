@@ -99,6 +99,8 @@ def test_match_handler_routes_asset_prefix_paths() -> None:
         "/v1/public/meta/conversations/abc/messages",
         "/v1/public/contacts",
         "/v1/public/contacts/abc",
+        "/v1/public/instances",
+        "/v1/public/instances/abc",
         "/v1/calendar/public",
         "/www/v1/calendar/public",
         "/v1/calendar/availability",
