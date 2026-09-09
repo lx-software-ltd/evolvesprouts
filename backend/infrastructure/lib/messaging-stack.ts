@@ -662,7 +662,7 @@ export class MessagingNestedStack extends cdk.NestedStack {
 
     this.salesDailyPlanQueue = new sqs.Queue(this, "SalesDailyPlanQueue", {
       queueName: name("sales-daily-plan-queue"),
-      visibilityTimeout: cdk.Duration.seconds(180),
+      visibilityTimeout: cdk.Duration.seconds(270),
       deadLetterQueue: {
         queue: this.salesDailyPlanDLQ,
         maxReceiveCount: 3,
@@ -673,11 +673,13 @@ export class MessagingNestedStack extends cdk.NestedStack {
 
     this.salesDailyPlanFunction = createPythonFunction("SalesDailyPlanFunction", {
       handler: "lambda/sales_daily_plan/handler.lambda_handler",
-      timeout: cdk.Duration.seconds(120),
+      // 180s so a 90s OpenRouter wait plus JSON repair can finish before the
+      // hard timeout; botocore's 60s invoke default is overridden in aws_proxy.
+      timeout: cdk.Duration.seconds(180),
       manageLogGroup: false,
       reservedConcurrentExecutions: -1,
       environment: {
-        SALES_DAILY_PLAN_LAMBDA_TIMEOUT_SECONDS: "120",
+        SALES_DAILY_PLAN_LAMBDA_TIMEOUT_SECONDS: "180",
         SALES_DAILY_PLAN_OPENROUTER_TIMEOUT_SECONDS: "90",
         DATABASE_SECRET_ARN: props.databaseSecretArn,
         DATABASE_NAME: "evolvesprouts",

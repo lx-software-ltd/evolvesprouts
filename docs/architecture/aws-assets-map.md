@@ -404,7 +404,7 @@ Each Lambda function created by `PythonLambda` construct includes:
 | `ApiKeyRotationFunction` | `lambda/api_key_rotation/handler.lambda_handler` | 256 MB | 60s | Yes | Scheduled API key rotation |
 | `MediaRequestProcessor` | `lambda/media_processor/handler.lambda_handler` | 512 MB | 30s | Yes | SQS-triggered media processor (nested stack `evolvesprouts-Messaging`) |
 | `ExpenseParserFunction` | `lambda/expense_parser/handler.lambda_handler` | 512 MB | 90s | Yes | SQS-triggered expense invoice parser (nested stack `evolvesprouts-Messaging`) |
-| `SalesDailyPlanFunction` | `lambda/sales_daily_plan/handler.lambda_handler` | 512 MB | 120s | Yes | SQS-triggered org-wide sales daily plan (nested stack `evolvesprouts-Messaging`) |
+| `SalesDailyPlanFunction` | `lambda/sales_daily_plan/handler.lambda_handler` | 512 MB | 180s | Yes | SQS-triggered org-wide sales daily plan (nested stack `evolvesprouts-Messaging`) |
 | `SalesDailyPlanSchedulerFunction` | `lambda/sales_daily_plan_scheduler/handler.lambda_handler` | 256 MB | 30s | Yes | EventBridge 06:00 HKT enqueue for sales daily plan (nested stack `evolvesprouts-Messaging`) |
 | `InboundInvoiceEmailProcessor` | `lambda/inbound_invoice_email/handler.lambda_handler` | 512 MB | 30s | Yes | SQS-triggered inbound invoice email processor |
 | `EventbriteSyncProcessor` | `lambda/eventbrite_sync_processor/handler.lambda_handler` | 512 MB | 60s | Yes | SQS-triggered Eventbrite sync processor |

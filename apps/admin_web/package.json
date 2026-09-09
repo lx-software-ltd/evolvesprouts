@@ -64,6 +64,7 @@
     "js-cookie": "^3.0.7",
     "openapi-typescript": {
       "typescript": "$typescript"
-    }
+    },
+    "sharp": "^0.35.4"
   }
 }
