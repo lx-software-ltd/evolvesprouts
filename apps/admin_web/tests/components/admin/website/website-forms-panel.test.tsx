@@ -13,7 +13,7 @@ vi.mock('@/lib/config', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/config')>();
   return {
     ...actual,
-    getTrainingSiteBaseUrl: (...args: unknown[]) => getTrainingSiteBaseUrl(...args),
+    getTrainingSiteBaseUrl: () => getTrainingSiteBaseUrl(),
   };
 });
 
