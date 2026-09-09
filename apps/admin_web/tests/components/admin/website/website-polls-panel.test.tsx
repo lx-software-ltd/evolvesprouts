@@ -7,6 +7,15 @@ const listAdminPolls = vi.fn();
 const listAdminPollAnswers = vi.fn();
 const exportAdminPollAnswersCsv = vi.fn();
 const clearAdminPollAnswers = vi.fn();
+const getTrainingSiteBaseUrl = vi.fn(() => 'https://training.example.com');
+
+vi.mock('@/lib/config', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/config')>();
+  return {
+    ...actual,
+    getTrainingSiteBaseUrl: (...args: unknown[]) => getTrainingSiteBaseUrl(...args),
+  };
+});
 
 vi.mock('@/lib/polls-api', () => ({
   listAdminPolls: (...args: unknown[]) => listAdminPolls(...args),
@@ -20,6 +29,7 @@ vi.mock('@/lib/polls-api', () => ({
 describe('WebsitePollsPanel', () => {
   afterEach(() => {
     vi.clearAllMocks();
+    getTrainingSiteBaseUrl.mockReturnValue('https://training.example.com');
   });
 
   it('loads polls and answers for the selected poll', async () => {
@@ -115,6 +125,41 @@ describe('WebsitePollsPanel', () => {
 
     await waitFor(() => {
       expect(clearAdminPollAnswers).toHaveBeenCalledWith('workshop-food-jun-26');
+    });
+  });
+
+  it('copies the selected poll page link and shows green Link copied feedback', async () => {
+    listAdminPolls.mockResolvedValue([{ pollSlug: 'workshop-food-jun-26', answerCount: 1 }]);
+    listAdminPollAnswers.mockResolvedValue({ items: [], nextCursor: null });
+    const writeText = vi.mocked(navigator.clipboard.writeText);
+    writeText.mockResolvedValue(undefined);
+
+    render(<WebsitePollsPanel />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Copy link' })).toBeEnabled();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith(
+        'https://training.example.com/polls/workshop-food-jun-26/'
+      );
+    });
+    const copiedButton = screen.getByRole('button', { name: 'Link copied' });
+    expect(copiedButton).toBeInTheDocument();
+    expect(copiedButton).toHaveClass('bg-emerald-600');
+  });
+
+  it('disables Copy link when no polls are found', async () => {
+    listAdminPolls.mockResolvedValue([]);
+    listAdminPollAnswers.mockResolvedValue({ items: [], nextCursor: null });
+
+    render(<WebsitePollsPanel />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Copy link' })).toBeDisabled();
     });
   });
 });

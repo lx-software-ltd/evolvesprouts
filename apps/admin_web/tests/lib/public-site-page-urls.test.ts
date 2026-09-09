@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildLocalizedPublicPageUrl,
   buildSitePageUrl,
+  buildTrainingFormOrPollPageUrl,
   normalizePublicSitePathInput,
   normalizePublicSiteSrcValue,
   sanitizePublicSiteSrcQueryInput,
@@ -78,6 +79,50 @@ describe('buildSitePageUrl', () => {
       buildSitePageUrl({
         baseUrl: '',
         path: '/',
+      }),
+    ).toBe('');
+  });
+});
+
+describe('buildTrainingFormOrPollPageUrl', () => {
+  it('builds form and poll URLs with a trailing slash', () => {
+    expect(
+      buildTrainingFormOrPollPageUrl({
+        baseUrl: 'https://training.example.com',
+        noun: 'form',
+        slug: 'workshop-feedback',
+      }),
+    ).toBe('https://training.example.com/forms/workshop-feedback/');
+
+    expect(
+      buildTrainingFormOrPollPageUrl({
+        baseUrl: 'https://training.example.com/',
+        noun: 'poll',
+        slug: 'workshop-food-jun-26',
+      }),
+    ).toBe('https://training.example.com/polls/workshop-food-jun-26/');
+  });
+
+  it('returns empty for missing base URL or invalid slug', () => {
+    expect(
+      buildTrainingFormOrPollPageUrl({
+        baseUrl: '',
+        noun: 'form',
+        slug: 'workshop-feedback',
+      }),
+    ).toBe('');
+    expect(
+      buildTrainingFormOrPollPageUrl({
+        baseUrl: 'https://training.example.com',
+        noun: 'poll',
+        slug: 'Not Valid',
+      }),
+    ).toBe('');
+    expect(
+      buildTrainingFormOrPollPageUrl({
+        baseUrl: 'https://training.example.com',
+        noun: 'form',
+        slug: '',
       }),
     ).toBe('');
   });
