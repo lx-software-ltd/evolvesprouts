@@ -15,7 +15,7 @@ import {
 } from '@/components/admin/finance/client-invoices-format-helpers';
 import { ClientInvoicesManualPaymentEditor } from '@/components/admin/finance/client-invoices-manual-payment-editor';
 import type { CustomerPaymentSummary } from '@/lib/billing-api';
-import { formatDate, formatEnumLabel } from '@/lib/format';
+import { formatDate, formatEnumLabel, formatPaymentPartyColumnLabel } from '@/lib/format';
 import {
   getPaymentAllocationStatus,
   shouldOpenAllocateDisclosure,
@@ -143,7 +143,7 @@ export function ClientInvoicesPaymentDetail({
   }
 
   const fieldId = (suffix: string) => `billing-payment-${id}-${suffix}`;
-  const partyLabel = (payment.party ?? '').trim() || '—';
+  const partyLabel = formatPaymentPartyColumnLabel(payment.party) || '—';
   const stripeRef = payment.stripePaymentIntentId?.trim() || payment.stripeRefundId?.trim() || '';
 
   return (

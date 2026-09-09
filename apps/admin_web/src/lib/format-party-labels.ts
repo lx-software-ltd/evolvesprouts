@@ -61,6 +61,30 @@ export function formatFamilyOrOrganizationPartyLabel(
   return '';
 }
 
+/**
+ * Payments table/detail Party display: drop a trailing ` · email` segment.
+ * Family/org `entity · primary contact` lines stay unchanged. Email-only
+ * labels (no name) are kept so the cell is not blank.
+ */
+export function formatPaymentPartyColumnLabel(
+  party: string | null | undefined,
+): string {
+  const raw = (party ?? '').trim();
+  if (raw === '') {
+    return '';
+  }
+  const parts = raw.split(DISPLAY_PART_SEP);
+  if (parts.length < 2) {
+    return raw;
+  }
+  const last = parts[parts.length - 1]?.trim() ?? '';
+  if (!last.includes('@')) {
+    return raw;
+  }
+  const withoutEmail = parts.slice(0, -1).join(DISPLAY_PART_SEP).trim();
+  return withoutEmail !== '' ? withoutEmail : raw;
+}
+
 /** Billing draft invoice enrollment picker — Party column: server `partyDisplayName` only. */
 export function formatBillingEnrollmentPartyCell(row: {
   partyDisplayName?: string | null;

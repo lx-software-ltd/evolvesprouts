@@ -94,7 +94,7 @@ export function ClientInvoicesManualPaymentEditor({
       >
         <AdminFieldGrid columns={4}>
           <AdminField
-            label='Enrollment'
+            label='Party / Enrollment'
             htmlFor='billing-create-pay-enrollment-select'
             span={2}
             hint={

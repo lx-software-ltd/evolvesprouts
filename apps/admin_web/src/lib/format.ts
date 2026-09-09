@@ -23,6 +23,7 @@ export {
   formatBillingEnrollmentPartyCell,
   formatContactNameEmailLabel,
   formatFamilyOrOrganizationPartyLabel,
+  formatPaymentPartyColumnLabel,
   resolveEnrollmentListPartyLabel,
 } from '@/lib/format-party-labels';
 export {
