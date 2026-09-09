@@ -438,3 +438,10 @@ def _apply_service_type_details(*, service: Service, details: Any) -> None:
             consultation_row.default_currency = details.default_currency
         service.training_course_details = None
         service.event_details = None
+
+
+list_services = _list_services
+create_service = _create_service
+get_service = _get_service
+update_service = _update_service
+delete_service = _delete_service

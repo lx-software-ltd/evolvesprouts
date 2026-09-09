@@ -39,7 +39,7 @@ from app.api.admin_meta import handle_admin_meta_request
 from app.api.admin_whatsapp import handle_admin_whatsapp_request
 from app.api.public.contacts import handle_public_contacts_request
 from app.api.public.families import handle_public_families_request
-from app.api.public.instances import handle_public_instances_request
+from app.api.public.services import handle_public_services_request
 from app.api.public.geographic_areas import handle_public_geographic_areas_request
 from app.api.public.locations import handle_public_locations_request
 from app.api.public.meta_conversations import handle_public_meta_request
@@ -235,7 +235,7 @@ _ROUTES: tuple[
     ),
     ("/v1/public/contacts", False, handle_public_contacts_request),
     ("/v1/public/families", False, handle_public_families_request),
-    ("/v1/public/instances", False, handle_public_instances_request),
+    ("/v1/public/services", False, handle_public_services_request),
     ("/v1/public/organizations", False, handle_public_organizations_request),
     ("/v1/public/locations", False, handle_public_locations_request),
     (

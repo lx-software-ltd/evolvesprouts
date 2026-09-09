@@ -1013,14 +1013,14 @@ and `wa_id`. CRM contacts live at `GET|POST /v1/public/contacts` and
 `GET|PATCH|DELETE /v1/public/contacts/{id}` with the admin contact payload
 (including PII), plus standalone notes at `/v1/public/contacts/{id}/notes`.
 The same token scopes cover families, organisations, locations,
-geographic-area reads, and service instances under `/v1/public/families`,
+geographic-area reads, and services under `/v1/public/families`,
 `/v1/public/organizations`, `/v1/public/locations`,
-`/v1/public/geographic-areas`, and `/v1/public/instances` (payloads match the
-corresponding admin contracts; family/organisation services, instance
-enrollments, and location delete stay on Cognito admin routes). Instance
-create is flat (`POST /v1/public/instances` with `service_id` in the body)
-rather than nested under a service path. Mailchimp jobs stay on Cognito admin
-routes. Admins create and revoke tokens from Audit → API keys.
+`/v1/public/geographic-areas`, and `/v1/public/services` (payloads and
+route nesting match the corresponding admin contracts; family/organisation
+purchased-service labels, instance enrollments, cover-image upload,
+discount-code usage summary, and location delete stay on Cognito admin
+routes). Mailchimp jobs stay on Cognito admin routes. Admins create and
+revoke tokens from Audit → API keys.
 
 **Why:**
 - Matches the Siutindei hashed-key pattern without colliding with the

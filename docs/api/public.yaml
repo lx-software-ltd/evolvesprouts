@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Public API
-  version: 0.7.0
+  version: 0.8.0
   description: |
     Public endpoint contract.
 
@@ -51,17 +51,17 @@ info:
       `user` tokens are GET only; `admin` tokens may create, update, and delete.
       Payloads match the admin contact contract (including email, phone, and
       date of birth). Standalone contact notes are exposed at
-      `/v1/public/contacts/{id}/notes`. Services and Mailchimp sync jobs are
-      not exposed.
+      `/v1/public/contacts/{id}/notes`. Contact purchased-service labels and
+      Mailchimp sync jobs are not exposed.
     - Token-authenticated CRM families, organisations, locations, geographic
-      areas, and service instances under `/v1/public/families`,
+      areas, and services under `/v1/public/families`,
       `/v1/public/organizations`, `/v1/public/locations`,
-      `/v1/public/geographic-areas`, and `/v1/public/instances`. Same
+      `/v1/public/geographic-areas`, and `/v1/public/services`. Same
       `x-api-token` scopes as contacts (`user` GET only; `admin` may write).
-      Payloads match the corresponding admin contracts. Family/organisation
-      services, instance enrollments, and location delete are not exposed.
-      Geographic areas are GET only. Create instance requires `service_id`
-      in the body (this resource is flat, not nested under a service path).
+      Payloads and route nesting match the corresponding admin contracts.
+      Family/organisation purchased-service labels, instance enrollments,
+      cover-image upload, discount-code usage summary, and location delete
+      are not exposed. Geographic areas are GET only.
 
 servers:
   - url: https://api.evolvesprouts.com
@@ -1615,9 +1615,93 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
-  /v1/public/instances:
+  /v1/public/services:
     get:
-      summary: List service instances (token API)
+      summary: List services (token API)
+      description: |
+        Returns service templates for a hashed API token (`x-api-token`).
+        Payloads match `GET /v1/admin/services`. Cover-image upload and
+        discount-code usage summary are not exposed.
+      security:
+        - ApiTokenAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: service_type
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/PublicServiceType"
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/PublicServiceStatus"
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Service list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicServiceListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      summary: Create service (token API)
+      description: Requires an `admin` scoped API token. `user` tokens receive `403`.
+      security:
+        - ApiTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePublicServiceRequest"
+      responses:
+        "201":
+          description: Service created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicServiceResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/public/services/instances:
+    get:
+      summary: List service instances across services (token API)
       description: |
         Returns service instances across all services for a hashed API token
         (`x-api-token`). Payloads match `GET /v1/admin/services/instances`.
@@ -1659,30 +1743,18 @@ paths:
         - name: contact_id
           in: query
           required: false
-          description: |
-            When set, only instances with a non-cancelled enrollment attributed to this
-            contact or to a family or organisation they belong to. Mutually exclusive
-            with `family_id` and `organization_id`.
           schema:
             type: string
             format: uuid
         - name: family_id
           in: query
           required: false
-          description: |
-            When set, only instances with a non-cancelled enrollment attributed to this
-            family or to one of its member contacts. Mutually exclusive with
-            `contact_id` and `organization_id`.
           schema:
             type: string
             format: uuid
         - name: organization_id
           in: query
           required: false
-          description: |
-            When set, only instances with a non-cancelled enrollment attributed to this
-            organisation or to one of its member contacts. Mutually exclusive with
-            `contact_id` and `family_id`.
           schema:
             type: string
             format: uuid
@@ -1705,12 +1777,173 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /v1/public/services/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get service (token API)
+      security:
+        - ApiTokenAuth: []
+      responses:
+        "200":
+          description: Service response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicServiceResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      summary: Update service (token API)
+      description: Requires an `admin` scoped API token.
+      security:
+        - ApiTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePublicServiceRequest"
+      responses:
+        "200":
+          description: Service response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicServiceResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Service key and service tier conflict with another service.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Partially update service (token API)
+      description: Requires an `admin` scoped API token.
+      security:
+        - ApiTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartialUpdatePublicServiceRequest"
+      responses:
+        "200":
+          description: Service response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicServiceResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Service key and service tier conflict with another service.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: Delete service (token API)
+      description: Requires an `admin` scoped API token. Returns 409 when instances exist.
+      security:
+        - ApiTokenAuth: []
+      responses:
+        "204":
+          description: Service deleted.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Service has instances and cannot be deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /v1/public/services/{id}/instances:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: List instances for a service (token API)
+      security:
+        - ApiTokenAuth: []
+      responses:
+        "200":
+          description: Service instance list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicInstanceListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
     post:
       summary: Create service instance (token API)
       description: |
-        Creates a service instance. Requires an `admin` scoped API token.
-        `user` tokens receive `403`. `service_id` is required in the body.
-        Duplicate instance slugs return 409 with `field: slug`.
+        Creates a service instance under the parent service. Requires an `admin`
+        scoped API token. Duplicate instance slugs return 409 with `field: slug`.
       security:
         - ApiTokenAuth: []
       requestBody:
@@ -1745,7 +1978,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /v1/public/instances/{id}:
+  /v1/public/services/{id}/instances/{instance_id}:
     parameters:
       - name: id
         in: path
@@ -1753,11 +1986,14 @@ paths:
         schema:
           type: string
           format: uuid
+      - name: instance_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
     get:
       summary: Get service instance (token API)
-      description: |
-        Returns one service instance for a hashed API token (`x-api-token`).
-        Payload matches the admin instance contract.
       security:
         - ApiTokenAuth: []
       responses:
@@ -1784,8 +2020,7 @@ paths:
       description: |
         Requires an `admin` scoped API token. When `status` is set to `completed`,
         every enrollment on the instance that is still `registered` or `confirmed`
-        is updated to `completed` in the same request (cancelled, waitlisted, and
-        already-completed rows are left unchanged).
+        is updated to `completed` in the same request.
       security:
         - ApiTokenAuth: []
       requestBody:
@@ -5576,6 +5811,271 @@ components:
     PublicConsultationPricingModel:
       type: string
       enum: [free, hourly, package]
+    PublicServiceStatus:
+      type: string
+      enum: [draft, published, archived]
+    PublicEventCategory:
+      type: string
+      enum: [workshop, webinar, open_house, community_meetup, other]
+    PublicConsultationFormat:
+      type: string
+      enum: [one_on_one, group]
+    PublicServiceTrainingDetails:
+      type: object
+      properties:
+        pricing_unit:
+          $ref: "#/components/schemas/PublicTrainingPricingUnit"
+        default_price:
+          type: string
+          nullable: true
+        default_currency:
+          type: string
+          nullable: true
+    PublicServiceEventDetails:
+      type: object
+      properties:
+        event_category:
+          $ref: "#/components/schemas/PublicEventCategory"
+        default_price:
+          type: string
+          nullable: true
+        default_currency:
+          type: string
+          nullable: true
+    PublicServiceConsultationDetails:
+      type: object
+      properties:
+        consultation_format:
+          $ref: "#/components/schemas/PublicConsultationFormat"
+        max_group_size:
+          type: integer
+          nullable: true
+        duration_minutes:
+          type: integer
+          nullable: true
+        pricing_model:
+          $ref: "#/components/schemas/PublicConsultationPricingModel"
+        default_hourly_rate:
+          type: string
+          nullable: true
+        default_package_price:
+          type: string
+          nullable: true
+        default_package_sessions:
+          type: integer
+          nullable: true
+        default_currency:
+          type: string
+          nullable: true
+    PublicServiceSummary:
+      type: object
+      required:
+        - id
+        - service_type
+        - title
+        - delivery_mode
+        - status
+        - instances_count
+      properties:
+        id:
+          type: string
+          format: uuid
+        service_type:
+          $ref: "#/components/schemas/PublicServiceType"
+        title:
+          type: string
+        service_key:
+          type: string
+          nullable: true
+          maxLength: 80
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+        booking_system:
+          type: string
+          nullable: true
+          maxLength: 80
+        description:
+          type: string
+          nullable: true
+        cover_image_s3_key:
+          type: string
+          nullable: true
+        delivery_mode:
+          $ref: "#/components/schemas/PublicServiceDeliveryMode"
+        status:
+          $ref: "#/components/schemas/PublicServiceStatus"
+        service_tier:
+          type: string
+          nullable: true
+          maxLength: 128
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_by:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        training_details:
+          allOf:
+            - $ref: "#/components/schemas/PublicServiceTrainingDetails"
+          nullable: true
+        event_details:
+          allOf:
+            - $ref: "#/components/schemas/PublicServiceEventDetails"
+          nullable: true
+        consultation_details:
+          allOf:
+            - $ref: "#/components/schemas/PublicServiceConsultationDetails"
+          nullable: true
+        instances_count:
+          type: integer
+          minimum: 0
+    PublicService:
+      allOf:
+        - $ref: "#/components/schemas/PublicServiceSummary"
+        - type: object
+          properties:
+            tag_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+            asset_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+    PublicServiceListResponse:
+      type: object
+      required: [items, total_count]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicServiceSummary"
+        next_cursor:
+          type: string
+          nullable: true
+        total_count:
+          type: integer
+    PublicServiceResponse:
+      type: object
+      required: [service]
+      properties:
+        service:
+          $ref: "#/components/schemas/PublicService"
+    CreatePublicServiceRequest:
+      type: object
+      required: [service_type, title, delivery_mode]
+      properties:
+        service_type:
+          $ref: "#/components/schemas/PublicServiceType"
+        title:
+          type: string
+        service_key:
+          type: string
+          nullable: true
+          maxLength: 80
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+        booking_system:
+          type: string
+          nullable: true
+          maxLength: 80
+        description:
+          type: string
+          nullable: true
+        cover_image_s3_key:
+          type: string
+          nullable: true
+        delivery_mode:
+          $ref: "#/components/schemas/PublicServiceDeliveryMode"
+        status:
+          $ref: "#/components/schemas/PublicServiceStatus"
+        service_tier:
+          type: string
+          nullable: true
+          maxLength: 128
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        asset_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        training_details:
+          $ref: "#/components/schemas/PublicServiceTrainingDetails"
+        event_details:
+          $ref: "#/components/schemas/PublicServiceEventDetails"
+        consultation_details:
+          $ref: "#/components/schemas/PublicServiceConsultationDetails"
+    UpdatePublicServiceRequest:
+      allOf:
+        - $ref: "#/components/schemas/CreatePublicServiceRequest"
+    PartialUpdatePublicServiceRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title:
+          type: string
+        service_key:
+          type: string
+          nullable: true
+          maxLength: 80
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+        booking_system:
+          type: string
+          nullable: true
+          maxLength: 80
+        description:
+          type: string
+          nullable: true
+        cover_image_s3_key:
+          type: string
+          nullable: true
+        delivery_mode:
+          $ref: "#/components/schemas/PublicServiceDeliveryMode"
+        status:
+          $ref: "#/components/schemas/PublicServiceStatus"
+        service_tier:
+          type: string
+          nullable: true
+          maxLength: 128
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        asset_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        training_details:
+          $ref: "#/components/schemas/PublicServiceTrainingDetails"
+        event_details:
+          $ref: "#/components/schemas/PublicServiceEventDetails"
+        consultation_details:
+          $ref: "#/components/schemas/PublicServiceConsultationDetails"
     PublicSessionSlot:
       type: object
       properties:
@@ -5856,15 +6356,12 @@ components:
           $ref: "#/components/schemas/PublicServiceInstance"
     CreatePublicInstanceRequest:
       type: object
-      required: [service_id, slug]
+      required: [slug]
       description: >
-        Instance create body for `POST /v1/public/instances`. `service_id` identifies
-        the parent service. `slug` is required (400 with `field: slug` when missing
-        or invalid). Duplicate instance slugs return 409 with `field: slug`.
+        Instance create body for `POST /v1/public/services/{id}/instances`. `slug` is
+        required (400 with `field: slug` when missing or invalid). Duplicate instance
+        slugs return 409 with `field: slug`.
       properties:
-        service_id:
-          type: string
-          format: uuid
         title:
           type: string
           nullable: true
@@ -5960,7 +6457,6 @@ components:
       required:
         - status
       description: >
-        `service_id` is ignored on update (the instance keeps its parent service).
         Clearing `slug` to null returns 400 with `field: slug`.
     ReservationSubmissionAccepted:
       type: object
