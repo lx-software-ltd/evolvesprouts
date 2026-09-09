@@ -630,7 +630,7 @@ their primary responsibilities.
     `OPENROUTER_MODEL`
   - `AWS_PROXY_FUNCTION_ARN`
   - `COGNITO_USER_POOL_ID`, `ADMIN_GROUP`
-  - `SALES_DAILY_PLAN_LAMBDA_TIMEOUT_SECONDS` (120),
+  - `SALES_DAILY_PLAN_LAMBDA_TIMEOUT_SECONDS` (180),
     `SALES_DAILY_PLAN_OPENROUTER_TIMEOUT_SECONDS` (90)
 
 ### Sales daily plan scheduler
@@ -866,4 +866,7 @@ their primary responsibilities.
   the User Pool, so a VPC endpoint cannot be used.  This proxy provides
   a reusable channel for any service that is unreachable via PrivateLink.
 - Client: in-VPC Lambdas import `app.services.aws_proxy.invoke` (for
-  AWS calls) or `app.services.aws_proxy.http_invoke` (for HTTP calls)
+  AWS calls) or `app.services.aws_proxy.http_invoke` (for HTTP calls).
+  The Invoke client uses a **105s** read timeout and **no retries** so a
+  90s OpenRouter wait is not cut at botocore's default 60s (which retried
+  and left the 06:00 HKT sales-plan job stuck in `processing`).

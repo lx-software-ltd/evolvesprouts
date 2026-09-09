@@ -1188,6 +1188,10 @@ unallocating a payment does not reopen them.
 - Parse failures (empty OpenRouter HTTP bodies, malformed model JSON, failed
   repair) are mapped to a short admin-safe message so the 06:00 HKT job does
   not surface a raw `JSONDecodeError` on the dashboard.
+- Proxy Lambda Invoke must wait longer than botocore's 60s default (and must
+  not retry on timeout). Otherwise a long OpenRouter call is duplicated and
+  the worker dies still `processing`, which the dashboard shows as
+  "Worker did not finish the previous attempt".
 - Reusing the lead-AI OpenRouter / proxy / job-timing pattern keeps secrets and
   failure handling consistent.
 - Reset is an explicit admin action so memory is durable until the assignee

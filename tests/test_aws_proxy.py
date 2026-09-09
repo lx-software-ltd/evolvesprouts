@@ -4,6 +4,7 @@ from io import BytesIO
 from typing import Any
 
 import pytest
+from botocore.exceptions import ReadTimeoutError
 
 from app.services import aws_proxy
 
@@ -202,3 +203,43 @@ def test_invoke_proxy_rejects_invalid_json_payload(monkeypatch: Any) -> None:
         aws_proxy._invoke_proxy({"type": "http"})
     assert exc_info.value.code == "InvalidProxyResponse"
     assert "invalid JSON" in str(exc_info.value)
+
+
+def test_proxy_lambda_client_waits_past_default_read_timeout(
+    monkeypatch: Any,
+) -> None:
+    aws_proxy._lambda_client = None
+    captured: dict[str, Any] = {}
+
+    def _fake_client(service: str, **kwargs: Any) -> object:
+        captured["service"] = service
+        captured["config"] = kwargs.get("config")
+        return object()
+
+    monkeypatch.setattr(aws_proxy.boto3, "client", _fake_client)
+    aws_proxy._get_lambda_client()
+    config = captured["config"]
+    assert captured["service"] == "lambda"
+    assert config is not None
+    assert config.read_timeout == aws_proxy._LAMBDA_INVOKE_READ_TIMEOUT_SECONDS
+    assert config.read_timeout > 60
+    assert config.retries["max_attempts"] == 1
+    aws_proxy._lambda_client = None
+
+
+def test_invoke_proxy_maps_read_timeout(monkeypatch: Any) -> None:
+    class _FakeLambda:
+        def invoke(self, **_kwargs: Any) -> dict[str, Any]:
+            raise ReadTimeoutError(
+                endpoint_url="https://lambda.example.com",
+                error="read timed out",
+            )
+
+    monkeypatch.setattr(aws_proxy, "_lambda_client", _FakeLambda())
+    monkeypatch.setattr(
+        aws_proxy, "_proxy_arn", "arn:aws:lambda:us-east-1:1:function:proxy"
+    )
+
+    with pytest.raises(aws_proxy.AwsProxyError) as exc_info:
+        aws_proxy._invoke_proxy({"type": "http"})
+    assert exc_info.value.code == "TimeoutError"

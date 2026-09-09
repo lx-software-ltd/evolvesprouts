@@ -453,7 +453,7 @@ new job; GET returns the newest stored plan.
 
 - Receives JSON messages `{ "job_id": "<uuid>" }` from
   `EvolvesproutsAdminFunction` and `SalesDailyPlanSchedulerFunction`.
-- **180** second visibility timeout (above the **120** second worker Lambda timeout).
+- **270** second visibility timeout (above the **180** second worker Lambda timeout).
 - 3 retry attempts before DLQ.
 - KMS encryption using the shared queue key.
 
@@ -470,7 +470,9 @@ new job; GET returns the newest stored plan.
   inbox / recent-contact context, resolves `generated_by_name` (logged-in
   admin or Sales default assignee for the 06:00 HKT run), calls OpenRouter via
   `AwsApiProxyFunction`, then persists `sales_daily_plans` and marks the job
-  succeeded or failed. Safety stubs and empty plans fail the job.
+  succeeded or failed. Safety stubs and empty plans fail the job. The worker
+  Lambda is **180s** so a 90s OpenRouter completion plus JSON repair can finish;
+  the proxy Invoke client must not use botocore's 60s default read timeout.
 - Uses the same OpenRouter + Secrets + proxy wiring as `LeadAiSuggestionFunction`.
 
 ### Scheduler Lambda: `SalesDailyPlanSchedulerFunction`

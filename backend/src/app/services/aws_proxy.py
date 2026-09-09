@@ -31,6 +31,10 @@ from typing import Any
 from collections.abc import Mapping
 from urllib.parse import urlparse
 
+import boto3
+from botocore.config import Config
+from botocore.exceptions import ConnectTimeoutError, ReadTimeoutError
+
 from app.services.aws_clients import get_client
 
 from app.utils.logging import configure_logging, get_logger
@@ -50,6 +54,11 @@ _HTTP_PROXY_USER_AGENT = "EvolveSproutsProxy/1.0"
 # calls are not clipped to 60s, and keep headroom under AwsApiProxyFunction's
 # 120s Lambda timeout so the proxy can still return a payload.
 _MAX_HTTP_TIMEOUT_SECONDS = 90
+# botocore defaults to a 60s read timeout and retries Lambda Invoke. A 06:00
+# HKT OpenRouter call that takes ~80s then gets a second overlapping invoke,
+# and the worker Lambda dies at 120s still marked PROCESSING.
+_LAMBDA_INVOKE_CONNECT_TIMEOUT_SECONDS = 10
+_LAMBDA_INVOKE_READ_TIMEOUT_SECONDS = _MAX_HTTP_TIMEOUT_SECONDS + 15
 
 
 def _get_allowed_actions() -> set[str]:
@@ -250,20 +259,34 @@ def _get_proxy_arn() -> str:
     return _proxy_arn
 
 
+def _lambda_invoke_config() -> Config:
+    """Wait longer than OpenRouter HTTP and do not retry Invoke on timeout."""
+    return Config(
+        connect_timeout=_LAMBDA_INVOKE_CONNECT_TIMEOUT_SECONDS,
+        read_timeout=_LAMBDA_INVOKE_READ_TIMEOUT_SECONDS,
+        retries={"max_attempts": 1, "mode": "standard"},
+    )
+
+
 def _get_lambda_client() -> Any:
     global _lambda_client
     if _lambda_client is None:
-        _lambda_client = get_client("lambda")
+        _lambda_client = boto3.client("lambda", config=_lambda_invoke_config())
     return _lambda_client
 
 
 def _invoke_proxy(payload: dict[str, Any]) -> dict[str, Any]:
     """Low-level invoke of the proxy Lambda.  Returns the parsed body."""
-    resp = _get_lambda_client().invoke(
-        FunctionName=_get_proxy_arn(),
-        InvocationType="RequestResponse",
-        Payload=json.dumps(payload).encode(),
-    )
+    try:
+        resp = _get_lambda_client().invoke(
+            FunctionName=_get_proxy_arn(),
+            InvocationType="RequestResponse",
+            Payload=json.dumps(payload).encode(),
+        )
+    except (ReadTimeoutError, ConnectTimeoutError) as exc:
+        raise AwsProxyError(
+            "TimeoutError", str(exc) or "Lambda invoke timed out"
+        ) from exc
 
     raw_payload = resp["Payload"].read()
     if not raw_payload:

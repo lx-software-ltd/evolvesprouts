@@ -1,6 +1,6 @@
 """Execute sales daily plan jobs (SQS worker).
 
-Time budget: the worker Lambda timeout is configured in CDK (typically **120s**)
+Time budget: the worker Lambda timeout is configured in CDK (typically **180s**)
 via ``SALES_DAILY_PLAN_LAMBDA_TIMEOUT_SECONDS``. OpenRouter completion is capped
 below that so status updates finish before the Lambda hard timeout.
 """
@@ -25,11 +25,11 @@ logger = get_logger(__name__)
 
 
 def _lambda_timeout_seconds() -> int:
-    raw = os.environ.get("SALES_DAILY_PLAN_LAMBDA_TIMEOUT_SECONDS", "120").strip()
+    raw = os.environ.get("SALES_DAILY_PLAN_LAMBDA_TIMEOUT_SECONDS", "180").strip()
     try:
         return max(30, int(raw))
     except ValueError:
-        return 120
+        return 180
 
 
 def _processing_stale_threshold() -> timedelta:
@@ -79,6 +79,10 @@ def process_sales_daily_plan_job(job_id: UUID) -> SalesDailyPlanWorkerOutcome:
                     extra={"job_id": str(job_id)},
                 )
                 return SalesDailyPlanWorkerOutcome(ack_sqs_message=False)
+            logger.warning(
+                "Sales daily plan job abandoned after worker timeout",
+                extra={"job_id": str(job_id)},
+            )
             set_audit_context(session, user_id=job.created_by, request_id=req_id)
             job_repo.mark_failed(
                 job,
