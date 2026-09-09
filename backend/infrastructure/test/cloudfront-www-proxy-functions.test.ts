@@ -86,9 +86,9 @@ function main(): void {
       "WWW_PROXY_ALLOWLIST_FUNCTION missing poll GET /results suffix rule",
     );
   }
-  if (!WWW_PROXY_ALLOWLIST_FUNCTION.includes(REQUIRED_POLL_CONTROL_SUFFIX)) {
+  if (!WWW_PROXY_ALLOWLIST_FUNCTION.includes("/contact-context")) {
     throw new Error(
-      "WWW_PROXY_ALLOWLIST_FUNCTION missing poll /control suffix rule",
+      "WWW_PROXY_ALLOWLIST_FUNCTION missing form GET /contact-context allowlist rule",
     );
   }
 

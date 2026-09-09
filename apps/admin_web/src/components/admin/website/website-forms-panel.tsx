@@ -1,5 +1,7 @@
 'use client';
 
+import { trainingFormRequiresContact } from '@shared-training/training-form-catalog';
+
 import { WebsiteAnswersPanel } from '@/components/admin/website/website-answers-panel';
 import {
   clearAdminFormAnswers,
@@ -16,7 +18,11 @@ export function WebsiteFormsPanel() {
       noun='form'
       listSummaries={async (signal) => {
         const items = await listAdminForms(signal);
-        return items.map((item) => ({ slug: item.formSlug, answerCount: item.answerCount }));
+        return items.map((item) => ({
+          slug: item.formSlug,
+          answerCount: item.answerCount,
+          requiresContact: trainingFormRequiresContact(item.formSlug),
+        }));
       }}
       listAnswers={listAdminFormAnswers}
       exportCsv={exportAdminFormAnswersCsv}

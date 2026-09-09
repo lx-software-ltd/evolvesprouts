@@ -12,15 +12,18 @@ describe('buildPersistBody', () => {
       question: 'How useful?',
       options: [{ value: 5, emoji: '🤩' }],
     };
-    const body = buildPersistBody({
-      formSlug: 'workshop-exit-feedback',
-      sessionId: '550e8400-e29b-41d4-a716-446655440000',
-      question,
-      answer: { ...emptyFormAnswerState(), ratingValue: 5 },
-    });
-    expect(body).toMatchObject({
+    expect(
+      buildPersistBody({
+        formSlug: 'workshop-exit-feedback',
+        sessionId: '550e8400-e29b-41d4-a716-446655440000',
+        question,
+        answer: { ...emptyFormAnswerState(), ratingValue: 5 },
+        contactId: '11111111-1111-4111-8111-111111111111',
+      }),
+    ).toMatchObject({
       questionType: 'rating',
       ratingValue: 5,
+      contactId: '11111111-1111-4111-8111-111111111111',
     });
   });
 

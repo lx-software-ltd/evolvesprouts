@@ -6,6 +6,20 @@ import {
   type WebsiteAnswersRow,
 } from '@/components/admin/website/website-answers-panel';
 
+vi.mock('@/lib/config', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/config')>();
+  return {
+    ...actual,
+    getTrainingSiteBaseUrl: () => 'https://training.example.com',
+  };
+});
+
+vi.mock('@/lib/entity-api', () => ({
+  searchEntityContactsForPicker: vi.fn(async () => [
+    { id: '11111111-1111-4111-8111-111111111111', label: 'Jane Doe · jane@example.com' },
+  ]),
+}));
+
 interface Row extends WebsiteAnswersRow {
   freeText: string;
 }
@@ -114,5 +128,58 @@ describe('WebsiteAnswersPanel', () => {
     await waitFor(() => {
       expect(props.listSummaries).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it('hides the contact picker for forms that do not require a contact', async () => {
+    renderPanel();
+    await screen.findByText('Alex');
+    expect(screen.queryByLabelText('Contact')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy link' })).toBeEnabled();
+  });
+
+  it('shows a contact picker and disables Copy link until a contact is selected', async () => {
+    renderPanel({
+      listSummaries: vi.fn().mockResolvedValue([
+        { slug: 'family-check-in', answerCount: 0, requiresContact: true },
+      ]),
+      listAnswers: vi.fn().mockResolvedValue({ items: [], nextCursor: null }),
+    });
+
+    const contactInput = await screen.findByLabelText('Contact');
+    expect(screen.getByRole('button', { name: 'Copy link' })).toBeDisabled();
+
+    fireEvent.change(contactInput, { target: { value: 'ja' } });
+    const option = await screen.findByRole('option', { name: 'Jane Doe · jane@example.com' });
+    fireEvent.click(option);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Copy link' })).toBeEnabled();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+        'https://training.example.com/forms/family-check-in/?contact=11111111-1111-4111-8111-111111111111',
+      );
+    });
+  });
+
+  it('shows stored contact id in the answer detail panel', async () => {
+    renderPanel({
+      listAnswers: vi.fn().mockResolvedValue({
+        items: [
+          {
+            ...ROWS[0],
+            contactId: '11111111-1111-4111-8111-111111111111',
+          },
+        ],
+        nextCursor: null,
+      }),
+    });
+    await screen.findByText('Alex');
+    fireEvent.click(screen.getByRole('button', { name: /name answer from session/ }));
+    const panel = await screen.findByTestId('admin-editor-panel');
+    expect(within(panel).getByText('Contact')).toBeInTheDocument();
+    expect(within(panel).getByText('11111111-1111-4111-8111-111111111111')).toBeInTheDocument();
   });
 });

@@ -56,6 +56,9 @@ function parseFormAnswerRow(value: unknown): AdminFormAnswerRow {
   if (typeof row.freeText === 'string') {
     parsed.freeText = row.freeText;
   }
+  if (typeof row.contactId === 'string' && row.contactId.trim()) {
+    parsed.contactId = row.contactId.trim();
+  }
   return parsed;
 }
 

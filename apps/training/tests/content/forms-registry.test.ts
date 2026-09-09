@@ -9,6 +9,7 @@ import {
   getFormContent,
   isValidFormSlug,
 } from '@/lib/forms';
+import { trainingFormRequiresContact } from '@/lib/training-form-catalog';
 
 describe('forms registry', () => {
   it('returns registered slugs and resolves content', () => {
@@ -40,8 +41,10 @@ describe('forms registry', () => {
       expect(registered.has(slug)).toBe(true);
       const raw = JSON.parse(readFileSync(path.join(dir, fileName), 'utf8')) as {
         slug: string;
+        requiresContact?: boolean;
       };
       expect(raw.slug).toBe(slug);
+      expect(trainingFormRequiresContact(slug)).toBe(raw.requiresContact === true);
     }
   });
 

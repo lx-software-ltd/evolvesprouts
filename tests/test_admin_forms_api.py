@@ -94,6 +94,7 @@ def test_list_form_answers_paginates_with_cursor(
                 "questionId": "name",
                 "questionType": "text",
                 "freeText": "Ada",
+                "contactId": "11111111-1111-4111-8111-111111111111",
                 "createdAt": "2026-01-01T10:00:00Z",
                 "updatedAt": "2026-01-02T10:00:00Z",
             },
@@ -132,6 +133,7 @@ def test_list_form_answers_paginates_with_cursor(
     first_body = json.loads(first["body"])
     assert len(first_body["items"]) == 1
     assert first_body["items"][0]["sessionId"] == "s-1"
+    assert first_body["items"][0]["contactId"] == "11111111-1111-4111-8111-111111111111"
     assert first_body["next_cursor"]
 
     second = admin_forms.handle_admin_forms_request(

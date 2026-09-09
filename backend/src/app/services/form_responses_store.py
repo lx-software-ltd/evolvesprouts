@@ -67,6 +67,7 @@ def upsert_form_answer(
     boolean_answer: bool | None = None,
     rating_value: int | None = None,
     free_text: str | None = None,
+    contact_id: str | None = None,
 ) -> dict[str, Any]:
     """Persist one question answer; overwrites prior value for the same session/question."""
     table = _get_table()
@@ -100,6 +101,12 @@ def upsert_form_answer(
             item["createdAt"] = existing["createdAt"]
         else:
             item["createdAt"] = now
+        resolved_contact_id = _resolve_stored_contact_id(
+            incoming=contact_id,
+            existing=existing,
+        )
+        if resolved_contact_id:
+            item["contactId"] = resolved_contact_id
         table.put_item(Item=item)
     except ClientError:
         logger.exception(
@@ -213,6 +220,9 @@ def serialize_form_answer_item(item: Mapping[str, Any]) -> dict[str, Any]:
     free_text = item.get("freeText")
     if isinstance(free_text, str):
         row["freeText"] = free_text
+    contact_id = item.get("contactId")
+    if isinstance(contact_id, str) and contact_id.strip():
+        row["contactId"] = contact_id.strip()
     return row
 
 
@@ -254,6 +264,21 @@ def clear_form_answers(*, form_slug: str) -> int:
         ) from None
 
     return len(items)
+
+
+def _resolve_stored_contact_id(
+    *,
+    incoming: str | None,
+    existing: Mapping[str, Any] | None,
+) -> str | None:
+    if isinstance(incoming, str) and incoming.strip():
+        return incoming.strip()
+    if not existing:
+        return None
+    prior = existing.get("contactId")
+    if isinstance(prior, str) and prior.strip():
+        return prior.strip()
+    return None
 
 
 def _extract_form_slug_from_item(item: Mapping[str, Any]) -> str | None:

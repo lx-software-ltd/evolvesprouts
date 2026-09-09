@@ -4,6 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { AdminPageErrorBanner } from '@/components/admin/admin-page-error-banner';
 import {
+  AdminContactSearchField,
+  type SelectedContactValue,
+} from '@/components/ui/admin-contact-search-field';
+import {
   AdminDataTableCell,
   AdminDataTableCellMeta,
   AdminDataTableHeadCell,
@@ -29,6 +33,7 @@ import { buildTrainingFormOrPollPageUrl } from '@/lib/public-site-page-urls';
 export interface WebsiteAnswersSummary {
   slug: string;
   answerCount: number;
+  requiresContact?: boolean;
 }
 
 export interface WebsiteAnswersRow {
@@ -36,6 +41,7 @@ export interface WebsiteAnswersRow {
   questionId: string;
   questionType: string;
   updatedAt: string;
+  contactId?: string;
 }
 
 export interface WebsiteAnswersPageParams {
@@ -85,6 +91,7 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
   const lowerNoun = noun;
   const [summaries, setSummaries] = useState<WebsiteAnswersSummary[]>([]);
   const [selectedSlug, setSelectedSlug] = useState('');
+  const [selectedContact, setSelectedContact] = useState<SelectedContactValue>({ status: 'empty' });
   const [summariesLoading, setSummariesLoading] = useState(true);
   const [summariesError, setSummariesError] = useState('');
   const [actionError, setActionError] = useState('');
@@ -100,6 +107,8 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
     () => summaries.find((item) => item.slug === selectedSlug) ?? null,
     [summaries, selectedSlug]
   );
+  const contactRequired = noun === 'form' && Boolean(selectedSummary?.requiresContact);
+  const selectedContactId = selectedContact.status === 'selected' ? selectedContact.id : '';
 
   const fetcher = useCallback(
     async (params: AnswerFilters & WebsiteAnswersPageParams) => {
@@ -171,11 +180,15 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
     if (!selectedSlug) {
       return;
     }
+    if (contactRequired && !selectedContactId) {
+      return;
+    }
     setActionError('');
     const url = buildTrainingFormOrPollPageUrl({
       baseUrl: trainingSiteBaseUrl,
       noun,
       slug: selectedSlug,
+      contactId: contactRequired ? selectedContactId : undefined,
     });
     if (!url) {
       setActionError(
@@ -235,6 +248,8 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
 
   const storedCount = selectedSummary?.answerCount ?? 0;
   const isFirstLoad = summariesLoading || (answersLoading && answers.length === 0);
+  const copyLinkDisabled =
+    !selectedSlug || !trainingSiteBaseUrl || (contactRequired && !selectedContactId);
 
   return (
     <div className='space-y-4'>
@@ -267,7 +282,7 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
                   type='button'
                   variant={isLinkCopied ? 'success' : 'outline'}
                   onClick={() => void handleCopyLink()}
-                  disabled={!selectedSlug || !trainingSiteBaseUrl}
+                  disabled={copyLinkDisabled}
                 >
                   {isLinkCopied ? 'Link copied' : 'Copy link'}
                 </Button>
@@ -299,6 +314,7 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
                 onChange={(event) => {
                   expanded.collapse();
                   setSelectedSlug(event.target.value);
+                  setSelectedContact({ status: 'empty' });
                 }}
                 disabled={summariesLoading || summaries.length === 0}
               >
@@ -313,6 +329,21 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
                 )}
               </Select>
             </AdminFilterField>
+            {contactRequired ? (
+              <AdminFilterField
+                label='Contact'
+                htmlFor={`website-${lowerNoun}s-contact`}
+                className='sm:basis-72'
+              >
+                <AdminContactSearchField
+                  inputId={`website-${lowerNoun}s-contact`}
+                  hideLabel
+                  value={selectedContact}
+                  onChange={setSelectedContact}
+                  disabled={summariesLoading}
+                />
+              </AdminFilterField>
+            ) : null}
           </AdminFilterBar>
         }
         head={
@@ -375,6 +406,13 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
                       <AdminReadOnlyValue label='Type'>{row.questionType}</AdminReadOnlyValue>
                       <AdminReadOnlyValue label='Updated'>{updatedLabel}</AdminReadOnlyValue>
                     </AdminFieldGrid>
+                    {row.contactId ? (
+                      <AdminFieldGrid columns={4}>
+                        <AdminReadOnlyValue label='Contact' mono>
+                          {row.contactId}
+                        </AdminReadOnlyValue>
+                      </AdminFieldGrid>
+                    ) : null}
                     <AdminFieldGrid columns={1}>
                       <AdminReadOnlyValue label='Answer'>
                         <span className='wrap-anywhere whitespace-pre-wrap'>{answerText}</span>

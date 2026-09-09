@@ -41,7 +41,11 @@ their primary responsibilities.
   `/v1/discounts/validate`,
   `/v1/contact-us`,
   `/v1/forms/{form_slug}/answers` (PUT; API key; persists training form answers to DynamoDB
-  `evolvesprouts-poll-responses`; same contract as `/www/v1/forms/{form_slug}/answers`),
+  `evolvesprouts-poll-responses`; optional `contactId` on the body stores which CRM contact
+  the session was personalised for; same contract as `/www/v1/forms/{form_slug}/answers`),
+  `/v1/forms/{form_slug}/contact-context` (GET; API key; `contactId` query; display-only
+  household placeholder strings for `{contactName}` / `{children.firstName}` / `{helpers.firstName}`
+  tokens; `Cache-Control: no-store`; same contract as `/www/v1/forms/{form_slug}/contact-context`),
   `/v1/polls/{poll_slug}/answers` (GET lists answers for `sessionId`; PUT upserts one answer;
   API key; DynamoDB `evolvesprouts-poll-responses`; validates options when control state
   publishes `questionOptions`; per-session hourly write rate limits; same contract as
@@ -181,8 +185,9 @@ their primary responsibilities.
   structured bill-to snapshots keep the trade `name` by design),
   `/v1/admin/forms` (lists form slugs with answer counts from DynamoDB
   `evolvesprouts-poll-responses`), `/v1/admin/forms/{form_slug}/answers`
-  (`GET` lists stored answer rows with cursor pagination; `DELETE` clears all rows for the form),
-  `/v1/admin/forms/{form_slug}/answers/export` (`GET`; CSV export),
+  (`GET` lists stored answer rows with cursor pagination, including optional `contactId`
+  when the session was personalised; `DELETE` clears all rows for the form),
+  `/v1/admin/forms/{form_slug}/answers/export` (`GET`; CSV export, includes Contact ID),
   `/v1/admin/polls` (lists poll slugs with answer counts from DynamoDB
   `evolvesprouts-poll-responses`), `/v1/admin/polls/{poll_slug}/answers`
   (`GET` lists stored answer rows with cursor pagination; `DELETE` clears all rows for the poll),

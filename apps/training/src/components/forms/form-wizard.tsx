@@ -21,10 +21,14 @@ import { FormApiError, persistFormAnswer } from '@/lib/forms-api';
 export interface FormWizardProps {
   form: FormContent;
   common: FormsCommonContent;
+  contactId?: string | null;
 }
 
-export function FormWizard({ form, common }: FormWizardProps) {
-  const sessionId = useMemo(() => getOrCreateFormSessionId(form.slug), [form.slug]);
+export function FormWizard({ form, common, contactId = null }: FormWizardProps) {
+  const sessionId = useMemo(
+    () => getOrCreateFormSessionId(form.slug, contactId),
+    [form.slug, contactId],
+  );
   const [stepIndex, setStepIndex] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -155,6 +159,7 @@ export function FormWizard({ form, common }: FormWizardProps) {
         sessionId,
         question: currentQuestion,
         answer: currentAnswer,
+        contactId,
       });
     } catch (error) {
       setErrorMessage(resolvePersistErrorMessage(error, common));

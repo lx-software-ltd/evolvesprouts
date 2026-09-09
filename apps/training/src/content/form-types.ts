@@ -77,6 +77,8 @@ export type FormQuestion =
 export interface FormContent {
   title: string;
   slug: string;
+  /** When true, admin Copy link / QR require a CRM contact and the page fills `{contactName}` tokens. */
+  requiresContact?: boolean;
   questions: FormQuestion[];
   completion?: {
     description?: string;

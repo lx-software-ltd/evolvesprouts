@@ -3737,6 +3737,69 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/forms/{form_slug}/contact-context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resolve display-only contact placeholders for a form
+         * @description Returns first names and household labels used to fill tokens such as `{contactName}`, `{contactFirstName}`, `{children.firstName}`, and `{helpers.firstName}` on a personalised training form. Does not return email, phone, or other CRM fields. Requires API key. Success and error responses set `Cache-Control: no-store` so CloudFront must not cache.
+         */
+        get: {
+            parameters: {
+                query: {
+                    /** @description CRM contact id from the personalised form link (`?contact=`). */
+                    contactId: string;
+                };
+                header?: never;
+                path: {
+                    form_slug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Placeholder map for the contact. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FormContactContextResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Contact not found. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Method not allowed. */
+                405: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/polls/{poll_slug}/answers": {
         parameters: {
             query?: never;
@@ -4352,6 +4415,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/www/v1/forms/{form_slug}/contact-context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resolve display-only contact placeholders (training website proxy path)
+         * @description Same as `GET /v1/forms/{form_slug}/contact-context` for same-origin calls from `apps/training`.
+         */
+        get: {
+            parameters: {
+                query: {
+                    contactId: string;
+                };
+                header?: never;
+                path: {
+                    form_slug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Placeholder map for the contact. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FormContactContextResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Contact not found. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Method not allowed. */
+                405: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/www/v1/polls/{poll_slug}/answers": {
         parameters: {
             query?: never;
@@ -4929,6 +5054,11 @@ export interface components {
             booleanAnswer?: boolean;
             /** @description Response body for `text`, `email`, and optional `consent` follow-up. */
             freeText?: string;
+            /**
+             * Format: uuid
+             * @description Optional CRM contact from the personalised form link. Stored on the answer row so admin can see which contact the session belonged to.
+             */
+            contactId?: string;
         };
         FormAnswerPutResponse: {
             formSlug: string;
@@ -4940,6 +5070,15 @@ export interface components {
              * @description UTC timestamp when the answer row was last written.
              */
             updatedAt: string;
+        };
+        FormContactContextResponse: {
+            formSlug: string;
+            /** Format: uuid */
+            contactId: string;
+            /** @description Token to display-string map. Keys include `contactName`, `contactFirstName`, `contactLastName`, `familyName`, `children.firstName`, `children.lastName`, `children.contactName`, `helpers.firstName`, `helpers.lastName`, and `helpers.contactName`. Missing household fields use English fallbacks (`there`, `your family`, `your child`, `your helper`). */
+            placeholders: {
+                [key: string]: string;
+            };
         };
         PollAnswerPutRequest: {
             /** @description Optional; when present must match the `{poll_slug}` path segment. */

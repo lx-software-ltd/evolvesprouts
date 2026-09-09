@@ -2,7 +2,16 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
+import {
+  parseTrainingFormSlugFromPath,
+  trainingFormRequiresContact,
+} from '@shared-training/training-form-catalog';
+
 import { PublicSiteQrExportPanel } from '@/components/admin/public-site-qr-export-panel';
+import {
+  AdminContactSearchField,
+  type SelectedContactValue,
+} from '@/components/ui/admin-contact-search-field';
 import { AdminEditorPanel } from '@/components/ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { AdminInlineError } from '@/components/ui/admin-inline-error';
@@ -57,6 +66,7 @@ export function WebsiteQrPage() {
   const [customPathInput, setCustomPathInput] = useState('');
   const [appendSrcQuery, setAppendSrcQuery] = useState(false);
   const [srcQueryValue, setSrcQueryValue] = useState('');
+  const [selectedContact, setSelectedContact] = useState<SelectedContactValue>({ status: 'empty' });
   const isCustom = presetValue === CUSTOM_PRESET_VALUE;
   const isTrainingSite = siteTarget === 'training';
   const baseUrl = isTrainingSite ? trainingSiteBaseUrl : publicSiteBaseUrl;
@@ -92,24 +102,37 @@ export function WebsiteQrPage() {
     });
   }, [baseUrl, isTrainingSite, locale, normalizedPathResult.error, normalizedPathResult.path]);
 
+  const trainingFormSlug = useMemo(() => {
+    if (!isTrainingSite || !normalizedPathResult.path) {
+      return null;
+    }
+    return parseTrainingFormSlugFromPath(normalizedPathResult.path);
+  }, [isTrainingSite, normalizedPathResult.path]);
+
+  const contactRequired = Boolean(
+    trainingFormSlug && trainingFormRequiresContact(trainingFormSlug),
+  );
+
   const builtUrlForQr = useMemo(() => {
     if (!builtUrl) {
       return '';
     }
-    if (!appendSrcQuery) {
-      return builtUrl;
-    }
-    if (!normalizedSrcForQuery) {
-      return builtUrl;
+    if (contactRequired && selectedContact.status !== 'selected') {
+      return '';
     }
     try {
       const url = new URL(builtUrl);
-      url.searchParams.set('src', normalizedSrcForQuery);
+      if (contactRequired && selectedContact.status === 'selected') {
+        url.searchParams.set('contact', selectedContact.id);
+      }
+      if (appendSrcQuery && normalizedSrcForQuery) {
+        url.searchParams.set('src', normalizedSrcForQuery);
+      }
       return url.toString();
     } catch {
       return builtUrl;
     }
-  }, [appendSrcQuery, builtUrl, normalizedSrcForQuery]);
+  }, [appendSrcQuery, builtUrl, contactRequired, normalizedSrcForQuery, selectedContact]);
 
   const pathForAnalytics = normalizedPathResult.path || '';
 
@@ -131,6 +154,10 @@ export function WebsiteQrPage() {
     : '';
 
   const pathError = normalizedPathResult.error;
+  const contactError =
+    contactRequired && selectedContact.status !== 'selected'
+      ? 'Select a contact to generate a personalised form QR code.'
+      : '';
 
   const downloadLocaleSuffix = isTrainingSite ? 'training' : locale;
   const downloadBase = `${normalizedSrcForQuery ? `${normalizedSrcForQuery}-` : ''}page-${pathToDownloadBase(normalizedPathResult.path || '/')}-${downloadLocaleSuffix}`;
@@ -150,6 +177,7 @@ export function WebsiteQrPage() {
                 setSiteTarget(nextSite);
                 setPresetValue(defaultPresetForSite(nextSite));
                 setCustomPathInput('');
+                setSelectedContact({ status: 'empty' });
               }}
             >
               {QR_SITE_TARGET_OPTIONS.map((option) => (
@@ -174,6 +202,7 @@ export function WebsiteQrPage() {
               onChange={(event) => {
                 const next = event.target.value;
                 setPresetValue(next);
+                setSelectedContact({ status: 'empty' });
               }}
               disabled={Boolean(configError)}
             >
@@ -231,6 +260,26 @@ export function WebsiteQrPage() {
             </AdminField>
           ) : null}
         </AdminFieldGrid>
+        {contactRequired ? (
+          <AdminFieldGrid columns={4}>
+            <AdminField
+              label='Contact'
+              htmlFor='website-qr-form-contact'
+              span={2}
+              hint='Required for this form. The QR URL includes the selected contact.'
+              error={contactError || undefined}
+              errorId='website-qr-form-contact-error'
+            >
+              <AdminContactSearchField
+                inputId='website-qr-form-contact'
+                hideLabel
+                value={selectedContact}
+                onChange={setSelectedContact}
+                disabled={Boolean(configError) || Boolean(pathError)}
+              />
+            </AdminField>
+          </AdminFieldGrid>
+        ) : null}
         {!isCustom && pathError ? <AdminInlineError>{pathError}</AdminInlineError> : null}
         <AdminFieldGrid columns={4}>
           <AdminField span={2}>
@@ -275,7 +324,7 @@ export function WebsiteQrPage() {
           ) : null}
         </AdminFieldGrid>
         <PublicSiteQrExportPanel
-          builtUrl={builtUrl && !pathError ? builtUrlForQr : ''}
+          builtUrl={builtUrl && !pathError && !contactError ? builtUrlForQr : ''}
           configError={configError}
           previewAriaLabel={`QR code preview for ${isTrainingSite ? 'training' : 'public'} page ${pathForAnalytics || '/'}`}
           downloadFilenameBase={downloadBase}

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 
 import { FormPage } from '@/components/forms/form-page';
 import {
@@ -46,5 +47,9 @@ export default async function FormRoutePage({ params }: FormRouteProps) {
     notFound();
   }
 
-  return <FormPage form={form} common={FORMS_COMMON} />;
+  return (
+    <Suspense fallback={null}>
+      <FormPage form={form} common={FORMS_COMMON} />
+    </Suspense>
+  );
 }
