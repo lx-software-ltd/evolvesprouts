@@ -539,6 +539,11 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | `/v1/public/meta/conversations/{id}/messages` | GET | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token message reads without scoped ids |
 | `/v1/public/contacts` | GET, POST | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token contact list/create; `user` GET only |
 | `/v1/public/contacts/{id}` | GET, PATCH, DELETE | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token contact get/update/delete; `user` GET only |
+| `/v1/public/services` | GET, POST | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token service list/create; `user` GET only |
+| `/v1/public/services/instances` | GET | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Cross-service instance list; `user` GET only |
+| `/v1/public/services/{id}` | GET, PUT, PATCH, DELETE | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token service get/update/delete; `user` GET only |
+| `/v1/public/services/{id}/instances` | GET, POST | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Nested instance list/create; `user` GET only |
+| `/v1/public/services/{id}/instances/{instance_id}` | GET, PUT, DELETE | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Nested instance get/update/delete; `user` GET only |
 | `/v1/admin/assets` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | |
 | `/v1/admin/assets/{id}` | GET, PUT, PATCH, DELETE | Admin Group | `EvolvesproutsAdminFunction` | |
 | `/v1/admin/assets/{id}/grants` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | |

@@ -2225,6 +2225,608 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List services (token API)
+         * @description Returns service templates for a hashed API token (`x-api-token`).
+         *     Payloads match `GET /v1/admin/services`. Cover-image upload and
+         *     discount-code usage summary are not exposed.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    cursor?: string;
+                    service_type?: components["schemas"]["PublicServiceType"];
+                    status?: components["schemas"]["PublicServiceStatus"];
+                    search?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Service list. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicServiceListResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Missing or invalid API token. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        put?: never;
+        /**
+         * Create service (token API)
+         * @description Requires an `admin` scoped API token. `user` tokens receive `403`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreatePublicServiceRequest"];
+                };
+            };
+            responses: {
+                /** @description Service created. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicServiceResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Missing or invalid API token. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/services/instances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List service instances across services (token API)
+         * @description Returns service instances across all services for a hashed API token
+         *     (`x-api-token`). Payloads match `GET /v1/admin/services/instances`.
+         *     Nested enrollments are not exposed.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    cursor?: string;
+                    status?: components["schemas"]["PublicInstanceStatus"];
+                    /** @description When set, only instances for this service UUID. */
+                    service_id?: string;
+                    /** @description When set, only instances whose parent service has this type. */
+                    service_type?: components["schemas"]["PublicServiceType"];
+                    contact_id?: string;
+                    family_id?: string;
+                    organization_id?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Service instance list. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicInstanceListResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Missing or invalid API token. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/services/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Get service (token API) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Service response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicServiceResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Missing or invalid API token. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        /**
+         * Update service (token API)
+         * @description Requires an `admin` scoped API token.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdatePublicServiceRequest"];
+                };
+            };
+            responses: {
+                /** @description Service response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicServiceResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Missing or invalid API token. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+                /** @description Service key and service tier conflict with another service. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Delete service (token API)
+         * @description Requires an `admin` scoped API token. Returns 409 when instances exist.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Service deleted. */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Missing or invalid API token. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+                /** @description Service has instances and cannot be deleted. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Partially update service (token API)
+         * @description Requires an `admin` scoped API token.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PartialUpdatePublicServiceRequest"];
+                };
+            };
+            responses: {
+                /** @description Service response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicServiceResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Missing or invalid API token. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+                /** @description Service key and service tier conflict with another service. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/v1/public/services/{id}/instances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** List instances for a service (token API) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Service instance list. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicInstanceListResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Missing or invalid API token. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        put?: never;
+        /**
+         * Create service instance (token API)
+         * @description Creates a service instance under the parent service. Requires an `admin`
+         *     scoped API token. Duplicate instance slugs return 409 with `field: slug`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreatePublicInstanceRequest"];
+                };
+            };
+            responses: {
+                /** @description Service instance created. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicInstanceResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Missing or invalid API token. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+                /** @description Another instance already uses this slug. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/services/{id}/instances/{instance_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                instance_id: string;
+            };
+            cookie?: never;
+        };
+        /** Get service instance (token API) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    instance_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Service instance response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicInstanceResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Missing or invalid API token. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        /**
+         * Update service instance (token API)
+         * @description Requires an `admin` scoped API token. When `status` is set to `completed`,
+         *     every enrollment on the instance that is still `registered` or `confirmed`
+         *     is updated to `completed` in the same request.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    instance_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdatePublicInstanceRequest"];
+                };
+            };
+            responses: {
+                /** @description Service instance response. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicInstanceResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Missing or invalid API token. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+                /** @description Another instance already uses this slug. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Delete service instance (token API)
+         * @description Requires an `admin` scoped API token.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    instance_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Service instance deleted. */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                400: components["responses"]["BadRequest"];
+                /** @description Missing or invalid API token. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/assets/free": {
         parameters: {
             query?: never;
@@ -4873,6 +5475,269 @@ export interface components {
         PublicGeographicAreaListResponse: {
             items: components["schemas"]["PublicGeographicArea"][];
         };
+        /** @enum {string} */
+        PublicInstanceStatus: "scheduled" | "open" | "full" | "in_progress" | "completed" | "cancelled";
+        /** @enum {string} */
+        PublicServiceType: "training_course" | "event" | "consultation" | "intro_call";
+        /** @enum {string} */
+        PublicServiceDeliveryMode: "online" | "in_person" | "hybrid";
+        /** @enum {string} */
+        PublicEventbriteSyncStatus: "pending" | "syncing" | "synced" | "failed" | "skipped";
+        /** @enum {string} */
+        PublicTrainingFormat: "group" | "private";
+        /** @enum {string} */
+        PublicTrainingPricingUnit: "per_person" | "per_family";
+        /** @enum {string} */
+        PublicConsultationPricingModel: "free" | "hourly" | "package";
+        /** @enum {string} */
+        PublicServiceStatus: "draft" | "published" | "archived";
+        /** @enum {string} */
+        PublicEventCategory: "workshop" | "webinar" | "open_house" | "community_meetup" | "other";
+        /** @enum {string} */
+        PublicConsultationFormat: "one_on_one" | "group";
+        PublicServiceTrainingDetails: {
+            pricing_unit?: components["schemas"]["PublicTrainingPricingUnit"];
+            default_price?: string | null;
+            default_currency?: string | null;
+        };
+        PublicServiceEventDetails: {
+            event_category?: components["schemas"]["PublicEventCategory"];
+            default_price?: string | null;
+            default_currency?: string | null;
+        };
+        PublicServiceConsultationDetails: {
+            consultation_format?: components["schemas"]["PublicConsultationFormat"];
+            max_group_size?: number | null;
+            duration_minutes?: number | null;
+            pricing_model?: components["schemas"]["PublicConsultationPricingModel"];
+            default_hourly_rate?: string | null;
+            default_package_price?: string | null;
+            default_package_sessions?: number | null;
+            default_currency?: string | null;
+        };
+        PublicServiceSummary: {
+            /** Format: uuid */
+            id: string;
+            service_type: components["schemas"]["PublicServiceType"];
+            title: string;
+            service_key?: string | null;
+            booking_system?: string | null;
+            description?: string | null;
+            cover_image_s3_key?: string | null;
+            delivery_mode: components["schemas"]["PublicServiceDeliveryMode"];
+            status: components["schemas"]["PublicServiceStatus"];
+            service_tier?: string | null;
+            /** Format: uuid */
+            location_id?: string | null;
+            created_by?: string;
+            /** Format: date-time */
+            created_at?: string | null;
+            /** Format: date-time */
+            updated_at?: string | null;
+            training_details?: components["schemas"]["PublicServiceTrainingDetails"] | null;
+            event_details?: components["schemas"]["PublicServiceEventDetails"] | null;
+            consultation_details?: components["schemas"]["PublicServiceConsultationDetails"] | null;
+            instances_count: number;
+        };
+        PublicService: components["schemas"]["PublicServiceSummary"] & {
+            tag_ids?: string[];
+            asset_ids?: string[];
+        };
+        PublicServiceListResponse: {
+            items: components["schemas"]["PublicServiceSummary"][];
+            next_cursor?: string | null;
+            total_count: number;
+        };
+        PublicServiceResponse: {
+            service: components["schemas"]["PublicService"];
+        };
+        CreatePublicServiceRequest: {
+            service_type: components["schemas"]["PublicServiceType"];
+            title: string;
+            service_key?: string | null;
+            booking_system?: string | null;
+            description?: string | null;
+            cover_image_s3_key?: string | null;
+            delivery_mode: components["schemas"]["PublicServiceDeliveryMode"];
+            status?: components["schemas"]["PublicServiceStatus"];
+            service_tier?: string | null;
+            /** Format: uuid */
+            location_id?: string | null;
+            tag_ids?: string[];
+            asset_ids?: string[];
+            training_details?: components["schemas"]["PublicServiceTrainingDetails"];
+            event_details?: components["schemas"]["PublicServiceEventDetails"];
+            consultation_details?: components["schemas"]["PublicServiceConsultationDetails"];
+        };
+        UpdatePublicServiceRequest: components["schemas"]["CreatePublicServiceRequest"];
+        PartialUpdatePublicServiceRequest: {
+            title?: string;
+            service_key?: string | null;
+            booking_system?: string | null;
+            description?: string | null;
+            cover_image_s3_key?: string | null;
+            delivery_mode?: components["schemas"]["PublicServiceDeliveryMode"];
+            status?: components["schemas"]["PublicServiceStatus"];
+            service_tier?: string | null;
+            /** Format: uuid */
+            location_id?: string | null;
+            tag_ids?: string[];
+            asset_ids?: string[];
+            training_details?: components["schemas"]["PublicServiceTrainingDetails"];
+            event_details?: components["schemas"]["PublicServiceEventDetails"];
+            consultation_details?: components["schemas"]["PublicServiceConsultationDetails"];
+        };
+        PublicSessionSlot: {
+            /** Format: uuid */
+            id?: string | null;
+            /** Format: uuid */
+            instance_id?: string | null;
+            /** Format: uuid */
+            purpose_service_id?: string | null;
+            /** Format: uuid */
+            location_id?: string | null;
+            /** Format: date-time */
+            starts_at?: string | null;
+            /** Format: date-time */
+            ends_at?: string | null;
+            sort_order?: number | null;
+        };
+        PublicEventTicketTier: {
+            /** Format: uuid */
+            id?: string | null;
+            /** Format: uuid */
+            instance_id?: string | null;
+            name?: string | null;
+            description?: string | null;
+            price?: string | null;
+            currency?: string | null;
+            max_quantity?: number | null;
+            sort_order?: number | null;
+        };
+        PublicInstancePartnerOrganization: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            archived: boolean;
+            /** Format: uuid */
+            location_id?: string | null;
+        };
+        PublicServiceInstance: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            service_id: string;
+            title?: string | null;
+            slug: string;
+            description?: string | null;
+            cover_image_s3_key?: string | null;
+            status: components["schemas"]["PublicInstanceStatus"];
+            delivery_mode?: components["schemas"]["PublicServiceDeliveryMode"];
+            /** Format: uuid */
+            location_id?: string | null;
+            max_capacity?: number | null;
+            capacity_enrolled_count?: number;
+            capacity_left_override?: number | null;
+            readonly capacity_left_effective?: number | null;
+            waitlist_enabled?: boolean;
+            eventbrite_sync_status: components["schemas"]["PublicEventbriteSyncStatus"];
+            /** Format: uri */
+            external_url?: string | null;
+            partner_organizations?: components["schemas"]["PublicInstancePartnerOrganization"][];
+            instructor_id?: string | null;
+            cohort?: string | null;
+            notes?: string | null;
+            tags?: components["schemas"]["PublicTagRef"][];
+            tag_ids?: string[];
+            created_by?: string;
+            /** Format: date-time */
+            created_at?: string | null;
+            /** Format: date-time */
+            updated_at?: string | null;
+            resolved_title?: string | null;
+            resolved_description?: string | null;
+            resolved_cover_image_s3_key?: string | null;
+            resolved_delivery_mode?: string | null;
+            resolved_slug: string;
+            /** Format: uuid */
+            resolved_location_id?: string | null;
+            resolved_training_details?: {
+                training_format?: components["schemas"]["PublicTrainingFormat"];
+                price?: string;
+                currency?: string;
+                pricing_unit?: components["schemas"]["PublicTrainingPricingUnit"];
+            } | null;
+            resolved_event_ticket_tiers?: components["schemas"]["PublicEventTicketTier"][];
+            resolved_consultation_details?: {
+                pricing_model?: components["schemas"]["PublicConsultationPricingModel"];
+                price?: string | null;
+                currency?: string;
+                package_sessions?: number | null;
+            } | null;
+            session_slots?: components["schemas"]["PublicSessionSlot"][];
+            training_details?: {
+                training_format?: components["schemas"]["PublicTrainingFormat"];
+                price?: string;
+                currency?: string;
+                pricing_unit?: components["schemas"]["PublicTrainingPricingUnit"];
+            } | null;
+            event_ticket_tiers?: components["schemas"]["PublicEventTicketTier"][];
+            consultation_details?: {
+                pricing_model?: components["schemas"]["PublicConsultationPricingModel"];
+                price?: string | null;
+                currency?: string;
+                package_sessions?: number | null;
+            } | null;
+            parent_service_title?: string | null;
+            parent_service_tier?: string | null;
+            parent_service_type?: components["schemas"]["PublicServiceType"] | null;
+            parent_service_key?: string | null;
+        };
+        PublicInstanceListResponse: {
+            items: components["schemas"]["PublicServiceInstance"][];
+            next_cursor?: string | null;
+            total_count: number;
+        };
+        PublicInstanceResponse: {
+            instance: components["schemas"]["PublicServiceInstance"];
+        };
+        /** @description Instance create body for `POST /v1/public/services/{id}/instances`. `slug` is required (400 with `field: slug` when missing or invalid). Duplicate instance slugs return 409 with `field: slug`. */
+        CreatePublicInstanceRequest: {
+            title?: string | null;
+            slug: string;
+            description?: string | null;
+            cover_image_s3_key?: string | null;
+            status?: components["schemas"]["PublicInstanceStatus"];
+            delivery_mode?: components["schemas"]["PublicServiceDeliveryMode"];
+            /** Format: uuid */
+            location_id?: string | null;
+            max_capacity?: number | null;
+            capacity_left_override?: number | null;
+            waitlist_enabled?: boolean;
+            /** Format: uri */
+            external_url?: string | null;
+            partner_organization_ids?: string[];
+            instructor_id?: string | null;
+            cohort?: string | null;
+            notes?: string | null;
+            tag_ids?: string[];
+            session_slots?: components["schemas"]["PublicSessionSlot"][];
+            training_details?: {
+                training_format?: components["schemas"]["PublicTrainingFormat"];
+                price?: string;
+                currency?: string;
+                pricing_unit?: components["schemas"]["PublicTrainingPricingUnit"];
+            } | null;
+            event_ticket_tiers?: components["schemas"]["PublicEventTicketTier"][];
+            consultation_details?: {
+                pricing_model?: components["schemas"]["PublicConsultationPricingModel"];
+                price?: string | null;
+                currency?: string;
+                package_sessions?: number | null;
+            } | null;
+        };
+        /** @description Clearing `slug` to null returns 400 with `field: slug`. */
+        UpdatePublicInstanceRequest: WithRequired<components["schemas"]["CreatePublicInstanceRequest"], "status">;
         ReservationSubmissionAccepted: {
             message: string;
             /** @description True when the Stripe PaymentIntent was already linked to a customer payment. */
@@ -4967,4 +5832,7 @@ export interface components {
     pathItems: never;
 }
 export type $defs = Record<string, never>;
+type WithRequired<T, K extends keyof T> = T & {
+    [P in K]-?: T[P];
+};
 export type operations = Record<string, never>;

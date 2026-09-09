@@ -296,17 +296,19 @@ def _create_instance(
 def _get_instance(
     event: Mapping[str, Any],
     *,
-    service_id: UUID,
     instance_id: UUID,
+    service_id: UUID | None = None,
 ) -> dict[str, Any]:
     logger.info(
         "Getting service instance",
-        extra={"service_id": str(service_id), "instance_id": str(instance_id)},
+        extra={"instance_id": str(instance_id)},
     )
     with Session(get_engine()) as session:
         repository = ServiceInstanceRepository(session)
         instance = repository.get_by_id_with_details(instance_id)
-        if instance is None or instance.service_id != service_id:
+        if instance is None or (
+            service_id is not None and instance.service_id != service_id
+        ):
             raise NotFoundError("ServiceInstance", str(instance_id))
         bulk_reconcile_instance_capacity_status(session, [instance])
         enrollment_counts = _capacity_commit_and_counts(

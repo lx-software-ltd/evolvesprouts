@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Public API
-  version: 0.6.0
+  version: 0.8.0
   description: |
     Public endpoint contract.
 
@@ -51,15 +51,17 @@ info:
       `user` tokens are GET only; `admin` tokens may create, update, and delete.
       Payloads match the admin contact contract (including email, phone, and
       date of birth). Standalone contact notes are exposed at
-      `/v1/public/contacts/{id}/notes`. Services and Mailchimp sync jobs are
-      not exposed.
-    - Token-authenticated CRM families, organisations, locations, and
-      geographic areas under `/v1/public/families`, `/v1/public/organizations`,
-      `/v1/public/locations`, and `/v1/public/geographic-areas`. Same
+      `/v1/public/contacts/{id}/notes`. Contact purchased-service labels and
+      Mailchimp sync jobs are not exposed.
+    - Token-authenticated CRM families, organisations, locations, geographic
+      areas, and services under `/v1/public/families`,
+      `/v1/public/organizations`, `/v1/public/locations`,
+      `/v1/public/geographic-areas`, and `/v1/public/services`. Same
       `x-api-token` scopes as contacts (`user` GET only; `admin` may write).
-      Payloads match the corresponding admin contracts. Family/organisation
-      services and location delete are not exposed. Geographic areas are
-      GET only.
+      Payloads and route nesting match the corresponding admin contracts.
+      Family/organisation purchased-service labels, instance enrollments,
+      cover-image upload, discount-code usage summary, and location delete
+      are not exposed. Geographic areas are GET only.
 
 servers:
   - url: https://api.evolvesprouts.com
@@ -1612,6 +1614,466 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
           $ref: "#/components/responses/Forbidden"
+
+  /v1/public/services:
+    get:
+      summary: List services (token API)
+      description: |
+        Returns service templates for a hashed API token (`x-api-token`).
+        Payloads match `GET /v1/admin/services`. Cover-image upload and
+        discount-code usage summary are not exposed.
+      security:
+        - ApiTokenAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: service_type
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/PublicServiceType"
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/PublicServiceStatus"
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Service list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicServiceListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      summary: Create service (token API)
+      description: Requires an `admin` scoped API token. `user` tokens receive `403`.
+      security:
+        - ApiTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePublicServiceRequest"
+      responses:
+        "201":
+          description: Service created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicServiceResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/public/services/instances:
+    get:
+      summary: List service instances across services (token API)
+      description: |
+        Returns service instances across all services for a hashed API token
+        (`x-api-token`). Payloads match `GET /v1/admin/services/instances`.
+        Nested enrollments are not exposed.
+      security:
+        - ApiTokenAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/PublicInstanceStatus"
+        - name: service_id
+          in: query
+          required: false
+          description: When set, only instances for this service UUID.
+          schema:
+            type: string
+            format: uuid
+        - name: service_type
+          in: query
+          required: false
+          description: When set, only instances whose parent service has this type.
+          schema:
+            $ref: "#/components/schemas/PublicServiceType"
+        - name: contact_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: family_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: organization_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Service instance list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicInstanceListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/public/services/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get service (token API)
+      security:
+        - ApiTokenAuth: []
+      responses:
+        "200":
+          description: Service response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicServiceResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      summary: Update service (token API)
+      description: Requires an `admin` scoped API token.
+      security:
+        - ApiTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePublicServiceRequest"
+      responses:
+        "200":
+          description: Service response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicServiceResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Service key and service tier conflict with another service.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Partially update service (token API)
+      description: Requires an `admin` scoped API token.
+      security:
+        - ApiTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartialUpdatePublicServiceRequest"
+      responses:
+        "200":
+          description: Service response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicServiceResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Service key and service tier conflict with another service.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: Delete service (token API)
+      description: Requires an `admin` scoped API token. Returns 409 when instances exist.
+      security:
+        - ApiTokenAuth: []
+      responses:
+        "204":
+          description: Service deleted.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Service has instances and cannot be deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /v1/public/services/{id}/instances:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: List instances for a service (token API)
+      security:
+        - ApiTokenAuth: []
+      responses:
+        "200":
+          description: Service instance list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicInstanceListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      summary: Create service instance (token API)
+      description: |
+        Creates a service instance under the parent service. Requires an `admin`
+        scoped API token. Duplicate instance slugs return 409 with `field: slug`.
+      security:
+        - ApiTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePublicInstanceRequest"
+      responses:
+        "201":
+          description: Service instance created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicInstanceResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Another instance already uses this slug.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /v1/public/services/{id}/instances/{instance_id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: instance_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get service instance (token API)
+      security:
+        - ApiTokenAuth: []
+      responses:
+        "200":
+          description: Service instance response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicInstanceResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      summary: Update service instance (token API)
+      description: |
+        Requires an `admin` scoped API token. When `status` is set to `completed`,
+        every enrollment on the instance that is still `registered` or `confirmed`
+        is updated to `completed` in the same request.
+      security:
+        - ApiTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePublicInstanceRequest"
+      responses:
+        "200":
+          description: Service instance response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicInstanceResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Another instance already uses this slug.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: Delete service instance (token API)
+      description: Requires an `admin` scoped API token.
+      security:
+        - ApiTokenAuth: []
+      responses:
+        "204":
+          description: Service instance deleted.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid API token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /v1/assets/free:
     get:
@@ -5328,6 +5790,674 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PublicGeographicArea"
+    PublicInstanceStatus:
+      type: string
+      enum: [scheduled, open, full, in_progress, completed, cancelled]
+    PublicServiceType:
+      type: string
+      enum: [training_course, event, consultation, intro_call]
+    PublicServiceDeliveryMode:
+      type: string
+      enum: [online, in_person, hybrid]
+    PublicEventbriteSyncStatus:
+      type: string
+      enum: [pending, syncing, synced, failed, skipped]
+    PublicTrainingFormat:
+      type: string
+      enum: [group, private]
+    PublicTrainingPricingUnit:
+      type: string
+      enum: [per_person, per_family]
+    PublicConsultationPricingModel:
+      type: string
+      enum: [free, hourly, package]
+    PublicServiceStatus:
+      type: string
+      enum: [draft, published, archived]
+    PublicEventCategory:
+      type: string
+      enum: [workshop, webinar, open_house, community_meetup, other]
+    PublicConsultationFormat:
+      type: string
+      enum: [one_on_one, group]
+    PublicServiceTrainingDetails:
+      type: object
+      properties:
+        pricing_unit:
+          $ref: "#/components/schemas/PublicTrainingPricingUnit"
+        default_price:
+          type: string
+          nullable: true
+        default_currency:
+          type: string
+          nullable: true
+    PublicServiceEventDetails:
+      type: object
+      properties:
+        event_category:
+          $ref: "#/components/schemas/PublicEventCategory"
+        default_price:
+          type: string
+          nullable: true
+        default_currency:
+          type: string
+          nullable: true
+    PublicServiceConsultationDetails:
+      type: object
+      properties:
+        consultation_format:
+          $ref: "#/components/schemas/PublicConsultationFormat"
+        max_group_size:
+          type: integer
+          nullable: true
+        duration_minutes:
+          type: integer
+          nullable: true
+        pricing_model:
+          $ref: "#/components/schemas/PublicConsultationPricingModel"
+        default_hourly_rate:
+          type: string
+          nullable: true
+        default_package_price:
+          type: string
+          nullable: true
+        default_package_sessions:
+          type: integer
+          nullable: true
+        default_currency:
+          type: string
+          nullable: true
+    PublicServiceSummary:
+      type: object
+      required:
+        - id
+        - service_type
+        - title
+        - delivery_mode
+        - status
+        - instances_count
+      properties:
+        id:
+          type: string
+          format: uuid
+        service_type:
+          $ref: "#/components/schemas/PublicServiceType"
+        title:
+          type: string
+        service_key:
+          type: string
+          nullable: true
+          maxLength: 80
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+        booking_system:
+          type: string
+          nullable: true
+          maxLength: 80
+        description:
+          type: string
+          nullable: true
+        cover_image_s3_key:
+          type: string
+          nullable: true
+        delivery_mode:
+          $ref: "#/components/schemas/PublicServiceDeliveryMode"
+        status:
+          $ref: "#/components/schemas/PublicServiceStatus"
+        service_tier:
+          type: string
+          nullable: true
+          maxLength: 128
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_by:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        training_details:
+          allOf:
+            - $ref: "#/components/schemas/PublicServiceTrainingDetails"
+          nullable: true
+        event_details:
+          allOf:
+            - $ref: "#/components/schemas/PublicServiceEventDetails"
+          nullable: true
+        consultation_details:
+          allOf:
+            - $ref: "#/components/schemas/PublicServiceConsultationDetails"
+          nullable: true
+        instances_count:
+          type: integer
+          minimum: 0
+    PublicService:
+      allOf:
+        - $ref: "#/components/schemas/PublicServiceSummary"
+        - type: object
+          properties:
+            tag_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+            asset_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+    PublicServiceListResponse:
+      type: object
+      required: [items, total_count]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicServiceSummary"
+        next_cursor:
+          type: string
+          nullable: true
+        total_count:
+          type: integer
+    PublicServiceResponse:
+      type: object
+      required: [service]
+      properties:
+        service:
+          $ref: "#/components/schemas/PublicService"
+    CreatePublicServiceRequest:
+      type: object
+      required: [service_type, title, delivery_mode]
+      properties:
+        service_type:
+          $ref: "#/components/schemas/PublicServiceType"
+        title:
+          type: string
+        service_key:
+          type: string
+          nullable: true
+          maxLength: 80
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+        booking_system:
+          type: string
+          nullable: true
+          maxLength: 80
+        description:
+          type: string
+          nullable: true
+        cover_image_s3_key:
+          type: string
+          nullable: true
+        delivery_mode:
+          $ref: "#/components/schemas/PublicServiceDeliveryMode"
+        status:
+          $ref: "#/components/schemas/PublicServiceStatus"
+        service_tier:
+          type: string
+          nullable: true
+          maxLength: 128
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        asset_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        training_details:
+          $ref: "#/components/schemas/PublicServiceTrainingDetails"
+        event_details:
+          $ref: "#/components/schemas/PublicServiceEventDetails"
+        consultation_details:
+          $ref: "#/components/schemas/PublicServiceConsultationDetails"
+    UpdatePublicServiceRequest:
+      allOf:
+        - $ref: "#/components/schemas/CreatePublicServiceRequest"
+    PartialUpdatePublicServiceRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title:
+          type: string
+        service_key:
+          type: string
+          nullable: true
+          maxLength: 80
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+        booking_system:
+          type: string
+          nullable: true
+          maxLength: 80
+        description:
+          type: string
+          nullable: true
+        cover_image_s3_key:
+          type: string
+          nullable: true
+        delivery_mode:
+          $ref: "#/components/schemas/PublicServiceDeliveryMode"
+        status:
+          $ref: "#/components/schemas/PublicServiceStatus"
+        service_tier:
+          type: string
+          nullable: true
+          maxLength: 128
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        asset_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        training_details:
+          $ref: "#/components/schemas/PublicServiceTrainingDetails"
+        event_details:
+          $ref: "#/components/schemas/PublicServiceEventDetails"
+        consultation_details:
+          $ref: "#/components/schemas/PublicServiceConsultationDetails"
+    PublicSessionSlot:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+        instance_id:
+          type: string
+          format: uuid
+          nullable: true
+        purpose_service_id:
+          type: string
+          format: uuid
+          nullable: true
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        starts_at:
+          type: string
+          format: date-time
+          nullable: true
+        ends_at:
+          type: string
+          format: date-time
+          nullable: true
+        sort_order:
+          type: integer
+          nullable: true
+    PublicEventTicketTier:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+        instance_id:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        price:
+          type: string
+          nullable: true
+          pattern: ^-?\d+(\.\d{1,2})?$
+        currency:
+          type: string
+          nullable: true
+          minLength: 3
+          maxLength: 3
+          pattern: ^[A-Z]{3}$
+        max_quantity:
+          type: integer
+          nullable: true
+        sort_order:
+          type: integer
+          nullable: true
+    PublicInstancePartnerOrganization:
+      type: object
+      required: [id, name, archived]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        archived:
+          type: boolean
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+    PublicServiceInstance:
+      type: object
+      required: [id, service_id, status, slug, resolved_slug, eventbrite_sync_status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        service_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          nullable: true
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        cover_image_s3_key:
+          type: string
+          nullable: true
+        status:
+          $ref: "#/components/schemas/PublicInstanceStatus"
+        delivery_mode:
+          $ref: "#/components/schemas/PublicServiceDeliveryMode"
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        max_capacity:
+          type: integer
+          nullable: true
+        capacity_enrolled_count:
+          type: integer
+        capacity_left_override:
+          type: integer
+          nullable: true
+          minimum: 0
+        capacity_left_effective:
+          type: integer
+          nullable: true
+          readOnly: true
+        waitlist_enabled:
+          type: boolean
+        eventbrite_sync_status:
+          $ref: "#/components/schemas/PublicEventbriteSyncStatus"
+        external_url:
+          type: string
+          format: uri
+          pattern: ^https?://
+          nullable: true
+          maxLength: 500
+        partner_organizations:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicInstancePartnerOrganization"
+        instructor_id:
+          type: string
+          nullable: true
+        cohort:
+          type: string
+          nullable: true
+          maxLength: 128
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+        notes:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicTagRef"
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        created_by:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        resolved_title:
+          type: string
+          nullable: true
+        resolved_description:
+          type: string
+          nullable: true
+        resolved_cover_image_s3_key:
+          type: string
+          nullable: true
+        resolved_delivery_mode:
+          type: string
+          nullable: true
+        resolved_slug:
+          type: string
+        resolved_location_id:
+          type: string
+          format: uuid
+          nullable: true
+        resolved_training_details:
+          type: object
+          nullable: true
+          properties:
+            training_format:
+              $ref: "#/components/schemas/PublicTrainingFormat"
+            price:
+              type: string
+            currency:
+              type: string
+            pricing_unit:
+              $ref: "#/components/schemas/PublicTrainingPricingUnit"
+        resolved_event_ticket_tiers:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicEventTicketTier"
+        resolved_consultation_details:
+          type: object
+          nullable: true
+          properties:
+            pricing_model:
+              $ref: "#/components/schemas/PublicConsultationPricingModel"
+            price:
+              type: string
+              nullable: true
+            currency:
+              type: string
+            package_sessions:
+              type: integer
+              nullable: true
+        session_slots:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicSessionSlot"
+        training_details:
+          type: object
+          nullable: true
+          properties:
+            training_format:
+              $ref: "#/components/schemas/PublicTrainingFormat"
+            price:
+              type: string
+            currency:
+              type: string
+            pricing_unit:
+              $ref: "#/components/schemas/PublicTrainingPricingUnit"
+        event_ticket_tiers:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicEventTicketTier"
+        consultation_details:
+          type: object
+          nullable: true
+          properties:
+            pricing_model:
+              $ref: "#/components/schemas/PublicConsultationPricingModel"
+            price:
+              type: string
+              nullable: true
+            currency:
+              type: string
+            package_sessions:
+              type: integer
+              nullable: true
+        parent_service_title:
+          type: string
+          nullable: true
+        parent_service_tier:
+          type: string
+          nullable: true
+        parent_service_type:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/PublicServiceType"
+        parent_service_key:
+          type: string
+          nullable: true
+    PublicInstanceListResponse:
+      type: object
+      required: [items, total_count]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicServiceInstance"
+        next_cursor:
+          type: string
+          nullable: true
+        total_count:
+          type: integer
+    PublicInstanceResponse:
+      type: object
+      required: [instance]
+      properties:
+        instance:
+          $ref: "#/components/schemas/PublicServiceInstance"
+    CreatePublicInstanceRequest:
+      type: object
+      required: [slug]
+      description: >
+        Instance create body for `POST /v1/public/services/{id}/instances`. `slug` is
+        required (400 with `field: slug` when missing or invalid). Duplicate instance
+        slugs return 409 with `field: slug`.
+      properties:
+        title:
+          type: string
+          nullable: true
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        cover_image_s3_key:
+          type: string
+          nullable: true
+        status:
+          $ref: "#/components/schemas/PublicInstanceStatus"
+        delivery_mode:
+          $ref: "#/components/schemas/PublicServiceDeliveryMode"
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        max_capacity:
+          type: integer
+          nullable: true
+        capacity_left_override:
+          type: integer
+          nullable: true
+          minimum: 0
+        waitlist_enabled:
+          type: boolean
+        external_url:
+          type: string
+          format: uri
+          pattern: ^https?://
+          nullable: true
+          maxLength: 500
+        partner_organization_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        instructor_id:
+          type: string
+          nullable: true
+        cohort:
+          type: string
+          nullable: true
+          maxLength: 128
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+        notes:
+          type: string
+          nullable: true
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        session_slots:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicSessionSlot"
+        training_details:
+          type: object
+          nullable: true
+          properties:
+            training_format:
+              $ref: "#/components/schemas/PublicTrainingFormat"
+            price:
+              type: string
+            currency:
+              type: string
+            pricing_unit:
+              $ref: "#/components/schemas/PublicTrainingPricingUnit"
+        event_ticket_tiers:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicEventTicketTier"
+        consultation_details:
+          type: object
+          nullable: true
+          properties:
+            pricing_model:
+              $ref: "#/components/schemas/PublicConsultationPricingModel"
+            price:
+              type: string
+              nullable: true
+            currency:
+              type: string
+            package_sessions:
+              type: integer
+              nullable: true
+    UpdatePublicInstanceRequest:
+      allOf:
+        - $ref: "#/components/schemas/CreatePublicInstanceRequest"
+      required:
+        - status
+      description: >
+        Clearing `slug` to null returns 400 with `field: slug`.
     ReservationSubmissionAccepted:
       type: object
       required:

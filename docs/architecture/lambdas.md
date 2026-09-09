@@ -89,6 +89,14 @@ their primary responsibilities.
   `x-api-token`; payloads match `/v1/admin/locations`; delete is not exposed),
   `/v1/public/geographic-areas` (GET only; hashed `x-api-token`; payloads match
   `/v1/admin/geographic-areas`),
+  `/v1/public/services` and `/v1/public/services/{id}` (hashed `x-api-token`
+  service list/get for `user` and `admin` scopes; create/update/delete for
+  `admin` only; payloads match `/v1/admin/services`; cover-image upload and
+  discount-code usage summary are not exposed),
+  `/v1/public/services/instances` and
+  `/v1/public/services/{id}/instances` plus `{id}/instances/{instance_id}`
+  (hashed `x-api-token`; nested the same way as `/v1/admin/services/...`;
+  enrollments are not exposed),
   `/v1/admin/locations/*` (including `GET /v1/admin/locations?exclude_addresses=true`
   to list service venues without family/organisation home addresses, and
   `POST /v1/admin/locations/geocode` for

@@ -3458,6 +3458,24 @@ export class ApiStack extends cdk.Stack {
 
     addPublicTokenMethod(publicRoot.addResource("geographic-areas"), "GET");
 
+    const publicServices = publicRoot.addResource("services");
+    addPublicTokenMethod(publicServices, "GET");
+    addPublicTokenMethod(publicServices, "POST");
+    addPublicTokenMethod(publicServices.addResource("instances"), "GET");
+    const publicServiceById = publicServices.addResource("{id}");
+    addPublicTokenMethod(publicServiceById, "GET");
+    addPublicTokenMethod(publicServiceById, "PUT");
+    addPublicTokenMethod(publicServiceById, "PATCH");
+    addPublicTokenMethod(publicServiceById, "DELETE");
+    const publicServiceInstances = publicServiceById.addResource("instances");
+    addPublicTokenMethod(publicServiceInstances, "GET");
+    addPublicTokenMethod(publicServiceInstances, "POST");
+    const publicServiceInstanceById =
+      publicServiceInstances.addResource("{instance_id}");
+    addPublicTokenMethod(publicServiceInstanceById, "GET");
+    addPublicTokenMethod(publicServiceInstanceById, "PUT");
+    addPublicTokenMethod(publicServiceInstanceById, "DELETE");
+
     // Admin asset routes
     const admin = v1.addResource("admin");
     const adminAssets = admin.addResource("assets");
