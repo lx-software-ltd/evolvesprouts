@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from collections import Counter
 from datetime import UTC, datetime
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 import boto3
@@ -189,6 +189,18 @@ def list_form_answers(*, form_slug: str) -> list[dict[str, Any]]:
         reverse=True,
     )
     return serialized
+
+
+def unique_form_answer_contact_ids(items: Sequence[Mapping[str, Any]]) -> list[str]:
+    """Distinct non-empty ``contactId`` values in first-seen order."""
+    seen: dict[str, None] = {}
+    for row in items:
+        contact_id = row.get("contactId")
+        if isinstance(contact_id, str):
+            normalized = contact_id.strip()
+            if normalized:
+                seen.setdefault(normalized, None)
+    return list(seen)
 
 
 def serialize_form_answer_item(item: Mapping[str, Any]) -> dict[str, Any]:

@@ -1353,9 +1353,12 @@ workloads split usage inside this product without sending PII.
 ## Training form contact personalization
 
 **Decision:** Some training forms declare `requiresContact` in their content JSON.
-Admin Copy link (Website → Forms) and Website QR then require an existing CRM
-contact (same 2-character typeahead as invoice bill-to, without create). The
-copied URL / QR encodes `?contact=<uuid>`. The public training page loads
+Website QR then requires an existing CRM contact (same 2-character typeahead as
+invoice bill-to, without create) and encodes `?contact=<uuid>` on the generated
+URL / QR. Website → Forms does not copy personalised links; operators filter
+stored answers with a dropdown of contacts who already submitted that form
+(`respondentContactIds` plus optional `contact_id` on
+`GET /v1/admin/forms/{form_slug}/answers`). The public training page loads
 display-only placeholders (`contactName`, `contactFirstName`, `children.firstName`,
 `helpers.firstName`, and related tokens) from
 `GET /v1/forms/{form_slug}/contact-context` and stores `contactId` on each
@@ -1365,8 +1368,10 @@ never returns email, phone, or other CRM fields, and always sends
 `Cache-Control: no-store`.
 
 **Why:** Personalised workshop copy needs household first names without exposing
-the full CRM contact over the public API key. Admin gating keeps operators from
-copying a generic link for a form that cannot render correctly without a contact.
+the full CRM contact over the public API key. QR is the operator path for
+creating a contact-bound link. The Forms answers table is for reviewing
+submissions, so its contact control filters respondents rather than minting
+URLs.
 
 ## Keeping Documentation Up to Date
 

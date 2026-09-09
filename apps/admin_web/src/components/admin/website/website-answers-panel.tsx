@@ -4,10 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { AdminPageErrorBanner } from '@/components/admin/admin-page-error-banner';
 import {
-  AdminContactSearchField,
-  type SelectedContactValue,
-} from '@/components/ui/admin-contact-search-field';
-import {
   AdminDataTableCell,
   AdminDataTableCellMeta,
   AdminDataTableHeadCell,
@@ -22,13 +18,11 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Select } from '@/components/ui/select';
 import { toErrorMessage } from '@/hooks/hook-errors';
-import { useCopyFeedback } from '@/hooks/use-copy-feedback';
 import { useExpandedRecord } from '@/hooks/use-expanded-record';
 import { usePaginatedList } from '@/hooks/use-paginated-list';
-import { copyTextToClipboard } from '@/lib/clipboard';
-import { getTrainingSiteBaseUrl } from '@/lib/config';
+import { getAdminContact } from '@/lib/entity-api';
 import { formatDate } from '@/lib/format';
-import { buildTrainingFormOrPollPageUrl } from '@/lib/public-site-page-urls';
+import { formatAdminContactFullName } from '@/lib/format-party-labels';
 
 export interface WebsiteAnswersSummary {
   slug: string;
@@ -48,6 +42,13 @@ export interface WebsiteAnswersPageParams {
   cursor: string | null;
   limit: number;
   signal: AbortSignal;
+  contactId?: string;
+}
+
+export interface WebsiteAnswersListResult<TRow extends WebsiteAnswersRow> {
+  items: TRow[];
+  nextCursor: string | null;
+  respondentContactIds?: string[];
 }
 
 export interface WebsiteAnswersPanelProps<TRow extends WebsiteAnswersRow> {
@@ -56,7 +57,7 @@ export interface WebsiteAnswersPanelProps<TRow extends WebsiteAnswersRow> {
   listAnswers: (
     slug: string,
     params: WebsiteAnswersPageParams
-  ) => Promise<{ items: TRow[]; nextCursor: string | null }>;
+  ) => Promise<WebsiteAnswersListResult<TRow>>;
   exportCsv: (slug: string) => Promise<Blob>;
   clearAnswers: (slug: string) => Promise<void>;
   formatAnswer: (row: TRow) => string;
@@ -64,7 +65,10 @@ export interface WebsiteAnswersPanelProps<TRow extends WebsiteAnswersRow> {
 
 type AnswerFilters = {
   slug: string;
+  contactId: string;
 };
+
+const ALL_CONTACTS_VALUE = '';
 
 // Read-only rows: expand column + five data columns, no Operations column.
 const COLUMN_COUNT = 6;
@@ -75,9 +79,11 @@ function answerRowId(row: WebsiteAnswersRow): string {
 
 /**
  * Stored answers for one form or poll as a table-first, read-only record
- * table: the form/poll picker is the only filter, `Export answers` and
- * `Clear answers` are table-scoped tools in the filter bar's trailing slot,
- * and each row expands into the full answer on the field grid.
+ * table: the form/poll picker is the only always-on filter, `Export answers`
+ * and `Clear answers` are table-scoped tools in the filter bar's trailing
+ * slot, and each row expands into the full answer on the field grid.
+ * Contact-required forms add a respondent dropdown that filters by stored
+ * `contactId`.
  */
 export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
   noun,
@@ -91,7 +97,9 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
   const lowerNoun = noun;
   const [summaries, setSummaries] = useState<WebsiteAnswersSummary[]>([]);
   const [selectedSlug, setSelectedSlug] = useState('');
-  const [selectedContact, setSelectedContact] = useState<SelectedContactValue>({ status: 'empty' });
+  const [selectedContactId, setSelectedContactId] = useState(ALL_CONTACTS_VALUE);
+  const [respondentContactIds, setRespondentContactIds] = useState<string[]>([]);
+  const [contactLabels, setContactLabels] = useState<Record<string, string>>({});
   const [summariesLoading, setSummariesLoading] = useState(true);
   const [summariesError, setSummariesError] = useState('');
   const [actionError, setActionError] = useState('');
@@ -99,27 +107,27 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
   const [clearing, setClearing] = useState(false);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const expanded = useExpandedRecord({ paramName: `${lowerNoun}-answer` });
-  const trainingSiteBaseUrl = useMemo(() => getTrainingSiteBaseUrl(), []);
-  const { copiedKey: copiedLinkFeedbackKey, markCopied: markPageLinkCopied } = useCopyFeedback(1000);
-  const isLinkCopied = copiedLinkFeedbackKey === 'page-link';
 
   const selectedSummary = useMemo(
     () => summaries.find((item) => item.slug === selectedSlug) ?? null,
     [summaries, selectedSlug]
   );
   const contactRequired = noun === 'form' && Boolean(selectedSummary?.requiresContact);
-  const selectedContactId = selectedContact.status === 'selected' ? selectedContact.id : '';
 
   const fetcher = useCallback(
     async (params: AnswerFilters & WebsiteAnswersPageParams) => {
       if (!params.slug) {
+        setRespondentContactIds([]);
         return { items: [] as TRow[], nextCursor: null };
       }
-      return listAnswers(params.slug, {
+      const result = await listAnswers(params.slug, {
         cursor: params.cursor,
         limit: params.limit,
         signal: params.signal,
+        contactId: params.contactId || undefined,
       });
+      setRespondentContactIds(result.respondentContactIds ?? []);
+      return { items: result.items, nextCursor: result.nextCursor };
     },
     [listAnswers]
   );
@@ -134,7 +142,7 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
     refetch,
   } = usePaginatedList<TRow, AnswerFilters>({
     fetcher,
-    defaultFilters: { slug: '' },
+    defaultFilters: { slug: '', contactId: ALL_CONTACTS_VALUE },
     errorPrefix: `Failed to load ${lowerNoun} answers`,
     fetchOnMount: false,
   });
@@ -173,38 +181,36 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
   }, [loadSummaries]);
 
   useEffect(() => {
-    void refetch({ slug: selectedSlug });
-  }, [refetch, selectedSlug]);
-
-  const handleCopyLink = async () => {
-    if (!selectedSlug) {
-      return;
-    }
-    if (contactRequired && !selectedContactId) {
-      return;
-    }
-    setActionError('');
-    const url = buildTrainingFormOrPollPageUrl({
-      baseUrl: trainingSiteBaseUrl,
-      noun,
+    void refetch({
       slug: selectedSlug,
-      contactId: contactRequired ? selectedContactId : undefined,
+      contactId: contactRequired ? selectedContactId : ALL_CONTACTS_VALUE,
     });
-    if (!url) {
-      setActionError(
-        trainingSiteBaseUrl
-          ? `Unable to build a ${lowerNoun} link for "${selectedSlug}".`
-          : 'Set NEXT_PUBLIC_TRAINING_SITE_BASE_URL to copy training site links.'
-      );
+  }, [contactRequired, refetch, selectedContactId, selectedSlug]);
+
+  useEffect(() => {
+    if (!contactRequired || respondentContactIds.length === 0) {
+      setContactLabels({});
       return;
     }
-    try {
-      await copyTextToClipboard(url);
-      markPageLinkCopied('page-link');
-    } catch (error) {
-      setActionError(toErrorMessage(error, 'Unable to copy the link to clipboard.'));
-    }
-  };
+    const controller = new AbortController();
+    void (async () => {
+      const entries = await Promise.all(
+        respondentContactIds.map(async (contactId) => {
+          try {
+            const contact = await getAdminContact(contactId, controller.signal);
+            const name = contact ? formatAdminContactFullName(contact) : '';
+            return [contactId, name || contactId] as const;
+          } catch {
+            return [contactId, contactId] as const;
+          }
+        })
+      );
+      if (!controller.signal.aborted) {
+        setContactLabels(Object.fromEntries(entries));
+      }
+    })();
+    return () => controller.abort();
+  }, [contactRequired, respondentContactIds]);
 
   const handleExport = async () => {
     if (!selectedSlug) {
@@ -237,8 +243,9 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
       await clearAnswers(selectedSlug);
       setClearDialogOpen(false);
       expanded.collapse();
+      setSelectedContactId(ALL_CONTACTS_VALUE);
       await loadSummaries();
-      await refetch({ slug: selectedSlug });
+      await refetch({ slug: selectedSlug, contactId: ALL_CONTACTS_VALUE });
     } catch (error) {
       setActionError(toErrorMessage(error, `Failed to clear ${lowerNoun} answers.`));
     } finally {
@@ -248,8 +255,11 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
 
   const storedCount = selectedSummary?.answerCount ?? 0;
   const isFirstLoad = summariesLoading || (answersLoading && answers.length === 0);
-  const copyLinkDisabled =
-    !selectedSlug || !trainingSiteBaseUrl || (contactRequired && !selectedContactId);
+  const emptyLabel = selectedContactId
+    ? 'No answers stored for this contact.'
+    : selectedSlug
+      ? `No answers stored for this ${lowerNoun} yet.`
+      : `No ${lowerNoun}s found.`;
 
   return (
     <div className='space-y-4'>
@@ -266,9 +276,7 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
         onLoadMore={loadMore}
         error={answersError}
         errorTitle={`${titleNoun} answers`}
-        emptyLabel={
-          selectedSlug ? `No answers stored for this ${lowerNoun} yet.` : `No ${lowerNoun}s found.`
-        }
+        emptyLabel={emptyLabel}
         filters={
           <AdminFilterBar
             summary={
@@ -278,14 +286,6 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
             }
             trailing={
               <>
-                <Button
-                  type='button'
-                  variant={isLinkCopied ? 'success' : 'outline'}
-                  onClick={() => void handleCopyLink()}
-                  disabled={copyLinkDisabled}
-                >
-                  {isLinkCopied ? 'Link copied' : 'Copy link'}
-                </Button>
                 <Button
                   type='button'
                   variant='outline'
@@ -314,7 +314,7 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
                 onChange={(event) => {
                   expanded.collapse();
                   setSelectedSlug(event.target.value);
-                  setSelectedContact({ status: 'empty' });
+                  setSelectedContactId(ALL_CONTACTS_VALUE);
                 }}
                 disabled={summariesLoading || summaries.length === 0}
               >
@@ -335,13 +335,22 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
                 htmlFor={`website-${lowerNoun}s-contact`}
                 className='sm:basis-72'
               >
-                <AdminContactSearchField
-                  inputId={`website-${lowerNoun}s-contact`}
-                  hideLabel
-                  value={selectedContact}
-                  onChange={setSelectedContact}
+                <Select
+                  id={`website-${lowerNoun}s-contact`}
+                  value={selectedContactId}
+                  onChange={(event) => {
+                    expanded.collapse();
+                    setSelectedContactId(event.target.value);
+                  }}
                   disabled={summariesLoading}
-                />
+                >
+                  <option value={ALL_CONTACTS_VALUE}>All contacts</option>
+                  {respondentContactIds.map((contactId) => (
+                    <option key={contactId} value={contactId}>
+                      {contactLabels[contactId] ?? contactId}
+                    </option>
+                  ))}
+                </Select>
               </AdminFilterField>
             ) : null}
           </AdminFilterBar>

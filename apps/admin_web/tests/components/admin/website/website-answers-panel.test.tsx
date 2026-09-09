@@ -6,18 +6,16 @@ import {
   type WebsiteAnswersRow,
 } from '@/components/admin/website/website-answers-panel';
 
-vi.mock('@/lib/config', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/config')>();
-  return {
-    ...actual,
-    getTrainingSiteBaseUrl: () => 'https://training.example.com',
-  };
-});
+const CONTACT_ID = '11111111-1111-4111-8111-111111111111';
+const OTHER_CONTACT_ID = '22222222-2222-4222-8222-222222222222';
 
 vi.mock('@/lib/entity-api', () => ({
-  searchEntityContactsForPicker: vi.fn(async () => [
-    { id: '11111111-1111-4111-8111-111111111111', label: 'Jane Doe · jane@example.com' },
-  ]),
+  getAdminContact: vi.fn(async (id: string) => {
+    if (id === CONTACT_ID) {
+      return { id, first_name: 'Jane', last_name: 'Doe' };
+    }
+    throw new Error('Contact not found');
+  }),
 }));
 
 interface Row extends WebsiteAnswersRow {
@@ -48,7 +46,7 @@ function renderPanel(overrides: Partial<Parameters<typeof WebsiteAnswersPanel<Ro
       { slug: 'workshop-feedback', answerCount: 2 },
       { slug: 'contact-us', answerCount: 0 },
     ]),
-    listAnswers: vi.fn().mockResolvedValue({ items: ROWS, nextCursor: null }),
+    listAnswers: vi.fn().mockResolvedValue({ items: ROWS, nextCursor: null, respondentContactIds: [] }),
     exportCsv: vi.fn().mockResolvedValue(new Blob(['a,b'], { type: 'text/csv' })),
     clearAnswers: vi.fn().mockResolvedValue(undefined),
     formatAnswer: (row: Row) => row.freeText,
@@ -73,6 +71,7 @@ describe('WebsiteAnswersPanel', () => {
     const trailing = within(filterBar).getByTestId('admin-filter-bar-trailing');
     expect(within(trailing).getByRole('button', { name: 'Export answers' })).toBeInTheDocument();
     expect(within(trailing).getByRole('button', { name: 'Clear answers' })).toBeInTheDocument();
+    expect(within(trailing).queryByRole('button', { name: 'Copy link' })).not.toBeInTheDocument();
 
     await waitFor(() => {
       expect(within(region).getByText('Alex')).toBeInTheDocument();
@@ -130,38 +129,41 @@ describe('WebsiteAnswersPanel', () => {
     });
   });
 
-  it('hides the contact picker for forms that do not require a contact', async () => {
+  it('hides the contact filter for forms that do not require a contact', async () => {
     renderPanel();
     await screen.findByText('Alex');
     expect(screen.queryByLabelText('Contact')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Copy link' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Copy link' })).not.toBeInTheDocument();
   });
 
-  it('shows a contact picker and disables Copy link until a contact is selected', async () => {
+  it('filters contact-required form answers with a respondent dropdown', async () => {
+    const listAnswers = vi.fn().mockResolvedValue({
+      items: [{ ...ROWS[0], contactId: CONTACT_ID }],
+      nextCursor: null,
+      respondentContactIds: [CONTACT_ID, OTHER_CONTACT_ID],
+    });
     renderPanel({
       listSummaries: vi.fn().mockResolvedValue([
-        { slug: 'family-check-in', answerCount: 0, requiresContact: true },
+        { slug: 'family-check-in', answerCount: 2, requiresContact: true },
       ]),
-      listAnswers: vi.fn().mockResolvedValue({ items: [], nextCursor: null }),
+      listAnswers,
     });
 
-    const contactInput = await screen.findByLabelText('Contact');
-    expect(screen.getByRole('button', { name: 'Copy link' })).toBeDisabled();
-
-    fireEvent.change(contactInput, { target: { value: 'j' } });
-    expect(contactInput).toHaveValue('j');
-    fireEvent.change(contactInput, { target: { value: 'ja' } });
-    const option = await screen.findByRole('option', { name: 'Jane Doe · jane@example.com' });
-    fireEvent.click(option);
-
+    const contactSelect = await screen.findByLabelText('Contact');
+    expect(within(contactSelect).getByRole('option', { name: 'All contacts' })).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Copy link' })).toBeEnabled();
+      expect(within(contactSelect).getByRole('option', { name: 'Jane Doe' })).toBeInTheDocument();
     });
+    expect(within(contactSelect).getByRole('option', { name: OTHER_CONTACT_ID })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Copy link' }));
+    fireEvent.change(contactSelect, { target: { value: CONTACT_ID } });
+
     await waitFor(() => {
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-        'https://training.example.com/forms/family-check-in/?contact=11111111-1111-4111-8111-111111111111',
+      expect(listAnswers).toHaveBeenCalledWith(
+        'family-check-in',
+        expect.objectContaining({
+          contactId: CONTACT_ID,
+        })
       );
     });
   });
@@ -172,7 +174,7 @@ describe('WebsiteAnswersPanel', () => {
         items: [
           {
             ...ROWS[0],
-            contactId: '11111111-1111-4111-8111-111111111111',
+            contactId: CONTACT_ID,
           },
         ],
         nextCursor: null,
@@ -182,6 +184,6 @@ describe('WebsiteAnswersPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: /name answer from session/ }));
     const panel = await screen.findByTestId('admin-editor-panel');
     expect(within(panel).getByText('Contact')).toBeInTheDocument();
-    expect(within(panel).getByText('11111111-1111-4111-8111-111111111111')).toBeInTheDocument();
+    expect(within(panel).getByText(CONTACT_ID)).toBeInTheDocument();
   });
 });

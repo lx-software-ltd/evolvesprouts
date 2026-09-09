@@ -1,5 +1,6 @@
 {
   "title": "Ciao {contactFirstName} 🌿",
+  "pageTitle": "Pre Session Check In",
   "slug": "pre-session-check-in",
   "requiresContact": true,
   "completion": {

@@ -184,9 +184,11 @@ their primary responsibilities.
   invoice Bill To entity lines—resolved as `legal_name` or `name` at issue time; pickers and
   structured bill-to snapshots keep the trade `name` by design),
   `/v1/admin/forms` (lists form slugs with answer counts from DynamoDB
-  `evolvesprouts-poll-responses`), `/v1/admin/forms/{form_slug}/answers`
+  `evolvesprouts-poll-responses`),   `/v1/admin/forms/{form_slug}/answers`
   (`GET` lists stored answer rows with cursor pagination, including optional `contactId`
-  when the session was personalised; `DELETE` clears all rows for the form),
+  when the session was personalised; optional `contact_id` query filters to that
+  contact before pagination; `respondentContactIds` lists distinct respondent
+  contact ids from all stored rows; `DELETE` clears all rows for the form),
   `/v1/admin/forms/{form_slug}/answers/export` (`GET`; CSV export, includes Contact ID),
   `/v1/admin/polls` (lists poll slugs with answer counts from DynamoDB
   `evolvesprouts-poll-responses`), `/v1/admin/polls/{poll_slug}/answers`
