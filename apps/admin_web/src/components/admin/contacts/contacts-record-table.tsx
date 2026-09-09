@@ -83,8 +83,11 @@ export function ContactsRecordTable({
 }: ContactsRecordTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
-  const displayRows =
-    pinnedRow && !rows.some((row) => row.id === pinnedRow.id) ? [pinnedRow, ...rows] : rows;
+  const displayRows = useMemo(
+    () =>
+      pinnedRow && !rows.some((row) => row.id === pinnedRow.id) ? [pinnedRow, ...rows] : rows,
+    [pinnedRow, rows]
+  );
   const selectedContacts = useMemo(
     () => displayRows.filter((row) => selectedSet.has(row.id)),
     [displayRows, selectedSet]
