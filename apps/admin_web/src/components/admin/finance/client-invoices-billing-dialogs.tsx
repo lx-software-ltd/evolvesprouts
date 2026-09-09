@@ -51,7 +51,7 @@ export function ClientInvoicesBillingDialogs({
       <ConfirmDialog
         open={voidDialogOpen}
         title='Void invoice'
-        description='This voids the draft or issued invoice. Provide a short reason for the audit trail.'
+        description='This voids the issued invoice. Provide a short reason for the audit trail.'
         confirmLabel='Void invoice'
         cancelLabel='Cancel'
         variant='danger'

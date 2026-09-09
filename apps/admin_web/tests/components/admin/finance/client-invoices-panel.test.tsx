@@ -798,7 +798,38 @@ describe('ClientInvoicesPanel', () => {
     openSpy.mockRestore();
   });
 
-  it('void dialog calls voidInvoice with reason', async () => {
+  it('void dialog calls voidInvoice with reason for issued invoices', async () => {
+    const invId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+    billingMocks.listCustomerInvoices.mockResolvedValue({
+      items: [
+        {
+          id: invId,
+          status: 'issued',
+          invoiceNumber: 'INV-1',
+          currency: 'HKD',
+          total: '1',
+          lineCount: 0,
+          createdAt: '2026-01-01T00:00:00+00:00',
+        },
+      ],
+      next_cursor: null,
+    });
+    billingMocks.voidInvoice.mockResolvedValue({ invoiceId: invId, status: 'void' });
+
+    render(<ClientInvoicesPanel />);
+
+    await userEvent.click(await within(invoiceTable()).findByRole('button', { name: /void invoice/i }));
+
+    await userEvent.type(screen.getByLabelText(/reason/i), 'Customer cancelled');
+    const voidDialog = screen.getByRole('alertdialog');
+    await userEvent.click(within(voidDialog).getByRole('button', { name: /^void invoice$/i }));
+
+    await waitFor(() => {
+      expect(billingMocks.voidInvoice).toHaveBeenCalledWith(invId, 'Customer cancelled');
+    });
+  });
+
+  it('does not offer void on draft invoices', async () => {
     const invId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
     billingMocks.listCustomerInvoices.mockResolvedValue({
       items: [
@@ -813,21 +844,12 @@ describe('ClientInvoicesPanel', () => {
       ],
       next_cursor: null,
     });
-    billingMocks.voidInvoice.mockResolvedValue({ invoiceId: invId, status: 'void' });
 
     render(<ClientInvoicesPanel />);
 
-    // Draft rows have three actions besides preview, so Void lives in the overflow menu.
     await userEvent.click(await within(invoiceTable()).findByRole('button', { name: /more actions/i }));
-    await userEvent.click(await screen.findByRole('menuitem', { name: /void invoice/i }));
-
-    await userEvent.type(screen.getByLabelText(/reason/i), 'Customer cancelled');
-    const voidDialog = screen.getByRole('alertdialog');
-    await userEvent.click(within(voidDialog).getByRole('button', { name: /^void invoice$/i }));
-
-    await waitFor(() => {
-      expect(billingMocks.voidInvoice).toHaveBeenCalledWith(invId, 'Customer cancelled');
-    });
+    expect(screen.queryByRole('menuitem', { name: /void invoice/i })).not.toBeInTheDocument();
+    expect(await screen.findByRole('menuitem', { name: /delete draft invoice/i })).toBeInTheDocument();
   });
 
   it('export calls exportBillingCsv and triggers download', async () => {

@@ -848,6 +848,45 @@ def test_void_invoice_calls_recompute_invoice_settlement(
     assert touched == [inv_id]
 
 
+def test_void_invoice_rejects_draft(
+    api_gateway_event: Any,
+    admin_identity: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    inv_id = uuid4()
+    inv = SimpleNamespace(
+        id=inv_id,
+        status=BillingInvoiceStatus.DRAFT,
+        voided_at=None,
+        void_reason=None,
+    )
+
+    @contextmanager
+    def _fake_session(_u: str, _r: str | None) -> Any:
+        s = MagicMock()
+
+        def _get(model: Any, pk: Any) -> Any:
+            if model is CustomerInvoice and pk == inv_id:
+                return inv
+            return None
+
+        s.get.side_effect = _get
+        yield s
+
+    monkeypatch.setattr(admin_billing_invoices_mod, "session_with_audit", _fake_session)
+
+    ev = api_gateway_event(
+        method="POST",
+        path=f"/v1/admin/billing/invoices/{inv_id}/void",
+        body=json.dumps({"reason": "customer request"}),
+        authorizer_context=admin_identity,
+    )
+    with pytest.raises(ValidationError, match="Only issued"):
+        admin_billing.handle_admin_billing_request(
+            ev, "POST", f"/v1/admin/billing/invoices/{inv_id}/void"
+        )
+
+
 def test_issue_invoice_calls_recompute_invoice_settlement(
     api_gateway_event: Any,
     admin_identity: dict[str, str],

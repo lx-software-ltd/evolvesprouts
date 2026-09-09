@@ -5964,8 +5964,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Void invoice (draft or issued)
-         * @description Voids a draft or issued invoice. Returns 400 if already void. Application audit rows distinguish `VOID_FROM_DRAFT` vs `VOID_FROM_ISSUED`.
+         * Void invoice (issued)
+         * @description Voids an issued invoice. Returns 400 if the invoice is draft or already void. Draft invoices must be deleted instead. Application audit rows use `VOID_FROM_ISSUED`.
          */
         post: {
             parameters: {
