@@ -46,6 +46,7 @@ export function ClientInvoicesPanel() {
         payments={payments}
         manualPayment={manualPayment}
         allocate={allocate}
+        onOpenInvoicePdf={invoices.handleOpenInvoicePdfPreview}
       />
       <ClientInvoicesBillingDialogs busy={busy} dialogs={dialogs} />
     </div>

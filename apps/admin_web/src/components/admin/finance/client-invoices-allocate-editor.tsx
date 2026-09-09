@@ -58,13 +58,9 @@ export function ClientInvoicesAllocateEditor({
   const targetIsIssued = invoices.find((i) => i.id === allocateInvoiceId.trim())?.status === 'issued';
   const lineSelectValue =
     allocateLineId !== '' && allocateLinesOrdered.some((l) => l.id === allocateLineId) ? allocateLineId : '';
-  const summary =
-    invoiceSelectValue === ''
-      ? `${issuedInvoicesForAllocate.length} issued invoice${issuedInvoicesForAllocate.length === 1 ? '' : 's'}`
-      : (issuedInvoicesForAllocate.find((i) => i.id === invoiceSelectValue)?.invoiceNumber ?? 'Invoice selected');
 
   return (
-    <AdminDisclosure id='billing-allocate' title='Allocate to invoice' summary={summary} defaultOpen={defaultOpen}>
+    <AdminDisclosure id='billing-allocate' title='Allocate to invoice' defaultOpen={defaultOpen}>
       <form id={ALLOCATE_FORM_ID} className='space-y-4' onSubmit={(e) => void handleAllocate(e)}>
         <AdminFieldGrid columns={4}>
           <AdminField

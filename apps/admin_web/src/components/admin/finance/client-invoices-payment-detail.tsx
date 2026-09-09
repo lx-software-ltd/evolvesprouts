@@ -2,12 +2,11 @@
 
 import type { ReactNode } from 'react';
 
-import Link from 'next/link';
-
 import { AdminDisclosure } from '@/components/ui/admin-disclosure';
 import { AdminEditorPanel } from '@/components/ui/admin-editor-panel';
 import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { AdminInlineError } from '@/components/ui/admin-inline-error';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ClientInvoicesAllocateEditor } from '@/components/admin/finance/client-invoices-allocate-editor';
 import {
@@ -18,7 +17,6 @@ import { ClientInvoicesManualPaymentEditor } from '@/components/admin/finance/cl
 import type { CustomerPaymentSummary } from '@/lib/billing-api';
 import { formatDate, formatEnumLabel } from '@/lib/format';
 import {
-  financeClientInvoiceHref,
   getPaymentAllocationStatus,
   shouldOpenAllocateDisclosure,
   shouldOpenAllocatedInvoicesDisclosure,
@@ -40,6 +38,7 @@ export interface ClientInvoicesPaymentDetailProps {
   manualPayment: ClientInvoicesManualPaymentEditorSlice;
   payments: ClientInvoicesPaymentsTableSlice;
   allocate: ClientInvoicesAllocateEditorSlice;
+  onOpenInvoicePdf: (invoiceId: string) => Promise<void>;
 }
 
 function formatMoney(value: string | null | undefined, currencyCode: string): string {
@@ -61,8 +60,10 @@ export function ClientInvoicesPaymentDetail({
   manualPayment,
   payments: pay,
   allocate,
+  onOpenInvoicePdf,
 }: ClientInvoicesPaymentDetailProps) {
   const { defaultCurrency } = currency;
+  const { busyAction, editorBusy } = busy;
   const { detail, detailError } = pay;
   const id = payment.id ?? '';
   const detailForRow = detail?.id === id ? detail : null;
@@ -105,14 +106,17 @@ export function ClientInvoicesPaymentDetail({
               }
               return (
                 <li key={invoiceId} className='wrap-anywhere'>
-                  <Link
-                    href={financeClientInvoiceHref(invoiceId)}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    className='font-medium text-slate-900 underline-offset-2 hover:underline'
+                  <Button
+                    type='button'
+                    variant='ghost'
+                    className='h-auto min-h-0 justify-start px-0 py-0 font-medium text-slate-900 underline underline-offset-2 hover:bg-transparent'
+                    loading={busyAction === 'pdf'}
+                    loadingLabel='Opening…'
+                    disabled={editorBusy}
+                    onClick={() => void onOpenInvoicePdf(invoiceId)}
                   >
                     {label}
-                  </Link>
+                  </Button>
                 </li>
               );
             })}

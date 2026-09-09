@@ -102,8 +102,3 @@ export function shouldOpenAllocatedInvoicesDisclosure(
 export function shouldOpenAllocateDisclosure(status: PaymentAllocationStatus | null): boolean {
   return status === 'none' || status === 'less';
 }
-
-/** Deep link that expands a customer invoice on Finance → Client invoices. */
-export function financeClientInvoiceHref(invoiceId: string): string {
-  return `/finance?tab=client-invoices&invoice=${encodeURIComponent(invoiceId)}`;
-}

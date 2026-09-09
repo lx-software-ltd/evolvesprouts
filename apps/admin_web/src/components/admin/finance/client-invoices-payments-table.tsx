@@ -43,6 +43,7 @@ export interface ClientInvoicesPaymentsTableProps {
   payments: ClientInvoicesPaymentsTableSlice;
   manualPayment: ClientInvoicesManualPaymentEditorSlice;
   allocate: ClientInvoicesAllocateEditorSlice;
+  onOpenInvoicePdf: (invoiceId: string) => Promise<void>;
 }
 
 function formatMoney(value: string | null | undefined, currencyCode: string): string {
@@ -77,6 +78,7 @@ export function ClientInvoicesPaymentsTable({
   payments: pay,
   manualPayment,
   allocate,
+  onOpenInvoicePdf,
 }: ClientInvoicesPaymentsTableProps) {
   const { defaultCurrency } = currency;
   const { busyAction, editorBusy } = busy;
@@ -275,6 +277,7 @@ export function ClientInvoicesPaymentsTable({
                     manualPayment={manualPayment}
                     payments={pay}
                     allocate={allocate}
+                    onOpenInvoicePdf={onOpenInvoicePdf}
                   />
                 ) : null
               }

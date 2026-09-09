@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import { actionBadgeClassName } from '@/components/admin/audit/audit-log-badges';
 import {
-  financeClientInvoiceHref,
   getPaymentAllocationStatus,
   getPaymentAllocationStatusLabel,
   paymentAllocationBadgeClassName,
@@ -130,11 +129,5 @@ describe('allocation disclosure defaults', () => {
     expect(shouldOpenAllocateDisclosure('less')).toBe(true);
     expect(shouldOpenAllocateDisclosure('in_full')).toBe(false);
     expect(shouldOpenAllocateDisclosure('more')).toBe(false);
-  });
-});
-
-describe('financeClientInvoiceHref', () => {
-  it('builds the client-invoices deep link', () => {
-    expect(financeClientInvoiceHref('inv-1001')).toBe('/finance?tab=client-invoices&invoice=inv-1001');
   });
 });
