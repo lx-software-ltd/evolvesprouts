@@ -41,6 +41,7 @@ info:
     - `PATCH|DELETE /v1/admin/tags/{id}` (DELETE returns JSON with `deleted` and `usage_count`)
     - `GET /v1/admin/contacts/tags`
     - `GET /v1/admin/contacts/search`
+    - `POST /v1/admin/contacts/merge`
     - `POST /v1/admin/contacts/mailchimp-sync-run`
     - `POST /v1/admin/contacts/mailchimp-sync-orphans`
     - `GET /v1/admin/contacts/mailchimp-sync-status`
@@ -1332,11 +1333,12 @@ paths:
       summary: Merge selected sales leads
       description: >
         Merges two or more leads into the chosen keeper lead. When selected leads
-        belong to different contacts, loser contact fields and related records
+        belong to different contacts, loser identity and related records are
+        folded onto the keeper contact through the shared record-merge helpers
         (notes, enrollments, invoices, payments, conversations, certificates,
-        and tags) are consolidated onto the keeper contact and orphaned loser
-        contacts are deleted. Non-selected leads on loser contacts remain on
-        the keeper contact as separate lead rows.
+        tags, and remaining leads). Orphaned loser contacts are deleted.
+        Non-selected leads on loser contacts remain on the keeper contact as
+        separate lead rows except uniqueness conflicts.
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -3123,6 +3125,39 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
+
+  /v1/admin/contacts/merge:
+    post:
+      summary: Merge selected CRM contacts
+      description: >
+        Merges two or more contacts into the chosen keeper contact. Loser fields
+        fill empty keeper identity fields. Related records (notes, enrollments,
+        invoices, payments, conversations, certificates, tags, and sales leads)
+        move onto the keeper. Sales leads stay as separate rows except uniqueness
+        conflicts (same-guide dedupe and one open automated lead per contact).
+        Orphaned loser contacts are deleted. Conflicting emails, Instagram
+        handles, families, or organisations return 400.
+      security:
+        - AdminBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MergeContactsRequest"
+      responses:
+        "200":
+          description: Surviving contact after merge.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminContactResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /v1/admin/contacts/mailchimp-sync-run:
     post:
@@ -6817,6 +6852,22 @@ components:
           type: string
           format: uuid
           description: Lead that survives the merge; must be one of `lead_ids`.
+    MergeContactsRequest:
+      type: object
+      required:
+        - contact_ids
+        - keeper_contact_id
+      properties:
+        contact_ids:
+          type: array
+          minItems: 2
+          items:
+            type: string
+            format: uuid
+        keeper_contact_id:
+          type: string
+          format: uuid
+          description: Contact that survives the merge; must be one of `contact_ids`.
     CreateLeadRequest:
       type: object
       required:

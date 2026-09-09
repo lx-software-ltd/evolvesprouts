@@ -11,6 +11,7 @@ type ApiSchemas = components['schemas'];
 
 type ApiContactList = ApiSchemas['AdminContactListResponse'];
 type ApiContactResponse = ApiSchemas['AdminContactResponse'];
+type ApiMergeContactsRequest = ApiSchemas['MergeContactsRequest'];
 type ApiFamilyList = ApiSchemas['AdminFamilyListResponse'];
 type ApiFamilyResponse = ApiSchemas['AdminFamilyResponse'];
 type ApiOrganizationList = ApiSchemas['AdminOrganizationListResponse'];
@@ -178,6 +179,21 @@ export async function deleteAdminContact(contactId: string): Promise<void> {
     method: 'DELETE',
     expectedSuccessStatuses: [204],
   });
+}
+
+export async function mergeAdminContacts(params: {
+  contactIds: string[];
+  keeperContactId: string;
+}): Promise<AdminContactRow | null> {
+  const payload = await adminApiRequest<ApiContactResponse>({
+    endpointPath: '/v1/admin/contacts/merge',
+    method: 'POST',
+    body: {
+      contact_ids: params.contactIds,
+      keeper_contact_id: params.keeperContactId,
+    } satisfies ApiMergeContactsRequest,
+  });
+  return payload.contact ? parseContact(payload.contact) : null;
 }
 
 export async function listAdminContactNotes(

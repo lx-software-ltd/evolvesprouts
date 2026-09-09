@@ -6,10 +6,12 @@ import {
   createAdminContact,
   deleteAdminContact,
   listAdminContacts,
+  mergeAdminContacts,
   updateAdminContact,
 } from '@/lib/entity-api';
 import { ADMIN_LIST_PAGE_SIZE } from '@/lib/admin-list-query';
 import { adminQueryKeys } from '@/lib/admin-query-keys';
+import { getAdminQueryClient } from '@/lib/admin-query-client';
 import { DEFAULT_CONTACT_LIST_FILTERS, type EntityListFilters } from '@/types/entity-list';
 import type { components } from '@/types/generated/admin-api.generated';
 
@@ -75,6 +77,16 @@ export function useAdminEntityContacts() {
     [mutate]
   );
 
+  const mergeContacts = useCallback(
+    async (contactIds: string[], keeperContactId: string) =>
+      mutate(async () => {
+        const keeper = await mergeAdminContacts({ contactIds, keeperContactId });
+        await getAdminQueryClient().invalidateQueries({ queryKey: adminQueryKeys.leads.lists() });
+        return keeper;
+      }),
+    [mutate]
+  );
+
   const patchContactStandaloneNoteCount = useCallback(
     (contactId: string, standaloneNoteCount: number) => {
       setContactRows((current) =>
@@ -100,6 +112,7 @@ export function useAdminEntityContacts() {
     createContact,
     updateContact,
     deleteContact,
+    mergeContacts,
     patchContactStandaloneNoteCount,
     refetch: refetchContacts,
   };

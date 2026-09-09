@@ -1512,7 +1512,7 @@ export interface paths {
         put?: never;
         /**
          * Merge selected sales leads
-         * @description Merges two or more leads into the chosen keeper lead. When selected leads belong to different contacts, loser contact fields and related records (notes, enrollments, invoices, payments, conversations, certificates, and tags) are consolidated onto the keeper contact and orphaned loser contacts are deleted. Non-selected leads on loser contacts remain on the keeper contact as separate lead rows.
+         * @description Merges two or more leads into the chosen keeper lead. When selected leads belong to different contacts, loser identity and related records are folded onto the keeper contact through the shared record-merge helpers (notes, enrollments, invoices, payments, conversations, certificates, tags, and remaining leads). Orphaned loser contacts are deleted. Non-selected leads on loser contacts remain on the keeper contact as separate lead rows except uniqueness conflicts.
          */
         post: {
             parameters: {
@@ -3986,6 +3986,52 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/contacts/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge selected CRM contacts
+         * @description Merges two or more contacts into the chosen keeper contact. Loser fields fill empty keeper identity fields. Related records (notes, enrollments, invoices, payments, conversations, certificates, tags, and sales leads) move onto the keeper. Sales leads stay as separate rows except uniqueness conflicts (same-guide dedupe and one open automated lead per contact). Orphaned loser contacts are deleted. Conflicting emails, Instagram handles, families, or organisations return 400.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["MergeContactsRequest"];
+                };
+            };
+            responses: {
+                /** @description Surviving contact after merge. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminContactResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -7638,6 +7684,14 @@ export interface components {
              * @description Lead that survives the merge; must be one of `lead_ids`.
              */
             keeper_lead_id: string;
+        };
+        MergeContactsRequest: {
+            contact_ids: string[];
+            /**
+             * Format: uuid
+             * @description Contact that survives the merge; must be one of `contact_ids`.
+             */
+            keeper_contact_id: string;
         };
         CreateLeadRequest: {
             first_name: string;
