@@ -6,6 +6,7 @@ import {
   formatAdminContactPickerLabel,
   formatFamilyOrOrganizationPartyLabel,
   formatBillingEnrollmentPartyCell,
+  formatPaymentPartyColumnLabel,
   resolveEnrollmentListPartyLabel,
   compareInstancesByFirstSlotStartsDesc,
   formatAssetContentLanguageLabel,
@@ -1085,6 +1086,15 @@ describe('CRM party display labels', () => {
       }),
     ).toBe('Smith Family · Jane');
     expect(formatBillingEnrollmentPartyCell({ partyDisplayName: '' })).toBe('');
+  });
+
+  it('strips a trailing email from payment Party column labels', () => {
+    expect(formatPaymentPartyColumnLabel('Sam Sample · sam@example.com')).toBe('Sam Sample');
+    expect(formatPaymentPartyColumnLabel('Smith Family · Jane')).toBe('Smith Family · Jane');
+    expect(formatPaymentPartyColumnLabel('sam@example.com')).toBe('sam@example.com');
+    expect(formatPaymentPartyColumnLabel('Pat')).toBe('Pat');
+    expect(formatPaymentPartyColumnLabel('  ')).toBe('');
+    expect(formatPaymentPartyColumnLabel(null)).toBe('');
   });
 
   it('resolves enrollment list party from API or picker maps', () => {

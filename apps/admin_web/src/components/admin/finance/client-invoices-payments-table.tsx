@@ -18,7 +18,7 @@ import { formatPaymentMethodLabel } from '@/components/admin/finance/client-invo
 import { ClientInvoicesManualPaymentEditor } from '@/components/admin/finance/client-invoices-manual-payment-editor';
 import { ClientInvoicesPaymentDetail } from '@/components/admin/finance/client-invoices-payment-detail';
 import { DRAFT_RECORD_ID } from '@/hooks/use-expanded-record';
-import { formatEnumLabel } from '@/lib/format';
+import { formatEnumLabel, formatPaymentPartyColumnLabel } from '@/lib/format';
 import {
   getPaymentAllocationStatus,
   getPaymentAllocationStatusLabel,
@@ -196,7 +196,7 @@ export function ClientInvoicesPaymentsTable({
           const payCurrencyCode = (p.currency ?? defaultCurrency).trim().toUpperCase() || defaultCurrency;
           const amountDisplay = formatMoney(p.amount, payCurrencyCode);
           const unappliedDisplay = formatMoney(p.unappliedAmount, payCurrencyCode);
-          const partyDisplay = (p.party ?? '').trim() || '—';
+          const partyDisplay = formatPaymentPartyColumnLabel(p.party) || '—';
           const directionLabel = formatEnumLabel(p.direction ?? '');
           const statusLabel = formatEnumLabel(p.status ?? '');
           const methodLabel = formatPaymentMethodLabel(p.method);

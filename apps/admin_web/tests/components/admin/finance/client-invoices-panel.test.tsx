@@ -212,6 +212,30 @@ describe('ClientInvoicesPanel', () => {
     expect(within(paymentTable()).queryByRole('columnheader', { name: 'Direction' })).not.toBeInTheDocument();
   });
 
+  it('payments Party column omits a trailing contact email', async () => {
+    billingMocks.listCustomerPayments.mockResolvedValue({
+      items: [
+        {
+          ...manualPendingPayment,
+          party: 'Sam Sample \u00b7 sam@example.com',
+        },
+        {
+          ...manualPendingPayment,
+          id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+          party: 'Smith Family \u00b7 Jane',
+        },
+      ],
+      next_cursor: null,
+    });
+    render(<ClientInvoicesPanel />);
+
+    await waitFor(() => expect(billingMocks.listCustomerPayments).toHaveBeenCalled());
+    const table = paymentTable();
+    expect(within(table).getByText('Sam Sample')).toBeInTheDocument();
+    expect(within(table).queryByText(/sam@example.com/)).not.toBeInTheDocument();
+    expect(within(table).getByText('Smith Family · Jane')).toBeInTheDocument();
+  });
+
   it('renders allocation chips for none, less, in full, more, and a dash for refunds', async () => {
     billingMocks.listCustomerPayments.mockResolvedValue({
       items: [
@@ -458,6 +482,8 @@ describe('ClientInvoicesPanel', () => {
     await waitFor(() => expect(billingMocks.listRecentEnrollmentsForInvoicing).toHaveBeenCalled());
     await openNewPayment();
 
+    expect(screen.getByLabelText('Party / Enrollment')).toBeInTheDocument();
+
     const user = userEvent.setup();
     const enrollmentSelect = document.getElementById('billing-create-pay-enrollment-select') as HTMLSelectElement;
     await user.selectOptions(enrollmentSelect, eid);
@@ -608,6 +634,7 @@ describe('ClientInvoicesPanel', () => {
     });
     expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
 
+    expect(screen.getByLabelText('Party / Enrollment')).toBeInTheDocument();
     const enrollmentField = document.getElementById('billing-create-pay-enrollment-select') as HTMLInputElement;
     expect(enrollmentField.value).toBe('Pat · Spring Workshop · Standard · Group A');
     expect(enrollmentField).toHaveAttribute('readonly');
@@ -636,6 +663,7 @@ describe('ClientInvoicesPanel', () => {
       status: 'succeeded' as const,
       method: 'stripe_card',
       stripePaymentIntentId: 'pi_123',
+      party: 'Pat \u00b7 pat@example.com',
     };
     billingMocks.listCustomerPayments.mockResolvedValue({ items: [stripePayment], next_cursor: null });
     billingMocks.getCustomerPayment.mockResolvedValue({
@@ -650,6 +678,9 @@ describe('ClientInvoicesPanel', () => {
     await waitFor(() => {
       expect(document.getElementById(`billing-payment-${stripePayment.id}-stripe-ref`)).toBeTruthy();
     });
+    const partyField = document.getElementById(`billing-payment-${stripePayment.id}-party`) as HTMLInputElement;
+    expect(partyField.value).toBe('Pat');
+    expect(screen.queryByDisplayValue('pat@example.com')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /customer payment$/ })).not.toBeInTheDocument();
     expect((document.getElementById(`billing-payment-${stripePayment.id}-stripe-ref`) as HTMLInputElement).value).toBe(
       'pi_123',
