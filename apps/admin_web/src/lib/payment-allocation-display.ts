@@ -1,12 +1,13 @@
 /** Display labels for customer payment allocation vs payment amount. */
 
-export type PaymentAllocationStatus = 'none' | 'less' | 'in_full' | 'more';
+export type PaymentAllocationStatus = 'none' | 'free' | 'less' | 'in_full' | 'more';
 
 export type PaymentAllocationBadgeInput = {
   amount?: string | null;
   unappliedAmount?: string | null;
   direction?: string | null;
   status?: string | null;
+  method?: string | null;
 };
 
 const AMOUNT_EPSILON = 1e-9;
@@ -23,6 +24,7 @@ function parseDecimal(raw: string | null | undefined): number | null {
 /**
  * Compare allocated amount (`amount - unappliedAmount`) to the payment amount.
  * Refunds and failed payments are not invoice allocations; callers should render an em dash.
+ * Succeeded free methods with nothing allocated show as Free instead of None.
  */
 export function getPaymentAllocationStatus(
   payment: PaymentAllocationBadgeInput,
@@ -45,6 +47,10 @@ export function getPaymentAllocationStatus(
   }
   const allocated = amount - unapplied;
   if (allocated <= AMOUNT_EPSILON) {
+    const method = (payment.method ?? '').trim().toLowerCase();
+    if (paymentStatus === 'succeeded' && method === 'free') {
+      return 'free';
+    }
     return 'none';
   }
   if (unapplied > AMOUNT_EPSILON) {
@@ -56,6 +62,9 @@ export function getPaymentAllocationStatus(
 export function getPaymentAllocationStatusLabel(status: PaymentAllocationStatus | null): string {
   if (status === 'none') {
     return 'None';
+  }
+  if (status === 'free') {
+    return 'Free';
   }
   if (status === 'less') {
     return 'Less';
@@ -71,7 +80,7 @@ export function getPaymentAllocationStatusLabel(status: PaymentAllocationStatus 
 
 /**
  * Pill colors match audit ActionBadge (INSERT green, DELETE red).
- * Less and pending None use yellow; succeeded None uses red.
+ * Less and pending None use yellow; succeeded None uses red; Free uses INSERT green.
  */
 export function paymentAllocationBadgeClassName(
   status: PaymentAllocationStatus,
@@ -87,7 +96,7 @@ export function paymentAllocationBadgeClassName(
   if (status === 'less') {
     return 'bg-yellow-100 text-yellow-800';
   }
-  if (status === 'in_full') {
+  if (status === 'in_full' || status === 'free') {
     return 'bg-green-100 text-green-800';
   }
   return 'bg-red-100 text-red-800';
@@ -100,5 +109,5 @@ export function shouldOpenAllocatedInvoicesDisclosure(
 }
 
 export function shouldOpenAllocateDisclosure(status: PaymentAllocationStatus | null): boolean {
-  return status === 'none' || status === 'less';
+  return status === 'none' || status === 'free' || status === 'less';
 }

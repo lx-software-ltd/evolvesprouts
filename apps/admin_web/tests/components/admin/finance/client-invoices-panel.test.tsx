@@ -236,7 +236,7 @@ describe('ClientInvoicesPanel', () => {
     expect(within(table).getByText('Smith Family · Jane')).toBeInTheDocument();
   });
 
-  it('renders allocation chips for none, less, in full, more, and a dash for refunds', async () => {
+  it('renders allocation chips for none, free, less, in full, more, and a dash for refunds', async () => {
     billingMocks.listCustomerPayments.mockResolvedValue({
       items: [
         {
@@ -261,6 +261,18 @@ describe('ClientInvoicesPanel', () => {
           party: 'None Succeeded Party',
           unappliedAmount: '80',
           createdAt: '2026-01-01T01:00:00+00:00',
+          orphanPaymentDeletable: false,
+        },
+        {
+          id: '77777777-7777-7777-7777-777777777777',
+          direction: 'inbound',
+          status: 'succeeded',
+          method: 'free',
+          amount: '0',
+          currency: 'HKD',
+          party: 'Free Party',
+          unappliedAmount: '0',
+          createdAt: '2026-01-01T01:30:00+00:00',
           orphanPaymentDeletable: false,
         },
         {
@@ -335,6 +347,15 @@ describe('ClientInvoicesPanel', () => {
     expect(noneSucceededChip.className).toContain('bg-red-100');
     expect(noneSucceededChip.className).toContain('text-red-800');
 
+    const freeRow = within(table).getByText('Free Party').closest('tr');
+    expect(freeRow).not.toBeNull();
+    const freeChip = within(freeRow as HTMLElement)
+      .getAllByText('Free')
+      .find((el) => el.className.includes('rounded-full'));
+    expect(freeChip?.className).toContain('bg-green-100');
+    expect(freeChip?.className).toContain('text-green-800');
+    expect(within(freeRow as HTMLElement).queryByText('None')).not.toBeInTheDocument();
+
     const lessChip = within(table).getByText('Less');
     expect(lessChip.className).toContain('bg-yellow-100');
     expect(lessChip.className).toContain('text-yellow-800');
@@ -351,6 +372,7 @@ describe('ClientInvoicesPanel', () => {
     const refundRow = within(table).getByText('Refund Party').closest('tr');
     expect(refundRow).not.toBeNull();
     expect(within(refundRow as HTMLElement).queryByText('None')).not.toBeInTheDocument();
+    expect(within(refundRow as HTMLElement).queryByText('Free')).not.toBeInTheDocument();
     expect(within(refundRow as HTMLElement).queryByText('Less')).not.toBeInTheDocument();
     expect(within(refundRow as HTMLElement).queryByText('In full')).not.toBeInTheDocument();
     expect(within(refundRow as HTMLElement).queryByText('More')).not.toBeInTheDocument();

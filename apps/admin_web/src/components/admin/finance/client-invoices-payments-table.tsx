@@ -205,6 +205,7 @@ export function ClientInvoicesPaymentsTable({
             unappliedAmount: p.unappliedAmount,
             direction: p.direction,
             status: p.status,
+            method: p.method,
           });
           const allocationLabel = getPaymentAllocationStatusLabel(allocationStatus);
           const confirming = busyAction === 'confirm' && confirmPaymentId === id;
