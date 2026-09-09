@@ -41,13 +41,15 @@ export function AdminContactSearchField({
   const [open, setOpen] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(0);
   const blurCloseTimer = useRef<number | null>(null);
+  const previousStatus = useRef(value.status);
 
   useEffect(() => {
     if (value.status === 'selected') {
       setInputValue(value.label);
-    } else {
+    } else if (previousStatus.current === 'selected') {
       setInputValue('');
     }
+    previousStatus.current = value.status;
   }, [value]);
 
   useEffect(() => {
@@ -140,8 +142,9 @@ export function AdminContactSearchField({
             setOpen(true);
             if (value.status === 'selected' && next.trim() !== value.label.trim()) {
               onChange({ status: 'empty' });
+              return;
             }
-            if (next.trim().length < BILL_TO_PARTY_SEARCH_MIN_CHARS) {
+            if (value.status !== 'empty' && next.trim().length < BILL_TO_PARTY_SEARCH_MIN_CHARS) {
               onChange({ status: 'empty' });
             }
           }}

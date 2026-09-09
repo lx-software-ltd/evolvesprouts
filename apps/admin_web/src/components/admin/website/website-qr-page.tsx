@@ -271,6 +271,7 @@ export function WebsiteQrPage() {
               errorId='website-qr-form-contact-error'
             >
               <AdminContactSearchField
+                key={trainingFormSlug ?? 'none'}
                 inputId='website-qr-form-contact'
                 hideLabel
                 value={selectedContact}
