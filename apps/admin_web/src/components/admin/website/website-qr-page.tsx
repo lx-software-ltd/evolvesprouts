@@ -230,11 +230,30 @@ export function WebsiteQrPage() {
               </Select>
             </AdminField>
           ) : null}
+          {contactRequired ? (
+            <AdminField
+              label='Contact'
+              htmlFor='website-qr-form-contact'
+              span={isCustom ? 1 : 2}
+              hint='Required for this form. The QR URL includes the selected contact.'
+              error={contactError || undefined}
+              errorId='website-qr-form-contact-error'
+            >
+              <AdminContactSearchField
+                key={trainingFormSlug ?? 'none'}
+                inputId='website-qr-form-contact'
+                hideLabel
+                value={selectedContact}
+                onChange={setSelectedContact}
+                disabled={Boolean(configError) || Boolean(pathError)}
+              />
+            </AdminField>
+          ) : null}
           {isCustom ? (
             <AdminField
               label='Custom path'
               htmlFor='website-qr-custom-path'
-              span={isTrainingSite ? 2 : 1}
+              span={isTrainingSite && !contactRequired ? 2 : 1}
               error={pathError || undefined}
               errorId='website-qr-custom-path-error'
               hint={
@@ -260,27 +279,6 @@ export function WebsiteQrPage() {
             </AdminField>
           ) : null}
         </AdminFieldGrid>
-        {contactRequired ? (
-          <AdminFieldGrid columns={4}>
-            <AdminField
-              label='Contact'
-              htmlFor='website-qr-form-contact'
-              span={2}
-              hint='Required for this form. The QR URL includes the selected contact.'
-              error={contactError || undefined}
-              errorId='website-qr-form-contact-error'
-            >
-              <AdminContactSearchField
-                key={trainingFormSlug ?? 'none'}
-                inputId='website-qr-form-contact'
-                hideLabel
-                value={selectedContact}
-                onChange={setSelectedContact}
-                disabled={Boolean(configError) || Boolean(pathError)}
-              />
-            </AdminField>
-          </AdminFieldGrid>
-        ) : null}
         {!isCustom && pathError ? <AdminInlineError>{pathError}</AdminInlineError> : null}
         <AdminFieldGrid columns={4}>
           <AdminField span={2}>
