@@ -286,7 +286,7 @@ export function ClientInvoicesInvoicesTable({
                       label: 'Void invoice',
                       icon: <VoidExpenseIcon className='h-4 w-4' />,
                       tone: 'danger',
-                      hidden: invoice.status === 'void',
+                      hidden: invoice.status !== 'issued',
                       disabled: actionsBlocked || !id,
                       onClick: () => openVoidInvoiceDialog(id),
                     },

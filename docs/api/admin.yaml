@@ -4640,10 +4640,10 @@ paths:
 
   /v1/admin/billing/invoices/{id}/void:
     post:
-      summary: Void invoice (draft or issued)
+      summary: Void invoice (issued)
       description: >
-        Voids a draft or issued invoice. Returns 400 if already void.
-        Application audit rows distinguish `VOID_FROM_DRAFT` vs `VOID_FROM_ISSUED`.
+        Voids an issued invoice. Returns 400 if the invoice is draft or already void.
+        Draft invoices must be deleted instead. Application audit rows use `VOID_FROM_ISSUED`.
       security:
         - AdminBearerAuth: []
       parameters:

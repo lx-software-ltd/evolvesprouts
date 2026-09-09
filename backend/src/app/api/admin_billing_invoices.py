@@ -177,7 +177,10 @@ def _void_invoice(
             raise NotFoundError("CustomerInvoice", str(invoice_id))
         if inv.status == BillingInvoiceStatus.VOID:
             raise ValidationError("Invoice is already void", field="invoiceId")
-        prev = inv.status
+        if inv.status != BillingInvoiceStatus.ISSUED:
+            raise ValidationError(
+                "Only issued invoices can be voided", field="invoiceId"
+            )
         inv.status = BillingInvoiceStatus.VOID
         inv.voided_at = datetime.now(UTC)
         inv.void_reason = reason[:2000]
@@ -185,11 +188,7 @@ def _void_invoice(
         audit.log_custom(
             table_name="customer_invoices",
             record_id=inv.id,
-            action=(
-                "VOID_FROM_DRAFT"
-                if prev == BillingInvoiceStatus.DRAFT
-                else "VOID_FROM_ISSUED"
-            ),
+            action="VOID_FROM_ISSUED",
             new_values={"reason": inv.void_reason},
         )
         recompute_invoice_settlement(session, inv)
