@@ -73,10 +73,11 @@ export async function listAdminForms(signal?: AbortSignal): Promise<AdminFormSum
 
 export async function listAdminFormAnswers(
   formSlug: string,
-  params: { cursor?: string | null; limit?: number; signal?: AbortSignal } = {}
-): Promise<{ items: AdminFormAnswerRow[]; nextCursor: string | null }> {
+  params: { cursor?: string | null; limit?: number; signal?: AbortSignal; contactId?: string } = {}
+): Promise<{ items: AdminFormAnswerRow[]; nextCursor: string | null; respondentContactIds: string[] }> {
   const payload = await adminApiRequest<ApiSchemas['AdminFormAnswerListResponse']>({
     endpointPath: buildAdminListPath(`/v1/admin/forms/${encodeURIComponent(formSlug)}/answers`, {
+      filters: { contact_id: params.contactId },
       cursor: params.cursor,
       limit: params.limit,
     }),
@@ -86,6 +87,11 @@ export async function listAdminFormAnswers(
   return {
     items: Array.isArray(payload.items) ? payload.items.map((item) => parseFormAnswerRow(item)) : [],
     nextCursor: typeof payload.next_cursor === 'string' ? payload.next_cursor : null,
+    respondentContactIds: Array.isArray(payload.respondentContactIds)
+      ? payload.respondentContactIds.filter(
+          (contactId): contactId is string => typeof contactId === 'string' && contactId.trim().length > 0
+        )
+      : [],
   };
 }
 

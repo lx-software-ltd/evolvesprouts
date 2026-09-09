@@ -6760,7 +6760,7 @@ export interface paths {
         };
         /**
          * List stored answers for a form
-         * @description Returns answer rows newest first. Pass `next_cursor` from the prior response as `cursor`. Default and maximum page size follow the standard admin list limit (25 / 100).
+         * @description Returns answer rows newest first. Pass `next_cursor` from the prior response as `cursor`. Default and maximum page size follow the standard admin list limit (25 / 100). Optional `contact_id` filters to rows stored for that CRM contact before pagination. `respondentContactIds` lists distinct contact ids from all stored rows for the form (not just the current page), independent of the `contact_id` filter.
          */
         get: {
             parameters: {
@@ -6768,6 +6768,8 @@ export interface paths {
                     /** @description Opaque continuation token from `next_cursor`. */
                     cursor?: string;
                     limit?: number;
+                    /** @description When set, return only answer rows whose stored `contactId` matches this CRM contact UUID. */
+                    contact_id?: string;
                 };
                 header?: never;
                 path: {
@@ -9122,6 +9124,8 @@ export interface components {
             items: components["schemas"]["AdminFormAnswerRow"][];
             /** @description Opaque cursor for the next page, or null when no further rows remain. */
             next_cursor?: string | null;
+            /** @description Distinct CRM contact ids that have stored answers for this form, in first-seen order from the newest-first full set. Independent of pagination and of the `contact_id` filter. */
+            respondentContactIds: string[];
         };
         AdminFormClearAnswersResponse: {
             formSlug: string;

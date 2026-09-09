@@ -191,6 +191,18 @@ def list_form_answers(*, form_slug: str) -> list[dict[str, Any]]:
     return serialized
 
 
+def unique_form_answer_contact_ids(items: list[Mapping[str, Any]]) -> list[str]:
+    """Distinct non-empty ``contactId`` values in first-seen order."""
+    seen: dict[str, None] = {}
+    for row in items:
+        contact_id = row.get("contactId")
+        if isinstance(contact_id, str):
+            normalized = contact_id.strip()
+            if normalized:
+                seen.setdefault(normalized, None)
+    return list(seen)
+
+
 def serialize_form_answer_item(item: Mapping[str, Any]) -> dict[str, Any]:
     """Map a DynamoDB form answer item to an admin API payload."""
     row: dict[str, Any] = {

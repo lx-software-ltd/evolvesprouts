@@ -7,6 +7,7 @@ import io
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any
+from uuid import UUID
 
 from app.api.admin_request import (
     paginate_after_key,
@@ -21,6 +22,7 @@ from app.services.form_responses_store import (
     clear_form_answers,
     list_form_answers,
     list_form_summaries,
+    unique_form_answer_contact_ids,
 )
 from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger
@@ -80,12 +82,26 @@ def _list_forms(event: Mapping[str, Any]) -> dict[str, Any]:
     return json_response(200, {"items": items}, event=event)
 
 
+def _parse_contact_id_filter(event: Mapping[str, Any]) -> str | None:
+    raw = query_param(event, "contact_id")
+    if raw is None or not raw.strip():
+        return None
+    try:
+        return str(UUID(raw.strip()))
+    except ValueError as exc:
+        raise ValidationError("contact_id must be a UUID", field="contact_id") from exc
+
+
 def _list_form_answers(
     event: Mapping[str, Any],
     *,
     form_slug: str,
 ) -> dict[str, Any]:
     items = list_form_answers(form_slug=form_slug)
+    respondent_contact_ids = unique_form_answer_contact_ids(items)
+    contact_id = _parse_contact_id_filter(event)
+    if contact_id is not None:
+        items = [row for row in items if row.get("contactId") == contact_id]
     page, next_cursor = paginate_after_key(
         items,
         limit=parse_limit(event),
@@ -94,7 +110,11 @@ def _list_form_answers(
     )
     return json_response(
         200,
-        {"items": page, "next_cursor": next_cursor},
+        {
+            "items": page,
+            "next_cursor": next_cursor,
+            "respondentContactIds": respondent_contact_ids,
+        },
         event=event,
     )
 
