@@ -6,19 +6,27 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
-from app.api.admin_request import parse_body
+from app.api.admin_request import parse_body, parse_uuid
+from app.api.public_forms_contact import handle_form_contact_context_request
 from app.api.validators import validate_email
 from app.exceptions import ValidationError
 from app.services.form_responses_store import upsert_form_answer
-from app.utils import json_response, method_not_allowed, not_found
+from app.utils import (
+    CACHE_CONTROL_NO_STORE,
+    json_response,
+    method_not_allowed,
+    not_found,
+)
 from app.utils.logging import get_logger
 from app.utils.public_slug import PUBLIC_INSTANCE_SLUG_PATTERN
 
 logger = get_logger(__name__)
 
 _ANSWERS_SUFFIX = "/answers"
+_CONTACT_CONTEXT_SUFFIX = "/contact-context"
 _FORM_API_PREFIX = "/v1/forms/"
 _WWW_FORM_API_PREFIX = "/www/v1/forms/"
+_NO_STORE = {"Cache-Control": CACHE_CONTROL_NO_STORE}
 
 _MAX_SELECTED_OPTION = 500
 _MAX_FREE_TEXT = 4000
@@ -46,12 +54,18 @@ def handle_public_forms_request(
     path: str,
 ) -> dict[str, Any]:
     """Route form API requests under /v1/forms/* and /www/v1/forms/*."""
-    answers = _parse_form_answers_path(path)
+    answers = _parse_form_suffix_path(path, suffix=_ANSWERS_SUFFIX)
     if answers is not None:
-        form_slug, _suffix = answers
+        form_slug = answers
         if method == "PUT":
             return _handle_put_form_answer(event, form_slug=form_slug)
         return method_not_allowed(event)
+
+    contact_context = _parse_form_suffix_path(path, suffix=_CONTACT_CONTEXT_SUFFIX)
+    if contact_context is not None:
+        if method == "GET":
+            return handle_form_contact_context_request(event, form_slug=contact_context)
+        return method_not_allowed(event, headers=_NO_STORE)
 
     return not_found(event)
 
@@ -65,16 +79,16 @@ def _parse_form_path_remainder(path: str) -> str | None:
     return None
 
 
-def _parse_form_answers_path(path: str) -> tuple[str, str] | None:
+def _parse_form_suffix_path(path: str, *, suffix: str) -> str | None:
     remainder = _parse_form_path_remainder(path)
-    if remainder is None or not remainder.endswith(_ANSWERS_SUFFIX):
+    if remainder is None or not remainder.endswith(suffix):
         return None
-    form_slug = remainder[: -len(_ANSWERS_SUFFIX)].strip("/")
+    form_slug = remainder[: -len(suffix)].strip("/")
     if "/" in form_slug or not form_slug:
         return None
     if not PUBLIC_INSTANCE_SLUG_PATTERN.match(form_slug):
         return None
-    return form_slug, _ANSWERS_SUFFIX
+    return form_slug
 
 
 def _handle_put_form_answer(
@@ -134,6 +148,7 @@ def _validate_put_body(
         "session_id": session_id,
         "question_id": question_id,
         "question_type": question_type,
+        "contact_id": _optional_contact_id(body.get("contactId")),
     }
 
     if question_type in _SELECT_TYPES:
@@ -302,6 +317,20 @@ def _require_boolean(value: Any) -> bool:
     if not isinstance(value, bool):
         raise ValidationError("booleanAnswer must be a boolean")
     return value
+
+
+def _optional_contact_id(value: Any) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValidationError("contactId must be a UUID", field="contactId")
+    normalized = value.strip()
+    if not normalized:
+        return None
+    try:
+        return str(parse_uuid(normalized))
+    except ValidationError as exc:
+        raise ValidationError("contactId must be a UUID", field="contactId") from exc
 
 
 def _require_non_empty_string(value: Any, *, field: str) -> str:

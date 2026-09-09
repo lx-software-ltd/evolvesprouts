@@ -1350,6 +1350,24 @@ lx-software `contracts/openrouter-apps.json`) and set `user` to
 named keys let OpenRouter Activity group spend by product immediately;
 workloads split usage inside this product without sending PII.
 
+## Training form contact personalization
+
+**Decision:** Some training forms declare `requiresContact` in their content JSON.
+Admin Copy link (Website → Forms) and Website QR then require an existing CRM
+contact (same 2-character typeahead as invoice bill-to, without create). The
+copied URL / QR encodes `?contact=<uuid>`. The public training page loads
+display-only placeholders (`contactName`, `contactFirstName`, `children.firstName`,
+`helpers.firstName`, and related tokens) from
+`GET /v1/forms/{form_slug}/contact-context` and stores `contactId` on each
+persisted answer row. Missing household fields use English fallbacks
+(`there`, `your family`, `your child`, `your helper`). The context endpoint
+never returns email, phone, or other CRM fields, and always sends
+`Cache-Control: no-store`.
+
+**Why:** Personalised workshop copy needs household first names without exposing
+the full CRM contact over the public API key. Admin gating keeps operators from
+copying a generic link for a form that cannot render correctly without a contact.
+
 ## Keeping Documentation Up to Date
 
 **Decision:** Architecture documentation in `docs/architecture/` describes

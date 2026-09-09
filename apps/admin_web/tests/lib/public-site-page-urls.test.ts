@@ -126,6 +126,27 @@ describe('buildTrainingFormOrPollPageUrl', () => {
       }),
     ).toBe('');
   });
+
+  it('appends a contact query on personalised form URLs', () => {
+    expect(
+      buildTrainingFormOrPollPageUrl({
+        baseUrl: 'https://training.example.com',
+        noun: 'form',
+        slug: 'family-check-in',
+        contactId: '11111111-1111-4111-8111-111111111111',
+      }),
+    ).toBe(
+      'https://training.example.com/forms/family-check-in/?contact=11111111-1111-4111-8111-111111111111',
+    );
+    expect(
+      buildTrainingFormOrPollPageUrl({
+        baseUrl: 'https://training.example.com',
+        noun: 'form',
+        slug: 'family-check-in',
+        contactId: 'not-a-uuid',
+      }),
+    ).toBe('');
+  });
 });
 
 describe('buildLocalizedPublicPageUrl', () => {

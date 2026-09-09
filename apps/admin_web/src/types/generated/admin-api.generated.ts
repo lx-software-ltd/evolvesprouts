@@ -9108,6 +9108,11 @@ export interface components {
             ratingValue?: number;
             booleanAnswer?: boolean;
             freeText?: string;
+            /**
+             * Format: uuid
+             * @description CRM contact this answer was personalised for, when the training-site link included `contact`. Omitted on answers collected without a contact.
+             */
+            contactId?: string;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */

@@ -141,6 +141,7 @@ def _export_form_answers(
             "Rating Value",
             "Boolean Answer",
             "Free Text",
+            "Contact ID",
             "Created At",
             "Updated At",
         ]
@@ -181,6 +182,7 @@ def _export_form_answers(
                 rating_cell,
                 boolean_cell,
                 item.get("freeText") or "",
+                item.get("contactId") or "",
                 item.get("createdAt") or "",
                 item.get("updatedAt") or "",
             ]

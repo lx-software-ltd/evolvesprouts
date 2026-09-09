@@ -64,6 +64,17 @@ function handler(event) {
     return request;
   }
 
+  var isFormContactContextPath =
+    uri.indexOf('/www/v1/forms/') === 0 &&
+    uri.lastIndexOf('/contact-context') === uri.length - 16;
+  if (
+    (method === 'GET' || method === 'OPTIONS') &&
+    isFormContactContextPath
+  ) {
+    request.uri = uri.substring(4);
+    return request;
+  }
+
   var isPollAnswersPath =
     uri.indexOf('/www/v1/polls/') === 0 &&
     uri.lastIndexOf('/answers') === uri.length - 8;

@@ -20,6 +20,10 @@ info:
     - Media lead capture (`/v1/assets/free/request`, `/www/v1/assets/free/request`).
     - Training form answer persistence (`PUT /v1/forms/{form_slug}/answers`,
       `/www/v1/forms/{form_slug}/answers`) for `apps/training` (DynamoDB; API key only).
+      Optional `contactId` on the PUT body stores which CRM contact the session was
+      personalised for. Display-only household placeholders load via
+      `GET /v1/forms/{form_slug}/contact-context?contactId=` (same `/www` prefix;
+      `Cache-Control: no-store`).
     - Training poll answer persistence (`PUT /v1/polls/{poll_slug}/answers`,
       `/www/v1/polls/{poll_slug}/answers`) and session resume
       (`GET /v1/polls/{poll_slug}/answers?sessionId=…`, same `/www` prefix),
@@ -2825,6 +2829,53 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /v1/forms/{form_slug}/contact-context:
+    get:
+      summary: Resolve display-only contact placeholders for a form
+      description: >
+        Returns first names and household labels used to fill tokens such as
+        `{contactName}`, `{contactFirstName}`, `{children.firstName}`, and
+        `{helpers.firstName}` on a personalised training form. Does not return
+        email, phone, or other CRM fields. Requires API key. Success and error
+        responses set `Cache-Control: no-store` so CloudFront must not cache.
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: form_slug
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
+        - name: contactId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: CRM contact id from the personalised form link (`?contact=`).
+      responses:
+        "200":
+          description: Placeholder map for the contact.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FormContactContextResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          description: Contact not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "405":
+          description: Method not allowed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /v1/polls/{poll_slug}/answers:
     get:
       summary: List persisted answers for one poll session (direct API path)
@@ -3285,6 +3336,47 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "500":
           description: Persistence failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /www/v1/forms/{form_slug}/contact-context:
+    get:
+      summary: Resolve display-only contact placeholders (training website proxy path)
+      description: Same as `GET /v1/forms/{form_slug}/contact-context` for same-origin calls from `apps/training`.
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: form_slug
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
+        - name: contactId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Placeholder map for the contact.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FormContactContextResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          description: Contact not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "405":
+          description: Method not allowed.
           content:
             application/json:
               schema:
@@ -4492,6 +4584,12 @@ components:
           type: string
           maxLength: 4000
           description: Response body for `text`, `email`, and optional `consent` follow-up.
+        contactId:
+          type: string
+          format: uuid
+          description: >
+            Optional CRM contact from the personalised form link. Stored on the
+            answer row so admin can see which contact the session belonged to.
     FormAnswerPutResponse:
       type: object
       required:
@@ -4511,6 +4609,30 @@ components:
           type: string
           format: date-time
           description: UTC timestamp when the answer row was last written.
+    FormContactContextResponse:
+      type: object
+      required:
+        - formSlug
+        - contactId
+        - placeholders
+      properties:
+        formSlug:
+          type: string
+          pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
+        contactId:
+          type: string
+          format: uuid
+        placeholders:
+          type: object
+          additionalProperties:
+            type: string
+          description: >
+            Token to display-string map. Keys include `contactName`,
+            `contactFirstName`, `contactLastName`, `familyName`,
+            `children.firstName`, `children.lastName`, `children.contactName`,
+            `helpers.firstName`, `helpers.lastName`, and `helpers.contactName`.
+            Missing household fields use English fallbacks (`there`,
+            `your family`, `your child`, `your helper`).
     PollAnswerPutRequest:
       type: object
       required:

@@ -8,6 +8,20 @@ vi.mock('@/lib/config', () => ({
   getTrainingSiteBaseUrl: () => 'https://training.example.com',
 }));
 
+vi.mock('@shared-training/training-form-catalog', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@shared-training/training-form-catalog')>();
+  return {
+    ...actual,
+    trainingFormRequiresContact: (slug: string) => slug === 'workshop-feedback',
+  };
+});
+
+vi.mock('@/lib/entity-api', () => ({
+  searchEntityContactsForPicker: vi.fn(async () => [
+    { id: '11111111-1111-4111-8111-111111111111', label: 'Jane Doe · jane@example.com' },
+  ]),
+}));
+
 const generateSpy = vi.fn(async (...args: unknown[]) => {
   void args;
   return 'data:image/png;base64,AA';
@@ -198,6 +212,34 @@ describe('WebsiteQrPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Download PNG (512)' }));
     await vi.waitFor(() => {
       expect(createdAnchors.at(-1)?.download).toBe('page-home-training-512.png');
+    });
+  });
+
+  it('requires a contact for personalised training forms before showing the QR URL', async () => {
+    render(<WebsiteQrPage />);
+
+    fireEvent.change(screen.getByLabelText('Site'), { target: { value: 'training' } });
+    fireEvent.change(screen.getByLabelText('Page'), {
+      target: { value: '/forms/workshop-feedback' },
+    });
+
+    const contactInput = await screen.findByLabelText('Contact');
+    expect(
+      screen.queryByRole('link', {
+        name: 'https://training.example.com/forms/workshop-feedback/',
+      }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(contactInput, { target: { value: 'ja' } });
+    const option = await screen.findByRole('option', { name: 'Jane Doe · jane@example.com' });
+    fireEvent.click(option);
+
+    await vi.waitFor(() => {
+      expect(
+        screen.getByRole('link', {
+          name: 'https://training.example.com/forms/workshop-feedback/?contact=11111111-1111-4111-8111-111111111111',
+        }),
+      ).toBeInTheDocument();
     });
   });
 });

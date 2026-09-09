@@ -124,11 +124,17 @@ export interface BuildTrainingFormOrPollPageUrlInput {
   baseUrl: string;
   noun: 'form' | 'poll';
   slug: string;
+  /** CRM contact UUID appended as `contact` when personalising a form link. */
+  contactId?: string;
 }
+
+const CONTACT_ID_UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
  * Builds an absolute training-site URL for a form (`/forms/{slug}/`) or poll
  * (`/polls/{slug}/`). Returns empty when the base URL or slug is invalid.
+ * Optional `contactId` is appended as `?contact=<uuid>`.
  */
 export function buildTrainingFormOrPollPageUrl(input: BuildTrainingFormOrPollPageUrlInput): string {
   const slug = input.slug.trim();
@@ -140,7 +146,24 @@ export function buildTrainingFormOrPollPageUrl(input: BuildTrainingFormOrPollPag
   if (normalized.error || !normalized.path) {
     return '';
   }
-  return buildSitePageUrl({ baseUrl: input.baseUrl, path: normalized.path });
+  const pageUrl = buildSitePageUrl({ baseUrl: input.baseUrl, path: normalized.path });
+  if (!pageUrl) {
+    return '';
+  }
+  const contactId = input.contactId?.trim() ?? '';
+  if (!contactId) {
+    return pageUrl;
+  }
+  if (!CONTACT_ID_UUID.test(contactId)) {
+    return '';
+  }
+  try {
+    const url = new URL(pageUrl);
+    url.searchParams.set('contact', contactId.toLowerCase());
+    return url.toString();
+  } catch {
+    return '';
+  }
 }
 
 export function buildLocalizedPublicPageUrl(input: BuildLocalizedPublicPageUrlInput): string {

@@ -10077,6 +10077,12 @@ components:
         freeText:
           type: string
           maxLength: 4000
+        contactId:
+          type: string
+          format: uuid
+          description: >
+            CRM contact this answer was personalised for, when the training-site
+            link included `contact`. Omitted on answers collected without a contact.
         createdAt:
           type: string
           format: date-time

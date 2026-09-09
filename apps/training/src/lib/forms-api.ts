@@ -11,6 +11,13 @@ export interface PersistFormAnswerInput {
   sessionId: string;
   question: FormQuestion;
   answer: FormAnswerState;
+  contactId?: string | null;
+}
+
+export interface FormContactContextResponse {
+  formSlug: string;
+  contactId: string;
+  placeholders: Record<string, string>;
 }
 
 export class FormApiError extends Error {
@@ -57,12 +64,16 @@ export async function persistFormAnswer(input: PersistFormAnswerInput): Promise<
 export function buildPersistBody(
   input: PersistFormAnswerInput,
 ): Record<string, unknown> | null {
-  const base = {
+  const contactId = input.contactId?.trim() ?? '';
+  const base: Record<string, unknown> = {
     formSlug: input.formSlug,
     sessionId: input.sessionId,
     questionId: input.question.id,
     questionType: input.question.type,
   };
+  if (contactId) {
+    base.contactId = contactId;
+  }
 
   if (input.question.type === 'select' || input.question.type === 'segmented') {
     const selectedOption = input.answer.selectedOption.trim();
@@ -118,6 +129,45 @@ export function buildPersistBody(
   return {
     ...base,
     freeText,
+  };
+}
+
+export async function fetchFormContactContext(
+  formSlug: string,
+  contactId: string,
+  signal?: AbortSignal,
+): Promise<FormContactContextResponse> {
+  const config = resolveFormApiConfig();
+  if (!config) {
+    throw new FormApiError('Form API is not configured', 0);
+  }
+  const params = new URLSearchParams({ contactId: contactId.trim() });
+  const endpointPath = `${config.baseUrl}/v1/forms/${encodeURIComponent(formSlug)}/contact-context?${params.toString()}`;
+  const response = await fetch(endpointPath, {
+    method: 'GET',
+    cache: 'no-store',
+    headers: {
+      accept: 'application/json',
+      'x-api-key': config.apiKey,
+    },
+    signal,
+  });
+  if (!response.ok) {
+    throw new FormApiError('Failed to load form contact context', response.status);
+  }
+  const payload = (await response.json()) as FormContactContextResponse;
+  const placeholders =
+    payload && typeof payload.placeholders === 'object' && payload.placeholders !== null
+      ? payload.placeholders
+      : {};
+  return {
+    formSlug: typeof payload.formSlug === 'string' ? payload.formSlug : formSlug,
+    contactId: typeof payload.contactId === 'string' ? payload.contactId : contactId,
+    placeholders: Object.fromEntries(
+      Object.entries(placeholders).filter(
+        (entry): entry is [string, string] => typeof entry[1] === 'string',
+      ),
+    ),
   };
 }
 

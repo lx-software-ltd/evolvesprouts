@@ -42,7 +42,9 @@ Flutter Mobile / Next.js Admin
 - Training form and poll pages in `apps/training` (static export at `training.evolvesprouts.com`, not indexed).
   Form answers persist via `PUT /www/v1/forms/{form_slug}/answers` against the shared
   DynamoDB table `evolvesprouts-poll-responses` (content-driven JSON per form under
-  `apps/training/src/content/forms/`). Poll answers persist via
+  `apps/training/src/content/forms/`). Forms that set `requiresContact` are personalised
+  from a CRM contact on the link (`?contact=<uuid>`); the training page loads display-only
+  placeholders via `GET /www/v1/forms/{form_slug}/contact-context`. Poll answers persist via
   `PUT /www/v1/polls/{poll_slug}/answers` and live per-question aggregates load via
   `GET /www/v1/polls/{poll_slug}/questions/{question_id}/results` (content-driven JSON
   per poll under `apps/training/src/content/polls/`).

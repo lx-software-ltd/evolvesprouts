@@ -382,6 +382,9 @@ Current allowlisted public website POST paths include:
 
 Training form persistence uses `PUT /www/v1/forms/{form_slug}/answers` (prefix +
 `/answers` suffix rule in `WWW_PROXY_ALLOWLIST_FUNCTION`; not a fixed path per form).
+Personalised-form household placeholders use `GET /www/v1/forms/{form_slug}/contact-context`
+(prefix + `/contact-context` suffix; `Cache-Control: no-store`; response is first names
+and family labels only).
 Training poll persistence uses `PUT /www/v1/polls/{poll_slug}/answers` (prefix +
 `/answers` suffix rule in `WWW_PROXY_ALLOWLIST_FUNCTION`; not a fixed path per poll).
 Live poll aggregates use `GET /www/v1/polls/{poll_slug}/questions/{question_id}/results`

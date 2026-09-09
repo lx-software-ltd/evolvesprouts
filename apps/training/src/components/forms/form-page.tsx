@@ -1,4 +1,4 @@
-import { FormWizard } from '@/components/forms/form-wizard';
+import { FormPersonalization } from '@/components/forms/form-personalization';
 import type { FormContent, FormsCommonContent } from '@/content/form-types';
 import { SITE_COMMON } from '@/content/site-types';
 import { getPublicWwwHomeUrl } from '@/lib/public-www-url';
@@ -22,7 +22,7 @@ export function FormPage({ form, common }: FormPageProps) {
 
   return (
     <main className='flex min-h-screen flex-col px-6 py-10'>
-      <header className='mx-auto mb-8 w-full max-w-xl text-center'>
+      <header className='mx-auto mb-4 w-full max-w-xl text-center'>
         <div className='mb-4'>
           {publicWwwHomeUrl ? (
             <a
@@ -36,9 +36,8 @@ export function FormPage({ form, common }: FormPageProps) {
             logo
           )}
         </div>
-        <h1 className='es-type-title text-2xl'>{form.title}</h1>
       </header>
-      <FormWizard form={form} common={common} />
+      <FormPersonalization form={form} common={common} />
     </main>
   );
 }
