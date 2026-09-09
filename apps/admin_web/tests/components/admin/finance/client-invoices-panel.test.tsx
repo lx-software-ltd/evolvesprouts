@@ -208,6 +208,91 @@ describe('ClientInvoicesPanel', () => {
     expect(within(invoiceTable()).queryByRole('columnheader', { name: 'Invoice' })).not.toBeInTheDocument();
     expect(within(invoiceTable()).getByRole('columnheader', { name: 'Settlement' })).toBeInTheDocument();
     expect(within(paymentTable()).getByRole('columnheader', { name: 'Party' })).toBeInTheDocument();
+    expect(within(paymentTable()).getByRole('columnheader', { name: 'Allocation' })).toBeInTheDocument();
+    expect(within(paymentTable()).queryByRole('columnheader', { name: 'Direction' })).not.toBeInTheDocument();
+  });
+
+  it('renders allocation chips for less, in full, more, and a dash for refunds', async () => {
+    billingMocks.listCustomerPayments.mockResolvedValue({
+      items: [
+        {
+          id: '11111111-1111-1111-1111-111111111111',
+          direction: 'inbound',
+          status: 'succeeded',
+          method: 'bank_transfer',
+          amount: '100',
+          currency: 'HKD',
+          party: 'Less Party',
+          unappliedAmount: '40',
+          createdAt: '2026-01-01T00:00:00+00:00',
+          orphanPaymentDeletable: false,
+        },
+        {
+          id: '22222222-2222-2222-2222-222222222222',
+          direction: 'inbound',
+          status: 'succeeded',
+          method: 'bank_transfer',
+          amount: '100',
+          currency: 'HKD',
+          party: 'Full Party',
+          unappliedAmount: '0',
+          createdAt: '2026-01-02T00:00:00+00:00',
+          orphanPaymentDeletable: false,
+        },
+        {
+          id: '33333333-3333-3333-3333-333333333333',
+          direction: 'inbound',
+          status: 'succeeded',
+          method: 'bank_transfer',
+          amount: '100',
+          currency: 'HKD',
+          party: 'More Party',
+          unappliedAmount: '-10',
+          createdAt: '2026-01-03T00:00:00+00:00',
+          orphanPaymentDeletable: false,
+        },
+        {
+          id: '44444444-4444-4444-4444-444444444444',
+          direction: 'refund',
+          status: 'succeeded',
+          method: 'bank_transfer',
+          amount: '25',
+          currency: 'HKD',
+          party: 'Refund Party',
+          unappliedAmount: '25',
+          createdAt: '2026-01-04T00:00:00+00:00',
+          orphanPaymentDeletable: false,
+        },
+      ],
+      next_cursor: null,
+    });
+
+    render(<ClientInvoicesPanel />);
+
+    const table = await waitFor(() => {
+      const t = paymentTable();
+      expect(within(t).getByText('Less Party')).toBeInTheDocument();
+      return t;
+    });
+
+    const lessChip = within(table).getByText('Less');
+    expect(lessChip.className).toContain('bg-yellow-100');
+    expect(lessChip.className).toContain('text-yellow-800');
+    expect(lessChip.className).toContain('rounded-full');
+
+    const inFullChip = within(table).getByText('In full');
+    expect(inFullChip.className).toContain('bg-green-100');
+    expect(inFullChip.className).toContain('text-green-800');
+
+    const moreChip = within(table).getByText('More');
+    expect(moreChip.className).toContain('bg-red-100');
+    expect(moreChip.className).toContain('text-red-800');
+
+    const refundRow = within(table).getByText('Refund Party').closest('tr');
+    expect(refundRow).not.toBeNull();
+    expect(within(refundRow as HTMLElement).queryByText('Less')).not.toBeInTheDocument();
+    expect(within(refundRow as HTMLElement).queryByText('In full')).not.toBeInTheDocument();
+    expect(within(refundRow as HTMLElement).queryByText('More')).not.toBeInTheDocument();
   });
 
   it('expanding an issued invoice seeds the allocation target of an expanded payment', async () => {
