@@ -29,6 +29,39 @@ describe('getPaymentAllocationStatus', () => {
     ).toBe('none');
   });
 
+  it('returns free when a succeeded free payment has nothing allocated', () => {
+    expect(
+      getPaymentAllocationStatus({
+        direction: 'inbound',
+        status: 'succeeded',
+        method: 'free',
+        amount: '0',
+        unappliedAmount: '0',
+      }),
+    ).toBe('free');
+    expect(
+      getPaymentAllocationStatus({
+        direction: 'inbound',
+        status: 'succeeded',
+        method: 'FREE',
+        amount: '10',
+        unappliedAmount: '10',
+      }),
+    ).toBe('free');
+  });
+
+  it('keeps pending free unallocated payments as none', () => {
+    expect(
+      getPaymentAllocationStatus({
+        direction: 'inbound',
+        status: 'pending',
+        method: 'free',
+        amount: '0',
+        unappliedAmount: '0',
+      }),
+    ).toBe('none');
+  });
+
   it('returns less when some of the payment is still unapplied', () => {
     expect(
       getPaymentAllocationStatus({
@@ -95,6 +128,7 @@ describe('getPaymentAllocationStatus', () => {
 describe('getPaymentAllocationStatusLabel', () => {
   it('maps statuses to table copy', () => {
     expect(getPaymentAllocationStatusLabel('none')).toBe('None');
+    expect(getPaymentAllocationStatusLabel('free')).toBe('Free');
     expect(getPaymentAllocationStatusLabel('less')).toBe('Less');
     expect(getPaymentAllocationStatusLabel('in_full')).toBe('In full');
     expect(getPaymentAllocationStatusLabel('more')).toBe('More');
@@ -105,6 +139,7 @@ describe('getPaymentAllocationStatusLabel', () => {
 describe('paymentAllocationBadgeClassName', () => {
   it('matches audit INSERT green and DELETE red', () => {
     expect(paymentAllocationBadgeClassName('in_full')).toBe(actionBadgeClassName('INSERT'));
+    expect(paymentAllocationBadgeClassName('free')).toBe(actionBadgeClassName('INSERT'));
     expect(paymentAllocationBadgeClassName('more')).toBe(actionBadgeClassName('DELETE'));
     expect(paymentAllocationBadgeClassName('none', 'succeeded')).toBe(actionBadgeClassName('DELETE'));
   });
@@ -121,11 +156,13 @@ describe('allocation disclosure defaults', () => {
     expect(shouldOpenAllocatedInvoicesDisclosure('in_full')).toBe(true);
     expect(shouldOpenAllocatedInvoicesDisclosure('more')).toBe(true);
     expect(shouldOpenAllocatedInvoicesDisclosure('none')).toBe(false);
+    expect(shouldOpenAllocatedInvoicesDisclosure('free')).toBe(false);
     expect(shouldOpenAllocatedInvoicesDisclosure('less')).toBe(false);
   });
 
   it('opens allocate for none and less', () => {
     expect(shouldOpenAllocateDisclosure('none')).toBe(true);
+    expect(shouldOpenAllocateDisclosure('free')).toBe(true);
     expect(shouldOpenAllocateDisclosure('less')).toBe(true);
     expect(shouldOpenAllocateDisclosure('in_full')).toBe(false);
     expect(shouldOpenAllocateDisclosure('more')).toBe(false);

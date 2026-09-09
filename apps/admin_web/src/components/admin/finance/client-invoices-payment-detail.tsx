@@ -75,6 +75,7 @@ export function ClientInvoicesPaymentDetail({
     unappliedAmount: payment.unappliedAmount,
     direction: payment.direction,
     status: payment.status,
+    method: payment.method,
   });
   const openAllocatedInvoices = shouldOpenAllocatedInvoicesDisclosure(allocationStatus);
   const openAllocate = shouldOpenAllocateDisclosure(allocationStatus);
