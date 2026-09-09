@@ -1,0 +1,54 @@
+{
+  "title": "Ciao {contactFirstName} 🌿",
+  "slug": "pre-session-check-in",
+  "requiresContact": true,
+  "completion": {
+    "description": "Thank you — that's exactly what I needed before our session."
+  },
+  "questions": [
+    {
+      "id": "typical-day",
+      "type": "text",
+      "screen": "Before our session",
+      "question": "What does a normal day look like for {children.firstName}?",
+      "hint": "Here are the few things I'd love to know before our session — nothing long, just type whenever you have a minute. Roughly wake / naps / meals / bed.",
+      "required": true
+    },
+    {
+      "id": "who-is-with",
+      "type": "text",
+      "question": "Who's with {children.firstName} most of the day, and what does a usual stretch with {helpers.firstName} look like?",
+      "required": true
+    },
+    {
+      "id": "play-time",
+      "type": "text",
+      "question": "Where does {children.firstName} spend play time — floor, bouncer, cot, someone's lap? And how long on the floor?",
+      "required": true
+    },
+    {
+      "id": "toys",
+      "type": "text",
+      "question": "Toys and objects — does someone usually hand them over, or does {children.firstName} reach?",
+      "required": true
+    },
+    {
+      "id": "feeding",
+      "type": "text",
+      "question": "Milk and solids going ok? Anything {children.firstName} refuses?",
+      "required": true
+    },
+    {
+      "id": "helper",
+      "type": "text",
+      "question": "{helpers.firstName} — how long with you, what languages, and open to trying new things?",
+      "required": true
+    },
+    {
+      "id": "session-wish",
+      "type": "text",
+      "question": "If one thing felt different after our session, what would you most want it to be?",
+      "required": true
+    }
+  ]
+}

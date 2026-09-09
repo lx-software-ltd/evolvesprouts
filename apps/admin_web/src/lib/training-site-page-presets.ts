@@ -14,6 +14,7 @@ const PRESET_ROWS: readonly { label: string; routeKey: keyof typeof TRAINING_ROU
   { label: 'Home', routeKey: 'home' },
   { label: 'Workshop feedback form', routeKey: 'formsWorkshopFeedback' },
   { label: 'Workshop exit feedback', routeKey: 'formsWorkshopExitFeedback' },
+  { label: 'Pre-session check-in', routeKey: 'formsPreSessionCheckIn' },
   { label: 'Workshop food poll (Jun 26)', routeKey: 'pollsWorkshopFoodJun26' },
 ] as const;
 
