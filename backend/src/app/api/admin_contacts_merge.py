@@ -62,7 +62,9 @@ def merge_contacts_payload_from(
     return contact_ids, keeper_contact_id
 
 
-def merge_contacts_request(event: Mapping[str, Any], *, actor_sub: str) -> dict[str, Any]:
+def merge_contacts_request(
+    event: Mapping[str, Any], *, actor_sub: str
+) -> dict[str, Any]:
     body = parse_body(event)
     contact_ids, keeper_contact_id = merge_contacts_payload_from(body)
 

@@ -75,9 +75,7 @@ def absorb_loser_record(
     archive_email = archive_email_if_discarded(keeper, loser)
     loser.email = None
     loser.instagram_handle = None
-    transfer_group_memberships(
-        session, keeper, loser, conflict_field=conflict_field
-    )
+    transfer_group_memberships(session, keeper, loser, conflict_field=conflict_field)
     union_tag_links(session, keeper.id, loser.id)
     with session.no_autoflush:
         reassign_related_records(
