@@ -1,9 +1,12 @@
 'use client';
 
+import { useState } from 'react';
+
 import type { useAdminEntityContacts } from '@/hooks/use-admin-entity-contacts';
 import { useContactsPanelEditor } from '@/hooks/use-contacts-panel-editor';
 import { ContactEditorPanel } from '@/components/admin/contacts/contact-editor-panel';
 import { ContactsRecordTable } from '@/components/admin/contacts/contacts-record-table';
+import { StatusBanner } from '@/components/status-banner';
 import { AdminDiscardChangesDialog } from '@/components/ui/admin-discard-changes-dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { EntityTagRef } from '@/lib/entity-api';
@@ -35,6 +38,7 @@ export function ContactsPanel({
 }: ContactsPanelProps) {
   const { contacts: rows, filters, setFilter, isLoading, isLoadingMore, hasMore, error, loadMore } =
     contacts;
+  const [mergeError, setMergeError] = useState('');
 
   const editor = useContactsPanelEditor({
     contacts,
@@ -48,6 +52,11 @@ export function ContactsPanel({
     <>
       <ConfirmDialog {...editor.confirmDialogProps} />
       <AdminDiscardChangesDialog prompt={editor.expanded.discardPrompt} />
+      {mergeError ? (
+        <StatusBanner variant='error' title='Contact merge failed'>
+          {mergeError}
+        </StatusBanner>
+      ) : null}
       <ContactsRecordTable
         rows={rows}
         pinnedRow={editor.pinnedRow}
@@ -79,6 +88,25 @@ export function ContactsPanel({
           );
         }}
         onDeleteContact={(row) => void editor.handleDeleteContact(row)}
+        onBulkMerge={async (contactIds, keeperContactId) => {
+          setMergeError('');
+          try {
+            await contacts.mergeContacts(contactIds, keeperContactId);
+            if (
+              editor.expanded.expandedId &&
+              contactIds.includes(editor.expanded.expandedId) &&
+              editor.expanded.expandedId !== keeperContactId
+            ) {
+              editor.expanded.expand(keeperContactId);
+            }
+            await refreshFamilyOrgLists?.();
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : 'Contact merge failed. Try again.';
+            setMergeError(message);
+            throw error;
+          }
+        }}
       />
     </>
   );

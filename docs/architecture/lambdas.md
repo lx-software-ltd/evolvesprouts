@@ -116,8 +116,8 @@ their primary responsibilities.
   reconciliation job exists. **Caching:** share-link tokens stay stable on replace;
   CDN or browser caching keyed only by URL (not `s3_key`) may show stale bytes until TTL—
   downloads keyed by changing `s3_key` generally avoid that.
-  `/v1/admin/leads/merge` (POST merges selected leads; consolidates loser contacts and
-  deletes orphaned contacts),
+  `/v1/admin/leads/merge` (POST merges selected leads; folds loser contacts through
+  shared record-merge helpers and deletes orphaned contacts),
   `/v1/admin/leads/{id}/ai-suggestion` (GET latest stored close suggestion / POST
   enqueues async generation on `LeadAiSuggestionFunction` via SQS; poll
   `/v1/admin/leads/{id}/ai-suggestion/jobs/{job_id}` for status and timing),
@@ -136,6 +136,9 @@ their primary responsibilities.
   `organization_location_summary` when the contact is linked to a family or organisation that has a venue location,
   plus related-record flags `has_sales_conversation` (with optional `sales_conversation_channel`),
   `has_service_instance`, and `has_invoice`;
+  `POST /v1/admin/contacts/merge` merges selected contacts onto a keeper, moving
+  sales leads, enrollments, invoices, payments, conversations, certificates, notes,
+  and tags, then deleting orphaned contacts;
   `POST /v1/admin/contacts/mailchimp-sync-run`, `POST /v1/admin/contacts/mailchimp-sync-orphans`, and
   `GET /v1/admin/contacts/mailchimp-sync-status` for production Mailchimp audience sync, orphan cleanup, and status counters),
   `/v1/admin/tags/*` for CRM tag catalog administration (list with optional `include_archived` or

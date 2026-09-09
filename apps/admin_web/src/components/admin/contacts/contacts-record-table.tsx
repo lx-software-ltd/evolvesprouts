@@ -1,7 +1,8 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 
+import { ContactsBulkActions } from '@/components/admin/contacts/contacts-bulk-actions';
 import { relatedRecordActions } from '@/components/admin/contacts/related-record-actions';
 import { ArchiveIcon, DeleteIcon, NoteIcon, RestoreIcon } from '@/components/icons/action-icons';
 import { AdminCreateButton } from '@/components/ui/admin-create-button';
@@ -31,7 +32,7 @@ import type { components } from '@/types/generated/admin-api.generated';
 
 type AdminContact = components['schemas']['AdminContact'];
 
-const COLUMN_COUNT = 5;
+const COLUMN_COUNT = 6;
 
 export interface ContactsRecordTableProps {
   rows: AdminContact[];
@@ -53,6 +54,7 @@ export interface ContactsRecordTableProps {
   onOpenNotes: (row: AdminContact) => void;
   onToggleActive: (row: AdminContact) => void;
   onDeleteContact: (row: AdminContact) => void;
+  onBulkMerge: (contactIds: string[], keeperContactId: string) => Promise<void> | void;
 }
 
 function contactDisplayName(row: AdminContact): string {
@@ -77,9 +79,23 @@ export function ContactsRecordTable({
   onOpenNotes,
   onToggleActive,
   onDeleteContact,
+  onBulkMerge,
 }: ContactsRecordTableProps) {
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const displayRows =
     pinnedRow && !rows.some((row) => row.id === pinnedRow.id) ? [pinnedRow, ...rows] : rows;
+  const selectedContacts = useMemo(
+    () => displayRows.filter((row) => selectedSet.has(row.id)),
+    [displayRows, selectedSet]
+  );
+  const allChecked = displayRows.length > 0 && displayRows.every((row) => selectedSet.has(row.id));
+
+  const handleCheck = (contactId: string, checked: boolean) => {
+    setSelectedIds((current) =>
+      checked ? [...current, contactId] : current.filter((entry) => entry !== contactId)
+    );
+  };
 
   return (
     <AdminRecordTable
@@ -94,62 +110,83 @@ export function ContactsRecordTable({
       errorTitle='Contacts'
       emptyLabel='No contacts match the current filters.'
       filters={
-        <AdminFilterBar
-          trailing={
-            <AdminCreateButton
-              label='New contact'
-              active={expanded.isDraftOpen}
-              onClick={() => (expanded.isDraftOpen ? expanded.collapse() : expanded.openDraft())}
-            />
-          }
-        >
-          <AdminFilterField label='Search' htmlFor='crm-contacts-search' className='sm:basis-72'>
-            <Input
-              id='crm-contacts-search'
-              value={filters.query}
-              onChange={(e) => {
-                onClearDeleteError();
-                setFilter('query', e.target.value);
-              }}
-              placeholder='Name, email, phone, Instagram'
-            />
-          </AdminFilterField>
-          <AdminFilterField label='Type' htmlFor='crm-contacts-type'>
-            <Select
-              id='crm-contacts-type'
-              value={filters.contact_type}
-              onChange={(e) => {
-                onClearDeleteError();
-                setFilter('contact_type', e.target.value as EntityListFilters['contact_type']);
-              }}
-            >
-              <option value=''>All</option>
-              {CONTACT_TYPES.map((v) => (
-                <option key={v} value={v}>
-                  {formatEnumLabel(v)}
-                </option>
-              ))}
-            </Select>
-          </AdminFilterField>
-          <AdminFilterField label='Status' htmlFor='crm-contacts-active'>
-            <Select
-              id='crm-contacts-active'
-              value={filters.active}
-              onChange={(e) => {
-                onClearDeleteError();
-                setFilter('active', e.target.value as EntityListFilters['active']);
-              }}
-            >
-              <option value=''>All</option>
-              <option value='true'>Active</option>
-              <option value='false'>Archived</option>
-            </Select>
-          </AdminFilterField>
-        </AdminFilterBar>
+        <>
+          <AdminFilterBar
+            trailing={
+              <AdminCreateButton
+                label='New contact'
+                active={expanded.isDraftOpen}
+                onClick={() => (expanded.isDraftOpen ? expanded.collapse() : expanded.openDraft())}
+              />
+            }
+          >
+            <AdminFilterField label='Search' htmlFor='crm-contacts-search' className='sm:basis-72'>
+              <Input
+                id='crm-contacts-search'
+                value={filters.query}
+                onChange={(e) => {
+                  onClearDeleteError();
+                  setFilter('query', e.target.value);
+                }}
+                placeholder='Name, email, phone, Instagram'
+              />
+            </AdminFilterField>
+            <AdminFilterField label='Type' htmlFor='crm-contacts-type'>
+              <Select
+                id='crm-contacts-type'
+                value={filters.contact_type}
+                onChange={(e) => {
+                  onClearDeleteError();
+                  setFilter('contact_type', e.target.value as EntityListFilters['contact_type']);
+                }}
+              >
+                <option value=''>All</option>
+                {CONTACT_TYPES.map((v) => (
+                  <option key={v} value={v}>
+                    {formatEnumLabel(v)}
+                  </option>
+                ))}
+              </Select>
+            </AdminFilterField>
+            <AdminFilterField label='Status' htmlFor='crm-contacts-active'>
+              <Select
+                id='crm-contacts-active'
+                value={filters.active}
+                onChange={(e) => {
+                  onClearDeleteError();
+                  setFilter('active', e.target.value as EntityListFilters['active']);
+                }}
+              >
+                <option value=''>All</option>
+                <option value='true'>Active</option>
+                <option value='false'>Archived</option>
+              </Select>
+            </AdminFilterField>
+          </AdminFilterBar>
+          <ContactsBulkActions
+            selectedCount={selectedIds.length}
+            selectedContacts={selectedContacts}
+            onBulkMerge={async (contactIds, keeperContactId) => {
+              await onBulkMerge(contactIds, keeperContactId);
+              setSelectedIds([]);
+            }}
+          />
+        </>
       }
       head={
         <tr>
           <AdminDataTableHeadCell className='w-10' />
+          <AdminDataTableHeadCell className='w-10 pr-0'>
+            <input
+              type='checkbox'
+              aria-label='Select all contacts'
+              className='h-4 w-4 rounded border-slate-300 text-slate-900'
+              checked={allChecked}
+              onChange={(event) =>
+                setSelectedIds(event.target.checked ? displayRows.map((row) => row.id) : [])
+              }
+            />
+          </AdminDataTableHeadCell>
           <AdminDataTableHeadCell>Name</AdminDataTableHeadCell>
           <AdminDataTableHeadCell priority='secondary'>Email</AdminDataTableHeadCell>
           <AdminDataTableHeadCell priority='tertiary'>Type</AdminDataTableHeadCell>
@@ -167,6 +204,7 @@ export function ContactsRecordTable({
           columnCount={COLUMN_COUNT}
           cells={
             <>
+              <AdminDataTableCell className='w-10 pr-0' />
               <AdminDataTableCell className='font-medium text-slate-900'>New contact</AdminDataTableCell>
               <AdminDataTableCell priority='secondary' className='text-slate-400'>
                 —
@@ -194,6 +232,20 @@ export function ContactsRecordTable({
             columnCount={COLUMN_COUNT}
             cells={
               <>
+                <AdminDataTableCell
+                  className='w-10 pr-0'
+                  onClick={(event) => {
+                    event.stopPropagation();
+                  }}
+                >
+                  <input
+                    type='checkbox'
+                    aria-label={`Select ${name}`}
+                    className='h-4 w-4 rounded border-slate-300 text-slate-900'
+                    checked={selectedSet.has(row.id)}
+                    onChange={(event) => handleCheck(row.id, event.target.checked)}
+                  />
+                </AdminDataTableCell>
                 <AdminDataTableCell>
                   {name}
                   {nameListSuffix ? (

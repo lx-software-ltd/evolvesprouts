@@ -1142,6 +1142,23 @@ conversations.
 - Reopening a closed lead keeps history on one record when the same
   person comes back.
 
+## Contact and lead merge
+
+**Decision:** Shared record-merge helpers in `backend/src/app/services/record_merge.py`
+(`absorb_loser_record` and related-row helpers in `record_merge_related.py`)
+fold one record's identity and related rows onto a keeper. `merge_contacts`
+(`POST /v1/admin/contacts/merge`) uses those helpers and keeps sales leads as
+separate rows except uniqueness conflicts (`sales_leads_guide_dedup_idx` and
+`sales_leads_one_open_contact_idx`). `merge_leads` (`POST /v1/admin/leads/merge`)
+calls the same helpers for loser contacts, then additionally collapses the
+**selected** lead rows onto the keeper lead.
+
+**Why:**
+- Operators need a contact-first merge (duplicate WhatsApp vs CRM client)
+  that preserves enrollments, invoices, conversations, and leads.
+- Lead merge stays for collapsing pipeline rows without duplicating
+  contact-consolidation logic.
+
 ## Helper Detector for automated sales leads
 
 **Decision:** Persist a `helper_detector_enabled` flag on the singleton

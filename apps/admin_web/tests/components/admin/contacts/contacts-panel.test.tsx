@@ -71,6 +71,7 @@ function buildContactsHook(
     createContact: vi.fn().mockResolvedValue(null),
     updateContact: vi.fn().mockResolvedValue(null),
     deleteContact: vi.fn().mockResolvedValue(undefined),
+    mergeContacts: vi.fn().mockResolvedValue(null),
     patchContactStandaloneNoteCount: vi.fn(),
     refetch: vi.fn(),
     ...overrides,
@@ -356,6 +357,35 @@ describe('ContactsPanel', () => {
 
     await user.click(screen.getByRole('button', { name: 'Collapse Bob Ray' }));
     expect(window.location.search).toBe('');
+  });
+
+  it('merges checked contacts onto the chosen keeper', async () => {
+    const user = userEvent.setup();
+    const mergeContacts = vi.fn().mockResolvedValue(null);
+    const ann = buildContact({
+      id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      first_name: 'Ann',
+      last_name: 'Lee',
+    });
+    const gabriella = buildContact({
+      id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      first_name: 'Gabriella',
+      last_name: 'Zavatti',
+      relationship_type: 'client',
+    });
+    renderPanel({
+      contacts: buildContactsHook({ contacts: [ann, gabriella], mergeContacts }),
+    });
+
+    expect(screen.queryByRole('button', { name: 'Merge contacts' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('checkbox', { name: 'Select Ann Lee' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Select Gabriella Zavatti' }));
+    await user.click(screen.getByRole('button', { name: 'Merge contacts' }));
+    await user.click(screen.getByRole('radio', { name: /Gabriella Zavatti/i }));
+    const confirmMerge = screen.getAllByRole('button', { name: 'Merge contacts' })[1];
+    await user.click(confirmMerge!);
+
+    expect(mergeContacts).toHaveBeenCalledWith([ann.id, gabriella.id], gabriella.id);
   });
 
   it('asks before discarding unsaved edits when switching rows', async () => {

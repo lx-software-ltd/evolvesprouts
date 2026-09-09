@@ -20,6 +20,7 @@ from app.api.admin_contacts_mailchimp_sync import (
     run_mailchimp_orphan_cleanup,
     run_mailchimp_sync_batch,
 )
+from app.api.admin_contacts_merge import merge_contacts_request
 from app.api.admin_contacts_mutations import (
     create_contact,
     update_contact,
@@ -83,6 +84,11 @@ def handle_admin_contacts_request(
     if len(parts) == 3 and parts[2] == "search":
         if method == "GET":
             return _search_contacts_for_picker(event)
+        return method_not_allowed(event)
+
+    if len(parts) == 3 and parts[2] == "merge":
+        if method == "POST":
+            return merge_contacts_request(event, actor_sub=identity.user_sub)
         return method_not_allowed(event)
 
     if len(parts) == 2:
