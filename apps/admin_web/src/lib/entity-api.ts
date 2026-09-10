@@ -20,6 +20,7 @@ type ApiTagList = ApiSchemas['EntityTagListResponse'];
 type ApiEntityPickerList = ApiSchemas['EntityPickerListResponse'];
 type ApiNoteList = ApiSchemas['AdminNoteListResponse'];
 type ApiEntityServicesList = ApiSchemas['EntityServicesResponse'];
+type ApiContactMapPinList = ApiSchemas['AdminContactMapPinListResponse'];
 
 export type AdminContactRow = ApiSchemas['AdminContact'];
 export type AdminFamilyRow = ApiSchemas['AdminFamily'];
@@ -27,6 +28,7 @@ export type AdminOrganizationRow = ApiSchemas['AdminOrganization'];
 export type EntityTagRef = ApiSchemas['EntityTagRef'];
 export type EntityPickerListItem = ApiSchemas['EntityPickerListItem'];
 export type NoteRow = ApiSchemas['Note'];
+export type AdminContactMapPin = ApiSchemas['AdminContactMapPin'];
 
 function parseContact(value: unknown): AdminContactRow {
   const row = isRecord(value) ? value : {};
@@ -127,6 +129,17 @@ export async function getAdminContact(
     signal,
   });
   return payload.contact ? parseContact(payload.contact) : null;
+}
+
+export async function listAdminContactMapPins(
+  signal?: AbortSignal
+): Promise<AdminContactMapPin[]> {
+  const payload = await adminApiRequest<ApiContactMapPinList>({
+    endpointPath: '/v1/admin/contacts/map-pins',
+    method: 'GET',
+    signal,
+  });
+  return Array.isArray(payload.items) ? payload.items : [];
 }
 
 export async function listAdminContacts(

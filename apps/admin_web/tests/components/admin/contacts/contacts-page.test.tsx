@@ -155,6 +155,11 @@ describe('ContactsPage', () => {
     expect(screen.getByRole('button', { name: 'New organisation' })).toBeInTheDocument();
     expect(window.location.search).toBe('?tab=organizations');
 
+    await user.click(screen.getByRole('button', { name: 'Map' }));
+    expect(screen.getByTestId('contacts-map-panel')).toBeInTheDocument();
+    expect(window.location.search).toBe('?tab=map');
+    expect(screen.queryByRole('region', { name: 'Organisations' })).not.toBeInTheDocument();
+
     await user.click(screen.getByRole('button', { name: 'Mailchimp' }));
     expect(screen.getByTestId('mailchimp-sync-card')).toBeInTheDocument();
     expect(window.location.search).toBe('?tab=mailchimp');
@@ -176,6 +181,21 @@ describe('ContactsPage', () => {
     await waitFor(() => {
       expect(screen.getByRole('region', { name: 'Organisations' })).toBeInTheDocument();
     });
+  });
+
+  it('opens the Map tab from the URL query parameter', async () => {
+    listEntityTags.mockResolvedValue([]);
+    listAllLocations.mockResolvedValue([]);
+    listGeographicAreas.mockResolvedValue([]);
+
+    window.history.replaceState(null, '', '/contacts?tab=map');
+    render(<ContactsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('contacts-map-panel')).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('region', { name: 'Contacts' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Map' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('opens the Mailchimp tab from the URL query parameter', async () => {

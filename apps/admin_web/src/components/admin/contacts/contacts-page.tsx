@@ -2,6 +2,7 @@
 
 import { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 
+import { ContactsMapPanel } from '@/components/admin/contacts/contacts-map-panel';
 import { ContactsPanel } from '@/components/admin/contacts/contacts-panel';
 import { FamiliesPanel } from '@/components/admin/contacts/families-panel';
 import { MailchimpSyncCard } from '@/components/admin/contacts/mailchimp-sync-card';
@@ -24,6 +25,7 @@ const TAB_ITEMS = [
   { key: 'contacts', label: 'Contacts' },
   { key: 'families', label: 'Families' },
   { key: 'organizations', label: 'Organisations' },
+  { key: 'map', label: 'Map' },
   { key: 'mailchimp', label: 'Mailchimp' },
 ] as const;
 
@@ -142,6 +144,8 @@ export function ContactsPage() {
           contactOptions={contactOptions}
           contactsForMembership={contactsForMembership}
         />
+      ) : activeView === 'map' ? (
+        <ContactsMapPanel />
       ) : (
         <MailchimpSyncCard />
       )}

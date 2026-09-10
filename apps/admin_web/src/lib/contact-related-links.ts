@@ -125,6 +125,26 @@ export function adminContactInvoicesDeepLink(partyName: string): string {
   return adminPartyInvoicesDeepLink(partyName);
 }
 
+export function adminContactsMapPinDeepLink(entityType: RelatedPartyKind, id: string): string {
+  if (entityType === 'family') {
+    return `/contacts?tab=families&${partySearch('family', id)}`;
+  }
+  if (entityType === 'organization') {
+    return `/contacts?tab=organizations&${partySearch('organization', id)}`;
+  }
+  return `/contacts?${partySearch('contact', id)}`;
+}
+
+export function contactsMapPinKindLabel(entityType: RelatedPartyKind): string {
+  if (entityType === 'family') {
+    return 'Family';
+  }
+  if (entityType === 'organization') {
+    return 'Organisation';
+  }
+  return 'Contact';
+}
+
 export function isSalesInboxTab(value: string | null | undefined): value is SalesInboxTab {
   return value === 'whatsapp' || value === 'instagram' || value === 'messenger';
 }

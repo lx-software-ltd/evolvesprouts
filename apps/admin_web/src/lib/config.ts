@@ -5,6 +5,7 @@ export interface AppConfig {
   apiBaseUrl: string;
   publicSiteBaseUrl: string;
   trainingSiteBaseUrl: string;
+  googleMapsApiKey: string;
 }
 
 export const appConfig: AppConfig = {
@@ -14,6 +15,7 @@ export const appConfig: AppConfig = {
   apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? '',
   publicSiteBaseUrl: process.env.NEXT_PUBLIC_PUBLIC_SITE_BASE_URL ?? '',
   trainingSiteBaseUrl: process.env.NEXT_PUBLIC_TRAINING_SITE_BASE_URL ?? '',
+  googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
 };
 
 function trimTrailingSlashes(value: string) {
@@ -130,6 +132,11 @@ export function getPublicSiteHostname(): string {
 
 export function getTrainingSiteBaseUrl(): string {
   return normalizeSiteBaseUrl(appConfig.trainingSiteBaseUrl);
+}
+
+/** Browser Maps JavaScript API key, or empty when Contacts → Map is not configured. */
+export function getGoogleMapsApiKey(): string {
+  return appConfig.googleMapsApiKey.trim();
 }
 
 export function getAdminDefaultCurrencyCode(): string {

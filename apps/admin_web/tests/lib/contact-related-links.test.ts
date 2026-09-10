@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   adminContactInvoicesDeepLink,
+  adminContactsMapPinDeepLink,
   adminPartyInvoicesDeepLink,
+  contactsMapPinKindLabel,
   adminPartySalesConversationsDeepLink,
   adminPartyServiceInstancesDeepLink,
   adminSalesConversationDeepLink,
@@ -49,6 +51,17 @@ describe('contact related deep links', () => {
   it('accepts only known sales inbox tabs', () => {
     expect(isSalesInboxTab('whatsapp')).toBe(true);
     expect(isSalesInboxTab('pipeline')).toBe(false);
+  });
+
+  it('builds Contacts Map pin deep links and kind labels', () => {
+    expect(adminContactsMapPinDeepLink('contact', 'c-1')).toBe('/contacts?contact=c-1');
+    expect(adminContactsMapPinDeepLink('family', 'f-1')).toBe('/contacts?tab=families&family=f-1');
+    expect(adminContactsMapPinDeepLink('organization', 'o-1')).toBe(
+      '/contacts?tab=organizations&organization=o-1'
+    );
+    expect(contactsMapPinKindLabel('contact')).toBe('Contact');
+    expect(contactsMapPinKindLabel('family')).toBe('Family');
+    expect(contactsMapPinKindLabel('organization')).toBe('Organisation');
   });
 
   it('builds family and organisation destination URLs', () => {

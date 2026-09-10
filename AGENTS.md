@@ -76,6 +76,9 @@ mandatory `.cursorrules` integration anchors are removed or weakened.
   flows. Without them, the app renders but sign-in won't work.
 - **Admin web** Website QR also needs `NEXT_PUBLIC_PUBLIC_SITE_BASE_URL` (www)
   and `NEXT_PUBLIC_TRAINING_SITE_BASE_URL` (training) for link previews.
+- **Admin web** Contacts → Map needs `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` (Maps
+  JavaScript API, HTTP-referrer restricted). Without it the tab renders a
+  configuration message instead of the map.
 - **Public website** requires `NEXT_PUBLIC_SITE_ORIGIN` and
   `NEXT_PUBLIC_EMAIL` at minimum. Create `apps/public_www/.env.local` with:
   ```

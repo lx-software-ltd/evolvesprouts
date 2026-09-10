@@ -57,6 +57,7 @@ jobs:
           NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
           NEXT_PUBLIC_PUBLIC_SITE_BASE_URL: ${{ vars.NEXT_PUBLIC_PUBLIC_SITE_BASE_URL }}
           NEXT_PUBLIC_TRAINING_SITE_BASE_URL: ${{ vars.NEXT_PUBLIC_TRAINING_SITE_BASE_URL }}
+          NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ vars.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
 
       - name: Configure AWS credentials
         if: ${{ vars.AWS_ACCOUNT_ID != '' && vars.AWS_REGION != '' }}

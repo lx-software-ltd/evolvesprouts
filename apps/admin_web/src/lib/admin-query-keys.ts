@@ -18,6 +18,9 @@ function resource<TName extends string>(name: TName) {
 
 export const adminQueryKeys = {
   contacts: resource('contacts'),
+  contactsMapPins: {
+    all: () => [ROOT, 'contacts-map-pins'] as const,
+  },
   families: resource('families'),
   organizations: resource('organizations'),
   leads: resource('leads'),

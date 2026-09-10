@@ -20,6 +20,7 @@ from app.api.admin_contacts_mailchimp_sync import (
     run_mailchimp_orphan_cleanup,
     run_mailchimp_sync_batch,
 )
+from app.api.admin_contacts_map import list_contact_map_pins
 from app.api.admin_contacts_merge import merge_contacts_request
 from app.api.admin_contacts_mutations import (
     create_contact,
@@ -111,6 +112,11 @@ def handle_admin_contacts_request(
     if len(parts) == 3 and parts[2] == "mailchimp-sync-status":
         if method == "GET":
             return get_mailchimp_sync_summary(event)
+        return method_not_allowed(event)
+
+    if len(parts) == 3 and parts[2] == "map-pins":
+        if method == "GET":
+            return list_contact_map_pins(event)
         return method_not_allowed(event)
 
     contact_id = parse_uuid(parts[2])
