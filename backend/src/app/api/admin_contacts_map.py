@@ -165,7 +165,9 @@ def build_map_pin_items(
             )
         )
 
-    items.sort(key=lambda item: (item["entity_type"], item["label"].lower(), item["id"]))
+    items.sort(
+        key=lambda item: (item["entity_type"], item["label"].lower(), item["id"])
+    )
     return items
 
 
@@ -213,7 +215,9 @@ def load_map_pin_entities(
         .options(selectinload(Contact.location).selectinload(Location.area))
     )
     if suppressed:
-        contact_statement = contact_statement.where(Contact.id.notin_(tuple(suppressed)))
+        contact_statement = contact_statement.where(
+            Contact.id.notin_(tuple(suppressed))
+        )
     contacts = list(session.scalars(contact_statement).all())
     return families, organizations, contacts
 

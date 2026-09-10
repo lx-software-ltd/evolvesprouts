@@ -44,7 +44,6 @@ def test_build_map_pin_items_hides_contacts_in_mapped_families() -> None:
     member_id = uuid4()
     standalone_id = uuid4()
     org_id = uuid4()
-    vendor_id = uuid4()
 
     family_location = _location(address="1 Family Street")
     member_own_location = _location(address="99 Other Street", lat=22.3, lng=114.2)
@@ -92,14 +91,6 @@ def test_build_map_pin_items_hides_contacts_in_mapped_families() -> None:
             )
         ],
     )
-    vendor = SimpleNamespace(
-        id=vendor_id,
-        name="Hidden Vendor",
-        organization_type=OrganizationType.COMPANY,
-        location=_location(address="Vendor Wharf"),
-        organization_members=[],
-    )
-
     items = build_map_pin_items(
         families=[family],
         organizations=[organization],
@@ -115,7 +106,6 @@ def test_build_map_pin_items_hides_contacts_in_mapped_families() -> None:
     assert str(standalone_id) in ids
     assert types[str(standalone_id)] == "contact"
     assert str(member_id) not in ids
-    assert str(vendor_id) not in ids
 
     family_pin = next(item for item in items if item["id"] == str(family_id))
     assert family_pin["address"] == "1 Family Street"
