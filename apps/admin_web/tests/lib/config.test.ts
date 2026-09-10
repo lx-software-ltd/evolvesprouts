@@ -122,6 +122,18 @@ describe('config helpers', () => {
     expect(getPublicSiteHostname()).toBe('www.example.com');
   });
 
+  it('reads the optional Google Maps API key', async () => {
+    delete process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    vi.resetModules();
+    const { getGoogleMapsApiKey } = await import('@/lib/config');
+    expect(getGoogleMapsApiKey()).toBe('');
+
+    process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY = ' maps-key ';
+    vi.resetModules();
+    const { getGoogleMapsApiKey: readAgain } = await import('@/lib/config');
+    expect(readAgain()).toBe('maps-key');
+  });
+
   it('returns an empty public site hostname when the base URL is missing', async () => {
     delete process.env.NEXT_PUBLIC_PUBLIC_SITE_BASE_URL;
     vi.resetModules();

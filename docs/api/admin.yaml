@@ -45,6 +45,7 @@ info:
     - `POST /v1/admin/contacts/mailchimp-sync-run`
     - `POST /v1/admin/contacts/mailchimp-sync-orphans`
     - `GET /v1/admin/contacts/mailchimp-sync-status`
+    - `GET /v1/admin/contacts/map-pins`
     - `GET|POST /v1/admin/contacts`
     - `GET|PATCH|DELETE /v1/admin/contacts/{id}`
     - `GET|POST /v1/admin/contacts/{id}/notes`
@@ -3252,6 +3253,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MailchimpSyncStatusResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/admin/contacts/map-pins:
+    get:
+      summary: List confirmed CRM addresses for the Contacts Map tab
+      description: |
+        Returns one pin per active family, organisation, or contact that has a linked
+        location with both coordinates and non-blank address text. Vendor and partner
+        organisations are excluded (same default as `GET /v1/admin/organizations`).
+        When a family is included, member contacts are omitted even if they have their
+        own confirmed address.
+      security:
+        - AdminBearerAuth: []
+      responses:
+        "200":
+          description: Map pin list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminContactMapPinListResponse"
         "403":
           $ref: "#/components/responses/Forbidden"
 
@@ -10302,6 +10324,60 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/EntityPickerListItem"
+    AdminContactMapPinEntityType:
+      type: string
+      enum: [contact, family, organization]
+    AdminContactMapPin:
+      type: object
+      required:
+        - entity_type
+        - id
+        - label
+        - area_name
+        - lat
+        - lng
+      properties:
+        entity_type:
+          $ref: "#/components/schemas/AdminContactMapPinEntityType"
+        id:
+          type: string
+          format: uuid
+        label:
+          type: string
+          description: Family name, organisation name, or contact display name.
+        address:
+          type: string
+          nullable: true
+        area_name:
+          type: string
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        contact_type:
+          allOf:
+            - $ref: "#/components/schemas/EntityContactType"
+          description: Present when `entity_type` is `contact`.
+        organization_type:
+          allOf:
+            - $ref: "#/components/schemas/EntityOrganizationType"
+          description: Present when `entity_type` is `organization`.
+        member_labels:
+          type: array
+          items:
+            type: string
+          description: Display names of family or organisation members.
+    AdminContactMapPinListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminContactMapPin"
     EntityLocationVenueSummary:
       type: object
       required:

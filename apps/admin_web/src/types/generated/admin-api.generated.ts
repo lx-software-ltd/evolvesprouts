@@ -4203,6 +4203,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/contacts/map-pins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List confirmed CRM addresses for the Contacts Map tab
+         * @description Returns one pin per active family, organisation, or contact that has a linked
+         *     location with both coordinates and non-blank address text. Vendor and partner
+         *     organisations are excluded (same default as `GET /v1/admin/organizations`).
+         *     When a family is included, member contacts are omitted even if they have their
+         *     own confirmed address.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Map pin list. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminContactMapPinListResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/contacts": {
         parameters: {
             query?: never;
@@ -9190,6 +9234,30 @@ export interface components {
         };
         EntityPickerListResponse: {
             items: components["schemas"]["EntityPickerListItem"][];
+        };
+        /** @enum {string} */
+        AdminContactMapPinEntityType: "contact" | "family" | "organization";
+        AdminContactMapPin: {
+            entity_type: components["schemas"]["AdminContactMapPinEntityType"];
+            /** Format: uuid */
+            id: string;
+            /** @description Family name, organisation name, or contact display name. */
+            label: string;
+            address?: string | null;
+            area_name: string;
+            /** Format: double */
+            lat: number;
+            /** Format: double */
+            lng: number;
+            /** @description Present when `entity_type` is `contact`. */
+            contact_type?: components["schemas"]["EntityContactType"];
+            /** @description Present when `entity_type` is `organization`. */
+            organization_type?: components["schemas"]["EntityOrganizationType"];
+            /** @description Display names of family or organisation members. */
+            member_labels?: string[];
+        };
+        AdminContactMapPinListResponse: {
+            items: components["schemas"]["AdminContactMapPin"][];
         };
         EntityLocationVenueSummary: {
             /** Format: uuid */

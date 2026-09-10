@@ -77,6 +77,9 @@ For the OIDC provider itself, add the same tags:
     - `PublicWwwApiBaseUrl` (typically `<FROM_GITHUB_VAR: NEXT_PUBLIC_API_BASE_URL>`)
     - `PublicWwwMediaRequestApiBaseUrl` (typically `<FROM_GITHUB_VAR: NEXT_PUBLIC_API_BASE_URL>`)
 - `NEXT_PUBLIC_API_BASE_URL` (execute-api base URL for Public WWW and Admin Web API routing)
+- `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` (optional; browser Maps JavaScript API key, HTTP-referrer
+  restricted to the admin origin. Required for Contacts → Map. When unset, the tab shows a
+  configuration message. Wire the same GitHub variable into `deploy-admin-web.yml`.)
 - `NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS` (comma-separated hostname allowlist for `/www` proxy rewrites)
 - `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (for Public WWW booking form)
 - `CDK_PARAM_META_PAGE_ID` (Facebook Page id for Graph inbox import)

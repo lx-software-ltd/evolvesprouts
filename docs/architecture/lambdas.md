@@ -144,7 +144,9 @@ their primary responsibilities.
   sales leads, enrollments, invoices, payments, conversations, certificates, notes,
   and tags, then deleting orphaned contacts;
   `POST /v1/admin/contacts/mailchimp-sync-run`, `POST /v1/admin/contacts/mailchimp-sync-orphans`, and
-  `GET /v1/admin/contacts/mailchimp-sync-status` for production Mailchimp audience sync, orphan cleanup, and status counters),
+  `GET /v1/admin/contacts/mailchimp-sync-status` for production Mailchimp audience sync, orphan cleanup, and status counters;
+  `GET /v1/admin/contacts/map-pins` returns confirmed family, organisation, and contact
+  addresses for the Contacts Map tab and omits contacts that belong to a mapped family),
   `/v1/admin/tags/*` for CRM tag catalog administration (list with optional `include_archived` or
   `archived_only`, create, update, `PATCH` `archived` to restore, delete returns `deleted` +
   `usage_count`; system tag names are protected),
