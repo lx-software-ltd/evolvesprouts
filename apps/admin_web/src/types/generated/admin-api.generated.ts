@@ -4216,7 +4216,8 @@ export interface paths {
          *     location with both coordinates and non-blank address text. Vendor and partner
          *     organisations are excluded (same default as `GET /v1/admin/organizations`).
          *     When a family is included, member contacts are omitted even if they have their
-         *     own confirmed address.
+         *     own confirmed address. Family pins include `primary_contact_label` when a
+         *     member is flagged as the main contact and has a first or last name.
          */
         get: {
             parameters: {
@@ -9255,6 +9256,8 @@ export interface components {
             organization_type?: components["schemas"]["EntityOrganizationType"];
             /** @description Display names of family or organisation members. */
             member_labels?: string[];
+            /** @description First and last name of the family's main contact. Present when `entity_type` is `family` and a primary member has a non-blank name. */
+            primary_contact_label?: string;
         };
         AdminContactMapPinListResponse: {
             items: components["schemas"]["AdminContactMapPin"][];

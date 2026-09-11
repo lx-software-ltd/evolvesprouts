@@ -3264,7 +3264,8 @@ paths:
         location with both coordinates and non-blank address text. Vendor and partner
         organisations are excluded (same default as `GET /v1/admin/organizations`).
         When a family is included, member contacts are omitted even if they have their
-        own confirmed address.
+        own confirmed address. Family pins include `primary_contact_label` when a
+        member is flagged as the main contact and has a first or last name.
       security:
         - AdminBearerAuth: []
       responses:
@@ -10369,6 +10370,11 @@ components:
           items:
             type: string
           description: Display names of family or organisation members.
+        primary_contact_label:
+          type: string
+          description: >
+            First and last name of the family's main contact. Present when
+            `entity_type` is `family` and a primary member has a non-blank name.
     AdminContactMapPinListResponse:
       type: object
       required:
