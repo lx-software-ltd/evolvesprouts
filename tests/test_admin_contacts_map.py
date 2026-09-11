@@ -130,17 +130,23 @@ def test_build_map_pin_items_hides_contacts_in_mapped_families() -> None:
 
 def test_family_map_pin_uses_primary_member_name_and_surname() -> None:
     family_id = uuid4()
+    primary_id = uuid4()
+    child_id = uuid4()
     primary = SimpleNamespace(
-        first_name="Mei", last_name="Lam", email="mei@example.com"
+        id=primary_id, first_name="Mei", last_name="Lam", email="mei@example.com"
     )
-    child = SimpleNamespace(first_name="Bo", last_name="Lam", email=None)
+    child = SimpleNamespace(id=child_id, first_name="Bo", last_name="Lam", email=None)
     family = SimpleNamespace(
         id=family_id,
         family_name="Lam family",
         location=_location(address="2 Family Street"),
         family_members=[
-            SimpleNamespace(contact=child, is_primary_contact=False),
-            SimpleNamespace(contact=primary, is_primary_contact=True),
+            SimpleNamespace(
+                contact_id=child_id, contact=child, is_primary_contact=False
+            ),
+            SimpleNamespace(
+                contact_id=primary_id, contact=primary, is_primary_contact=True
+            ),
         ],
     )
     items = build_map_pin_items(families=[family], organizations=[], contacts=[])
@@ -151,12 +157,14 @@ def test_family_map_pin_uses_primary_member_name_and_surname() -> None:
 
 
 def test_family_map_pin_omits_primary_contact_without_name() -> None:
+    contact_id = uuid4()
     family = SimpleNamespace(
         id=uuid4(),
         family_name="Wong family",
         location=_location(address="3 Family Street"),
         family_members=[
             SimpleNamespace(
+                contact_id=contact_id,
                 contact=SimpleNamespace(
                     first_name="", last_name="", email="pat@example.com"
                 ),
