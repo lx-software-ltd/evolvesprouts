@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { groupMapPinsByCoordinate } from '@/lib/contacts-map-pins';
+import {
+  contactsMapPinMarkerTitle,
+  familyMapPinPrimaryContactName,
+  groupMapPinsByCoordinate,
+} from '@/lib/contacts-map-pins';
 import type { AdminContactMapPin } from '@/lib/entity-api';
 
 function pin(overrides: Partial<AdminContactMapPin> & Pick<AdminContactMapPin, 'id' | 'label'>): AdminContactMapPin {
@@ -52,5 +56,37 @@ describe('groupMapPinsByCoordinate', () => {
         }),
       ])
     ).toEqual([]);
+  });
+});
+
+describe('family map pin heading', () => {
+  it('returns the family main-contact name only for family pins', () => {
+    const family = pin({
+      id: '11111111-1111-1111-1111-111111111111',
+      entity_type: 'family',
+      label: 'Chan family',
+      primary_contact_label: 'Ada Chan',
+    });
+    expect(familyMapPinPrimaryContactName(family)).toBe('Ada Chan');
+    expect(contactsMapPinMarkerTitle(family)).toBe('Chan family · Ada Chan');
+    expect(
+      familyMapPinPrimaryContactName(
+        pin({
+          id: '22222222-2222-2222-2222-222222222222',
+          entity_type: 'organization',
+          label: 'Harbour School',
+          primary_contact_label: 'Pat Ho',
+        })
+      )
+    ).toBe('');
+    expect(
+      familyMapPinPrimaryContactName(
+        pin({
+          id: '11111111-1111-1111-1111-111111111111',
+          entity_type: 'family',
+          label: 'Chan family',
+        })
+      )
+    ).toBe('');
   });
 });

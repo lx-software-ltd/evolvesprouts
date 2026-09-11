@@ -8,8 +8,14 @@ import {
   contactsMapPinKindLabel,
   type RelatedPartyKind,
 } from '@/lib/contact-related-links';
-import { groupMapPinsByCoordinate, type GroupedContactMapPin } from '@/lib/contacts-map-pins';
+import {
+  contactsMapPinMarkerTitle,
+  familyMapPinPrimaryContactName,
+  groupMapPinsByCoordinate,
+  type GroupedContactMapPin,
+} from '@/lib/contacts-map-pins';
 import type { AdminContactMapPin } from '@/lib/entity-api';
+import { DISPLAY_PART_SEP } from '@/lib/format-separators';
 import { loadGoogleMaps } from '@/lib/google-maps-loader';
 import {
   HONG_KONG_MAP_BOUNDS,
@@ -94,7 +100,7 @@ export function ContactsMapCanvas({ apiKey, pins }: ContactsMapCanvasProps) {
       const marker = new maps.Marker({
         map,
         position: { lat: group.lat, lng: group.lng },
-        title: group.items.map((item) => item.label).join(', '),
+        title: group.items.map((item) => contactsMapPinMarkerTitle(item)).join(', '),
       });
       marker.addListener('click', () => {
         setSelectedKey(group.key);
@@ -143,7 +149,7 @@ function ContactsMapPinDetails({ group }: { group: GroupedContactMapPin | null }
           <p className='text-xs font-semibold uppercase tracking-wide text-slate-500'>
             {contactsMapPinKindLabel(pinKind(pin.entity_type))}
           </p>
-          <p className='text-sm font-semibold text-slate-900'>{pin.label}</p>
+          <ContactsMapPinHeading pin={pin} />
           {pin.contact_type ? (
             <p className='text-sm text-slate-600'>Type: {pin.contact_type}</p>
           ) : null}
@@ -168,5 +174,15 @@ function ContactsMapPinDetails({ group }: { group: GroupedContactMapPin | null }
         </article>
       ))}
     </div>
+  );
+}
+
+function ContactsMapPinHeading({ pin }: { pin: AdminContactMapPin }) {
+  const primaryName = familyMapPinPrimaryContactName(pin);
+  return (
+    <p className='text-sm text-slate-900 wrap-anywhere'>
+      <span className='font-semibold'>{pin.label}</span>
+      {primaryName ? `${DISPLAY_PART_SEP}${primaryName}` : null}
+    </p>
   );
 }

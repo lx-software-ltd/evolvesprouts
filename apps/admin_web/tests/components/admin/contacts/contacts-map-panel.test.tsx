@@ -113,6 +113,7 @@ describe('ContactsMapPanel', () => {
         lat: 22.2819,
         lng: 114.1582,
         member_labels: ['Ada Chan'],
+        primary_contact_label: 'Ada Chan',
       },
     ]);
 
@@ -136,7 +137,10 @@ describe('ContactsMapPanel', () => {
     maps.clickFirstMarker();
     expect(await screen.findByTestId('contacts-map-pin-details')).toBeInTheDocument();
     expect(screen.getByText('Family')).toBeInTheDocument();
-    expect(screen.getByText('Chan family')).toBeInTheDocument();
+    const familyName = screen.getByText('Chan family');
+    expect(familyName).toBeInTheDocument();
+    expect(familyName).toHaveClass('font-semibold');
+    expect(familyName.parentElement).toHaveTextContent('Chan family · Ada Chan');
     expect(screen.getByText('12 Queen Street · Central')).toBeInTheDocument();
     expect(screen.getByText('Members: Ada Chan')).toBeInTheDocument();
     const openLink = screen.getByRole('link', { name: 'Open' });

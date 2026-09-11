@@ -59,7 +59,11 @@ def test_build_map_pin_items_hides_contacts_in_mapped_families() -> None:
         location=member_own_location,
         family_members=[],
     )
-    family_member = SimpleNamespace(contact_id=member_id, contact=member)
+    family_member = SimpleNamespace(
+        contact_id=member_id,
+        contact=member,
+        is_primary_contact=True,
+    )
     family = SimpleNamespace(
         id=family_id,
         family_name="Chan family",
@@ -110,6 +114,7 @@ def test_build_map_pin_items_hides_contacts_in_mapped_families() -> None:
     family_pin = next(item for item in items if item["id"] == str(family_id))
     assert family_pin["address"] == "1 Family Street"
     assert family_pin["member_labels"] == ["Ada Chan"]
+    assert family_pin["primary_contact_label"] == "Ada Chan"
     assert family_pin["lat"] == 22.2819
     assert family_pin["lng"] == 114.1582
 
@@ -120,6 +125,49 @@ def test_build_map_pin_items_hides_contacts_in_mapped_families() -> None:
     contact_pin = next(item for item in items if item["id"] == str(standalone_id))
     assert contact_pin["contact_type"] == "professional"
     assert "member_labels" not in contact_pin
+    assert "primary_contact_label" not in contact_pin
+
+
+def test_family_map_pin_uses_primary_member_name_and_surname() -> None:
+    family_id = uuid4()
+    primary = SimpleNamespace(
+        first_name="Mei", last_name="Lam", email="mei@example.com"
+    )
+    child = SimpleNamespace(first_name="Bo", last_name="Lam", email=None)
+    family = SimpleNamespace(
+        id=family_id,
+        family_name="Lam family",
+        location=_location(address="2 Family Street"),
+        family_members=[
+            SimpleNamespace(contact=child, is_primary_contact=False),
+            SimpleNamespace(contact=primary, is_primary_contact=True),
+        ],
+    )
+    items = build_map_pin_items(families=[family], organizations=[], contacts=[])
+    pin = items[0]
+    assert pin["label"] == "Lam family"
+    assert pin["primary_contact_label"] == "Mei Lam"
+    assert pin["member_labels"] == ["Bo Lam", "Mei Lam"]
+
+
+def test_family_map_pin_omits_primary_contact_without_name() -> None:
+    family = SimpleNamespace(
+        id=uuid4(),
+        family_name="Wong family",
+        location=_location(address="3 Family Street"),
+        family_members=[
+            SimpleNamespace(
+                contact=SimpleNamespace(
+                    first_name="", last_name="", email="pat@example.com"
+                ),
+                is_primary_contact=True,
+            )
+        ],
+    )
+    items = build_map_pin_items(families=[family], organizations=[], contacts=[])
+    pin = items[0]
+    assert "primary_contact_label" not in pin
+    assert pin["member_labels"] == ["pat@example.com"]
 
 
 def test_unmapped_family_does_not_suppress_member_contact() -> None:
@@ -139,7 +187,13 @@ def test_unmapped_family_does_not_suppress_member_contact() -> None:
         id=family_id,
         family_name="Lam family",
         location=incomplete_location,
-        family_members=[SimpleNamespace(contact_id=member_id, contact=member)],
+        family_members=[
+            SimpleNamespace(
+                contact_id=member_id,
+                contact=member,
+                is_primary_contact=False,
+            )
+        ],
     )
 
     assert contact_ids_suppressed_by_mapped_families([family]) == set()

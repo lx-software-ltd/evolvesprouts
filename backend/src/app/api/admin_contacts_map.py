@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.api.admin_entities_serializers import contact_label
 from app.db.engine import get_engine
 from app.db.models import Contact, Family, FamilyMember, Location, Organization
+from app.db.models.contact import contact_full_name
 from app.db.models.enums import RelationshipType
 from app.db.models.organization import OrganizationMember
 from app.utils import json_response
@@ -68,6 +69,17 @@ def _member_labels(members: Iterable[FamilyMember | OrganizationMember]) -> list
     return labels
 
 
+def _primary_contact_full_name(members: Iterable[FamilyMember]) -> str | None:
+    """First and last name of the member flagged as the family's main contact."""
+    for member in members:
+        if not member.is_primary_contact:
+            continue
+        name = contact_full_name(member.contact)
+        if name:
+            return name
+    return None
+
+
 def contact_ids_suppressed_by_mapped_families(
     families: Sequence[Family],
 ) -> set[UUID]:
@@ -90,6 +102,7 @@ def serialize_map_pin(
     contact_type: str | None = None,
     organization_type: str | None = None,
     member_labels: Sequence[str] | None = None,
+    primary_contact_label: str | None = None,
 ) -> dict[str, Any]:
     """Build one map-pin payload. Caller must pass a confirmed location."""
     pin: dict[str, Any] = {
@@ -107,6 +120,8 @@ def serialize_map_pin(
         pin["organization_type"] = organization_type
     if member_labels is not None:
         pin["member_labels"] = list(member_labels)
+    if primary_contact_label:
+        pin["primary_contact_label"] = primary_contact_label
     return pin
 
 
@@ -131,6 +146,7 @@ def build_map_pin_items(
                 label=family.family_name,
                 location=location,
                 member_labels=_member_labels(family.family_members),
+                primary_contact_label=_primary_contact_full_name(family.family_members),
             )
         )
 
