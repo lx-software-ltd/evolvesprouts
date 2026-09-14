@@ -44,7 +44,7 @@ export function useSalesDailyPlan() {
   const query = useQuery<SalesDailyPlanSnapshot, unknown>(
     {
       queryKey,
-      queryFn: fetchSalesDailyPlan,
+      queryFn: () => fetchSalesDailyPlan(),
     },
     queryClient
   );
