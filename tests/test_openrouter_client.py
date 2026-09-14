@@ -10,6 +10,13 @@ import pytest
 from app.services import openrouter_client as client
 
 
+@pytest.fixture(autouse=True)
+def _clear_openrouter_model_cache() -> None:
+    client.clear_openrouter_model_cache()
+    yield
+    client.clear_openrouter_model_cache()
+
+
 def test_openrouter_chat_completion_respects_max_attempts(
     monkeypatch: Any,
 ) -> None:
@@ -120,6 +127,7 @@ def test_openrouter_chat_completion_tags_hidden_app_and_workload(
         timeout=10,
         workload="sales-daily-plan",
         max_attempts=1,
+        use_sales_model=True,
     )
 
     headers = captured["headers"]
@@ -129,7 +137,91 @@ def test_openrouter_chat_completion_tags_hidden_app_and_workload(
     assert headers["X-OpenRouter-App-Visibility"] == "hidden"
     payload = json.loads(captured["body"])
     assert payload["user"] == "evolvesprouts:sales-daily-plan"
+    assert payload["model"] == "test-model"
     assert client.OPENROUTER_NAMED_KEY == "lxsoftware:evolvesprouts"
+
+
+def test_openrouter_chat_completion_non_sales_uses_deployed_model(
+    monkeypatch: Any,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    def _fake_http_invoke(**kwargs: Any) -> dict[str, Any]:
+        captured.update(kwargs)
+        return {"status": 200, "body": '{"choices":[{"message":{"content":"ok"}}]}'}
+
+    monkeypatch.setenv(
+        "OPENROUTER_CHAT_COMPLETIONS_URL",
+        "https://openrouter.ai/api/v1/chat/completions",
+    )
+    monkeypatch.setenv("OPENROUTER_MODEL", "test-model")
+    monkeypatch.setattr(client, "get_openrouter_api_key", lambda: "test-key")
+    monkeypatch.setattr(client, "http_invoke", _fake_http_invoke)
+    monkeypatch.setattr(
+        client,
+        "_load_sales_settings_openrouter_model",
+        lambda: (True, "openai/gpt-4.1-mini"),
+    )
+
+    client.openrouter_chat_completion(
+        system_prompt="system",
+        user_content="user",
+        timeout=10,
+        workload="json-repair",
+        max_attempts=1,
+    )
+
+    payload = json.loads(captured["body"])
+    assert payload["model"] == "test-model"
+    assert payload["user"] == "evolvesprouts:json-repair"
+
+
+def test_normalize_openrouter_model_treats_auto_as_unset() -> None:
+    assert client.normalize_openrouter_model(None) is None
+    assert client.normalize_openrouter_model("  ") is None
+    assert client.normalize_openrouter_model("Auto") is None
+    assert client.normalize_openrouter_model("openrouter/auto") is None
+    assert client.normalize_openrouter_model("openai/gpt-4.1-mini") == (
+        "openai/gpt-4.1-mini"
+    )
+
+
+def test_configured_model_name_defaults_to_auto(monkeypatch: Any) -> None:
+    client.clear_openrouter_model_cache()
+    monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
+    monkeypatch.setattr(
+        client, "_load_sales_settings_openrouter_model", lambda: (False, None)
+    )
+    assert client.configured_model_name() == client.OPENROUTER_AUTO_MODEL
+
+
+def test_configured_model_name_uses_sales_settings(monkeypatch: Any) -> None:
+    client.clear_openrouter_model_cache()
+    monkeypatch.setenv("OPENROUTER_MODEL", "env-model")
+    monkeypatch.setattr(
+        client,
+        "_load_sales_settings_openrouter_model",
+        lambda: (True, "openai/gpt-4.1-mini"),
+    )
+    assert client.configured_model_name() == "openai/gpt-4.1-mini"
+
+
+def test_configured_model_name_settings_auto_ignores_env(monkeypatch: Any) -> None:
+    client.clear_openrouter_model_cache()
+    monkeypatch.setenv("OPENROUTER_MODEL", "env-model")
+    monkeypatch.setattr(
+        client, "_load_sales_settings_openrouter_model", lambda: (True, None)
+    )
+    assert client.configured_model_name() == client.OPENROUTER_AUTO_MODEL
+
+
+def test_configured_model_name_falls_back_to_env(monkeypatch: Any) -> None:
+    client.clear_openrouter_model_cache()
+    monkeypatch.setenv("OPENROUTER_MODEL", "test-model")
+    monkeypatch.setattr(
+        client, "_load_sales_settings_openrouter_model", lambda: (False, None)
+    )
+    assert client.configured_model_name() == "test-model"
 
 
 def test_attribution_user_strips_pii_from_workload() -> None:

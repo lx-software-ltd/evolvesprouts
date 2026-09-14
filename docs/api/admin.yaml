@@ -1396,7 +1396,7 @@ paths:
 
   /v1/admin/leads/settings:
     get:
-      summary: Get sales lead assignment settings
+      summary: Get sales lead assignment and OpenRouter model settings
       security:
         - AdminBearerAuth: []
       responses:
@@ -1413,7 +1413,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     patch:
-      summary: Update sales lead assignment settings
+      summary: Update sales lead assignment and OpenRouter model settings
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -6971,6 +6971,7 @@ components:
         - default_assigned_to
         - notify_assignee_on_assignment
         - helper_detector_enabled
+        - openrouter_model
       properties:
         default_assigned_to:
           type: string
@@ -6991,6 +6992,15 @@ components:
             When true, new automated leads are classified with OpenRouter; Filipino or
             Bahasa (Indonesian/Malay) name/username signals set funnel stage to
             `unqualified` and contact type to `helper` when the contact type is `other`.
+        openrouter_model:
+          type: string
+          nullable: true
+          description: >
+            OpenRouter model id for lead closing suggestions and the dashboard
+            insight. Null means Auto (`openrouter/auto`). Helper Detector, invoice
+            parsing, and JSON repair keep using the deployed `OPENROUTER_MODEL`.
+            Operators type a model code such as `openai/gpt-4.1-mini`.
+          maxLength: 128
         updated_at:
           type: string
           format: date-time
@@ -7017,6 +7027,10 @@ components:
           type: boolean
         helper_detector_enabled:
           type: boolean
+        openrouter_model:
+          type: string
+          nullable: true
+          maxLength: 128
     LeadAnalyticsResponse:
       type: object
       required:

@@ -65,6 +65,7 @@ const { mockUseSalesPage, state } = vi.hoisted(() => {
         default_assigned_to: null,
         notify_assignee_on_assignment: false,
         helper_detector_enabled: false,
+        openrouter_model: null,
       },
       isLoading: false,
       isSaving: false,

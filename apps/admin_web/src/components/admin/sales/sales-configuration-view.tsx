@@ -8,6 +8,7 @@ import { AdminField, AdminFieldGrid } from '@/components/ui/admin-field-grid';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import type { SalesSettings, UpdateSalesSettingsRequest } from '@/lib/sales-settings-api';
@@ -52,16 +53,20 @@ export function SalesConfigurationView({
   const [helperDetectorEnabled, setHelperDetectorEnabled] = useState(
     settings?.helper_detector_enabled ?? false
   );
+  const [openrouterModel, setOpenrouterModel] = useState(
+    settings?.openrouter_model ?? ''
+  );
   const [hydratedKey, setHydratedKey] = useState<string | null>(null);
 
   const settingsKey = settings
-    ? `${settings.default_assigned_to ?? ''}:${settings.notify_assignee_on_assignment}:${settings.helper_detector_enabled}`
+    ? `${settings.default_assigned_to ?? ''}:${settings.notify_assignee_on_assignment}:${settings.helper_detector_enabled}:${settings.openrouter_model ?? ''}`
     : null;
   if (settingsKey && settingsKey !== hydratedKey) {
     setHydratedKey(settingsKey);
     setDefaultAssignedTo(settings?.default_assigned_to ?? '');
     setNotifyAssignee(settings?.notify_assignee_on_assignment ?? false);
     setHelperDetectorEnabled(settings?.helper_detector_enabled ?? false);
+    setOpenrouterModel(settings?.openrouter_model ?? '');
   }
 
   const staleUserLabel =
@@ -75,6 +80,7 @@ export function SalesConfigurationView({
         default_assigned_to: defaultAssignedTo || null,
         notify_assignee_on_assignment: notifyAssignee,
         helper_detector_enabled: helperDetectorEnabled,
+        openrouter_model: openrouterModel.trim() || null,
       });
     } catch {
       // Keep the form visible so users can correct and retry.
@@ -129,6 +135,22 @@ export function SalesConfigurationView({
                     </option>
                   ))}
                 </Select>
+              </AdminField>
+              <AdminField
+                label='OpenRouter model'
+                htmlFor='sales-settings-openrouter-model'
+                span={2}
+                hint='Used for lead suggestions and the dashboard insight. Leave blank for Auto. Invoice parsing and other OpenRouter jobs keep the deployed model.'
+              >
+                <Input
+                  id='sales-settings-openrouter-model'
+                  value={openrouterModel}
+                  onChange={(event) => setOpenrouterModel(event.target.value)}
+                  placeholder='Auto'
+                  maxLength={128}
+                  autoComplete='off'
+                  spellCheck={false}
+                />
               </AdminField>
             </AdminFieldGrid>
 

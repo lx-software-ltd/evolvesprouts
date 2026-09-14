@@ -1,4 +1,4 @@
-"""Singleton sales configuration (default assignee and assignment email)."""
+"""Singleton sales configuration (assignee, Helper Detector, OpenRouter model)."""
 
 from __future__ import annotations
 
@@ -37,6 +37,7 @@ class SalesSettings(Base):
         nullable=False,
         server_default=text("false"),
     )
+    openrouter_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True),
         nullable=False,

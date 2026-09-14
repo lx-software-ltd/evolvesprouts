@@ -1083,6 +1083,7 @@ def test_openrouter_chat_completion_tags_hidden_app_and_workload(
     assert headers["X-OpenRouter-App-Visibility"] == "hidden"
     payload = json.loads(captured["body"])
     assert payload["user"] == "evolvesprouts:helper-detector"
+    assert payload["model"] == "openai/gpt-4.1-mini"
 
 
 def test_openrouter_chat_completion_retries_on_envelope_504_in_2xx(

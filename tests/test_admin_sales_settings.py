@@ -51,6 +51,46 @@ def test_parse_sales_settings_payload_rejects_non_bool_helper_detector() -> None
         settings_api.parse_sales_settings_payload({"helper_detector_enabled": "yes"})
 
 
+def test_parse_sales_settings_payload_accepts_openrouter_model() -> None:
+    payload = settings_api.parse_sales_settings_payload(
+        {"openrouter_model": " openai/gpt-4.1-mini "}
+    )
+    assert payload == {"openrouter_model": "openai/gpt-4.1-mini"}
+
+
+def test_parse_sales_settings_payload_normalizes_auto_model() -> None:
+    assert settings_api.parse_sales_settings_payload({"openrouter_model": "Auto"}) == {
+        "openrouter_model": None
+    }
+    assert settings_api.parse_sales_settings_payload(
+        {"openrouter_model": "openrouter/auto"}
+    ) == {"openrouter_model": None}
+    assert settings_api.parse_sales_settings_payload({"openrouter_model": ""}) == {
+        "openrouter_model": None
+    }
+    assert settings_api.parse_sales_settings_payload({"openrouter_model": None}) == {
+        "openrouter_model": None
+    }
+
+
+def test_parse_sales_settings_payload_rejects_long_openrouter_model() -> None:
+    with pytest.raises(ValidationError, match="at most"):
+        settings_api.parse_sales_settings_payload({"openrouter_model": "x" * 129})
+
+
+def test_serialize_sales_settings_includes_openrouter_model() -> None:
+    row = MagicMock()
+    row.default_assigned_to = None
+    row.notify_assignee_on_assignment = False
+    row.helper_detector_enabled = False
+    row.openrouter_model = "openai/gpt-4.1-mini"
+    row.updated_at = None
+    row.updated_by = None
+    assert settings_api.serialize_sales_settings(row)["openrouter_model"] == (
+        "openai/gpt-4.1-mini"
+    )
+
+
 def test_parse_create_lead_marks_assigned_to_omitted() -> None:
     payload = parse_create_lead_payload(
         {
@@ -84,6 +124,7 @@ def test_handle_sales_settings_get(
     row.default_assigned_to = "user-1"
     row.notify_assignee_on_assignment = True
     row.helper_detector_enabled = False
+    row.openrouter_model = None
     row.updated_at = None
     row.updated_by = "admin-1"
     repo = MagicMock()

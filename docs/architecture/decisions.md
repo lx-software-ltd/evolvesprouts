@@ -1177,6 +1177,22 @@ detector.
 - Fail-open keeps webhook and form latency bounded when the model is slow or
   unavailable.
 
+## OpenRouter model from Sales configuration
+
+**Decision:** Persist an optional `openrouter_model` on the singleton
+`sales_settings` row (default `NULL` = Auto / `openrouter/auto`). The admin
+Sales → Configuration screen exposes a free-text model-code field. Only lead
+close suggestions and the dashboard insight (`use_sales_model=True`) resolve
+the model through `configured_model_name()`. Helper Detector, invoice parsing,
+and JSON repair keep using the deployed `OPENROUTER_MODEL` environment
+variable, unchanged from before this setting existed. When the settings row
+cannot be read, sales generation falls back to `OPENROUTER_MODEL`, then Auto.
+
+**Why:**
+- Operators need to change the sales/dashboard model without a CDK redeploy.
+- Invoice parsing, Helper Detector, and JSON repair stay on the existing
+  deploy-time model so a typed sales model cannot change those workloads.
+
 ## Sales plan of the day (dashboard)
 
 **Decision:** Persist org-wide sales daily plans in `sales_daily_plans` and

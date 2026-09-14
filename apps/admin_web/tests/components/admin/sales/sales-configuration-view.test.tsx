@@ -12,6 +12,13 @@ const MEMORY_PROPS = {
   resetError: '',
 };
 
+const EMPTY_SETTINGS = {
+  default_assigned_to: null,
+  notify_assignee_on_assignment: false,
+  helper_detector_enabled: false,
+  openrouter_model: null,
+};
+
 describe('SalesConfigurationView', () => {
   it('saves the default assignee and notify toggle', async () => {
     const user = userEvent.setup();
@@ -20,11 +27,7 @@ describe('SalesConfigurationView', () => {
     render(
       <SalesConfigurationView
         users={USERS}
-        settings={{
-          default_assigned_to: null,
-          notify_assignee_on_assignment: false,
-          helper_detector_enabled: false,
-        }}
+        settings={EMPTY_SETTINGS}
         isLoading={false}
         isSaving={false}
         error=''
@@ -34,6 +37,11 @@ describe('SalesConfigurationView', () => {
     );
 
     expect(screen.getByText(/scheduled 6:00 HKT insight/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('OpenRouter model')).toHaveAttribute('placeholder', 'Auto');
+    expect(
+      screen.getByText(/lead suggestions and the dashboard insight/i)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/keep the deployed model/i)).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText('Default assignee'), 'user-1');
     await user.click(
       screen.getByLabelText('Email the assignee when a lead is assigned to them')
@@ -45,6 +53,34 @@ describe('SalesConfigurationView', () => {
       default_assigned_to: 'user-1',
       notify_assignee_on_assignment: true,
       helper_detector_enabled: true,
+      openrouter_model: null,
+    });
+  });
+
+  it('saves a typed OpenRouter model code', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <SalesConfigurationView
+        users={USERS}
+        settings={EMPTY_SETTINGS}
+        isLoading={false}
+        isSaving={false}
+        error=''
+        onSave={onSave}
+        {...MEMORY_PROPS}
+      />
+    );
+
+    await user.type(screen.getByLabelText('OpenRouter model'), 'openai/gpt-4.1-mini');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(onSave).toHaveBeenCalledWith({
+      default_assigned_to: null,
+      notify_assignee_on_assignment: false,
+      helper_detector_enabled: false,
+      openrouter_model: 'openai/gpt-4.1-mini',
     });
   });
 
@@ -56,6 +92,7 @@ describe('SalesConfigurationView', () => {
           default_assigned_to: 'stale-sub',
           notify_assignee_on_assignment: true,
           helper_detector_enabled: false,
+          openrouter_model: null,
         }}
         isLoading={false}
         isSaving={false}
@@ -76,11 +113,7 @@ describe('SalesConfigurationView', () => {
     render(
       <SalesConfigurationView
         users={USERS}
-        settings={{
-          default_assigned_to: null,
-          notify_assignee_on_assignment: false,
-          helper_detector_enabled: false,
-        }}
+        settings={EMPTY_SETTINGS}
         isLoading={false}
         isSaving={false}
         error=''

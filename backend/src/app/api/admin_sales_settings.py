@@ -15,6 +15,11 @@ from app.db.audit import set_audit_context
 from app.db.engine import get_engine
 from app.db.repositories.sales_settings import SalesSettingsRepository
 from app.exceptions import ValidationError
+from app.services.openrouter_client import (
+    OPENROUTER_MODEL_MAX_LENGTH,
+    clear_openrouter_model_cache,
+    normalize_openrouter_model,
+)
 from app.utils import json_response, method_not_allowed
 
 _ASSIGNED_TO_MAX_LENGTH = 128
@@ -41,6 +46,9 @@ def serialize_sales_settings(row: Any) -> dict[str, Any]:
         "default_assigned_to": row.default_assigned_to,
         "notify_assignee_on_assignment": bool(row.notify_assignee_on_assignment),
         "helper_detector_enabled": bool(row.helper_detector_enabled),
+        "openrouter_model": normalize_openrouter_model(
+            row.openrouter_model if isinstance(row.openrouter_model, str) else None
+        ),
         "updated_at": updated_at.isoformat() if updated_at is not None else None,
         "updated_by": row.updated_by,
     }
@@ -54,6 +62,7 @@ def parse_sales_settings_payload(body: Mapping[str, Any]) -> dict[str, Any]:
         "default_assigned_to",
         "notify_assignee_on_assignment",
         "helper_detector_enabled",
+        "openrouter_model",
     }
     if unknown:
         raise ValidationError(
@@ -89,6 +98,18 @@ def parse_sales_settings_payload(body: Mapping[str, Any]) -> dict[str, Any]:
                 field="helper_detector_enabled",
             )
         payload["helper_detector_enabled"] = raw_helper
+    if "openrouter_model" in body:
+        raw_model = body.get("openrouter_model")
+        if raw_model is None:
+            payload["openrouter_model"] = None
+        else:
+            parsed_model = validate_string_length(
+                raw_model,
+                "openrouter_model",
+                max_length=OPENROUTER_MODEL_MAX_LENGTH,
+                required=False,
+            )
+            payload["openrouter_model"] = normalize_openrouter_model(parsed_model)
     if not payload:
         raise ValidationError("At least one field is required", field="body")
     return payload
@@ -129,10 +150,13 @@ def _patch_sales_settings(
             row.notify_assignee_on_assignment = payload["notify_assignee_on_assignment"]
         if "helper_detector_enabled" in payload:
             row.helper_detector_enabled = payload["helper_detector_enabled"]
+        if "openrouter_model" in payload:
+            row.openrouter_model = payload["openrouter_model"]
         row.updated_by = actor_sub
         row.updated_at = datetime.now(UTC)
         repo.update(row)
         session.commit()
+        clear_openrouter_model_cache()
         return json_response(
             200,
             {"settings": serialize_sales_settings(row)},
