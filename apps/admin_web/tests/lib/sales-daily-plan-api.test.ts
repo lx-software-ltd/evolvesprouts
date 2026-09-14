@@ -15,18 +15,29 @@ describe('parseSalesDailyPlan', () => {
           title: 'Call Mei',
           why: 'Qualified',
           action: 'Book a slot',
+          kind: 'book',
+          urgency: 1,
+          sources: ['lead'],
           lead_id: 'lead-1',
           invoice_id: 'inv-1',
+          conversation_id: null,
+          assigned_to: 'user-1',
+          item_key: 'Call Mei\nlead-1\ninv-1',
           done: true,
+          feedback: 'up',
+          compare_status: 'new',
         },
       ],
       outreach: [
         {
           channel: 'whatsapp',
           lead_id: 'lead-1',
+          conversation_id: 'conv-1',
+          assigned_to: 'user-1',
           message_excerpt: 'When?',
           draft_reply: 'Tue or Thu?',
           rationale: 'Offer two slots',
+          item_key: 'whatsapp\nlead-1\nconv-1\nWhen?',
         },
       ],
       product_focus: 'Family Consultations',
@@ -41,6 +52,7 @@ describe('parseSalesDailyPlan', () => {
       pipeline_watermark_at: '2026-09-01T09:30:00Z',
       is_stale: true,
       stale_reasons: ['age', 'pipeline_changed'],
+      stale_counts: { new_conversation: 0, pipeline_changed: 2, contacts_changed: 0 },
       stale_after: '2026-09-02T10:00:00Z',
       latest_message_at: null,
       latest_pipeline_at: '2026-09-01T11:00:00Z',
@@ -57,7 +69,10 @@ describe('parseSalesDailyPlan', () => {
     });
     expect(plan?.priorities[0]?.leadId).toBe('lead-1');
     expect(plan?.priorities[0]?.invoiceId).toBe('inv-1');
+    expect(plan?.priorities[0]?.kind).toBe('book');
     expect(plan?.priorities[0]?.done).toBe(true);
+    expect(plan?.staleCounts.pipelineChanged).toBe(2);
+    expect(plan?.outreach[0]?.conversationId).toBe('conv-1');
     expect(plan?.generatedByName).toBe('Ida');
     expect(plan?.latestContactAt).toBe('2026-09-01T11:30:00Z');
     expect(plan?.outreach[0]?.draftReply).toBe('Tue or Thu?');
@@ -94,6 +109,7 @@ describe('parseSalesDailyPlan', () => {
         focus: 'Close consults',
         productFocus: 'Family Consultations',
         operatorInput: 'Focus on MBA',
+        priorities: [],
       },
     ]);
     expect(snapshot.job?.status).toBe('failed');

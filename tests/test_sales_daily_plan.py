@@ -73,11 +73,15 @@ def test_normalize_plan_payload_coerces_lists() -> None:
         {
             "channel": "whatsapp",
             "lead_id": None,
+            "conversation_id": None,
+            "assigned_to": None,
             "message_excerpt": "How much?",
             "draft_reply": "I can share the current consult options.",
             "rationale": "Price question",
         }
     ]
+    assert payload["priorities"][0]["kind"] is None
+    assert payload["priorities"][0]["urgency"] == 2
     assert payload["offer_refinements"] == ["Tighten MBA intro copy"]
     assert payload["risks"] == ["Do not invent pricing"]
 
@@ -102,6 +106,16 @@ def test_evaluate_staleness_age_conversation_and_pipeline(monkeypatch: object) -
         "app.services.sales_daily_plan.latest_contact_activity_at",
         lambda _session: now - timedelta(hours=4),
     )
+    called: list[str] = []
+
+    def _counts(_session: object, *, plan: object) -> dict[str, int]:
+        called.append("counts")
+        return {"new_conversation": 1, "pipeline_changed": 2, "contacts_changed": 0}
+
+    monkeypatch.setattr(
+        "app.services.sales_daily_plan.stale_activity_counts",
+        _counts,
+    )
 
     result = evaluate_staleness(
         session=SimpleNamespace(),
@@ -110,6 +124,8 @@ def test_evaluate_staleness_age_conversation_and_pipeline(monkeypatch: object) -
     )
     assert result["is_stale"] is True
     assert result["stale_reasons"] == ["age", "new_conversation", "pipeline_changed"]
+    assert result["stale_counts"]["new_conversation"] == 1
+    assert called == ["counts"]
 
 
 def test_evaluate_staleness_fresh_plan(monkeypatch: object) -> None:
@@ -138,6 +154,11 @@ def test_evaluate_staleness_fresh_plan(monkeypatch: object) -> None:
     )
     assert result["is_stale"] is False
     assert result["stale_reasons"] == []
+    assert result["stale_counts"] == {
+        "new_conversation": 0,
+        "pipeline_changed": 0,
+        "contacts_changed": 0,
+    }
 
 
 def test_evaluate_staleness_contacts_changed(monkeypatch: object) -> None:

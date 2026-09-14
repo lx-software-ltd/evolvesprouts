@@ -9,7 +9,13 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.api.admin_leads_common import request_id
-from app.api.admin_request import parse_body, parse_uuid
+from app.api.admin_request import parse_body, parse_uuid, query_param
+from app.api.admin_sales_daily_plan_items import (
+    create_sales_daily_plan_question,
+    parse_optional_plan_id,
+    require_latest_plan_for_mutation,
+    upsert_sales_daily_plan_item_annotation,
+)
 from app.api.admin_validators import validate_string_length
 from app.db.audit import set_audit_context
 from app.db.engine import get_engine
@@ -30,10 +36,58 @@ from app.services.sales_daily_plan_memory import (
     serialize_memory_entry,
 )
 from app.services.sales_daily_plan_serialize import serialize_sales_daily_plan_job
-from app.utils import json_response
+from app.utils import json_response, method_not_allowed
+
+
+def route_sales_daily_plan_request(
+    event: Mapping[str, Any],
+    method: str,
+    parts: list[str],
+    *,
+    actor_sub: str,
+) -> dict[str, Any] | None:
+    """Dispatch /v1/admin/leads/daily-plan* or return None when unmatched."""
+    if len(parts) < 3 or parts[2] != "daily-plan":
+        return None
+    if len(parts) == 3:
+        if method == "GET":
+            return get_sales_daily_plan(event)
+        if method == "POST":
+            return create_sales_daily_plan(event, actor_sub=actor_sub)
+        if method == "DELETE":
+            return delete_sales_daily_plan_memory(event, actor_sub=actor_sub)
+        return method_not_allowed(event)
+    if len(parts) == 5 and parts[3] == "jobs":
+        job_id = parse_uuid(parts[4])
+        if method == "GET":
+            return get_sales_daily_plan_job(event, job_id=job_id)
+        return method_not_allowed(event)
+    if len(parts) == 4 and parts[3] == "priority-completions":
+        if method == "POST":
+            return upsert_sales_daily_plan_priority_completion(
+                event, actor_sub=actor_sub
+            )
+        return method_not_allowed(event)
+    if len(parts) == 4 and parts[3] == "item-annotations":
+        if method == "POST":
+            return upsert_sales_daily_plan_item_annotation(event, actor_sub=actor_sub)
+        return method_not_allowed(event)
+    if len(parts) == 4 and parts[3] == "questions":
+        if method == "POST":
+            return create_sales_daily_plan_question(event, actor_sub=actor_sub)
+        return method_not_allowed(event)
+    return None
+
+
+def parse_compare_flag(event: Mapping[str, Any]) -> bool:
+    raw = query_param(event, "compare")
+    if raw is None:
+        return False
+    return raw.strip().lower() in {"1", "true", "yes"}
 
 
 def get_sales_daily_plan(event: Mapping[str, Any]) -> dict[str, Any]:
+    include_comparison = parse_compare_flag(event)
     with Session(get_engine()) as session:
         plan = get_latest_plan(session)
         memory = [serialize_memory_entry(row) for row in list_recent_plans(session)]
@@ -52,7 +106,9 @@ def get_sales_daily_plan(event: Mapping[str, Any]) -> dict[str, Any]:
         return json_response(
             200,
             {
-                "plan": serialize_plan(session, plan=plan),
+                "plan": serialize_plan(
+                    session, plan=plan, include_comparison=include_comparison
+                ),
                 "memory": memory,
                 "job": job_payload,
             },
@@ -152,15 +208,14 @@ def upsert_sales_daily_plan_priority_completion(
         raise ValidationError("done must be a boolean", field="done")
     lead_id = _optional_uuid_field(body.get("lead_id"), "lead_id")
     invoice_id = _optional_uuid_field(body.get("invoice_id"), "invoice_id")
+    plan_id = parse_optional_plan_id(body)
     with Session(get_engine()) as session:
         set_audit_context(
             session,
             user_id=actor_sub,
             request_id=request_id(event),
         )
-        plan = get_latest_plan(session)
-        if plan is None:
-            raise NotFoundError("SalesDailyPlan", "latest")
+        plan = require_latest_plan_for_mutation(session, plan_id)
         row = upsert_completion(
             session,
             plan_id=plan.id,

@@ -6,6 +6,7 @@ from uuid import uuid4
 import pytest
 
 from app.api import admin_leads
+from app.api import admin_sales_daily_plan
 from app.api.admin_leads_common import parse_lead_filters
 from app.api.admin_request import RequestIdentity
 from app.exceptions import ValidationError
@@ -278,7 +279,9 @@ def test_handle_admin_leads_dispatches_daily_plan_get(
         lambda _: _build_admin_identity(admin_identity),
     )
     monkeypatch.setattr(
-        admin_leads, "get_sales_daily_plan", lambda *_args, **_kwargs: marker
+        admin_sales_daily_plan,
+        "get_sales_daily_plan",
+        lambda *_args, **_kwargs: marker,
     )
 
     response = admin_leads.handle_admin_leads_request(
@@ -308,7 +311,7 @@ def test_handle_admin_leads_dispatches_daily_plan_post(
         captured["event"] = event
         return marker
 
-    monkeypatch.setattr(admin_leads, "create_sales_daily_plan", _fake_create)
+    monkeypatch.setattr(admin_sales_daily_plan, "create_sales_daily_plan", _fake_create)
 
     response = admin_leads.handle_admin_leads_request(
         api_gateway_event(method="POST", path="/v1/admin/leads/daily-plan"),
@@ -338,7 +341,9 @@ def test_handle_admin_leads_dispatches_daily_plan_delete(
         captured["event"] = event
         return marker
 
-    monkeypatch.setattr(admin_leads, "delete_sales_daily_plan_memory", _fake_delete)
+    monkeypatch.setattr(
+        admin_sales_daily_plan, "delete_sales_daily_plan_memory", _fake_delete
+    )
 
     response = admin_leads.handle_admin_leads_request(
         api_gateway_event(method="DELETE", path="/v1/admin/leads/daily-plan"),
@@ -362,7 +367,9 @@ def test_handle_admin_leads_dispatches_daily_plan_job_get(
         lambda _: _build_admin_identity(admin_identity),
     )
     monkeypatch.setattr(
-        admin_leads, "get_sales_daily_plan_job", lambda *_args, **_kwargs: marker
+        admin_sales_daily_plan,
+        "get_sales_daily_plan_job",
+        lambda *_args, **_kwargs: marker,
     )
     job_id = str(uuid4())
 
@@ -376,3 +383,102 @@ def test_handle_admin_leads_dispatches_daily_plan_job_get(
     )
 
     assert response is marker
+
+
+def test_handle_admin_leads_dispatches_daily_plan_item_annotations(
+    monkeypatch: Any,
+    api_gateway_event: Any,
+    admin_identity: dict[str, str],
+) -> None:
+    marker = {"statusCode": 200, "body": "{}"}
+    captured: dict[str, Any] = {}
+    monkeypatch.setattr(
+        admin_leads,
+        "require_admin_identity",
+        lambda _: _build_admin_identity(admin_identity),
+    )
+
+    def _fake_upsert(event: Any, *, actor_sub: str) -> dict[str, Any]:
+        captured["actor_sub"] = actor_sub
+        return marker
+
+    monkeypatch.setattr(
+        admin_sales_daily_plan,
+        "upsert_sales_daily_plan_item_annotation",
+        _fake_upsert,
+    )
+    response = admin_leads.handle_admin_leads_request(
+        api_gateway_event(
+            method="POST",
+            path="/v1/admin/leads/daily-plan/item-annotations",
+        ),
+        "POST",
+        "/v1/admin/leads/daily-plan/item-annotations",
+    )
+    assert response is marker
+    assert captured["actor_sub"] == admin_identity["userSub"]
+
+
+def test_handle_admin_leads_dispatches_daily_plan_questions(
+    monkeypatch: Any,
+    api_gateway_event: Any,
+    admin_identity: dict[str, str],
+) -> None:
+    marker = {"statusCode": 200, "body": "{}"}
+    captured: dict[str, Any] = {}
+    monkeypatch.setattr(
+        admin_leads,
+        "require_admin_identity",
+        lambda _: _build_admin_identity(admin_identity),
+    )
+
+    def _fake_ask(event: Any, *, actor_sub: str) -> dict[str, Any]:
+        captured["actor_sub"] = actor_sub
+        return marker
+
+    monkeypatch.setattr(
+        admin_sales_daily_plan,
+        "create_sales_daily_plan_question",
+        _fake_ask,
+    )
+    response = admin_leads.handle_admin_leads_request(
+        api_gateway_event(
+            method="POST",
+            path="/v1/admin/leads/daily-plan/questions",
+        ),
+        "POST",
+        "/v1/admin/leads/daily-plan/questions",
+    )
+    assert response is marker
+    assert captured["actor_sub"] == admin_identity["userSub"]
+
+
+def test_require_latest_plan_for_mutation_conflicts_on_stale_id(
+    monkeypatch: Any,
+) -> None:
+    from types import SimpleNamespace
+
+    from app.api import admin_sales_daily_plan_items
+    from app.api.admin_sales_daily_plan_items import require_latest_plan_for_mutation
+    from app.exceptions import ConflictError
+
+    latest_id = uuid4()
+    other_id = uuid4()
+    monkeypatch.setattr(
+        admin_sales_daily_plan_items,
+        "get_latest_plan",
+        lambda _session: SimpleNamespace(id=latest_id),
+    )
+    with pytest.raises(ConflictError) as exc_info:
+        require_latest_plan_for_mutation(object(), other_id)  # type: ignore[arg-type]
+    assert exc_info.value.status_code == 409
+    matched = require_latest_plan_for_mutation(object(), latest_id)  # type: ignore[arg-type]
+    assert matched.id == latest_id
+
+
+def test_parse_compare_flag() -> None:
+    from app.api.admin_sales_daily_plan import parse_compare_flag
+
+    assert parse_compare_flag({"queryStringParameters": {"compare": "true"}}) is True
+    assert parse_compare_flag({"queryStringParameters": {"compare": "1"}}) is True
+    assert parse_compare_flag({"queryStringParameters": {}}) is False

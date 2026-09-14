@@ -8,15 +8,20 @@ import { AdminApiError } from '@/lib/api-admin-client';
 import { getAdminQueryClient } from '@/lib/admin-query-client';
 import { adminQueryKeys } from '@/lib/admin-query-keys';
 import {
+  askSalesDailyPlanQuestion,
   enqueueSalesDailyPlanJob,
   fetchSalesDailyPlan,
   pollSalesDailyPlanJob,
   resetSalesDailyPlanMemory,
+  upsertSalesDailyPlanItemAnnotation,
   upsertSalesDailyPlanPriorityCompletion,
 } from '@/lib/sales-daily-plan-api';
 import type {
+  SalesDailyPlanFeedback,
+  SalesDailyPlanItemKind,
   SalesDailyPlanJob,
   SalesDailyPlanPriority,
+  SalesDailyPlanSnooze,
   SalesDailyPlanSnapshot,
 } from '@/types/sales-daily-plan';
 
@@ -93,14 +98,8 @@ export function useSalesDailyPlan() {
     };
   }, []);
 
-  const setPriorityDone = useCallback(
-    async (item: SalesDailyPlanPriority, done: boolean) => {
-      const plan = await upsertSalesDailyPlanPriorityCompletion({
-        title: item.title,
-        leadId: item.leadId,
-        invoiceId: item.invoiceId,
-        done,
-      });
+  const replacePlan = useCallback(
+    (plan: SalesDailyPlanSnapshot['plan']) => {
       queryClient.setQueryData<SalesDailyPlanSnapshot>(queryKey, (current) => ({
         plan,
         memory: current?.memory ?? [],
@@ -109,6 +108,65 @@ export function useSalesDailyPlan() {
     },
     [queryClient, queryKey]
   );
+
+  const currentPlanId = useCallback(() => {
+    return queryClient.getQueryData<SalesDailyPlanSnapshot>(queryKey)?.plan?.id;
+  }, [queryClient, queryKey]);
+
+  const setPriorityDone = useCallback(
+    async (item: SalesDailyPlanPriority, done: boolean) => {
+      const planId = currentPlanId();
+      if (!planId) {
+        throw new Error('No insight is loaded.');
+      }
+      const plan = await upsertSalesDailyPlanPriorityCompletion({
+        planId,
+        title: item.title,
+        leadId: item.leadId,
+        invoiceId: item.invoiceId,
+        done,
+      });
+      replacePlan(plan);
+    },
+    [currentPlanId, replacePlan]
+  );
+
+  const annotateItem = useCallback(
+    async (input: {
+      itemKind: SalesDailyPlanItemKind;
+      itemKey: string;
+      feedback?: SalesDailyPlanFeedback | null;
+      snooze?: SalesDailyPlanSnooze | null;
+      draftReply?: string | null;
+    }) => {
+      const planId = currentPlanId();
+      if (!planId) {
+        throw new Error('No insight is loaded.');
+      }
+      const plan = await upsertSalesDailyPlanItemAnnotation({ ...input, planId });
+      replacePlan(plan);
+    },
+    [currentPlanId, replacePlan]
+  );
+
+  const askFollowUp = useCallback(
+    async (question: string) => {
+      const planId = currentPlanId();
+      if (!planId) {
+        throw new Error('No insight is loaded.');
+      }
+      const plan = await askSalesDailyPlanQuestion(question, planId);
+      replacePlan(plan);
+    },
+    [currentPlanId, replacePlan]
+  );
+
+  const loadComparison = useCallback(async () => {
+    const snapshot = await fetchSalesDailyPlan({ compare: true });
+    if (snapshot.plan) {
+      replacePlan(snapshot.plan);
+    }
+  }, [replacePlan]);
 
   const snapshot = query.data ?? EMPTY_SNAPSHOT;
 
@@ -124,6 +182,9 @@ export function useSalesDailyPlan() {
     lastJob: lastJob ?? snapshot.job,
     generate,
     setPriorityDone,
+    annotateItem,
+    askFollowUp,
+    loadComparison,
     cancel,
   };
 }

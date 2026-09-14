@@ -17,11 +17,18 @@ vi.mock('@/lib/config', () => ({
   getAdminDefaultCurrencyCode: vi.fn(() => 'HKD'),
 }));
 
+vi.mock('@/components/auth-provider', () => ({
+  useAuth: () => ({ user: { subject: 'user-1' } }),
+}));
+
 vi.mock('@/lib/sales-daily-plan-api', () => ({
   fetchSalesDailyPlan: vi.fn(() => Promise.resolve({ plan: null, memory: [] })),
   enqueueSalesDailyPlanJob: vi.fn(),
   pollSalesDailyPlanJob: vi.fn(),
   resetSalesDailyPlanMemory: vi.fn(),
+  upsertSalesDailyPlanPriorityCompletion: vi.fn(),
+  upsertSalesDailyPlanItemAnnotation: vi.fn(),
+  askSalesDailyPlanQuestion: vi.fn(),
 }));
 
 import DashboardRoutePage from '@/app/(dashboard)/dashboard/page';

@@ -1448,11 +1448,26 @@ paths:
         WhatsApp/Meta message exists after the stored conversation watermark,
         when a lead was created or a funnel-stage event occurred after the
         stored pipeline watermark, or when a contact was created or updated
-        after that watermark. `job` is the newest generation job (including a
-        failed 06:00 HKT run). All stored plans are retained until
-        `DELETE /v1/admin/leads/daily-plan`.
+        after that watermark. `stale_counts` reports how many conversation,
+        pipeline, and contact changes landed after those watermarks. `job` is
+        the newest generation job (including a failed 06:00 HKT run). The
+        serialized plan includes item keys, annotations, and follow-up
+        `questions`. Pass `compare=true` to include `dropped_priorities` and
+        per-priority `compare_status` versus the previous plan. `stale_counts`
+        are populated only when activity (not age alone) made the plan stale.
+        All stored plans are retained until `DELETE /v1/admin/leads/daily-plan`.
       security:
         - AdminBearerAuth: []
+      parameters:
+        - name: compare
+          in: query
+          required: false
+          description: >
+            When `true`, `1`, or `yes`, compute new/carried/dropped priority
+            comparison against the previous stored plan.
+          schema:
+            type: string
+            enum: ["true", "false", "1", "0", "yes", "no"]
       responses:
         "200":
           description: Latest daily plan payload (or null) plus memory.
@@ -1541,8 +1556,9 @@ paths:
       summary: Mark or unmark an insight priority as done
       description: >
         Ticks or unticks one priority on the latest stored sales daily plan.
-        Completions are stored and included in later generations so the model
-        can skip finished work. `done: false` removes the tick.
+        Send `plan_id` of the plan on screen; a mismatch with the latest plan
+        returns 409. Completions are stored and included in later generations
+        so the model can skip finished work. `done: false` removes the tick.
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -1564,6 +1580,101 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          description: The stored insight was refreshed after this page loaded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /v1/admin/leads/daily-plan/item-annotations:
+    post:
+      summary: Upsert insight-board item annotation
+      description: >
+        Stores feedback (`up`, `down`, `not_relevant`), a snooze
+        (`tomorrow`, `next_week`, or `clear`), and/or an edited outreach
+        draft on one priority or outreach row. Send `plan_id` of the plan
+        on screen; a mismatch with the latest plan returns 409. `item_key`
+        is capped at 1024 characters. Omitted fields are left unchanged.
+        Rejected and still-snoozed items are fed into the next generation
+        as memory.
+      security:
+        - AdminBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SalesDailyPlanItemAnnotationRequest"
+      responses:
+        "200":
+          description: Updated plan plus the annotation row.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesDailyPlanItemAnnotationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: The stored insight was refreshed after this page loaded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /v1/admin/leads/daily-plan/questions:
+    post:
+      summary: Ask a follow-up question about the stored insight
+      description: >
+        Sends the stored plan JSON (not a fresh CRM snapshot) to OpenRouter
+        using the Sales Config model, with a short timeout. The model call
+        does not hold a database session. Send `plan_id` of the plan on
+        screen; a mismatch with the latest plan at request start returns 409.
+        GET responses return at most the 20 newest questions in chronological
+        order.
+      security:
+        - AdminBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SalesDailyPlanQuestionRequest"
+      responses:
+        "200":
+          description: Updated plan plus the new question row.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesDailyPlanQuestionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: The stored insight was refreshed after this page loaded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: The model returned an empty or invalid answer.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "504":
+          description: The model timed out.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /v1/admin/whatsapp/conversations:
     get:
@@ -6208,6 +6319,19 @@ components:
           type: string
         action:
           type: string
+        kind:
+          type: string
+          nullable: true
+          enum: [reply, close, chase_payment, book, offer]
+        urgency:
+          type: integer
+          minimum: 1
+          maximum: 3
+          description: 1 is highest urgency.
+        sources:
+          type: array
+          items:
+            type: string
         lead_id:
           type: string
           format: uuid
@@ -6217,9 +6341,33 @@ components:
           format: uuid
           nullable: true
           description: Unpaid issued invoice when the priority is a payment follow-up.
+        conversation_id:
+          type: string
+          format: uuid
+          nullable: true
+        channel:
+          type: string
+          nullable: true
+        assigned_to:
+          type: string
+          nullable: true
+        item_key:
+          type: string
         done:
           type: boolean
           description: True when an admin has ticked this priority on this plan.
+        feedback:
+          type: string
+          nullable: true
+          enum: [up, down, not_relevant]
+        snoozed_until:
+          type: string
+          format: date-time
+          nullable: true
+        compare_status:
+          type: string
+          nullable: true
+          enum: [new, carried]
     SalesDailyPlanOutreach:
       type: object
       required: [channel]
@@ -6230,12 +6378,66 @@ components:
           type: string
           format: uuid
           nullable: true
+        conversation_id:
+          type: string
+          format: uuid
+          nullable: true
+        assigned_to:
+          type: string
+          nullable: true
         message_excerpt:
           type: string
         draft_reply:
           type: string
         rationale:
           type: string
+        item_key:
+          type: string
+        feedback:
+          type: string
+          nullable: true
+          enum: [up, down, not_relevant]
+        snoozed_until:
+          type: string
+          format: date-time
+          nullable: true
+        saved_draft_reply:
+          type: string
+          nullable: true
+    SalesDailyPlanDroppedPriority:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+        lead_id:
+          type: string
+          format: uuid
+          nullable: true
+        invoice_id:
+          type: string
+          format: uuid
+          nullable: true
+    SalesDailyPlanQuestion:
+      type: object
+      required: [id, question, answer]
+      properties:
+        id:
+          type: string
+          format: uuid
+        question:
+          type: string
+        answer:
+          type: string
+        asked_by:
+          type: string
+        asked_at:
+          type: string
+          format: date-time
+          nullable: true
+        model:
+          type: string
+          nullable: true
     SalesDailyPlan:
       type: object
       required:
@@ -6274,6 +6476,14 @@ components:
           type: array
           items:
             type: string
+        dropped_priorities:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesDailyPlanDroppedPriority"
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesDailyPlanQuestion"
         generated_at:
           type: string
           format: date-time
@@ -6310,6 +6520,16 @@ components:
           type: string
           format: date-time
           description: Timestamp when the plan becomes age-stale (generated_at + 24h).
+        stale_counts:
+          type: object
+          description: Activity that landed after stored watermarks.
+          properties:
+            new_conversation:
+              type: integer
+            pipeline_changed:
+              type: integer
+            contacts_changed:
+              type: integer
         latest_message_at:
           type: string
           format: date-time
@@ -6339,6 +6559,10 @@ components:
         operator_input:
           type: string
           nullable: true
+        priorities:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesDailyPlanDroppedPriority"
     SalesDailyPlanResponse:
       type: object
       required: [plan, memory]
@@ -6361,6 +6585,10 @@ components:
       type: object
       required: [title, done]
       properties:
+        plan_id:
+          type: string
+          format: uuid
+          description: Plan currently shown. Must match the latest stored plan.
         title:
           type: string
         lead_id:
@@ -6399,6 +6627,99 @@ components:
               nullable: true
             done_by:
               type: string
+    SalesDailyPlanItemAnnotationRequest:
+      type: object
+      required: [item_kind]
+      properties:
+        plan_id:
+          type: string
+          format: uuid
+          description: Plan currently shown. Must match the latest stored plan.
+        item_kind:
+          type: string
+          enum: [priority, outreach]
+        item_key:
+          type: string
+          maxLength: 1024
+          description: Stable row key. When omitted, derived from title/ids or channel fields.
+        title:
+          type: string
+        lead_id:
+          type: string
+          format: uuid
+          nullable: true
+        invoice_id:
+          type: string
+          format: uuid
+          nullable: true
+        conversation_id:
+          type: string
+          format: uuid
+          nullable: true
+        channel:
+          type: string
+        message_excerpt:
+          type: string
+        feedback:
+          type: string
+          nullable: true
+          enum: [up, down, not_relevant]
+        snooze:
+          type: string
+          nullable: true
+          enum: [tomorrow, next_week, clear]
+        draft_reply:
+          type: string
+          nullable: true
+          maxLength: 4000
+    SalesDailyPlanItemAnnotationResponse:
+      type: object
+      required: [plan]
+      properties:
+        plan:
+          $ref: "#/components/schemas/SalesDailyPlan"
+        annotation:
+          type: object
+          properties:
+            item_kind:
+              type: string
+            item_key:
+              type: string
+            feedback:
+              type: string
+              nullable: true
+            snoozed_until:
+              type: string
+              format: date-time
+              nullable: true
+            draft_reply:
+              type: string
+              nullable: true
+            updated_by:
+              type: string
+            updated_at:
+              type: string
+              format: date-time
+              nullable: true
+    SalesDailyPlanQuestionRequest:
+      type: object
+      required: [question]
+      properties:
+        plan_id:
+          type: string
+          format: uuid
+          description: Plan currently shown. Must match the latest stored plan.
+        question:
+          type: string
+          maxLength: 2000
+    SalesDailyPlanQuestionResponse:
+      type: object
+      required: [plan, question]
+      properties:
+        plan:
+          $ref: "#/components/schemas/SalesDailyPlan"
+        question:
+          $ref: "#/components/schemas/SalesDailyPlanQuestion"
     SalesDailyPlanGenerateRequest:
       type: object
       properties:

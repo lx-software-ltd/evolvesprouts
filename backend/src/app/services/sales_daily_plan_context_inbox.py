@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.db.models.contact import Contact
 from app.db.models.enums import MetaMessageDirection, WhatsAppMessageDirection
 from app.db.models.meta import MetaConversation, MetaMessage
+from app.db.models.sales_lead import SalesLead
 from app.db.models.whatsapp import WhatsAppConversation, WhatsAppMessage
 
 MAX_NEEDS_REPLY = 15
@@ -68,6 +69,7 @@ def _latest_inbound_whatsapp(session: Session) -> list[dict[str, Any]]:
     ).subquery()
     rows = session.execute(
         select(
+            ranked.c.conversation_id,
             ranked.c.body,
             ranked.c.sent_at,
             WhatsAppConversation.contact_id,
@@ -75,23 +77,37 @@ def _latest_inbound_whatsapp(session: Session) -> list[dict[str, Any]]:
             WhatsAppConversation.profile_name,
             Contact.first_name,
             Contact.last_name,
+            SalesLead.assigned_to,
         )
         .join(
             WhatsAppConversation,
             WhatsAppConversation.id == ranked.c.conversation_id,
         )
         .outerjoin(Contact, Contact.id == WhatsAppConversation.contact_id)
+        .outerjoin(SalesLead, SalesLead.id == WhatsAppConversation.lead_id)
         .where(ranked.c.rn == 1)
         .where(ranked.c.direction == WhatsAppMessageDirection.INBOUND)
         .order_by(ranked.c.sent_at.desc())
         .limit(MAX_NEEDS_REPLY)
     ).all()
     results: list[dict[str, Any]] = []
-    for body, sent_at, contact_id, lead_id, profile_name, first_name, last_name in rows:
+    for (
+        conversation_id,
+        body,
+        sent_at,
+        contact_id,
+        lead_id,
+        profile_name,
+        first_name,
+        last_name,
+        assigned_to,
+    ) in rows:
         results.append(
             {
                 "channel": "whatsapp",
+                "conversation_id": str(conversation_id) if conversation_id else None,
                 "lead_id": str(lead_id) if lead_id else None,
+                "assigned_to": assigned_to,
                 "contact_name": display_name(first_name, last_name, profile_name),
                 "body": _truncate(body, MAX_MESSAGE_CHARS),
                 "_sent_at": _as_utc(sent_at) if sent_at is not None else None,
@@ -118,6 +134,7 @@ def _latest_inbound_meta(session: Session) -> list[dict[str, Any]]:
     ).subquery()
     rows = session.execute(
         select(
+            ranked.c.conversation_id,
             ranked.c.body,
             ranked.c.sent_at,
             MetaConversation.channel,
@@ -126,9 +143,11 @@ def _latest_inbound_meta(session: Session) -> list[dict[str, Any]]:
             MetaConversation.profile_name,
             Contact.first_name,
             Contact.last_name,
+            SalesLead.assigned_to,
         )
         .join(MetaConversation, MetaConversation.id == ranked.c.conversation_id)
         .outerjoin(Contact, Contact.id == MetaConversation.contact_id)
+        .outerjoin(SalesLead, SalesLead.id == MetaConversation.lead_id)
         .where(ranked.c.rn == 1)
         .where(ranked.c.direction == MetaMessageDirection.INBOUND)
         .order_by(ranked.c.sent_at.desc())
@@ -136,6 +155,7 @@ def _latest_inbound_meta(session: Session) -> list[dict[str, Any]]:
     ).all()
     results: list[dict[str, Any]] = []
     for (
+        conversation_id,
         body,
         sent_at,
         channel,
@@ -144,6 +164,7 @@ def _latest_inbound_meta(session: Session) -> list[dict[str, Any]]:
         profile_name,
         first_name,
         last_name,
+        assigned_to,
     ) in rows:
         channel_value = _enum_value(channel)
         mapped = (
@@ -156,7 +177,9 @@ def _latest_inbound_meta(session: Session) -> list[dict[str, Any]]:
         results.append(
             {
                 "channel": mapped,
+                "conversation_id": str(conversation_id) if conversation_id else None,
                 "lead_id": str(lead_id) if lead_id else None,
+                "assigned_to": assigned_to,
                 "contact_name": display_name(first_name, last_name, profile_name),
                 "body": _truncate(body, MAX_MESSAGE_CHARS),
                 "_sent_at": _as_utc(sent_at) if sent_at is not None else None,

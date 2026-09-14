@@ -73,9 +73,13 @@ from app.db.models.sales_daily_plan_job import (
     SalesDailyPlanJob,
     SalesDailyPlanJobStatus,
 )
+from app.db.models.sales_daily_plan_item_annotation import (
+    SalesDailyPlanItemAnnotation,
+)
 from app.db.models.sales_daily_plan_priority_completion import (
     SalesDailyPlanPriorityCompletion,
 )
+from app.db.models.sales_daily_plan_question import SalesDailyPlanQuestion
 from app.db.models.sales_lead import SalesLead, SalesLeadEvent
 from app.db.models.sales_lead_ai_suggestion import SalesLeadAiSuggestion
 from app.db.models.sales_lead_ai_suggestion_job import (
@@ -180,7 +184,9 @@ __all__ = [
     "SalesDailyPlan",
     "SalesDailyPlanJob",
     "SalesDailyPlanJobStatus",
+    "SalesDailyPlanItemAnnotation",
     "SalesDailyPlanPriorityCompletion",
+    "SalesDailyPlanQuestion",
     "SalesLead",
     "SalesLeadAiSuggestion",
     "SalesLeadAiSuggestionJob",

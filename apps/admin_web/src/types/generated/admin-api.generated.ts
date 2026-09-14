@@ -1664,11 +1664,14 @@ export interface paths {
         };
         /**
          * Get latest org-wide sales plan of the day
-         * @description Returns the newest stored org-wide AI sales daily plan, including staleness metadata, plus `memory` (up to the five newest stored plans, including the latest). `plan` is null when none has been generated yet. A scheduled job also generates a new plan every day at 06:00 HKT. A plan is stale when it is older than 24 hours, when a newer WhatsApp/Meta message exists after the stored conversation watermark, when a lead was created or a funnel-stage event occurred after the stored pipeline watermark, or when a contact was created or updated after that watermark. `job` is the newest generation job (including a failed 06:00 HKT run). All stored plans are retained until `DELETE /v1/admin/leads/daily-plan`.
+         * @description Returns the newest stored org-wide AI sales daily plan, including staleness metadata, plus `memory` (up to the five newest stored plans, including the latest). `plan` is null when none has been generated yet. A scheduled job also generates a new plan every day at 06:00 HKT. A plan is stale when it is older than 24 hours, when a newer WhatsApp/Meta message exists after the stored conversation watermark, when a lead was created or a funnel-stage event occurred after the stored pipeline watermark, or when a contact was created or updated after that watermark. `stale_counts` reports how many conversation, pipeline, and contact changes landed after those watermarks. `job` is the newest generation job (including a failed 06:00 HKT run). The serialized plan includes item keys, annotations, and follow-up `questions`. Pass `compare=true` to include `dropped_priorities` and per-priority `compare_status` versus the previous plan. `stale_counts` are populated only when activity (not age alone) made the plan stale. All stored plans are retained until `DELETE /v1/admin/leads/daily-plan`.
          */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description When `true`, `1`, or `yes`, compute new/carried/dropped priority comparison against the previous stored plan. */
+                    compare?: "true" | "false" | "1" | "0" | "yes" | "no";
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -1802,7 +1805,7 @@ export interface paths {
         put?: never;
         /**
          * Mark or unmark an insight priority as done
-         * @description Ticks or unticks one priority on the latest stored sales daily plan. Completions are stored and included in later generations so the model can skip finished work. `done: false` removes the tick.
+         * @description Ticks or unticks one priority on the latest stored sales daily plan. Send `plan_id` of the plan on screen; a mismatch with the latest plan returns 409. Completions are stored and included in later generations so the model can skip finished work. `done: false` removes the tick.
          */
         post: {
             parameters: {
@@ -1829,6 +1832,143 @@ export interface paths {
                 400: components["responses"]["BadRequest"];
                 403: components["responses"]["Forbidden"];
                 404: components["responses"]["NotFound"];
+                /** @description The stored insight was refreshed after this page loaded. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/leads/daily-plan/item-annotations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upsert insight-board item annotation
+         * @description Stores feedback (`up`, `down`, `not_relevant`), a snooze (`tomorrow`, `next_week`, or `clear`), and/or an edited outreach draft on one priority or outreach row. Send `plan_id` of the plan on screen; a mismatch with the latest plan returns 409. `item_key` is capped at 1024 characters. Omitted fields are left unchanged. Rejected and still-snoozed items are fed into the next generation as memory.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SalesDailyPlanItemAnnotationRequest"];
+                };
+            };
+            responses: {
+                /** @description Updated plan plus the annotation row. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SalesDailyPlanItemAnnotationResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+                /** @description The stored insight was refreshed after this page loaded. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/leads/daily-plan/questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask a follow-up question about the stored insight
+         * @description Sends the stored plan JSON (not a fresh CRM snapshot) to OpenRouter using the Sales Config model, with a short timeout. The model call does not hold a database session. Send `plan_id` of the plan on screen; a mismatch with the latest plan at request start returns 409. GET responses return at most the 20 newest questions in chronological order.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SalesDailyPlanQuestionRequest"];
+                };
+            };
+            responses: {
+                /** @description Updated plan plus the new question row. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SalesDailyPlanQuestionResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+                /** @description The stored insight was refreshed after this page loaded. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The model returned an empty or invalid answer. */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The model timed out. */
+                504: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
             };
         };
         delete?: never;
@@ -7428,6 +7568,11 @@ export interface components {
             title: string;
             why?: string;
             action?: string;
+            /** @enum {string|null} */
+            kind?: "reply" | "close" | "chase_payment" | "book" | "offer" | null;
+            /** @description 1 is highest urgency. */
+            urgency?: number;
+            sources?: string[];
             /** Format: uuid */
             lead_id?: string | null;
             /**
@@ -7435,16 +7580,53 @@ export interface components {
              * @description Unpaid issued invoice when the priority is a payment follow-up.
              */
             invoice_id?: string | null;
+            /** Format: uuid */
+            conversation_id?: string | null;
+            channel?: string | null;
+            assigned_to?: string | null;
+            item_key?: string;
             /** @description True when an admin has ticked this priority on this plan. */
             done?: boolean;
+            /** @enum {string|null} */
+            feedback?: "up" | "down" | "not_relevant" | null;
+            /** Format: date-time */
+            snoozed_until?: string | null;
+            /** @enum {string|null} */
+            compare_status?: "new" | "carried" | null;
         };
         SalesDailyPlanOutreach: {
             channel: string;
             /** Format: uuid */
             lead_id?: string | null;
+            /** Format: uuid */
+            conversation_id?: string | null;
+            assigned_to?: string | null;
             message_excerpt?: string;
             draft_reply?: string;
             rationale?: string;
+            item_key?: string;
+            /** @enum {string|null} */
+            feedback?: "up" | "down" | "not_relevant" | null;
+            /** Format: date-time */
+            snoozed_until?: string | null;
+            saved_draft_reply?: string | null;
+        };
+        SalesDailyPlanDroppedPriority: {
+            title: string;
+            /** Format: uuid */
+            lead_id?: string | null;
+            /** Format: uuid */
+            invoice_id?: string | null;
+        };
+        SalesDailyPlanQuestion: {
+            /** Format: uuid */
+            id: string;
+            question: string;
+            answer: string;
+            asked_by?: string;
+            /** Format: date-time */
+            asked_at?: string | null;
+            model?: string | null;
         };
         SalesDailyPlan: {
             /** Format: uuid */
@@ -7455,6 +7637,8 @@ export interface components {
             product_focus: string;
             offer_refinements: string[];
             risks: string[];
+            dropped_priorities?: components["schemas"]["SalesDailyPlanDroppedPriority"][];
+            questions?: components["schemas"]["SalesDailyPlanQuestion"][];
             /** Format: date-time */
             generated_at: string;
             generated_by?: string | null;
@@ -7474,6 +7658,12 @@ export interface components {
              * @description Timestamp when the plan becomes age-stale (generated_at + 24h).
              */
             stale_after: string;
+            /** @description Activity that landed after stored watermarks. */
+            stale_counts?: {
+                new_conversation?: number;
+                pipeline_changed?: number;
+                contacts_changed?: number;
+            };
             /** Format: date-time */
             latest_message_at?: string | null;
             /** Format: date-time */
@@ -7489,6 +7679,7 @@ export interface components {
             focus: string;
             product_focus: string;
             operator_input?: string | null;
+            priorities?: components["schemas"]["SalesDailyPlanDroppedPriority"][];
         };
         SalesDailyPlanResponse: {
             plan: components["schemas"]["SalesDailyPlan"] | null;
@@ -7498,6 +7689,11 @@ export interface components {
             job?: components["schemas"]["SalesDailyPlanJob"] | null;
         };
         SalesDailyPlanPriorityCompletionRequest: {
+            /**
+             * Format: uuid
+             * @description Plan currently shown. Must match the latest stored plan.
+             */
+            plan_id?: string;
             title: string;
             /** Format: uuid */
             lead_id?: string | null;
@@ -7517,6 +7713,57 @@ export interface components {
                 done_at?: string | null;
                 done_by?: string;
             } | null;
+        };
+        SalesDailyPlanItemAnnotationRequest: {
+            /**
+             * Format: uuid
+             * @description Plan currently shown. Must match the latest stored plan.
+             */
+            plan_id?: string;
+            /** @enum {string} */
+            item_kind: "priority" | "outreach";
+            /** @description Stable row key. When omitted, derived from title/ids or channel fields. */
+            item_key?: string;
+            title?: string;
+            /** Format: uuid */
+            lead_id?: string | null;
+            /** Format: uuid */
+            invoice_id?: string | null;
+            /** Format: uuid */
+            conversation_id?: string | null;
+            channel?: string;
+            message_excerpt?: string;
+            /** @enum {string|null} */
+            feedback?: "up" | "down" | "not_relevant" | null;
+            /** @enum {string|null} */
+            snooze?: "tomorrow" | "next_week" | "clear" | null;
+            draft_reply?: string | null;
+        };
+        SalesDailyPlanItemAnnotationResponse: {
+            plan: components["schemas"]["SalesDailyPlan"];
+            annotation?: {
+                item_kind?: string;
+                item_key?: string;
+                feedback?: string | null;
+                /** Format: date-time */
+                snoozed_until?: string | null;
+                draft_reply?: string | null;
+                updated_by?: string;
+                /** Format: date-time */
+                updated_at?: string | null;
+            };
+        };
+        SalesDailyPlanQuestionRequest: {
+            /**
+             * Format: uuid
+             * @description Plan currently shown. Must match the latest stored plan.
+             */
+            plan_id?: string;
+            question: string;
+        };
+        SalesDailyPlanQuestionResponse: {
+            plan: components["schemas"]["SalesDailyPlan"];
+            question: components["schemas"]["SalesDailyPlanQuestion"];
         };
         SalesDailyPlanGenerateRequest: {
             /** @description Optional refinement used for this generation and stored as memory. */

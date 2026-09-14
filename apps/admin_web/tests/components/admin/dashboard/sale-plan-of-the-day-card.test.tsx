@@ -7,11 +7,19 @@ const {
   enqueueSalesDailyPlanJob,
   pollSalesDailyPlanJob,
   upsertSalesDailyPlanPriorityCompletion,
+  upsertSalesDailyPlanItemAnnotation,
+  askSalesDailyPlanQuestion,
 } = vi.hoisted(() => ({
   fetchSalesDailyPlan: vi.fn(),
   enqueueSalesDailyPlanJob: vi.fn(),
   pollSalesDailyPlanJob: vi.fn(),
   upsertSalesDailyPlanPriorityCompletion: vi.fn(),
+  upsertSalesDailyPlanItemAnnotation: vi.fn(),
+  askSalesDailyPlanQuestion: vi.fn(),
+}));
+
+vi.mock('@/components/auth-provider', () => ({
+  useAuth: () => ({ user: { subject: 'user-1' } }),
 }));
 
 vi.mock('@/lib/sales-daily-plan-api', () => ({
@@ -19,6 +27,8 @@ vi.mock('@/lib/sales-daily-plan-api', () => ({
   enqueueSalesDailyPlanJob,
   pollSalesDailyPlanJob,
   upsertSalesDailyPlanPriorityCompletion,
+  upsertSalesDailyPlanItemAnnotation,
+  askSalesDailyPlanQuestion,
   resetSalesDailyPlanMemory: vi.fn(),
 }));
 
@@ -33,23 +43,41 @@ const samplePlan = {
       title: 'Reply to Mei',
       why: 'Inbound yesterday asking about helper training.',
       action: 'Send a consult CTA on WhatsApp.',
+      kind: 'reply',
+      urgency: 1,
+      sources: ['inbox'],
       leadId: 'lead-1',
       invoiceId: null,
+      conversationId: 'conv-1',
+      channel: 'whatsapp',
+      assignedTo: 'user-1',
+      itemKey: 'Reply to Mei\nlead-1\n',
       done: false,
+      feedback: null,
+      snoozedUntil: null,
+      compareStatus: 'new',
     },
   ],
   outreach: [
     {
       channel: 'whatsapp',
       leadId: 'lead-1',
+      conversationId: 'conv-1',
+      assignedTo: 'user-1',
       messageExcerpt: 'Is this for helpers?',
       draftReply: 'Yes — My Best Auntie is helper training focused on ages 0–6.',
       rationale: 'Answer the inbound question directly.',
+      itemKey: 'whatsapp\nlead-1\nconv-1\nIs this for helpers?',
+      feedback: null,
+      snoozedUntil: null,
+      savedDraftReply: null,
     },
   ],
   productFocus: 'Push Family Consultations this week.',
   offerRefinements: ['Tighten MBA intro copy around daily routines.'],
   risks: ['Do not invent pricing'],
+  droppedPriorities: [],
+  questions: [],
   generatedAt: '2026-09-01T10:00:00Z',
   generatedBy: 'user-1',
   generatedByName: 'Ida',
@@ -59,6 +87,7 @@ const samplePlan = {
   pipelineWatermarkAt: '2026-09-01T09:00:00Z',
   isStale: false,
   staleReasons: [],
+  staleCounts: { newConversation: 0, pipelineChanged: 0, contactsChanged: 0 },
   staleAfter: '2026-09-02T10:00:00Z',
   latestMessageAt: '2026-09-01T09:00:00Z',
   latestPipelineAt: '2026-09-01T09:00:00Z',
@@ -71,6 +100,8 @@ describe('SalePlanOfTheDayCard', () => {
     enqueueSalesDailyPlanJob.mockReset();
     pollSalesDailyPlanJob.mockReset();
     upsertSalesDailyPlanPriorityCompletion.mockReset();
+    upsertSalesDailyPlanItemAnnotation.mockReset();
+    askSalesDailyPlanQuestion.mockReset();
   });
 
   it('loads empty state and generates a plan on demand', async () => {
@@ -136,7 +167,14 @@ describe('SalePlanOfTheDayCard', () => {
     const leadLinks = screen.getAllByRole('link', { name: 'Open lead' });
     expect(leadLinks.length).toBeGreaterThan(0);
     expect(leadLinks[0]).toHaveAttribute('href', '/sales?lead=lead-1');
-    expect(screen.getByText(/Last run: queue 1\.0 s · model 7\.0 s/i)).toBeInTheDocument();
+    expect(screen.getByText(/Last run: queue 1\.0 s · model 7\.0 s · test-model/i)).toBeInTheDocument();
+    expect(screen.getByText('0 of 1 done')).toBeInTheDocument();
+    const inboxLinks = screen.getAllByRole('link', { name: 'Reply in inbox' });
+    expect(inboxLinks.length).toBeGreaterThan(0);
+    expect(inboxLinks[0]).toHaveAttribute(
+      'href',
+      '/sales?tab=whatsapp&conversation=conv-1',
+    );
     expect(enqueueSalesDailyPlanJob).toHaveBeenCalledWith(undefined);
     expect(pollSalesDailyPlanJob).toHaveBeenCalledWith('job-1', expect.any(AbortSignal));
   });
@@ -151,8 +189,18 @@ describe('SalePlanOfTheDayCard', () => {
             why: 'Balance overdue',
             action: 'Send a polite payment reminder.',
             leadId: null,
+            kind: 'chase_payment',
+            urgency: 1,
+            sources: ['invoice'],
             invoiceId: 'inv-1001',
+            conversationId: null,
+            channel: null,
+            assignedTo: null,
+            itemKey: 'Chase INV-1001\n\ninv-1001',
             done: false,
+            feedback: null,
+            snoozedUntil: null,
+            compareStatus: 'new',
           },
         ],
         outreach: [],
@@ -184,6 +232,7 @@ describe('SalePlanOfTheDayCard', () => {
         risks: [],
         isStale: true,
         staleReasons: ['age', 'new_conversation', 'pipeline_changed', 'contacts_changed'],
+        staleCounts: { newConversation: 3, pipelineChanged: 2, contactsChanged: 1 },
       },
       memory: [
         {
@@ -209,9 +258,9 @@ describe('SalePlanOfTheDayCard', () => {
       expect(screen.getByText(/Plan may be stale/i)).toBeInTheDocument();
     });
     expect(screen.getByText(/older than 24 hours/i)).toBeInTheDocument();
-    expect(screen.getByText(/newer conversation messages/i)).toBeInTheDocument();
-    expect(screen.getByText(/pipeline activity since this plan/i)).toBeInTheDocument();
-    expect(screen.getByText(/contact changes since this plan/i)).toBeInTheDocument();
+    expect(screen.getByText(/3 newer conversation messages/i)).toBeInTheDocument();
+    expect(screen.getByText(/2 pipeline events since this plan/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 contact change since this plan/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Refresh insight' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Previous insights/i })).toBeInTheDocument();
   });
@@ -332,6 +381,7 @@ describe('SalePlanOfTheDayCard', () => {
 
     await waitFor(() => {
       expect(upsertSalesDailyPlanPriorityCompletion).toHaveBeenCalledWith({
+        planId: 'plan-1',
         title: 'Reply to Mei',
         leadId: 'lead-1',
         invoiceId: null,
@@ -339,6 +389,108 @@ describe('SalePlanOfTheDayCard', () => {
       });
     });
     expect(screen.getByLabelText('Reply to Mei')).toBeChecked();
+  });
+
+  it('appends a refinement chip and can ask a follow-up', async () => {
+    fetchSalesDailyPlan.mockResolvedValue({ plan: samplePlan, memory: [], job: null });
+    askSalesDailyPlanQuestion.mockResolvedValue({
+      ...samplePlan,
+      questions: [
+        {
+          id: 'q-1',
+          question: 'Which invoice first?',
+          answer: 'Start with the oldest overdue balance.',
+          askedBy: 'user-1',
+          askedAt: '2026-09-01T11:00:00Z',
+          model: 'test-model',
+        },
+      ],
+    });
+
+    const user = userEvent.setup();
+    render(<SalePlanOfTheDayCard />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Refresh insight' })).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole('button', { name: 'Chase overdue invoices first' }));
+    expect(screen.getByLabelText('Refinement for next insight')).toHaveValue(
+      'Chase overdue invoices first',
+    );
+    await user.type(screen.getByLabelText('Ask a follow-up'), 'Which invoice first?');
+    await user.click(screen.getByRole('button', { name: 'Ask' }));
+    await waitFor(() => {
+      expect(askSalesDailyPlanQuestion).toHaveBeenCalledWith('Which invoice first?', 'plan-1');
+    });
+    expect(screen.getByText('Start with the oldest overdue balance.')).toBeInTheDocument();
+  });
+
+  it('hides snoozed priorities until shown', async () => {
+    const snoozedUntil = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    fetchSalesDailyPlan.mockResolvedValue({
+      plan: {
+        ...samplePlan,
+        priorities: [{ ...samplePlan.priorities[0], snoozedUntil }],
+      },
+      memory: [],
+      job: null,
+    });
+
+    const user = userEvent.setup();
+    render(<SalePlanOfTheDayCard />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Snoozed priorities are hidden.')).toBeInTheDocument();
+    });
+    expect(screen.queryByLabelText('Reply to Mei')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Show snoozed/ }));
+    expect(screen.getByLabelText('Reply to Mei')).toBeInTheDocument();
+    expect(screen.getByText('Snoozed')).toBeInTheDocument();
+  });
+
+  it('loads comparison when Compare with previous is pressed', async () => {
+    fetchSalesDailyPlan
+      .mockResolvedValueOnce({ plan: samplePlan, memory: [], job: null })
+      .mockResolvedValueOnce({
+        plan: {
+          ...samplePlan,
+          priorities: [{ ...samplePlan.priorities[0], compareStatus: 'carried' }],
+          droppedPriorities: [{ title: 'Old chase', leadId: null, invoiceId: null }],
+        },
+        memory: [],
+        job: null,
+      });
+
+    const user = userEvent.setup();
+    render(<SalePlanOfTheDayCard />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Compare with previous' })).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole('button', { name: 'Compare with previous' }));
+    await waitFor(() => {
+      expect(fetchSalesDailyPlan).toHaveBeenCalledWith({ compare: true });
+    });
+    expect(screen.getByText('Dropped since last plan')).toBeInTheDocument();
+    expect(screen.getByText('Old chase')).toBeInTheDocument();
+  });
+
+  it('surfaces annotation errors', async () => {
+    fetchSalesDailyPlan.mockResolvedValue({ plan: samplePlan, memory: [], job: null });
+    upsertSalesDailyPlanItemAnnotation.mockRejectedValue(new Error('The insight was refreshed. Reload the page and try again.'));
+
+    const user = userEvent.setup();
+    render(<SalePlanOfTheDayCard />);
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: 'Helpful' }).length).toBeGreaterThan(0);
+    });
+    await user.click(screen.getAllByRole('button', { name: 'Helpful' })[0]);
+    await waitFor(() => {
+      expect(
+        screen.getByText('The insight was refreshed. Reload the page and try again.'),
+      ).toBeInTheDocument();
+    });
   });
 
   it('shows a failed scheduled job when no plan was stored', async () => {

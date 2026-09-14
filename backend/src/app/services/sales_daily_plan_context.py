@@ -26,6 +26,9 @@ from app.db.models.whatsapp import WhatsAppMessage
 from app.services.sales_daily_plan_completions import (
     load_recent_completions_for_context,
 )
+from app.services.sales_daily_plan_context_enrichment import (
+    enrich_sales_daily_plan_context,
+)
 from app.services.sales_daily_plan_context_inbox import load_needs_reply_threads
 from app.services.sales_daily_plan_memory import load_prior_plans_for_context
 from app.utils.logging import mask_email, mask_pii
@@ -112,10 +115,14 @@ def build_sales_daily_plan_context(
             "(open_leads, recent_contacts, converted_nurture, unpaid invoices) "
             "when it disagrees. Do not repeat completed_priorities unless the "
             "live CRM still needs the work. Address generated_by_name; never "
-            "say operator. Do not invent pricing, schedules, or guarantees. If "
-            "context is thin, say what to gather next."
+            "say operator. Honour item_feedback_memory (skip or deprioritize "
+            "rejected and still-snoozed items). Use days_in_stage, "
+            "days_since_last_contact, trends, and yesterday_follow_through. "
+            "Do not invent pricing, schedules, or guarantees. If context is "
+            "thin, say what to gather next."
         ),
     }
+    enrich_sales_daily_plan_context(session, context, now=now)
     return context, SalesDailyPlanWatermarks(
         conversation_watermark_at=conversation_watermark,
         pipeline_watermark_at=pipeline_watermark,
@@ -228,6 +235,11 @@ def _serialize_unpaid_invoice(
         "days_overdue": days_overdue,
         "is_overdue": is_overdue,
         "is_partially_paid": amount_allocated > 0,
+        "bill_to_contact_id": (
+            str(invoice.bill_to_contact_id)
+            if getattr(invoice, "bill_to_contact_id", None)
+            else None
+        ),
         "_balance_due_sort": float(balance_due),
     }
 
@@ -416,6 +428,7 @@ def _serialize_lead_summary(lead: SalesLead) -> dict[str, Any]:
         reverse=True,
     )
     last_note = notes[0].content if notes and notes[0].content else None
+    last_note_at = notes[0].created_at if notes else None
     contact = lead.contact
     contact_block: dict[str, Any] | None = None
     if contact is not None:
@@ -431,6 +444,7 @@ def _serialize_lead_summary(lead: SalesLead) -> dict[str, Any]:
         "converted_at": _iso(lead.converted_at),
         "lost_at": _iso(lead.lost_at),
         "last_note": _truncate(last_note, MAX_NOTE_CHARS),
+        "last_note_at": _iso(last_note_at),
         "contact": contact_block,
     }
 

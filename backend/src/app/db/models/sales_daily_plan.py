@@ -15,9 +15,13 @@ from sqlalchemy.types import TIMESTAMP
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.db.models.sales_daily_plan_item_annotation import (
+        SalesDailyPlanItemAnnotation,
+    )
     from app.db.models.sales_daily_plan_priority_completion import (
         SalesDailyPlanPriorityCompletion,
     )
+    from app.db.models.sales_daily_plan_question import SalesDailyPlanQuestion
 
 
 class SalesDailyPlan(Base):
@@ -56,4 +60,14 @@ class SalesDailyPlan(Base):
             back_populates="plan",
             cascade="all, delete-orphan",
         )
+    )
+    item_annotations: Mapped[list["SalesDailyPlanItemAnnotation"]] = relationship(
+        "SalesDailyPlanItemAnnotation",
+        back_populates="plan",
+        cascade="all, delete-orphan",
+    )
+    questions: Mapped[list["SalesDailyPlanQuestion"]] = relationship(
+        "SalesDailyPlanQuestion",
+        back_populates="plan",
+        cascade="all, delete-orphan",
     )
