@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.db.models.sales_daily_plan import SalesDailyPlan
 from app.db.models.sales_daily_plan_job import SalesDailyPlanJob
 from app.services.sales_daily_plan_completions import delete_completions_for_reset
+from app.services.sales_daily_plan_payload import compact_priority_memory
 
 MEMORY_PLAN_LIMIT = 5
 MAX_OPERATOR_INPUT_LENGTH = 4000
@@ -37,6 +38,7 @@ def serialize_memory_entry(plan: SalesDailyPlan) -> dict[str, Any]:
         "focus": str(payload.get("focus") or ""),
         "product_focus": str(payload.get("product_focus") or ""),
         "operator_input": plan.operator_input,
+        "priorities": compact_priority_memory(payload),
     }
 
 

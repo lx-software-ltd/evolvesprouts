@@ -35,6 +35,7 @@ def test_serialize_memory_entry_uses_payload_focus() -> None:
     assert entry["focus"] == "Close consults"
     assert entry["product_focus"] == "Family Consultations"
     assert entry["operator_input"] == "Focus on MBA"
+    assert entry["priorities"] == []
 
 
 def test_load_prior_plans_for_context_is_oldest_first(monkeypatch: object) -> None:

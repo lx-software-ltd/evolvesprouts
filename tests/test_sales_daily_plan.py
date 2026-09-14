@@ -73,11 +73,15 @@ def test_normalize_plan_payload_coerces_lists() -> None:
         {
             "channel": "whatsapp",
             "lead_id": None,
+            "conversation_id": None,
+            "assigned_to": None,
             "message_excerpt": "How much?",
             "draft_reply": "I can share the current consult options.",
             "rationale": "Price question",
         }
     ]
+    assert payload["priorities"][0]["kind"] is None
+    assert payload["priorities"][0]["urgency"] == 2
     assert payload["offer_refinements"] == ["Tighten MBA intro copy"]
     assert payload["risks"] == ["Do not invent pricing"]
 

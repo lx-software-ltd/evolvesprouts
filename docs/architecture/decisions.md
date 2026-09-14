@@ -1204,10 +1204,16 @@ shows a 24-hour (plus pipeline / inbox / contact watermark) stale flag, and
 still lets the assignee Generate / Refresh insight. Optional `operator_input`
 on refresh is stored on the new plan. The last five plans (and their
 refinements), recent contacts, converted-client nurture rows, and ticked
-priorities are sent back as memory on the next generation. Empty or non-JSON
+priorities, rejected/snoozed item annotations, week-over-week trends, and
+yesterday follow-through are sent back as memory on the next generation. Empty or non-JSON
 model output fails the job instead of storing a blank plan. Scheduled jobs
 address Sales config `default_assigned_to` by Cognito name; manual runs
-address the logged-in admin. All rows are kept until Sales → Configuration
+address the logged-in admin. The dashboard card is interactive: kind/urgency
+chips, progress, copy-and-inbox outreach, Mine vs All, compare-with-previous,
+item feedback/snooze/draft edits
+(`POST /v1/admin/leads/daily-plan/item-annotations`), and follow-up Q&A on the
+stored plan JSON (`POST /v1/admin/leads/daily-plan/questions`). All rows are
+kept until Sales → Configuration
 resets memory (`DELETE /v1/admin/leads/daily-plan`). Scheduled jobs use audit
 actor `system:sales-daily-plan` and skip enqueue when another job is already
 `pending` or `processing`. Fully paid invoices convert matching open or lost

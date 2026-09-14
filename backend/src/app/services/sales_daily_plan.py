@@ -22,6 +22,7 @@ from app.services.openrouter_client import (
 )
 from app.services.openrouter_json_parse import loads_openrouter_json
 from app.services.cognito_display_name import resolve_insight_generated_by_name
+from app.services.sales_daily_plan_annotations import apply_annotations_to_items
 from app.services.sales_daily_plan_completions import (
     list_completions_for_plan,
     priority_key,
@@ -32,6 +33,18 @@ from app.services.sales_daily_plan_context import (
     latest_conversation_at,
     latest_pipeline_activity_at,
 )
+from app.services.sales_daily_plan_insights import (
+    apply_comparison,
+    hydrate_assigned_to,
+    stale_activity_counts,
+)
+from app.services.sales_daily_plan_payload import (
+    normalize_plan_payload,
+    outreach_from_value,
+    priorities_from_value,
+    string_list,
+)
+from app.services.sales_daily_plan_questions import serialize_questions_for_plan
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -57,14 +70,22 @@ markdown) with this shape:
       "title": "short activity title",
       "why": "why this matters today",
       "action": "concrete next step the admin should do",
+      "kind": "reply|close|chase_payment|book|offer",
+      "urgency": 1,
+      "sources": ["inbox", "invoice"],
       "lead_id": "uuid of an open lead when the action is about one, else null",
-      "invoice_id": "uuid of an unpaid issued invoice when the action is about one, else null"
+      "invoice_id": "uuid of an unpaid issued invoice when the action is about one, else null",
+      "conversation_id": "uuid of the inbox thread when the action is a reply, else null",
+      "channel": "whatsapp|instagram|messenger when conversation_id is set, else null",
+      "assigned_to": "assignee sub from the lead when known, else null"
     }
   ],
   "outreach": [
     {
       "channel": "whatsapp|instagram|messenger|unknown",
       "lead_id": "uuid when known, else null",
+      "conversation_id": "uuid of the inbox thread when known, else null",
+      "assigned_to": "assignee sub from the lead when known, else null",
       "message_excerpt": "short excerpt of the inbound message being answered",
       "draft_reply": "suggested reply the admin can send",
       "rationale": "why this reply / action"
@@ -94,6 +115,10 @@ Rules:
 - Do not invent pricing, schedules, or guarantees.
 - If context is thin, say what to ask or gather next.
 - Keep draft replies concise and natural.
+- Set kind, urgency (1=high, 2=medium, 3=low), and sources on every priority.
+- Copy conversation_id from needs_reply_threads when suggesting a reply.
+- Skip or deprioritize item_feedback_memory rows that are rejected or still
+  snoozed. Prefer unfinished yesterday_follow_through items when still valid.
 """.strip()
 
 
@@ -159,6 +184,7 @@ def evaluate_staleness(
         "is_stale": bool(reasons),
         "stale_reasons": reasons,
         "stale_after": stale_after.isoformat(),
+        "stale_counts": stale_activity_counts(session, plan=plan),
         "latest_message_at": (
             latest_message_at.isoformat() if latest_message_at is not None else None
         ),
@@ -175,16 +201,24 @@ def serialize_plan(session: Session, *, plan: SalesDailyPlan) -> dict[str, Any]:
     """Serialize a daily plan row plus freshness metadata for the admin API."""
     payload = plan.payload if isinstance(plan.payload, dict) else {}
     staleness = evaluate_staleness(session, plan=plan)
-    priorities = _priorities(payload.get("priorities"))
+    priorities = priorities_from_value(payload.get("priorities"))
+    outreach = outreach_from_value(payload.get("outreach"))
     _apply_priority_done_flags(session, plan_id=plan.id, priorities=priorities)
+    apply_annotations_to_items(
+        session, plan_id=plan.id, priorities=priorities, outreach=outreach
+    )
+    hydrate_assigned_to(session, priorities=priorities, outreach=outreach)
+    dropped = apply_comparison(session, plan=plan, priorities=priorities)
     return {
         "id": str(plan.id),
         "focus": str(payload.get("focus") or ""),
         "priorities": priorities,
-        "outreach": _outreach(payload.get("outreach")),
+        "outreach": outreach,
         "product_focus": str(payload.get("product_focus") or ""),
-        "offer_refinements": _string_list(payload.get("offer_refinements")),
-        "risks": _string_list(payload.get("risks")),
+        "offer_refinements": string_list(payload.get("offer_refinements")),
+        "risks": string_list(payload.get("risks")),
+        "dropped_priorities": dropped,
+        "questions": serialize_questions_for_plan(session, plan.id),
         "generated_at": _as_utc(plan.generated_at).isoformat(),
         "generated_by": plan.generated_by,
         "generated_by_name": getattr(plan, "generated_by_name", None),
@@ -325,80 +359,6 @@ def _apply_priority_done_flags(
             str(item.get("title") or ""), item.get("lead_id"), item.get("invoice_id")
         )
         item["done"] = key in completions
-
-
-def normalize_plan_payload(parsed: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "focus": str(parsed.get("focus") or "").strip(),
-        "priorities": _priorities(parsed.get("priorities")),
-        "outreach": _outreach(parsed.get("outreach")),
-        "product_focus": str(parsed.get("product_focus") or "").strip(),
-        "offer_refinements": _string_list(parsed.get("offer_refinements")),
-        "risks": _string_list(parsed.get("risks")),
-    }
-
-
-def _priorities(value: Any) -> list[dict[str, Any]]:
-    if not isinstance(value, list):
-        return []
-    items: list[dict[str, Any]] = []
-    for entry in value:
-        if not isinstance(entry, dict):
-            continue
-        title = str(entry.get("title") or "").strip()
-        if not title:
-            continue
-        items.append(
-            {
-                "title": title,
-                "why": str(entry.get("why") or "").strip(),
-                "action": str(entry.get("action") or "").strip(),
-                "lead_id": _optional_uuid(entry.get("lead_id")),
-                "invoice_id": _optional_uuid(entry.get("invoice_id")),
-                "done": False,
-            }
-        )
-    return items
-
-
-def _outreach(value: Any) -> list[dict[str, str | None]]:
-    if not isinstance(value, list):
-        return []
-    items: list[dict[str, str | None]] = []
-    for entry in value:
-        if not isinstance(entry, dict):
-            continue
-        items.append(
-            {
-                "channel": str(entry.get("channel") or "unknown").strip() or "unknown",
-                "lead_id": _optional_uuid(entry.get("lead_id")),
-                "message_excerpt": str(entry.get("message_excerpt") or "").strip(),
-                "draft_reply": str(entry.get("draft_reply") or "").strip(),
-                "rationale": str(entry.get("rationale") or "").strip(),
-            }
-        )
-    return items
-
-
-def _string_list(value: Any) -> list[str]:
-    if not isinstance(value, list):
-        return []
-    items: list[str] = []
-    for entry in value:
-        text = str(entry or "").strip()
-        if text:
-            items.append(text)
-    return items
-
-
-def _optional_uuid(value: Any) -> str | None:
-    text = str(value or "").strip()
-    if not text:
-        return None
-    try:
-        return str(UUID(text))
-    except ValueError:
-        return None
 
 
 def _as_utc(value: datetime) -> datetime:

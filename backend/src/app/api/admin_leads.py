@@ -56,13 +56,7 @@ from app.api.admin_leads_ai_suggestions import (
 from app.api.admin_leads_analytics import (
     get_analytics,
 )
-from app.api.admin_sales_daily_plan import (
-    create_sales_daily_plan,
-    delete_sales_daily_plan_memory,
-    get_sales_daily_plan,
-    get_sales_daily_plan_job,
-    upsert_sales_daily_plan_priority_completion,
-)
+from app.api.admin_sales_daily_plan import route_sales_daily_plan_request
 
 
 def handle_admin_leads_request(
@@ -92,35 +86,15 @@ def handle_admin_leads_request(
     if len(parts) == 3 and parts[2] == "settings":
         return handle_sales_settings_request(event, method, actor_sub=identity.user_sub)
 
-    if len(parts) == 3 and parts[2] == "daily-plan":
-        if method == "GET":
-            return get_sales_daily_plan(event)
-        if method == "POST":
-            return create_sales_daily_plan(event, actor_sub=identity.user_sub)
-        if method == "DELETE":
-            return delete_sales_daily_plan_memory(event, actor_sub=identity.user_sub)
-        return method_not_allowed(event)
+    daily_plan = route_sales_daily_plan_request(
+        event, method, parts, actor_sub=identity.user_sub
+    )
+    if daily_plan is not None:
+        return daily_plan
 
     if len(parts) == 3 and parts[2] == "merge":
         if method == "POST":
             return _merge_leads(event, actor_sub=identity.user_sub)
-        return method_not_allowed(event)
-
-    if len(parts) == 5 and parts[2] == "daily-plan" and parts[3] == "jobs":
-        job_id = parse_uuid(parts[4])
-        if method == "GET":
-            return get_sales_daily_plan_job(event, job_id=job_id)
-        return method_not_allowed(event)
-
-    if (
-        len(parts) == 4
-        and parts[2] == "daily-plan"
-        and parts[3] == "priority-completions"
-    ):
-        if method == "POST":
-            return upsert_sales_daily_plan_priority_completion(
-                event, actor_sub=identity.user_sub
-            )
         return method_not_allowed(event)
 
     lead_id = parse_uuid(parts[2])

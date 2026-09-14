@@ -618,7 +618,28 @@ maps legacy `note.id` to the **first** inserted row’s UUID.
   than the conversation watermark, when a lead was created / a funnel-stage
   event occurred after the pipeline watermark, or when a contact was created
   or updated after that watermark.
+- Payload priorities may include `kind`, `urgency`, `sources`,
+  `conversation_id`, `channel`, and `assigned_to`. Outreach rows may include
+  `conversation_id` and `assigned_to`.
 - No seed rows (generated on the 06:00 HKT schedule and on demand).
+
+### `sales_daily_plan_item_annotations`
+
+- Purpose: per-item insight-board state on a stored plan — feedback
+  (`up` / `down` / `not_relevant`), optional `snoozed_until`, and an edited
+  outreach `draft_reply`.
+- Unique on `(plan_id, item_kind, item_key)` where `item_kind` is
+  `priority` or `outreach`; `ON DELETE CASCADE` from `sales_daily_plans`.
+- Rejected and still-snoozed rows are included in the next generation as
+  `item_feedback_memory`.
+- No seed rows (created when an admin rates, snoozes, or edits a draft).
+
+### `sales_daily_plan_questions`
+
+- Purpose: follow-up Q&A against the stored plan JSON (OpenRouter, Sales
+  Config model, short timeout — not a fresh CRM snapshot).
+- `ON DELETE CASCADE` from `sales_daily_plans`.
+- No seed rows (created when an admin asks a follow-up).
 
 ### `sales_daily_plan_priority_completions`
 

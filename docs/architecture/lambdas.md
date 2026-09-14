@@ -135,6 +135,10 @@ their primary responsibilities.
   `/v1/admin/leads/daily-plan/jobs/{job_id}` (GET job status / duration),
   `/v1/admin/leads/daily-plan/priority-completions` (POST ticks or unticks a
   priority on the latest insight so later generations skip finished work),
+  `/v1/admin/leads/daily-plan/item-annotations` (POST feedback, snooze, or
+  edited outreach draft on one priority or outreach row),
+  `/v1/admin/leads/daily-plan/questions` (POST a follow-up about the stored
+  plan JSON using the Sales Config OpenRouter model),
   `/v1/admin/contacts/*` (including `GET /v1/admin/contacts` optional `contact_type` filter;
   list and single-contact responses include read-only `family_location_summary` and
   `organization_location_summary` when the contact is linked to a family or organisation that has a venue location,
