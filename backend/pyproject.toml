@@ -8,11 +8,11 @@ version = "0.1.0"
 description = "Backend services for Evolve Sprouts."
 requires-python = ">=3.12"
 dependencies = [
-  "alembic==1.19.1",
+  "alembic==1.19.2",
   "boto3==1.43.89",
   "pyjwt[crypto]==2.13.0",
   "pydantic==2.13.5",
-  "psycopg[binary]==3.3.4",
+  "psycopg[binary]==3.3.5",
   "sqlalchemy==2.0.52",
   "phonenumbers==9.0.38",
   "reportlab==5.0.1",
