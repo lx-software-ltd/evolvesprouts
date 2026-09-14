@@ -109,6 +109,7 @@ describe('parseSalesDailyPlan', () => {
         focus: 'Close consults',
         productFocus: 'Family Consultations',
         operatorInput: 'Focus on MBA',
+        priorities: [],
       },
     ]);
     expect(snapshot.job?.status).toBe('failed');
