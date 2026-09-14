@@ -38,6 +38,9 @@ describe('SalesConfigurationView', () => {
 
     expect(screen.getByText(/scheduled 6:00 HKT insight/i)).toBeInTheDocument();
     expect(screen.getByLabelText('OpenRouter model')).toHaveAttribute('placeholder', 'Auto');
+    expect(
+      screen.getByText(/lead suggestions and the dashboard insight/i)
+    ).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText('Default assignee'), 'user-1');
     await user.click(
       screen.getByLabelText('Email the assignee when a lead is assigned to them')

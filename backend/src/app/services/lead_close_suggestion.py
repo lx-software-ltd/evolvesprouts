@@ -185,6 +185,7 @@ def generate_and_store_suggestion(
             timeout=_openrouter_timeout_seconds(),
             workload=WORKLOAD_LEAD_CLOSE_SUGGESTION,
             temperature=0.2,
+            use_sales_model=True,
         )
     except AwsProxyError as exc:
         raise RuntimeError(_format_openrouter_failure(exc)) from exc

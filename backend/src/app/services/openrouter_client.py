@@ -108,14 +108,18 @@ def openrouter_chat_completion(
     temperature: float = 0,
     plugins: Sequence[Mapping[str, Any]] | None = None,
     max_attempts: int | None = None,
+    use_sales_model: bool = False,
 ) -> str:
     """POST a chat completion and return the raw HTTP response body string.
 
     Intentionally does not force JSON response mode (same rationale as the
     expense parser: JSON mode can yield empty ``{}`` on borderline inputs).
+
+    ``use_sales_model`` applies the Sales Config OpenRouter model (lead close
+    suggestions and the dashboard insight). Other workloads stay on Auto.
     """
     endpoint_url = require_env("OPENROUTER_CHAT_COMPLETIONS_URL")
-    model = configured_model_name()
+    model = configured_model_name() if use_sales_model else OPENROUTER_AUTO_MODEL
     api_key = get_openrouter_api_key()
 
     user_message_content: Any
@@ -296,7 +300,10 @@ def clear_openrouter_model_cache() -> None:
 
 
 def configured_model_name() -> str:
-    """Return the OpenRouter model id from sales settings (Auto when unset).
+    """Return the Sales Config OpenRouter model id (Auto when unset).
+
+    Used for lead close suggestions and the dashboard insight. Helper Detector,
+    invoice parsing, and JSON repair always use ``OPENROUTER_AUTO_MODEL``.
 
     When the singleton ``sales_settings`` row cannot be read (unit tests, cold
     DB errors), fall back to ``OPENROUTER_MODEL`` then ``openrouter/auto``.

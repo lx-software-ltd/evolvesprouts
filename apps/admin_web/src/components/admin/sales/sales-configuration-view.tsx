@@ -140,7 +140,7 @@ export function SalesConfigurationView({
                 label='OpenRouter model'
                 htmlFor='sales-settings-openrouter-model'
                 span={2}
-                hint='Model code OpenRouter uses for sales AI, Helper Detector, and invoice parsing. Leave blank for Auto.'
+                hint='Used for lead suggestions and the dashboard insight. Helper Detector, invoice parsing, and JSON repair always use Auto. Leave blank for Auto.'
               >
                 <Input
                   id='sales-settings-openrouter-model'

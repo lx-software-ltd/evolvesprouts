@@ -1181,16 +1181,17 @@ detector.
 
 **Decision:** Persist an optional `openrouter_model` on the singleton
 `sales_settings` row (default `NULL` = Auto / `openrouter/auto`). The admin
-Sales → Configuration screen exposes a free-text model-code field. All
-OpenRouter chat completions (sales daily plan, lead close suggestions, Helper
-Detector, invoice parsing, JSON repair) resolve the model through
-`configured_model_name()`. When the settings row cannot be read, the process
-falls back to the `OPENROUTER_MODEL` environment variable, then Auto.
+Sales → Configuration screen exposes a free-text model-code field. Only lead
+close suggestions and the dashboard insight (`use_sales_model=True`) resolve
+the model through `configured_model_name()`. Helper Detector, invoice parsing,
+and JSON repair always call OpenRouter Auto (`openrouter/auto`). When the
+settings row cannot be read, sales generation falls back to the
+`OPENROUTER_MODEL` environment variable, then Auto.
 
 **Why:**
-- Operators need to change the model without a CDK redeploy.
-- Auto is the product default; a typed OpenRouter model id (for example
-  `openai/gpt-4.1-mini`) overrides it site-wide.
+- Operators need to change the sales/dashboard model without a CDK redeploy.
+- Invoice parsing, Helper Detector, and JSON repair stay on Auto so a typed
+  sales model cannot change those workloads.
 
 ## Sales plan of the day (dashboard)
 

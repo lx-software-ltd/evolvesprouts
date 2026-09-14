@@ -248,6 +248,7 @@ def generate_and_store_plan(
             timeout=_openrouter_timeout_seconds(),
             workload=WORKLOAD_SALES_DAILY_PLAN,
             temperature=0.2,
+            use_sales_model=True,
         )
         text = extract_message_text(raw_body)
         payload = normalize_plan_payload(parse_plan_json_object(text))
