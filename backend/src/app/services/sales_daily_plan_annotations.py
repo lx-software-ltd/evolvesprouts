@@ -171,13 +171,13 @@ def resolve_snoozed_until(
     """Map API snooze tokens to a timestamp. ``None`` input means unchanged."""
     if snooze is None:
         return ...
-    token = snooze.strip().lower()
-    if token in {"", "clear", "none"}:
+    snooze_preset = snooze.strip().lower()
+    if snooze_preset in {"", "clear", "none"}:
         return None
     current = now or datetime.now(UTC)
-    if token == "tomorrow":
+    if snooze_preset == "tomorrow":
         return current + SNOOZE_TOMORROW
-    if token in {"next_week", "next-week"}:
+    if snooze_preset in {"next_week", "next-week"}:
         return current + SNOOZE_NEXT_WEEK
     raise ValueError(f"Unsupported snooze value: {snooze}")
 

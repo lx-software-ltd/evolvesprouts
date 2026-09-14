@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
@@ -78,7 +79,8 @@ export function SalePlanPriorityItem({
   const checkboxId = `insight-priority-${item.itemKey}`;
   const inboxHref = salesInboxHref(item.channel ?? '', item.conversationId);
   const kindClass = item.kind ? KIND_CLASS[item.kind] : null;
-  const isSnoozed = Boolean(item.snoozedUntil && Date.parse(item.snoozedUntil) > Date.now());
+  const [nowMs] = useState(() => Date.now());
+  const isSnoozed = Boolean(item.snoozedUntil && Date.parse(item.snoozedUntil) > nowMs);
 
   return (
     <li className='space-y-2'>

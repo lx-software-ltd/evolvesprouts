@@ -34,7 +34,9 @@ def enrich_sales_daily_plan_context(
     """Mutate and return context with trends, follow-through, and aging."""
     enrich_open_leads(session, context.get("open_leads") or [], now=now)
     attach_invoice_chase_notes(session, context.get("unpaid_invoices") or [])
-    context["trends"] = build_week_over_week_trends(session, now=now, funnel=context.get("funnel"))
+    context["trends"] = build_week_over_week_trends(
+        session, now=now, funnel=context.get("funnel")
+    )
     context["yesterday_follow_through"] = build_yesterday_follow_through(session)
     context["recent_outcome_memory"] = build_outcome_memory(session)
     context["item_feedback_memory"] = load_item_feedback_memory(session, now=now)

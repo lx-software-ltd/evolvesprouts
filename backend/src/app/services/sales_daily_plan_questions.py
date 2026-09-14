@@ -61,8 +61,12 @@ def serialize_question(row: SalesDailyPlanQuestion) -> dict[str, Any]:
     }
 
 
-def serialize_questions_for_plan(session: Session, plan_id: UUID) -> list[dict[str, Any]]:
-    return [serialize_question(row) for row in list_questions_for_plan(session, plan_id)]
+def serialize_questions_for_plan(
+    session: Session, plan_id: UUID
+) -> list[dict[str, Any]]:
+    return [
+        serialize_question(row) for row in list_questions_for_plan(session, plan_id)
+    ]
 
 
 def answer_follow_up_question(

@@ -11,7 +11,10 @@ from app.services.sales_daily_plan_context_enrichment import (
     build_week_over_week_trends,
     enrich_open_leads,
 )
-from app.services.sales_daily_plan_insights import apply_comparison, stale_activity_counts
+from app.services.sales_daily_plan_insights import (
+    apply_comparison,
+    stale_activity_counts,
+)
 from app.services.sales_daily_plan_payload import compact_priority_memory
 
 
@@ -31,7 +34,9 @@ def test_stale_activity_counts_zero_without_scalar() -> None:
 
 
 def test_apply_comparison_marks_new_without_previous() -> None:
-    priorities = [{"title": "Reply", "lead_id": None, "invoice_id": None, "item_key": "Reply\n\n"}]
+    priorities = [
+        {"title": "Reply", "lead_id": None, "invoice_id": None, "item_key": "Reply\n\n"}
+    ]
     dropped = apply_comparison(
         SimpleNamespace(),
         plan=SimpleNamespace(id=uuid4()),  # type: ignore[arg-type]

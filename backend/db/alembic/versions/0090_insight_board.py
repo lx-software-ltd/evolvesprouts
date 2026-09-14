@@ -116,7 +116,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index("sdp_questions_plan_asked_idx", table_name="sales_daily_plan_questions")
+    op.drop_index(
+        "sdp_questions_plan_asked_idx", table_name="sales_daily_plan_questions"
+    )
     op.drop_table("sales_daily_plan_questions")
     op.drop_index(
         "sdp_item_annotations_snooze_idx",

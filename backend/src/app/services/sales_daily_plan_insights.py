@@ -119,9 +119,7 @@ def apply_comparison(
         )
         current_keys.add(key)
         item["compare_status"] = "carried" if key in previous_by_key else "new"
-    return [
-        value for key, value in previous_by_key.items() if key not in current_keys
-    ]
+    return [value for key, value in previous_by_key.items() if key not in current_keys]
 
 
 def hydrate_assigned_to(

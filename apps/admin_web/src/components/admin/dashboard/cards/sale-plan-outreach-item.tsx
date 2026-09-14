@@ -34,7 +34,8 @@ export function SalePlanOutreachItem({
   const inboxHref = salesInboxHref(item.channel, item.conversationId);
   const [draft, setDraft] = useState(item.savedDraftReply || item.draftReply || '');
   const [isSaving, setIsSaving] = useState(false);
-  const isSnoozed = Boolean(item.snoozedUntil && Date.parse(item.snoozedUntil) > Date.now());
+  const [nowMs] = useState(() => Date.now());
+  const isSnoozed = Boolean(item.snoozedUntil && Date.parse(item.snoozedUntil) > nowMs);
 
   async function handleCopy() {
     const text = draft.trim() || item.draftReply;
