@@ -24,6 +24,7 @@ import {
   SALES_DAILY_PLAN_OPERATOR_INPUT_MAX,
   SALES_DAILY_PLAN_QUESTION_MAX,
   SALES_DAILY_PLAN_REFINEMENT_CHIPS,
+  salesDailyPlanItemIsSnoozed,
 } from '@/types/sales-daily-plan';
 
 function formatStaleReasons(
@@ -108,22 +109,27 @@ export function SalePlanOfTheDayCard() {
     setPriorityDone,
     annotateItem,
     askFollowUp,
+    loadComparison,
   } = useSalesDailyPlan();
   const [refinement, setRefinement] = useState('');
   const [pendingPriorityKey, setPendingPriorityKey] = useState<string | null>(null);
   const [assigneeFilter, setAssigneeFilter] = useState<'all' | 'mine'>('all');
   const [showCompare, setShowCompare] = useState(false);
+  const [showSnoozed, setShowSnoozed] = useState(false);
   const [followUp, setFollowUp] = useState('');
   const [followUpError, setFollowUpError] = useState('');
+  const [actionError, setActionError] = useState('');
   const [isAsking, setIsAsking] = useState(false);
+  const [isComparing, setIsComparing] = useState(false);
+  const [nowMs] = useState(() => Date.now());
   const scheduledJobError =
     lastJob?.status === 'failed' ? lastJob.errorMessage?.trim() || 'Insight generation failed.' : '';
-  const error = generateError || loadError || scheduledJobError;
+  const error = generateError || loadError || scheduledJobError || actionError;
   const primaryLabel = plan ? 'Refresh insight' : 'Generate insight';
   const previousMemory = memory.filter((entry) => entry.id !== plan?.id);
   const subject = user?.subject ?? '';
 
-  const visiblePriorities = useMemo(() => {
+  const assignedPriorities = useMemo(() => {
     const items = plan?.priorities ?? [];
     if (assigneeFilter === 'mine' && subject) {
       return items.filter((item) => item.assignedTo === subject);
@@ -131,13 +137,28 @@ export function SalePlanOfTheDayCard() {
     return items;
   }, [assigneeFilter, plan?.priorities, subject]);
 
-  const visibleOutreach = useMemo(() => {
+  const assignedOutreach = useMemo(() => {
     const items = plan?.outreach ?? [];
     if (assigneeFilter === 'mine' && subject) {
       return items.filter((item) => item.assignedTo === subject);
     }
     return items;
   }, [assigneeFilter, plan?.outreach, subject]);
+
+  const snoozedPriorityCount = assignedPriorities.filter((item) =>
+    salesDailyPlanItemIsSnoozed(item.snoozedUntil, nowMs),
+  ).length;
+  const snoozedOutreachCount = assignedOutreach.filter((item) =>
+    salesDailyPlanItemIsSnoozed(item.snoozedUntil, nowMs),
+  ).length;
+  const snoozedCount = snoozedPriorityCount + snoozedOutreachCount;
+
+  const visiblePriorities = showSnoozed
+    ? assignedPriorities
+    : assignedPriorities.filter((item) => !salesDailyPlanItemIsSnoozed(item.snoozedUntil, nowMs));
+  const visibleOutreach = showSnoozed
+    ? assignedOutreach
+    : assignedOutreach.filter((item) => !salesDailyPlanItemIsSnoozed(item.snoozedUntil, nowMs));
 
   const doneCount = visiblePriorities.filter((item) => item.done).length;
 
@@ -149,10 +170,21 @@ export function SalePlanOfTheDayCard() {
     }
   }
 
+  async function withActionError(work: () => Promise<void>) {
+    setActionError('');
+    try {
+      await work();
+    } catch (caught) {
+      setActionError(
+        caught instanceof Error ? caught.message : 'Failed to update the insight.',
+      );
+    }
+  }
+
   async function handlePriorityDone(item: SalesDailyPlanPriority, done: boolean) {
     setPendingPriorityKey(item.itemKey);
     try {
-      await setPriorityDone(item, done);
+      await withActionError(() => setPriorityDone(item, done));
     } finally {
       setPendingPriorityKey(null);
     }
@@ -162,26 +194,55 @@ export function SalePlanOfTheDayCard() {
     item: SalesDailyPlanPriority,
     feedback: SalesDailyPlanFeedback | null,
   ) {
-    await annotateItem({ itemKind: 'priority', itemKey: item.itemKey, feedback });
+    await withActionError(() =>
+      annotateItem({ itemKind: 'priority', itemKey: item.itemKey, feedback }),
+    );
   }
 
   async function handlePrioritySnooze(item: SalesDailyPlanPriority, snooze: SalesDailyPlanSnooze) {
-    await annotateItem({ itemKind: 'priority', itemKey: item.itemKey, snooze });
+    await withActionError(() =>
+      annotateItem({ itemKind: 'priority', itemKey: item.itemKey, snooze }),
+    );
   }
 
   async function handleOutreachFeedback(
     item: SalesDailyPlanOutreach,
     feedback: SalesDailyPlanFeedback | null,
   ) {
-    await annotateItem({ itemKind: 'outreach', itemKey: item.itemKey, feedback });
+    await withActionError(() =>
+      annotateItem({ itemKind: 'outreach', itemKey: item.itemKey, feedback }),
+    );
   }
 
   async function handleOutreachSnooze(item: SalesDailyPlanOutreach, snooze: SalesDailyPlanSnooze) {
-    await annotateItem({ itemKind: 'outreach', itemKey: item.itemKey, snooze });
+    await withActionError(() =>
+      annotateItem({ itemKind: 'outreach', itemKey: item.itemKey, snooze }),
+    );
   }
 
   async function handleSaveDraft(item: SalesDailyPlanOutreach, draftReply: string) {
-    await annotateItem({ itemKind: 'outreach', itemKey: item.itemKey, draftReply });
+    await withActionError(() =>
+      annotateItem({ itemKind: 'outreach', itemKey: item.itemKey, draftReply }),
+    );
+  }
+
+  async function handleToggleCompare() {
+    const next = !showCompare;
+    setShowCompare(next);
+    if (!next) {
+      return;
+    }
+    setIsComparing(true);
+    setActionError('');
+    try {
+      await loadComparison();
+    } catch (caught) {
+      setActionError(
+        caught instanceof Error ? caught.message : 'Failed to compare with the previous insight.',
+      );
+    } finally {
+      setIsComparing(false);
+    }
   }
 
   async function handleAskFollowUp() {
@@ -287,15 +348,32 @@ export function SalePlanOfTheDayCard() {
                 activeKey={assigneeFilter}
                 onChange={setAssigneeFilter}
               />
-              <Button
-                type='button'
-                size='sm'
-                variant={showCompare ? 'secondary' : 'outline'}
-                aria-pressed={showCompare}
-                onClick={() => setShowCompare((current) => !current)}
-              >
-                Compare with previous
-              </Button>
+              <div className='flex flex-wrap items-center gap-2'>
+                {snoozedCount > 0 ? (
+                  <Button
+                    type='button'
+                    size='sm'
+                    variant={showSnoozed ? 'secondary' : 'outline'}
+                    aria-pressed={showSnoozed}
+                    onClick={() => setShowSnoozed((current) => !current)}
+                  >
+                    {showSnoozed ? 'Hide snoozed' : `Show snoozed (${snoozedCount})`}
+                  </Button>
+                ) : null}
+                <Button
+                  type='button'
+                  size='sm'
+                  variant={showCompare ? 'secondary' : 'outline'}
+                  aria-pressed={showCompare}
+                  loading={isComparing}
+                  loadingLabel='Comparing…'
+                  onClick={() => {
+                    void handleToggleCompare();
+                  }}
+                >
+                  Compare with previous
+                </Button>
+              </div>
             </div>
 
             {plan.priorities.length > 0 ? (
@@ -307,7 +385,11 @@ export function SalePlanOfTheDayCard() {
                   </p>
                 </div>
                 {visiblePriorities.length === 0 ? (
-                  <p className='mt-2 text-sm text-slate-600'>No priorities assigned to you.</p>
+                  <p className='mt-2 text-sm text-slate-600'>
+                    {assigneeFilter === 'mine' && assignedPriorities.length === 0
+                      ? 'No priorities assigned to you.'
+                      : 'Snoozed priorities are hidden.'}
+                  </p>
                 ) : (
                   <ul className='mt-2 space-y-3 text-sm text-slate-700'>
                     {visiblePriorities.map((item) => (
@@ -315,16 +397,13 @@ export function SalePlanOfTheDayCard() {
                         key={item.itemKey}
                         item={item}
                         showCompare={showCompare}
+                        nowMs={nowMs}
                         disabled={isGenerating || pendingPriorityKey === item.itemKey}
                         onDoneChange={(nextItem, done) => {
                           void handlePriorityDone(nextItem, done);
                         }}
-                        onFeedback={(nextItem, feedback) => {
-                          void handlePriorityFeedback(nextItem, feedback);
-                        }}
-                        onSnooze={(nextItem, snooze) => {
-                          void handlePrioritySnooze(nextItem, snooze);
-                        }}
+                        onFeedback={handlePriorityFeedback}
+                        onSnooze={handlePrioritySnooze}
                       />
                     ))}
                   </ul>
@@ -349,20 +428,21 @@ export function SalePlanOfTheDayCard() {
               <div className='space-y-3'>
                 <h3 className='text-sm font-medium text-slate-900'>Outreach drafts</h3>
                 {visibleOutreach.length === 0 ? (
-                  <p className='text-sm text-slate-600'>No outreach drafts assigned to you.</p>
+                  <p className='text-sm text-slate-600'>
+                    {assigneeFilter === 'mine' && assignedOutreach.length === 0
+                      ? 'No outreach drafts assigned to you.'
+                      : 'Snoozed outreach drafts are hidden.'}
+                  </p>
                 ) : (
                   visibleOutreach.map((item, index) => (
                     <SalePlanOutreachItem
                       key={item.itemKey}
                       item={item}
                       index={index}
+                      nowMs={nowMs}
                       disabled={isGenerating}
-                      onFeedback={(nextItem, feedback) => {
-                        void handleOutreachFeedback(nextItem, feedback);
-                      }}
-                      onSnooze={(nextItem, snooze) => {
-                        void handleOutreachSnooze(nextItem, snooze);
-                      }}
+                      onFeedback={handleOutreachFeedback}
+                      onSnooze={handleOutreachSnooze}
                       onSaveDraft={handleSaveDraft}
                     />
                   ))

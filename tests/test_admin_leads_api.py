@@ -451,3 +451,34 @@ def test_handle_admin_leads_dispatches_daily_plan_questions(
     )
     assert response is marker
     assert captured["actor_sub"] == admin_identity["userSub"]
+
+
+def test_require_latest_plan_for_mutation_conflicts_on_stale_id(
+    monkeypatch: Any,
+) -> None:
+    from types import SimpleNamespace
+
+    from app.api import admin_sales_daily_plan_items
+    from app.api.admin_sales_daily_plan_items import require_latest_plan_for_mutation
+    from app.exceptions import ConflictError
+
+    latest_id = uuid4()
+    other_id = uuid4()
+    monkeypatch.setattr(
+        admin_sales_daily_plan_items,
+        "get_latest_plan",
+        lambda _session: SimpleNamespace(id=latest_id),
+    )
+    with pytest.raises(ConflictError) as exc_info:
+        require_latest_plan_for_mutation(object(), other_id)  # type: ignore[arg-type]
+    assert exc_info.value.status_code == 409
+    matched = require_latest_plan_for_mutation(object(), latest_id)  # type: ignore[arg-type]
+    assert matched.id == latest_id
+
+
+def test_parse_compare_flag() -> None:
+    from app.api.admin_sales_daily_plan import parse_compare_flag
+
+    assert parse_compare_flag({"queryStringParameters": {"compare": "true"}}) is True
+    assert parse_compare_flag({"queryStringParameters": {"compare": "1"}}) is True
+    assert parse_compare_flag({"queryStringParameters": {}}) is False

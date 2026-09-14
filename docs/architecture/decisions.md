@@ -1209,11 +1209,14 @@ yesterday follow-through are sent back as memory on the next generation. Empty o
 model output fails the job instead of storing a blank plan. Scheduled jobs
 address Sales config `default_assigned_to` by Cognito name; manual runs
 address the logged-in admin. The dashboard card is interactive: kind/urgency
-chips, progress, copy-and-inbox outreach, Mine vs All, compare-with-previous,
+chips, progress, copy-and-inbox outreach, Mine vs All, compare-with-previous
+(`GET .../daily-plan?compare=true`), snoozed items hidden until shown,
 item feedback/snooze/draft edits
 (`POST /v1/admin/leads/daily-plan/item-annotations`), and follow-up Q&A on the
-stored plan JSON (`POST /v1/admin/leads/daily-plan/questions`). All rows are
-kept until Sales → Configuration
+stored plan JSON (`POST /v1/admin/leads/daily-plan/questions`). Mutations send
+`plan_id` and 409 when the latest plan changed. Follow-up model calls run
+outside the database session. Trend and aging day counts use Asia/Hong_Kong
+wall time. All rows are kept until Sales → Configuration
 resets memory (`DELETE /v1/admin/leads/daily-plan`). Scheduled jobs use audit
 actor `system:sales-daily-plan` and skip enqueue when another job is already
 `pending` or `processing`. Fully paid invoices convert matching open or lost

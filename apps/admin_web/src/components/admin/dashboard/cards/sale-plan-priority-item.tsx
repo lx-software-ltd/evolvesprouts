@@ -9,7 +9,7 @@ import type {
   SalesDailyPlanPriority,
   SalesDailyPlanSnooze,
 } from '@/types/sales-daily-plan';
-import { salesInboxHref } from '@/types/sales-daily-plan';
+import { salesDailyPlanItemIsSnoozed, salesInboxHref } from '@/types/sales-daily-plan';
 
 const KIND_LABELS: Record<string, string> = {
   reply: 'Reply',
@@ -32,6 +32,8 @@ const URGENCY_LABELS: Record<number, string> = {
   2: 'Medium',
   3: 'Low',
 };
+
+type PendingAction = SalesDailyPlanFeedback | SalesDailyPlanSnooze | null;
 
 function LeadLink({ leadId }: { leadId: string | null }) {
   if (!leadId) {
@@ -65,6 +67,7 @@ export function SalePlanPriorityItem({
   item,
   disabled,
   showCompare,
+  nowMs,
   onDoneChange,
   onFeedback,
   onSnooze,
@@ -72,15 +75,29 @@ export function SalePlanPriorityItem({
   item: SalesDailyPlanPriority;
   disabled: boolean;
   showCompare: boolean;
+  nowMs: number;
   onDoneChange: (item: SalesDailyPlanPriority, done: boolean) => void;
-  onFeedback: (item: SalesDailyPlanPriority, feedback: SalesDailyPlanFeedback | null) => void;
-  onSnooze: (item: SalesDailyPlanPriority, snooze: SalesDailyPlanSnooze) => void;
+  onFeedback: (
+    item: SalesDailyPlanPriority,
+    feedback: SalesDailyPlanFeedback | null,
+  ) => Promise<void>;
+  onSnooze: (item: SalesDailyPlanPriority, snooze: SalesDailyPlanSnooze) => Promise<void>;
 }) {
   const checkboxId = `insight-priority-${item.itemKey}`;
   const inboxHref = salesInboxHref(item.channel ?? '', item.conversationId);
   const kindClass = item.kind ? KIND_CLASS[item.kind] : null;
-  const [nowMs] = useState(() => Date.now());
-  const isSnoozed = Boolean(item.snoozedUntil && Date.parse(item.snoozedUntil) > nowMs);
+  const isSnoozed = salesDailyPlanItemIsSnoozed(item.snoozedUntil, nowMs);
+  const [pending, setPending] = useState<PendingAction>(null);
+  const busy = disabled || pending !== null;
+
+  async function run(action: PendingAction, work: () => Promise<void>) {
+    setPending(action);
+    try {
+      await work();
+    } finally {
+      setPending(null);
+    }
+  }
 
   return (
     <li className='space-y-2'>
@@ -125,7 +142,7 @@ export function SalePlanPriorityItem({
           type='checkbox'
           className='mt-0.5 h-4 w-4 rounded border-slate-300 text-slate-900'
           checked={item.done}
-          disabled={disabled}
+          disabled={busy}
           onChange={(event) => onDoneChange(item, event.target.checked)}
         />
         <label
@@ -158,8 +175,12 @@ export function SalePlanPriorityItem({
           type='button'
           size='sm'
           variant={item.feedback === 'up' ? 'secondary' : 'outline'}
-          disabled={disabled}
-          onClick={() => onFeedback(item, item.feedback === 'up' ? null : 'up')}
+          disabled={busy}
+          loading={pending === 'up'}
+          loadingLabel='Saving…'
+          onClick={() => {
+            void run('up', () => onFeedback(item, item.feedback === 'up' ? null : 'up'));
+          }}
         >
           Helpful
         </Button>
@@ -167,8 +188,12 @@ export function SalePlanPriorityItem({
           type='button'
           size='sm'
           variant={item.feedback === 'down' ? 'secondary' : 'outline'}
-          disabled={disabled}
-          onClick={() => onFeedback(item, item.feedback === 'down' ? null : 'down')}
+          disabled={busy}
+          loading={pending === 'down'}
+          loadingLabel='Saving…'
+          onClick={() => {
+            void run('down', () => onFeedback(item, item.feedback === 'down' ? null : 'down'));
+          }}
         >
           Not helpful
         </Button>
@@ -176,8 +201,14 @@ export function SalePlanPriorityItem({
           type='button'
           size='sm'
           variant={item.feedback === 'not_relevant' ? 'secondary' : 'outline'}
-          disabled={disabled}
-          onClick={() => onFeedback(item, item.feedback === 'not_relevant' ? null : 'not_relevant')}
+          disabled={busy}
+          loading={pending === 'not_relevant'}
+          loadingLabel='Saving…'
+          onClick={() => {
+            void run('not_relevant', () =>
+              onFeedback(item, item.feedback === 'not_relevant' ? null : 'not_relevant'),
+            );
+          }}
         >
           Not relevant
         </Button>
@@ -185,8 +216,12 @@ export function SalePlanPriorityItem({
           type='button'
           size='sm'
           variant='outline'
-          disabled={disabled}
-          onClick={() => onSnooze(item, 'tomorrow')}
+          disabled={busy}
+          loading={pending === 'tomorrow'}
+          loadingLabel='Saving…'
+          onClick={() => {
+            void run('tomorrow', () => onSnooze(item, 'tomorrow'));
+          }}
         >
           Snooze tomorrow
         </Button>
@@ -194,8 +229,12 @@ export function SalePlanPriorityItem({
           type='button'
           size='sm'
           variant='outline'
-          disabled={disabled}
-          onClick={() => onSnooze(item, 'next_week')}
+          disabled={busy}
+          loading={pending === 'next_week'}
+          loadingLabel='Saving…'
+          onClick={() => {
+            void run('next_week', () => onSnooze(item, 'next_week'));
+          }}
         >
           Snooze next week
         </Button>
@@ -204,8 +243,12 @@ export function SalePlanPriorityItem({
             type='button'
             size='sm'
             variant='ghost'
-            disabled={disabled}
-            onClick={() => onSnooze(item, 'clear')}
+            disabled={busy}
+            loading={pending === 'clear'}
+            loadingLabel='Clearing…'
+            onClick={() => {
+              void run('clear', () => onSnooze(item, 'clear'));
+            }}
           >
             Clear snooze
           </Button>

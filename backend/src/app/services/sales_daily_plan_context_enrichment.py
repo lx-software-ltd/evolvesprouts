@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session
@@ -20,6 +21,8 @@ from app.services.sales_daily_plan_completions import (
 from app.services.sales_daily_plan_memory import list_recent_plans
 
 _CLOSED_STAGES = (FunnelStage.CONVERTED, FunnelStage.LOST)
+# Product jurisdiction wall time (same IANA zone as the 06:00 HKT schedule).
+_BUSINESS_TZ = ZoneInfo("Asia/Hong_Kong")
 MAX_STILL_OPEN = 15
 MAX_OUTCOMES = 12
 MAX_CHASE_NOTE_CHARS = 240
@@ -106,7 +109,7 @@ def attach_invoice_chase_notes(
     }
     for invoice in invoices:
         contact_id = str(invoice.get("bill_to_contact_id") or "")
-        invoice["last_chase_note"] = notes.get(contact_id)
+        invoice["last_contact_note"] = notes.get(contact_id)
 
 
 def build_week_over_week_trends(
@@ -115,10 +118,11 @@ def build_week_over_week_trends(
     now: datetime,
     funnel: Any,
 ) -> dict[str, Any]:
+    local_now = _in_business_tz(now)
     week_start = datetime.combine(
-        (now - timedelta(days=now.weekday())).date(),
+        local_now.date() - timedelta(days=local_now.weekday()),
         datetime.min.time(),
-        tzinfo=UTC,
+        tzinfo=_BUSINESS_TZ,
     )
     last_week_start = week_start - timedelta(days=7)
     leads_this_week = _count_leads_created(session, week_start, now)
@@ -272,12 +276,15 @@ def _count_leads_converted(session: Session, start: datetime, end: datetime) -> 
     return int(value or 0)
 
 
+def _in_business_tz(value: datetime) -> datetime:
+    current = value if value.tzinfo else value.replace(tzinfo=UTC)
+    return current.astimezone(_BUSINESS_TZ)
+
+
 def _days_between(now: datetime, earlier: datetime | None) -> int | None:
     if earlier is None:
         return None
-    current = now if now.tzinfo else now.replace(tzinfo=UTC)
-    start = earlier if earlier.tzinfo else earlier.replace(tzinfo=UTC)
-    return max(0, (current.date() - start.date()).days)
+    return max(0, (_in_business_tz(now).date() - _in_business_tz(earlier).date()).days)
 
 
 def _parse_iso(value: Any) -> datetime | None:

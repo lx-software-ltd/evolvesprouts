@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 import { CopyFeedbackIconButton } from '@/components/ui/copy-feedback-icon-button';
@@ -12,12 +12,19 @@ import type {
   SalesDailyPlanOutreach,
   SalesDailyPlanSnooze,
 } from '@/types/sales-daily-plan';
-import { SALES_DAILY_PLAN_DRAFT_MAX, salesInboxHref } from '@/types/sales-daily-plan';
+import {
+  SALES_DAILY_PLAN_DRAFT_MAX,
+  salesDailyPlanItemIsSnoozed,
+  salesInboxHref,
+} from '@/types/sales-daily-plan';
+
+type PendingAction = SalesDailyPlanFeedback | SalesDailyPlanSnooze | 'draft' | null;
 
 export function SalePlanOutreachItem({
   item,
   index,
   disabled,
+  nowMs,
   onFeedback,
   onSnooze,
   onSaveDraft,
@@ -25,17 +32,26 @@ export function SalePlanOutreachItem({
   item: SalesDailyPlanOutreach;
   index: number;
   disabled: boolean;
-  onFeedback: (item: SalesDailyPlanOutreach, feedback: SalesDailyPlanFeedback | null) => void;
-  onSnooze: (item: SalesDailyPlanOutreach, snooze: SalesDailyPlanSnooze) => void;
+  nowMs: number;
+  onFeedback: (
+    item: SalesDailyPlanOutreach,
+    feedback: SalesDailyPlanFeedback | null,
+  ) => Promise<void>;
+  onSnooze: (item: SalesDailyPlanOutreach, snooze: SalesDailyPlanSnooze) => Promise<void>;
   onSaveDraft: (item: SalesDailyPlanOutreach, draftReply: string) => Promise<void>;
 }) {
   const { copiedKey, markCopied } = useCopyFeedback(1000);
   const copyKey = `outreach-${index}`;
   const inboxHref = salesInboxHref(item.channel, item.conversationId);
-  const [draft, setDraft] = useState(item.savedDraftReply || item.draftReply || '');
-  const [isSaving, setIsSaving] = useState(false);
-  const [nowMs] = useState(() => Date.now());
-  const isSnoozed = Boolean(item.snoozedUntil && Date.parse(item.snoozedUntil) > nowMs);
+  const serverDraft = item.savedDraftReply || item.draftReply || '';
+  const [draft, setDraft] = useState(serverDraft);
+  const [pending, setPending] = useState<PendingAction>(null);
+  const isSnoozed = salesDailyPlanItemIsSnoozed(item.snoozedUntil, nowMs);
+  const busy = disabled || pending !== null;
+
+  useEffect(() => {
+    setDraft(item.savedDraftReply || item.draftReply || '');
+  }, [item.savedDraftReply, item.draftReply]);
 
   async function handleCopy() {
     const text = draft.trim() || item.draftReply;
@@ -46,12 +62,12 @@ export function SalePlanOutreachItem({
     markCopied(copyKey);
   }
 
-  async function handleSave() {
-    setIsSaving(true);
+  async function run(action: PendingAction, work: () => Promise<void>) {
+    setPending(action);
     try {
-      await onSaveDraft(item, draft.trim());
+      await work();
     } finally {
-      setIsSaving(false);
+      setPending(null);
     }
   }
 
@@ -62,7 +78,7 @@ export function SalePlanOutreachItem({
         <div className='flex flex-wrap items-center gap-2'>
           <CopyFeedbackIconButton
             copied={copiedKey === copyKey}
-            disabled={disabled || !(draft.trim() || item.draftReply)}
+            disabled={busy || !(draft.trim() || item.draftReply)}
             onClick={() => {
               void handleCopy();
             }}
@@ -88,7 +104,7 @@ export function SalePlanOutreachItem({
         onChange={(event) => setDraft(event.target.value)}
         maxLength={SALES_DAILY_PLAN_DRAFT_MAX}
         rows={4}
-        disabled={disabled}
+        disabled={busy}
       />
       {item.rationale ? <p className='text-xs text-slate-500'>{item.rationale}</p> : null}
       <div className='flex flex-wrap items-center gap-2'>
@@ -104,11 +120,11 @@ export function SalePlanOutreachItem({
           type='button'
           size='sm'
           variant='secondary'
-          disabled={disabled}
-          loading={isSaving}
+          disabled={busy}
+          loading={pending === 'draft'}
           loadingLabel='Saving…'
           onClick={() => {
-            void handleSave();
+            void run('draft', () => onSaveDraft(item, draft.trim()));
           }}
         >
           Save draft
@@ -119,8 +135,12 @@ export function SalePlanOutreachItem({
           type='button'
           size='sm'
           variant={item.feedback === 'up' ? 'secondary' : 'outline'}
-          disabled={disabled}
-          onClick={() => onFeedback(item, item.feedback === 'up' ? null : 'up')}
+          disabled={busy}
+          loading={pending === 'up'}
+          loadingLabel='Saving…'
+          onClick={() => {
+            void run('up', () => onFeedback(item, item.feedback === 'up' ? null : 'up'));
+          }}
         >
           Helpful
         </Button>
@@ -128,8 +148,12 @@ export function SalePlanOutreachItem({
           type='button'
           size='sm'
           variant={item.feedback === 'down' ? 'secondary' : 'outline'}
-          disabled={disabled}
-          onClick={() => onFeedback(item, item.feedback === 'down' ? null : 'down')}
+          disabled={busy}
+          loading={pending === 'down'}
+          loadingLabel='Saving…'
+          onClick={() => {
+            void run('down', () => onFeedback(item, item.feedback === 'down' ? null : 'down'));
+          }}
         >
           Not helpful
         </Button>
@@ -137,8 +161,14 @@ export function SalePlanOutreachItem({
           type='button'
           size='sm'
           variant={item.feedback === 'not_relevant' ? 'secondary' : 'outline'}
-          disabled={disabled}
-          onClick={() => onFeedback(item, item.feedback === 'not_relevant' ? null : 'not_relevant')}
+          disabled={busy}
+          loading={pending === 'not_relevant'}
+          loadingLabel='Saving…'
+          onClick={() => {
+            void run('not_relevant', () =>
+              onFeedback(item, item.feedback === 'not_relevant' ? null : 'not_relevant'),
+            );
+          }}
         >
           Not relevant
         </Button>
@@ -146,8 +176,12 @@ export function SalePlanOutreachItem({
           type='button'
           size='sm'
           variant='outline'
-          disabled={disabled}
-          onClick={() => onSnooze(item, 'tomorrow')}
+          disabled={busy}
+          loading={pending === 'tomorrow'}
+          loadingLabel='Saving…'
+          onClick={() => {
+            void run('tomorrow', () => onSnooze(item, 'tomorrow'));
+          }}
         >
           Snooze tomorrow
         </Button>
@@ -155,8 +189,12 @@ export function SalePlanOutreachItem({
           type='button'
           size='sm'
           variant='outline'
-          disabled={disabled}
-          onClick={() => onSnooze(item, 'next_week')}
+          disabled={busy}
+          loading={pending === 'next_week'}
+          loadingLabel='Saving…'
+          onClick={() => {
+            void run('next_week', () => onSnooze(item, 'next_week'));
+          }}
         >
           Snooze next week
         </Button>
@@ -165,8 +203,12 @@ export function SalePlanOutreachItem({
             type='button'
             size='sm'
             variant='ghost'
-            disabled={disabled}
-            onClick={() => onSnooze(item, 'clear')}
+            disabled={busy}
+            loading={pending === 'clear'}
+            loadingLabel='Clearing…'
+            onClick={() => {
+              void run('clear', () => onSnooze(item, 'clear'));
+            }}
           >
             Clear snooze
           </Button>

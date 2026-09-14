@@ -7,6 +7,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import Select, or_, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from app.db.models.sales_daily_plan_item_annotation import (
@@ -21,6 +22,7 @@ ITEM_KINDS = ("priority", "outreach")
 SNOOZE_TOMORROW = timedelta(days=1)
 SNOOZE_NEXT_WEEK = timedelta(days=7)
 MAX_DRAFT_REPLY = 4000
+MAX_ITEM_KEY = 1024
 
 
 def list_annotations_for_plan(
@@ -135,32 +137,41 @@ def upsert_annotation(
     draft_reply: str | None | object = ...,
 ) -> SalesDailyPlanItemAnnotation:
     """Create or update one item annotation. Ellipsis means leave unchanged."""
-    existing = session.scalars(
-        select(SalesDailyPlanItemAnnotation).where(
-            SalesDailyPlanItemAnnotation.plan_id == plan_id,
-            SalesDailyPlanItemAnnotation.item_kind == item_kind,
-            SalesDailyPlanItemAnnotation.item_key == item_key,
-        )
-    ).first()
-    if existing is None:
-        existing = SalesDailyPlanItemAnnotation(
-            plan_id=plan_id,
-            item_kind=item_kind,
-            item_key=item_key,
-            updated_by=updated_by,
-            updated_at=datetime.now(UTC),
-        )
-        session.add(existing)
+    now = datetime.now(UTC)
+    values: dict[str, Any] = {
+        "plan_id": plan_id,
+        "item_kind": item_kind,
+        "item_key": item_key,
+        "updated_by": updated_by,
+        "updated_at": now,
+    }
+    update_set: dict[str, Any] = {
+        "updated_by": updated_by,
+        "updated_at": now,
+    }
     if feedback is not ...:
-        existing.feedback = feedback  # type: ignore[assignment]
+        values["feedback"] = feedback
+        update_set["feedback"] = feedback
     if snoozed_until is not ...:
-        existing.snoozed_until = snoozed_until  # type: ignore[assignment]
+        values["snoozed_until"] = snoozed_until
+        update_set["snoozed_until"] = snoozed_until
     if draft_reply is not ...:
-        existing.draft_reply = draft_reply  # type: ignore[assignment]
-    existing.updated_by = updated_by
-    existing.updated_at = datetime.now(UTC)
+        values["draft_reply"] = draft_reply
+        update_set["draft_reply"] = draft_reply
+    statement = (
+        pg_insert(SalesDailyPlanItemAnnotation)
+        .values(**values)
+        .on_conflict_do_update(
+            constraint="sdp_item_annotations_plan_item_uidx",
+            set_=update_set,
+        )
+        .returning(SalesDailyPlanItemAnnotation)
+    )
+    row = session.scalars(statement).first()
+    if row is None:
+        raise RuntimeError("Failed to upsert insight annotation")
     session.flush()
-    return existing
+    return row
 
 
 def resolve_snoozed_until(

@@ -81,3 +81,9 @@ def test_days_between_and_trends_without_db() -> None:
     )
     assert trends["open_count"] == 4
     assert trends["leads_this_week"] == 0
+
+
+def test_days_between_uses_hong_kong_calendar_date() -> None:
+    now = datetime(2026, 9, 10, 0, 30, tzinfo=UTC)
+    earlier = datetime(2026, 9, 9, 20, 0, tzinfo=UTC)
+    assert _days_between(now, earlier) == 0

@@ -443,6 +443,21 @@ fail-closed outbound policy:
 - Parser updates expense parse status to `failed` on upstream/service errors so
   operators can retry explicitly (`/v1/admin/expenses/{id}/reparse`).
 
+### Sales daily plan context sent to OpenRouter
+
+Insight generation sends CRM-derived context through the same AWS HTTP proxy
+(not a direct OpenRouter call). The payload can include:
+
+- Open lead summaries (stage, assignee, `last_note_at`, aging fields)
+- Inbox message excerpts and conversation ids
+- Unpaid invoice identifiers and bill-to contact ids
+- The newest contact note text per unpaid invoice bill-to
+  (`last_contact_note`, truncated)
+
+Do not expand this surface without a review. Follow-up questions send only
+the stored plan JSON, not a fresh CRM snapshot. Do not log note bodies or
+other unmasked PII from this path.
+
 ### Inbound invoice email handling
 
 Inbound invoice email ingestion stores raw `.eml` payloads in the private

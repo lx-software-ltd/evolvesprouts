@@ -100,6 +100,8 @@ describe('SalePlanOfTheDayCard', () => {
     enqueueSalesDailyPlanJob.mockReset();
     pollSalesDailyPlanJob.mockReset();
     upsertSalesDailyPlanPriorityCompletion.mockReset();
+    upsertSalesDailyPlanItemAnnotation.mockReset();
+    askSalesDailyPlanQuestion.mockReset();
   });
 
   it('loads empty state and generates a plan on demand', async () => {
@@ -379,6 +381,7 @@ describe('SalePlanOfTheDayCard', () => {
 
     await waitFor(() => {
       expect(upsertSalesDailyPlanPriorityCompletion).toHaveBeenCalledWith({
+        planId: 'plan-1',
         title: 'Reply to Mei',
         leadId: 'lead-1',
         invoiceId: null,
@@ -417,9 +420,77 @@ describe('SalePlanOfTheDayCard', () => {
     await user.type(screen.getByLabelText('Ask a follow-up'), 'Which invoice first?');
     await user.click(screen.getByRole('button', { name: 'Ask' }));
     await waitFor(() => {
-      expect(askSalesDailyPlanQuestion).toHaveBeenCalledWith('Which invoice first?');
+      expect(askSalesDailyPlanQuestion).toHaveBeenCalledWith('Which invoice first?', 'plan-1');
     });
     expect(screen.getByText('Start with the oldest overdue balance.')).toBeInTheDocument();
+  });
+
+  it('hides snoozed priorities until shown', async () => {
+    const snoozedUntil = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    fetchSalesDailyPlan.mockResolvedValue({
+      plan: {
+        ...samplePlan,
+        priorities: [{ ...samplePlan.priorities[0], snoozedUntil }],
+      },
+      memory: [],
+      job: null,
+    });
+
+    const user = userEvent.setup();
+    render(<SalePlanOfTheDayCard />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Snoozed priorities are hidden.')).toBeInTheDocument();
+    });
+    expect(screen.queryByLabelText('Reply to Mei')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Show snoozed/ }));
+    expect(screen.getByLabelText('Reply to Mei')).toBeInTheDocument();
+    expect(screen.getByText('Snoozed')).toBeInTheDocument();
+  });
+
+  it('loads comparison when Compare with previous is pressed', async () => {
+    fetchSalesDailyPlan
+      .mockResolvedValueOnce({ plan: samplePlan, memory: [], job: null })
+      .mockResolvedValueOnce({
+        plan: {
+          ...samplePlan,
+          priorities: [{ ...samplePlan.priorities[0], compareStatus: 'carried' }],
+          droppedPriorities: [{ title: 'Old chase', leadId: null, invoiceId: null }],
+        },
+        memory: [],
+        job: null,
+      });
+
+    const user = userEvent.setup();
+    render(<SalePlanOfTheDayCard />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Compare with previous' })).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole('button', { name: 'Compare with previous' }));
+    await waitFor(() => {
+      expect(fetchSalesDailyPlan).toHaveBeenCalledWith({ compare: true });
+    });
+    expect(screen.getByText('Dropped since last plan')).toBeInTheDocument();
+    expect(screen.getByText('Old chase')).toBeInTheDocument();
+  });
+
+  it('surfaces annotation errors', async () => {
+    fetchSalesDailyPlan.mockResolvedValue({ plan: samplePlan, memory: [], job: null });
+    upsertSalesDailyPlanItemAnnotation.mockRejectedValue(new Error('The insight was refreshed. Reload the page and try again.'));
+
+    const user = userEvent.setup();
+    render(<SalePlanOfTheDayCard />);
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: 'Helpful' }).length).toBeGreaterThan(0);
+    });
+    await user.click(screen.getAllByRole('button', { name: 'Helpful' })[0]);
+    await waitFor(() => {
+      expect(
+        screen.getByText('The insight was refreshed. Reload the page and try again.'),
+      ).toBeInTheDocument();
+    });
   });
 
   it('shows a failed scheduled job when no plan was stored', async () => {

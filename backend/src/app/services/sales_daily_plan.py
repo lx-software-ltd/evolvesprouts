@@ -180,11 +180,21 @@ def evaluate_staleness(
     ):
         reasons.append("contacts_changed")
 
+    activity_reasons = [reason for reason in reasons if reason != "age"]
+    stale_counts = (
+        stale_activity_counts(session, plan=plan)
+        if activity_reasons
+        else {
+            "new_conversation": 0,
+            "pipeline_changed": 0,
+            "contacts_changed": 0,
+        }
+    )
     return {
         "is_stale": bool(reasons),
         "stale_reasons": reasons,
         "stale_after": stale_after.isoformat(),
-        "stale_counts": stale_activity_counts(session, plan=plan),
+        "stale_counts": stale_counts,
         "latest_message_at": (
             latest_message_at.isoformat() if latest_message_at is not None else None
         ),
@@ -197,7 +207,12 @@ def evaluate_staleness(
     }
 
 
-def serialize_plan(session: Session, *, plan: SalesDailyPlan) -> dict[str, Any]:
+def serialize_plan(
+    session: Session,
+    *,
+    plan: SalesDailyPlan,
+    include_comparison: bool = False,
+) -> dict[str, Any]:
     """Serialize a daily plan row plus freshness metadata for the admin API."""
     payload = plan.payload if isinstance(plan.payload, dict) else {}
     staleness = evaluate_staleness(session, plan=plan)
@@ -208,7 +223,12 @@ def serialize_plan(session: Session, *, plan: SalesDailyPlan) -> dict[str, Any]:
         session, plan_id=plan.id, priorities=priorities, outreach=outreach
     )
     hydrate_assigned_to(session, priorities=priorities, outreach=outreach)
-    dropped = apply_comparison(session, plan=plan, priorities=priorities)
+    dropped: list[dict[str, Any]] = []
+    if include_comparison:
+        dropped = apply_comparison(session, plan=plan, priorities=priorities)
+    else:
+        for item in priorities:
+            item["compare_status"] = None
     return {
         "id": str(plan.id),
         "focus": str(payload.get("focus") or ""),

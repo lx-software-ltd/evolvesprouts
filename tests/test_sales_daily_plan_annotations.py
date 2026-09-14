@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.dialects import postgresql
+from sqlalchemy.orm import Session
 
 from app.services.sales_daily_plan_annotations import (
     apply_annotations_to_items,
@@ -55,53 +58,24 @@ def test_apply_annotations_sets_keys_without_session_query() -> None:
     assert outreach[0]["saved_draft_reply"] is None
 
 
-def test_upsert_annotation_creates_then_updates_feedback() -> None:
+def test_upsert_annotation_uses_on_conflict() -> None:
     plan_id = uuid4()
-    added: list[object] = []
-
-    class _Result:
-        def __init__(self, row: object | None) -> None:
-            self._row = row
-
-        def first(self) -> object | None:
-            return self._row
-
-    class _Session:
-        def __init__(self) -> None:
-            self._row: object | None = None
-
-        def scalars(self, _statement: object) -> _Result:
-            return _Result(self._row)
-
-        def add(self, row: object) -> None:
-            added.append(row)
-            self._row = row
-
-        def flush(self) -> None:
-            return None
-
-    session = _Session()
+    row = SimpleNamespace(feedback="up", updated_by="user-1")
+    session = MagicMock(spec=Session)
+    session.scalars.return_value.first.return_value = row
     created = upsert_annotation(
-        session,  # type: ignore[arg-type]
+        session,
         plan_id=plan_id,
         item_kind="priority",
         item_key="Reply to Mei\n\n",
         updated_by="user-1",
         feedback="up",
     )
-    assert created.feedback == "up"
-    assert len(added) == 1
-    updated = upsert_annotation(
-        session,  # type: ignore[arg-type]
-        plan_id=plan_id,
-        item_kind="priority",
-        item_key="Reply to Mei\n\n",
-        updated_by="user-2",
-        feedback="down",
-    )
-    assert updated.feedback == "down"
-    assert updated.updated_by == "user-2"
-    assert len(added) == 1
+    assert created is row
+    statement = session.scalars.call_args[0][0]
+    compiled = str(statement.compile(dialect=postgresql.dialect())).upper()
+    assert "ON CONFLICT" in compiled
+    session.flush.assert_called_once()
 
 
 def test_serialize_annotation_includes_feedback() -> None:

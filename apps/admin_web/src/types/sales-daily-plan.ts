@@ -120,6 +120,13 @@ export const SALES_DAILY_PLAN_OPERATOR_INPUT_MAX = 4000;
 export const SALES_DAILY_PLAN_QUESTION_MAX = 2000;
 export const SALES_DAILY_PLAN_DRAFT_MAX = 4000;
 
+export function salesDailyPlanItemIsSnoozed(
+  snoozedUntil: string | null,
+  nowMs: number,
+): boolean {
+  return Boolean(snoozedUntil && Date.parse(snoozedUntil) > nowMs);
+}
+
 export const SALES_DAILY_PLAN_REFINEMENT_CHIPS = [
   'Focus on my assigned leads',
   'Chase overdue invoices first',

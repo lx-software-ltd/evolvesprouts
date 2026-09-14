@@ -127,18 +127,21 @@ their primary responsibilities.
   `/v1/admin/leads/{id}/ai-suggestion/jobs/{job_id}` for status and timing),
   `/v1/admin/leads/{id}/ai-suggestion/jobs/{job_id}` (GET job status / duration),
   `/v1/admin/leads/daily-plan` (GET latest stored org-wide sales plan of the day
-  plus compact memory of the last five plans / POST enqueues async generation on
+  plus compact memory of the last five plans; optional `compare=true` adds
+  dropped/carried priority comparison / POST enqueues async generation on
   `SalesDailyPlanFunction` via SQS with optional `operator_input`; poll
   `/v1/admin/leads/daily-plan/jobs/{job_id}` for status and timing /
   DELETE resets all stored plans, jobs, and refinements; EventBridge also
   enqueues a new plan daily at 06:00 HKT via `SalesDailyPlanSchedulerFunction`),
   `/v1/admin/leads/daily-plan/jobs/{job_id}` (GET job status / duration),
   `/v1/admin/leads/daily-plan/priority-completions` (POST ticks or unticks a
-  priority on the latest insight so later generations skip finished work),
+  priority; `plan_id` must match the latest insight or 409),
   `/v1/admin/leads/daily-plan/item-annotations` (POST feedback, snooze, or
-  edited outreach draft on one priority or outreach row),
+  edited outreach draft on one priority or outreach row; `plan_id` must match
+  the latest insight or 409),
   `/v1/admin/leads/daily-plan/questions` (POST a follow-up about the stored
-  plan JSON using the Sales Config OpenRouter model),
+  plan JSON using the Sales Config OpenRouter model; model call is outside the
+  DB session; `plan_id` must match the latest insight at request start or 409),
   `/v1/admin/contacts/*` (including `GET /v1/admin/contacts` optional `contact_type` filter;
   list and single-contact responses include read-only `family_location_summary` and
   `organization_location_summary` when the contact is linked to a family or organisation that has a venue location,

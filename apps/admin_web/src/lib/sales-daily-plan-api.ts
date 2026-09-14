@@ -285,9 +285,12 @@ export function parseSalesDailyPlanSnapshot(value: unknown): SalesDailyPlanSnaps
   };
 }
 
-export async function fetchSalesDailyPlan(): Promise<SalesDailyPlanSnapshot> {
+export async function fetchSalesDailyPlan(options?: {
+  compare?: boolean;
+}): Promise<SalesDailyPlanSnapshot> {
+  const query = options?.compare ? '?compare=true' : '';
   const payload = await adminApiRequest<unknown>({
-    endpointPath: '/v1/admin/leads/daily-plan',
+    endpointPath: `/v1/admin/leads/daily-plan${query}`,
     method: 'GET',
   });
   return parseSalesDailyPlanSnapshot(payload);
@@ -356,6 +359,7 @@ export async function pollSalesDailyPlanJob(
 }
 
 export async function upsertSalesDailyPlanPriorityCompletion(input: {
+  planId: string;
   title: string;
   leadId?: string | null;
   invoiceId?: string | null;
@@ -365,6 +369,7 @@ export async function upsertSalesDailyPlanPriorityCompletion(input: {
     endpointPath: '/v1/admin/leads/daily-plan/priority-completions',
     method: 'POST',
     body: {
+      plan_id: input.planId,
       title: input.title,
       lead_id: input.leadId ?? null,
       invoice_id: input.invoiceId ?? null,
@@ -379,6 +384,7 @@ export async function upsertSalesDailyPlanPriorityCompletion(input: {
 }
 
 export async function upsertSalesDailyPlanItemAnnotation(input: {
+  planId: string;
   itemKind: SalesDailyPlanItemKind;
   itemKey: string;
   feedback?: SalesDailyPlanFeedback | null;
@@ -386,6 +392,7 @@ export async function upsertSalesDailyPlanItemAnnotation(input: {
   draftReply?: string | null;
 }): Promise<SalesDailyPlan> {
   const body: Record<string, unknown> = {
+    plan_id: input.planId,
     item_kind: input.itemKind,
     item_key: input.itemKey,
   };
@@ -410,11 +417,14 @@ export async function upsertSalesDailyPlanItemAnnotation(input: {
   return plan;
 }
 
-export async function askSalesDailyPlanQuestion(question: string): Promise<SalesDailyPlan> {
+export async function askSalesDailyPlanQuestion(
+  question: string,
+  planId: string,
+): Promise<SalesDailyPlan> {
   const payload = await adminApiRequest<{ plan?: unknown }>({
     endpointPath: '/v1/admin/leads/daily-plan/questions',
     method: 'POST',
-    body: { question },
+    body: { question, plan_id: planId },
   });
   const plan = parseSalesDailyPlan(payload.plan);
   if (!plan) {

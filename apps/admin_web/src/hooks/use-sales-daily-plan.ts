@@ -109,9 +109,18 @@ export function useSalesDailyPlan() {
     [queryClient, queryKey]
   );
 
+  const currentPlanId = useCallback(() => {
+    return queryClient.getQueryData<SalesDailyPlanSnapshot>(queryKey)?.plan?.id;
+  }, [queryClient, queryKey]);
+
   const setPriorityDone = useCallback(
     async (item: SalesDailyPlanPriority, done: boolean) => {
+      const planId = currentPlanId();
+      if (!planId) {
+        throw new Error('No insight is loaded.');
+      }
       const plan = await upsertSalesDailyPlanPriorityCompletion({
+        planId,
         title: item.title,
         leadId: item.leadId,
         invoiceId: item.invoiceId,
@@ -119,7 +128,7 @@ export function useSalesDailyPlan() {
       });
       replacePlan(plan);
     },
-    [replacePlan]
+    [currentPlanId, replacePlan]
   );
 
   const annotateItem = useCallback(
@@ -130,19 +139,34 @@ export function useSalesDailyPlan() {
       snooze?: SalesDailyPlanSnooze | null;
       draftReply?: string | null;
     }) => {
-      const plan = await upsertSalesDailyPlanItemAnnotation(input);
+      const planId = currentPlanId();
+      if (!planId) {
+        throw new Error('No insight is loaded.');
+      }
+      const plan = await upsertSalesDailyPlanItemAnnotation({ ...input, planId });
       replacePlan(plan);
     },
-    [replacePlan]
+    [currentPlanId, replacePlan]
   );
 
   const askFollowUp = useCallback(
     async (question: string) => {
-      const plan = await askSalesDailyPlanQuestion(question);
+      const planId = currentPlanId();
+      if (!planId) {
+        throw new Error('No insight is loaded.');
+      }
+      const plan = await askSalesDailyPlanQuestion(question, planId);
       replacePlan(plan);
     },
-    [replacePlan]
+    [currentPlanId, replacePlan]
   );
+
+  const loadComparison = useCallback(async () => {
+    const snapshot = await fetchSalesDailyPlan({ compare: true });
+    if (snapshot.plan) {
+      replacePlan(snapshot.plan);
+    }
+  }, [replacePlan]);
 
   const snapshot = query.data ?? EMPTY_SNAPSHOT;
 
@@ -160,6 +184,7 @@ export function useSalesDailyPlan() {
     setPriorityDone,
     annotateItem,
     askFollowUp,
+    loadComparison,
     cancel,
   };
 }
