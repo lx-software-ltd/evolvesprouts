@@ -147,9 +147,16 @@ updates:
       - "dependencies"
       - "web"
     groups:
+      vitest:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
       minor-and-patch:
         patterns:
           - "*"
+        exclude-patterns:
+          - "vitest"
+          - "@vitest/*"
         update-types:
           - "minor"
           - "patch"
@@ -185,9 +192,16 @@ updates:
       - "dependencies"
       - "web"
     groups:
+      vitest:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
       minor-and-patch:
         patterns:
           - "*"
+        exclude-patterns:
+          - "vitest"
+          - "@vitest/*"
         update-types:
           - "minor"
           - "patch"
