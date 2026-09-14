@@ -1596,7 +1596,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get sales lead assignment settings */
+        /** Get sales lead assignment and OpenRouter model settings */
         get: {
             parameters: {
                 query?: never;
@@ -1625,7 +1625,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Update sales lead assignment settings */
+        /** Update sales lead assignment and OpenRouter model settings */
         patch: {
             parameters: {
                 query?: never;
@@ -7771,6 +7771,8 @@ export interface components {
             notify_assignee_on_assignment: boolean;
             /** @description When true, new automated leads are classified with OpenRouter; Filipino or Bahasa (Indonesian/Malay) name/username signals set funnel stage to `unqualified` and contact type to `helper` when the contact type is `other`. */
             helper_detector_enabled: boolean;
+            /** @description OpenRouter model id used for sales AI, Helper Detector, invoice parsing, and other OpenRouter chat completions. Null means Auto (`openrouter/auto`). Operators type a model code such as `openai/gpt-4.1-mini`. */
+            openrouter_model: string | null;
             /** Format: date-time */
             updated_at?: string | null;
             updated_by?: string | null;
@@ -7782,6 +7784,7 @@ export interface components {
             default_assigned_to?: string | null;
             notify_assignee_on_assignment?: boolean;
             helper_detector_enabled?: boolean;
+            openrouter_model?: string | null;
         };
         LeadAnalyticsResponse: {
             funnel: {

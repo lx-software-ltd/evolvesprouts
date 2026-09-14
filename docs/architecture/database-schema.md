@@ -564,6 +564,9 @@ maps legacy `note.id` to the **first** inserted row’s UUID.
 - `helper_detector_enabled` toggles AI Helper Detector on automated new leads
   (Filipino/Bahasa name signals → funnel stage `unqualified`, contact type
   `helper` only when current type is `other`). Default off.
+- `openrouter_model` is an optional OpenRouter model id for all OpenRouter chat
+  completions (sales AI, Helper Detector, invoice parsing). `NULL` means Auto
+  (`openrouter/auto`).
 - `updated_by` stores the admin Cognito `sub` that last saved the row.
 
 ### `sales_lead_events`

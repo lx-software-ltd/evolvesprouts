@@ -16,6 +16,7 @@ from app.services.openrouter_client import (
     WORKLOAD_EXPENSE_PARSER,
     attribution_headers,
     attribution_user,
+    configured_model_name,
 )
 from app.services.openrouter_json_parse import loads_openrouter_json
 from app.services.secrets import SECRETS_CACHE_TTL_SECONDS
@@ -186,7 +187,7 @@ def _openrouter_chat_completion(
     parser at commit ``b6f8990b``.
     """
     endpoint_url = _require_env("OPENROUTER_CHAT_COMPLETIONS_URL")
-    model = _require_env("OPENROUTER_MODEL")
+    model = configured_model_name()
     api_key = _get_api_key()
 
     payload: dict[str, Any] = {

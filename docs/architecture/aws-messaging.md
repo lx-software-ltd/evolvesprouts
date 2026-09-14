@@ -415,7 +415,7 @@ SQS retries or mailbox forwarding duplicates.
 | `AWS_PROXY_FUNCTION_ARN` | Lambda ARN for AWS proxy (`ListUsersInGroup` for sales recap recipients) |
 | `OPENROUTER_API_KEY_SECRET_ARN` | Existing secret ARN for the named OpenRouter key `lxsoftware:evolvesprouts` |
 | `OPENROUTER_CHAT_COMPLETIONS_URL` | OpenRouter chat completion URL |
-| `OPENROUTER_MODEL` | OpenRouter model identifier |
+| `OPENROUTER_MODEL` | Fallback OpenRouter model identifier when sales settings cannot be read |
 | `OPENROUTER_MAX_FILE_BYTES` | Attachment size limit for parser |
 | `ASSETS_BUCKET_NAME` | Existing private assets bucket for expense attachments |
 | `EXPENSE_PARSE_TOPIC_ARN` | SNS topic ARN for expense parser events |

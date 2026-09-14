@@ -24,6 +24,7 @@ from app.utils.logging import get_logger
 logger = get_logger(__name__)
 
 _api_key_cache: tuple[str, float] | None = None
+_model_cache: tuple[str, float] | None = None
 
 _RETRYABLE_HTTP_STATUSES = frozenset({408, 425, 429, 500, 502, 503, 504})
 _RETRYABLE_ENVELOPE_CODES = frozenset({408, 425, 429, 500, 502, 503, 504})
@@ -38,6 +39,9 @@ OPENROUTER_APP_ID = "evolvesprouts"
 OPENROUTER_APP_TITLE = "Evolve Sprouts"
 OPENROUTER_APP_REFERER = "https://evolvesprouts.com"
 OPENROUTER_NAMED_KEY = "lxsoftware:evolvesprouts"
+OPENROUTER_AUTO_MODEL = "openrouter/auto"
+OPENROUTER_MODEL_MAX_LENGTH = 128
+_OPENROUTER_AUTO_ALIASES = frozenset({"auto", "openrouter/auto"})
 
 WORKLOAD_EXPENSE_PARSER = "expense-parser"
 WORKLOAD_LEAD_CLOSE_SUGGESTION = "lead-close-suggestion"
@@ -111,7 +115,7 @@ def openrouter_chat_completion(
     expense parser: JSON mode can yield empty ``{}`` on borderline inputs).
     """
     endpoint_url = require_env("OPENROUTER_CHAT_COMPLETIONS_URL")
-    model = require_env("OPENROUTER_MODEL")
+    model = configured_model_name()
     api_key = get_openrouter_api_key()
 
     user_message_content: Any
@@ -273,9 +277,73 @@ def extract_message_text(body: str) -> str:
     return text
 
 
+def normalize_openrouter_model(value: str | None) -> str | None:
+    """Return a stored OpenRouter model id, or ``None`` for Auto."""
+    if value is None:
+        return None
+    trimmed = value.strip()
+    if not trimmed:
+        return None
+    if trimmed.lower() in _OPENROUTER_AUTO_ALIASES:
+        return None
+    return trimmed
+
+
+def clear_openrouter_model_cache() -> None:
+    """Drop the in-process OpenRouter model cache (after sales settings save)."""
+    global _model_cache
+    _model_cache = None
+
+
 def configured_model_name() -> str:
-    """Return the configured OpenRouter model id (for persistence metadata)."""
-    return require_env("OPENROUTER_MODEL")
+    """Return the OpenRouter model id from sales settings (Auto when unset).
+
+    When the singleton ``sales_settings`` row cannot be read (unit tests, cold
+    DB errors), fall back to ``OPENROUTER_MODEL`` then ``openrouter/auto``.
+    """
+    global _model_cache
+    now = time.monotonic()
+    if _model_cache is not None:
+        cached_value, loaded_at = _model_cache
+        if now - loaded_at <= SECRETS_CACHE_TTL_SECONDS:
+            return cached_value
+    loaded, stored = _load_sales_settings_openrouter_model()
+    if loaded:
+        resolved = stored or OPENROUTER_AUTO_MODEL
+        _model_cache = (resolved, now)
+        return resolved
+    env = os.getenv("OPENROUTER_MODEL", "").strip()
+    return normalize_openrouter_model(env) or OPENROUTER_AUTO_MODEL
+
+
+def _load_sales_settings_openrouter_model() -> tuple[bool, str | None]:
+    """Return ``(loaded, model_or_none)`` from ``sales_settings``.
+
+    ``loaded`` is False when the database is unavailable so callers can fall
+    back to the environment. ``None`` model means Auto.
+    """
+    try:
+        from sqlalchemy.orm import Session
+
+        from app.db.engine import get_engine
+        from app.db.models.sales_settings import (
+            SALES_SETTINGS_SINGLETON_ID,
+            SalesSettings,
+        )
+
+        with Session(get_engine()) as session:
+            row = session.get(SalesSettings, SALES_SETTINGS_SINGLETON_ID)
+            if row is None:
+                return True, None
+            raw = getattr(row, "openrouter_model", None)
+            return True, normalize_openrouter_model(
+                raw if isinstance(raw, str) else None
+            )
+    except Exception:
+        logger.debug(
+            "sales_settings OpenRouter model unavailable; using environment fallback"
+        )
+        return False, None
 
 
 def _extract_key(secret_string: str) -> str:

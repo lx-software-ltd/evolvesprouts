@@ -1,5 +1,5 @@
 import { adminApiRequest } from '@/lib/api-admin-client';
-import { asBoolean, asNullableString } from '@/lib/api-payload';
+import { asBoolean, asNullableString, asTrimmedString } from '@/lib/api-payload';
 import { isRecord } from '@/lib/type-guards';
 
 import type { components } from '@/types/generated/admin-api.generated';
@@ -15,6 +15,7 @@ function parseSalesSettings(value: unknown): SalesSettings {
     default_assigned_to: asNullableString(row.default_assigned_to),
     notify_assignee_on_assignment: asBoolean(row.notify_assignee_on_assignment, false),
     helper_detector_enabled: asBoolean(row.helper_detector_enabled, false),
+    openrouter_model: asTrimmedString(row.openrouter_model),
     updated_at: asNullableString(row.updated_at) ?? undefined,
     updated_by: asNullableString(row.updated_by) ?? undefined,
   };

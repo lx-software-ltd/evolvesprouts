@@ -1177,6 +1177,21 @@ detector.
 - Fail-open keeps webhook and form latency bounded when the model is slow or
   unavailable.
 
+## OpenRouter model from Sales configuration
+
+**Decision:** Persist an optional `openrouter_model` on the singleton
+`sales_settings` row (default `NULL` = Auto / `openrouter/auto`). The admin
+Sales → Configuration screen exposes a free-text model-code field. All
+OpenRouter chat completions (sales daily plan, lead close suggestions, Helper
+Detector, invoice parsing, JSON repair) resolve the model through
+`configured_model_name()`. When the settings row cannot be read, the process
+falls back to the `OPENROUTER_MODEL` environment variable, then Auto.
+
+**Why:**
+- Operators need to change the model without a CDK redeploy.
+- Auto is the product default; a typed OpenRouter model id (for example
+  `openai/gpt-4.1-mini`) overrides it site-wide.
+
 ## Sales plan of the day (dashboard)
 
 **Decision:** Persist org-wide sales daily plans in `sales_daily_plans` and

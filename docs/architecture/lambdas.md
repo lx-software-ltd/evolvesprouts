@@ -648,7 +648,7 @@ their primary responsibilities.
   - `DATABASE_SECRET_ARN`, `DATABASE_NAME`, `DATABASE_USERNAME`,
     `DATABASE_PROXY_ENDPOINT`, `DATABASE_IAM_AUTH`
   - `OPENROUTER_API_KEY_SECRET_ARN`, `OPENROUTER_CHAT_COMPLETIONS_URL`,
-    `OPENROUTER_MODEL`
+    `OPENROUTER_MODEL (fallback when sales_settings.openrouter_model is unset)`
   - `AWS_PROXY_FUNCTION_ARN`
   - `COGNITO_USER_POOL_ID`, `ADMIN_GROUP`
   - `SALES_DAILY_PLAN_LAMBDA_TIMEOUT_SECONDS` (180),
@@ -704,7 +704,7 @@ their primary responsibilities.
     `DATABASE_PROXY_ENDPOINT`, `DATABASE_IAM_AUTH`
   - `ASSETS_BUCKET_NAME`
   - `OPENROUTER_API_KEY_SECRET_ARN`, `OPENROUTER_CHAT_COMPLETIONS_URL`,
-    `OPENROUTER_MODEL`, `OPENROUTER_MAX_FILE_BYTES`
+    `OPENROUTER_MODEL (fallback when sales_settings.openrouter_model is unset)`, `OPENROUTER_MAX_FILE_BYTES`
   - `AWS_PROXY_FUNCTION_ARN`
 
 ### Bulk expense import processor
@@ -783,7 +783,7 @@ their primary responsibilities.
     `DATABASE_PROXY_ENDPOINT`, `DATABASE_IAM_AUTH`
   - `ASSETS_BUCKET_NAME`
   - `OPENROUTER_API_KEY_SECRET_ARN`, `OPENROUTER_CHAT_COMPLETIONS_URL`,
-    `OPENROUTER_MODEL`, `OPENROUTER_MAX_FILE_BYTES`
+    `OPENROUTER_MODEL (fallback when sales_settings.openrouter_model is unset)`, `OPENROUTER_MAX_FILE_BYTES`
   - `AWS_PROXY_FUNCTION_ARN`
 
 ### Inbound invoice email processor

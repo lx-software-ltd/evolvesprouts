@@ -10,6 +10,13 @@ import pytest
 from app.services import openrouter_client as client
 
 
+@pytest.fixture(autouse=True)
+def _clear_openrouter_model_cache() -> None:
+    client.clear_openrouter_model_cache()
+    yield
+    client.clear_openrouter_model_cache()
+
+
 def test_openrouter_chat_completion_respects_max_attempts(
     monkeypatch: Any,
 ) -> None:
@@ -130,6 +137,54 @@ def test_openrouter_chat_completion_tags_hidden_app_and_workload(
     payload = json.loads(captured["body"])
     assert payload["user"] == "evolvesprouts:sales-daily-plan"
     assert client.OPENROUTER_NAMED_KEY == "lxsoftware:evolvesprouts"
+
+
+def test_normalize_openrouter_model_treats_auto_as_unset() -> None:
+    assert client.normalize_openrouter_model(None) is None
+    assert client.normalize_openrouter_model("  ") is None
+    assert client.normalize_openrouter_model("Auto") is None
+    assert client.normalize_openrouter_model("openrouter/auto") is None
+    assert client.normalize_openrouter_model("openai/gpt-4.1-mini") == (
+        "openai/gpt-4.1-mini"
+    )
+
+
+def test_configured_model_name_defaults_to_auto(monkeypatch: Any) -> None:
+    client.clear_openrouter_model_cache()
+    monkeypatch.delenv("OPENROUTER_MODEL", raising=False)
+    monkeypatch.setattr(
+        client, "_load_sales_settings_openrouter_model", lambda: (False, None)
+    )
+    assert client.configured_model_name() == client.OPENROUTER_AUTO_MODEL
+
+
+def test_configured_model_name_uses_sales_settings(monkeypatch: Any) -> None:
+    client.clear_openrouter_model_cache()
+    monkeypatch.setenv("OPENROUTER_MODEL", "env-model")
+    monkeypatch.setattr(
+        client,
+        "_load_sales_settings_openrouter_model",
+        lambda: (True, "openai/gpt-4.1-mini"),
+    )
+    assert client.configured_model_name() == "openai/gpt-4.1-mini"
+
+
+def test_configured_model_name_settings_auto_ignores_env(monkeypatch: Any) -> None:
+    client.clear_openrouter_model_cache()
+    monkeypatch.setenv("OPENROUTER_MODEL", "env-model")
+    monkeypatch.setattr(
+        client, "_load_sales_settings_openrouter_model", lambda: (True, None)
+    )
+    assert client.configured_model_name() == client.OPENROUTER_AUTO_MODEL
+
+
+def test_configured_model_name_falls_back_to_env(monkeypatch: Any) -> None:
+    client.clear_openrouter_model_cache()
+    monkeypatch.setenv("OPENROUTER_MODEL", "test-model")
+    monkeypatch.setattr(
+        client, "_load_sales_settings_openrouter_model", lambda: (False, None)
+    )
+    assert client.configured_model_name() == "test-model"
 
 
 def test_attribution_user_strips_pii_from_workload() -> None:

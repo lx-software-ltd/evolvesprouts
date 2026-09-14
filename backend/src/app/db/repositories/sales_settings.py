@@ -22,6 +22,7 @@ class SalesSettingsRepository:
                 default_assigned_to=None,
                 notify_assignee_on_assignment=False,
                 helper_detector_enabled=False,
+                openrouter_model=None,
             )
             self._session.add(row)
             self._session.flush()
