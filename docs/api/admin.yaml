@@ -6998,8 +6998,8 @@ components:
           description: >
             OpenRouter model id for lead closing suggestions and the dashboard
             insight. Null means Auto (`openrouter/auto`). Helper Detector, invoice
-            parsing, and JSON repair always use Auto. Operators type a model code
-            such as `openai/gpt-4.1-mini`.
+            parsing, and JSON repair keep using the deployed `OPENROUTER_MODEL`.
+            Operators type a model code such as `openai/gpt-4.1-mini`.
           maxLength: 128
         updated_at:
           type: string

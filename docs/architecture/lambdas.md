@@ -704,7 +704,7 @@ their primary responsibilities.
     `DATABASE_PROXY_ENDPOINT`, `DATABASE_IAM_AUTH`
   - `ASSETS_BUCKET_NAME`
   - `OPENROUTER_API_KEY_SECRET_ARN`, `OPENROUTER_CHAT_COMPLETIONS_URL`,
-    `OPENROUTER_MODEL` (unused for model selection; invoice parsing always uses Auto), `OPENROUTER_MAX_FILE_BYTES`
+    `OPENROUTER_MODEL`, `OPENROUTER_MAX_FILE_BYTES`
   - `AWS_PROXY_FUNCTION_ARN`
 
 ### Bulk expense import processor
@@ -783,7 +783,7 @@ their primary responsibilities.
     `DATABASE_PROXY_ENDPOINT`, `DATABASE_IAM_AUTH`
   - `ASSETS_BUCKET_NAME`
   - `OPENROUTER_API_KEY_SECRET_ARN`, `OPENROUTER_CHAT_COMPLETIONS_URL`,
-    `OPENROUTER_MODEL` (unused for model selection; invoice parsing always uses Auto), `OPENROUTER_MAX_FILE_BYTES`
+    `OPENROUTER_MODEL`, `OPENROUTER_MAX_FILE_BYTES`
   - `AWS_PROXY_FUNCTION_ARN`
 
 ### Inbound invoice email processor

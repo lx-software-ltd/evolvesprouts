@@ -116,10 +116,13 @@ def openrouter_chat_completion(
     expense parser: JSON mode can yield empty ``{}`` on borderline inputs).
 
     ``use_sales_model`` applies the Sales Config OpenRouter model (lead close
-    suggestions and the dashboard insight). Other workloads stay on Auto.
+    suggestions and the dashboard insight). Other workloads use the deployed
+    ``OPENROUTER_MODEL`` the same way they did before Sales Config.
     """
     endpoint_url = require_env("OPENROUTER_CHAT_COMPLETIONS_URL")
-    model = configured_model_name() if use_sales_model else OPENROUTER_AUTO_MODEL
+    model = (
+        configured_model_name() if use_sales_model else require_env("OPENROUTER_MODEL")
+    )
     api_key = get_openrouter_api_key()
 
     user_message_content: Any
@@ -303,10 +306,11 @@ def configured_model_name() -> str:
     """Return the Sales Config OpenRouter model id (Auto when unset).
 
     Used for lead close suggestions and the dashboard insight. Helper Detector,
-    invoice parsing, and JSON repair always use ``OPENROUTER_AUTO_MODEL``.
+    invoice parsing, and JSON repair keep using ``OPENROUTER_MODEL``.
 
     When the singleton ``sales_settings`` row cannot be read (unit tests, cold
-    DB errors), fall back to ``OPENROUTER_MODEL`` then ``openrouter/auto``.
+    DB errors), sales generation falls back to ``OPENROUTER_MODEL`` then
+    ``openrouter/auto``.
     """
     global _model_cache
     now = time.monotonic()

@@ -1184,14 +1184,14 @@ detector.
 Sales → Configuration screen exposes a free-text model-code field. Only lead
 close suggestions and the dashboard insight (`use_sales_model=True`) resolve
 the model through `configured_model_name()`. Helper Detector, invoice parsing,
-and JSON repair always call OpenRouter Auto (`openrouter/auto`). When the
-settings row cannot be read, sales generation falls back to the
-`OPENROUTER_MODEL` environment variable, then Auto.
+and JSON repair keep using the deployed `OPENROUTER_MODEL` environment
+variable, unchanged from before this setting existed. When the settings row
+cannot be read, sales generation falls back to `OPENROUTER_MODEL`, then Auto.
 
 **Why:**
 - Operators need to change the sales/dashboard model without a CDK redeploy.
-- Invoice parsing, Helper Detector, and JSON repair stay on Auto so a typed
-  sales model cannot change those workloads.
+- Invoice parsing, Helper Detector, and JSON repair stay on the existing
+  deploy-time model so a typed sales model cannot change those workloads.
 
 ## Sales plan of the day (dashboard)
 

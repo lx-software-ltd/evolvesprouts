@@ -141,7 +141,7 @@ def test_openrouter_chat_completion_tags_hidden_app_and_workload(
     assert client.OPENROUTER_NAMED_KEY == "lxsoftware:evolvesprouts"
 
 
-def test_openrouter_chat_completion_uses_auto_without_sales_model(
+def test_openrouter_chat_completion_non_sales_uses_deployed_model(
     monkeypatch: Any,
 ) -> None:
     captured: dict[str, Any] = {}
@@ -172,7 +172,7 @@ def test_openrouter_chat_completion_uses_auto_without_sales_model(
     )
 
     payload = json.loads(captured["body"])
-    assert payload["model"] == client.OPENROUTER_AUTO_MODEL
+    assert payload["model"] == "test-model"
     assert payload["user"] == "evolvesprouts:json-repair"
 
 

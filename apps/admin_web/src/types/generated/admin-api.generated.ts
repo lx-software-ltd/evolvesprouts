@@ -7771,7 +7771,7 @@ export interface components {
             notify_assignee_on_assignment: boolean;
             /** @description When true, new automated leads are classified with OpenRouter; Filipino or Bahasa (Indonesian/Malay) name/username signals set funnel stage to `unqualified` and contact type to `helper` when the contact type is `other`. */
             helper_detector_enabled: boolean;
-            /** @description OpenRouter model id for lead closing suggestions and the dashboard insight. Null means Auto (`openrouter/auto`). Helper Detector, invoice parsing, and JSON repair always use Auto. Operators type a model code such as `openai/gpt-4.1-mini`. */
+            /** @description OpenRouter model id for lead closing suggestions and the dashboard insight. Null means Auto (`openrouter/auto`). Helper Detector, invoice parsing, and JSON repair keep using the deployed `OPENROUTER_MODEL`. Operators type a model code such as `openai/gpt-4.1-mini`. */
             openrouter_model: string | null;
             /** Format: date-time */
             updated_at?: string | null;

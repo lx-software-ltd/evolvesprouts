@@ -13,7 +13,6 @@ from collections.abc import Mapping, Sequence
 
 from app.services.aws_clients import get_s3_client, get_secretsmanager_client
 from app.services.openrouter_client import (
-    OPENROUTER_AUTO_MODEL,
     WORKLOAD_EXPENSE_PARSER,
     attribution_headers,
     attribution_user,
@@ -187,7 +186,7 @@ def _openrouter_chat_completion(
     parser at commit ``b6f8990b``.
     """
     endpoint_url = _require_env("OPENROUTER_CHAT_COMPLETIONS_URL")
-    model = OPENROUTER_AUTO_MODEL
+    model = _require_env("OPENROUTER_MODEL")
     api_key = _get_api_key()
 
     payload: dict[str, Any] = {

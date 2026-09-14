@@ -41,6 +41,7 @@ describe('SalesConfigurationView', () => {
     expect(
       screen.getByText(/lead suggestions and the dashboard insight/i)
     ).toBeInTheDocument();
+    expect(screen.getByText(/keep the deployed model/i)).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText('Default assignee'), 'user-1');
     await user.click(
       screen.getByLabelText('Email the assignee when a lead is assigned to them')
