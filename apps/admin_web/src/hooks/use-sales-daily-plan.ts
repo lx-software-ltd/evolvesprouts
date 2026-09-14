@@ -8,15 +8,20 @@ import { AdminApiError } from '@/lib/api-admin-client';
 import { getAdminQueryClient } from '@/lib/admin-query-client';
 import { adminQueryKeys } from '@/lib/admin-query-keys';
 import {
+  askSalesDailyPlanQuestion,
   enqueueSalesDailyPlanJob,
   fetchSalesDailyPlan,
   pollSalesDailyPlanJob,
   resetSalesDailyPlanMemory,
+  upsertSalesDailyPlanItemAnnotation,
   upsertSalesDailyPlanPriorityCompletion,
 } from '@/lib/sales-daily-plan-api';
 import type {
+  SalesDailyPlanFeedback,
+  SalesDailyPlanItemKind,
   SalesDailyPlanJob,
   SalesDailyPlanPriority,
+  SalesDailyPlanSnooze,
   SalesDailyPlanSnapshot,
 } from '@/types/sales-daily-plan';
 
@@ -93,6 +98,17 @@ export function useSalesDailyPlan() {
     };
   }, []);
 
+  const replacePlan = useCallback(
+    (plan: SalesDailyPlanSnapshot['plan']) => {
+      queryClient.setQueryData<SalesDailyPlanSnapshot>(queryKey, (current) => ({
+        plan,
+        memory: current?.memory ?? [],
+        job: current?.job ?? null,
+      }));
+    },
+    [queryClient, queryKey]
+  );
+
   const setPriorityDone = useCallback(
     async (item: SalesDailyPlanPriority, done: boolean) => {
       const plan = await upsertSalesDailyPlanPriorityCompletion({
@@ -101,13 +117,31 @@ export function useSalesDailyPlan() {
         invoiceId: item.invoiceId,
         done,
       });
-      queryClient.setQueryData<SalesDailyPlanSnapshot>(queryKey, (current) => ({
-        plan,
-        memory: current?.memory ?? [],
-        job: current?.job ?? null,
-      }));
+      replacePlan(plan);
     },
-    [queryClient, queryKey]
+    [replacePlan]
+  );
+
+  const annotateItem = useCallback(
+    async (input: {
+      itemKind: SalesDailyPlanItemKind;
+      itemKey: string;
+      feedback?: SalesDailyPlanFeedback | null;
+      snooze?: SalesDailyPlanSnooze | null;
+      draftReply?: string | null;
+    }) => {
+      const plan = await upsertSalesDailyPlanItemAnnotation(input);
+      replacePlan(plan);
+    },
+    [replacePlan]
+  );
+
+  const askFollowUp = useCallback(
+    async (question: string) => {
+      const plan = await askSalesDailyPlanQuestion(question);
+      replacePlan(plan);
+    },
+    [replacePlan]
   );
 
   const snapshot = query.data ?? EMPTY_SNAPSHOT;
@@ -124,6 +158,8 @@ export function useSalesDailyPlan() {
     lastJob: lastJob ?? snapshot.job,
     generate,
     setPriorityDone,
+    annotateItem,
+    askFollowUp,
     cancel,
   };
 }

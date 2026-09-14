@@ -22,11 +22,18 @@ vi.mock('@/lib/billing-api', () => ({
   resolveBillToPrimaryContacts: (...args: unknown[]) => mockResolveBillToPrimaryContacts(...args),
 }));
 
+vi.mock('@/components/auth-provider', () => ({
+  useAuth: () => ({ user: { subject: 'user-1' } }),
+}));
+
 vi.mock('@/lib/sales-daily-plan-api', () => ({
   fetchSalesDailyPlan: vi.fn(() => Promise.resolve({ plan: null, memory: [] })),
   enqueueSalesDailyPlanJob: vi.fn(),
   pollSalesDailyPlanJob: vi.fn(),
   resetSalesDailyPlanMemory: vi.fn(),
+  upsertSalesDailyPlanPriorityCompletion: vi.fn(),
+  upsertSalesDailyPlanItemAnnotation: vi.fn(),
+  askSalesDailyPlanQuestion: vi.fn(),
 }));
 
 import { DashboardPageBody } from '@/components/admin/dashboard/dashboard-page-body';
