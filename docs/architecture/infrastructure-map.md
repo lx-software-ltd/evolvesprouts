@@ -50,15 +50,73 @@ and edge proxy. It is managed manually through the Cloudflare dashboard
 
 | Record | Domain | Target | Proxy |
 |---|---|---|---|
+| CNAME | `evolvesprouts.com` | CloudFront distribution (public website, apex) | Yes |
 | CNAME | `www.evolvesprouts.com` | CloudFront distribution (public website) | Yes |
 | CNAME | `www-staging.evolvesprouts.com` | CloudFront distribution (staging) | Yes |
-| CNAME | `api.evolvesprouts.com` | API Gateway custom domain | No (grey cloud) |
-| CNAME | `admin.evolvesprouts.com` | CloudFront distribution (admin web) | Yes |
+| CNAME | `api.evolvesprouts.com` | API Gateway custom domain | Yes |
+| CNAME | `admin.evolvesprouts.com` | CloudFront distribution (admin web) | No (grey cloud) |
 | CNAME | `training.evolvesprouts.com` | CloudFront distribution (training web) | Yes |
-| CNAME | `media.evolvesprouts.com` | CloudFront distribution (asset downloads) | Yes |
-| CNAME | `auth.evolvesprouts.com` | Cognito custom domain CloudFront | No |
+| CNAME | `media.evolvesprouts.com` | CloudFront distribution (asset downloads) | No (grey cloud) |
+| CNAME | `auth.evolvesprouts.com` | Cognito custom domain CloudFront | No (grey cloud) |
+| CNAME | `_<token>.evolvesprouts.com` | `_<token>.<id>.acm-validations.aws` (ACM DNS validation) | No (grey cloud) |
+| CAA | `evolvesprouts.com` | See [CAA records](#caa-records-certificate-issuance) | N/A |
 | MX | `evolvesprouts.com` | iCloud Mail | N/A |
 | MX | `inbound.evolvesprouts.com` | `10 inbound-smtp.ap-southeast-1.amazonaws.com` | N/A |
+
+Hosts that are **not** proxied (grey cloud) terminate TLS directly on the
+CloudFront distribution, so they depend on the ACM certificate below being
+valid. Proxied hosts present a Cloudflare edge certificate to browsers but
+Cloudflare still validates the CloudFront certificate on the origin
+connection, so an expired ACM certificate breaks both groups.
+
+### TLS certificate (ACM, `us-east-1`)
+
+One wildcard certificate for `*.evolvesprouts.com` in ACM `us-east-1` is
+shared by every CloudFront-fronted host and the Cognito custom domain. Its
+ARN is supplied through the CDK parameters `CognitoCustomDomainCertificateArn`,
+`AdminWebCertificateArn`, `PublicWwwCertificateArn`,
+`PublicWwwStagingCertificateArn`, `TrainingCertificateArn`, and
+`AssetDownloadCustomDomainCertificateArn` in
+`backend/infrastructure/params/production.json`. The API custom domain uses a
+separate regional certificate in `ap-southeast-1`
+(`ApiCustomDomainCertificateArn`).
+
+The certificate uses DNS validation: ACM issues one `_<token>` CNAME on the
+apex, which must stay in Cloudflare (unproxied) for automatic renewal. Do not
+delete it after issuance.
+
+### CAA records (certificate issuance)
+
+The zone publishes CAA records, so every certificate authority that must issue
+for `evolvesprouts.com` has to be listed explicitly. Cloudflare also
+synthesises `issue` and `issuewild` records for its Universal SSL CAs
+(`comodoca.com`, `digicert.com`, `letsencrypt.org`, `pki.goog`, `ssl.com`);
+those do not appear in the DNS record list but are returned to resolvers.
+
+Per RFC 8659 §4.3, once **any** `issuewild` record exists, wildcard requests are
+checked only against `issuewild` records. The ACM certificate is a wildcard,
+so Amazon must have `issuewild` entries or ACM renewal fails with
+`CAA_ERROR` even though DNS validation succeeds (the AWS Health notice then
+reports "0 domains require validation"). Keep all of these on the apex
+`evolvesprouts.com` with flags `0`:
+
+| Tag | Value |
+|---|---|
+| `issue` | `amazon.com` |
+| `issue` | `amazontrust.com` |
+| `issue` | `awstrust.com` |
+| `issue` | `amazonaws.com` |
+| `issuewild` | `amazon.com` |
+| `issuewild` | `amazontrust.com` |
+| `issuewild` | `awstrust.com` |
+| `issuewild` | `amazonaws.com` |
+| `issue` | `letsencrypt.org` (Cloudflare Universal SSL) |
+| `issue` | `pki.goog` (Cloudflare Universal SSL) |
+
+Verify the effective set with `dig +short CAA evolvesprouts.com`. If a renewal
+still does not complete after the CAA fix, request a new wildcard certificate in
+`us-east-1`, replace the ARN in the six parameters above, and redeploy through
+the backend deployment workflow.
 
 ### Cloudflare Turnstile (CAPTCHA)
 
@@ -152,7 +210,7 @@ page-level CSP with hashed inline scripts is injected at build time by
 ### Architecture
 
 ```
-Cloudflare (api.evolvesprouts.com) — proxy disabled
+Cloudflare (api.evolvesprouts.com) — proxied
         │
         ▼
 API Gateway (evolvesprouts-api)
