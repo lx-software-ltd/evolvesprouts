@@ -666,6 +666,116 @@ describe('InstanceDetailPanel', () => {
     );
   });
 
+  it('does not treat the service default as the instance venue when locationId is empty', async () => {
+    const user = userEvent.setup();
+    const onUpdate = vi.fn().mockResolvedValue(undefined);
+    const instance: ServiceInstance = {
+      id: 'inst-tbc',
+      serviceId: 'service-1',
+      parentServiceTitle: null,
+      parentServiceTier: null,
+      parentServiceKey: null,
+      parentServiceType: 'training_course',
+      title: 'TBC venue',
+      slug: 'tbc-venue',
+      description: null,
+      coverImageS3Key: null,
+      status: 'scheduled',
+      deliveryMode: 'in_person',
+      locationId: null,
+      maxCapacity: 10,
+      capacityLeftOverride: null,
+      capacityLeftEffective: 10,
+      waitlistEnabled: false,
+      eventbriteSyncStatus: 'pending',
+      externalUrl: null,
+      partnerOrganizations: [],
+      instructorId: null,
+      cohort: null,
+      notes: '',
+      tagIds: [],
+      createdBy: 'admin',
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+      resolvedTitle: null,
+      resolvedSlug: 'tbc-venue',
+      resolvedDescription: null,
+      resolvedCoverImageS3Key: null,
+      resolvedDeliveryMode: null,
+      resolvedLocationId: 'location-1',
+      sessionSlots: [
+        {
+          id: 'slot-tbc',
+          instanceId: 'inst-tbc',
+          locationId: null,
+          startsAt: '2026-10-01T01:00:00Z',
+          endsAt: '2026-10-01T03:00:00Z',
+          sortOrder: 0,
+        },
+      ],
+      trainingDetails: {
+        trainingFormat: 'group',
+        price: '50',
+        currency: 'HKD',
+        pricingUnit: 'per_person',
+      },
+      resolvedTrainingDetails: {
+        trainingFormat: 'group',
+        price: '50',
+        currency: 'HKD',
+        pricingUnit: 'per_person',
+      },
+      eventTicketTiers: [],
+      resolvedEventTicketTiers: [],
+      consultationDetails: null,
+      resolvedConsultationDetails: null,
+    };
+
+    render(
+      <InstanceDetailPanel
+        {...defaultEntityTagProps}
+        instance={instance}
+        selectedServiceId='service-1'
+        serviceOptions={[buildServiceSummary({ locationId: 'location-1' })]}
+        locationOptions={[buildLocationSummary()]}
+        isLoadingLocations={false}
+        serviceType='training_course'
+        isSaving={false}
+        error=''
+        onSelectService={vi.fn()}
+        onCreate={vi.fn()}
+        onUpdate={onUpdate}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Location')).toHaveValue('');
+    });
+    expect(
+      screen.getByText(/Public website shows To be confirmed/i),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByText('Session slots'));
+    const locationSelects = screen.getAllByLabelText('Location');
+    const slotLocationSelect = locationSelects.find((el) => el.id === 'slot-0-location');
+    expect(slotLocationSelect).toBeDefined();
+    expect(slotLocationSelect).toHaveValue('');
+
+    await user.click(screen.getByRole('button', { name: 'Update instance' }));
+    expect(onUpdate).toHaveBeenCalledWith(
+      'service-1',
+      'inst-tbc',
+      expect.objectContaining({
+        location_id: null,
+        session_slots: [
+          expect.objectContaining({
+            location_id: null,
+          }),
+        ],
+      }),
+    );
+  });
+
   it('prefills new session slot location from service default when instance venue is empty', async () => {
     const user = userEvent.setup();
     const onCreate = vi.fn().mockResolvedValue(undefined);

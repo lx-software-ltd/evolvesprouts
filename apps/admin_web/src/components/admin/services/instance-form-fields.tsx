@@ -50,8 +50,6 @@ export interface InstanceFormState {
 export interface InstanceFormFieldsProps {
   value: InstanceFormState;
   serviceId?: string | null;
-  /** Service default location; used to show the correct option when the form `locationId` is still empty. */
-  serviceLocationId?: string | null;
   serviceOptions?: ServiceSummary[];
   locationOptions?: LocationSummary[];
   isLoadingLocations?: boolean;
@@ -126,7 +124,6 @@ export function InstanceInstructorField({
 export function InstanceFormFields({
   value,
   serviceId = null,
-  serviceLocationId = null,
   serviceOptions = [],
   locationOptions = [],
   isLoadingLocations = false,
@@ -141,7 +138,7 @@ export function InstanceFormFields({
   const selectedServiceOption =
     serviceOptions.find((entry) => entry.id === serviceId) ?? null;
   const serviceExists = selectedServiceOption !== null;
-  const effectiveLocationId = value.locationId || (serviceLocationId ?? "");
+  const effectiveLocationId = value.locationId;
   const locationExists = locationOptions.some(
     (entry) => entry.id === effectiveLocationId,
   );
@@ -380,6 +377,9 @@ export function InstanceFormFields({
               placeholder="Location UUID"
             />
           )}
+          {/* Exception: Location documents the public TBC contract. The empty
+              option is no longer a "select a venue" placeholder, so operators
+              need this note to know the service default is admin-only. */}
           {!value.locationId.trim() ? (
             <p className="mt-1 text-xs text-slate-500">
               Public website shows To be confirmed until a venue is saved on this

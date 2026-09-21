@@ -41,9 +41,8 @@ function instanceSearchText(instance: ServiceInstance, locationById: Map<string,
   if (cohortTrimmed) {
     parts.push(cohortTrimmed);
   }
-  const locResolved = instance.locationId ?? instance.resolvedLocationId;
-  if (locResolved?.trim()) {
-    parts.push(locResolved);
+  if (instance.locationId?.trim()) {
+    parts.push(instance.locationId);
   }
   for (const slot of instance.sessionSlots) {
     if (slot.locationId?.trim()) {

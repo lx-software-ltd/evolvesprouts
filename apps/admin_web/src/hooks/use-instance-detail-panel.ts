@@ -224,7 +224,7 @@ export function useInstanceDetailPanel({
   }, [instance, selectedServiceId, effectiveServiceType, suggestedCreateSlug]);
 
   const effectiveSessionSlotDefaultLocationId =
-    instanceForm.locationId.trim() || selectedService?.locationId?.trim() || null;
+    instanceForm.locationId.trim() || null;
 
   const extraSelectedLocationIds = useMemo(() => {
     const ids = new Set<string>();
