@@ -749,17 +749,14 @@ describe('InstanceDetailPanel', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Location')).toHaveValue('');
+      expect(document.getElementById('instance-location-id')).toHaveValue('');
     });
     expect(
       screen.getByText(/Public website shows To be confirmed/i),
     ).toBeInTheDocument();
 
     await user.click(screen.getByText('Session slots'));
-    const locationSelects = screen.getAllByLabelText('Location');
-    const slotLocationSelect = locationSelects.find((el) => el.id === 'slot-0-location');
-    expect(slotLocationSelect).toBeDefined();
-    expect(slotLocationSelect).toHaveValue('');
+    expect(document.getElementById('slot-0-location')).toHaveValue('');
 
     await user.click(screen.getByRole('button', { name: 'Update instance' }));
     expect(onUpdate).toHaveBeenCalledWith(
