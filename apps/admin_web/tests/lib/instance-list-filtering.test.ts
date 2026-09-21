@@ -116,6 +116,52 @@ describe('filterInstancesForTable', () => {
     ).toHaveLength(1);
   });
 
+  it('does not match the parent service default venue when the instance has no venue', () => {
+    const tbc = {
+      ...BASE,
+      resolvedLocationId: 'loc-service',
+    };
+    const locations = new Map<string, LocationSummary>([
+      [
+        'loc-service',
+        {
+          id: 'loc-service',
+          name: 'Service Hall',
+          areaId: 'area-1',
+          address: null,
+          lat: null,
+          lng: null,
+          createdAt: null,
+          updatedAt: null,
+          lockedFromPartnerOrg: false,
+          partnerOrganizationIds: [],
+          partnerOrganizationLabels: [],
+        },
+      ],
+    ]);
+    expect(
+      filterInstancesForTable([tbc], {
+        statusFilter: '',
+        search: 'service hall',
+        locationById: locations,
+      }),
+    ).toEqual([]);
+    expect(
+      filterInstancesForTable([tbc], {
+        statusFilter: '',
+        search: 'loc-service',
+        locationById: locations,
+      }),
+    ).toEqual([]);
+    expect(
+      filterInstancesForTable([tbc], {
+        statusFilter: '',
+        search: 'to be confirmed',
+        locationById: locations,
+      }),
+    ).toHaveLength(1);
+  });
+
   it('orders rows newest first by their first session slot', () => {
     const early = {
       ...BASE,

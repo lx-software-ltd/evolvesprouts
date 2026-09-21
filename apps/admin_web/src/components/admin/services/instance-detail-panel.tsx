@@ -170,7 +170,6 @@ export function InstanceDetailPanel({
         <InstanceFormFields
           value={panel.instanceForm}
           serviceId={panel.selectedServiceId}
-          serviceLocationId={panel.selectedService?.locationId ?? null}
           serviceOptions={panel.serviceOptions}
           locationOptions={panel.filteredLocationOptions}
           isLoadingLocations={isLoadingLocations}

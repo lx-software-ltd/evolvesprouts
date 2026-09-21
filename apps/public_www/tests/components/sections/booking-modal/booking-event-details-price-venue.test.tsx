@@ -43,4 +43,20 @@ describe('BookingEventDetailsPriceVenue', () => {
     expect(container.querySelector('.es-mask-dollar-success')).toBeNull();
     expect(screen.getByText(payment.refundHint)).toBeInTheDocument();
   });
+
+  it('shows only the to-be-confirmed venue name and hides directions', () => {
+    render(
+      <BookingEventDetailsPriceVenue
+        locale='en'
+        content={payment}
+        originalAmount={9000}
+        venueName={enContent.common.locationToBeConfirmedLabel}
+        venueAddress=''
+        directionHref=''
+      />,
+    );
+
+    expect(screen.getByText(enContent.common.locationToBeConfirmedLabel)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: payment.directionLabel })).not.toBeInTheDocument();
+  });
 });

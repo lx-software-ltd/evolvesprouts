@@ -88,9 +88,11 @@ export function BookingEventDetailsPriceVenue({
                 {venueName}
               </p>
             ) : null}
-            <p className='mt-1 text-base font-semibold leading-6 es-text-heading'>
-              {venueAddress}
-            </p>
+            {venueAddress ? (
+              <p className='mt-1 text-base font-semibold leading-6 es-text-heading'>
+                {venueAddress}
+              </p>
+            ) : null}
             {showDirectionsLink ? (
               <SmartLink
                 href={directionHref.trim()}

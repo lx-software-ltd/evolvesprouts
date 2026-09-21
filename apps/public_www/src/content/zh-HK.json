@@ -409,7 +409,7 @@
     "emptyStateLabel": "暫無即將舉辦的活動",
     "errorLabel": "暫時無法載入活動，請稍後再試。",
     "card": {
-      "emptyLocationLabel": "地點詳情將稍後公佈。",
+      "emptyLocationLabel": "待確認",
       "directionLabel": "查看路線",
       "ctaLabel": "立即預訂",
       "fullyBookedLabel": "已滿額",
@@ -1168,7 +1168,8 @@
     "placeholder": {
       "descriptionTemplate": "{title} - {brand}",
       "workshopsTitle": "工作坊"
-    }
+    },
+    "locationToBeConfirmedLabel": "待確認"
   },
   "myBestAuntie": {
     "hero": {

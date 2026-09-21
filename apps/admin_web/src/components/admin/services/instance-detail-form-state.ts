@@ -40,7 +40,7 @@ export function instanceFormFromServiceInstance(
     description: source.description ?? '',
     status: source.status,
     deliveryMode: source.deliveryMode ?? '',
-    locationId: source.locationId ?? source.resolvedLocationId ?? '',
+    locationId: source.locationId ?? '',
     maxCapacity: source.maxCapacity?.toString() ?? '',
     capacityLeftOverride:
       source.capacityLeftOverride != null ? String(source.capacityLeftOverride) : '',

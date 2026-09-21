@@ -12,6 +12,7 @@ const localeFiles = ['en.json', 'zh-CN.json', 'zh-HK.json'] as const;
 
 const REQUIRED_NON_EMPTY_COPY_KEYS = [
   'common.accessibility.carouselRoleDescription',
+  'common.locationToBeConfirmedLabel',
   'common.shell.skipToMainContentLabel',
   'common.shell.environmentBadgeLabel',
   'resources.formFirstNameLabel',
@@ -43,5 +44,10 @@ describe('required locale copy keys', () => {
       expect(value, `${filename}:${keyPath}`).toBeTruthy();
       expect(value?.trim(), `${filename}:${keyPath}`).not.toBe('');
     }
+
+    expect(
+      readStringAtPath(content, 'events.card.emptyLocationLabel'),
+      `${filename}:events.card.emptyLocationLabel`,
+    ).toBe(readStringAtPath(content, 'common.locationToBeConfirmedLabel'));
   });
 });

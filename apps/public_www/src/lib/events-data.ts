@@ -1,7 +1,8 @@
 import type { BookingTopicsFieldConfig } from '@/components/sections/booking-modal/types';
-import type {
-  EventsContent,
-  Locale,
+import {
+  type EventsContent,
+  type Locale,
+  getContent,
 } from '@/content';
 import {
   readCandidateText,
@@ -159,6 +160,8 @@ export interface MyBestAuntieEventCohort {
   location_name: string;
   location_address: string;
   location_url: string;
+  /** True when the public calendar has no instance/slot venue (service default is ignored). */
+  location_tbc: boolean;
   dates: MyBestAuntieEventCohortDate[];
 }
 
@@ -183,6 +186,8 @@ export interface EventCardData {
   costLabel?: string;
   isFreeCost?: boolean;
   isVirtualEvent: boolean;
+  /** True when the public calendar has no instance/slot venue. */
+  isLocationTbc?: boolean;
   locationName?: string;
   locationAddress?: string;
   directionHref?: string;
@@ -489,6 +494,7 @@ function buildEventBookingModalPayload(
   locationName: string | undefined,
   locationAddress: string | undefined,
   directionHref: string,
+  isLocationTbc: boolean,
 ): EventCalendarBookingModalPayload {
   const dateParts = resolveBookingDateParts(record, summary ?? '');
   const selectedDateStartTime = dateParts[0]?.startDateTime ?? '';
@@ -508,6 +514,14 @@ function buildEventBookingModalPayload(
   const instanceSlug = readCandidateText(record, ['slug', 'id', 'eventId'])?.trim() ?? '';
   const serviceKey =
     readCandidateText(record, ['service_key', 'serviceKey'])?.trim() ?? '';
+  const venue = resolveBookingVenueDisplay({
+    isVirtual: isVirtualLocationType(readOptionalText(record.location)),
+    locationTbc: isLocationTbc,
+    locationName,
+    locationAddress,
+    directionHref,
+    toBeConfirmedLabel: locationToBeConfirmedLabelForLocale(locale),
+  });
 
   return {
     variant: 'event',
@@ -517,9 +531,9 @@ function buildEventBookingModalPayload(
     title,
     subtitle: summary ?? '',
     originalAmount,
-    locationName: locationName ?? '',
-    locationAddress: locationAddress ?? '',
-    directionHref,
+    locationName: venue.venueName,
+    locationAddress: venue.venueAddress,
+    directionHref: venue.directionHref,
     dateParts,
     selectedDateLabel,
     selectedDateStartTime,
@@ -531,75 +545,16 @@ function buildMyBestAuntieBookingModalPayload(
   record: Record<string, unknown>,
   locale: Locale,
 ): MyBestAuntieBookingModalPayload | null {
-  const slug =
-    readCandidateText(record, ['slug', 'id', 'eventId'])?.trim() ?? '';
-  const serviceTier = readCandidateText(record, ['service_tier']) ?? '';
-  const cohortValue = readCandidateText(record, ['cohort']) ?? '';
-  if (!slug || !serviceTier || !cohortValue) {
+  const selectedCohort = recordToMyBestAuntieEventCohort(record);
+  if (!selectedCohort) {
     return null;
   }
-
-  const title = readCandidateText(record, ['title']) ?? '';
-  const description = readCandidateText(record, ['description']) ?? '';
-  const spacesTotal = resolveNumericCandidate(record, ['spaces_total']) ?? 0;
-  const spacesLeft = resolveNumericCandidate(record, ['spaces_left']) ?? 0;
-  const price = resolveNumericCandidate(record, ['price']) ?? 0;
-  const currency = readCandidateText(record, ['currency']) ?? 'HKD';
-  const location = readCandidateText(record, ['location']) ?? 'physical';
-  const locationAddress = readCandidateText(record, [
-    'location_address',
-    'locationAddress',
-    'address',
-  ]) ?? '';
-  const locationName = readCandidateText(record, [
-    'location_name',
-    'locationName',
-    'venue',
-  ]) ?? locationAddress;
-  const locationUrl = sanitizeGoogleMapsHref(
-    readCandidateText(record, ['location_url', 'locationUrl', 'address_url']),
-  );
-  const dates = resolveBookingDateParts(record, '').map((partRow, idx) => {
-    const part =
-      typeof partRow.sessionPart === 'number' && partRow.sessionPart > 0
-        ? partRow.sessionPart
-        : idx + 1;
-    return {
-      part,
-      start_datetime: partRow.startDateTime,
-      end_datetime: partRow.endDateTime,
-    };
-  });
-  if (dates.length === 0) {
-    return null;
-  }
-
-  const selectedCohort: MyBestAuntieEventCohort = {
-    slug,
-    service_tier: serviceTier,
-    title,
-    description,
-    cohort: cohortValue,
-    spaces_total: spacesTotal,
-    spaces_left: spacesLeft,
-    is_fully_booked: resolveEventStatus(record) === 'fully_booked',
-    price,
-    currency,
-    location,
-    booking_system: MY_BEST_AUNTIE_BOOKING_SYSTEM,
-    tags: resolveStringList(record.tags),
-    categories: resolveStringList(record.categories),
-    location_name: locationName,
-    location_address: locationAddress,
-    location_url: locationUrl,
-    dates,
-  };
 
   return {
     variant: 'my-best-auntie',
     bookingSystem: MY_BEST_AUNTIE_BOOKING_SYSTEM,
-    selectedServiceTierLabel: serviceTier,
-    selectedCohortDateLabel: formatCohortValue(cohortValue, locale),
+    selectedServiceTierLabel: selectedCohort.service_tier,
+    selectedCohortDateLabel: formatCohortValue(selectedCohort.cohort, locale),
     selectedCohort,
   };
 }
@@ -613,6 +568,7 @@ function resolveBookingModalPayload(
   locationName: string | undefined,
   locationAddress: string | undefined,
   directionHref: string,
+  isLocationTbc: boolean,
 ): EventCardBookingModalPayload | undefined {
   if (bookingSystem === EVENT_BOOKING_SYSTEM) {
     return buildEventBookingModalPayload(
@@ -623,6 +579,7 @@ function resolveBookingModalPayload(
       locationName,
       locationAddress,
       directionHref,
+      isLocationTbc,
     );
   }
 
@@ -825,6 +782,78 @@ function normalizeLocationLabel(
 function isVirtualLocationType(value: string | undefined): boolean {
   const normalizedValue = readOptionalText(value)?.toLowerCase();
   return normalizedValue === 'virtual';
+}
+
+function readLocationTbcFlag(record: Record<string, unknown>): boolean | undefined {
+  const value = readFirstCandidateValue(record, ['location_tbc', 'locationTbc']);
+  if (value === true) {
+    return true;
+  }
+  if (value === false) {
+    return false;
+  }
+  return undefined;
+}
+
+function locationToBeConfirmedLabelForLocale(locale: Locale): string {
+  return getContent(locale).common.locationToBeConfirmedLabel;
+}
+
+export function isPublicLocationToBeConfirmed({
+  isVirtual,
+  locationTbc,
+  locationName,
+  locationAddress,
+}: {
+  isVirtual: boolean;
+  locationTbc?: boolean;
+  locationName?: string | null;
+  locationAddress?: string | null;
+}): boolean {
+  if (isVirtual) {
+    return false;
+  }
+  if (locationTbc === true) {
+    return true;
+  }
+  return !readOptionalText(locationName) && !readOptionalText(locationAddress);
+}
+
+export function resolveBookingVenueDisplay({
+  isVirtual = false,
+  locationTbc,
+  locationName,
+  locationAddress,
+  directionHref,
+  toBeConfirmedLabel,
+}: {
+  isVirtual?: boolean;
+  locationTbc?: boolean;
+  locationName?: string | null;
+  locationAddress?: string | null;
+  directionHref?: string | null;
+  toBeConfirmedLabel: string;
+}): { venueName: string; venueAddress: string; directionHref: string } {
+  if (
+    isPublicLocationToBeConfirmed({
+      isVirtual,
+      locationTbc,
+      locationName,
+      locationAddress,
+    })
+  ) {
+    return {
+      venueName: toBeConfirmedLabel,
+      venueAddress: '',
+      directionHref: '',
+    };
+  }
+
+  return {
+    venueName: readOptionalText(locationName) ?? '',
+    venueAddress: readOptionalText(locationAddress) ?? '',
+    directionHref: readOptionalText(directionHref) ?? '',
+  };
 }
 
 function readFirstCandidateValue(
@@ -1304,15 +1333,6 @@ function normalizeEventCard(
     dateTimeDetails.timestamp ??
     parseTimestamp(dateLabel);
 
-  const locationName =
-    readCandidateText(record, [
-      'location_name',
-      'locationName',
-      'venue',
-      'location_address',
-      'locationAddress',
-      'address',
-    ]) ?? normalizeLocationLabel(readOptionalText(record.location), content);
   const isVirtualEvent = isVirtualLocationType(
     readCandidateText(record, [
       'locationType',
@@ -1322,25 +1342,43 @@ function normalizeEventCard(
       'venue_type',
     ]),
   );
+  const rawLocationName = readCandidateText(record, [
+    'location_name',
+    'locationName',
+    'venue',
+  ]);
   const locationAddress = readCandidateText(record, [
     'location_address',
     'locationAddress',
     'venueAddress',
     'address',
   ]);
-  const directionHref = sanitizeGoogleMapsHref(
-    readCandidateText(record, [
-      'location_url',
-      'directionHref',
-      'directionUrl',
-      'mapHref',
-      'mapUrl',
-      'mapsUrl',
-      'locationMapUrl',
-      'locationUrl',
-      'address_url',
-    ]),
-  );
+  const isLocationTbc = isPublicLocationToBeConfirmed({
+    isVirtual: isVirtualEvent,
+    locationTbc: readLocationTbcFlag(record),
+    locationName: rawLocationName,
+    locationAddress,
+  });
+  const locationName = isLocationTbc
+    ? locationToBeConfirmedLabelForLocale(locale)
+    : (rawLocationName
+      ?? locationAddress
+      ?? normalizeLocationLabel(readOptionalText(record.location), content));
+  const directionHref = isLocationTbc
+    ? ''
+    : sanitizeGoogleMapsHref(
+        readCandidateText(record, [
+          'location_url',
+          'directionHref',
+          'directionUrl',
+          'mapHref',
+          'mapUrl',
+          'mapsUrl',
+          'locationMapUrl',
+          'locationUrl',
+          'address_url',
+        ]),
+      );
   const bookingSystem = readOptionalText(record.booking_system) ?? undefined;
   const bookingModalPayload = resolveBookingModalPayload(
     record,
@@ -1348,9 +1386,10 @@ function normalizeEventCard(
     locale,
     title,
     summary,
-    locationName,
-    locationAddress,
+    isLocationTbc ? undefined : (rawLocationName ?? locationAddress),
+    isLocationTbc ? undefined : locationAddress,
     directionHref,
+    isLocationTbc,
   );
 
   const ctaHref =
@@ -1389,9 +1428,10 @@ function normalizeEventCard(
     costLabel,
     isFreeCost,
     isVirtualEvent,
+    isLocationTbc,
     locationName,
     locationAddress:
-      locationAddress && locationAddress !== locationName
+      !isLocationTbc && locationAddress && locationAddress !== locationName
         ? locationAddress
         : undefined,
     directionHref: directionHref || undefined,
@@ -1423,6 +1463,7 @@ export function normalizeEvents(
 export function getLandingPageHeroEventContentFromPayload(
   payload: unknown,
   slug: string,
+  locale?: string,
 ): LandingPageHeroEventContent | null {
   const eventRecord = findLandingPageEventInPayload(payload, slug);
   if (!eventRecord) {
@@ -1441,16 +1482,32 @@ export function getLandingPageHeroEventContentFromPayload(
   const endDateTime = firstDateRecord
     ? readCandidateText(firstDateRecord, ['end_datetime', 'endDateTime', 'end'])
     : undefined;
-  const locationSource =
-    readCandidateText(eventRecord, [
-      'location_address',
-      'locationAddress',
-      'venueAddress',
-      'address',
-      'location_name',
-      'locationName',
-      'venue',
-    ]) ?? readOptionalText(eventRecord.location);
+  const normalizedLocale = resolveEventsLocale(locale);
+  const rawLocationName = readCandidateText(eventRecord, [
+    'location_name',
+    'locationName',
+    'venue',
+  ]);
+  const rawLocationAddress = readCandidateText(eventRecord, [
+    'location_address',
+    'locationAddress',
+    'venueAddress',
+    'address',
+  ]);
+  const isVirtualEvent = isVirtualLocationType(
+    readOptionalText(eventRecord.location),
+  );
+  const isLocationTbc = isPublicLocationToBeConfirmed({
+    isVirtual: isVirtualEvent,
+    locationTbc: readLocationTbcFlag(eventRecord),
+    locationName: rawLocationName,
+    locationAddress: rawLocationAddress,
+  });
+  const locationSource = isLocationTbc
+    ? locationToBeConfirmedLabelForLocale(normalizedLocale)
+    : (rawLocationAddress
+      ?? rawLocationName
+      ?? readOptionalText(eventRecord.location));
   const locationLabel = extractTrailingLocationSegment(locationSource);
   const partners = resolvePartnerSlugs(eventRecord.partners);
 
@@ -1492,33 +1549,41 @@ export function getLandingPageBookingEventContentFromPayload(
     'excerpt',
     'body',
   ]);
-  const locationName = readCandidateText(eventRecord, [
-    'location_name',
-    'locationName',
-    'venue',
-    'location_address',
-    'locationAddress',
-    'address',
-  ]);
   const locationAddress = readCandidateText(eventRecord, [
     'location_address',
     'locationAddress',
     'venueAddress',
     'address',
   ]);
-  const directionHref = sanitizeGoogleMapsHref(
-    readCandidateText(eventRecord, [
-      'location_url',
-      'directionHref',
-      'directionUrl',
-      'mapHref',
-      'mapUrl',
-      'mapsUrl',
-      'locationMapUrl',
-      'locationUrl',
-      'address_url',
-    ]),
+  const rawLocationName = readCandidateText(eventRecord, [
+    'location_name',
+    'locationName',
+    'venue',
+  ]);
+  const isVirtualEvent = isVirtualLocationType(
+    readOptionalText(eventRecord.location),
   );
+  const isLocationTbc = isPublicLocationToBeConfirmed({
+    isVirtual: isVirtualEvent,
+    locationTbc: readLocationTbcFlag(eventRecord),
+    locationName: rawLocationName,
+    locationAddress,
+  });
+  const directionHref = isLocationTbc
+    ? ''
+    : sanitizeGoogleMapsHref(
+        readCandidateText(eventRecord, [
+          'location_url',
+          'directionHref',
+          'directionUrl',
+          'mapHref',
+          'mapUrl',
+          'mapsUrl',
+          'locationMapUrl',
+          'locationUrl',
+          'address_url',
+        ]),
+      );
   const bookingSystem = readOptionalText(eventRecord.booking_system) ?? undefined;
   const resolvedPayload = resolveBookingModalPayload(
     eventRecord,
@@ -1526,9 +1591,10 @@ export function getLandingPageBookingEventContentFromPayload(
     normalizedLocale,
     title,
     summary,
-    locationName,
-    locationAddress,
+    isLocationTbc ? undefined : (rawLocationName ?? locationAddress),
+    isLocationTbc ? undefined : locationAddress,
     directionHref,
+    isLocationTbc,
   );
 
   return {
@@ -1543,6 +1609,7 @@ export function getLandingPageBookingEventContentFromPayload(
 export function getLandingPageStructuredDataContentFromPayload(
   payload: unknown,
   slug: string,
+  locale?: string,
 ): LandingPageStructuredDataContent | null {
   const eventRecord = findLandingPageEventInPayload(payload, slug);
   if (!eventRecord) {
@@ -1597,13 +1664,24 @@ export function getLandingPageStructuredDataContentFromPayload(
     'venueAddress',
     'address',
   ]);
-  const locationName = readCandidateText(eventRecord, [
+  const rawLocationName = readCandidateText(eventRecord, [
     'location_name',
     'locationName',
     'venue',
-    'location_address',
-    'locationAddress',
-  ]) ?? extractTrailingLocationSegment(locationAddress);
+  ]);
+  const isVirtualEvent = isVirtualLocationType(
+    readOptionalText(eventRecord.location),
+  );
+  const isLocationTbc = isPublicLocationToBeConfirmed({
+    isVirtual: isVirtualEvent,
+    locationTbc: readLocationTbcFlag(eventRecord),
+    locationName: rawLocationName,
+    locationAddress,
+  });
+  const locationName = isLocationTbc
+    ? locationToBeConfirmedLabelForLocale(resolveEventsLocale(locale))
+    : (rawLocationName
+      ?? extractTrailingLocationSegment(locationAddress));
   const offerPriceNumeric = resolveNumericCandidate(eventRecord, [
     'price',
     'cost',
@@ -1624,7 +1702,7 @@ export function getLandingPageStructuredDataContentFromPayload(
     startDate: parsedStartDate.toISOString(),
     endDate,
     locationName: locationName ?? undefined,
-    locationAddress: locationAddress ?? undefined,
+    locationAddress: isLocationTbc ? undefined : (locationAddress ?? undefined),
     offerPrice: offerPriceNumeric === null ? undefined : String(offerPriceNumeric),
     offerCurrency: offerPriceNumeric === null ? undefined : (offerCurrency ?? 'HKD'),
     offerAvailability:
@@ -1676,9 +1754,17 @@ function recordToMyBestAuntieEventCohort(
     'locationName',
     'venue',
   ]) ?? locationAddress;
-  const locationUrl = sanitizeGoogleMapsHref(
-    readCandidateText(record, ['location_url', 'locationUrl', 'address_url']),
-  );
+  const locationTbc = isPublicLocationToBeConfirmed({
+    isVirtual: isVirtualLocationType(location),
+    locationTbc: readLocationTbcFlag(record),
+    locationName,
+    locationAddress,
+  });
+  const locationUrl = locationTbc
+    ? ''
+    : sanitizeGoogleMapsHref(
+        readCandidateText(record, ['location_url', 'locationUrl', 'address_url']),
+      );
   const dates = resolveBookingDateParts(record, '').map((partRow, idx) => {
     const part =
       typeof partRow.sessionPart === 'number' && partRow.sessionPart > 0
@@ -1709,9 +1795,10 @@ function recordToMyBestAuntieEventCohort(
     booking_system: MY_BEST_AUNTIE_BOOKING_SYSTEM,
     tags: resolveStringList(record.tags),
     categories: resolveStringList(record.categories),
-    location_name: locationName,
-    location_address: locationAddress,
+    location_name: locationTbc ? '' : locationName,
+    location_address: locationTbc ? '' : locationAddress,
     location_url: locationUrl,
+    location_tbc: locationTbc,
     dates,
   };
 }

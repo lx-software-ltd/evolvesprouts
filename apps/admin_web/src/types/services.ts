@@ -323,6 +323,7 @@ export interface ServiceInstance {
   resolvedDescription: string | null;
   resolvedCoverImageS3Key: string | null;
   resolvedDeliveryMode: string | null;
+  /** Admin-only inherited venue (instance location, else service default). Public calendar ignores this. */
   resolvedLocationId: string | null;
   sessionSlots: SessionSlot[];
   trainingDetails: TrainingInstanceDetailsRow | null;

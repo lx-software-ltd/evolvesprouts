@@ -8336,7 +8336,7 @@ export interface components {
             resolved_slug: string;
             /**
              * Format: uuid
-             * @description Effective venue: instance location_id when set, otherwise the parent service default location_id.
+             * @description Instance location_id when set, otherwise the parent service default location_id. This is admin-only catalog inheritance. The public calendar does not use this value; physical offerings with no instance or slot venue emit `location_tbc: true` instead.
              */
             resolved_location_id?: string | null;
             /** @description Effective training pricing: instance row when present, otherwise the parent service training_course_details defaults. */

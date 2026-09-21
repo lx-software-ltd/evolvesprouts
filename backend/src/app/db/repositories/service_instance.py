@@ -340,7 +340,6 @@ class ServiceInstanceRepository(BaseRepository[ServiceInstance]):
                 joinedload(ServiceInstance.training_details),
                 joinedload(ServiceInstance.service).options(
                     joinedload(Service.event_details),
-                    selectinload(Service.location),
                 ),
                 selectinload(ServiceInstance.instance_tags).joinedload(
                     ServiceInstanceTag.tag

@@ -409,7 +409,7 @@
     "emptyStateLabel": "No upcoming events for now",
     "errorLabel": "Unable to load events right now. Please check back soon.",
     "card": {
-      "emptyLocationLabel": "Location details will be announced soon.",
+      "emptyLocationLabel": "To be confirmed",
       "directionLabel": "Get Directions",
       "ctaLabel": "Reserve your spot",
       "fullyBookedLabel": "Fully booked",
@@ -1168,7 +1168,8 @@
     "placeholder": {
       "descriptionTemplate": "{title} - {brand}",
       "workshopsTitle": "Workshops"
-    }
+    },
+    "locationToBeConfirmedLabel": "To be confirmed"
   },
   "myBestAuntie": {
     "hero": {

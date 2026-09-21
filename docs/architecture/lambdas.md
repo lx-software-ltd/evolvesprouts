@@ -293,7 +293,11 @@ their primary responsibilities.
   and `title` augmented with the tier, a spaced hyphen, and a title-cased cohort label
   when both `service_tier` and `cohort` are present (cohort hyphen segments capitalized,
   e.g. `may-26` → `May 26`),
-  `is_fully_booked`, and a server-derived `location_url`. `location_name` falls back
+  `is_fully_booked`, and a server-derived `location_url`. Venue fields resolve from
+  the primary session slot, then the instance; the parent service default location
+  is admin-only. Physical offerings with no slot or instance venue set
+  `location_tbc: true` and omit venue name, address, and maps URL.
+  `location_name` falls back
   to the linked partner organization's display name when the venue location row has
   no name but is that partner's `organizations.location`. `booking_system` comes
   from `services.booking_system` or defaults from service type (MBA training
