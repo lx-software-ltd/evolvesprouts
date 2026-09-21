@@ -1555,7 +1555,6 @@
       "closeLabel": "关闭",
       "refundHint": "开课前 7 天可全额退款。",
       "directionLabel": "查看路线",
-      "locationToBeConfirmedLabel": "待确认",
       "reservationTitle": "报名信息",
       "selectedAgeGroupTitleTemplate": "{title}（适用于{ageGroupLabel}年龄组）",
       "reservationDescription": "请填写你的信息，我们会通过邮箱发送付款确认。",

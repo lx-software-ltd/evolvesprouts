@@ -44,5 +44,10 @@ describe('required locale copy keys', () => {
       expect(value, `${filename}:${keyPath}`).toBeTruthy();
       expect(value?.trim(), `${filename}:${keyPath}`).not.toBe('');
     }
+
+    expect(
+      readStringAtPath(content, 'events.card.emptyLocationLabel'),
+      `${filename}:events.card.emptyLocationLabel`,
+    ).toBe(readStringAtPath(content, 'common.locationToBeConfirmedLabel'));
   });
 });

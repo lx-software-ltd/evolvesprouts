@@ -490,6 +490,34 @@ describe('events-data', () => {
     expect(events[0]?.directionHref).toBeUndefined();
   });
 
+  it('treats an empty physical venue as to be confirmed even when location_tbc is false', () => {
+    const payload = {
+      data: [
+        {
+          title: 'Empty venue event',
+          location: 'physical',
+          location_tbc: false,
+          location_name: null,
+          location_address: null,
+          location_url: '',
+          dates: [
+            {
+              start_datetime: '2026-10-10T01:00:00Z',
+            },
+          ],
+        },
+      ],
+    };
+
+    const events = normalizeEvents(payload, enContent.events);
+    expect(events[0]).toMatchObject({
+      locationName: enContent.common.locationToBeConfirmedLabel,
+      isLocationTbc: true,
+    });
+    expect(events[0]?.locationAddress).toBeUndefined();
+    expect(events[0]?.directionHref).toBeUndefined();
+  });
+
   it('treats location_tbc as to be confirmed even when a leftover venue name is present', () => {
     const payload = {
       data: [

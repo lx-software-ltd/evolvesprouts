@@ -1,11 +1,9 @@
 import type { BookingTopicsFieldConfig } from '@/components/sections/booking-modal/types';
-import type {
-  EventsContent,
-  Locale,
+import {
+  type EventsContent,
+  type Locale,
+  getContent,
 } from '@/content';
-import enContent from '@/content/en.json';
-import zhCNContent from '@/content/zh-CN.json';
-import zhHKContent from '@/content/zh-HK.json';
 import {
   readCandidateText,
   readOptionalText,
@@ -798,13 +796,7 @@ function readLocationTbcFlag(record: Record<string, unknown>): boolean | undefin
 }
 
 function locationToBeConfirmedLabelForLocale(locale: Locale): string {
-  if (locale === 'zh-CN') {
-    return zhCNContent.common.locationToBeConfirmedLabel;
-  }
-  if (locale === 'zh-HK') {
-    return zhHKContent.common.locationToBeConfirmedLabel;
-  }
-  return enContent.common.locationToBeConfirmedLabel;
+  return getContent(locale).common.locationToBeConfirmedLabel;
 }
 
 export function isPublicLocationToBeConfirmed({
@@ -823,9 +815,6 @@ export function isPublicLocationToBeConfirmed({
   }
   if (locationTbc === true) {
     return true;
-  }
-  if (locationTbc === false) {
-    return false;
   }
   return !readOptionalText(locationName) && !readOptionalText(locationAddress);
 }
@@ -1371,7 +1360,7 @@ function normalizeEventCard(
     locationAddress,
   });
   const locationName = isLocationTbc
-    ? content.card.emptyLocationLabel
+    ? locationToBeConfirmedLabelForLocale(locale)
     : (rawLocationName
       ?? locationAddress
       ?? normalizeLocationLabel(readOptionalText(record.location), content));

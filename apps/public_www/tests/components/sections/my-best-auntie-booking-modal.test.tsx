@@ -410,7 +410,7 @@ describe('my-best-auntie booking modals footer content', () => {
     });
 
     expect(
-      screen.getByText(bookingModalContent.locationToBeConfirmedLabel),
+      screen.getByText(enContent.common.locationToBeConfirmedLabel),
     ).toBeInTheDocument();
     expect(screen.queryByText(selectedCohort.location_name)).not.toBeInTheDocument();
     expect(screen.queryByText(selectedCohort.location_address)).not.toBeInTheDocument();

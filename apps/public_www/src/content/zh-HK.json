@@ -1555,7 +1555,6 @@
       "closeLabel": "關閉",
       "refundHint": "開課前 7 天可全額退款。",
       "directionLabel": "查看路線",
-      "locationToBeConfirmedLabel": "待確認",
       "reservationTitle": "報名資料",
       "selectedAgeGroupTitleTemplate": "{title}（適用於{ageGroupLabel}年齡組）",
       "reservationDescription": "請填寫你的資料，我們會以電郵發送付款確認。",

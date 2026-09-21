@@ -1555,7 +1555,6 @@
       "closeLabel": "Close",
       "refundHint": "Full refund up to 7 days prior.",
       "directionLabel": "Get Directions",
-      "locationToBeConfirmedLabel": "To be confirmed",
       "reservationTitle": "Reservation",
       "selectedAgeGroupTitleTemplate": "{title} for age group {ageGroupLabel}",
       "reservationDescription": "Please complete your details. We will send payment confirmation by email.",

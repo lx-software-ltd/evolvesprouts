@@ -22,10 +22,11 @@ import type {
   BookingThankYouRecapLabelTemplates,
   ReservationSummary,
 } from '@/components/sections/booking-modal/types';
-import type {
-  BookingPaymentModalContent,
-  Locale,
-  MyBestAuntieModalContent,
+import {
+  type BookingPaymentModalContent,
+  getContent,
+  type Locale,
+  type MyBestAuntieModalContent,
 } from '@/content';
 import {
   MY_BEST_AUNTIE_TRAINING_COURSE_CALENDAR_SERVICE_KEY,
@@ -135,7 +136,7 @@ export function MyBestAuntieBookingModal({
     locationName: selectedCohort?.location_name,
     locationAddress: selectedCohort?.location_address,
     directionHref: selectedCohort?.location_url,
-    toBeConfirmedLabel: paymentModalContent.locationToBeConfirmedLabel,
+    toBeConfirmedLabel: getContent(locale).common.locationToBeConfirmedLabel,
   });
 
   return (
