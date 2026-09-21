@@ -1442,7 +1442,7 @@ function normalizeEventCard(
     isLocationTbc,
     locationName,
     locationAddress:
-      locationAddress && locationAddress !== locationName
+      !isLocationTbc && locationAddress && locationAddress !== locationName
         ? locationAddress
         : undefined,
     directionHref: directionHref || undefined,
