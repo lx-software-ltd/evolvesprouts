@@ -29,10 +29,10 @@ packages:
     dependency: "direct main"
     description:
       name: amplify_api
-      sha256: "0398e1fbc851617ca15179fb809b140b159568dc8778eb76ff0b72fe2348d44c"
+      sha256: "876e3e68764853e9504fb590a6e21c36a73c70ebe48410279cc53429df6c9f72"
       url: "https://pub.dev"
     source: hosted
-    version: "2.15.0"
+    version: "2.15.1"
   amplify_api_dart:
     dependency: transitive
     description:
