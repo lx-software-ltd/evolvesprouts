@@ -71,12 +71,14 @@ export function useLandingPageCalendar({
         }
 
         setHasRefreshError(false);
-        setHeroEventContent(getLandingPageHeroEventContentFromPayload(payload, slug));
+        setHeroEventContent(
+          getLandingPageHeroEventContentFromPayload(payload, slug, locale),
+        );
         setBookingEventContent(
           getLandingPageBookingEventContentFromPayload(payload, slug, locale),
         );
         setStructuredDataContent(
-          getLandingPageStructuredDataContentFromPayload(payload, slug),
+          getLandingPageStructuredDataContentFromPayload(payload, slug, locale),
         );
       })
       .catch((error) => {

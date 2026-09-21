@@ -30,6 +30,7 @@ import type {
 import {
   MY_BEST_AUNTIE_TRAINING_COURSE_CALENDAR_SERVICE_KEY,
   MY_BEST_AUNTIE_BOOKING_SYSTEM,
+  resolveBookingVenueDisplay,
   type MyBestAuntieEventCohort,
 } from '@/lib/events-data';
 import { formatContentTemplate } from '@/content/content-field-utils';
@@ -124,9 +125,18 @@ export function MyBestAuntieBookingModal({
         ageGroupLabel: selectedServiceTierLabelText,
       }) || modalContent.title
     : modalContent.title;
-  const selectedVenueName = selectedCohort?.location_name ?? '';
-  const selectedVenueAddress = selectedCohort?.location_address ?? '';
-  const selectedVenueDirectionHref = selectedCohort?.location_url ?? '#';
+  const {
+    venueName: selectedVenueName,
+    venueAddress: selectedVenueAddress,
+    directionHref: selectedVenueDirectionHref,
+  } = resolveBookingVenueDisplay({
+    isVirtual: selectedCohort?.location === 'virtual',
+    locationTbc: selectedCohort?.location_tbc,
+    locationName: selectedCohort?.location_name,
+    locationAddress: selectedCohort?.location_address,
+    directionHref: selectedCohort?.location_url,
+    toBeConfirmedLabel: paymentModalContent.locationToBeConfirmedLabel,
+  });
 
   return (
     <ModalOverlay

@@ -86,6 +86,7 @@ export default async function LandingPageRoute({ params }: LandingPageRouteProps
   const heroEventContent = getLandingPageHeroEventContentFromPayload(
     calendarPayload,
     landingPageSlug,
+    locale,
   );
   const bookingEventContent = getLandingPageBookingEventContentFromPayload(
     calendarPayload,
@@ -95,6 +96,7 @@ export default async function LandingPageRoute({ params }: LandingPageRouteProps
   const structuredDataContent = getLandingPageStructuredDataContentFromPayload(
     calendarPayload,
     landingPageSlug,
+    locale,
   );
 
   const isBookFreeCall = landingPageSlug === 'book-a-free-call';

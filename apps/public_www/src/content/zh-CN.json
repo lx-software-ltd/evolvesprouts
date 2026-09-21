@@ -409,7 +409,7 @@
     "emptyStateLabel": "暂无即将举办的活动",
     "errorLabel": "暂时无法加载活动，请稍后再试。",
     "card": {
-      "emptyLocationLabel": "地点详情将稍后公布。",
+      "emptyLocationLabel": "待确认",
       "directionLabel": "查看路线",
       "ctaLabel": "立即预订",
       "fullyBookedLabel": "已满额",
@@ -1168,7 +1168,8 @@
     "placeholder": {
       "descriptionTemplate": "{title} - {brand}",
       "workshopsTitle": "工作坊"
-    }
+    },
+    "locationToBeConfirmedLabel": "待确认"
   },
   "myBestAuntie": {
     "hero": {
@@ -1554,6 +1555,7 @@
       "closeLabel": "关闭",
       "refundHint": "开课前 7 天可全额退款。",
       "directionLabel": "查看路线",
+      "locationToBeConfirmedLabel": "待确认",
       "reservationTitle": "报名信息",
       "selectedAgeGroupTitleTemplate": "{title}（适用于{ageGroupLabel}年龄组）",
       "reservationDescription": "请填写你的信息，我们会通过邮箱发送付款确认。",

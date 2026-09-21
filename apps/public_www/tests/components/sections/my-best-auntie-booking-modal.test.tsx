@@ -398,6 +398,30 @@ afterEach(() => {
 });
 
 describe('my-best-auntie booking modals footer content', () => {
+  it('shows To be confirmed and hides directions when the cohort venue is tbc', () => {
+    renderBookingModal({
+      selectedCohort: {
+        ...selectedCohort,
+        location_name: '',
+        location_address: '',
+        location_url: selectedCohort.location_url,
+        location_tbc: true,
+      },
+    });
+
+    expect(
+      screen.getByText(bookingModalContent.locationToBeConfirmedLabel),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(selectedCohort.location_name)).not.toBeInTheDocument();
+    expect(screen.queryByText(selectedCohort.location_address)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: bookingModalContent.directionLabel }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: bookingModalContent.submitLabel }),
+    ).toBeEnabled();
+  });
+
   it('exposes labelled dialog semantics for booking and thank-you modals', () => {
     const bookingModalView = renderBookingModal();
 

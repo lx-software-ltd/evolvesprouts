@@ -484,7 +484,76 @@ describe('events-data', () => {
 
     const events = normalizeEvents(payload, enContent.events);
     expect(events[0]).toMatchObject({
-      locationName: 'In Person',
+      locationName: enContent.events.card.emptyLocationLabel,
+      isLocationTbc: true,
+    });
+    expect(events[0]?.directionHref).toBeUndefined();
+  });
+
+  it('treats location_tbc as to be confirmed even when a leftover venue name is present', () => {
+    const payload = {
+      data: [
+        {
+          title: 'TBC venue event',
+          location: 'physical',
+          location_tbc: true,
+          location_name: 'Evolve Sprouts',
+          location_address: '507, 5/F',
+          location_url: 'https://www.google.com/maps/dir/?api=1&destination=22.3%2C114.1',
+          dates: [
+            {
+              start_datetime: '2026-10-10T01:00:00Z',
+            },
+          ],
+        },
+      ],
+    };
+
+    const events = normalizeEvents(payload, enContent.events);
+    expect(events[0]).toMatchObject({
+      locationName: enContent.common.locationToBeConfirmedLabel,
+      isLocationTbc: true,
+    });
+    expect(events[0]?.locationAddress).toBeUndefined();
+    expect(events[0]?.directionHref).toBeUndefined();
+  });
+
+  it('normalizes MBA cohorts with location_tbc and no venue as to be confirmed', () => {
+    const payload = {
+      events: [
+        {
+          slug: 'my-best-auntie-1-3-oct-26',
+          service_type: 'training_course',
+          booking_system: 'my-best-auntie-booking',
+          service_tier: '1-3',
+          cohort: 'oct-26',
+          title: 'My Best Auntie 1-3 - Oct 26',
+          location: 'physical',
+          location_tbc: true,
+          location_name: null,
+          location_address: null,
+          location_url: '',
+          dates: [
+            {
+              part: 1,
+              start_datetime: '2026-10-10T01:00:00Z',
+              end_datetime: '2026-10-10T03:00:00Z',
+            },
+          ],
+          price: 9000,
+          currency: 'HKD',
+        },
+      ],
+    };
+
+    const cohorts = normalizeMyBestAuntieCohortsFromPayload(payload);
+    expect(cohorts).toHaveLength(1);
+    expect(cohorts[0]).toMatchObject({
+      slug: 'my-best-auntie-1-3-oct-26',
+      location_tbc: true,
+      location_name: '',
+      location_address: '',
+      location_url: '',
     });
   });
 

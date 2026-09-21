@@ -12,6 +12,7 @@ const localeFiles = ['en.json', 'zh-CN.json', 'zh-HK.json'] as const;
 
 const REQUIRED_NON_EMPTY_COPY_KEYS = [
   'common.accessibility.carouselRoleDescription',
+  'common.locationToBeConfirmedLabel',
   'common.shell.skipToMainContentLabel',
   'common.shell.environmentBadgeLabel',
   'resources.formFirstNameLabel',
