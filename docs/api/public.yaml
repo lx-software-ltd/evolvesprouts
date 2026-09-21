@@ -3831,6 +3831,7 @@ components:
         - is_fully_booked
         - location
         - location_url
+        - location_tbc
         - dates
         - tags
         - categories
@@ -3876,22 +3877,35 @@ components:
           type: string
           nullable: true
           description: >
-            Venue display name; derivation matches `location_url`. When the resolved
+            Venue display name; derivation matches `location_url`. Null when
+            `location_tbc` is true or the offering is virtual. When the resolved
             location row has no display name but matches a linked partner organization's
             CRM location (`organizations.location_id`), the API uses that partner's
             `organizations.name` instead of `null`.
         location_address:
           type: string
           nullable: true
-          description: Venue address line; derivation matches `location_url`.
+          description: >
+            Venue address line; derivation matches `location_url`. Null when
+            `location_tbc` is true or the offering is virtual.
+        location_tbc:
+          type: boolean
+          description: >
+            True when the offering is physical and neither the primary session
+            slot nor the instance has a location. The parent service default
+            location is admin-only and does not resolve these fields. Public
+            clients should show a to-be-confirmed venue label and hide
+            directions. Always false for virtual offerings.
         location_url:
           type: string
           description: >
             Google Maps directions URL derived server-side from venue coordinates
             when available, otherwise from the URL-encoded address. Empty string
-            for virtual offerings or when no location metadata is on file. Location fields
-            resolve from the primary session slot's location when set, otherwise from the
-            instance's location, otherwise from the parent service's location.
+            for virtual offerings or when no location metadata is on file. Location
+            fields resolve from the primary session slot's location when set,
+            otherwise from the instance's location. The parent service default
+            location is not used. When `location_tbc` is true, this is an empty
+            string.
         external_url:
           type: string
           nullable: true

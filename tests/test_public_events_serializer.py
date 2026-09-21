@@ -375,6 +375,7 @@ def test_virtual_clears_location_and_url_even_with_coords() -> None:
     assert out["location_name"] is None
     assert out["location_address"] is None
     assert out["location_url"] == ""
+    assert out["location_tbc"] is False
 
 
 def test_physical_coord_location_url() -> None:
@@ -412,6 +413,7 @@ def test_no_location_empty_url() -> None:
     inst.location = None
     out = public_events._serialize_public_event(inst, enrollment_counts={})
     assert out["location_url"] == ""
+    assert out["location_tbc"] is True
 
 
 def test_primary_location_prefers_slot_over_instance_and_service() -> None:
@@ -425,6 +427,7 @@ def test_primary_location_prefers_slot_over_instance_and_service() -> None:
     inst.location = inst_loc
     out = public_events._serialize_public_event(inst, enrollment_counts={})
     assert out["location_name"] == "SlotVenue"
+    assert out["location_tbc"] is False
 
 
 def test_primary_location_falls_back_to_instance_when_slot_unset() -> None:
@@ -437,9 +440,10 @@ def test_primary_location_falls_back_to_instance_when_slot_unset() -> None:
     inst.location = inst_loc
     out = public_events._serialize_public_event(inst, enrollment_counts={})
     assert out["location_name"] == "InstVenue"
+    assert out["location_tbc"] is False
 
 
-def test_primary_location_falls_back_to_service_when_slot_and_instance_unset() -> None:
+def test_primary_location_does_not_use_service_when_slot_and_instance_unset() -> None:
     service = _event_service()
     svc_loc = SimpleNamespace(name="SvcVenue", address="V1", lat=None, lng=None)
     service.location = svc_loc
@@ -447,7 +451,10 @@ def test_primary_location_falls_back_to_service_when_slot_and_instance_unset() -
     inst.session_slots[0].location = None
     inst.location = None
     out = public_events._serialize_public_event(inst, enrollment_counts={})
-    assert out["location_name"] == "SvcVenue"
+    assert out["location_name"] is None
+    assert out["location_address"] is None
+    assert out["location_url"] == ""
+    assert out["location_tbc"] is True
 
 
 def test_primary_location_all_null() -> None:
@@ -459,6 +466,7 @@ def test_primary_location_all_null() -> None:
     out = public_events._serialize_public_event(inst, enrollment_counts={})
     assert out["location_name"] is None
     assert out["location_address"] is None
+    assert out["location_tbc"] is True
 
 
 def test_partner_venue_location_name_falls_back_to_organization_name() -> None:

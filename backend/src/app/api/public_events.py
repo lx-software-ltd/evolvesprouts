@@ -181,15 +181,17 @@ def _resolve_primary_location(
     instance: ServiceInstance,
     slots: list[InstanceSessionSlot],
 ) -> Location | None:
+    """Resolve the public venue from the primary slot, then the instance.
+
+    The parent service default location is admin-only and must not appear on
+    the public calendar. A physical offering with no slot or instance venue is
+    treated as to-be-confirmed by the serializer.
+    """
     if slots and slots[0].location is not None:
         return slots[0].location
     if instance.location is not None:
         return instance.location
-    # Public calendar query eagerly loads ``instance.service`` (and ``Service.location``).
-    service = getattr(instance, "service", None)
-    if service is None:
-        return None
-    return service.location
+    return None
 
 
 def _resolve_primary_price(
@@ -371,6 +373,7 @@ def _serialize_public_event(
 
     primary_location = _resolve_primary_location(instance, slots)
     is_virtual = _is_virtual_delivery_mode(instance, service)
+    location_tbc = (not is_virtual) and primary_location is None
 
     location_name = (
         None
@@ -422,6 +425,7 @@ def _serialize_public_event(
         "location_name": location_name,
         "location_address": location_address,
         "location_url": location_url,
+        "location_tbc": location_tbc,
         "dates": dates,
         "tags": _resolve_tags(instance, service_tier=service_tier),
         "categories": _resolve_categories(service),

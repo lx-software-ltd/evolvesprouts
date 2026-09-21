@@ -4799,11 +4799,13 @@ export interface components {
             booking_system?: string;
             /** @enum {string} */
             location: "virtual" | "physical";
-            /** @description Venue display name; derivation matches `location_url`. When the resolved location row has no display name but matches a linked partner organization's CRM location (`organizations.location_id`), the API uses that partner's `organizations.name` instead of `null`. */
+            /** @description Venue display name; derivation matches `location_url`. Null when `location_tbc` is true or the offering is virtual. When the resolved location row has no display name but matches a linked partner organization's CRM location (`organizations.location_id`), the API uses that partner's `organizations.name` instead of `null`. */
             location_name?: string | null;
-            /** @description Venue address line; derivation matches `location_url`. */
+            /** @description Venue address line; derivation matches `location_url`. Null when `location_tbc` is true or the offering is virtual. */
             location_address?: string | null;
-            /** @description Google Maps directions URL derived server-side from venue coordinates when available, otherwise from the URL-encoded address. Empty string for virtual offerings or when no location metadata is on file. Location fields resolve from the primary session slot's location when set, otherwise from the instance's location, otherwise from the parent service's location. */
+            /** @description True when the offering is physical and neither the primary session slot nor the instance has a location. The parent service default location is admin-only and does not resolve these fields. Public clients should show a to-be-confirmed venue label and hide directions. Always false for virtual offerings. */
+            location_tbc: boolean;
+            /** @description Google Maps directions URL derived server-side from venue coordinates when available, otherwise from the URL-encoded address. Empty string for virtual offerings or when no location metadata is on file. Location fields resolve from the primary session slot's location when set, otherwise from the instance's location. The parent service default location is not used. When `location_tbc` is true, this is an empty string. */
             location_url: string;
             /** @description Optional external registration URL. Uses `service_instances.external_url` when set, falling back to `service_instances.eventbrite_event_url` for backward compatibility. */
             external_url?: string | null;
