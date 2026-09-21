@@ -356,7 +356,7 @@ export function InstanceFormFields({
               <option value="">
                 {isLoadingLocations
                   ? "Loading locations..."
-                  : "Select location"}
+                  : "To be confirmed"}
               </option>
               {effectiveLocationId && !locationExists ? (
                 <option value={effectiveLocationId}>
@@ -380,6 +380,12 @@ export function InstanceFormFields({
               placeholder="Location UUID"
             />
           )}
+          {!value.locationId.trim() ? (
+            <p className="mt-1 text-xs text-slate-500">
+              Public website shows To be confirmed until a venue is saved on this
+              instance or its slots. The service default is admin-only.
+            </p>
+          ) : null}
         </div>
       </AdminFieldGrid>
       <AdminFieldGrid columns={4}>

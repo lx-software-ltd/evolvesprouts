@@ -350,15 +350,16 @@ function collectDistinctLocationLabels(
 
 /**
  * Distinct venue labels for instance default, session slots, and partner org venues.
+ * The parent service default (`resolvedLocationId` when `locationId` is empty) is
+ * admin-only and does not count as a public venue.
  */
 export function formatInstanceSlotLocationSummary(
   instance: ServiceInstance,
   locationById: Map<string, LocationSummary>
 ): string {
   const idSequence: string[] = [];
-  const resolved = instance.locationId ?? instance.resolvedLocationId;
-  if (resolved?.trim()) {
-    idSequence.push(resolved);
+  if (instance.locationId?.trim()) {
+    idSequence.push(instance.locationId);
   }
   for (const slot of orderSessionSlotsForDisplay(instance.sessionSlots)) {
     if (slot.locationId?.trim()) {
@@ -372,7 +373,7 @@ export function formatInstanceSlotLocationSummary(
   }
   const labels = collectDistinctLocationLabels(locationById, idSequence);
   if (labels.length === 0) {
-    return '-';
+    return 'To be confirmed';
   }
   return labels.join(' · ');
 }

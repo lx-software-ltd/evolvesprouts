@@ -669,6 +669,79 @@ describe('format helpers', () => {
     expect(formatInstanceSlotLocationSummary(instance, locById)).toBe('Hall A · Co');
   });
 
+  it('treats a service-only resolved location as to be confirmed', () => {
+    const locById = new Map([
+      [
+        'loc-service',
+        {
+          id: 'loc-service',
+          name: 'Service Hall',
+          areaId: 'area-1',
+          address: null,
+          lat: null,
+          lng: null,
+          createdAt: null,
+          updatedAt: null,
+          lockedFromPartnerOrg: false,
+          partnerOrganizationLabels: [],
+          partnerOrganizationIds: [],
+        },
+      ],
+    ]);
+    const instance: ServiceInstance = {
+      id: 'i-tbc',
+      serviceId: 's1',
+      parentServiceTitle: null,
+      parentServiceTier: null,
+      parentServiceType: null,
+      parentServiceKey: null,
+      title: null,
+      slug: 'fmt-inst-tbc',
+      description: null,
+      coverImageS3Key: null,
+      status: 'scheduled',
+      deliveryMode: null,
+      locationId: null,
+      maxCapacity: null,
+      capacityLeftOverride: null,
+      capacityLeftEffective: null,
+      waitlistEnabled: false,
+      eventbriteSyncStatus: 'pending',
+      externalUrl: null,
+      partnerOrganizations: [],
+      instructorId: null,
+      cohort: null,
+      notes: null,
+      tagIds: [],
+      createdBy: 'u',
+      createdAt: null,
+      updatedAt: null,
+      resolvedTitle: null,
+      resolvedSlug: 'fmt-inst-tbc',
+      resolvedDescription: null,
+      resolvedCoverImageS3Key: null,
+      resolvedDeliveryMode: null,
+      resolvedLocationId: 'loc-service',
+      sessionSlots: [
+        {
+          id: 'slot-1',
+          instanceId: 'i-tbc',
+          locationId: null,
+          startsAt: '2026-01-01T10:00:00Z',
+          endsAt: null,
+          sortOrder: 0,
+        },
+      ],
+      trainingDetails: null,
+      resolvedTrainingDetails: null,
+      eventTicketTiers: [],
+      resolvedEventTicketTiers: [],
+      consultationDetails: null,
+      resolvedConsultationDetails: null,
+    };
+    expect(formatInstanceSlotLocationSummary(instance, locById)).toBe('To be confirmed');
+  });
+
   it('uses earliest ordered slot time for instance sort key', () => {
     const slots: SessionSlot[] = [
       { id: 'late', instanceId: null, locationId: null, startsAt: '2026-02-01T10:00:00Z', endsAt: null, sortOrder: 2 },
