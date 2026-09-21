@@ -10,13 +10,13 @@ requires-python = ">=3.12"
 dependencies = [
   "alembic==1.20.0",
   "boto3==1.43.93",
-  "pyjwt[crypto]==2.13.0",
+  "pyjwt[crypto]==2.14.0",
   "pydantic==2.13.5",
   "psycopg[binary]==3.3.5",
   "sqlalchemy==2.0.52",
-  "phonenumbers==9.0.38",
+  "phonenumbers==9.0.39",
   "reportlab==5.0.1",
-  "pypdf==6.17.0",
+  "pypdf==6.18.1",
   "segno==1.6.6",
 ]
 
