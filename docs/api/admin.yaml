@@ -8019,8 +8019,10 @@ components:
           format: uuid
           nullable: true
           description: >
-            Effective venue: instance location_id when set, otherwise the parent
-            service default location_id.
+            Instance location_id when set, otherwise the parent service default
+            location_id. This is admin-only catalog inheritance. The public
+            calendar does not use this value; physical offerings with no
+            instance or slot venue emit `location_tbc: true` instead.
         resolved_training_details:
           type: object
           nullable: true
