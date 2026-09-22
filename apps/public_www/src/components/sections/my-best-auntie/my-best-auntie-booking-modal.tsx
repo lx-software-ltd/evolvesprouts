@@ -1,9 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import { BookingFlowModalShell } from '@/components/sections/booking-modal/booking-flow-modal-shell';
-import { BookingShareLinkButton } from '@/components/sections/booking-modal/booking-share-link-button';
 import { useBookingModalScaffold } from '@/components/sections/booking-modal/use-booking-modal-scaffold';
 import {
   type BookingEventDetailPart,
@@ -22,13 +21,6 @@ import {
   type Locale,
   type MyBestAuntieModalContent,
 } from '@/content';
-import {
-  MY_BEST_AUNTIE_BOOKING_HASH,
-  buildBookingDeepLinkUrl,
-  resolveBookingShareCode,
-} from '@/lib/booking-deep-link';
-import { localizeHref } from '@/lib/locale-routing';
-import { ROUTES } from '@/lib/routes';
 import {
   MY_BEST_AUNTIE_TRAINING_COURSE_CALENDAR_SERVICE_KEY,
   MY_BEST_AUNTIE_BOOKING_SYSTEM,
@@ -83,10 +75,6 @@ export function MyBestAuntieBookingModal({
     dialogTitleId,
     dialogDescriptionId,
   } = useBookingModalScaffold(onClose);
-  const [appliedShareCode, setAppliedShareCode] = useState({
-    code: '',
-    fromReferral: false,
-  });
 
   const originalAmount = selectedCohort?.price ?? 0;
 
@@ -143,24 +131,6 @@ export function MyBestAuntieBookingModal({
     directionHref: selectedCohort?.location_url,
     toBeConfirmedLabel: getContent(locale).common.locationToBeConfirmedLabel,
   });
-  const shareCode = resolveBookingShareCode({
-    prefilledCode: prefilledDiscountCode,
-    appliedCode: appliedShareCode.code,
-    appliedFromReferral: appliedShareCode.fromReferral,
-  });
-  const shareUrl =
-    typeof window === 'undefined'
-      ? ''
-      : buildBookingDeepLinkUrl({
-          origin: window.location.origin,
-          pathname: localizeHref(ROUTES.servicesMyBestAuntieTrainingCourse, locale),
-          bookingSystem: MY_BEST_AUNTIE_BOOKING_SYSTEM,
-          serviceTier: selectedCohort?.service_tier ?? '',
-          cohortSlug: selectedCohort?.slug ?? '',
-          hash: MY_BEST_AUNTIE_BOOKING_HASH,
-          shareCode,
-        });
-
   return (
     <BookingFlowModalShell
       paymentModalContent={paymentModalContent}
@@ -169,18 +139,6 @@ export function MyBestAuntieBookingModal({
       dialogTitleId={dialogTitleId}
       dialogDescriptionId={dialogDescriptionId}
       onClose={onClose}
-      headerActions={
-        <BookingShareLinkButton
-          url={shareUrl}
-          copyLinkLabel={paymentModalContent.copyLinkLabel}
-          copyLinkCopiedLabel={paymentModalContent.copyLinkCopiedLabel}
-          copyLinkFallbackLabel={paymentModalContent.copyLinkFallbackLabel}
-          copyLinkCopiedAnnouncement={paymentModalContent.copyLinkCopiedAnnouncement}
-          serviceTier={selectedServiceTierLabelText || selectedCohort?.service_tier || ''}
-          cohortLabel={selectedCohortDateLabelText}
-          analyticsSectionId={analyticsSectionId}
-        />
-      }
     >
             <BookingEventDetails
               locale={locale}
@@ -229,7 +187,6 @@ export function MyBestAuntieBookingModal({
               metaPixelContentName={metaPixelContentName}
               captchaWidgetAction={captchaWidgetAction}
               thankYouRecapLabels={thankYouRecapLabels}
-              onAppliedShareCodeChange={setAppliedShareCode}
               onSubmitReservation={onSubmitReservation}
             />
     </BookingFlowModalShell>

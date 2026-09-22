@@ -1609,10 +1609,6 @@
       "emailValidationError": "Please enter a valid email address.",
       "submitErrorMessage": "Unable to submit reservation right now. Please try again.",
       "closeOverlayLabel": "Close modal",
-      "copyLinkLabel": "Copy link",
-      "copyLinkCopiedLabel": "Link copied",
-      "copyLinkFallbackLabel": "Booking link",
-      "copyLinkCopiedAnnouncement": "Booking link copied",
       "fpsQrCodeLabel": "FPS payment QR code",
       "consultationPicker": {
         "pickDateTimeIntro": "Pick a date and time that suits you:",

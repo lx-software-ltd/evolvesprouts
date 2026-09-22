@@ -91,8 +91,6 @@ interface BookingReservationFormProps {
   referralAppliedNote?: string;
   referralAppliedAnnouncement?: string;
   initiallyInteracted?: boolean;
-  /** Fires when a discount code is successfully applied, and again if it clears. */
-  onAppliedShareCodeChange?: (applied: { code: string; fromReferral: boolean }) => void;
   onSubmitReservation: (summary: ReservationSummary) => void;
 }
 
@@ -128,7 +126,6 @@ export function BookingReservationForm({
   referralAppliedNote = '',
   referralAppliedAnnouncement = '',
   initiallyInteracted = false,
-  onAppliedShareCodeChange,
   onSubmitReservation,
 }: BookingReservationFormProps) {
   const requiresServiceInstanceSlug =
@@ -193,13 +190,6 @@ export function BookingReservationForm({
     prefilledDiscountCode,
     referralAppliedAnnouncement,
   });
-
-  useEffect(() => {
-    onAppliedShareCodeChange?.({
-      code: discountRule ? discountCode : '',
-      fromReferral: autoAppliedFromReferral,
-    });
-  }, [autoAppliedFromReferral, discountCode, discountRule, onAppliedShareCodeChange]);
 
   const totalAmount = useMemo(() => {
     return applyDiscount(originalPriceAmount, discountRule);

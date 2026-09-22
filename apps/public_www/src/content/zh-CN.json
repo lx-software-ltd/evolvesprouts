@@ -1609,10 +1609,6 @@
       "emailValidationError": "请输入有效的邮箱地址。",
       "submitErrorMessage": "暂时无法提交预约，请稍后重试。",
       "closeOverlayLabel": "关闭弹窗",
-      "copyLinkLabel": "复制链接",
-      "copyLinkCopiedLabel": "链接已复制",
-      "copyLinkFallbackLabel": "预约链接",
-      "copyLinkCopiedAnnouncement": "预约链接已复制",
       "fpsQrCodeLabel": "FPS 付款二维码",
       "consultationPicker": {
         "pickDateTimeIntro": "请选择适合您的日期和时段：",
