@@ -15,10 +15,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { useSalesDailyPlan } from '@/hooks/use-sales-daily-plan';
 import type {
   SalesDailyPlanFeedback,
+  SalesDailyPlanInstructionScope,
   SalesDailyPlanMemoryEntry,
   SalesDailyPlanOutreach,
   SalesDailyPlanPriority,
   SalesDailyPlanSnooze,
+  SalesDailyPlanSuppressedItem,
 } from '@/types/sales-daily-plan';
 import {
   SALES_DAILY_PLAN_OPERATOR_INPUT_MAX,
@@ -85,6 +87,12 @@ function MemoryEntry({ entry }: { entry: SalesDailyPlanMemoryEntry }) {
   );
 }
 
+const SUPPRESSED_REASON_LABELS: Record<SalesDailyPlanSuppressedItem['reason'], string> = {
+  done_today: 'Done until 6:00 HKT',
+  dismissed: 'Not relevant',
+  snoozed: 'Snoozed',
+};
+
 function appendChip(current: string, chip: string): string {
   if (!current.trim()) {
     return chip;
@@ -100,18 +108,21 @@ export function SalePlanOfTheDayCard() {
   const {
     plan,
     memory,
+    instructions,
     isLoading,
     loadError,
     generateError,
     isGenerating,
     lastJob,
     generate,
+    removeInstruction,
     setPriorityDone,
     annotateItem,
     askFollowUp,
     loadComparison,
   } = useSalesDailyPlan();
   const [refinement, setRefinement] = useState('');
+  const [refinementScope, setRefinementScope] = useState<SalesDailyPlanInstructionScope>('today');
   const [pendingPriorityKey, setPendingPriorityKey] = useState<string | null>(null);
   const [assigneeFilter, setAssigneeFilter] = useState<'all' | 'mine'>('all');
   const [showCompare, setShowCompare] = useState(false);
@@ -161,10 +172,11 @@ export function SalePlanOfTheDayCard() {
     : assignedOutreach.filter((item) => !salesDailyPlanItemIsSnoozed(item.snoozedUntil, nowMs));
 
   const doneCount = visiblePriorities.filter((item) => item.done).length;
+  const hiddenItems = plan?.suppressedItems ?? [];
 
   async function handleGenerate() {
     const note = refinement.trim();
-    const succeeded = await generate(note || undefined);
+    const succeeded = await generate(note || undefined, note ? refinementScope : undefined);
     if (succeeded) {
       setRefinement('');
     }
@@ -270,9 +282,11 @@ export function SalePlanOfTheDayCard() {
         <p className='text-xs text-slate-500'>
           Sales-focused advice for today from your pipeline, unanswered messages,
           unpaid invoices, catalogue, and saved insights. A new plan is generated
-          every morning at 6:00 HKT. You can also refresh it here. Refinements stay
-          in memory until you reset them in Sales configuration. Suggestions are
-          not sent automatically.
+          every morning at 6:00 HKT. You can also refresh it here. Ticked tasks stay
+          hidden until the next 6:00 HKT. A refinement lasts until then, or until
+          you remove it when you choose Keep until removed. Reset in Sales
+          configuration clears plans, instructions, and hidden tasks. Suggestions
+          are not sent automatically.
         </p>
         {error ? (
           <StatusBanner variant='error' title='Sale Plan of the Day'>
@@ -450,6 +464,83 @@ export function SalePlanOfTheDayCard() {
               </div>
             ) : null}
 
+            {hiddenItems.length > 0 ? (
+              <AdminDisclosure
+                id='sale-plan-hidden'
+                title='Hidden this run'
+                summary={String(hiddenItems.length)}
+              >
+                <ul className='space-y-2'>
+                  {hiddenItems.map((item) => (
+                    <li
+                      key={`${item.itemKind}-${item.itemKey}`}
+                      className='flex flex-wrap items-center justify-between gap-2'
+                    >
+                      <span className='text-sm text-slate-700'>
+                        {item.title}
+                        <span className='text-slate-500'>
+                          {' '}
+                          · {SUPPRESSED_REASON_LABELS[item.reason]}
+                        </span>
+                      </span>
+                      <Button
+                        type='button'
+                        size='sm'
+                        variant='outline'
+                        disabled={isGenerating}
+                        onClick={() => {
+                          void withActionError(async () => {
+                            if (item.reason === 'snoozed') {
+                              await annotateItem({
+                                itemKind: item.itemKind,
+                                itemKey: item.itemKey,
+                                snooze: 'clear',
+                              });
+                              return;
+                            }
+                            if (item.reason === 'dismissed') {
+                              await annotateItem({
+                                itemKind: item.itemKind,
+                                itemKey: item.itemKey,
+                                feedback: null,
+                              });
+                              return;
+                            }
+                            await setPriorityDone(
+                              {
+                                title: item.title,
+                                why: '',
+                                action: '',
+                                kind: null,
+                                urgency: 2,
+                                sources: [],
+                                leadId: item.leadId,
+                                invoiceId: item.invoiceId,
+                                conversationId: null,
+                                channel: null,
+                                assignedTo: null,
+                                itemKey: item.itemKey,
+                                done: true,
+                                feedback: null,
+                                snoozedUntil: null,
+                                compareStatus: null,
+                                instructionId: null,
+                                fromInstruction: false,
+                                resurfaced: false,
+                              },
+                              false,
+                            );
+                          });
+                        }}
+                      >
+                        Show again
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </AdminDisclosure>
+            ) : null}
+
             {plan.productFocus ? (
               <AdminDisclosure id='sale-plan-product-focus' title='Product focus'>
                 <p className='whitespace-pre-wrap text-sm text-slate-700'>{plan.productFocus}</p>
@@ -549,8 +640,63 @@ export function SalePlanOfTheDayCard() {
           </AdminDisclosure>
         ) : null}
 
+        {instructions.length > 0 ? (
+          <div className='space-y-2'>
+            <h3 className='text-sm font-medium text-slate-900'>Active instructions</h3>
+            <ul className='space-y-2'>
+              {instructions.map((entry) => (
+                <li
+                  key={entry.id}
+                  className='flex flex-wrap items-start justify-between gap-2'
+                >
+                  <p className='text-sm text-slate-700'>
+                    <span className='font-medium text-slate-900'>
+                      {entry.scope === 'standing' ? 'Kept' : 'Today'}
+                    </span>
+                    {' '}
+                    {entry.text}
+                  </p>
+                  <Button
+                    type='button'
+                    size='sm'
+                    variant='outline'
+                    disabled={isGenerating}
+                    onClick={() => {
+                      void withActionError(() => removeInstruction(entry.id));
+                    }}
+                  >
+                    Remove
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
         <div className='space-y-2'>
-          <Label htmlFor='sale-plan-refinement'>Refinement for next insight</Label>
+          <Label htmlFor='sale-plan-refinement'>Refinement for the next insight</Label>
+          <div className='flex flex-wrap gap-1.5' role='group' aria-label='Refinement lifetime'>
+            <Button
+              type='button'
+              size='sm'
+              variant={refinementScope === 'today' ? 'secondary' : 'outline'}
+              aria-pressed={refinementScope === 'today'}
+              disabled={isGenerating || isLoading}
+              onClick={() => setRefinementScope('today')}
+            >
+              Today only
+            </Button>
+            <Button
+              type='button'
+              size='sm'
+              variant={refinementScope === 'standing' ? 'secondary' : 'outline'}
+              aria-pressed={refinementScope === 'standing'}
+              disabled={isGenerating || isLoading}
+              onClick={() => setRefinementScope('standing')}
+            >
+              Keep until removed
+            </Button>
+          </div>
           <div className='flex flex-wrap gap-1.5'>
             {SALES_DAILY_PLAN_REFINEMENT_CHIPS.map((chip) => (
               <Button
@@ -572,7 +718,7 @@ export function SalePlanOfTheDayCard() {
             maxLength={SALES_DAILY_PLAN_OPERATOR_INPUT_MAX}
             rows={3}
             disabled={isGenerating || isLoading}
-            placeholder='Optional. Saved with the next plan and used as memory from then on.'
+            placeholder='Optional. Today only lasts until 6:00 HKT. Keep until removed is included in every later insight.'
           />
         </div>
 

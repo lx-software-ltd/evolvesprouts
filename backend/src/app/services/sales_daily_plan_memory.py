@@ -10,7 +10,9 @@ from sqlalchemy.orm import Session
 
 from app.db.models.sales_daily_plan import SalesDailyPlan
 from app.db.models.sales_daily_plan_job import SalesDailyPlanJob
-from app.services.sales_daily_plan_completions import delete_completions_for_reset
+from app.services.sales_daily_plan_identity import priority_identity
+from app.services.sales_daily_plan_instructions import delete_instructions_for_reset
+from app.services.sales_daily_plan_item_state import delete_item_states_for_reset
 from app.services.sales_daily_plan_payload import compact_priority_memory
 
 MEMORY_PLAN_LIMIT = 5
@@ -47,26 +49,58 @@ def load_prior_plans_for_context(
     *,
     limit: int = MEMORY_PLAN_LIMIT,
 ) -> list[dict[str, Any]]:
-    """Serialize recent plans oldest-first for the OpenRouter prompt."""
+    """Serialize recent plans oldest-first as compact prompt memory."""
     rows = list(reversed(list_recent_plans(session, limit=limit)))
-    memory: list[dict[str, Any]] = []
-    for plan in rows:
-        payload = plan.payload if isinstance(plan.payload, dict) else {}
-        memory.append(
+    return [compact_plan_for_prompt(plan) for plan in rows]
+
+
+def compact_plan_for_prompt(plan: SalesDailyPlan) -> dict[str, Any]:
+    """History the model may use. Omits drafts and per-item done flags."""
+    payload = plan.payload if isinstance(plan.payload, dict) else {}
+    priorities: list[dict[str, Any]] = []
+    for entry in payload.get("priorities") or []:
+        if not isinstance(entry, dict):
+            continue
+        title = str(entry.get("title") or "").strip()
+        if not title:
+            continue
+        priorities.append(
             {
-                "generated_at": _as_utc(plan.generated_at).isoformat(),
-                "operator_input": plan.operator_input,
-                "plan": payload,
+                "title": title,
+                "kind": entry.get("kind"),
+                "lead_id": entry.get("lead_id"),
+                "invoice_id": entry.get("invoice_id"),
+                "item_key": entry.get("item_key")
+                or priority_identity(
+                    kind=_text(entry.get("kind")),
+                    lead_id=entry.get("lead_id"),
+                    invoice_id=entry.get("invoice_id"),
+                    conversation_id=entry.get("conversation_id"),
+                    title=title,
+                    instruction_id=entry.get("instruction_id"),
+                ),
             }
         )
-    return memory
+    return {
+        "generated_at": _as_utc(plan.generated_at).isoformat(),
+        "operator_input": plan.operator_input,
+        "focus": str(payload.get("focus") or ""),
+        "product_focus": str(payload.get("product_focus") or ""),
+        "priorities": priorities,
+    }
 
 
 def reset_sales_daily_plan_memory(session: Session) -> None:
-    """Delete every stored daily plan, job, and refinement."""
-    delete_completions_for_reset(session)
+    """Delete plans, jobs, item state, and instructions."""
+    delete_item_states_for_reset(session)
+    delete_instructions_for_reset(session)
     session.execute(delete(SalesDailyPlanJob))
     session.execute(delete(SalesDailyPlan))
+
+
+def _text(value: Any) -> str | None:
+    text = str(value or "").strip()
+    return text or None
 
 
 def _as_utc(value: datetime) -> datetime:

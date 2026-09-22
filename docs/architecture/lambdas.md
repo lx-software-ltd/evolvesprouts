@@ -127,18 +127,22 @@ their primary responsibilities.
   `/v1/admin/leads/{id}/ai-suggestion/jobs/{job_id}` for status and timing),
   `/v1/admin/leads/{id}/ai-suggestion/jobs/{job_id}` (GET job status / duration),
   `/v1/admin/leads/daily-plan` (GET latest stored org-wide sales plan of the day
-  plus compact memory of the last five plans; optional `compare=true` adds
-  dropped/carried priority comparison / POST enqueues async generation on
-  `SalesDailyPlanFunction` via SQS with optional `operator_input`; poll
+  plus compact memory of the last five plans and active instructions; optional
+  `compare=true` adds dropped/carried priority comparison / POST enqueues async
+  generation on `SalesDailyPlanFunction` via SQS with optional `operator_input`
+  and `operator_input_scope`; poll
   `/v1/admin/leads/daily-plan/jobs/{job_id}` for status and timing /
-  DELETE resets all stored plans, jobs, and refinements; EventBridge also
+  DELETE resets stored plans, jobs, item state, and instructions; EventBridge also
   enqueues a new plan daily at 06:00 HKT via `SalesDailyPlanSchedulerFunction`),
   `/v1/admin/leads/daily-plan/jobs/{job_id}` (GET job status / duration),
+  `/v1/admin/leads/daily-plan/instructions` (GET active refinements / POST saves
+  one without generating) and
+  `/v1/admin/leads/daily-plan/instructions/{instruction_id}` (DELETE archives one),
   `/v1/admin/leads/daily-plan/priority-completions` (POST ticks or unticks a
-  priority; `plan_id` must match the latest insight or 409),
-  `/v1/admin/leads/daily-plan/item-annotations` (POST feedback, snooze, or
-  edited outreach draft on one priority or outreach row; `plan_id` must match
-  the latest insight or 409),
+  priority until the next 06:00 HKT; identity is org-wide),
+  `/v1/admin/leads/daily-plan/item-annotations` (POST org-wide feedback or snooze,
+  or an edited outreach draft; draft edits 409 when `plan_id` is not the latest
+  insight),
   `/v1/admin/leads/daily-plan/questions` (POST a follow-up about the stored
   plan JSON using the Sales Config OpenRouter model; model call is outside the
   DB session; `plan_id` must match the latest insight at request start or 409),
@@ -642,9 +646,10 @@ their primary responsibilities.
 - Purpose: generate an org-wide sales plan of the day from open pipeline, unanswered
   WhatsApp/Meta threads, unpaid issued invoices, published catalogue, and recent
   won/lost leads via OpenRouter
-  (`AwsApiProxyFunction`) with the last five persisted plans, recent contacts,
-  converted-client nurture rows, completed priorities, and any
-  `operator_input` as memory. Addresses the logged-in admin or, for the 06:00
+  (`AwsApiProxyFunction`) with compact prior plans, active instructions,
+  suppressed item state, recent contacts, converted-client nurture rows, and
+  completed priorities. After the model responds, suppressed identities are
+  removed and any omitted same-day instruction is appended. Addresses the logged-in admin or, for the 06:00
   HKT run, the Sales default assignee. Empty or non-JSON model output fails the
   job instead of storing a blank plan; the dashboard shows a short "invalid
   response" message rather than a raw `JSONDecodeError`. Persists

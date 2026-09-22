@@ -7,6 +7,8 @@ import type {
   SalesDailyPlanCompareStatus,
   SalesDailyPlanDroppedPriority,
   SalesDailyPlanFeedback,
+  SalesDailyPlanInstruction,
+  SalesDailyPlanInstructionScope,
   SalesDailyPlanItemKind,
   SalesDailyPlanJob,
   SalesDailyPlanJobStatus,
@@ -16,6 +18,8 @@ import type {
   SalesDailyPlanSnooze,
   SalesDailyPlanSnapshot,
   SalesDailyPlanStaleCounts,
+  SalesDailyPlanSuppressedItem,
+  SalesDailyPlanSuppressedReason,
 } from '@/types/sales-daily-plan';
 import {
   salesDailyPlanOutreachKey,
@@ -133,6 +137,9 @@ function parsePriority(value: unknown): SalesDailyPlan['priorities'][number] | n
     feedback: parseFeedback(value.feedback),
     snoozedUntil: asNullableString(value.snoozed_until),
     compareStatus,
+    instructionId: asNullableString(value.instruction_id),
+    fromInstruction: Boolean(value.from_instruction),
+    resurfaced: Boolean(value.resurfaced),
   };
 }
 
@@ -196,6 +203,7 @@ export function parseSalesDailyPlan(value: unknown): SalesDailyPlan | null {
     productFocus: asNullableString(value.product_focus) ?? '',
     offerRefinements: parseStringList(value.offer_refinements),
     risks: parseStringList(value.risks),
+    suppressedItems: parseSuppressedItems(value.suppressed_items),
     droppedPriorities: Array.isArray(value.dropped_priorities)
       ? value.dropped_priorities
           .map((entry) => parseDroppedPriority(entry))
@@ -269,18 +277,81 @@ export function parseSalesDailyPlanMemoryEntry(
   };
 }
 
+function parseSuppressedReason(value: unknown): SalesDailyPlanSuppressedReason | null {
+  const text = asNullableString(value);
+  if (text === 'done_today' || text === 'dismissed' || text === 'snoozed') {
+    return text;
+  }
+  return null;
+}
+
+function parseSuppressedItems(value: unknown): SalesDailyPlanSuppressedItem[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((entry) => {
+    if (!isRecord(entry)) {
+      return [];
+    }
+    const title = asNullableString(entry.title)?.trim() ?? '';
+    const itemKey = asNullableString(entry.item_key)?.trim() ?? '';
+    const reason = parseSuppressedReason(entry.reason);
+    if (!title || !itemKey || !reason) {
+      return [];
+    }
+    const kind = asNullableString(entry.item_kind) === 'outreach' ? 'outreach' : 'priority';
+    return [
+      {
+        title,
+        itemKey,
+        itemKind: kind,
+        reason,
+        leadId: asNullableString(entry.lead_id),
+        invoiceId: asNullableString(entry.invoice_id),
+      },
+    ];
+  });
+}
+
+function parseInstruction(value: unknown): SalesDailyPlanInstruction | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const id = asNullableString(value.id)?.trim() ?? '';
+  const text = asNullableString(value.text)?.trim() ?? '';
+  const scopeRaw = asNullableString(value.scope);
+  if (!id || !text || (scopeRaw !== 'today' && scopeRaw !== 'standing')) {
+    return null;
+  }
+  const scope = scopeRaw as SalesDailyPlanInstructionScope;
+  return {
+    id,
+    text,
+    scope,
+    activeUntil: asNullableString(value.active_until),
+    createdBy: asNullableString(value.created_by),
+    createdAt: asNullableString(value.created_at),
+  };
+}
+
 export function parseSalesDailyPlanSnapshot(value: unknown): SalesDailyPlanSnapshot {
   if (!isRecord(value)) {
-    return { plan: null, memory: [], job: null };
+    return { plan: null, memory: [], instructions: [], job: null };
   }
   const memory = Array.isArray(value.memory)
     ? value.memory
         .map((entry) => parseSalesDailyPlanMemoryEntry(entry))
         .filter((entry): entry is SalesDailyPlanMemoryEntry => entry !== null)
     : [];
+  const instructions = Array.isArray(value.instructions)
+    ? value.instructions
+        .map((entry) => parseInstruction(entry))
+        .filter((entry): entry is SalesDailyPlanInstruction => entry !== null)
+    : [];
   return {
     plan: parseSalesDailyPlan(value.plan),
     memory,
+    instructions,
     job: parseSalesDailyPlanJob(value.job),
   };
 }
@@ -298,12 +369,16 @@ export async function fetchSalesDailyPlan(options?: {
 
 export async function enqueueSalesDailyPlanJob(
   operatorInput?: string,
+  operatorInputScope?: 'today' | 'standing',
 ): Promise<SalesDailyPlanJob> {
   const trimmed = operatorInput?.trim() ?? '';
   const payload = await adminApiRequest<{ job?: unknown }>({
     endpointPath: '/v1/admin/leads/daily-plan',
     method: 'POST',
-    body: { operator_input: trimmed || null },
+    body: {
+      operator_input: trimmed || null,
+      ...(operatorInputScope ? { operator_input_scope: operatorInputScope } : {}),
+    },
     expectedSuccessStatuses: [202],
   });
   const job = parseSalesDailyPlanJob(payload.job);
@@ -363,6 +438,7 @@ export async function upsertSalesDailyPlanPriorityCompletion(input: {
   title: string;
   leadId?: string | null;
   invoiceId?: string | null;
+  itemKey?: string | null;
   done: boolean;
 }): Promise<SalesDailyPlan> {
   const payload = await adminApiRequest<{ plan?: unknown }>({
@@ -373,6 +449,7 @@ export async function upsertSalesDailyPlanPriorityCompletion(input: {
       title: input.title,
       lead_id: input.leadId ?? null,
       invoice_id: input.invoiceId ?? null,
+      item_key: input.itemKey ?? null,
       done: input.done,
     },
   });
@@ -431,6 +508,16 @@ export async function askSalesDailyPlanQuestion(
     throw new Error('Follow-up question response was empty.');
   }
   return plan;
+}
+
+export async function archiveSalesDailyPlanInstruction(
+  instructionId: string,
+): Promise<SalesDailyPlan | null> {
+  const payload = await adminApiRequest<{ plan?: unknown }>({
+    endpointPath: `/v1/admin/leads/daily-plan/instructions/${instructionId}`,
+    method: 'DELETE',
+  });
+  return parseSalesDailyPlan(payload.plan);
 }
 
 export async function resetSalesDailyPlanMemory(): Promise<void> {

@@ -21,6 +21,10 @@ export type SalesDailyPlanCompareStatus = 'new' | 'carried';
 
 export type SalesDailyPlanItemKind = 'priority' | 'outreach';
 
+export type SalesDailyPlanInstructionScope = 'today' | 'standing';
+
+export type SalesDailyPlanSuppressedReason = 'done_today' | 'dismissed' | 'snoozed';
+
 export interface SalesDailyPlanStaleCounts {
   newConversation: number;
   pipelineChanged: number;
@@ -44,6 +48,9 @@ export interface SalesDailyPlanPriority {
   feedback: SalesDailyPlanFeedback | null;
   snoozedUntil: string | null;
   compareStatus: SalesDailyPlanCompareStatus | null;
+  instructionId: string | null;
+  fromInstruction: boolean;
+  resurfaced: boolean;
 }
 
 export interface SalesDailyPlanOutreach {
@@ -83,6 +90,7 @@ export interface SalesDailyPlan {
   productFocus: string;
   offerRefinements: string[];
   risks: string[];
+  suppressedItems: SalesDailyPlanSuppressedItem[];
   droppedPriorities: SalesDailyPlanDroppedPriority[];
   questions: SalesDailyPlanQuestion[];
   generatedAt: string | null;
@@ -101,6 +109,24 @@ export interface SalesDailyPlan {
   latestContactAt: string | null;
 }
 
+export interface SalesDailyPlanSuppressedItem {
+  title: string;
+  itemKey: string;
+  itemKind: SalesDailyPlanItemKind;
+  reason: SalesDailyPlanSuppressedReason;
+  leadId: string | null;
+  invoiceId: string | null;
+}
+
+export interface SalesDailyPlanInstruction {
+  id: string;
+  text: string;
+  scope: SalesDailyPlanInstructionScope;
+  activeUntil: string | null;
+  createdBy: string | null;
+  createdAt: string | null;
+}
+
 export interface SalesDailyPlanMemoryEntry {
   id: string;
   generatedAt: string | null;
@@ -113,6 +139,7 @@ export interface SalesDailyPlanMemoryEntry {
 export interface SalesDailyPlanSnapshot {
   plan: SalesDailyPlan | null;
   memory: SalesDailyPlanMemoryEntry[];
+  instructions: SalesDailyPlanInstruction[];
   job: SalesDailyPlanJob | null;
 }
 

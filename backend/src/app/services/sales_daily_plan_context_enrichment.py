@@ -5,7 +5,6 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session
@@ -13,16 +12,18 @@ from sqlalchemy.orm import Session
 from app.db.models.enums import FunnelStage, LeadEventType
 from app.db.models.note import Note
 from app.db.models.sales_lead import SalesLead, SalesLeadEvent
-from app.services.sales_daily_plan_annotations import load_item_feedback_memory
-from app.services.sales_daily_plan_completions import (
-    list_completions_for_plan,
-    priority_key,
-)
+from app.services.sales_daily_plan_identity import priority_identity
+from app.services.sales_daily_plan_item_state import load_done_identities
 from app.services.sales_daily_plan_memory import list_recent_plans
+from app.services.sales_daily_plan_time import (
+    BUSINESS_TZ as _BUSINESS_TZ,
+)
+from app.services.sales_daily_plan_time import (
+    current_business_day_start,
+    in_business_tz,
+)
 
 _CLOSED_STAGES = (FunnelStage.CONVERTED, FunnelStage.LOST)
-# Product jurisdiction wall time (same IANA zone as the 06:00 HKT schedule).
-_BUSINESS_TZ = ZoneInfo("Asia/Hong_Kong")
 MAX_STILL_OPEN = 15
 MAX_OUTCOMES = 12
 MAX_CHASE_NOTE_CHARS = 240
@@ -40,9 +41,15 @@ def enrich_sales_daily_plan_context(
     context["trends"] = build_week_over_week_trends(
         session, now=now, funnel=context.get("funnel")
     )
-    context["yesterday_follow_through"] = build_yesterday_follow_through(session)
+    context["yesterday_follow_through"] = build_yesterday_follow_through(
+        session, now=now
+    )
     context["recent_outcome_memory"] = build_outcome_memory(session)
-    context["item_feedback_memory"] = load_item_feedback_memory(session, now=now)
+    context["item_feedback_memory"] = [
+        item
+        for item in (context.get("suppressed_items") or [])
+        if item.get("reason") in {"dismissed", "snoozed"}
+    ]
     return context
 
 
@@ -141,18 +148,27 @@ def build_week_over_week_trends(
     }
 
 
-def build_yesterday_follow_through(session: Session) -> dict[str, Any]:
-    """How many priorities from the latest stored plan were ticked."""
+def build_yesterday_follow_through(
+    session: Session, *, now: datetime | None = None
+) -> dict[str, Any]:
+    """Priorities from the previous business day that are still unfinished."""
+    empty = {"previous_priority_count": 0, "completed_count": 0, "still_open": []}
     if not hasattr(session, "scalars"):
-        return {"previous_priority_count": 0, "completed_count": 0, "still_open": []}
-    plans = list_recent_plans(session, limit=1)
-    if not plans:
-        return {"previous_priority_count": 0, "completed_count": 0, "still_open": []}
-    plan = plans[0]
+        return empty
+    current = now or datetime.now(UTC)
+    boundary = current_business_day_start(current)
+    plan = next(
+        (
+            row
+            for row in list_recent_plans(session, limit=8)
+            if _as_utc(row.generated_at) < boundary
+        ),
+        None,
+    )
+    if plan is None:
+        return empty
     payload = plan.payload if isinstance(plan.payload, dict) else {}
-    completions = {
-        row.priority_key for row in list_completions_for_plan(session, plan.id)
-    }
+    done = load_done_identities(session)
     still_open: list[dict[str, Any]] = []
     completed = 0
     total = 0
@@ -163,14 +179,22 @@ def build_yesterday_follow_through(session: Session) -> dict[str, Any]:
         if not title:
             continue
         total += 1
-        key = priority_key(title, entry.get("lead_id"), entry.get("invoice_id"))
-        if key in completions:
+        key = str(entry.get("item_key") or "") or priority_identity(
+            kind=_text(entry.get("kind")),
+            lead_id=entry.get("lead_id"),
+            invoice_id=entry.get("invoice_id"),
+            conversation_id=entry.get("conversation_id"),
+            title=title,
+            instruction_id=entry.get("instruction_id"),
+        )
+        if key in done:
             completed += 1
             continue
         if len(still_open) < MAX_STILL_OPEN:
             still_open.append(
                 {
                     "title": title,
+                    "item_key": key,
                     "lead_id": entry.get("lead_id"),
                     "invoice_id": entry.get("invoice_id"),
                 }
@@ -277,8 +301,17 @@ def _count_leads_converted(session: Session, start: datetime, end: datetime) -> 
 
 
 def _in_business_tz(value: datetime) -> datetime:
+    return in_business_tz(value)
+
+
+def _as_utc(value: datetime) -> datetime:
     current = value if value.tzinfo else value.replace(tzinfo=UTC)
-    return current.astimezone(_BUSINESS_TZ)
+    return current.astimezone(UTC)
+
+
+def _text(value: Any) -> str | None:
+    text = str(value or "").strip()
+    return text or None
 
 
 def _days_between(now: datetime, earlier: datetime | None) -> int | None:

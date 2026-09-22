@@ -10,10 +10,13 @@ from sqlalchemy.orm import Session
 
 from app.api.admin_leads_common import request_id
 from app.api.admin_request import parse_body, parse_uuid, query_param
+from app.api.admin_sales_daily_plan_instructions import (
+    archive_sales_daily_plan_instruction_http,
+    create_sales_daily_plan_instruction_http,
+    list_sales_daily_plan_instructions,
+)
 from app.api.admin_sales_daily_plan_items import (
     create_sales_daily_plan_question,
-    parse_optional_plan_id,
-    require_latest_plan_for_mutation,
     upsert_sales_daily_plan_item_annotation,
 )
 from app.api.admin_validators import validate_string_length
@@ -24,11 +27,18 @@ from app.db.models.sales_daily_plan_job import SalesDailyPlanJobStatus
 from app.db.repositories.sales_daily_plan_job import SalesDailyPlanJobRepository
 from app.exceptions import NotFoundError, ValidationError
 from app.services.sales_daily_plan import get_latest_plan, serialize_plan
-from app.services.sales_daily_plan_completions import (
-    serialize_completion,
-    upsert_completion,
-)
 from app.services.sales_daily_plan_enqueue import queue_sales_daily_plan_job
+from app.services.sales_daily_plan_identity import priority_identity
+from app.services.sales_daily_plan_instructions import (
+    INSTRUCTION_SCOPES,
+    create_instruction,
+    list_active_instructions,
+    serialize_instruction,
+)
+from app.services.sales_daily_plan_item_state import (
+    serialize_completion,
+    set_item_done,
+)
 from app.services.sales_daily_plan_memory import (
     MAX_OPERATOR_INPUT_LENGTH,
     list_recent_plans,
@@ -62,6 +72,19 @@ def route_sales_daily_plan_request(
         if method == "GET":
             return get_sales_daily_plan_job(event, job_id=job_id)
         return method_not_allowed(event)
+    if len(parts) == 4 and parts[3] == "instructions":
+        if method == "GET":
+            return list_sales_daily_plan_instructions(event)
+        if method == "POST":
+            return create_sales_daily_plan_instruction_http(event, actor_sub=actor_sub)
+        return method_not_allowed(event)
+    if len(parts) == 5 and parts[3] == "instructions":
+        instruction_id = parse_uuid(parts[4])
+        if method == "DELETE":
+            return archive_sales_daily_plan_instruction_http(
+                event, instruction_id=instruction_id, actor_sub=actor_sub
+            )
+        return method_not_allowed(event)
     if len(parts) == 4 and parts[3] == "priority-completions":
         if method == "POST":
             return upsert_sales_daily_plan_priority_completion(
@@ -91,6 +114,9 @@ def get_sales_daily_plan(event: Mapping[str, Any]) -> dict[str, Any]:
     with Session(get_engine()) as session:
         plan = get_latest_plan(session)
         memory = [serialize_memory_entry(row) for row in list_recent_plans(session)]
+        instructions = [
+            serialize_instruction(row) for row in list_active_instructions(session)
+        ]
         latest_job = SalesDailyPlanJobRepository(session).latest()
         job_payload = (
             serialize_sales_daily_plan_job(latest_job)
@@ -100,7 +126,12 @@ def get_sales_daily_plan(event: Mapping[str, Any]) -> dict[str, Any]:
         if plan is None:
             return json_response(
                 200,
-                {"plan": None, "memory": memory, "job": job_payload},
+                {
+                    "plan": None,
+                    "memory": memory,
+                    "instructions": instructions,
+                    "job": job_payload,
+                },
                 event=event,
             )
         return json_response(
@@ -110,6 +141,7 @@ def get_sales_daily_plan(event: Mapping[str, Any]) -> dict[str, Any]:
                     session, plan=plan, include_comparison=include_comparison
                 ),
                 "memory": memory,
+                "instructions": instructions,
                 "job": job_payload,
             },
             event=event,
@@ -118,6 +150,16 @@ def get_sales_daily_plan(event: Mapping[str, Any]) -> dict[str, Any]:
 
 def parse_daily_plan_operator_input(event: Mapping[str, Any]) -> str | None:
     """Read optional ``operator_input`` from POST; empty body is allowed."""
+    body = _daily_plan_body(event)
+    return validate_string_length(
+        body.get("operator_input"),
+        "operator_input",
+        MAX_OPERATOR_INPUT_LENGTH,
+        required=False,
+    )
+
+
+def _daily_plan_body(event: Mapping[str, Any]) -> dict[str, Any]:
     raw = event.get("body") or ""
     if event.get("isBase64Encoded") and raw:
         body = parse_body(event)
@@ -127,12 +169,22 @@ def parse_daily_plan_operator_input(event: Mapping[str, Any]) -> str | None:
         body = parse_body(event)
     if not isinstance(body, dict):
         raise ValidationError("Request body must be a JSON object")
-    return validate_string_length(
-        body.get("operator_input"),
-        "operator_input",
-        MAX_OPERATOR_INPUT_LENGTH,
-        required=False,
-    )
+    return body
+
+
+def parse_daily_plan_operator_scope(event: Mapping[str, Any]) -> str:
+    """Read optional ``operator_input_scope``; default is ``today``."""
+    body = _daily_plan_body(event)
+    raw = body.get("operator_input_scope")
+    if raw is None or str(raw).strip() == "":
+        return "today"
+    scope = str(raw).strip().lower()
+    if scope not in INSTRUCTION_SCOPES:
+        raise ValidationError(
+            "operator_input_scope must be today or standing",
+            field="operator_input_scope",
+        )
+    return scope
 
 
 def create_sales_daily_plan(
@@ -141,6 +193,21 @@ def create_sales_daily_plan(
     actor_sub: str,
 ) -> dict[str, Any]:
     operator_input = parse_daily_plan_operator_input(event)
+    if operator_input:
+        scope = parse_daily_plan_operator_scope(event)
+        with Session(get_engine()) as session:
+            set_audit_context(
+                session,
+                user_id=actor_sub,
+                request_id=request_id(event),
+            )
+            create_instruction(
+                session,
+                text=operator_input,
+                scope=scope,
+                created_by=actor_sub,
+            )
+            session.commit()
     persisted_job = queue_sales_daily_plan_job(
         created_by=actor_sub,
         request_id=request_id(event),
@@ -208,22 +275,39 @@ def upsert_sales_daily_plan_priority_completion(
         raise ValidationError("done must be a boolean", field="done")
     lead_id = _optional_uuid_field(body.get("lead_id"), "lead_id")
     invoice_id = _optional_uuid_field(body.get("invoice_id"), "invoice_id")
-    plan_id = parse_optional_plan_id(body)
+    conversation_id = _optional_uuid_field(
+        body.get("conversation_id"), "conversation_id"
+    )
+    raw_key = str(body.get("item_key") or "").strip()
+    identity = raw_key or priority_identity(
+        kind=_optional_text(body.get("kind")),
+        lead_id=lead_id,
+        invoice_id=invoice_id,
+        conversation_id=conversation_id,
+        title=title,
+        instruction_id=body.get("instruction_id"),
+    )
     with Session(get_engine()) as session:
         set_audit_context(
             session,
             user_id=actor_sub,
             request_id=request_id(event),
         )
-        plan = require_latest_plan_for_mutation(session, plan_id)
-        row = upsert_completion(
+        plan = get_latest_plan(session)
+        if plan is None:
+            raise NotFoundError("SalesDailyPlan", "latest")
+        row = set_item_done(
             session,
-            plan_id=plan.id,
+            identity=identity,
+            item_kind="priority",
             title=title,
             lead_id=lead_id,
             invoice_id=invoice_id,
-            done_by=actor_sub,
+            conversation_id=conversation_id,
+            priority_kind=_optional_text(body.get("kind")),
             done=raw_done,
+            actor=actor_sub,
+            source_plan_id=plan.id,
         )
         session.commit()
         return json_response(
@@ -234,6 +318,11 @@ def upsert_sales_daily_plan_priority_completion(
             },
             event=event,
         )
+
+
+def _optional_text(value: Any) -> str | None:
+    text = str(value or "").strip()
+    return text or None
 
 
 def _optional_uuid_field(value: Any, field: str) -> UUID | None:

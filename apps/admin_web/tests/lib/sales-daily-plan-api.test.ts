@@ -76,6 +76,8 @@ describe('parseSalesDailyPlan', () => {
     expect(plan?.generatedByName).toBe('Ida');
     expect(plan?.latestContactAt).toBe('2026-09-01T11:30:00Z');
     expect(plan?.outreach[0]?.draftReply).toBe('Tue or Thu?');
+    expect(plan?.suppressedItems).toEqual([]);
+    expect(plan?.priorities[0]?.fromInstruction).toBe(false);
   });
 
   it('returns null for non-objects', () => {
@@ -116,5 +118,43 @@ describe('parseSalesDailyPlan', () => {
     expect(snapshot.job?.errorMessage).toBe(
       'The AI returned an invalid response. Please try again.',
     );
+    expect(snapshot.instructions).toEqual([]);
+  });
+
+  it('parses instructions and suppressed items', () => {
+    const snapshot = parseSalesDailyPlanSnapshot({
+      plan: {
+        id: 'plan-1',
+        focus: 'Close consults',
+        suppressed_items: [
+          {
+            title: 'Call Sam',
+            item_key: 'title:call sam',
+            item_kind: 'priority',
+            reason: 'done_today',
+          },
+        ],
+        priorities: [
+          {
+            title: 'Call the venue',
+            from_instruction: true,
+            instruction_id: 'instr-1',
+            resurfaced: false,
+          },
+        ],
+      },
+      instructions: [
+        {
+          id: 'instr-1',
+          text: 'Call the venue about Thursday',
+          scope: 'today',
+          active_until: '2026-09-04T22:00:00Z',
+        },
+      ],
+    });
+    expect(snapshot.instructions[0]?.scope).toBe('today');
+    expect(snapshot.plan?.suppressedItems[0]?.reason).toBe('done_today');
+    expect(snapshot.plan?.priorities[0]?.fromInstruction).toBe(true);
+    expect(snapshot.plan?.priorities[0]?.instructionId).toBe('instr-1');
   });
 });

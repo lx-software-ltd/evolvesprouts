@@ -102,8 +102,9 @@ info:
     - `POST /v1/admin/leads/{id}/notes`
     - `GET|POST /v1/admin/leads/{id}/ai-suggestion` (POST queues async job; poll `.../ai-suggestion/jobs/{job_id}`)
     - `GET /v1/admin/leads/analytics`
-    - `GET|POST|DELETE /v1/admin/leads/daily-plan` (POST queues async job with optional `operator_input`; poll `.../daily-plan/jobs/{job_id}`; DELETE resets stored memory)
-    - `POST /v1/admin/leads/daily-plan/priority-completions` (tick or untick a priority on the latest insight)
+    - `GET|POST|DELETE /v1/admin/leads/daily-plan` (POST queues async job with optional `operator_input` and `operator_input_scope` of `today` or `standing`; poll `.../daily-plan/jobs/{job_id}`; DELETE resets stored plans, item state, and instructions)
+    - `GET|POST /v1/admin/leads/daily-plan/instructions` and `DELETE /v1/admin/leads/daily-plan/instructions/{instruction_id}` (active refinements; `today` lasts until the next 06:00 HKT, `standing` until removed)
+    - `POST /v1/admin/leads/daily-plan/priority-completions` (tick or untick a priority until the next 06:00 HKT; identity is org-wide)
     - `GET|PATCH /v1/admin/leads/settings`
     - `GET /v1/admin/whatsapp/conversations`
     - `GET /v1/admin/whatsapp/conversations/{id}/messages`
@@ -1442,7 +1443,9 @@ paths:
       description: >
         Returns the newest stored org-wide AI sales daily plan, including
         staleness metadata, plus `memory` (up to the five newest stored plans,
-        including the latest). `plan` is null when none has been generated yet.
+        including the latest) and active `instructions`. `plan` is null when
+        none has been generated yet. `suppressed_items` lists priorities the
+        generator hid because they were done today, dismissed, or snoozed.
         A scheduled job also generates a new plan every day at 06:00 HKT.
         A plan is stale when it is older than 24 hours, when a newer
         WhatsApp/Meta message exists after the stored conversation watermark,
@@ -1485,8 +1488,10 @@ paths:
         allow-listed chat-completions URL, and AWS HTTP proxy as lead AI
         suggestions). Context includes open pipeline, unanswered threads, unpaid
         issued invoices, and the published catalogue. Optional `operator_input`
-        is stored on the job and the resulting plan and is included in later
-        generations as memory, along with the last five persisted plans. Poll
+        is stored on the job and the resulting plan and is saved as an
+        instruction. `operator_input_scope` `today` (default) lasts until the
+        next 06:00 HKT; `standing` is included until removed. Done, dismissed,
+        and snoozed items are omitted in code after the model responds. Poll
         `GET /v1/admin/leads/daily-plan/jobs/{job_id}` for status, timing
         (`queue_wait_ms`, `duration_ms`), and the resulting plan. Does not send
         messages or payment reminders.
@@ -1512,9 +1517,9 @@ paths:
     delete:
       summary: Reset sale plan memory
       description: >
-        Permanently deletes every stored sales daily plan, generation job, and
-        operator refinement. Live contacts, leads, and messages are not
-        affected. This cannot be undone.
+        Permanently deletes every stored sales daily plan, generation job,
+        org-wide done/dismiss/snooze state, and instruction. Live contacts,
+        leads, and messages are not affected. This cannot be undone.
       security:
         - AdminBearerAuth: []
       responses:
@@ -1555,10 +1560,10 @@ paths:
     post:
       summary: Mark or unmark an insight priority as done
       description: >
-        Ticks or unticks one priority on the latest stored sales daily plan.
-        Send `plan_id` of the plan on screen; a mismatch with the latest plan
-        returns 409. Completions are stored and included in later generations
-        so the model can skip finished work. `done: false` removes the tick.
+        Ticks or unticks one priority. Done state is org-wide and hides the
+        same invoice, conversation, lead-and-kind, or instruction until the
+        next 06:00 HKT, including after the insight is regenerated.
+        `done: false` clears that suppression. `plan_id` is ignored.
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -1580,12 +1585,6 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
-        "409":
-          description: The stored insight was refreshed after this page loaded.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
 
   /v1/admin/leads/daily-plan/item-annotations:
     post:
@@ -1593,11 +1592,11 @@ paths:
       description: >
         Stores feedback (`up`, `down`, `not_relevant`), a snooze
         (`tomorrow`, `next_week`, or `clear`), and/or an edited outreach
-        draft on one priority or outreach row. Send `plan_id` of the plan
-        on screen; a mismatch with the latest plan returns 409. `item_key`
-        is capped at 1024 characters. Omitted fields are left unchanged.
-        Rejected and still-snoozed items are fed into the next generation
-        as memory.
+        draft. Feedback and snooze are org-wide: `down` and `not_relevant`
+        hide the item for 30 days, and snooze hides it until the chosen time.
+        An edited `draft_reply` stays on the current plan; send `plan_id` and
+        a mismatch with the latest plan returns 409. `item_key` is capped at
+        1024 characters. Omitted fields are left unchanged.
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -1675,6 +1674,78 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
+  /v1/admin/leads/daily-plan/instructions:
+    get:
+      summary: List active insight instructions
+      description: >
+        Returns refinements that later generations must honour. `today`
+        instructions drop out after the next 06:00 HKT. `standing`
+        instructions stay until deleted.
+      security:
+        - AdminBearerAuth: []
+      responses:
+        "200":
+          description: Active instructions.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesDailyPlanInstructionListResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      summary: Save an insight instruction without generating
+      description: >
+        Stores a refinement. `scope` defaults to `today` (until the next
+        06:00 HKT). `standing` is included in every later generation until
+        removed. An active instruction with the same scope and wording is
+        reused.
+      security:
+        - AdminBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SalesDailyPlanInstructionRequest"
+      responses:
+        "200":
+          description: Saved instruction.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesDailyPlanInstructionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/admin/leads/daily-plan/instructions/{instruction_id}:
+    parameters:
+      - name: instruction_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      summary: Remove an insight instruction
+      description: >
+        Archives one instruction so later generations no longer include it.
+        Stored plans are kept.
+      security:
+        - AdminBearerAuth: []
+      responses:
+        "200":
+          description: Archived instruction and the latest plan when one exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesDailyPlanInstructionArchiveResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /v1/admin/whatsapp/conversations:
     get:
@@ -6368,6 +6439,17 @@ components:
           type: string
           nullable: true
           enum: [new, carried]
+        instruction_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Today-instruction this priority carries.
+        from_instruction:
+          type: boolean
+          description: True when the server added this priority because the model omitted the instruction.
+        resurfaced:
+          type: boolean
+          description: True when a done item returned because newer CRM activity arrived.
     SalesDailyPlanOutreach:
       type: object
       required: [channel]
@@ -6476,6 +6558,10 @@ components:
           type: array
           items:
             type: string
+        suppressed_items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesDailyPlanSuppressedItem"
         dropped_priorities:
           type: array
           items:
@@ -6500,7 +6586,7 @@ components:
         operator_input:
           type: string
           nullable: true
-          description: Operator refinement stored with this plan and used as later memory.
+          description: Refinement typed for this generation. Active instructions are returned separately and enforced on later runs.
         conversation_watermark_at:
           type: string
           format: date-time
@@ -6565,7 +6651,7 @@ components:
             $ref: "#/components/schemas/SalesDailyPlanDroppedPriority"
     SalesDailyPlanResponse:
       type: object
-      required: [plan, memory]
+      required: [plan, memory, instructions]
       properties:
         plan:
           allOf:
@@ -6581,6 +6667,11 @@ components:
             - $ref: "#/components/schemas/SalesDailyPlanJob"
           nullable: true
           description: Newest generation job, including a failed scheduled run.
+        instructions:
+          type: array
+          description: Active today and standing instructions, oldest first.
+          items:
+            $ref: "#/components/schemas/SalesDailyPlanInstruction"
     SalesDailyPlanPriorityCompletionRequest:
       type: object
       required: [title, done]
@@ -6601,6 +6692,20 @@ components:
           nullable: true
         done:
           type: boolean
+        item_key:
+          type: string
+          description: Stable identity. When omitted, derived from title and ids.
+        conversation_id:
+          type: string
+          format: uuid
+          nullable: true
+        kind:
+          type: string
+          nullable: true
+        instruction_id:
+          type: string
+          format: uuid
+          nullable: true
     SalesDailyPlanPriorityCompletionResponse:
       type: object
       required: [plan]
@@ -6627,6 +6732,90 @@ components:
               nullable: true
             done_by:
               type: string
+            done_until:
+              type: string
+              format: date-time
+              nullable: true
+            item_key:
+              type: string
+    SalesDailyPlanSuppressedItem:
+      type: object
+      required: [title, item_key, item_kind, reason]
+      properties:
+        title:
+          type: string
+        item_key:
+          type: string
+        item_kind:
+          type: string
+          enum: [priority, outreach]
+        reason:
+          type: string
+          enum: [done_today, dismissed, snoozed]
+        lead_id:
+          type: string
+          format: uuid
+          nullable: true
+        invoice_id:
+          type: string
+          format: uuid
+          nullable: true
+    SalesDailyPlanInstruction:
+      type: object
+      required: [id, text, scope]
+      properties:
+        id:
+          type: string
+          format: uuid
+        text:
+          type: string
+        scope:
+          type: string
+          enum: [today, standing]
+        active_until:
+          type: string
+          format: date-time
+          nullable: true
+        created_by:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+    SalesDailyPlanInstructionListResponse:
+      type: object
+      required: [instructions]
+      properties:
+        instructions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesDailyPlanInstruction"
+    SalesDailyPlanInstructionRequest:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          maxLength: 4000
+        scope:
+          type: string
+          enum: [today, standing]
+    SalesDailyPlanInstructionResponse:
+      type: object
+      required: [instruction]
+      properties:
+        instruction:
+          $ref: "#/components/schemas/SalesDailyPlanInstruction"
+    SalesDailyPlanInstructionArchiveResponse:
+      type: object
+      required: [instruction]
+      properties:
+        instruction:
+          $ref: "#/components/schemas/SalesDailyPlanInstruction"
+        plan:
+          allOf:
+            - $ref: "#/components/schemas/SalesDailyPlan"
+          nullable: true
     SalesDailyPlanItemAnnotationRequest:
       type: object
       required: [item_kind]
@@ -6727,7 +6916,11 @@ components:
           type: string
           nullable: true
           maxLength: 4000
-          description: Optional refinement used for this generation and stored as memory.
+          description: Optional refinement saved as an instruction and stored on this plan.
+        operator_input_scope:
+          type: string
+          enum: [today, standing]
+          description: today lasts until the next 06:00 HKT. standing lasts until removed. Defaults to today.
     SalesDailyPlanJob:
       type: object
       required: [id, status]

@@ -354,13 +354,13 @@ describe('SalePlanOfTheDayCard', () => {
     });
 
     await user.type(
-      screen.getByLabelText('Refinement for next insight'),
+      screen.getByLabelText('Refinement for the next insight'),
       'Focus on MBA this week'
     );
     await user.click(screen.getByRole('button', { name: 'Refresh insight' }));
 
     await waitFor(() => {
-      expect(enqueueSalesDailyPlanJob).toHaveBeenCalledWith('Focus on MBA this week');
+      expect(enqueueSalesDailyPlanJob).toHaveBeenCalledWith('Focus on MBA this week', 'today');
     });
   });
 
@@ -385,6 +385,7 @@ describe('SalePlanOfTheDayCard', () => {
         title: 'Reply to Mei',
         leadId: 'lead-1',
         invoiceId: null,
+        itemKey: 'Reply to Mei\nlead-1\n',
         done: true,
       });
     });
@@ -414,7 +415,7 @@ describe('SalePlanOfTheDayCard', () => {
       expect(screen.getByRole('button', { name: 'Refresh insight' })).toBeInTheDocument();
     });
     await user.click(screen.getByRole('button', { name: 'Chase overdue invoices first' }));
-    expect(screen.getByLabelText('Refinement for next insight')).toHaveValue(
+    expect(screen.getByLabelText('Refinement for the next insight')).toHaveValue(
       'Chase overdue invoices first',
     );
     await user.type(screen.getByLabelText('Ask a follow-up'), 'Which invoice first?');

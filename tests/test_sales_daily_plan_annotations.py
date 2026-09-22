@@ -17,7 +17,6 @@ from app.services.sales_daily_plan_annotations import (
     serialize_annotation,
     upsert_annotation,
 )
-from app.services.sales_daily_plan_payload import outreach_item_key
 
 
 def test_resolve_snoozed_until_maps_tokens() -> None:
@@ -53,8 +52,8 @@ def test_apply_annotations_sets_keys_without_session_query() -> None:
         priorities=priorities,
         outreach=outreach,
     )
-    assert priorities[0]["item_key"] == "Reply to Mei\nlead-1\n"
-    assert outreach[0]["item_key"] == outreach_item_key("whatsapp", None, None, "Hi")
+    assert priorities[0]["item_key"] == "title:reply to mei"
+    assert outreach[0]["item_key"] == "excerpt:whatsapp:hi"
     assert outreach[0]["saved_draft_reply"] is None
 
 

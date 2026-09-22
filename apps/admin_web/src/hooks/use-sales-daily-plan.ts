@@ -9,6 +9,7 @@ import { getAdminQueryClient } from '@/lib/admin-query-client';
 import { adminQueryKeys } from '@/lib/admin-query-keys';
 import {
   askSalesDailyPlanQuestion,
+  archiveSalesDailyPlanInstruction,
   enqueueSalesDailyPlanJob,
   fetchSalesDailyPlan,
   pollSalesDailyPlanJob,
@@ -36,7 +37,12 @@ function formatDailyPlanError(error: unknown, fallback: string): string {
   return toErrorMessage(error, fallback);
 }
 
-const EMPTY_SNAPSHOT: SalesDailyPlanSnapshot = { plan: null, memory: [], job: null };
+const EMPTY_SNAPSHOT: SalesDailyPlanSnapshot = {
+  plan: null,
+  memory: [],
+  instructions: [],
+  job: null,
+};
 
 export function useSalesDailyPlan() {
   const queryClient = getAdminQueryClient();
@@ -54,7 +60,7 @@ export function useSalesDailyPlan() {
   const abortRef = useRef<AbortController | null>(null);
 
   const generate = useCallback(
-    async (operatorInput?: string) => {
+    async (operatorInput?: string, operatorInputScope?: 'today' | 'standing') => {
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
@@ -62,7 +68,9 @@ export function useSalesDailyPlan() {
       setGenerateError('');
       setLastJob(null);
       try {
-        const queued = await enqueueSalesDailyPlanJob(operatorInput);
+        const queued = operatorInputScope
+          ? await enqueueSalesDailyPlanJob(operatorInput, operatorInputScope)
+          : await enqueueSalesDailyPlanJob(operatorInput);
         setLastJob(queued);
         const finished = await pollSalesDailyPlanJob(queued.id, controller.signal);
         setLastJob(finished);
@@ -70,6 +78,7 @@ export function useSalesDailyPlan() {
           queryClient.setQueryData<SalesDailyPlanSnapshot>(queryKey, (current) => ({
             plan: finished.plan,
             memory: current?.memory ?? [],
+            instructions: current?.instructions ?? [],
             job: finished,
           }));
         }
@@ -103,6 +112,7 @@ export function useSalesDailyPlan() {
       queryClient.setQueryData<SalesDailyPlanSnapshot>(queryKey, (current) => ({
         plan,
         memory: current?.memory ?? [],
+        instructions: current?.instructions ?? [],
         job: current?.job ?? null,
       }));
     },
@@ -124,6 +134,7 @@ export function useSalesDailyPlan() {
         title: item.title,
         leadId: item.leadId,
         invoiceId: item.invoiceId,
+        itemKey: item.itemKey,
         done,
       });
       replacePlan(plan);
@@ -161,6 +172,14 @@ export function useSalesDailyPlan() {
     [currentPlanId, replacePlan]
   );
 
+  const removeInstruction = useCallback(
+    async (instructionId: string) => {
+      await archiveSalesDailyPlanInstruction(instructionId);
+      await queryClient.invalidateQueries({ queryKey });
+    },
+    [queryClient, queryKey],
+  );
+
   const loadComparison = useCallback(async () => {
     const snapshot = await fetchSalesDailyPlan({ compare: true });
     if (snapshot.plan) {
@@ -173,6 +192,7 @@ export function useSalesDailyPlan() {
   return {
     plan: snapshot.plan,
     memory: snapshot.memory,
+    instructions: snapshot.instructions ?? [],
     isLoading: query.isLoading,
     loadError: query.error
       ? formatDailyPlanError(query.error, 'Failed to load daily plan.')
@@ -181,6 +201,7 @@ export function useSalesDailyPlan() {
     isGenerating,
     lastJob: lastJob ?? snapshot.job,
     generate,
+    removeInstruction,
     setPriorityDone,
     annotateItem,
     askFollowUp,
