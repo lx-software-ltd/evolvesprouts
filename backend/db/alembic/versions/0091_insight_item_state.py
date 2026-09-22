@@ -126,7 +126,8 @@ def upgrade() -> None:
                 plan_id,
                 CASE
                     WHEN invoice_id IS NOT NULL THEN 'invoice:' || invoice_id::text
-                    WHEN lead_id IS NOT NULL THEN 'lead:' || lead_id::text || ':any'
+                    WHEN lead_id IS NOT NULL
+                        THEN 'lead:' || lead_id::text || ':' || 'any'
                     ELSE 'title:' || """
         + _TITLE_SQL.format(expr="title")
         + """
@@ -181,7 +182,7 @@ def upgrade() -> None:
                     WHEN item_kind = 'priority'
                         AND split_part(item_key, E'\\n', 2)
                             ~ '^[0-9a-fA-F-]{36}$'
-                        THEN 'lead:' || split_part(item_key, E'\\n', 2) || ':any'
+                        THEN 'lead:' || split_part(item_key, E'\\n', 2) || ':' || 'any'
                     WHEN item_kind = 'priority'
                         THEN 'title:' || """
         + _TITLE_SQL.format(expr="split_part(item_key, E'\\n', 1)")
@@ -189,7 +190,8 @@ def upgrade() -> None:
                     WHEN split_part(item_key, E'\\n', 3) ~ '^[0-9a-fA-F-]{36}$'
                         THEN 'conversation:' || split_part(item_key, E'\\n', 3)
                     WHEN split_part(item_key, E'\\n', 2) ~ '^[0-9a-fA-F-]{36}$'
-                        THEN 'lead:' || split_part(item_key, E'\\n', 2) || ':outreach'
+                        THEN 'lead:' || split_part(item_key, E'\\n', 2)
+                            || ':' || 'outreach'
                     ELSE 'excerpt:' || lower(split_part(item_key, E'\\n', 1))
                 END AS item_identity,
                 CASE

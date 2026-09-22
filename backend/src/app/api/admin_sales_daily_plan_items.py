@@ -114,10 +114,11 @@ def upsert_sales_daily_plan_item_annotation(
         if has_draft:
             plan = require_latest_plan_for_mutation(session, plan_id)
         else:
-            plan = get_latest_plan(session)
-            if plan is None:
+            latest = get_latest_plan(session)
+            if latest is None:
                 raise NotFoundError("SalesDailyPlan", "latest")
-        row = None
+            plan = latest
+        row: SalesDailyPlanItemAnnotation | SalesDailyPlanItemState | None = None
         if has_draft:
             row = upsert_annotation(
                 session,

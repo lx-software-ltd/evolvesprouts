@@ -317,8 +317,11 @@ def _prefer_higher_urgency(
 
 
 def _urgency(item: dict[str, Any]) -> int:
+    raw = item.get("urgency")
+    if raw is None or isinstance(raw, bool):
+        return 2
     try:
-        parsed = int(item.get("urgency"))
+        parsed = int(raw)
     except (TypeError, ValueError):
         return 2
     return parsed if parsed in {1, 2, 3} else 2
