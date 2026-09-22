@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -68,31 +68,45 @@ def test_done_until_is_the_next_hong_kong_business_start() -> None:
     )
 
 
-def test_set_item_done_sets_horizon_then_clears_it() -> None:
-    added: list[object] = []
+class _MutableRow:
+    done_at = None
+    done_by = None
+    done_until = None
+    feedback = None
+    dismissed_until = None
+    snoozed_until = None
+    lead_id = None
+    invoice_id = None
+    conversation_id = None
+    priority_kind = None
+    source_plan_id = None
+    updated_by = None
+    updated_at = None
+
+
+def _upsert_session(row: _MutableRow) -> tuple[object, list[object]]:
+    statements: list[object] = []
 
     class _Result:
-        def __init__(self, row: object | None) -> None:
-            self._row = row
-
-        def first(self) -> object | None:
-            return self._row
+        def first(self) -> _MutableRow:
+            return row
 
     class _Session:
-        def __init__(self) -> None:
-            self._row: object | None = None
-
-        def scalars(self, _statement: object) -> _Result:
-            return _Result(self._row)
-
-        def add(self, row: object) -> None:
-            added.append(row)
-            self._row = row
+        def scalars(self, statement: object) -> _Result:
+            statements.append(statement)
+            return _Result()
 
         def flush(self) -> None:
             return None
 
-    session = _Session()
+    return _Session(), statements
+
+
+def test_set_item_done_sets_horizon_then_clears_it() -> None:
+    from sqlalchemy.dialects import postgresql
+
+    row = _MutableRow()
+    session, statements = _upsert_session(row)
     now = datetime(2026, 9, 3, 10, 0, tzinfo=UTC)
     created = set_item_done(
         session,  # type: ignore[arg-type]
@@ -108,11 +122,12 @@ def test_set_item_done_sets_horizon_then_clears_it() -> None:
         source_plan_id=None,
         now=now,
     )
-    assert created is not None
-    assert created.done_until == next_business_day_start(now)
-    assert added == [created]
+    assert created is row
+    assert row.done_until == next_business_day_start(now)
+    compiled = str(statements[0].compile(dialect=postgresql.dialect()))  # type: ignore[attr-defined]
+    assert "ON CONFLICT" in compiled
+    assert "sdp_item_states_identity_uidx" in compiled
 
-    session._row = created
     cleared = set_item_done(
         session,  # type: ignore[arg-type]
         identity="title:call sam",
@@ -128,8 +143,8 @@ def test_set_item_done_sets_horizon_then_clears_it() -> None:
         now=now,
     )
     assert cleared is None
-    assert created.done_at is None
-    assert created.done_until is None
+    assert row.done_at is None
+    assert row.done_until is None
 
 
 def test_generation_hides_done_items_and_keeps_today_instructions() -> None:
@@ -228,6 +243,59 @@ def test_generation_resurfaces_done_work_after_new_activity() -> None:
     assert payload["priorities"][0]["resurfaced"] is True
 
 
+def test_short_title_does_not_satisfy_a_longer_instruction() -> None:
+    instruction_id = str(uuid4())
+    payload = apply_generation_rules(
+        {
+            "focus": "Today",
+            "priorities": [{"title": "Follow up", "action": "Send a note"}],
+        },
+        context={
+            "open_leads": [],
+            "recent_closed_leads": [],
+            "converted_nurture": [],
+            "unpaid_invoices": [],
+            "needs_reply_threads": [],
+            "today_instructions": [
+                {
+                    "id": instruction_id,
+                    "text": "Follow up with the venue about Thursday",
+                }
+            ],
+        },
+    )
+    fallback = [item for item in payload["priorities"] if item.get("from_instruction")]
+    assert len(fallback) == 1
+    assert fallback[0]["instruction_id"] == instruction_id
+    assert any(item["title"] == "Follow up" for item in payload["priorities"])
+
+
+def test_generation_keeps_leads_named_outside_the_pipeline_caps() -> None:
+    inbox_lead = str(uuid4())
+    history_lead = str(uuid4())
+    invented = str(uuid4())
+    payload = apply_generation_rules(
+        {
+            "focus": "Today",
+            "priorities": [
+                {"title": "Reply", "lead_id": inbox_lead, "kind": "reply"},
+                {"title": "Chase history", "lead_id": history_lead, "kind": "close"},
+                {"title": "Invented", "lead_id": invented, "kind": "reply"},
+            ],
+        },
+        context={
+            "open_leads": [],
+            "recent_closed_leads": [],
+            "converted_nurture": [],
+            "unpaid_invoices": [],
+            "needs_reply_threads": [{"lead_id": inbox_lead}],
+            "prior_plans": [{"priorities": [{"lead_id": history_lead}]}],
+        },
+    )
+    kept = {item["lead_id"] for item in payload["priorities"]}
+    assert kept == {inbox_lead, history_lead}
+
+
 def test_generation_drops_unknown_invoice_ids() -> None:
     payload = apply_generation_rules(
         {
@@ -302,11 +370,14 @@ def test_show_again_keeps_instruction_identity() -> None:
         def scalars(self, _statement: object) -> _Result:
             return _Result()
 
+    lead_id = str(uuid4())
+    conversation_id = str(uuid4())
     priorities: list[dict[str, object]] = []
+    outreach: list[dict[str, object]] = []
     remaining = release_cleared_suppressions(
         _Session(),  # type: ignore[arg-type]
         priorities=priorities,
-        outreach=[],
+        outreach=outreach,
         suppressed=[
             {
                 "item_key": identity,
@@ -320,17 +391,96 @@ def test_show_again_keeps_instruction_identity() -> None:
                 "title": "Leave this hidden",
                 "reason": "done_today",
             },
+            {
+                "item_key": f"lead:{lead_id}:reply",
+                "item_kind": "priority",
+                "title": "Reply",
+                "reason": "done_today",
+                "lead_id": lead_id,
+            },
+            {
+                "item_key": f"conversation:{conversation_id}",
+                "item_kind": "outreach",
+                "title": "Thread",
+                "reason": "snoozed",
+                "lead_id": lead_id,
+            },
         ],
         now=datetime(2026, 9, 3, 10, 0, tzinfo=UTC),
     )
     assert [item["item_key"] for item in remaining] == ["title:leave this hidden"]
-    assert priorities[0]["instruction_id"] == instruction_id
-    assert priorities[0]["from_instruction"] is True
-    assert priorities[0]["item_key"] == identity
+    apply_item_states(SimpleNamespace(), priorities=priorities, outreach=outreach)
+    restored = {str(item["item_key"]): item for item in priorities}
+    assert restored[identity]["instruction_id"] == instruction_id
+    assert restored[identity]["from_instruction"] is True
+    assert restored[f"lead:{lead_id}:reply"]["kind"] == "reply"
+    assert outreach[0]["item_key"] == f"conversation:{conversation_id}"
 
-    apply_item_states(
-        SimpleNamespace(),
-        priorities=priorities,
-        outreach=[],
+
+def test_suppressed_query_filters_active_windows() -> None:
+    from app.services.sales_daily_plan_item_state import load_suppressed_for_context
+
+    seen: list[object] = []
+
+    class _Result:
+        def all(self) -> list[object]:
+            return []
+
+    class _Session:
+        def scalars(self, statement: object) -> _Result:
+            seen.append(statement)
+            return _Result()
+
+    load_suppressed_for_context(
+        _Session(),  # type: ignore[arg-type]
+        now=datetime(2026, 9, 3, 10, 0, tzinfo=UTC),
+        limit=40,
     )
-    assert priorities[0]["item_key"] == identity
+    compiled = str(seen[0])
+    assert "done_until" in compiled
+    assert "snoozed_until" in compiled
+    assert "dismissed_until" in compiled
+    assert "sales_daily_plan_item_states.feedback" in compiled
+
+
+def test_feedback_dismisses_for_thirty_days_and_snooze_sets_until() -> None:
+    from app.services.sales_daily_plan_item_state import (
+        DISMISS_SUPPRESS_DAYS,
+        set_item_feedback,
+        set_item_snooze,
+    )
+
+    row = _MutableRow()
+    session, _statements = _upsert_session(row)
+    now = datetime(2026, 9, 3, 10, 0, tzinfo=UTC)
+    set_item_feedback(
+        session,  # type: ignore[arg-type]
+        identity="title:skip this",
+        item_kind="priority",
+        title="Skip this",
+        feedback="not_relevant",
+        actor="user-1",
+        now=now,
+    )
+    assert row.dismissed_until == now + timedelta(days=DISMISS_SUPPRESS_DAYS)
+    set_item_feedback(
+        session,  # type: ignore[arg-type]
+        identity="title:skip this",
+        item_kind="priority",
+        title="Skip this",
+        feedback=None,
+        actor="user-1",
+        now=now,
+    )
+    assert row.dismissed_until is None
+    until = now.replace(day=4)
+    set_item_snooze(
+        session,  # type: ignore[arg-type]
+        identity="title:skip this",
+        item_kind="priority",
+        title="Skip this",
+        snoozed_until=until,
+        actor="user-1",
+        now=now,
+    )
+    assert row.snoozed_until == until

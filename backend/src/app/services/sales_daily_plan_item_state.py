@@ -6,14 +6,16 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Select, delete, select
+from sqlalchemy import Select, and_, delete, or_, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from app.db.models.sales_daily_plan_item_state import SalesDailyPlanItemState
 from app.services.sales_daily_plan_identity import (
+    outreach_fields_from_identity,
     outreach_identity,
+    priority_fields_from_identity,
     priority_identity,
-    uuid_text,
 )
 from app.services.sales_daily_plan_time import as_utc, next_business_day_start
 
@@ -34,15 +36,22 @@ def load_suppressed_for_context(
     current = now or datetime.now(UTC)
     statement: Select[tuple[SalesDailyPlanItemState]] = (
         select(SalesDailyPlanItemState)
+        .where(
+            or_(
+                SalesDailyPlanItemState.done_until > current,
+                SalesDailyPlanItemState.snoozed_until > current,
+                and_(
+                    SalesDailyPlanItemState.feedback.in_(("down", "not_relevant")),
+                    SalesDailyPlanItemState.dismissed_until > current,
+                ),
+            )
+        )
         .order_by(SalesDailyPlanItemState.updated_at.desc())
-        .limit(max(limit * 4, limit))
+        .limit(limit)
     )
-    rows = [
-        row
-        for row in session.scalars(statement).all()
-        if suppression_reason(row, current) is not None
+    return [
+        serialize_suppressed(row, current) for row in session.scalars(statement).all()
     ]
-    return [serialize_suppressed(row, current) for row in rows[:limit]]
 
 
 def load_recent_completions_for_context(
@@ -362,18 +371,17 @@ def _outreach_identity(item: dict[str, Any]) -> str:
 
 def _restored_priority(item: dict[str, Any]) -> dict[str, Any]:
     identity = str(item.get("item_key") or "")
-    instruction_id = (
-        identity.split(":", 1)[1] if identity.startswith("instruction:") else None
-    )
+    parsed = priority_fields_from_identity(identity)
+    instruction_id = parsed.get("instruction_id")
     return {
         "title": str(item.get("title") or ""),
         "why": "",
         "action": "",
-        "lead_id": item.get("lead_id"),
-        "invoice_id": item.get("invoice_id"),
-        "conversation_id": None,
+        "lead_id": parsed.get("lead_id") if parsed else item.get("lead_id"),
+        "invoice_id": (parsed.get("invoice_id") if parsed else item.get("invoice_id")),
+        "conversation_id": parsed.get("conversation_id"),
         "channel": None,
-        "kind": None,
+        "kind": parsed.get("kind"),
         "urgency": 2,
         "sources": ["instruction"] if instruction_id else [],
         "assigned_to": None,
@@ -386,11 +394,15 @@ def _restored_priority(item: dict[str, Any]) -> dict[str, Any]:
 
 
 def _restored_outreach(item: dict[str, Any]) -> dict[str, Any]:
+    identity = str(item.get("item_key") or "")
+    parsed = outreach_fields_from_identity(identity)
     return {
-        "channel": "unknown",
-        "lead_id": item.get("lead_id"),
-        "conversation_id": None,
-        "message_excerpt": str(item.get("title") or ""),
+        "channel": parsed.get("channel") or "unknown",
+        "lead_id": parsed.get("lead_id") if parsed else item.get("lead_id"),
+        "conversation_id": parsed.get("conversation_id"),
+        "message_excerpt": parsed.get("message_excerpt")
+        if parsed
+        else str(item.get("title") or ""),
         "draft_reply": "",
         "rationale": "",
         "assigned_to": None,
@@ -411,28 +423,34 @@ def _ensure_row(
     actor: str,
     now: datetime,
 ) -> SalesDailyPlanItemState:
-    existing = session.scalars(
-        select(SalesDailyPlanItemState).where(
-            SalesDailyPlanItemState.item_identity == identity
-        )
-    ).first()
+    """Insert or reuse the identity row. Conflict updates share one statement."""
     label = title.strip() or identity
-    if existing is None:
-        existing = SalesDailyPlanItemState(
+    update_set: dict[str, Any] = {
+        "item_kind": item_kind,
+        "updated_by": actor,
+        "updated_at": now,
+    }
+    if title.strip():
+        update_set["title"] = title.strip()
+    statement = (
+        pg_insert(SalesDailyPlanItemState)
+        .values(
             item_identity=identity,
             item_kind=item_kind,
             title=label,
             updated_by=actor,
             updated_at=now,
         )
-        session.add(existing)
-        return existing
-    if title.strip():
-        existing.title = title.strip()
-    existing.item_kind = item_kind
-    existing.updated_by = actor
-    existing.updated_at = now
-    return existing
+        .on_conflict_do_update(
+            constraint="sdp_item_states_identity_uidx",
+            set_=update_set,
+        )
+        .returning(SalesDailyPlanItemState)
+    )
+    row = session.scalars(statement).first()
+    if row is None:
+        raise RuntimeError("Failed to upsert insight item state")
+    return row
 
 
 def _assign_links(
@@ -475,7 +493,3 @@ def _snooze_iso(row: SalesDailyPlanItemState | None) -> str | None:
 def _text(value: Any) -> str | None:
     text = str(value or "").strip()
     return text or None
-
-
-def optional_state_uuid(value: Any) -> str | None:
-    return uuid_text(value)

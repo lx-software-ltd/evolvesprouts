@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -27,11 +28,13 @@ from app.db.models.sales_daily_plan_job import SalesDailyPlanJobStatus
 from app.db.repositories.sales_daily_plan_job import SalesDailyPlanJobRepository
 from app.exceptions import NotFoundError, ValidationError
 from app.services.sales_daily_plan import get_latest_plan, serialize_plan
+from app.services.sales_daily_plan_annotations import MAX_ITEM_KEY
 from app.services.sales_daily_plan_enqueue import queue_sales_daily_plan_job
 from app.services.sales_daily_plan_identity import priority_identity
 from app.services.sales_daily_plan_instructions import (
     INSTRUCTION_SCOPES,
     create_instruction,
+    delete_instruction,
     list_active_instructions,
     serialize_instruction,
 )
@@ -47,6 +50,9 @@ from app.services.sales_daily_plan_memory import (
 )
 from app.services.sales_daily_plan_serialize import serialize_sales_daily_plan_job
 from app.utils import json_response, method_not_allowed
+from app.utils.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 def route_sales_daily_plan_request(
@@ -193,26 +199,19 @@ def create_sales_daily_plan(
     actor_sub: str,
 ) -> dict[str, Any]:
     operator_input = parse_daily_plan_operator_input(event)
-    if operator_input:
-        scope = parse_daily_plan_operator_scope(event)
-        with Session(get_engine()) as session:
-            set_audit_context(
-                session,
-                user_id=actor_sub,
-                request_id=request_id(event),
-            )
-            create_instruction(
-                session,
-                text=operator_input,
-                scope=scope,
-                created_by=actor_sub,
-            )
-            session.commit()
-    persisted_job = queue_sales_daily_plan_job(
-        created_by=actor_sub,
-        request_id=request_id(event),
-        operator_input=operator_input,
+    created_instruction_id = _store_operator_instruction(
+        event, actor_sub=actor_sub, operator_input=operator_input
     )
+    try:
+        persisted_job = queue_sales_daily_plan_job(
+            created_by=actor_sub,
+            request_id=request_id(event),
+            operator_input=operator_input,
+        )
+    except Exception:
+        if created_instruction_id is not None:
+            _discard_instruction(created_instruction_id)
+        raise
     return json_response(
         202,
         {"job": serialize_sales_daily_plan_job(persisted_job)},
@@ -279,6 +278,11 @@ def upsert_sales_daily_plan_priority_completion(
         body.get("conversation_id"), "conversation_id"
     )
     raw_key = str(body.get("item_key") or "").strip()
+    if len(raw_key) > MAX_ITEM_KEY:
+        raise ValidationError(
+            f"item_key must be at most {MAX_ITEM_KEY} characters",
+            field="item_key",
+        )
     identity = raw_key or priority_identity(
         kind=_optional_text(body.get("kind")),
         lead_id=lead_id,
@@ -318,6 +322,44 @@ def upsert_sales_daily_plan_priority_completion(
             },
             event=event,
         )
+
+
+def _store_operator_instruction(
+    event: Mapping[str, Any],
+    *,
+    actor_sub: str,
+    operator_input: str | None,
+) -> UUID | None:
+    """Persist a new note before enqueue. Reused notes are left in place."""
+    if not operator_input:
+        return None
+    scope = parse_daily_plan_operator_scope(event)
+    current = datetime.now(UTC)
+    with Session(get_engine()) as session:
+        set_audit_context(
+            session,
+            user_id=actor_sub,
+            request_id=request_id(event),
+        )
+        row = create_instruction(
+            session,
+            text=operator_input,
+            scope=scope,
+            created_by=actor_sub,
+            now=current,
+        )
+        is_new = row.created_at == current
+        session.commit()
+        return row.id if is_new else None
+
+
+def _discard_instruction(instruction_id: UUID) -> None:
+    try:
+        with Session(get_engine()) as session:
+            delete_instruction(session, instruction_id=instruction_id)
+            session.commit()
+    except Exception:
+        logger.exception("Failed to discard insight instruction after enqueue failure")
 
 
 def _optional_text(value: Any) -> str | None:

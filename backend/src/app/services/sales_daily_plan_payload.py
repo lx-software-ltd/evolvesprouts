@@ -77,19 +77,6 @@ def outreach_from_value(value: Any) -> list[dict[str, Any]]:
     return items
 
 
-def outreach_item_key(
-    channel: str,
-    lead_id: UUID | str | None,
-    conversation_id: UUID | str | None,
-    message_excerpt: str,
-) -> str:
-    """Stable identity for one outreach row."""
-    return (
-        f"{(channel or 'unknown').strip()}\n{lead_id or ''}\n"
-        f"{conversation_id or ''}\n{(message_excerpt or '').strip()}"
-    )
-
-
 def compact_priority_memory(payload: dict[str, Any]) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     for entry in payload.get("priorities") or []:

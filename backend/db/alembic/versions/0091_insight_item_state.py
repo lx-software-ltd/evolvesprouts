@@ -192,7 +192,19 @@ def upgrade() -> None:
                     WHEN split_part(item_key, E'\\n', 2) ~ '^[0-9a-fA-F-]{36}$'
                         THEN 'lead:' || split_part(item_key, E'\\n', 2)
                             || ':' || 'outreach'
-                    ELSE 'excerpt:' || lower(split_part(item_key, E'\\n', 1))
+                    ELSE 'excerpt:' || lower(
+                        COALESCE(
+                            NULLIF(btrim(split_part(item_key, E'\\n', 1)), ''),
+                            'unknown'
+                        )
+                    ) || CASE
+                        WHEN """
+        + _TITLE_SQL.format(expr="split_part(item_key, E'\\n', 4)")
+        + """ = '' THEN ''
+                        ELSE ':' || """
+        + _TITLE_SQL.format(expr="split_part(item_key, E'\\n', 4)")
+        + """
+                    END
                 END AS item_identity,
                 CASE
                     WHEN item_kind = 'priority'

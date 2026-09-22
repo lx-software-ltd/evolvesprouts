@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -9,6 +9,7 @@ const {
   upsertSalesDailyPlanPriorityCompletion,
   upsertSalesDailyPlanItemAnnotation,
   askSalesDailyPlanQuestion,
+  archiveSalesDailyPlanInstruction,
 } = vi.hoisted(() => ({
   fetchSalesDailyPlan: vi.fn(),
   enqueueSalesDailyPlanJob: vi.fn(),
@@ -16,6 +17,7 @@ const {
   upsertSalesDailyPlanPriorityCompletion: vi.fn(),
   upsertSalesDailyPlanItemAnnotation: vi.fn(),
   askSalesDailyPlanQuestion: vi.fn(),
+  archiveSalesDailyPlanInstruction: vi.fn(),
 }));
 
 vi.mock('@/components/auth-provider', () => ({
@@ -29,6 +31,7 @@ vi.mock('@/lib/sales-daily-plan-api', () => ({
   upsertSalesDailyPlanPriorityCompletion,
   upsertSalesDailyPlanItemAnnotation,
   askSalesDailyPlanQuestion,
+  archiveSalesDailyPlanInstruction,
   resetSalesDailyPlanMemory: vi.fn(),
 }));
 
@@ -102,6 +105,7 @@ describe('SalePlanOfTheDayCard', () => {
     upsertSalesDailyPlanPriorityCompletion.mockReset();
     upsertSalesDailyPlanItemAnnotation.mockReset();
     askSalesDailyPlanQuestion.mockReset();
+    archiveSalesDailyPlanInstruction.mockReset();
   });
 
   it('loads empty state and generates a plan on demand', async () => {
@@ -362,6 +366,151 @@ describe('SalePlanOfTheDayCard', () => {
     await waitFor(() => {
       expect(enqueueSalesDailyPlanJob).toHaveBeenCalledWith('Focus on MBA this week', 'today');
     });
+  });
+
+  it('sends a standing refinement and removes an active instruction', async () => {
+    fetchSalesDailyPlan.mockResolvedValue({
+      plan: samplePlan,
+      memory: [],
+      instructions: [
+        {
+          id: 'instr-1',
+          text: 'Call the venue',
+          scope: 'today',
+          activeUntil: '2026-09-03T22:00:00Z',
+          createdBy: 'user-1',
+          createdAt: '2026-09-03T10:00:00Z',
+        },
+      ],
+      job: null,
+    });
+    enqueueSalesDailyPlanJob.mockResolvedValue({
+      id: 'job-3',
+      status: 'pending',
+      errorMessage: null,
+      operatorInput: 'Keep MBA first',
+      planId: null,
+      createdAt: '2026-09-01T11:00:00Z',
+      startedAt: null,
+      finishedAt: null,
+      updatedAt: '2026-09-01T11:00:00Z',
+      queueWaitMs: null,
+      durationMs: null,
+      plan: null,
+    });
+    pollSalesDailyPlanJob.mockResolvedValue({
+      id: 'job-3',
+      status: 'succeeded',
+      errorMessage: null,
+      operatorInput: 'Keep MBA first',
+      planId: 'plan-1',
+      createdAt: '2026-09-01T11:00:00Z',
+      startedAt: '2026-09-01T11:00:01Z',
+      finishedAt: '2026-09-01T11:00:08Z',
+      updatedAt: '2026-09-01T11:00:08Z',
+      queueWaitMs: 1000,
+      durationMs: 7000,
+      plan: samplePlan,
+    });
+    archiveSalesDailyPlanInstruction.mockResolvedValue(samplePlan);
+
+    const user = userEvent.setup();
+    render(<SalePlanOfTheDayCard />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Call the venue')).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole('button', { name: 'Keep until removed' }));
+    await user.type(screen.getByLabelText('Refinement for the next insight'), 'Keep MBA first');
+    await user.click(screen.getByRole('button', { name: 'Refresh insight' }));
+    await waitFor(() => {
+      expect(enqueueSalesDailyPlanJob).toHaveBeenCalledWith('Keep MBA first', 'standing');
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Remove' }));
+    await waitFor(() => {
+      expect(archiveSalesDailyPlanInstruction).toHaveBeenCalledWith('instr-1');
+    });
+  });
+
+  it('shows hidden tasks again for done, dismissed, and snoozed reasons', async () => {
+    const hiddenPlan = {
+      ...samplePlan,
+      suppressedItems: [
+        {
+          title: 'Done task',
+          itemKey: 'title:done task',
+          itemKind: 'priority',
+          reason: 'done_today',
+          leadId: null,
+          invoiceId: null,
+        },
+        {
+          title: 'Dismissed task',
+          itemKey: 'title:dismissed task',
+          itemKind: 'priority',
+          reason: 'dismissed',
+          leadId: null,
+          invoiceId: null,
+        },
+        {
+          title: 'Snoozed task',
+          itemKey: 'excerpt:whatsapp:hi',
+          itemKind: 'outreach',
+          reason: 'snoozed',
+          leadId: null,
+          invoiceId: null,
+        },
+      ],
+    };
+    fetchSalesDailyPlan.mockResolvedValue({
+      plan: hiddenPlan,
+      memory: [],
+      instructions: [],
+      job: null,
+    });
+    upsertSalesDailyPlanPriorityCompletion.mockResolvedValue(hiddenPlan);
+    upsertSalesDailyPlanItemAnnotation.mockResolvedValue(hiddenPlan);
+
+    const user = userEvent.setup();
+    render(<SalePlanOfTheDayCard />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Hidden this run/ })).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole('button', { name: /Hidden this run/ }));
+
+    async function showAgain(title: string) {
+      const row = screen.getByText(title).closest('li');
+      if (!row) {
+        throw new Error(`Missing hidden row ${title}`);
+      }
+      await user.click(within(row).getByRole('button', { name: 'Show again' }));
+    }
+
+    await showAgain('Done task');
+    await showAgain('Dismissed task');
+    await showAgain('Snoozed task');
+
+    await waitFor(() => {
+      expect(upsertSalesDailyPlanPriorityCompletion).toHaveBeenCalledWith(
+        expect.objectContaining({ itemKey: 'title:done task', done: false }),
+      );
+    });
+    expect(upsertSalesDailyPlanItemAnnotation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        itemKind: 'priority',
+        itemKey: 'title:dismissed task',
+        feedback: null,
+      }),
+    );
+    expect(upsertSalesDailyPlanItemAnnotation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        itemKind: 'outreach',
+        itemKey: 'excerpt:whatsapp:hi',
+        snooze: 'clear',
+      }),
+    );
   });
 
   it('ticks a priority and persists the completion', async () => {

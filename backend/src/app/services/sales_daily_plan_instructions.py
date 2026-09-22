@@ -117,5 +117,13 @@ def serialize_instruction(row: SalesDailyPlanInstruction) -> dict[str, Any]:
     }
 
 
+def delete_instruction(session: Session, *, instruction_id: UUID) -> None:
+    session.execute(
+        delete(SalesDailyPlanInstruction).where(
+            SalesDailyPlanInstruction.id == instruction_id
+        )
+    )
+
+
 def delete_instructions_for_reset(session: Session) -> None:
     session.execute(delete(SalesDailyPlanInstruction))

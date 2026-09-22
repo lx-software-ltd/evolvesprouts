@@ -153,9 +153,7 @@ def _covers_instruction(item: dict[str, Any], text: str, instruction_id: str) ->
     if len(needle) < _MIN_INSTRUCTION_MATCH:
         return False
     haystack = normalize_title(f"{item.get('title') or ''} {item.get('action') or ''}")
-    if needle in haystack:
-        return True
-    return len(haystack) >= _MIN_INSTRUCTION_MATCH and haystack in needle
+    return needle in haystack
 
 
 def _suppressed_index(value: Any) -> dict[str, dict[str, Any]]:
@@ -196,22 +194,49 @@ def _ids(value: Any, *, field: str = "id") -> set[str] | None:
 
 
 def _lead_ids(context: dict[str, Any]) -> set[str] | None:
+    """Leads the model was allowed to cite.
+
+    Pipeline caps are not the only source: inbox threads, yesterday's still-open
+    items, compact history, and recent completions also name real leads.
+    """
     buckets = (
         context.get("open_leads"),
         context.get("recent_closed_leads"),
         context.get("converted_nurture"),
     )
-    if any(not isinstance(bucket, list) for bucket in buckets):
-        present = [bucket for bucket in buckets if isinstance(bucket, list)]
-        if not present:
-            return None
-    found: set[str] = set()
-    for bucket in buckets:
-        if not isinstance(bucket, list):
-            continue
+    listed = [bucket for bucket in buckets if isinstance(bucket, list)]
+    extras = _extra_lead_ids(context)
+    if not listed and not extras:
+        return None
+    found: set[str] = set(extras)
+    for bucket in listed:
         ids = _ids(bucket)
         if ids:
             found.update(ids)
+    return found
+
+
+def _extra_lead_ids(context: dict[str, Any]) -> set[str]:
+    found: set[str] = set()
+    threads = _ids(context.get("needs_reply_threads"), field="lead_id")
+    if threads:
+        found.update(threads)
+    follow = context.get("yesterday_follow_through")
+    if isinstance(follow, dict):
+        still_open = _ids(follow.get("still_open"), field="lead_id")
+        if still_open:
+            found.update(still_open)
+    plans = context.get("prior_plans")
+    if isinstance(plans, list):
+        for plan in plans:
+            if not isinstance(plan, dict):
+                continue
+            prior = _ids(plan.get("priorities"), field="lead_id")
+            if prior:
+                found.update(prior)
+    completed = _ids(context.get("completed_priorities"), field="lead_id")
+    if completed:
+        found.update(completed)
     return found
 
 
