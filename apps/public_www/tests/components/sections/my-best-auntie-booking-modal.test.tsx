@@ -2176,7 +2176,7 @@ describe('my-best-auntie booking modals footer content', () => {
     });
 
     const copyButton = screen.getByRole('button', { name: bookingModalContent.copyLinkLabel });
-    expect(copyButton.querySelector('.es-mask-copy-current')).not.toBeNull();
+    expect(copyButton.querySelector('.es-ui-icon-mask--copy')).not.toBeNull();
     expect(copyButton.querySelector('img')).toBeNull();
 
     fireEvent.click(copyButton);

@@ -11,7 +11,7 @@ export type MyBestAuntieDeepLinkResolution =
   | { status: 'unscoped' }
   | { status: 'tier'; serviceTier: string; cohortSlug: '' }
   | { status: 'open'; serviceTier: string; cohortSlug: string }
-  | { status: 'blocked'; serviceTier: string; cohortSlug: string };
+  | { status: 'blocked'; serviceTier: string; cohortSlug: '' };
 
 interface ResolveMyBestAuntieDeepLinkInput {
   link: BookingDeepLinkQuery;

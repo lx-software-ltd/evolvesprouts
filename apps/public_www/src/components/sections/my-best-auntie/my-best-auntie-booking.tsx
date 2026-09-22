@@ -249,9 +249,7 @@ export function MyBestAuntieBooking({
       ? deepLinkResolution.serviceTier
       : '';
   const deepLinkCohortSlug =
-    deepLinkResolution.status === 'open' || deepLinkResolution.status === 'blocked'
-      ? deepLinkResolution.cohortSlug
-      : '';
+    deepLinkResolution.status === 'open' ? deepLinkResolution.cohortSlug : '';
   /** Null until the visitor picks an age; a deep link supplies the age until then. */
   const [ageOverride, setAgeOverride] = useState<string | null>(null);
   /** Null follows the deep link. An empty string means the visitor cleared that date. */

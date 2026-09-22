@@ -93,7 +93,7 @@ export function BookingShareLinkButton({
           }}
         >
           <span
-            className={`${copied ? 'es-mask-check-current' : 'es-mask-copy-current'} h-4 w-4 shrink-0`}
+            className={`es-ui-icon-mask ${copied ? 'es-ui-icon-mask--check' : 'es-ui-icon-mask--copy'} h-4 w-4`}
             aria-hidden='true'
           />
           {copied ? copyLinkCopiedLabel : copyLinkLabel}
