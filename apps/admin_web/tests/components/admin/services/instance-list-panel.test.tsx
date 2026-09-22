@@ -91,6 +91,7 @@ describe('InstanceListPanel', () => {
     expect(screen.getByLabelText('Service')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Duplicate instance as new draft' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete instance' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy booking link' })).toBeNull();
     expect(screen.queryByTestId('row-editor')).toBeNull();
     expect(screen.queryByText('Booking')).toBeNull();
   });
@@ -170,5 +171,24 @@ describe('InstanceListPanel', () => {
 
     expect(screen.getByText('1/10')).toBeInTheDocument();
     expect(screen.getByText('Override')).toBeInTheDocument();
+  });
+
+  it('offers a booking link action for a My Best Auntie training instance', () => {
+    renderPanel({
+      instances: [
+        {
+          ...BASE_INSTANCE,
+          parentServiceKey: 'my-best-auntie-training-course',
+          parentServiceType: 'training_course',
+          parentServiceTier: '0-1',
+          slug: 'my-best-auntie-0-1-04-26',
+        },
+      ],
+    });
+
+    expect(screen.queryByRole('button', { name: 'Copy booking link' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'More actions' }));
+    expect(screen.getByRole('menuitem', { name: 'Copy booking link' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Delete instance' })).toBeInTheDocument();
   });
 });

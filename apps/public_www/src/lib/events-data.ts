@@ -31,16 +31,20 @@ import {
   isValidLandingPageSlug,
 } from '@/lib/landing-pages';
 import { isHttpHref } from '@/lib/url-utils';
+import {
+  BOOKING_SYSTEM_QUERY_PARAM,
+  MY_BEST_AUNTIE_BOOKING_HASH,
+  MY_BEST_AUNTIE_BOOKING_SYSTEM,
+} from '@/lib/booking-deep-link';
+
+export {
+  MY_BEST_AUNTIE_BOOKING_SYSTEM,
+  MY_BEST_AUNTIE_TRAINING_COURSE_SERVICE_KEY as MY_BEST_AUNTIE_TRAINING_COURSE_CALENDAR_SERVICE_KEY,
+} from '@/lib/booking-deep-link';
 
 type EventStatus = 'open' | 'fully_booked';
 
 export const EVENTS_API_PATH = '/v1/calendar/public';
-/**
- * `service_key` for `GET /v1/calendar/public` when loading My Best Auntie training
- * course cohorts (matches CRM `services.key` for the MBA training course offering).
- */
-export const MY_BEST_AUNTIE_TRAINING_COURSE_CALENDAR_SERVICE_KEY =
-  'my-best-auntie-training-course';
 
 /** Timeout for server-side / static-export calendar fetches (events, MBA, landing pages). */
 export const CALENDAR_PUBLIC_BUILD_FETCH_TIMEOUT_MS = 15_000;
@@ -60,12 +64,9 @@ export const CALENDAR_PUBLIC_CLIENT_FETCH_TIMEOUT_MS = 15_000;
  */
 export const CALENDAR_PUBLIC_FETCH_TIMEOUT_MS = CALENDAR_PUBLIC_BUILD_FETCH_TIMEOUT_MS;
 const MAX_PAST_EVENTS = 5;
-const BOOKING_SYSTEM_QUERY_PARAM = 'booking_system';
 export const EVENT_BOOKING_SYSTEM = 'event-booking';
 /** Consultation one-off booking modal (same reservation API shape as events). */
 export const CONSULTATION_BOOKING_SYSTEM = 'consultation-booking';
-export const MY_BEST_AUNTIE_BOOKING_SYSTEM = 'my-best-auntie-booking';
-const MY_BEST_AUNTIE_BOOKING_HASH = 'my-best-auntie-booking';
 
 /** Query keys for `GET /v1/calendar/public` (OpenAPI: `service_type`, `slug`, `service_key`). */
 export interface EventsFetchParams {

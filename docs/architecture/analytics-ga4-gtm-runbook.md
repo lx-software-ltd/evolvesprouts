@@ -30,6 +30,9 @@ Stable **`admin_*` namespace** events used today:
 | `admin_referral_qr_downloaded` | Download referral PNG | `service_key`, `png_size_px` |
 | `admin_public_page_qr_opened` | Website → public page QR screen: valid URL shown | `public_site_path`, `locale` |
 | `admin_public_page_qr_downloaded` | Download public page PNG | `public_site_path`, `locale`, `png_size_px` |
+| `admin_booking_link_opened` | Services instance booking-link dialog opens with a URL | `service_key`, `locale`, `service_tier` |
+| `admin_booking_link_copied` | Copy booking link in that dialog | `service_key`, `locale`, `service_tier` |
+| `admin_booking_link_qr_downloaded` | Download booking-link QR PNG | `service_key`, `locale`, `service_tier`, `png_size_px` |
 
 ## Tracking architecture
 
@@ -109,6 +112,7 @@ data bug.
 | `booking_age_selected` | Age option selected | `section_id`, `service_tier` | No |
 | `booking_date_selected` | Date/cohort selected | `section_id`, `service_tier`, `cohort_label`, `is_fully_booked` | No |
 | `booking_confirm_pay_click` | Confirm-and-pay CTA click | `section_id`, `service_tier`, `cohort_label`, `total_amount` | Yes |
+| `booking_share_link_copied` | Copy link in the My Best Auntie confirm-and-pay modal | `section_id`, `service_tier`, `cohort_label` | No |
 | `booking_payment_method_selected` | Payment method switch | `section_id`, `payment_method` | No |
 | `booking_discount_apply_success` | Discount code valid | `section_id`, `discount_type`, `discount_amount` | No |
 | `booking_discount_apply_error` | Discount code invalid/error | `section_id`, `error_type` | No |
@@ -230,7 +234,7 @@ Both checks run through Public WWW lint/verification workflows.
 
 ## Admin console (optional / not in public taxonomy)
 
-The admin web app may emit **`admin_referral_qr_opened`** and **`admin_referral_qr_downloaded`** from the discount referral QR utility, and **`admin_public_page_qr_opened`** / **`admin_public_page_qr_downloaded`** from the Website → public page QR screen (`trackAdminAnalyticsEvent`). These are **not** part of `apps/public_www/src/lib/analytics-taxonomy.json` and are currently **no-ops outside development** unless product wires them to `dataLayer`/GTM on the admin host. If they are enabled later, add GA4/GTM mappings separately from the public-site container.
+The admin web app may emit **`admin_referral_qr_opened`** and **`admin_referral_qr_downloaded`** from the discount referral QR utility, **`admin_public_page_qr_opened`** / **`admin_public_page_qr_downloaded`** from the Website → public page QR screen, and **`admin_booking_link_opened`** / **`admin_booking_link_copied`** / **`admin_booking_link_qr_downloaded`** from the Services instance booking-link dialog (`trackAdminAnalyticsEvent`). These are **not** part of `apps/public_www/src/lib/analytics-taxonomy.json` and are currently **no-ops outside development** unless product wires them to `dataLayer`/GTM on the admin host. If they are enabled later, add GA4/GTM mappings separately from the public-site container.
 
 ## Programmatic setup prerequisites (for service-account automation)
 

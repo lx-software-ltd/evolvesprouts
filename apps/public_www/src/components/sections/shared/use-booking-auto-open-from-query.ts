@@ -1,11 +1,42 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 
-const BOOKING_SYSTEM_QUERY_PARAM = 'booking_system';
+import {
+  readBookingDeepLinkFromSearch,
+  type BookingDeepLinkQuery,
+} from '@/lib/booking-deep-link';
 
 interface UseBookingAutoOpenFromQueryOptions {
   bookingSystem: string;
   canOpen: boolean;
   onOpen: () => void;
+}
+
+function subscribeToPageSearch(onStoreChange: () => void): () => void {
+  window.addEventListener('popstate', onStoreChange);
+  return () => {
+    window.removeEventListener('popstate', onStoreChange);
+  };
+}
+
+function readPageSearchSnapshot(): string {
+  return window.location.search;
+}
+
+function readServerPageSearchSnapshot(): string {
+  return '';
+}
+
+/**
+ * Booking query from the page URL. The server snapshot is empty so the first
+ * hydration render matches SSR; React then applies the client search before effects.
+ */
+export function useBookingPageSearch(): BookingDeepLinkQuery {
+  const search = useSyncExternalStore(
+    subscribeToPageSearch,
+    readPageSearchSnapshot,
+    readServerPageSearchSnapshot,
+  );
+  return readBookingDeepLinkFromSearch(search);
 }
 
 export function useBookingAutoOpenFromQuery({
@@ -25,8 +56,8 @@ export function useBookingAutoOpenFromQuery({
       return;
     }
 
-    const queryParams = new URLSearchParams(window.location.search);
-    if (queryParams.get(BOOKING_SYSTEM_QUERY_PARAM) !== bookingSystem) {
+    const queryLink = readBookingDeepLinkFromSearch(window.location.search);
+    if (queryLink.bookingSystem !== bookingSystem) {
       return;
     }
     if (hasOpenedBookingModalFromQueryRef.current) {

@@ -6,7 +6,10 @@ export type AdminAnalyticsEventName =
   | 'admin_referral_qr_opened'
   | 'admin_referral_qr_downloaded'
   | 'admin_public_page_qr_opened'
-  | 'admin_public_page_qr_downloaded';
+  | 'admin_public_page_qr_downloaded'
+  | 'admin_booking_link_opened'
+  | 'admin_booking_link_copied'
+  | 'admin_booking_link_qr_downloaded';
 
 export type AdminAnalyticsEventParams = Record<
   string,
