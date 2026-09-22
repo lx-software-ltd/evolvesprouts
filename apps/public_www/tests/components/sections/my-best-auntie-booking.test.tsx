@@ -712,14 +712,7 @@ describe('MyBestAuntieBooking section', () => {
     ).toContain('es-btn--state-active');
   });
 
-  it('copies a unique confirm-and-pay link and carries the referral code', async () => {
-    window.history.replaceState({}, '', '/en/events/?ref=SAVE10');
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: { writeText },
-    });
-
+  it('does not show a copy link control in the confirm-and-pay modal', async () => {
     render(
       <MyBestAuntieBooking
         locale='en'
@@ -731,57 +724,8 @@ describe('MyBestAuntieBooking section', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: bookingContent.confirmAndPayLabel }));
-    fireEvent.click(
-      await screen.findByRole('button', { name: bookingModalContent.paymentModal.copyLinkLabel }),
-    );
-
-    await waitFor(() => {
-      expect(writeText).toHaveBeenCalledTimes(1);
-    });
-    const copiedUrl = new URL(writeText.mock.calls[0]?.[0] as string);
-    expect(copiedUrl.pathname).toBe('/en/services/my-best-auntie-training-course/');
-    expect(copiedUrl.searchParams.get('booking_system')).toBe('my-best-auntie-booking');
-    expect(copiedUrl.searchParams.get('service_tier')).toBe('0-1');
-    expect(copiedUrl.searchParams.get('cohort')).toBe('my-best-auntie-0-1-04-26');
-    expect(copiedUrl.searchParams.get('ref')).toBe('SAVE10');
-    expect(copiedUrl.hash).toBe('#my-best-auntie-booking');
-    expect(mockedTrackAnalyticsEvent).toHaveBeenCalledWith(
-      'booking_share_link_copied',
-      expect.objectContaining({
-        sectionId: 'my-best-auntie-booking',
-        params: expect.objectContaining({
-          service_tier: bookingContent.ageOptions[0]!.label,
-        }),
-      }),
-    );
-  });
-
-  it('shows the booking link when the clipboard is unavailable', async () => {
-    window.history.replaceState({}, '', '/en/services/my-best-auntie-training-course/');
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
-    });
-
-    render(
-      <MyBestAuntieBooking
-        locale='en'
-        content={bookingContent}
-        initialCohorts={initialMbaCohorts}
-        modalContent={myBestAuntieModalContent}
-        bookingModalContent={bookingModalContent}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: bookingContent.confirmAndPayLabel }));
-    fireEvent.click(
-      await screen.findByRole('button', { name: bookingModalContent.paymentModal.copyLinkLabel }),
-    );
-
-    const fallback = await screen.findByRole('textbox', {
-      name: bookingModalContent.paymentModal.copyLinkFallbackLabel,
-    });
-    expect((fallback as HTMLInputElement).value).toContain('cohort=my-best-auntie-0-1-04-26');
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy link' })).toBeNull();
   });
 
   it('opens the confirm-and-pay modal on the deep-linked age group and cohort', async () => {

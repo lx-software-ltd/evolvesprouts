@@ -112,7 +112,6 @@ data bug.
 | `booking_age_selected` | Age option selected | `section_id`, `service_tier` | No |
 | `booking_date_selected` | Date/cohort selected | `section_id`, `service_tier`, `cohort_label`, `is_fully_booked` | No |
 | `booking_confirm_pay_click` | Confirm-and-pay CTA click | `section_id`, `service_tier`, `cohort_label`, `total_amount` | Yes |
-| `booking_share_link_copied` | Copy link in the My Best Auntie confirm-and-pay modal | `section_id`, `service_tier`, `cohort_label` | No |
 | `booking_payment_method_selected` | Payment method switch | `section_id`, `payment_method` | No |
 | `booking_discount_apply_success` | Discount code valid | `section_id`, `discount_type`, `discount_amount` | No |
 | `booking_discount_apply_error` | Discount code invalid/error | `section_id`, `error_type` | No |

@@ -1609,10 +1609,6 @@
       "emailValidationError": "請輸入有效的電郵地址。",
       "submitErrorMessage": "暫時未能提交預約，請稍後再試。",
       "closeOverlayLabel": "關閉視窗",
-      "copyLinkLabel": "複製連結",
-      "copyLinkCopiedLabel": "連結已複製",
-      "copyLinkFallbackLabel": "預約連結",
-      "copyLinkCopiedAnnouncement": "預約連結已複製",
       "fpsQrCodeLabel": "FPS 付款二維碼",
       "consultationPicker": {
         "pickDateTimeIntro": "請選擇適合你嘅日期同時段：",
