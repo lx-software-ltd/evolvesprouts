@@ -32,6 +32,7 @@ import type {
 } from '@/content';
 import { formatContentTemplate } from '@/content/content-field-utils';
 import {
+  MY_BEST_AUNTIE_BOOKING_SYSTEM,
   MY_BEST_AUNTIE_TRAINING_COURSE_CALENDAR_SERVICE_KEY,
   type MyBestAuntieEventCohort,
 } from '@/lib/events-data';
@@ -54,8 +55,6 @@ import {
   cohortsVisibleForAgeGroup,
   resolveMyBestAuntieDeepLink,
 } from '@/components/sections/my-best-auntie/resolve-my-best-auntie-deep-link';
-
-const MY_BEST_AUNTIE_BOOKING_SYSTEM = 'my-best-auntie-booking';
 
 const MyBestAuntieBookingModal = dynamic(
   () =>
@@ -237,7 +236,6 @@ export function MyBestAuntieBooking({
   const initialAgeId = ageOptions[0]?.id ?? '';
   const pageSearch = useBookingPageSearch();
   const deepLinkResolution = resolveMyBestAuntieDeepLink({
-    hasRead: true,
     link: pageSearch,
     cohorts: sortedCohorts,
     ageGroupIds: ageOptions.map((option) => option.id),

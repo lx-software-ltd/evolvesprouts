@@ -14,7 +14,6 @@ export type MyBestAuntieDeepLinkResolution =
   | { status: 'blocked'; serviceTier: string; cohortSlug: string };
 
 interface ResolveMyBestAuntieDeepLinkInput {
-  hasRead: boolean;
   link: BookingDeepLinkQuery;
   cohorts: MyBestAuntieEventCohort[];
   ageGroupIds: readonly string[];
@@ -24,16 +23,13 @@ interface ResolveMyBestAuntieDeepLinkInput {
 
 /**
  * Decide how a My Best Auntie booking URL should select a cohort.
- * Sold-out and past targets select the age group and do not auto-open.
- * An unknown slug falls back to the unscoped booking-system open.
+ * Sold-out and past targets select the age group, leave the date on the next
+ * bookable cohort, and do not auto-open. An unknown slug falls back to the
+ * unscoped booking-system open.
  */
 export function resolveMyBestAuntieDeepLink(
   input: ResolveMyBestAuntieDeepLinkInput,
 ): MyBestAuntieDeepLinkResolution {
-  if (!input.hasRead) {
-    return { status: 'pending' };
-  }
-
   if (input.link.bookingSystem !== MY_BEST_AUNTIE_BOOKING_SYSTEM) {
     return { status: 'ignore' };
   }
@@ -58,12 +54,11 @@ export function resolveMyBestAuntieDeepLink(
     return { status: 'unscoped' };
   }
 
-  const future = isFutureCohort(match, input.todayYmd);
-  if (!future || match.is_fully_booked) {
+  if (!isFutureCohort(match, input.todayYmd) || match.is_fully_booked) {
     return {
       status: 'blocked',
       serviceTier,
-      cohortSlug: future ? match.slug : '',
+      cohortSlug: '',
     };
   }
 

@@ -57,4 +57,22 @@ describe('useBookingAutoOpenFromQuery', () => {
 
     expect(onOpenMock).toHaveBeenCalledTimes(1);
   });
+
+  it('still opens when canOpen drops before the scheduled open', async () => {
+    const { rerender } = render(<BookingAutoOpenHarness canOpen />);
+
+    rerender(<BookingAutoOpenHarness canOpen={false} />);
+
+    await act(async () => {
+      vi.runAllTimers();
+    });
+    expect(onOpenMock).not.toHaveBeenCalled();
+
+    rerender(<BookingAutoOpenHarness canOpen />);
+
+    await act(async () => {
+      vi.runAllTimers();
+    });
+    expect(onOpenMock).toHaveBeenCalledTimes(1);
+  });
 });

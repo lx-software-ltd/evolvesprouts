@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { PublicSiteQrExportPanel } from '@/components/admin/public-site-qr-export-panel';
 import { AdminDialog } from '@/components/ui/admin-dialog';
@@ -38,6 +38,7 @@ export function BookingLinkDialog({
   const [locale, setLocale] = useState<MyBestAuntieReferralLocale>('en');
   const [copyError, setCopyError] = useState('');
   const { copiedKey, markCopied } = useCopyFeedback(1000);
+  const hasTrackedOpenRef = useRef(false);
   const baseUrl = useMemo(() => getPublicSiteBaseUrl(), []);
   const builtUrl = useMemo(() => {
     if (!baseUrl) {
@@ -54,13 +55,19 @@ export function BookingLinkDialog({
   }, [baseUrl, locale, parentServiceKey, parentServiceTier, parentServiceType, slug]);
 
   useEffect(() => {
-    if (open && builtUrl) {
-      trackAdminAnalyticsEvent('admin_booking_link_opened', {
-        service_key: parentServiceKey ?? '',
-        locale,
-        service_tier: parentServiceTier ?? '',
-      });
+    if (!open) {
+      hasTrackedOpenRef.current = false;
+      return;
     }
+    if (!builtUrl || hasTrackedOpenRef.current) {
+      return;
+    }
+    hasTrackedOpenRef.current = true;
+    trackAdminAnalyticsEvent('admin_booking_link_opened', {
+      service_key: parentServiceKey ?? '',
+      locale,
+      service_tier: parentServiceTier ?? '',
+    });
   }, [builtUrl, locale, open, parentServiceKey, parentServiceTier]);
 
   const configError = !baseUrl.trim()

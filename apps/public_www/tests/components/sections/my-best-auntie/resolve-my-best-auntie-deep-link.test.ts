@@ -63,7 +63,6 @@ describe('resolveMyBestAuntieDeepLink', () => {
   it('opens a future bookable cohort', () => {
     expect(
       resolveMyBestAuntieDeepLink({
-        hasRead: true,
         link: {
           bookingSystem: 'my-best-auntie-booking',
           serviceTier: '1-3',
@@ -81,10 +80,9 @@ describe('resolveMyBestAuntieDeepLink', () => {
     });
   });
 
-  it('blocks auto-open for a sold-out cohort and keeps its slug visible', () => {
+  it('blocks auto-open for a sold-out cohort and leaves the date unselected', () => {
     expect(
       resolveMyBestAuntieDeepLink({
-        hasRead: true,
         link: {
           bookingSystem: 'my-best-auntie-booking',
           serviceTier: '1-3',
@@ -98,14 +96,13 @@ describe('resolveMyBestAuntieDeepLink', () => {
     ).toEqual({
       status: 'blocked',
       serviceTier: '1-3',
-      cohortSlug: 'my-best-auntie-1-3-sold',
+      cohortSlug: '',
     });
   });
 
   it('blocks auto-open for a past cohort without selecting that date', () => {
     expect(
       resolveMyBestAuntieDeepLink({
-        hasRead: true,
         link: {
           bookingSystem: 'my-best-auntie-booking',
           serviceTier: '1-3',
@@ -126,7 +123,6 @@ describe('resolveMyBestAuntieDeepLink', () => {
   it('falls back to the unscoped booking open when the slug is unknown', () => {
     expect(
       resolveMyBestAuntieDeepLink({
-        hasRead: true,
         link: {
           bookingSystem: 'my-best-auntie-booking',
           serviceTier: '',

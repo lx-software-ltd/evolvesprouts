@@ -27,6 +27,8 @@ import {
   buildBookingDeepLinkUrl,
   resolveBookingShareCode,
 } from '@/lib/booking-deep-link';
+import { localizeHref } from '@/lib/locale-routing';
+import { ROUTES } from '@/lib/routes';
 import {
   MY_BEST_AUNTIE_TRAINING_COURSE_CALENDAR_SERVICE_KEY,
   MY_BEST_AUNTIE_BOOKING_SYSTEM,
@@ -151,7 +153,7 @@ export function MyBestAuntieBookingModal({
       ? ''
       : buildBookingDeepLinkUrl({
           origin: window.location.origin,
-          pathname: window.location.pathname,
+          pathname: localizeHref(ROUTES.servicesMyBestAuntieTrainingCourse, locale),
           bookingSystem: MY_BEST_AUNTIE_BOOKING_SYSTEM,
           serviceTier: selectedCohort?.service_tier ?? '',
           cohortSlug: selectedCohort?.slug ?? '',
@@ -174,7 +176,7 @@ export function MyBestAuntieBookingModal({
           copyLinkCopiedLabel={paymentModalContent.copyLinkCopiedLabel}
           copyLinkFallbackLabel={paymentModalContent.copyLinkFallbackLabel}
           copyLinkCopiedAnnouncement={paymentModalContent.copyLinkCopiedAnnouncement}
-          serviceTier={selectedCohort?.service_tier ?? ''}
+          serviceTier={selectedServiceTierLabelText || selectedCohort?.service_tier || ''}
           cohortLabel={selectedCohortDateLabelText}
           analyticsSectionId={analyticsSectionId}
         />

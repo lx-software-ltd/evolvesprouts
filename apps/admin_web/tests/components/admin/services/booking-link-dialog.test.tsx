@@ -2,6 +2,11 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { BookingLinkDialog } from '@/components/admin/services/booking-link-dialog';
+import { trackAdminAnalyticsEvent } from '@/lib/admin-analytics';
+
+vi.mock('@/lib/admin-analytics', () => ({
+  trackAdminAnalyticsEvent: vi.fn(),
+}));
 
 vi.mock('@/lib/config', () => ({
   getPublicSiteBaseUrl: () => 'https://www.example.com',
@@ -20,6 +25,7 @@ const instanceProps = {
 
 describe('BookingLinkDialog', () => {
   afterEach(() => {
+    vi.mocked(trackAdminAnalyticsEvent).mockClear();
     vi.restoreAllMocks();
   });
 
@@ -52,5 +58,23 @@ describe('BookingLinkDialog', () => {
       );
     });
     expect(await screen.findByRole('button', { name: 'Link copied' })).toBeInTheDocument();
+  });
+
+  it('records an open once per dialog, including after a locale change', () => {
+    const onClose = vi.fn();
+    const view = render(<BookingLinkDialog open onClose={onClose} {...instanceProps} />);
+
+    expect(trackAdminAnalyticsEvent).toHaveBeenCalledTimes(1);
+    expect(trackAdminAnalyticsEvent).toHaveBeenCalledWith(
+      'admin_booking_link_opened',
+      expect.objectContaining({ locale: 'en' }),
+    );
+
+    fireEvent.change(screen.getByLabelText('Locale'), { target: { value: 'zh-HK' } });
+    expect(trackAdminAnalyticsEvent).toHaveBeenCalledTimes(1);
+
+    view.rerender(<BookingLinkDialog open={false} onClose={onClose} {...instanceProps} />);
+    view.rerender(<BookingLinkDialog open onClose={onClose} {...instanceProps} />);
+    expect(trackAdminAnalyticsEvent).toHaveBeenCalledTimes(2);
   });
 });

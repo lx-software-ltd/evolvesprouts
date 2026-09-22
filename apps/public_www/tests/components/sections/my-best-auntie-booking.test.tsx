@@ -713,11 +713,7 @@ describe('MyBestAuntieBooking section', () => {
   });
 
   it('copies a unique confirm-and-pay link and carries the referral code', async () => {
-    window.history.replaceState(
-      {},
-      '',
-      '/en/services/my-best-auntie-training-course/?ref=SAVE10',
-    );
+    window.history.replaceState({}, '', '/en/events/?ref=SAVE10');
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -754,7 +750,7 @@ describe('MyBestAuntieBooking section', () => {
       expect.objectContaining({
         sectionId: 'my-best-auntie-booking',
         params: expect.objectContaining({
-          service_tier: '0-1',
+          service_tier: bookingContent.ageOptions[0]!.label,
         }),
       }),
     );
@@ -841,6 +837,20 @@ describe('MyBestAuntieBooking section', () => {
       });
     });
     expect(screen.queryByRole('dialog')).toBeNull();
+
+    const dateSelectorRegion = screen.getByRole('region', {
+      name: bookingContent.dateSelectorLabel,
+    });
+    const preferredCohort = getCohortsForAge(cohorts, '1-3').find(
+      (entry) => !entry.is_fully_booked,
+    );
+    expect(preferredCohort).toBeDefined();
+    expect(
+      within(dateSelectorRegion).getByRole('button', {
+        name: new RegExp(formatCohortValue(preferredCohort!.cohort, 'en')),
+      }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: bookingContent.confirmAndPayLabel })).toBeEnabled();
   });
 
   it('keeps a deep-linked cohort selectable when it is past the three-date cap', async () => {

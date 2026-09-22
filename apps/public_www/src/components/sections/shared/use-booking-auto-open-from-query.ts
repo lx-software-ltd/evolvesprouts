@@ -44,6 +44,7 @@ export function useBookingAutoOpenFromQuery({
   canOpen,
   onOpen,
 }: UseBookingAutoOpenFromQueryOptions) {
+  const queryLink = useBookingPageSearch();
   const hasOpenedBookingModalFromQueryRef = useRef(false);
   const onOpenRef = useRef(onOpen);
 
@@ -52,11 +53,6 @@ export function useBookingAutoOpenFromQuery({
   }, [onOpen]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    const queryLink = readBookingDeepLinkFromSearch(window.location.search);
     if (queryLink.bookingSystem !== bookingSystem) {
       return;
     }
@@ -67,13 +63,19 @@ export function useBookingAutoOpenFromQuery({
       return;
     }
 
-    hasOpenedBookingModalFromQueryRef.current = true;
+    // Record the open only when the timer fires. Clearing this timer — canOpen
+    // flickering while cohorts load, or a server snapshot that does not yet
+    // match the client search — must leave the one-shot available.
     const openModalTimerId = window.setTimeout(() => {
+      if (hasOpenedBookingModalFromQueryRef.current) {
+        return;
+      }
+      hasOpenedBookingModalFromQueryRef.current = true;
       onOpenRef.current();
     }, 0);
 
     return () => {
       window.clearTimeout(openModalTimerId);
     };
-  }, [bookingSystem, canOpen]);
+  }, [bookingSystem, canOpen, queryLink.bookingSystem]);
 }

@@ -3,6 +3,8 @@
  * Admin builds the same URLs via `@shared-public-www/booking-deep-link`.
  */
 
+import { normalizeDiscountCode, readSearchParam } from './referral-link';
+
 export const BOOKING_SYSTEM_QUERY_PARAM = 'booking_system';
 export const BOOKING_SERVICE_TIER_QUERY_PARAM = 'service_tier';
 export const BOOKING_COHORT_QUERY_PARAM = 'cohort';
@@ -19,7 +21,6 @@ export const MY_BEST_AUNTIE_TRAINING_COURSE_SERVICE_KEY =
 const MY_BEST_AUNTIE_SLUG_TIERS = ['0-1', '1-3', '3-6'] as const;
 
 const BOOKING_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const DISCOUNT_CODE_PATTERN = /^[A-Za-z0-9_-]+$/;
 
 export interface BookingDeepLinkQuery {
   bookingSystem: string;
@@ -44,14 +45,6 @@ export interface BuildBookingDeepLinkUrlInput {
   shareCode?: BookingShareCode | null;
 }
 
-function readQueryValue(params: URLSearchParams, name: string): string {
-  const key = [...params.keys()].find((candidate) => candidate.toLowerCase() === name);
-  if (!key) {
-    return '';
-  }
-  return params.get(key)?.trim() ?? '';
-}
-
 /** Lowercase kebab token used for service tiers and instance slugs. Empty when invalid. */
 export function normalizeBookingSlug(raw: string | null | undefined): string {
   const value = (raw ?? '').trim().toLowerCase();
@@ -61,25 +54,15 @@ export function normalizeBookingSlug(raw: string | null | undefined): string {
   return value;
 }
 
-function normalizeDiscountCode(raw: string | null | undefined): string {
-  const trimmed = (raw ?? '').trim();
-  if (!trimmed || !DISCOUNT_CODE_PATTERN.test(trimmed)) {
-    return '';
-  }
-  return trimmed.toUpperCase();
-}
-
 /**
  * Read `booking_system`, `service_tier`, and `cohort` from a page query string.
  * Tier and cohort are dropped when they are not slug-safe.
  */
 export function readBookingDeepLinkFromSearch(search: string): BookingDeepLinkQuery {
-  const raw = search.startsWith('?') ? search.slice(1) : search;
-  const params = new URLSearchParams(raw);
   return {
-    bookingSystem: readQueryValue(params, BOOKING_SYSTEM_QUERY_PARAM),
-    serviceTier: normalizeBookingSlug(readQueryValue(params, BOOKING_SERVICE_TIER_QUERY_PARAM)),
-    cohortSlug: normalizeBookingSlug(readQueryValue(params, BOOKING_COHORT_QUERY_PARAM)),
+    bookingSystem: readSearchParam(search, BOOKING_SYSTEM_QUERY_PARAM) ?? '',
+    serviceTier: normalizeBookingSlug(readSearchParam(search, BOOKING_SERVICE_TIER_QUERY_PARAM)),
+    cohortSlug: normalizeBookingSlug(readSearchParam(search, BOOKING_COHORT_QUERY_PARAM)),
   };
 }
 
@@ -93,8 +76,8 @@ export function resolveBookingShareCode(input: {
   appliedCode: string;
   appliedFromReferral: boolean;
 }): BookingShareCode | null {
-  const applied = normalizeDiscountCode(input.appliedCode);
-  const prefilled = normalizeDiscountCode(input.prefilledCode);
+  const applied = normalizeDiscountCode(input.appliedCode) ?? '';
+  const prefilled = normalizeDiscountCode(input.prefilledCode) ?? '';
   if (applied) {
     const sameAsPrefill = prefilled !== '' && prefilled === applied;
     return {
@@ -175,7 +158,7 @@ export function buildBookingDeepLinkUrl(input: BuildBookingDeepLinkUrlInput): st
 
   const shareCode = input.shareCode ?? null;
   if (shareCode) {
-    const code = normalizeDiscountCode(shareCode.code);
+    const code = normalizeDiscountCode(shareCode.code) ?? '';
     if (code) {
       const paramName =
         shareCode.paramName === 'discount'

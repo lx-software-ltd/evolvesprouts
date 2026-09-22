@@ -1,13 +1,10 @@
 'use client';
 
-import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 
 import { ButtonPrimitive } from '@/components/shared/button-primitive';
 import { trackAnalyticsEvent } from '@/lib/analytics';
 
-const COPY_ICON_SOURCE = '/images/copy.svg';
-const COPIED_ICON_SOURCE = '/images/check.svg';
 const COPIED_RESET_MS = 2000;
 
 interface BookingShareLinkButtonProps {
@@ -95,13 +92,9 @@ export function BookingShareLinkButton({
             void handleCopy();
           }}
         >
-          <Image
-            src={copied ? COPIED_ICON_SOURCE : COPY_ICON_SOURCE}
-            alt=''
+          <span
+            className={`${copied ? 'es-mask-check-current' : 'es-mask-copy-current'} h-4 w-4 shrink-0`}
             aria-hidden='true'
-            width={16}
-            height={16}
-            className='h-4 w-4'
           />
           {copied ? copyLinkCopiedLabel : copyLinkLabel}
         </ButtonPrimitive>
