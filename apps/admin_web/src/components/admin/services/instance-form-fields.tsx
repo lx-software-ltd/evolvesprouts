@@ -377,15 +377,6 @@ export function InstanceFormFields({
               placeholder="Location UUID"
             />
           )}
-          {/* Exception: Location documents the public TBC contract. The empty
-              option is no longer a "select a venue" placeholder, so operators
-              need this note to know the service default is admin-only. */}
-          {!value.locationId.trim() ? (
-            <p className="mt-1 text-xs text-slate-500">
-              Public website shows To be confirmed until a venue is saved on this
-              instance or its slots. The service default is admin-only.
-            </p>
-          ) : null}
         </div>
       </AdminFieldGrid>
       <AdminFieldGrid columns={4}>
