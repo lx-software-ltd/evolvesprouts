@@ -1202,19 +1202,27 @@ per-lead AI suggestions. An EventBridge rule queues a new plan every day at
 the newest saved plan (and the newest job, so a failed 06:00 run is visible),
 shows a 24-hour (plus pipeline / inbox / contact watermark) stale flag, and
 still lets the assignee Generate / Refresh insight. Optional `operator_input`
-on refresh is stored on the new plan. The last five plans (and their
-refinements), recent contacts, converted-client nurture rows, and ticked
-priorities, rejected/snoozed item annotations, week-over-week trends, and
-yesterday follow-through are sent back as memory on the next generation. Empty or non-JSON
+on refresh is stored on the new plan and as an instruction: `today` until the
+next 06:00 HKT, or `standing` until removed. Done, dismissed, and snoozed
+items are org-wide (`sales_daily_plan_item_states`) and the server removes
+matching priorities after the model responds. A same-day instruction the model
+omits is appended as a fallback priority. The last five plans are sent as a
+compact history (not full payloads), with recent contacts, converted-client
+nurture rows, week-over-week trends, and follow-through from the previous
+business day. Empty or non-JSON
 model output fails the job instead of storing a blank plan. Scheduled jobs
 address Sales config `default_assigned_to` by Cognito name; manual runs
 address the logged-in admin. The dashboard card is interactive: kind/urgency
 chips, progress, copy-and-inbox outreach, Mine vs All, compare-with-previous
 (`GET .../daily-plan?compare=true`), snoozed items hidden until shown,
-item feedback/snooze/draft edits
-(`POST /v1/admin/leads/daily-plan/item-annotations`), and follow-up Q&A on the
-stored plan JSON (`POST /v1/admin/leads/daily-plan/questions`). Mutations send
-`plan_id` and 409 when the latest plan changed. Follow-up model calls run
+item feedback/snooze
+(`POST /v1/admin/leads/daily-plan/item-annotations`; feedback and snooze are
+org-wide, draft edits still 409 when `plan_id` is stale), instructions
+(`GET|POST /v1/admin/leads/daily-plan/instructions`,
+`DELETE .../instructions/{id}`), and follow-up Q&A on the
+stored plan JSON (`POST /v1/admin/leads/daily-plan/questions`). Follow-up
+questions and draft edits send `plan_id` and 409 when the latest plan changed.
+Priority ticks do not. Follow-up model calls run
 outside the database session. Trend and aging day counts use Asia/Hong_Kong
 wall time. All rows are kept until Sales → Configuration
 resets memory (`DELETE /v1/admin/leads/daily-plan`). Scheduled jobs use audit

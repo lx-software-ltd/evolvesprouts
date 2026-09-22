@@ -14,7 +14,7 @@ from app.db.models.meta import MetaMessage
 from app.db.models.sales_daily_plan import SalesDailyPlan
 from app.db.models.sales_lead import SalesLead, SalesLeadEvent
 from app.db.models.whatsapp import WhatsAppMessage
-from app.services.sales_daily_plan_completions import priority_key
+from app.services.sales_daily_plan_identity import priority_identity
 from app.services.sales_daily_plan_memory import list_recent_plans
 
 
@@ -104,7 +104,7 @@ def apply_comparison(
         title = str(entry.get("title") or "").strip()
         if not title:
             continue
-        key = priority_key(title, entry.get("lead_id"), entry.get("invoice_id"))
+        key = _priority_identity(entry)
         previous_by_key[key] = {
             "title": title,
             "lead_id": entry.get("lead_id"),
@@ -112,11 +112,7 @@ def apply_comparison(
         }
     current_keys: set[str] = set()
     for item in priorities:
-        key = str(item.get("item_key") or "") or priority_key(
-            str(item.get("title") or ""),
-            item.get("lead_id"),
-            item.get("invoice_id"),
-        )
+        key = str(item.get("item_key") or "") or _priority_identity(item)
         current_keys.add(key)
         item["compare_status"] = "carried" if key in previous_by_key else "new"
     return [value for key, value in previous_by_key.items() if key not in current_keys]
@@ -152,6 +148,22 @@ def hydrate_assigned_to(
         lead_id = str(item.get("lead_id") or "")
         if lead_id in assigned:
             item["assigned_to"] = assigned[lead_id]
+
+
+def _priority_identity(entry: dict[str, Any]) -> str:
+    return priority_identity(
+        kind=_text(entry.get("kind")),
+        lead_id=entry.get("lead_id"),
+        invoice_id=entry.get("invoice_id"),
+        conversation_id=entry.get("conversation_id"),
+        title=str(entry.get("title") or ""),
+        instruction_id=entry.get("instruction_id"),
+    )
+
+
+def _text(value: Any) -> str | None:
+    text = str(value or "").strip()
+    return text or None
 
 
 def _as_utc_or_none(value: datetime | None) -> datetime | None:

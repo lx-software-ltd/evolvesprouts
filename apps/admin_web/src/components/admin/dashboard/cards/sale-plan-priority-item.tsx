@@ -120,6 +120,21 @@ export function SalePlanPriorityItem({
             {source}
           </span>
         ))}
+        {item.fromInstruction ? (
+          <span className='rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-800'>
+            Added from your note
+          </span>
+        ) : null}
+        {item.instructionId && !item.fromInstruction ? (
+          <span className='rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-800'>
+            From your instruction
+          </span>
+        ) : null}
+        {item.resurfaced ? (
+          <span className='rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-800'>
+            Resurfaced
+          </span>
+        ) : null}
         {showCompare && item.compareStatus === 'new' ? (
           <span className='rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800'>
             New

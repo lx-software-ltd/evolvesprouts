@@ -3560,8 +3560,10 @@ export class ApiStack extends cdk.Stack {
 
     // Non-asset `/v1/admin/*` routes use a greedy `{proxy+}` + `ANY` integration
     // so the stack stays under CloudFormation's 500-resource limit. The Lambda
-    // handles its own path-based routing. Explicit `/v1/admin/assets/**` routes
-    // above take priority over this catch-all in API Gateway.
+    // handles its own path-based routing, including
+    // `/v1/admin/leads/daily-plan/instructions` and the other daily-plan item
+    // routes. Explicit `/v1/admin/assets/**` routes above take priority over
+    // this catch-all in API Gateway.
     const adminCatchAll = admin.addResource("{proxy+}");
     adminCatchAll.addMethod("ANY", adminIntegration, {
       authorizationType: apigateway.AuthorizationType.CUSTOM,

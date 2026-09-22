@@ -6,17 +6,15 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Select, or_, select
+from sqlalchemy import Select, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from app.db.models.sales_daily_plan_item_annotation import (
     SalesDailyPlanItemAnnotation,
 )
-from app.services.sales_daily_plan_completions import priority_key
-from app.services.sales_daily_plan_payload import outreach_item_key
+from app.services.sales_daily_plan_identity import outreach_identity, priority_identity
 
-ANNOTATION_MEMORY_LIMIT = 30
 FEEDBACK_VALUES = ("up", "down", "not_relevant")
 ITEM_KINDS = ("priority", "outreach")
 SNOOZE_TOMORROW = timedelta(days=1)
@@ -34,30 +32,6 @@ def list_annotations_for_plan(
         SalesDailyPlanItemAnnotation
     ).where(SalesDailyPlanItemAnnotation.plan_id == plan_id)
     return list(session.scalars(statement).all())
-
-
-def load_item_feedback_memory(
-    session: Session,
-    *,
-    now: datetime | None = None,
-    limit: int = ANNOTATION_MEMORY_LIMIT,
-) -> list[dict[str, Any]]:
-    """Rejected or still-snoozed items for the next generation."""
-    if not hasattr(session, "scalars"):
-        return []
-    current = now or datetime.now(UTC)
-    statement: Select[tuple[SalesDailyPlanItemAnnotation]] = (
-        select(SalesDailyPlanItemAnnotation)
-        .where(
-            or_(
-                SalesDailyPlanItemAnnotation.feedback.in_(("down", "not_relevant")),
-                SalesDailyPlanItemAnnotation.snoozed_until > current,
-            )
-        )
-        .order_by(SalesDailyPlanItemAnnotation.updated_at.desc())
-        .limit(limit)
-    )
-    return [serialize_annotation(row) for row in session.scalars(statement).all()]
 
 
 def serialize_annotation(row: SalesDailyPlanItemAnnotation) -> dict[str, Any]:
@@ -83,19 +57,22 @@ def apply_annotations_to_items(
 ) -> None:
     """Attach annotation fields and stable keys onto serialized items."""
     for item in priorities:
-        item["item_key"] = priority_key(
-            str(item.get("title") or ""),
-            item.get("lead_id"),
-            item.get("invoice_id"),
+        item["item_key"] = priority_identity(
+            kind=_text(item.get("kind")),
+            lead_id=item.get("lead_id"),
+            invoice_id=item.get("invoice_id"),
+            conversation_id=item.get("conversation_id"),
+            title=str(item.get("title") or ""),
+            instruction_id=item.get("instruction_id"),
         )
         item.setdefault("feedback", None)
         item.setdefault("snoozed_until", None)
     for item in outreach:
-        item["item_key"] = outreach_item_key(
-            str(item.get("channel") or "unknown"),
-            item.get("lead_id"),
-            item.get("conversation_id"),
-            str(item.get("message_excerpt") or ""),
+        item["item_key"] = outreach_identity(
+            conversation_id=item.get("conversation_id"),
+            lead_id=item.get("lead_id"),
+            channel=_text(item.get("channel")),
+            message_excerpt=str(item.get("message_excerpt") or ""),
         )
         item.setdefault("feedback", None)
         item.setdefault("snoozed_until", None)
@@ -191,6 +168,11 @@ def resolve_snoozed_until(
     if snooze_preset in {"next_week", "next-week"}:
         return current + SNOOZE_NEXT_WEEK
     raise ValueError(f"Unsupported snooze value: {snooze}")
+
+
+def _text(value: Any) -> str | None:
+    text = str(value or "").strip()
+    return text or None
 
 
 def _as_utc(value: datetime) -> datetime:

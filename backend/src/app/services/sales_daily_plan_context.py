@@ -23,13 +23,15 @@ from app.db.models.sales_lead import SalesLead, SalesLeadEvent
 from app.db.models.service import Service
 from app.db.models.service_instance import InstanceSessionSlot, ServiceInstance
 from app.db.models.whatsapp import WhatsAppMessage
-from app.services.sales_daily_plan_completions import (
-    load_recent_completions_for_context,
-)
 from app.services.sales_daily_plan_context_enrichment import (
     enrich_sales_daily_plan_context,
 )
 from app.services.sales_daily_plan_context_inbox import load_needs_reply_threads
+from app.services.sales_daily_plan_instructions import instructions_for_context
+from app.services.sales_daily_plan_item_state import (
+    load_recent_completions_for_context,
+    load_suppressed_for_context,
+)
 from app.services.sales_daily_plan_memory import load_prior_plans_for_context
 from app.utils.logging import mask_email, mask_pii
 
@@ -87,7 +89,11 @@ def build_sales_daily_plan_context(
     prior_plans = load_prior_plans_for_context(session)
     recent_contacts = _load_recent_contacts(session)
     converted_nurture = _load_converted_nurture(session)
-    completed_priorities = load_recent_completions_for_context(session)
+    completed_priorities = load_recent_completions_for_context(session, now=now)
+    standing_instructions, today_instructions = instructions_for_context(
+        session, now=now
+    )
+    suppressed_items = load_suppressed_for_context(session, now=now)
     contact_watermark = latest_contact_activity_at(session)
     context = {
         "generated_for": "org_wide_sales_plan_of_the_day",
@@ -104,22 +110,22 @@ def build_sales_daily_plan_context(
         "recent_contacts": recent_contacts,
         "converted_nurture": converted_nurture,
         "completed_priorities": completed_priorities,
+        "standing_instructions": standing_instructions,
+        "today_instructions": today_instructions,
+        "suppressed_items": suppressed_items,
         "guidance": (
             "Prioritize unanswered inbound threads, late-stage open leads, and "
             "issued invoices with a balance due (especially overdue ones). "
-            "Suggest concrete activities for today, including payment "
-            "follow-ups when unpaid invoices are present. Recommend which "
-            "published service to push and any offer-wording tweaks grounded in "
-            "message feedback. Treat prior_plans as memory of earlier "
-            "suggestions, not the source of truth. Prefer live CRM "
-            "(open_leads, recent_contacts, converted_nurture, unpaid invoices) "
-            "when it disagrees. Do not repeat completed_priorities unless the "
-            "live CRM still needs the work. Address generated_by_name; never "
-            "say operator. Honour item_feedback_memory (skip or deprioritize "
-            "rejected and still-snoozed items). Use days_in_stage, "
-            "days_since_last_contact, trends, and yesterday_follow_through. "
-            "Do not invent pricing, schedules, or guarantees. If context is "
-            "thin, say what to gather next."
+            "standing_instructions and today_instructions are binding. Copy "
+            "each today instruction id onto a priority that carries that work. "
+            "Do not emit items listed in suppressed_items. An unchanged unpaid "
+            "invoice is not new activity. Resurface finished work only when "
+            "CRM activity is newer than done_at. prior_plans are compact "
+            "history, not the source of truth. Prefer live CRM when it "
+            "disagrees with older plans. Address generated_by_name; never say "
+            "operator. Use days_in_stage, days_since_last_contact, trends, and "
+            "yesterday_follow_through. Do not invent pricing, schedules, or "
+            "guarantees. If context is thin, say what to gather next."
         ),
     }
     enrich_sales_daily_plan_context(session, context, now=now)
@@ -235,6 +241,7 @@ def _serialize_unpaid_invoice(
         "days_overdue": days_overdue,
         "is_overdue": is_overdue,
         "is_partially_paid": amount_allocated > 0,
+        "updated_at": _iso(getattr(invoice, "updated_at", None)),
         "bill_to_contact_id": (
             str(invoice.bill_to_contact_id)
             if getattr(invoice, "bill_to_contact_id", None)

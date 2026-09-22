@@ -18,9 +18,6 @@ if TYPE_CHECKING:
     from app.db.models.sales_daily_plan_item_annotation import (
         SalesDailyPlanItemAnnotation,
     )
-    from app.db.models.sales_daily_plan_priority_completion import (
-        SalesDailyPlanPriorityCompletion,
-    )
     from app.db.models.sales_daily_plan_question import SalesDailyPlanQuestion
 
 
@@ -54,13 +51,6 @@ class SalesDailyPlan(Base):
     model: Mapped[str | None] = mapped_column(String(256), nullable=True)
     operator_input: Mapped[str | None] = mapped_column(Text(), nullable=True)
 
-    priority_completions: Mapped[list["SalesDailyPlanPriorityCompletion"]] = (
-        relationship(
-            "SalesDailyPlanPriorityCompletion",
-            back_populates="plan",
-            cascade="all, delete-orphan",
-        )
-    )
     item_annotations: Mapped[list["SalesDailyPlanItemAnnotation"]] = relationship(
         "SalesDailyPlanItemAnnotation",
         back_populates="plan",

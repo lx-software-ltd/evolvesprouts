@@ -210,15 +210,16 @@ export function SalesConfigurationView({
           }
         >
           <p className='text-sm text-slate-600'>
-            Permanently delete every saved sale plan insight and refinement. Contacts,
-            leads, and messages are not affected. This cannot be undone.
+            Permanently delete every saved sale plan insight, standing instruction,
+            and hidden task. Contacts, leads, and messages are not affected. This
+            cannot be undone.
           </p>
         </AdminEditorPanel>
       </Card>
       <ConfirmDialog
         open={resetOpen}
         title='Reset sale plan memory'
-        description='This permanently deletes every saved sale plan insight and refinement. This cannot be undone. Live contacts, leads, and messages are not affected.'
+        description='This permanently deletes every saved sale plan insight, standing instruction, and hidden task. This cannot be undone. Live contacts, leads, and messages are not affected.'
         confirmLabel='Reset memory'
         variant='danger'
         confirmLoading={isResettingMemory}

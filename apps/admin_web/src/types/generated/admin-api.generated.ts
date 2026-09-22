@@ -1664,7 +1664,7 @@ export interface paths {
         };
         /**
          * Get latest org-wide sales plan of the day
-         * @description Returns the newest stored org-wide AI sales daily plan, including staleness metadata, plus `memory` (up to the five newest stored plans, including the latest). `plan` is null when none has been generated yet. A scheduled job also generates a new plan every day at 06:00 HKT. A plan is stale when it is older than 24 hours, when a newer WhatsApp/Meta message exists after the stored conversation watermark, when a lead was created or a funnel-stage event occurred after the stored pipeline watermark, or when a contact was created or updated after that watermark. `stale_counts` reports how many conversation, pipeline, and contact changes landed after those watermarks. `job` is the newest generation job (including a failed 06:00 HKT run). The serialized plan includes item keys, annotations, and follow-up `questions`. Pass `compare=true` to include `dropped_priorities` and per-priority `compare_status` versus the previous plan. `stale_counts` are populated only when activity (not age alone) made the plan stale. All stored plans are retained until `DELETE /v1/admin/leads/daily-plan`.
+         * @description Returns the newest stored org-wide AI sales daily plan, including staleness metadata, plus `memory` (up to the five newest stored plans, including the latest) and active `instructions`. `plan` is null when none has been generated yet. `suppressed_items` lists priorities the generator hid because they were done today, dismissed, or snoozed. A scheduled job also generates a new plan every day at 06:00 HKT. A plan is stale when it is older than 24 hours, when a newer WhatsApp/Meta message exists after the stored conversation watermark, when a lead was created or a funnel-stage event occurred after the stored pipeline watermark, or when a contact was created or updated after that watermark. `stale_counts` reports how many conversation, pipeline, and contact changes landed after those watermarks. `job` is the newest generation job (including a failed 06:00 HKT run). The serialized plan includes item keys, annotations, and follow-up `questions`. Pass `compare=true` to include `dropped_priorities` and per-priority `compare_status` versus the previous plan. `stale_counts` are populated only when activity (not age alone) made the plan stale. All stored plans are retained until `DELETE /v1/admin/leads/daily-plan`.
          */
         get: {
             parameters: {
@@ -1693,7 +1693,7 @@ export interface paths {
         put?: never;
         /**
          * Queue org-wide sales plan of the day generation
-         * @description Enqueues an asynchronous job that generates a sales-focused plan of the day via the shared OpenRouter pipeline (same Secrets Manager key, allow-listed chat-completions URL, and AWS HTTP proxy as lead AI suggestions). Context includes open pipeline, unanswered threads, unpaid issued invoices, and the published catalogue. Optional `operator_input` is stored on the job and the resulting plan and is included in later generations as memory, along with the last five persisted plans. Poll `GET /v1/admin/leads/daily-plan/jobs/{job_id}` for status, timing (`queue_wait_ms`, `duration_ms`), and the resulting plan. Does not send messages or payment reminders.
+         * @description Enqueues an asynchronous job that generates a sales-focused plan of the day via the shared OpenRouter pipeline (same Secrets Manager key, allow-listed chat-completions URL, and AWS HTTP proxy as lead AI suggestions). Context includes open pipeline, unanswered threads, unpaid issued invoices, and the published catalogue. Optional `operator_input` is stored on the job and the resulting plan and is saved as an instruction. `operator_input_scope` `today` (default) lasts until the next 06:00 HKT; `standing` is included until removed. Done, dismissed, and snoozed items are omitted in code after the model responds. Poll `GET /v1/admin/leads/daily-plan/jobs/{job_id}` for status, timing (`queue_wait_ms`, `duration_ms`), and the resulting plan. Does not send messages or payment reminders.
          */
         post: {
             parameters: {
@@ -1723,7 +1723,7 @@ export interface paths {
         };
         /**
          * Reset sale plan memory
-         * @description Permanently deletes every stored sales daily plan, generation job, and operator refinement. Live contacts, leads, and messages are not affected. This cannot be undone.
+         * @description Permanently deletes every stored sales daily plan, generation job, org-wide done/dismiss/snooze state, and instruction. Live contacts, leads, and messages are not affected. This cannot be undone.
          */
         delete: {
             parameters: {
@@ -1805,7 +1805,7 @@ export interface paths {
         put?: never;
         /**
          * Mark or unmark an insight priority as done
-         * @description Ticks or unticks one priority on the latest stored sales daily plan. Send `plan_id` of the plan on screen; a mismatch with the latest plan returns 409. Completions are stored and included in later generations so the model can skip finished work. `done: false` removes the tick.
+         * @description Ticks or unticks one priority. Done state is org-wide and hides the same invoice, conversation, lead-and-kind, or instruction until the next 06:00 HKT, including after the insight is regenerated. `done: false` clears that suppression. `plan_id` is ignored.
          */
         post: {
             parameters: {
@@ -1832,15 +1832,6 @@ export interface paths {
                 400: components["responses"]["BadRequest"];
                 403: components["responses"]["Forbidden"];
                 404: components["responses"]["NotFound"];
-                /** @description The stored insight was refreshed after this page loaded. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
             };
         };
         delete?: never;
@@ -1860,7 +1851,7 @@ export interface paths {
         put?: never;
         /**
          * Upsert insight-board item annotation
-         * @description Stores feedback (`up`, `down`, `not_relevant`), a snooze (`tomorrow`, `next_week`, or `clear`), and/or an edited outreach draft on one priority or outreach row. Send `plan_id` of the plan on screen; a mismatch with the latest plan returns 409. `item_key` is capped at 1024 characters. Omitted fields are left unchanged. Rejected and still-snoozed items are fed into the next generation as memory.
+         * @description Stores feedback (`up`, `down`, `not_relevant`), a snooze (`tomorrow`, `next_week`, or `clear`), and/or an edited outreach draft. Feedback and snooze are org-wide: `down` and `not_relevant` hide the item for 30 days, and snooze hides it until the chosen time. An edited `draft_reply` stays on the current plan; send `plan_id` and a mismatch with the latest plan returns 409. `item_key` is capped at 1024 characters. Omitted fields are left unchanged.
          */
         post: {
             parameters: {
@@ -1972,6 +1963,120 @@ export interface paths {
             };
         };
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/leads/daily-plan/instructions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List active insight instructions
+         * @description Returns refinements that later generations must honour. `today` instructions drop out after the next 06:00 HKT. `standing` instructions stay until deleted.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Active instructions. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SalesDailyPlanInstructionListResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        put?: never;
+        /**
+         * Save an insight instruction without generating
+         * @description Stores a refinement. `scope` defaults to `today` (until the next 06:00 HKT). `standing` is included in every later generation until removed. An active instruction with the same scope and wording is reused.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SalesDailyPlanInstructionRequest"];
+                };
+            };
+            responses: {
+                /** @description Saved instruction. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SalesDailyPlanInstructionResponse"];
+                    };
+                };
+                400: components["responses"]["BadRequest"];
+                403: components["responses"]["Forbidden"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/leads/daily-plan/instructions/{instruction_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instruction_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove an insight instruction
+         * @description Archives one instruction so later generations no longer include it. Stored plans are kept.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    instruction_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Archived instruction and the latest plan when one exists. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SalesDailyPlanInstructionArchiveResponse"];
+                    };
+                };
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -7593,6 +7698,15 @@ export interface components {
             snoozed_until?: string | null;
             /** @enum {string|null} */
             compare_status?: "new" | "carried" | null;
+            /**
+             * Format: uuid
+             * @description Today-instruction this priority carries.
+             */
+            instruction_id?: string | null;
+            /** @description True when the server added this priority because the model omitted the instruction. */
+            from_instruction?: boolean;
+            /** @description True when a done item returned because newer CRM activity arrived. */
+            resurfaced?: boolean;
         };
         SalesDailyPlanOutreach: {
             channel: string;
@@ -7637,6 +7751,7 @@ export interface components {
             product_focus: string;
             offer_refinements: string[];
             risks: string[];
+            suppressed_items?: components["schemas"]["SalesDailyPlanSuppressedItem"][];
             dropped_priorities?: components["schemas"]["SalesDailyPlanDroppedPriority"][];
             questions?: components["schemas"]["SalesDailyPlanQuestion"][];
             /** Format: date-time */
@@ -7645,7 +7760,7 @@ export interface components {
             /** @description Display name of the person this insight addresses (logged-in admin, or Sales default assignee for the 06:00 HKT run). */
             generated_by_name?: string | null;
             model?: string | null;
-            /** @description Operator refinement stored with this plan and used as later memory. */
+            /** @description Refinement typed for this generation. Active instructions are returned separately and enforced on later runs. */
             operator_input?: string | null;
             /** Format: date-time */
             conversation_watermark_at?: string | null;
@@ -7687,6 +7802,8 @@ export interface components {
             memory: components["schemas"]["SalesDailyPlanMemoryEntry"][];
             /** @description Newest generation job, including a failed scheduled run. */
             job?: components["schemas"]["SalesDailyPlanJob"] | null;
+            /** @description Active today and standing instructions, oldest first. */
+            instructions: components["schemas"]["SalesDailyPlanInstruction"][];
         };
         SalesDailyPlanPriorityCompletionRequest: {
             /**
@@ -7700,6 +7817,13 @@ export interface components {
             /** Format: uuid */
             invoice_id?: string | null;
             done: boolean;
+            /** @description Stable identity. When omitted, derived from title and ids. */
+            item_key?: string;
+            /** Format: uuid */
+            conversation_id?: string | null;
+            kind?: string | null;
+            /** Format: uuid */
+            instruction_id?: string | null;
         };
         SalesDailyPlanPriorityCompletionResponse: {
             plan: components["schemas"]["SalesDailyPlan"];
@@ -7712,7 +7836,49 @@ export interface components {
                 /** Format: date-time */
                 done_at?: string | null;
                 done_by?: string;
+                /** Format: date-time */
+                done_until?: string | null;
+                item_key?: string;
             } | null;
+        };
+        SalesDailyPlanSuppressedItem: {
+            title: string;
+            item_key: string;
+            /** @enum {string} */
+            item_kind: "priority" | "outreach";
+            /** @enum {string} */
+            reason: "done_today" | "dismissed" | "snoozed";
+            /** Format: uuid */
+            lead_id?: string | null;
+            /** Format: uuid */
+            invoice_id?: string | null;
+        };
+        SalesDailyPlanInstruction: {
+            /** Format: uuid */
+            id: string;
+            text: string;
+            /** @enum {string} */
+            scope: "today" | "standing";
+            /** Format: date-time */
+            active_until?: string | null;
+            created_by?: string;
+            /** Format: date-time */
+            created_at?: string | null;
+        };
+        SalesDailyPlanInstructionListResponse: {
+            instructions: components["schemas"]["SalesDailyPlanInstruction"][];
+        };
+        SalesDailyPlanInstructionRequest: {
+            text: string;
+            /** @enum {string} */
+            scope?: "today" | "standing";
+        };
+        SalesDailyPlanInstructionResponse: {
+            instruction: components["schemas"]["SalesDailyPlanInstruction"];
+        };
+        SalesDailyPlanInstructionArchiveResponse: {
+            instruction: components["schemas"]["SalesDailyPlanInstruction"];
+            plan?: components["schemas"]["SalesDailyPlan"] | null;
         };
         SalesDailyPlanItemAnnotationRequest: {
             /**
@@ -7766,8 +7932,13 @@ export interface components {
             question: components["schemas"]["SalesDailyPlanQuestion"];
         };
         SalesDailyPlanGenerateRequest: {
-            /** @description Optional refinement used for this generation and stored as memory. */
+            /** @description Optional refinement saved as an instruction and stored on this plan. */
             operator_input?: string | null;
+            /**
+             * @description today lasts until the next 06:00 HKT. standing lasts until removed. Defaults to today.
+             * @enum {string}
+             */
+            operator_input_scope?: "today" | "standing";
         };
         SalesDailyPlanJob: {
             /** Format: uuid */

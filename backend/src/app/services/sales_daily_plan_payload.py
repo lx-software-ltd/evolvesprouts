@@ -47,6 +47,9 @@ def priorities_from_value(value: Any) -> list[dict[str, Any]]:
                 "urgency": _urgency(entry.get("urgency")),
                 "sources": string_list(entry.get("sources"))[:MAX_SOURCES],
                 "assigned_to": _optional_text(entry.get("assigned_to")),
+                "instruction_id": optional_uuid(entry.get("instruction_id")),
+                "from_instruction": bool(entry.get("from_instruction")),
+                "resurfaced": bool(entry.get("resurfaced")),
                 "done": False,
             }
         )
@@ -74,19 +77,6 @@ def outreach_from_value(value: Any) -> list[dict[str, Any]]:
     return items
 
 
-def outreach_item_key(
-    channel: str,
-    lead_id: UUID | str | None,
-    conversation_id: UUID | str | None,
-    message_excerpt: str,
-) -> str:
-    """Stable identity for one outreach row."""
-    return (
-        f"{(channel or 'unknown').strip()}\n{lead_id or ''}\n"
-        f"{conversation_id or ''}\n{(message_excerpt or '').strip()}"
-    )
-
-
 def compact_priority_memory(payload: dict[str, Any]) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     for entry in payload.get("priorities") or []:
@@ -100,6 +90,38 @@ def compact_priority_memory(payload: dict[str, Any]) -> list[dict[str, Any]]:
                 "title": title,
                 "lead_id": entry.get("lead_id"),
                 "invoice_id": entry.get("invoice_id"),
+            }
+        )
+    return items
+
+
+def suppressed_from_value(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    items: list[dict[str, Any]] = []
+    for entry in value:
+        if not isinstance(entry, dict):
+            continue
+        title = str(entry.get("title") or "").strip()
+        item_key = str(entry.get("item_key") or "").strip()
+        reason = str(entry.get("reason") or "").strip()
+        if (
+            not title
+            or not item_key
+            or reason not in {"done_today", "dismissed", "snoozed"}
+        ):
+            continue
+        kind = str(entry.get("item_kind") or "priority").strip()
+        if kind not in {"priority", "outreach"}:
+            kind = "priority"
+        items.append(
+            {
+                "title": title,
+                "item_key": item_key,
+                "item_kind": kind,
+                "reason": reason,
+                "lead_id": optional_uuid(entry.get("lead_id")),
+                "invoice_id": optional_uuid(entry.get("invoice_id")),
             }
         )
     return items

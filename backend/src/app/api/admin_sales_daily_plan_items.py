@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -14,6 +15,10 @@ from app.api.admin_validators import validate_string_length
 from app.db.audit import set_audit_context
 from app.db.engine import get_engine
 from app.db.models.sales_daily_plan import SalesDailyPlan
+from app.db.models.sales_daily_plan_item_annotation import (
+    SalesDailyPlanItemAnnotation,
+)
+from app.db.models.sales_daily_plan_item_state import SalesDailyPlanItemState
 from app.exceptions import ConflictError, NotFoundError, ValidationError
 from app.services.sales_daily_plan import get_latest_plan, serialize_plan
 from app.services.sales_daily_plan_annotations import (
@@ -25,8 +30,8 @@ from app.services.sales_daily_plan_annotations import (
     serialize_annotation,
     upsert_annotation,
 )
-from app.services.sales_daily_plan_completions import priority_key
-from app.services.sales_daily_plan_payload import outreach_item_key
+from app.services.sales_daily_plan_identity import outreach_identity, priority_identity
+from app.services.sales_daily_plan_item_state import set_item_feedback, set_item_snooze
 from app.services.sales_daily_plan_questions import (
     MAX_QUESTION_LENGTH,
     generate_follow_up_answer,
@@ -91,30 +96,80 @@ def upsert_sales_daily_plan_item_annotation(
         required=False,
     )
     has_draft = "draft_reply" in body
+    has_feedback = "feedback" in body
+    has_snooze = isinstance(snooze_token, str)
     plan_id = parse_optional_plan_id(body)
+    title = str(body.get("title") or body.get("message_excerpt") or item_key)
+    lead_id = _optional_uuid_field(body.get("lead_id"), "lead_id")
+    invoice_id = _optional_uuid_field(body.get("invoice_id"), "invoice_id")
+    conversation_id = _optional_uuid_field(
+        body.get("conversation_id"), "conversation_id"
+    )
     with Session(get_engine()) as session:
         set_audit_context(
             session,
             user_id=actor_sub,
             request_id=request_id(event),
         )
-        plan = require_latest_plan_for_mutation(session, plan_id)
-        row = upsert_annotation(
-            session,
-            plan_id=plan.id,
-            item_kind=item_kind,
-            item_key=item_key,
-            updated_by=actor_sub,
-            feedback=feedback if "feedback" in body else ...,
-            snoozed_until=snoozed_until,
-            draft_reply=draft_reply if has_draft else ...,
-        )
+        if has_draft:
+            plan = require_latest_plan_for_mutation(session, plan_id)
+        else:
+            latest = get_latest_plan(session)
+            if latest is None:
+                raise NotFoundError("SalesDailyPlan", "latest")
+            plan = latest
+        row: SalesDailyPlanItemAnnotation | SalesDailyPlanItemState | None = None
+        if has_draft:
+            row = upsert_annotation(
+                session,
+                plan_id=plan.id,
+                item_kind=item_kind,
+                item_key=item_key,
+                updated_by=actor_sub,
+                draft_reply=draft_reply,
+            )
+        if has_feedback:
+            row = set_item_feedback(
+                session,
+                identity=item_key,
+                item_kind=item_kind,
+                title=title,
+                feedback=feedback,
+                actor=actor_sub,
+                lead_id=lead_id,
+                invoice_id=invoice_id,
+                conversation_id=conversation_id,
+                source_plan_id=plan.id,
+            )
+        if has_snooze:
+            row = set_item_snooze(
+                session,
+                identity=item_key,
+                item_kind=item_kind,
+                title=title,
+                snoozed_until=_snooze_timestamp(snoozed_until),
+                actor=actor_sub,
+                lead_id=lead_id,
+                invoice_id=invoice_id,
+                conversation_id=conversation_id,
+                source_plan_id=plan.id,
+            )
+        if row is None:
+            raise ValidationError(
+                "feedback, snooze, or draft_reply is required",
+                field="feedback",
+            )
         session.commit()
+        annotation = (
+            serialize_annotation(row)
+            if isinstance(row, SalesDailyPlanItemAnnotation)
+            else _state_annotation(row, item_kind=item_kind, item_key=item_key)
+        )
         return json_response(
             200,
             {
                 "plan": serialize_plan(session, plan=plan),
-                "annotation": serialize_annotation(row),
+                "annotation": annotation,
             },
             event=event,
         )
@@ -199,19 +254,26 @@ def _resolve_item_key(body: dict[str, Any], *, item_kind: str) -> str:
         if title is None:
             raise ValidationError("title is required", field="title")
         return _validated_item_key(
-            priority_key(
-                title,
-                _optional_uuid_field(body.get("lead_id"), "lead_id"),
-                _optional_uuid_field(body.get("invoice_id"), "invoice_id"),
+            priority_identity(
+                kind=_optional_text(body.get("kind")),
+                lead_id=_optional_uuid_field(body.get("lead_id"), "lead_id"),
+                invoice_id=_optional_uuid_field(body.get("invoice_id"), "invoice_id"),
+                conversation_id=_optional_uuid_field(
+                    body.get("conversation_id"), "conversation_id"
+                ),
+                title=title,
+                instruction_id=body.get("instruction_id"),
             )
         )
     channel = str(body.get("channel") or "unknown").strip() or "unknown"
     return _validated_item_key(
-        outreach_item_key(
-            channel,
-            _optional_uuid_field(body.get("lead_id"), "lead_id"),
-            _optional_uuid_field(body.get("conversation_id"), "conversation_id"),
-            str(body.get("message_excerpt") or ""),
+        outreach_identity(
+            channel=channel,
+            lead_id=_optional_uuid_field(body.get("lead_id"), "lead_id"),
+            conversation_id=_optional_uuid_field(
+                body.get("conversation_id"), "conversation_id"
+            ),
+            message_excerpt=str(body.get("message_excerpt") or ""),
         )
     )
 
@@ -223,6 +285,33 @@ def _validated_item_key(item_key: str) -> str:
             field="item_key",
         )
     return item_key
+
+
+def _state_annotation(
+    row: SalesDailyPlanItemState, *, item_kind: str, item_key: str
+) -> dict[str, Any]:
+    snoozed = row.snoozed_until
+    updated = row.updated_at
+    return {
+        "item_kind": item_kind,
+        "item_key": item_key,
+        "feedback": row.feedback,
+        "snoozed_until": snoozed.isoformat() if isinstance(snoozed, datetime) else None,
+        "draft_reply": None,
+        "updated_by": row.updated_by,
+        "updated_at": updated.isoformat() if isinstance(updated, datetime) else None,
+    }
+
+
+def _snooze_timestamp(value: datetime | None | object) -> datetime | None:
+    if isinstance(value, datetime):
+        return value
+    return None
+
+
+def _optional_text(value: Any) -> str | None:
+    text = str(value or "").strip()
+    return text or None
 
 
 def _optional_feedback(value: Any) -> str | None:

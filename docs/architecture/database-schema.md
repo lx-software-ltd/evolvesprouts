@@ -610,10 +610,15 @@ maps legacy `note.id` to the **first** inserted row’s UUID.
   `generated_at`, `generated_by`, optional `generated_by_name`, `model`, and
   optional `operator_input` (refinement text that triggered this plan).
 - Multiple rows are retained forever until
-  `DELETE /v1/admin/leads/daily-plan`; the next generation includes the last
-  five plans (plus their `operator_input`) as memory, recent contacts, and
-  completed priorities. Admin GET returns the newest plan plus a compact
-  `memory` list and the newest generation `job`.
+  `DELETE /v1/admin/leads/daily-plan`; the next generation includes a compact
+  projection of the last five plans (focus, priorities, and that run's
+  `operator_input`), recent contacts, active instructions, and org-wide item
+  state. Admin GET returns the newest plan, a compact `memory` list, active
+  `instructions`, and the newest generation `job`.
+- After the model responds, the server drops priorities whose identity is
+  done until the next 06:00 HKT, dismissed, or snoozed, dedupes by identity,
+  and appends a fallback priority for any same-day instruction the model
+  omitted. Those hidden rows are stored on the payload as `suppressed_items`.
 - Stale when older than 24 hours, when a newer conversation message exists
   than the conversation watermark, when a lead was created / a funnel-stage
   event occurred after the pipeline watermark, or when a contact was created
@@ -625,14 +630,32 @@ maps legacy `note.id` to the **first** inserted row’s UUID.
 
 ### `sales_daily_plan_item_annotations`
 
-- Purpose: per-item insight-board state on a stored plan — feedback
-  (`up` / `down` / `not_relevant`), optional `snoozed_until`, and an edited
-  outreach `draft_reply`.
+- Purpose: edited outreach `draft_reply` on one plan row. Feedback and
+  snooze live on `sales_daily_plan_item_states`.
 - Unique on `(plan_id, item_kind, item_key)` where `item_kind` is
   `priority` or `outreach`; `ON DELETE CASCADE` from `sales_daily_plans`.
-- Rejected and still-snoozed rows are included in the next generation as
-  `item_feedback_memory`.
-- No seed rows (created when an admin rates, snoozes, or edits a draft).
+- No seed rows (created when an admin edits a draft).
+
+### `sales_daily_plan_item_states`
+
+- Purpose: org-wide done, dismiss, and snooze state. Identity prefers
+  invoice id, then conversation id, then lead id plus priority kind, then
+  instruction id, then a normalized title.
+- A tick sets `done_until` to the next 06:00 HKT. `down` / `not_relevant`
+  set `dismissed_until` 30 days ahead. Snooze sets `snoozed_until`.
+- Unique on `item_identity`. `source_plan_id` is `ON DELETE SET NULL`, so
+  deleting a plan keeps the state.
+- The next generation omits identities that are still suppressed, unless a
+  done item has newer CRM activity (then it is marked resurfaced).
+- No seed rows. Existing per-plan completions and rejected/snoozed
+  annotations were copied in once when this table was added.
+
+### `sales_daily_plan_instructions`
+
+- Purpose: refinements later generations must honour.
+- `scope` is `today` (`active_until` is the next 06:00 HKT) or `standing`
+  (until archived).
+- No seed rows (created when an admin saves a refinement).
 
 ### `sales_daily_plan_questions`
 
@@ -640,14 +663,6 @@ maps legacy `note.id` to the **first** inserted row’s UUID.
   Config model, short timeout — not a fresh CRM snapshot).
 - `ON DELETE CASCADE` from `sales_daily_plans`.
 - No seed rows (created when an admin asks a follow-up).
-
-### `sales_daily_plan_priority_completions`
-
-- Purpose: admin ticks on insight priorities so the next generation can skip
-  finished work.
-- Unique on `(plan_id, priority_key)`; `ON DELETE CASCADE` from
-  `sales_daily_plans`.
-- No seed rows (created when an admin ticks a priority).
 
 ### `sales_daily_plan_jobs`
 
