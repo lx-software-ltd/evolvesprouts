@@ -8,7 +8,7 @@ import { ExternalLinkInlineContent } from '@/components/shared/external-link-ico
 import { ButtonPrimitive } from '@/components/shared/button-primitive';
 import { CarouselTrack } from '@/components/sections/shared/carousel-track';
 import { BOOKING_SELECTOR_CARD_CLASSNAME } from '@/components/sections/shared/booking-selector-layout';
-import { useBookingAutoOpenFromQuery } from '@/components/sections/shared/use-booking-auto-open-from-query';
+import { useBookingAutoOpenFromQuery, useBookingPageSearch } from '@/components/sections/shared/use-booking-auto-open-from-query';
 import { useBookingThankYouView } from '@/components/sections/shared/use-booking-thank-you-view';
 import { useReferralPrefill } from '@/components/sections/shared/use-referral-prefill';
 import { trackBookingBeginCheckout } from '@/components/sections/shared/track-booking-begin-checkout';
@@ -32,6 +32,7 @@ import type {
 } from '@/content';
 import { formatContentTemplate } from '@/content/content-field-utils';
 import {
+  MY_BEST_AUNTIE_BOOKING_SYSTEM,
   MY_BEST_AUNTIE_TRAINING_COURSE_CALENDAR_SERVICE_KEY,
   type MyBestAuntieEventCohort,
 } from '@/lib/events-data';
@@ -50,8 +51,10 @@ import { trackAnalyticsEvent } from '@/lib/analytics';
 import { trackMetaPixelEvent } from '@/lib/meta-pixel';
 import { PIXEL_CONTENT_NAME } from '@/lib/meta-pixel-taxonomy';
 import { useMyBestAuntieCohorts } from '@/components/sections/my-best-auntie/use-my-best-auntie-cohorts';
-
-const MY_BEST_AUNTIE_BOOKING_SYSTEM = 'my-best-auntie-booking';
+import {
+  cohortsVisibleForAgeGroup,
+  resolveMyBestAuntieDeepLink,
+} from '@/components/sections/my-best-auntie/resolve-my-best-auntie-deep-link';
 
 const MyBestAuntieBookingModal = dynamic(
   () =>
@@ -231,12 +234,36 @@ export function MyBestAuntieBooking({
   const ageOptions = content.ageOptions ?? [];
   const sortedCohorts = [...cohortsFromHook].sort(sortCohortsByPrimarySession);
   const initialAgeId = ageOptions[0]?.id ?? '';
-
-  const [selectedAgeId, setSelectedAgeId] = useState(initialAgeId);
-  const cohortsForSelectedAge = sortedCohorts
-    .filter((cohort) => cohort.service_tier === selectedAgeId)
-    .filter((cohort) => isFutureCohort(cohort, todayYmd))
-    .slice(0, MAX_VISIBLE_COHORTS_PER_AGE_GROUP);
+  const pageSearch = useBookingPageSearch();
+  const deepLinkResolution = resolveMyBestAuntieDeepLink({
+    link: pageSearch,
+    cohorts: sortedCohorts,
+    ageGroupIds: ageOptions.map((option) => option.id),
+    todayYmd,
+    isLoading: isCohortsLoading,
+  });
+  const deepLinkServiceTier =
+    deepLinkResolution.status === 'open' ||
+    deepLinkResolution.status === 'blocked' ||
+    deepLinkResolution.status === 'tier'
+      ? deepLinkResolution.serviceTier
+      : '';
+  const deepLinkCohortSlug =
+    deepLinkResolution.status === 'open' ? deepLinkResolution.cohortSlug : '';
+  /** Null until the visitor picks an age; a deep link supplies the age until then. */
+  const [ageOverride, setAgeOverride] = useState<string | null>(null);
+  /** Null follows the deep link. An empty string means the visitor cleared that date. */
+  const [dateOverride, setDateOverride] = useState<string | null>(null);
+  const selectedAgeId = ageOverride ?? (deepLinkServiceTier || initialAgeId);
+  const deepLinkedVisibleSlug = deepLinkCohortSlug;
+  const cohortsForSelectedAge = cohortsVisibleForAgeGroup({
+    sortedCohorts,
+    ageGroupId: selectedAgeId,
+    todayYmd,
+    deepLinkedSlug: deepLinkedVisibleSlug,
+    limit: MAX_VISIBLE_COHORTS_PER_AGE_GROUP,
+    sortCohorts: sortCohortsByPrimarySession,
+  });
   const dateOptions: BookingDateOption[] = cohortsForSelectedAge.map((cohort) => ({
     id: cohort.slug,
     label: formatCohortValue(cohort.cohort, locale),
@@ -247,10 +274,8 @@ export function MyBestAuntieBooking({
     isFullyBooked: cohort.is_fully_booked,
     cohort,
   }));
-  /** User-picked cohort slug for the current age tier; cleared on age change. */
-  const [pendingDateSelectionSlug, setPendingDateSelectionSlug] = useState<string | null>(
-    null,
-  );
+  const pendingDateSelectionSlug =
+    dateOverride !== null ? dateOverride || null : deepLinkCohortSlug || null;
   const preferredDateId = findPreferredCohortId(cohortsForSelectedAge, selectedAgeId);
   const selectedDateId =
     pendingDateSelectionSlug
@@ -302,6 +327,14 @@ export function MyBestAuntieBooking({
     scrollItemIntoView(selectedDateCard);
   }, [scrollItemIntoView, selectedDateId]);
 
+  const deepLinkSelectionReady =
+    deepLinkResolution.status === 'ignore' ||
+    deepLinkResolution.status === 'unscoped' ||
+    (deepLinkResolution.status === 'tier' && selectedAgeId === deepLinkServiceTier) ||
+    (deepLinkResolution.status === 'open' &&
+      selectedAgeId === deepLinkServiceTier &&
+      selectedDateId === deepLinkCohortSlug);
+
   const handleReferralPrefill = (referral: string) => {
     setPrefilledDiscountCode(referral);
   };
@@ -309,7 +342,9 @@ export function MyBestAuntieBooking({
 
   useBookingAutoOpenFromQuery({
     bookingSystem: MY_BEST_AUNTIE_BOOKING_SYSTEM,
-    canOpen: Boolean(selectedCohort && !selectedCohort.is_fully_booked),
+    canOpen:
+      deepLinkSelectionReady &&
+      Boolean(selectedCohort && !selectedCohort.is_fully_booked),
     onOpen: () => {
       if (!selectedCohort) {
         return;
@@ -430,8 +465,8 @@ export function MyBestAuntieBooking({
                             service_tier: option.label,
                           },
                         });
-                        setSelectedAgeId(option.id);
-                        setPendingDateSelectionSlug(null);
+                        setAgeOverride(option.id);
+                        setDateOverride('');
                       }}
                       className={`${BOOKING_SELECTOR_CARD_CLASSNAME} w-[140px] snap-center text-left sm:w-[168px]`}
                     >
@@ -507,7 +542,7 @@ export function MyBestAuntieBooking({
                                       is_fully_booked: option.isFullyBooked,
                                     },
                                   });
-                                  setPendingDateSelectionSlug(option.id);
+                                  setDateOverride(option.id);
                                 }
                           }
                           className={`${BOOKING_SELECTOR_CARD_CLASSNAME} relative w-[140px] snap-center text-center sm:w-[168px] ${isFullyBooked ? 'pointer-events-none' : ''}`}

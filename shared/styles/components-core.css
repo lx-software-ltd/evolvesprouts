@@ -990,4 +990,14 @@
     mask-image: url('/images/loading-gear-icon.svg');
     -webkit-mask-image: url('/images/loading-gear-icon.svg');
   }
+
+  .es-ui-icon-mask--copy {
+    mask-image: url('/images/copy.svg');
+    -webkit-mask-image: url('/images/copy.svg');
+  }
+
+  .es-ui-icon-mask--check {
+    mask-image: url('/images/check.svg');
+    -webkit-mask-image: url('/images/check.svg');
+  }
 }

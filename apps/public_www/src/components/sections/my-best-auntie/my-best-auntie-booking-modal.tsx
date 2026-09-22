@@ -1,15 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
-import {
-  OverlayDialogPanel,
-  OverlayScrollableBody,
-} from '@/components/shared/overlay-surface';
-import {
-  CloseButton,
-  ModalOverlay,
-} from '@/components/sections/booking-modal/shared';
+import { BookingFlowModalShell } from '@/components/sections/booking-modal/booking-flow-modal-shell';
+import { BookingShareLinkButton } from '@/components/sections/booking-modal/booking-share-link-button';
 import { useBookingModalScaffold } from '@/components/sections/booking-modal/use-booking-modal-scaffold';
 import {
   type BookingEventDetailPart,
@@ -28,6 +22,13 @@ import {
   type Locale,
   type MyBestAuntieModalContent,
 } from '@/content';
+import {
+  MY_BEST_AUNTIE_BOOKING_HASH,
+  buildBookingDeepLinkUrl,
+  resolveBookingShareCode,
+} from '@/lib/booking-deep-link';
+import { localizeHref } from '@/lib/locale-routing';
+import { ROUTES } from '@/lib/routes';
 import {
   MY_BEST_AUNTIE_TRAINING_COURSE_CALENDAR_SERVICE_KEY,
   MY_BEST_AUNTIE_BOOKING_SYSTEM,
@@ -82,6 +83,10 @@ export function MyBestAuntieBookingModal({
     dialogTitleId,
     dialogDescriptionId,
   } = useBookingModalScaffold(onClose);
+  const [appliedShareCode, setAppliedShareCode] = useState({
+    code: '',
+    fromReferral: false,
+  });
 
   const originalAmount = selectedCohort?.price ?? 0;
 
@@ -138,28 +143,45 @@ export function MyBestAuntieBookingModal({
     directionHref: selectedCohort?.location_url,
     toBeConfirmedLabel: getContent(locale).common.locationToBeConfirmedLabel,
   });
+  const shareCode = resolveBookingShareCode({
+    prefilledCode: prefilledDiscountCode,
+    appliedCode: appliedShareCode.code,
+    appliedFromReferral: appliedShareCode.fromReferral,
+  });
+  const shareUrl =
+    typeof window === 'undefined'
+      ? ''
+      : buildBookingDeepLinkUrl({
+          origin: window.location.origin,
+          pathname: localizeHref(ROUTES.servicesMyBestAuntieTrainingCourse, locale),
+          bookingSystem: MY_BEST_AUNTIE_BOOKING_SYSTEM,
+          serviceTier: selectedCohort?.service_tier ?? '',
+          cohortSlug: selectedCohort?.slug ?? '',
+          hash: MY_BEST_AUNTIE_BOOKING_HASH,
+          shareCode,
+        });
 
   return (
-    <ModalOverlay
+    <BookingFlowModalShell
+      paymentModalContent={paymentModalContent}
+      modalPanelRef={modalPanelRef}
+      closeButtonRef={closeButtonRef}
+      dialogTitleId={dialogTitleId}
+      dialogDescriptionId={dialogDescriptionId}
       onClose={onClose}
-      overlayAriaLabel={paymentModalContent.closeOverlayLabel}
+      headerActions={
+        <BookingShareLinkButton
+          url={shareUrl}
+          copyLinkLabel={paymentModalContent.copyLinkLabel}
+          copyLinkCopiedLabel={paymentModalContent.copyLinkCopiedLabel}
+          copyLinkFallbackLabel={paymentModalContent.copyLinkFallbackLabel}
+          copyLinkCopiedAnnouncement={paymentModalContent.copyLinkCopiedAnnouncement}
+          serviceTier={selectedServiceTierLabelText || selectedCohort?.service_tier || ''}
+          cohortLabel={selectedCohortDateLabelText}
+          analyticsSectionId={analyticsSectionId}
+        />
+      }
     >
-      <OverlayDialogPanel
-        panelRef={modalPanelRef}
-        ariaLabelledBy={dialogTitleId}
-        ariaDescribedBy={dialogDescriptionId}
-        tabIndex={-1}
-        className='es-booking-modal-panel overflow-visible'
-      >
-        <header className='flex justify-end px-4 pb-8 pt-6 sm:px-8 sm:pt-7'>
-          <CloseButton
-            label={paymentModalContent.closeLabel}
-            onClose={onClose}
-            buttonRef={closeButtonRef}
-          />
-        </header>
-        <OverlayScrollableBody className='pb-5 sm:pb-8'>
-          <div className='relative z-10 flex flex-col gap-8 pb-9 lg:flex-row lg:gap-10 lg:pb-[72px]'>
             <BookingEventDetails
               locale={locale}
               headingId={dialogTitleId}
@@ -207,12 +229,9 @@ export function MyBestAuntieBookingModal({
               metaPixelContentName={metaPixelContentName}
               captchaWidgetAction={captchaWidgetAction}
               thankYouRecapLabels={thankYouRecapLabels}
+              onAppliedShareCodeChange={setAppliedShareCode}
               onSubmitReservation={onSubmitReservation}
             />
-          </div>
-
-        </OverlayScrollableBody>
-      </OverlayDialogPanel>
-    </ModalOverlay>
+    </BookingFlowModalShell>
   );
 }

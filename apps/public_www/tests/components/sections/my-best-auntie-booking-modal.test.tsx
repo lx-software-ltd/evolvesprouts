@@ -2161,4 +2161,42 @@ describe('my-best-auntie booking modals footer content', () => {
       ),
     ).toHaveLength(1);
   });
+
+  it('copies the course page link from any page and records the age label', async () => {
+    window.history.replaceState({}, '', '/en/events/');
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+
+    renderBookingModal({
+      locale: 'zh-HK',
+      selectedServiceTierLabel: '18-24 months',
+    });
+
+    const copyButton = screen.getByRole('button', { name: bookingModalContent.copyLinkLabel });
+    expect(copyButton.querySelector('.es-ui-icon-mask--copy')).not.toBeNull();
+    expect(copyButton.querySelector('img')).toBeNull();
+
+    fireEvent.click(copyButton);
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledTimes(1);
+    });
+    const copiedUrl = new URL(writeText.mock.calls[0]?.[0] as string);
+    expect(copiedUrl.pathname).toBe('/zh-HK/services/my-best-auntie-training-course/');
+    expect(copiedUrl.searchParams.get('service_tier')).toBe(selectedCohort.service_tier);
+    expect(copiedUrl.searchParams.get('cohort')).toBe(selectedCohort.slug);
+    expect(mockedTrackAnalyticsEvent).toHaveBeenCalledWith(
+      'booking_share_link_copied',
+      expect.objectContaining({
+        params: expect.objectContaining({
+          service_tier: '18-24 months',
+        }),
+      }),
+    );
+
+    window.history.replaceState({}, '', '/');
+  });
 });

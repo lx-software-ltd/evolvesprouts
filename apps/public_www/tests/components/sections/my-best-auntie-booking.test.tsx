@@ -1,5 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { MyBestAuntieBooking } from '@/components/sections/my-best-auntie/my-best-auntie-booking';
@@ -710,5 +710,182 @@ describe('MyBestAuntieBooking section', () => {
         name: new RegExp(formatCohortValue(firstAvailableCohort!.cohort, 'en')),
       }).className,
     ).toContain('es-btn--state-active');
+  });
+
+  it('copies a unique confirm-and-pay link and carries the referral code', async () => {
+    window.history.replaceState({}, '', '/en/events/?ref=SAVE10');
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+
+    render(
+      <MyBestAuntieBooking
+        locale='en'
+        content={bookingContent}
+        initialCohorts={initialMbaCohorts}
+        modalContent={myBestAuntieModalContent}
+        bookingModalContent={bookingModalContent}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: bookingContent.confirmAndPayLabel }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: bookingModalContent.paymentModal.copyLinkLabel }),
+    );
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledTimes(1);
+    });
+    const copiedUrl = new URL(writeText.mock.calls[0]?.[0] as string);
+    expect(copiedUrl.pathname).toBe('/en/services/my-best-auntie-training-course/');
+    expect(copiedUrl.searchParams.get('booking_system')).toBe('my-best-auntie-booking');
+    expect(copiedUrl.searchParams.get('service_tier')).toBe('0-1');
+    expect(copiedUrl.searchParams.get('cohort')).toBe('my-best-auntie-0-1-04-26');
+    expect(copiedUrl.searchParams.get('ref')).toBe('SAVE10');
+    expect(copiedUrl.hash).toBe('#my-best-auntie-booking');
+    expect(mockedTrackAnalyticsEvent).toHaveBeenCalledWith(
+      'booking_share_link_copied',
+      expect.objectContaining({
+        sectionId: 'my-best-auntie-booking',
+        params: expect.objectContaining({
+          service_tier: bookingContent.ageOptions[0]!.label,
+        }),
+      }),
+    );
+  });
+
+  it('shows the booking link when the clipboard is unavailable', async () => {
+    window.history.replaceState({}, '', '/en/services/my-best-auntie-training-course/');
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
+    });
+
+    render(
+      <MyBestAuntieBooking
+        locale='en'
+        content={bookingContent}
+        initialCohorts={initialMbaCohorts}
+        modalContent={myBestAuntieModalContent}
+        bookingModalContent={bookingModalContent}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: bookingContent.confirmAndPayLabel }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: bookingModalContent.paymentModal.copyLinkLabel }),
+    );
+
+    const fallback = await screen.findByRole('textbox', {
+      name: bookingModalContent.paymentModal.copyLinkFallbackLabel,
+    });
+    expect((fallback as HTMLInputElement).value).toContain('cohort=my-best-auntie-0-1-04-26');
+  });
+
+  it('opens the confirm-and-pay modal on the deep-linked age group and cohort', async () => {
+    window.history.replaceState(
+      {},
+      '',
+      '/en/services/my-best-auntie-training-course/?booking_system=my-best-auntie-booking&service_tier=1-3&cohort=my-best-auntie-1-3-apr-26#my-best-auntie-booking',
+    );
+
+    render(
+      <MyBestAuntieBooking
+        locale='en'
+        content={bookingContent}
+        initialCohorts={initialMbaCohorts}
+        modalContent={myBestAuntieModalContent}
+        bookingModalContent={bookingModalContent}
+      />,
+    );
+
+    expect(
+      await screen.findByRole('dialog', { name: getBookingModalTitleForAgeGroup('1-3') }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '1-3' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('does not auto-open when the deep-linked cohort is sold out', async () => {
+    const soldOutSlug = 'my-best-auntie-1-3-apr-26';
+    const cohorts = initialMbaCohorts.map((entry) =>
+      entry.slug === soldOutSlug ? { ...entry, is_fully_booked: true, spaces_left: 0 } : entry,
+    );
+    window.history.replaceState(
+      {},
+      '',
+      `/en/services/my-best-auntie-training-course/?booking_system=my-best-auntie-booking&cohort=${soldOutSlug}`,
+    );
+
+    render(
+      <MyBestAuntieBooking
+        locale='en'
+        content={bookingContent}
+        initialCohorts={cohorts}
+        modalContent={myBestAuntieModalContent}
+        bookingModalContent={bookingModalContent}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '1-3' })).toHaveAttribute('aria-pressed', 'true');
+    });
+    await act(async () => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 30);
+      });
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    const dateSelectorRegion = screen.getByRole('region', {
+      name: bookingContent.dateSelectorLabel,
+    });
+    const preferredCohort = getCohortsForAge(cohorts, '1-3').find(
+      (entry) => !entry.is_fully_booked,
+    );
+    expect(preferredCohort).toBeDefined();
+    expect(
+      within(dateSelectorRegion).getByRole('button', {
+        name: new RegExp(formatCohortValue(preferredCohort!.cohort, 'en')),
+      }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: bookingContent.confirmAndPayLabel })).toBeEnabled();
+  });
+
+  it('keeps a deep-linked cohort selectable when it is past the three-date cap', async () => {
+    const lateCohort = buildTestCohort('0-1', 'aug-26', '2026-08-01T01:00:00Z');
+    const cohorts = [
+      buildTestCohort('0-1', 'may-26', '2026-05-01T01:00:00Z'),
+      buildTestCohort('0-1', 'jun-26', '2026-06-01T01:00:00Z'),
+      buildTestCohort('0-1', 'jul-26', '2026-07-01T01:00:00Z'),
+      lateCohort,
+    ];
+    window.history.replaceState(
+      {},
+      '',
+      `/en/services/my-best-auntie-training-course/?booking_system=my-best-auntie-booking&cohort=${lateCohort.slug}`,
+    );
+
+    render(
+      <MyBestAuntieBooking
+        locale='en'
+        content={bookingContent}
+        initialCohorts={cohorts}
+        modalContent={myBestAuntieModalContent}
+        bookingModalContent={bookingModalContent}
+      />,
+    );
+
+    expect(
+      await screen.findByRole('dialog', { name: getBookingModalTitleForAgeGroup('0-1') }),
+    ).toBeInTheDocument();
+    const dateSelectorRegion = screen.getByRole('region', { name: bookingContent.dateSelectorLabel });
+    expect(within(dateSelectorRegion).getAllByRole('button')).toHaveLength(4);
+    expect(
+      within(dateSelectorRegion).getByRole('button', {
+        name: new RegExp(formatCohortValue(lateCohort.cohort, 'en')),
+      }),
+    ).toHaveAttribute('aria-pressed', 'true');
   });
 });

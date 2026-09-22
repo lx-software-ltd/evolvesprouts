@@ -1,8 +1,11 @@
 'use client';
 
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 
-import { CheckIcon, DeleteIcon, DuplicateIcon } from '@/components/icons/action-icons';
+import { resolveMyBestAuntieInstanceTier } from '@shared-public-www/booking-deep-link';
+
+import { BookingLinkDialog } from '@/components/admin/services/booking-link-dialog';
+import { CheckIcon, CopyIcon, DeleteIcon, DuplicateIcon } from '@/components/icons/action-icons';
 import { AdminCreateButton } from '@/components/ui/admin-create-button';
 import {
   AdminDataTableCell,
@@ -109,6 +112,7 @@ export function InstanceListPanel({
   locationOptions = [],
 }: InstanceListPanelProps) {
   const [confirmDialogProps, requestConfirm] = useConfirmDialog();
+  const [bookingLinkInstance, setBookingLinkInstance] = useState<ServiceInstance | null>(null);
   const { copiedKey: duplicateDraftFeedbackId, markCopied: markDuplicateDraftFeedback } = useCopyFeedback(1000);
   const locationById = useMemo(() => new Map(locationOptions.map((loc) => [loc.id, loc])), [locationOptions]);
 
@@ -319,6 +323,14 @@ export function InstanceListPanel({
                       onClick: () => void handleDuplicateInstance(instance),
                     },
                     {
+                      key: 'booking-link',
+                      label: 'Copy booking link',
+                      icon: <CopyIcon className='h-4 w-4' />,
+                      hidden: resolveMyBestAuntieInstanceTier(instance) === '',
+                      disabled: isMutating,
+                      onClick: () => setBookingLinkInstance(instance),
+                    },
+                    {
                       key: 'delete',
                       label: 'Delete instance',
                       icon: <DeleteIcon className='h-4 w-4' />,
@@ -335,6 +347,14 @@ export function InstanceListPanel({
         })}
       </AdminRecordTable>
       <ConfirmDialog {...confirmDialogProps} />
+      <BookingLinkDialog
+        open={bookingLinkInstance !== null}
+        onClose={() => setBookingLinkInstance(null)}
+        parentServiceKey={bookingLinkInstance?.parentServiceKey ?? null}
+        parentServiceType={bookingLinkInstance?.parentServiceType ?? null}
+        parentServiceTier={bookingLinkInstance?.parentServiceTier ?? null}
+        slug={bookingLinkInstance?.slug ?? ''}
+      />
     </>
   );
 }

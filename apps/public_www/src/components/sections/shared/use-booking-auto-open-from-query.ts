@@ -1,6 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 
-const BOOKING_SYSTEM_QUERY_PARAM = 'booking_system';
+import {
+  readBookingDeepLinkFromSearch,
+  type BookingDeepLinkQuery,
+} from '@/lib/booking-deep-link';
 
 interface UseBookingAutoOpenFromQueryOptions {
   bookingSystem: string;
@@ -8,11 +11,40 @@ interface UseBookingAutoOpenFromQueryOptions {
   onOpen: () => void;
 }
 
+function subscribeToPageSearch(onStoreChange: () => void): () => void {
+  window.addEventListener('popstate', onStoreChange);
+  return () => {
+    window.removeEventListener('popstate', onStoreChange);
+  };
+}
+
+function readPageSearchSnapshot(): string {
+  return window.location.search;
+}
+
+function readServerPageSearchSnapshot(): string {
+  return '';
+}
+
+/**
+ * Booking query from the page URL. The server snapshot is empty so the first
+ * hydration render matches SSR; React then applies the client search before effects.
+ */
+export function useBookingPageSearch(): BookingDeepLinkQuery {
+  const search = useSyncExternalStore(
+    subscribeToPageSearch,
+    readPageSearchSnapshot,
+    readServerPageSearchSnapshot,
+  );
+  return readBookingDeepLinkFromSearch(search);
+}
+
 export function useBookingAutoOpenFromQuery({
   bookingSystem,
   canOpen,
   onOpen,
 }: UseBookingAutoOpenFromQueryOptions) {
+  const queryLink = useBookingPageSearch();
   const hasOpenedBookingModalFromQueryRef = useRef(false);
   const onOpenRef = useRef(onOpen);
 
@@ -21,12 +53,7 @@ export function useBookingAutoOpenFromQuery({
   }, [onOpen]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    const queryParams = new URLSearchParams(window.location.search);
-    if (queryParams.get(BOOKING_SYSTEM_QUERY_PARAM) !== bookingSystem) {
+    if (queryLink.bookingSystem !== bookingSystem) {
       return;
     }
     if (hasOpenedBookingModalFromQueryRef.current) {
@@ -36,13 +63,19 @@ export function useBookingAutoOpenFromQuery({
       return;
     }
 
-    hasOpenedBookingModalFromQueryRef.current = true;
+    // Record the open only when the timer fires. Clearing this timer — canOpen
+    // flickering while cohorts load, or a server snapshot that does not yet
+    // match the client search — must leave the one-shot available.
     const openModalTimerId = window.setTimeout(() => {
+      if (hasOpenedBookingModalFromQueryRef.current) {
+        return;
+      }
+      hasOpenedBookingModalFromQueryRef.current = true;
       onOpenRef.current();
     }, 0);
 
     return () => {
       window.clearTimeout(openModalTimerId);
     };
-  }, [bookingSystem, canOpen]);
+  }, [bookingSystem, canOpen, queryLink.bookingSystem]);
 }

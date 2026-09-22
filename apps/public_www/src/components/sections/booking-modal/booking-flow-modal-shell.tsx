@@ -20,6 +20,8 @@ interface BookingFlowModalShellProps {
   dialogTitleId: string;
   dialogDescriptionId: string;
   onClose: () => void;
+  /** Controls rendered before the close button (for example copy booking link). */
+  headerActions?: ReactNode;
   children: ReactNode;
 }
 
@@ -30,6 +32,7 @@ export function BookingFlowModalShell({
   dialogTitleId,
   dialogDescriptionId,
   onClose,
+  headerActions = null,
   children,
 }: BookingFlowModalShellProps) {
   return (
@@ -44,7 +47,8 @@ export function BookingFlowModalShell({
         tabIndex={-1}
         className='es-booking-modal-panel overflow-visible'
       >
-        <header className='flex justify-end px-4 pb-8 pt-6 sm:px-8 sm:pt-7'>
+        <header className='flex items-start justify-end gap-3 px-4 pb-8 pt-6 sm:px-8 sm:pt-7'>
+          {headerActions}
           <CloseButton
             label={paymentModalContent.closeLabel}
             onClose={onClose}

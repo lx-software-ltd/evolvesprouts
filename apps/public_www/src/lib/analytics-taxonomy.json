@@ -202,6 +202,17 @@
       ],
       "ga4KeyEvent": true
     },
+    "booking_share_link_copied": {
+      "requiredCustomParams": [
+        "service_tier",
+        "cohort_label"
+      ],
+      "allowedCustomParams": [
+        "service_tier",
+        "cohort_label"
+      ],
+      "ga4KeyEvent": false
+    },
     "booking_payment_method_selected": {
       "requiredCustomParams": [
         "payment_method"
