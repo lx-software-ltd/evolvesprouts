@@ -752,8 +752,8 @@ describe('InstanceDetailPanel', () => {
       expect(document.getElementById('instance-location-id')).toHaveValue('');
     });
     expect(
-      screen.getByText(/Public website shows To be confirmed/i),
-    ).toBeInTheDocument();
+      screen.queryByText(/Public website shows To be confirmed/i),
+    ).not.toBeInTheDocument();
 
     await user.click(screen.getByText('Session slots'));
     expect(document.getElementById('slot-0-location')).toHaveValue('');
