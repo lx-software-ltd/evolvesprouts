@@ -161,7 +161,7 @@ describe('structured-data builders', () => {
         timeLabel: '10:00 AM',
         isVirtualEvent: false,
         locationName: 'Baumhaus',
-        locationAddress: '1/F Kar Yau Building, Wan Chai',
+        locationAddress: '1/F, Example Tower, Hong Kong',
         ctaHref: 'https://example.com/register',
         ctaLabel: 'Reserve your spot',
         tags: ['Workshop'],
@@ -212,7 +212,7 @@ describe('structured-data builders', () => {
         name: 'Baumhaus',
         address: {
           '@type': 'PostalAddress',
-          streetAddress: '1/F Kar Yau Building, Wan Chai',
+          streetAddress: '1/F, Example Tower, Hong Kong',
           addressLocality: 'Hong Kong',
           addressCountry: 'HK',
         },
@@ -294,7 +294,7 @@ describe('structured-data builders', () => {
         name: 'Acorn Playhouse',
         address: {
           '@type': 'PostalAddress',
-          streetAddress: '3/F, 4 Yip Fat St, Wong Chuk Hang',
+          streetAddress: '1/F, 1 Sample Street, Hong Kong',
           addressLocality: 'Hong Kong',
           addressCountry: 'HK',
         },

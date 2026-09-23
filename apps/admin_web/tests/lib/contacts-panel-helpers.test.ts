@@ -7,15 +7,15 @@ import {
 
 describe('instagram handle display', () => {
   it('stores handles without a leading @', () => {
-    expect(instagramHandleForStorage(' @Kitie.W ')).toBe('kitie.w');
-    expect(instagramHandleForStorage('kitie.w')).toBe('kitie.w');
+    expect(instagramHandleForStorage(' @Mei.C ')).toBe('mei.c');
+    expect(instagramHandleForStorage('mei.c')).toBe('mei.c');
     expect(instagramHandleForStorage('@')).toBeNull();
     expect(instagramHandleForStorage('')).toBeNull();
   });
 
   it('prefixes @ for display only', () => {
-    expect(formatInstagramHandleDisplay('kitie.w')).toBe('@kitie.w');
-    expect(formatInstagramHandleDisplay('@Kitie.W')).toBe('@kitie.w');
+    expect(formatInstagramHandleDisplay('mei.c')).toBe('@mei.c');
+    expect(formatInstagramHandleDisplay('@Mei.C')).toBe('@mei.c');
     expect(formatInstagramHandleDisplay(null)).toBe('');
   });
 });

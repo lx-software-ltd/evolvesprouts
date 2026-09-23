@@ -138,21 +138,20 @@ def _v6_standard_invoice(
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_NAME", "Evolve Sprouts")
     monkeypatch.setenv(
         "PUBLIC_WWW_BUSINESS_ADDRESS",
-        "507, 5/F, Arion Commercial Centre\n2-12 Queen's Road West\n"
-        "Sheung Wan\nHong Kong SAR",
+        "1, 5/F, Example Tower\n1 Sample Street\n" "Hong Kong",
     )
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_LEGAL_NAME", "Evolve Sprouts Ltd")
-    monkeypatch.setenv("PUBLIC_WWW_BUSINESS_REGISTRATION", "41492636-000-02-25-0")
-    monkeypatch.setenv("PUBLIC_WWW_BANK_NAME", "389 - Mox Bank Limited")
-    monkeypatch.setenv("PUBLIC_WWW_BANK_ACCOUNT_NUMBER", "749 86477821")
-    monkeypatch.setenv("PUBLIC_WWW_BANK_ACCOUNT_HOLDER", "IDA DE GREGORIO")
+    monkeypatch.setenv("PUBLIC_WWW_BUSINESS_REGISTRATION", "00000000-000-00-00-0")
+    monkeypatch.setenv("PUBLIC_WWW_BANK_NAME", "000 - Example Bank")
+    monkeypatch.setenv("PUBLIC_WWW_BANK_ACCOUNT_NUMBER", "000 00000000")
+    monkeypatch.setenv("PUBLIC_WWW_BANK_ACCOUNT_HOLDER", "EXAMPLE HOLDER")
     inv = SimpleNamespace(
         invoice_number="I-2603-027",
         currency="HKD",
         subtotal=Decimal("583.33"),
         tax_total=Decimal("0"),
         total=Decimal("583.33"),
-        bill_to_display_name="Bump and Co",
+        bill_to_display_name="Example Client",
         bill_to_email=None,
         issued_at=datetime(2026, 3, 25, 12, 0, tzinfo=UTC),
         invoice_date=date(2026, 3, 25),
@@ -161,7 +160,7 @@ def _v6_standard_invoice(
     )
     line = SimpleNamespace(
         line_order=0,
-        description="Weaning Workshop for Bump & Co",
+        description="Weaning Workshop for Example Client",
         quantity=Decimal("1"),
         unit_amount=Decimal("583.33"),
         line_total=Decimal("583.33"),
@@ -294,14 +293,13 @@ def test_v7_fps_qr_on_payment_options_page(monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_NAME", "Evolve Sprouts")
     monkeypatch.setenv(
         "PUBLIC_WWW_BUSINESS_ADDRESS",
-        "507, 5/F, Arion Commercial Centre\n2-12 Queen's Road West\n"
-        "Sheung Wan\nHong Kong SAR",
+        "1, 5/F, Example Tower\n1 Sample Street\n" "Hong Kong",
     )
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_LEGAL_NAME", "Evolve Sprouts Ltd")
-    monkeypatch.setenv("PUBLIC_WWW_BUSINESS_REGISTRATION", "41492636-000-02-25-0")
-    monkeypatch.setenv("PUBLIC_WWW_BANK_NAME", "389 - Mox Bank Limited")
-    monkeypatch.setenv("PUBLIC_WWW_BANK_ACCOUNT_NUMBER", "749 86477821")
-    monkeypatch.setenv("PUBLIC_WWW_BANK_ACCOUNT_HOLDER", "IDA DE GREGORIO")
+    monkeypatch.setenv("PUBLIC_WWW_BUSINESS_REGISTRATION", "00000000-000-00-00-0")
+    monkeypatch.setenv("PUBLIC_WWW_BANK_NAME", "000 - Example Bank")
+    monkeypatch.setenv("PUBLIC_WWW_BANK_ACCOUNT_NUMBER", "000 00000000")
+    monkeypatch.setenv("PUBLIC_WWW_BANK_ACCOUNT_HOLDER", "EXAMPLE HOLDER")
     monkeypatch.setenv("PUBLIC_WWW_FPS_MERCHANT_NAME", "Evolve Sprouts")
     monkeypatch.setenv("PUBLIC_WWW_FPS_MOBILE_NUMBER", "91234567")
     inv = SimpleNamespace(
@@ -310,7 +308,7 @@ def test_v7_fps_qr_on_payment_options_page(monkeypatch: pytest.MonkeyPatch) -> N
         subtotal=Decimal("583.33"),
         tax_total=Decimal("0"),
         total=Decimal("583.33"),
-        bill_to_display_name="Bump and Co",
+        bill_to_display_name="Example Client",
         bill_to_email=None,
         issued_at=datetime(2026, 3, 25, 12, 0, tzinfo=UTC),
         invoice_date=date(2026, 3, 25),
@@ -319,7 +317,7 @@ def test_v7_fps_qr_on_payment_options_page(monkeypatch: pytest.MonkeyPatch) -> N
     )
     line = SimpleNamespace(
         line_order=0,
-        description="Weaning Workshop for Bump & Co",
+        description="Weaning Workshop for Example Client",
         quantity=Decimal("1"),
         unit_amount=Decimal("583.33"),
         line_total=Decimal("583.33"),
@@ -610,14 +608,13 @@ def test_paid_watermark_present_on_payment_options_page(
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_NAME", "Evolve Sprouts")
     monkeypatch.setenv(
         "PUBLIC_WWW_BUSINESS_ADDRESS",
-        "507, 5/F, Arion Commercial Centre\n2-12 Queen's Road West\n"
-        "Sheung Wan\nHong Kong SAR",
+        "1, 5/F, Example Tower\n1 Sample Street\n" "Hong Kong",
     )
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_LEGAL_NAME", "Evolve Sprouts Ltd")
-    monkeypatch.setenv("PUBLIC_WWW_BUSINESS_REGISTRATION", "41492636-000-02-25-0")
-    monkeypatch.setenv("PUBLIC_WWW_BANK_NAME", "389 - Mox Bank Limited")
-    monkeypatch.setenv("PUBLIC_WWW_BANK_ACCOUNT_NUMBER", "749 86477821")
-    monkeypatch.setenv("PUBLIC_WWW_BANK_ACCOUNT_HOLDER", "IDA DE GREGORIO")
+    monkeypatch.setenv("PUBLIC_WWW_BUSINESS_REGISTRATION", "00000000-000-00-00-0")
+    monkeypatch.setenv("PUBLIC_WWW_BANK_NAME", "000 - Example Bank")
+    monkeypatch.setenv("PUBLIC_WWW_BANK_ACCOUNT_NUMBER", "000 00000000")
+    monkeypatch.setenv("PUBLIC_WWW_BANK_ACCOUNT_HOLDER", "EXAMPLE HOLDER")
     monkeypatch.setenv("PUBLIC_WWW_FPS_MERCHANT_NAME", "Evolve Sprouts")
     monkeypatch.setenv("PUBLIC_WWW_FPS_MOBILE_NUMBER", "91234567")
     inv = SimpleNamespace(
@@ -626,7 +623,7 @@ def test_paid_watermark_present_on_payment_options_page(
         subtotal=Decimal("583.33"),
         tax_total=Decimal("0"),
         total=Decimal("583.33"),
-        bill_to_display_name="Bump and Co",
+        bill_to_display_name="Example Client",
         bill_to_email=None,
         issued_at=datetime(2026, 3, 25, 12, 0, tzinfo=UTC),
         invoice_date=date(2026, 3, 25),
@@ -636,7 +633,7 @@ def test_paid_watermark_present_on_payment_options_page(
     )
     line = SimpleNamespace(
         line_order=0,
-        description="Weaning Workshop for Bump & Co",
+        description="Weaning Workshop for Example Client",
         quantity=Decimal("1"),
         unit_amount=Decimal("583.33"),
         line_total=Decimal("583.33"),
@@ -654,21 +651,20 @@ def test_description_not_split_midword(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_NAME", "Evolve Sprouts")
     monkeypatch.setenv(
         "PUBLIC_WWW_BUSINESS_ADDRESS",
-        "507, 5/F, Arion Commercial Centre\n2-12 Queen's Road West\n"
-        "Sheung Wan\nHong Kong SAR",
+        "1, 5/F, Example Tower\n1 Sample Street\n" "Hong Kong",
     )
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_LEGAL_NAME", "Evolve Sprouts Ltd")
-    monkeypatch.setenv("PUBLIC_WWW_BUSINESS_REGISTRATION", "41492636-000-02-25-0")
-    monkeypatch.setenv("PUBLIC_WWW_BANK_NAME", "389 - Mox Bank Limited")
-    monkeypatch.setenv("PUBLIC_WWW_BANK_ACCOUNT_NUMBER", "749 86477821")
-    monkeypatch.setenv("PUBLIC_WWW_BANK_ACCOUNT_HOLDER", "IDA DE GREGORIO")
+    monkeypatch.setenv("PUBLIC_WWW_BUSINESS_REGISTRATION", "00000000-000-00-00-0")
+    monkeypatch.setenv("PUBLIC_WWW_BANK_NAME", "000 - Example Bank")
+    monkeypatch.setenv("PUBLIC_WWW_BANK_ACCOUNT_NUMBER", "000 00000000")
+    monkeypatch.setenv("PUBLIC_WWW_BANK_ACCOUNT_HOLDER", "EXAMPLE HOLDER")
     inv = SimpleNamespace(
         invoice_number="I-2603-027",
         currency="HKD",
         subtotal=Decimal("583.33"),
         tax_total=Decimal("0"),
         total=Decimal("583.33"),
-        bill_to_display_name="Bump and Co",
+        bill_to_display_name="Example Client",
         bill_to_email=None,
         issued_at=datetime(2026, 3, 25, 12, 0, tzinfo=UTC),
         invoice_date=date(2026, 3, 25),
@@ -677,14 +673,14 @@ def test_description_not_split_midword(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     line = SimpleNamespace(
         line_order=0,
-        description="Weaning Workshop for Bump & Co",
+        description="Weaning Workshop for Example Client",
         quantity=Decimal("1"),
         unit_amount=Decimal("583.33"),
         line_total=Decimal("583.33"),
         currency="HKD",
     )
     text = _pdf_text(render_invoice_pdf(invoice=inv, lines=[line], preview=False))
-    assert "Weaning Workshop for Bump & Co" in text
+    assert "Weaning Workshop for Example Client" in text
 
 
 def test_invoice_template_v6_layout_smoke(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -693,21 +689,20 @@ def test_invoice_template_v6_layout_smoke(monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_NAME", "Evolve Sprouts")
     monkeypatch.setenv(
         "PUBLIC_WWW_BUSINESS_ADDRESS",
-        "507, 5/F, Arion Commercial Centre\n2-12 Queen's Road West\n"
-        "Sheung Wan\nHong Kong SAR",
+        "1, 5/F, Example Tower\n1 Sample Street\n" "Hong Kong",
     )
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_LEGAL_NAME", "Evolve Sprouts Ltd")
-    monkeypatch.setenv("PUBLIC_WWW_BUSINESS_REGISTRATION", "41492636-000-02-25-0")
-    monkeypatch.setenv("PUBLIC_WWW_BANK_NAME", "389 - Mox Bank Limited")
-    monkeypatch.setenv("PUBLIC_WWW_BANK_ACCOUNT_NUMBER", "749 86477821")
-    monkeypatch.setenv("PUBLIC_WWW_BANK_ACCOUNT_HOLDER", "IDA DE GREGORIO")
+    monkeypatch.setenv("PUBLIC_WWW_BUSINESS_REGISTRATION", "00000000-000-00-00-0")
+    monkeypatch.setenv("PUBLIC_WWW_BANK_NAME", "000 - Example Bank")
+    monkeypatch.setenv("PUBLIC_WWW_BANK_ACCOUNT_NUMBER", "000 00000000")
+    monkeypatch.setenv("PUBLIC_WWW_BANK_ACCOUNT_HOLDER", "EXAMPLE HOLDER")
     inv = SimpleNamespace(
         invoice_number="I-2603-027",
         currency="HKD",
         subtotal=Decimal("583.33"),
         tax_total=Decimal("0"),
         total=Decimal("583.33"),
-        bill_to_display_name="Bump and Co",
+        bill_to_display_name="Example Client",
         bill_to_email=None,
         issued_at=datetime(2026, 3, 25, 12, 0, tzinfo=UTC),
         invoice_date=date(2026, 3, 25),
@@ -716,7 +711,7 @@ def test_invoice_template_v6_layout_smoke(monkeypatch: pytest.MonkeyPatch) -> No
     )
     line = SimpleNamespace(
         line_order=0,
-        description="Weaning Workshop for Bump & Co",
+        description="Weaning Workshop for Example Client",
         quantity=Decimal("1"),
         unit_amount=Decimal("583.33"),
         line_total=Decimal("583.33"),
@@ -743,7 +738,7 @@ def test_invoice_template_v6_layout_smoke(monkeypatch: pytest.MonkeyPatch) -> No
         "Payment Options:",
         "Bank Transfer",
         "Thank you!",
-        "Evolve Sprouts Ltd | Proudly registered in Hong Kong | BR: 41492636-000-02-25-0",
+        "Evolve Sprouts Ltd | Proudly registered in Hong Kong | BR: 00000000-000-00-00-0",
     ):
         assert fragment in text
 
@@ -769,10 +764,10 @@ def test_footer_text_option_b_combinations(monkeypatch: pytest.MonkeyPatch) -> N
     assert invoice_pdf_footer_text() == "BR: BR-99"
 
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_LEGAL_NAME", "Evolve Sprouts Ltd")
-    monkeypatch.setenv("PUBLIC_WWW_BUSINESS_REGISTRATION", "41492636-000-02-25-0")
+    monkeypatch.setenv("PUBLIC_WWW_BUSINESS_REGISTRATION", "00000000-000-00-00-0")
     assert (
         invoice_pdf_footer_text()
-        == "Evolve Sprouts Ltd | Proudly registered in Hong Kong | BR: 41492636-000-02-25-0"
+        == "Evolve Sprouts Ltd | Proudly registered in Hong Kong | BR: 00000000-000-00-00-0"
     )
 
 
@@ -848,7 +843,7 @@ def test_address_preserves_5f(monkeypatch: pytest.MonkeyPatch) -> None:
     _base_invoice_env(monkeypatch)
     monkeypatch.setenv(
         "PUBLIC_WWW_BUSINESS_ADDRESS",
-        "507, 5/F, Arion Commercial Centre\n2-12 Queen's Road West",
+        "1, 5/F, Example Tower\n1 Sample Street",
     )
     inv = SimpleNamespace(
         invoice_number="N1",

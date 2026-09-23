@@ -39,7 +39,7 @@ def test_render_completion_certificate_pdf_escapes_special_characters() -> None:
             trading_name="Evolve Sprouts",
             partner_display_name=None,
             partner_signer_name=None,
-            es_founder_name="Ida De Gregorio",
+            es_founder_name="Founder Example",
             body_text=build_certificate_body_text(
                 trading_name="Evolve Sprouts",
                 partner_display_name=None,
@@ -70,8 +70,8 @@ def test_render_completion_certificate_pdf_returns_bytes() -> None:
             participation_date=date(2026, 6, 14),
             trading_name="Evolve Sprouts",
             partner_display_name="Parachute",
-            partner_signer_name="Rosalind",
-            es_founder_name="Ida De Gregorio",
+            partner_signer_name="Pat Example",
+            es_founder_name="Founder Example",
             body_text=build_certificate_body_text(
                 trading_name="Evolve Sprouts",
                 partner_display_name="Parachute",

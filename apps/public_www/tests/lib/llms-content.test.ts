@@ -4,6 +4,8 @@ import enContent from '@/content/en.json';
 import { buildLlmsFullTxt, buildLlmsTxt } from '@/lib/llms-content';
 
 const TEST_CONTACT_EMAIL = process.env.NEXT_PUBLIC_EMAIL ?? 'tests@example.com';
+const FOUNDER_NAME = enContent.aboutUs.coaches.ida.title;
+process.env.NEXT_PUBLIC_FOUNDER_NAME = FOUNDER_NAME;
 
 describe('buildLlmsTxt', () => {
   const output = buildLlmsTxt(enContent);
@@ -32,6 +34,10 @@ describe('buildLlmsTxt', () => {
 
   it('includes the contact email from config', () => {
     expect(output).toContain(TEST_CONTACT_EMAIL);
+  });
+
+  it('includes the founder name from NEXT_PUBLIC_FOUNDER_NAME', () => {
+    expect(output).toContain(`**Founded by**: ${FOUNDER_NAME}, Montessori-certified practitioner`);
   });
 
   it('includes the required llms.txt sections', () => {
@@ -71,6 +77,7 @@ describe('buildLlmsFullTxt', () => {
   });
 
   it('includes the founder description from content', () => {
+    expect(output).toContain(`### The Founder: ${FOUNDER_NAME}`);
     expect(output).toContain(enContent.aboutUs.hero.subtitle);
     expect(output).toContain(enContent.aboutUs.hero.description);
   });

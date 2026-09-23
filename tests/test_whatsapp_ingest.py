@@ -13,9 +13,9 @@ from app.services import whatsapp_ingest as ingest
 
 
 def test_parse_wa_phone_hong_kong() -> None:
-    region, national = ingest._parse_wa_phone("85294479843")
+    region, national = ingest._parse_wa_phone("85251111111")
     assert region == "HK"
-    assert national == "94479843"
+    assert national == "51111111"
 
 
 def test_extract_body_text_and_interactive() -> None:
@@ -109,13 +109,13 @@ def test_ingest_stores_inbound_and_creates_lead(
                         "value": {
                             "contacts": [
                                 {
-                                    "wa_id": "85294479843",
-                                    "profile": {"name": "Kitie"},
+                                    "wa_id": "85251111111",
+                                    "profile": {"name": "Mei"},
                                 }
                             ],
                             "messages": [
                                 {
-                                    "from": "85294479843",
+                                    "from": "85251111111",
                                     "id": "wamid.ABC",
                                     "timestamp": "1710000000",
                                     "type": "text",
@@ -158,7 +158,7 @@ def test_ingest_skips_duplicate_message(monkeypatch: pytest.MonkeyPatch) -> None
                         "value": {
                             "messages": [
                                 {
-                                    "from": "85294479843",
+                                    "from": "85251111111",
                                     "id": "wamid.DUP",
                                     "timestamp": "1710000000",
                                     "type": "text",
@@ -251,7 +251,7 @@ def test_ingest_stores_coexistence_echo(monkeypatch: pytest.MonkeyPatch) -> None
                             "message_echoes": [
                                 {
                                     "from": "85255550000",
-                                    "to": "85294479843",
+                                    "to": "85251111111",
                                     "id": "wamid.ECHO",
                                     "timestamp": "1710000001",
                                     "type": "text",
@@ -337,10 +337,10 @@ def test_ingest_history_chunk_does_not_create_leads(
                                 {
                                     "threads": [
                                         {
-                                            "id": "85294479843",
+                                            "id": "85251111111",
                                             "messages": [
                                                 {
-                                                    "from": "85294479843",
+                                                    "from": "85251111111",
                                                     "id": "wamid.HIST",
                                                     "timestamp": "1710000000",
                                                     "type": "text",
@@ -377,8 +377,8 @@ def test_third_inbound_moves_existing_lead_to_engaged(
     class _FakeConversation:
         def __init__(self) -> None:
             self.id = conversation_id
-            self.wa_id = "85294479843"
-            self.profile_name = "Kitie"
+            self.wa_id = "85251111111"
+            self.profile_name = "Mei"
             self.contact_id = contact_id
             self.lead_id = lead_id
             self.inbound_count = 2
@@ -432,7 +432,7 @@ def test_third_inbound_moves_existing_lead_to_engaged(
                         "value": {
                             "messages": [
                                 {
-                                    "from": "85294479843",
+                                    "from": "85251111111",
                                     "id": "wamid.THIRD",
                                     "timestamp": "1710000003",
                                     "type": "text",

@@ -35,7 +35,7 @@ describe('AboutUsHero', () => {
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
     expect(
       screen.getByRole('img', {
-        name: /Ida De Gregorio from Evolve Sprouts/i,
+        name: content.imageAlt,
       }),
     ).toBeInTheDocument();
   });

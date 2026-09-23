@@ -128,7 +128,7 @@ def test_ingest_stores_inbound_instagram_and_creates_lead(
                 "id": "17841400000000000",
                 "messaging": [
                     {
-                        "sender": {"id": "igsid-user-1", "username": "@Kitie.W"},
+                        "sender": {"id": "igsid-user-1", "username": "@Mei.C"},
                         "recipient": {"id": "17841400000000000"},
                         "timestamp": 1710000000000,
                         "message": {"mid": "m_abc", "text": "How much?"},
@@ -146,9 +146,9 @@ def test_ingest_stores_inbound_instagram_and_creates_lead(
         if getattr(item, "platform_user_id", None) == "igsid-user-1"
     )
     assert conversation.channel is MetaChannel.INSTAGRAM
-    assert conversation.profile_name == "@Kitie.W"
+    assert conversation.profile_name == "@Mei.C"
     contact = next(item for item in added if isinstance(item, Contact))
-    assert contact.instagram_handle == "kitie.w"
+    assert contact.instagram_handle == "mei.c"
     assert not contact.instagram_handle.startswith("@")
     assert any(
         getattr(item, "direction", None) is MetaMessageDirection.INBOUND
@@ -418,7 +418,7 @@ def test_ingest_keeps_customer_instagram_when_own_handle_configured(
                 "id": "17841400000000000",
                 "messaging": [
                     {
-                        "sender": {"id": "igsid-user-1", "username": "kitie.w"},
+                        "sender": {"id": "igsid-user-1", "username": "mei.c"},
                         "recipient": {"id": "17841400000000000"},
                         "timestamp": 1710000000000,
                         "message": {"mid": "m_customer", "text": "How much?"},
@@ -434,7 +434,7 @@ def test_ingest_keeps_customer_instagram_when_own_handle_configured(
         for item in added
         if getattr(item, "platform_user_id", None) == "igsid-user-1"
     )
-    assert conversation.profile_name == "kitie.w"
+    assert conversation.profile_name == "mei.c"
 
 
 def test_ingest_echo_does_not_use_business_handle_as_chat_name(
@@ -515,7 +515,7 @@ def test_ingest_echo_does_not_use_business_handle_as_chat_name(
                             "id": "17841400000000000",
                             "username": "evolvesprouts",
                         },
-                        "recipient": {"id": "igsid-user-1", "username": "kitie.w"},
+                        "recipient": {"id": "igsid-user-1", "username": "mei.c"},
                         "timestamp": 1710000000,
                         "message": {
                             "mid": "m_echo",
@@ -534,7 +534,7 @@ def test_ingest_echo_does_not_use_business_handle_as_chat_name(
         for item in added
         if getattr(item, "platform_user_id", None) == "igsid-user-1"
     )
-    assert conversation.profile_name == "kitie.w"
+    assert conversation.profile_name == "mei.c"
 
 
 def test_contact_first_name_never_uses_last_four() -> None:
@@ -546,14 +546,14 @@ def test_contact_first_name_never_uses_last_four() -> None:
     assert ingest._contact_first_name(conversation) == "Instagram contact"
     named = SimpleNamespace(
         channel=MetaChannel.FACEBOOK,
-        profile_name="Kitie",
+        profile_name="Mei",
         platform_user_id="1234567890",
     )
-    assert ingest._contact_first_name(named) == "Kitie"
+    assert ingest._contact_first_name(named) == "Mei"
 
 
 def test_parse_instagram_username_rejects_igsid_and_display_names() -> None:
-    assert parse_instagram_username("@Kitie.W") == "kitie.w"
+    assert parse_instagram_username("@Mei.C") == "mei.c"
     assert parse_instagram_username("Feier Wang") is None
     assert (
         parse_instagram_username(
@@ -572,7 +572,7 @@ def test_ingest_reuses_contact_matching_instagram_handle(
     existing_id = uuid4()
     lead_id = uuid4()
     added: list[object] = []
-    existing = SimpleNamespace(id=existing_id, instagram_handle="kitie.w")
+    existing = SimpleNamespace(id=existing_id, instagram_handle="mei.c")
 
     class _FakeConversation:
         def __init__(self, **kwargs: object) -> None:
@@ -630,7 +630,7 @@ def test_ingest_reuses_contact_matching_instagram_handle(
                 "id": "17841400000000000",
                 "messaging": [
                     {
-                        "sender": {"id": "igsid-user-2", "username": "kitie.w"},
+                        "sender": {"id": "igsid-user-2", "username": "mei.c"},
                         "recipient": {"id": "17841400000000000"},
                         "timestamp": 1710000000000,
                         "message": {"mid": "m_reuse", "text": "Hi again"},
@@ -659,7 +659,7 @@ def test_ingest_reuses_archived_contact_matching_instagram_handle(
     added: list[object] = []
     existing = SimpleNamespace(
         id=existing_id,
-        instagram_handle="kitie.w",
+        instagram_handle="mei.c",
         archived_at="2026-01-01T00:00:00+00:00",
     )
 
@@ -719,7 +719,7 @@ def test_ingest_reuses_archived_contact_matching_instagram_handle(
                 "id": "17841400000000000",
                 "messaging": [
                     {
-                        "sender": {"id": "igsid-archived", "username": "kitie.w"},
+                        "sender": {"id": "igsid-archived", "username": "mei.c"},
                         "recipient": {"id": "17841400000000000"},
                         "timestamp": 1710000000000,
                         "message": {"mid": "m_archived", "text": "Hi"},
@@ -749,7 +749,7 @@ def test_ingest_fills_instagram_handle_on_existing_contact(
         channel=MetaChannel.INSTAGRAM,
         platform_user_id="igsid-user-3",
         page_id="17841400000000000",
-        profile_name="kitie.w",
+        profile_name="mei.c",
         contact_id=contact_id,
         lead_id=uuid4(),
         inbound_count=1,
@@ -800,7 +800,7 @@ def test_ingest_fills_instagram_handle_on_existing_contact(
                 "id": "17841400000000000",
                 "messaging": [
                     {
-                        "sender": {"id": "igsid-user-3", "username": "kitie.w"},
+                        "sender": {"id": "igsid-user-3", "username": "mei.c"},
                         "recipient": {"id": "17841400000000000"},
                         "timestamp": 1710000001000,
                         "message": {"mid": "m_fill", "text": "Hello"},
@@ -811,7 +811,7 @@ def test_ingest_fills_instagram_handle_on_existing_contact(
     }
     counters = ingest.ingest_webhook_payload(_FakeSession(), payload)
     assert counters["stored"] == 1
-    assert linked.instagram_handle == "kitie.w"
+    assert linked.instagram_handle == "mei.c"
 
 
 def test_ingest_facebook_contact_has_no_instagram_handle(
@@ -897,7 +897,7 @@ def test_find_or_create_reuses_contact_after_unique_handle_race(
 ) -> None:
     from sqlalchemy.exc import IntegrityError
 
-    existing = SimpleNamespace(id=uuid4(), instagram_handle="kitie.w")
+    existing = SimpleNamespace(id=uuid4(), instagram_handle="mei.c")
     lookups = {"count": 0}
 
     class _FakeContactRepo:
@@ -936,9 +936,9 @@ def test_find_or_create_reuses_contact_after_unique_handle_race(
         session,  # type: ignore[arg-type]
         conversation=SimpleNamespace(
             channel=MetaChannel.INSTAGRAM,
-            profile_name="kitie.w",
+            profile_name="mei.c",
         ),
-        instagram_handle="kitie.w",
+        instagram_handle="mei.c",
         source_detail="meta_webhook",
     )
     assert created is False

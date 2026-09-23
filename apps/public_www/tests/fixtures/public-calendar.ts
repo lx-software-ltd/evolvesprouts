@@ -38,9 +38,9 @@ export const publicCalendarFixture = {
           part: 3,
         },
       ],
-      location_address: 'Unit 507, 5/F, Arion Commercial Centre, 2-12 Queen\'s Road West, Sheung Wan',
+      location_address: 'Unit 1, 1/F, Example Tower, 1 Sample Street, Hong Kong',
       location_url:
-        'https://www.google.com/maps/dir/?api=1&destination=Arion+Commercial+Centre,+2-12+Queen%27s+Road+West,+Sheung+Wan',
+        'https://www.google.com/maps/dir/?api=1&destination=Example+Tower,+1+Sample+Street,+Hong+Kong',
       location_name: 'Evolve Sprouts',
       slug: 'my-best-auntie-1-3-apr-26',
     },
@@ -77,9 +77,9 @@ export const publicCalendarFixture = {
           part: 3,
         },
       ],
-      location_address: 'Unit 507, 5/F, Arion Commercial Centre, 2-12 Queen\'s Road West, Sheung Wan',
+      location_address: 'Unit 1, 1/F, Example Tower, 1 Sample Street, Hong Kong',
       location_url:
-        'https://www.google.com/maps/dir/?api=1&destination=Arion+Commercial+Centre,+2-12+Queen%27s+Road+West,+Sheung+Wan',
+        'https://www.google.com/maps/dir/?api=1&destination=Example+Tower,+1+Sample+Street,+Hong+Kong',
       location_name: 'Evolve Sprouts',
       slug: 'my-best-auntie-0-1-may-26',
     },
@@ -124,9 +124,9 @@ export const publicCalendarFixture = {
       currency: 'HKD',
       is_fully_booked: false,
       location_name: 'Baumhaus',
-      location_address: "1/F Kar Yau Building, 36-44 Queen's Rd E, Wan Chai",
+      location_address: "1/F, Example Tower, 1 Sample Street, Hong Kong",
       location_url:
-        'https://www.google.com/maps/dir/?api=1&destination=Baumhaus,+1/F+Kar+Yau+Building,+36-44+Queen%27s+Rd+E,+Wan+Chai',
+        'https://www.google.com/maps/dir/?api=1&destination=Example+Hall,+1+Sample+Street,+Hong+Kong',
       slug: 'easter-2026-montessori-play-coaching-workshop',
     },
     {
@@ -153,9 +153,9 @@ export const publicCalendarFixture = {
       currency: 'HKD',
       is_fully_booked: false,
       location_name: 'Acorn Playhouse',
-      location_address: '3/F, 4 Yip Fat St, Wong Chuk Hang',
+      location_address: '1/F, 1 Sample Street, Hong Kong',
       location_url:
-        'https://www.google.com/maps/dir/?api=1&destination=3%2FF%2C+4+Yip+Fat+St%2C+Wong+Chuk+Hang',
+        'https://www.google.com/maps/dir/?api=1&destination=1%2FF%2C+1+Sample+Street%2C+Hong+Kong',
       slug: 'may-2026-the-missing-piece',
     },
   ],

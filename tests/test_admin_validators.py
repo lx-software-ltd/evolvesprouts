@@ -62,8 +62,8 @@ def test_parse_optional_service_instance_slug_like_text_sets_field_on_error() ->
 
 
 def test_parse_optional_instagram_handle_strips_at_and_lowercases() -> None:
-    assert parse_optional_instagram_handle(" @Kitie.W ") == "kitie.w"
-    assert parse_optional_instagram_handle("kitie.w") == "kitie.w"
+    assert parse_optional_instagram_handle(" @Mei.C ") == "mei.c"
+    assert parse_optional_instagram_handle("mei.c") == "mei.c"
     assert parse_optional_instagram_handle(" @ ") is None
     assert parse_optional_instagram_handle(None) is None
 

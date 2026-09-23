@@ -11,6 +11,7 @@ const ENV_KEYS = [
   'NEXT_PUBLIC_WHATSAPP_URL',
   'NEXT_PUBLIC_INSTAGRAM_URL',
   'NEXT_PUBLIC_LINKEDIN_URL',
+  'NEXT_PUBLIC_FOUNDER_NAME',
 ] as const;
 const originalEnvValues = Object.fromEntries(
   ENV_KEYS.map((key) => [key, process.env[key]]),
@@ -68,6 +69,14 @@ describe('site-config', () => {
 
   it('returns an empty value when the base WhatsApp URL is invalid', () => {
     expect(buildWhatsappPrefilledHref('/contact-us', 'hello')).toBe('');
+  });
+
+  it('returns the founder name from NEXT_PUBLIC_FOUNDER_NAME', () => {
+    process.env.NEXT_PUBLIC_EMAIL = 'hello@example.com';
+    process.env.NEXT_PUBLIC_FOUNDER_NAME = 'Founder Example';
+
+    const siteConfig = resolvePublicSiteConfig();
+    expect(siteConfig.founderName).toBe('Founder Example');
   });
 
   it('returns configured contact email when NEXT_PUBLIC_EMAIL is valid', () => {

@@ -49,9 +49,9 @@ describe('LandingPageHero section', () => {
       subtitle: 'A practical workshop',
       originalAmount: 350,
       locationName: 'Baumhaus',
-      locationAddress: "Baumhaus, 1/F Kar Yau Building, 36-44 Queen's Rd E, Wan Chai",
+      locationAddress: "Example Hall, 1/F, Example Tower, 1 Sample Street, Hong Kong",
       directionHref:
-        'https://www.google.com/maps/dir/?api=1&destination=Baumhaus,+1/F+Kar+Yau+Building,+36-44+Queen%27s+Rd+E,+Wan+Chai',
+        'https://www.google.com/maps/dir/?api=1&destination=Example+Hall,+1+Sample+Street,+Hong+Kong',
       dateParts: [
         {
           id: 'session-1',
@@ -146,9 +146,9 @@ describe('LandingPageHero section', () => {
       subtitle: 'A practical workshop',
       originalAmount: 350,
       locationName: 'Baumhaus',
-      locationAddress: "Baumhaus, 1/F Kar Yau Building, 36-44 Queen's Rd E, Wan Chai",
+      locationAddress: "Example Hall, 1/F, Example Tower, 1 Sample Street, Hong Kong",
       directionHref:
-        'https://www.google.com/maps/dir/?api=1&destination=Baumhaus,+1/F+Kar+Yau+Building,+36-44+Queen%27s+Rd+E,+Wan+Chai',
+        'https://www.google.com/maps/dir/?api=1&destination=Example+Hall,+1+Sample+Street,+Hong+Kong',
       dateParts: [
         {
           id: 'session-1',
@@ -201,9 +201,9 @@ describe('LandingPageHero section', () => {
       subtitle: 'Workshop',
       originalAmount: 150,
       locationName: 'Acorn Playhouse',
-      locationAddress: '3/F, 4 Yip Fat St, Wong Chuk Hang',
+      locationAddress: '1/F, 1 Sample Street, Hong Kong',
       directionHref:
-        'https://www.google.com/maps/dir/?api=1&destination=3%2FF%2C+4+Yip+Fat+St%2C+Wong+Chuk+Hang',
+        'https://www.google.com/maps/dir/?api=1&destination=1%2FF%2C+1+Sample+Street%2C+Hong+Kong',
       dateParts: [
         {
           id: 'session-1',

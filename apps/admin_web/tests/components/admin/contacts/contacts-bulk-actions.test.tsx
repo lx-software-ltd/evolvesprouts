@@ -43,8 +43,8 @@ const sampleContacts: AdminContact[] = [
   buildContact(),
   buildContact({
     id: '22222222-2222-2222-2222-222222222222',
-    first_name: 'Gabriella',
-    last_name: 'Zavatti',
+    first_name: 'Sam',
+    last_name: 'Rivera',
     email: 'gabriella@example.com',
     relationship_type: 'client',
   }),
@@ -85,7 +85,7 @@ describe('ContactsBulkActions', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'Merge contacts' }));
-    await user.click(screen.getByRole('radio', { name: /Gabriella Zavatti/i }));
+    await user.click(screen.getByRole('radio', { name: /Sam Rivera/i }));
     const confirmMerge = screen.getAllByRole('button', { name: 'Merge contacts' })[1];
     await user.click(confirmMerge!);
 

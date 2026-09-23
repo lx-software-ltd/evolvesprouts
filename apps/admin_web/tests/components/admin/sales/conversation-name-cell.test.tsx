@@ -26,7 +26,7 @@ describe('ConversationNameCell', () => {
       <ConversationNameCell
         contactId='contact-1'
         contactName='Jane Doe'
-        profileName='kitie.w'
+        profileName='mei.c'
       />
     );
 
@@ -36,10 +36,10 @@ describe('ConversationNameCell', () => {
 
   it('renders the platform profile name without a link when no contact is linked', () => {
     render(
-      <ConversationNameCell contactId={null} contactName={null} profileName='Kitie Wong' />
+      <ConversationNameCell contactId={null} contactName={null} profileName='Mei Chan' />
     );
 
-    expect(screen.getByText('Kitie Wong')).toBeInTheDocument();
+    expect(screen.getByText('Mei Chan')).toBeInTheDocument();
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 
@@ -51,7 +51,7 @@ describe('ConversationNameCell', () => {
         <ConversationNameCell
           contactId='contact-1'
           contactName='Jane Doe'
-          profileName='kitie.w'
+          profileName='mei.c'
         />
       </button>
     );

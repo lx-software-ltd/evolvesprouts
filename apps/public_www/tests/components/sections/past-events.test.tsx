@@ -71,8 +71,8 @@ describe('PastEvents section', () => {
           {
             title: 'Past event with booking metadata',
             location: 'physical',
-            address: 'PMQ, Hong Kong',
-            address_url: 'https://maps.google.com/?q=PMQ+Hong+Kong',
+            address: 'Example Hall, Hong Kong',
+            address_url: 'https://maps.google.com/?q=Example+Hall+Hong+Kong',
             dates: [
               {
                 start_datetime: '2024-02-01T09:00:00Z',

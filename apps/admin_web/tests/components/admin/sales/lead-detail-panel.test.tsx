@@ -47,7 +47,7 @@ const LEAD_FIXTURE: LeadDetail = {
     phoneRegion: 'HK',
     phoneNationalNumber: '12345678',
     phoneE164: '+85212345678',
-    instagramHandle: 'kitie.w',
+    instagramHandle: 'mei.c',
     source: 'manual',
     sourceDetail: 'Walk-in',
     contactType: 'parent',
@@ -141,7 +141,7 @@ describe('LeadDetailPanel', () => {
     expect(screen.getByLabelText(/^First name/)).toHaveValue('Jane');
     expect(screen.getByLabelText('Last name')).toHaveValue('Doe');
     expect(screen.getByLabelText('Email')).toHaveValue('jane@example.com');
-    expect(screen.getByLabelText('Instagram')).toHaveValue('kitie.w');
+    expect(screen.getByLabelText('Instagram')).toHaveValue('mei.c');
     expect(screen.getByLabelText('Source detail')).toHaveValue('Walk-in');
     expect(screen.getByLabelText('Stage')).toHaveValue('contacted');
     expect(screen.getByLabelText('Assigned to')).toHaveValue('user-1');
@@ -280,7 +280,7 @@ describe('LeadDetailPanel', () => {
         email: 'jane@example.com',
         phone_region: 'HK',
         phone_number: '12345678',
-        instagram_handle: 'kitie.w',
+        instagram_handle: 'mei.c',
         source: 'manual',
         source_detail: 'Walk-in',
         contact_type: 'parent',

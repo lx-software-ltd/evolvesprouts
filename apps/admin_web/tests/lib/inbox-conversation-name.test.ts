@@ -11,7 +11,7 @@ describe('formatInboxConversationName', () => {
     expect(
       formatInboxConversationName({
         contactName: 'Jane Doe',
-        profileName: 'kitie.w',
+        profileName: 'mei.c',
       })
     ).toBe('Jane Doe');
   });
@@ -20,18 +20,18 @@ describe('formatInboxConversationName', () => {
     expect(
       formatInboxConversationName({
         contactName: null,
-        profileName: 'Kitie Wong',
+        profileName: 'Mei Chan',
       })
-    ).toBe('Kitie Wong');
+    ).toBe('Mei Chan');
   });
 
   it('treats blank contact names as missing', () => {
     expect(
       formatInboxConversationName({
         contactName: '   ',
-        profileName: 'Kitie',
+        profileName: 'Mei',
       })
-    ).toBe('Kitie');
+    ).toBe('Mei');
   });
 });
 

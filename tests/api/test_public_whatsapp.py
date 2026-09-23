@@ -64,18 +64,18 @@ def test_public_whatsapp_user_cannot_write(api_gateway_event: Any) -> None:
 
 def test_public_conversation_name_never_uses_phone_or_fallback() -> None:
     conversation = SimpleNamespace(
-        wa_id="85294479843",
+        wa_id="85251111111",
         profile_name="WhatsApp 9843",
         contact=SimpleNamespace(first_name="WhatsApp 9843", last_name=None),
     )
     assert pwa.public_conversation_name(conversation) == "WhatsApp contact"
 
     named = SimpleNamespace(
-        wa_id="85294479843",
-        profile_name="Kitie Wong",
+        wa_id="85251111111",
+        profile_name="Mei Chan",
         contact=None,
     )
-    assert pwa.public_conversation_name(named) == "Kitie Wong"
+    assert pwa.public_conversation_name(named) == "Mei Chan"
 
 
 def test_public_whatsapp_lists_without_phone_fields(
@@ -85,8 +85,8 @@ def test_public_whatsapp_lists_without_phone_fields(
     conversation_id = uuid4()
     row = SimpleNamespace(
         id=conversation_id,
-        wa_id="85294479843",
-        profile_name="Kitie",
+        wa_id="85251111111",
+        profile_name="Mei",
         contact=None,
         first_inbound_at=datetime(2026, 8, 1, tzinfo=UTC),
         last_message_at=datetime(2026, 8, 2, tzinfo=UTC),
@@ -113,10 +113,10 @@ def test_public_whatsapp_lists_without_phone_fields(
     assert response["statusCode"] == 200
     body = json.loads(response["body"])
     item = body["items"][0]
-    assert item["name"] == "Kitie"
+    assert item["name"] == "Mei"
     assert item["id"] == str(conversation_id)
     assert "wa_id" not in item
-    assert "85294479843" not in json.dumps(body)
+    assert "85251111111" not in json.dumps(body)
 
 
 def test_public_whatsapp_messages_omit_wa_ids(
@@ -126,8 +126,8 @@ def test_public_whatsapp_messages_omit_wa_ids(
     conversation_id = uuid4()
     conversation = SimpleNamespace(
         id=conversation_id,
-        wa_id="85294479843",
-        profile_name="Kitie",
+        wa_id="85251111111",
+        profile_name="Mei",
         contact=None,
         first_inbound_at=datetime(2026, 8, 1, tzinfo=UTC),
         last_message_at=datetime(2026, 8, 2, tzinfo=UTC),
@@ -167,4 +167,4 @@ def test_public_whatsapp_messages_omit_wa_ids(
     assert "wa_message_id" not in body["items"][0]
     assert "wa_id" not in body["conversation"]
     assert "wamid.secret" not in json.dumps(body)
-    assert "85294479843" not in json.dumps(body)
+    assert "85251111111" not in json.dumps(body)

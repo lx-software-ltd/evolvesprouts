@@ -397,7 +397,7 @@ def test_physical_address_only_location_url() -> None:
     from app.utils.maps import _BASE
 
     service = _event_service()
-    addr = "Queen's Rd Central"
+    addr = "Sample Street"
     loc = SimpleNamespace(name="V", address=addr, lat=None, lng=None)
     inst = _minimal_instance(service)
     inst.session_slots[0].location = loc

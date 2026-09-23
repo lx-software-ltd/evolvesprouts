@@ -136,9 +136,9 @@ describe('events-data', () => {
           partners: ['partner-one'],
           location: 'physical',
           address:
-            'H210, 2/F, PMQ, Mid-Levels, Central and Western, Hong Kong Island',
+            'Room 1, 1/F, Example Hall, 1 Sample Street, Hong Kong',
           address_url:
-            'https://www.google.com/maps/search/?api=1&query=H210%2C+2%2FF%2C+PMQ%2C+Mid-Levels%2C+Central+and+Western%2C+Hong+Kong+Island',
+            'https://www.google.com/maps/search/?api=1&query=Room+1%2C+1%2FF%2C+Example+Hall%2C+1+Sample+Street%2C+Hong+Kong',
           dates: [
             {
               start_datetime: '2025-12-05T10:00:00Z',
@@ -185,9 +185,9 @@ describe('events-data', () => {
       dateLabel: formatExpectedDateLabel('2025-12-05T10:00:00Z', 'en'),
       timeLabel: formatExpectedTimeLabel('2025-12-05T10:00:00Z', '2025-12-05T13:00:00Z', 'en'),
       locationName:
-        'H210, 2/F, PMQ, Mid-Levels, Central and Western, Hong Kong Island',
+        'Room 1, 1/F, Example Hall, 1 Sample Street, Hong Kong',
       directionHref:
-        'https://www.google.com/maps/search/?api=1&query=H210%2C+2%2FF%2C+PMQ%2C+Mid-Levels%2C+Central+and+Western%2C+Hong+Kong+Island',
+        'https://www.google.com/maps/search/?api=1&query=Room+1%2C+1%2FF%2C+Example+Hall%2C+1+Sample+Street%2C+Hong+Kong',
       ctaHref: '',
       ctaLabel: enContent.events.card.ctaLabel,
       costLabel: 'HK$9,000',
@@ -230,9 +230,9 @@ describe('events-data', () => {
         {
           title: 'External CTA event',
           location: 'physical',
-          address: 'PMQ, Hong Kong',
-          address_url: 'https://maps.google.com/?q=PMQ+Hong+Kong',
-          external_url: 'https://booking.example.com/events/pmq-session',
+          address: 'Example Hall, Hong Kong',
+          address_url: 'https://maps.google.com/?q=Example+Hall+Hong+Kong',
+          external_url: 'https://booking.example.com/events/example-hall-session',
           dates: [
             {
               start_datetime: '2026-01-20T09:00:00Z',
@@ -248,8 +248,8 @@ describe('events-data', () => {
 
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
-      directionHref: 'https://maps.google.com/?q=PMQ+Hong+Kong',
-      ctaHref: 'https://booking.example.com/events/pmq-session',
+      directionHref: 'https://maps.google.com/?q=Example+Hall+Hong+Kong',
+      ctaHref: 'https://booking.example.com/events/example-hall-session',
     });
   });
 
@@ -267,8 +267,8 @@ describe('events-data', () => {
           price: 9000,
           currency: 'HKD',
           location: 'physical',
-          address: 'PMQ, Hong Kong',
-          address_url: 'https://maps.google.com/?q=PMQ+Hong+Kong',
+          address: 'Example Hall, Hong Kong',
+          address_url: 'https://maps.google.com/?q=Example+Hall+Hong+Kong',
           external_url: 'https://booking.example.com/events/should-not-be-used',
           dates: [
             {
@@ -345,8 +345,8 @@ describe('events-data', () => {
           title: 'Event booking demo',
           description: 'Simple booking modal flow',
           booking_system: 'event-booking',
-          address: 'PMQ, Hong Kong',
-          address_url: 'https://maps.google.com/?q=PMQ+Hong+Kong',
+          address: 'Example Hall, Hong Kong',
+          address_url: 'https://maps.google.com/?q=Example+Hall+Hong+Kong',
           dates: [
             {
               id: 'session-1',
@@ -373,8 +373,8 @@ describe('events-data', () => {
       title: 'Event booking demo',
       subtitle: 'Simple booking modal flow',
       originalAmount: 350,
-      locationAddress: 'PMQ, Hong Kong',
-      directionHref: 'https://maps.google.com/?q=PMQ+Hong+Kong',
+      locationAddress: 'Example Hall, Hong Kong',
+      directionHref: 'https://maps.google.com/?q=Example+Hall+Hong+Kong',
       selectedDateStartTime: '2026-04-06T02:00:00Z',
     });
   });
@@ -678,7 +678,7 @@ describe('events-data', () => {
       title: 'Easter 2026 Montessori Play Coaching Workshop',
       startDateTime: '2026-04-06T02:00:00Z',
       endDateTime: '2026-04-06T03:00:00Z',
-      locationLabel: 'Wan Chai',
+      locationLabel: 'Hong Kong',
       partners: ['happy-baton', 'baumhaus'],
       categoryChips: ['Workshop'],
     });
@@ -732,7 +732,7 @@ describe('events-data', () => {
         instanceSlug: 'easter-2026-montessori-play-coaching-workshop',
         title: 'Easter 2026 Montessori Play Coaching Workshop',
         locationName: 'Baumhaus',
-        locationAddress: "1/F Kar Yau Building, 36-44 Queen's Rd E, Wan Chai",
+        locationAddress: "1/F, Example Tower, 1 Sample Street, Hong Kong",
         selectedDateLabel: '06 Apr 2026',
         selectedDateStartTime: '2026-04-06T02:00:00Z',
       },
@@ -753,7 +753,7 @@ describe('events-data', () => {
       startDate: '2026-04-06T02:00:00.000Z',
       endDate: '2026-04-06T03:00:00.000Z',
       locationName: 'Baumhaus',
-      locationAddress: "1/F Kar Yau Building, 36-44 Queen's Rd E, Wan Chai",
+      locationAddress: "1/F, Example Tower, 1 Sample Street, Hong Kong",
       offerPrice: '350',
       offerCurrency: 'HKD',
       offerAvailability: 'InStock',
@@ -771,7 +771,7 @@ describe('events-data', () => {
       title: 'The Missing Piece',
       startDateTime: '2026-05-16T01:00:00Z',
       endDateTime: '2026-05-16T02:00:00Z',
-      locationLabel: 'Wong Chuk Hang',
+      locationLabel: 'Hong Kong',
       partners: ['little-hk'],
       categoryChips: ['Workshop'],
     });
@@ -794,7 +794,7 @@ describe('events-data', () => {
         instanceSlug: 'may-2026-the-missing-piece',
         title: 'The Missing Piece',
         locationName: 'Acorn Playhouse',
-        locationAddress: '3/F, 4 Yip Fat St, Wong Chuk Hang',
+        locationAddress: '1/F, 1 Sample Street, Hong Kong',
         selectedDateLabel: '16 May 2026',
         selectedDateStartTime: '2026-05-16T01:00:00Z',
       },
@@ -816,7 +816,7 @@ describe('events-data', () => {
       startDate: '2026-05-16T01:00:00.000Z',
       endDate: '2026-05-16T02:00:00.000Z',
       locationName: 'Acorn Playhouse',
-      locationAddress: '3/F, 4 Yip Fat St, Wong Chuk Hang',
+      locationAddress: '1/F, 1 Sample Street, Hong Kong',
       offerPrice: '150',
       offerCurrency: 'HKD',
       offerAvailability: 'InStock',

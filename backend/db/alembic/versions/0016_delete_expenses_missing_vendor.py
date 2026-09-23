@@ -4,8 +4,8 @@ Data steps (in order):
 1. Null `amends_expense_id` pointing at expenses that will be deleted.
 2. Collect attachment asset ids for rows to delete, then delete those expenses
    (cascade removes `expense_attachments`), then delete unreferenced assets.
-3. Delete expenses with `vendor_name` exactly
-   'Contact Person: Luca Cacchiani' (and orphan assets same as above).
+3. Delete expenses whose legacy `vendor_name` is a contact-person
+   placeholder (`Contact Person:%`) (and orphan assets same as above).
 4. Set `vendor_id` for expenses whose `vendor_name` is 'EPrint100' from the
    active vendor organization named 'EPrint100' (`relationship_type` = vendor,
    `archived_at` IS NULL). Rows are skipped if zero or multiple such orgs exist.
@@ -51,7 +51,7 @@ def upgrade() -> None:
           AND (
               (tgt.vendor_id IS NULL
                AND (tgt.vendor_name IS NULL OR trim(tgt.vendor_name) = ''))
-              OR trim(tgt.vendor_name) = 'Contact Person: Luca Cacchiani'
+              OR trim(tgt.vendor_name) LIKE 'Contact Person:%'
           )
         """
     )
@@ -75,7 +75,7 @@ def upgrade() -> None:
             FROM expenses e
             WHERE (e.vendor_id IS NULL
                    AND (e.vendor_name IS NULL OR trim(e.vendor_name) = ''))
-               OR trim(e.vendor_name) = 'Contact Person: Luca Cacchiani'
+               OR trim(e.vendor_name) LIKE 'Contact Person:%'
         )
         ON CONFLICT (id) DO NOTHING
         """
@@ -86,7 +86,7 @@ def upgrade() -> None:
         DELETE FROM expenses e
         WHERE (e.vendor_id IS NULL
                AND (e.vendor_name IS NULL OR trim(e.vendor_name) = ''))
-           OR trim(e.vendor_name) = 'Contact Person: Luca Cacchiani'
+           OR trim(e.vendor_name) LIKE 'Contact Person:%'
         """
     )
 

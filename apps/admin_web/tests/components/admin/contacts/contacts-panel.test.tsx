@@ -369,8 +369,8 @@ describe('ContactsPanel', () => {
     });
     const gabriella = buildContact({
       id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-      first_name: 'Gabriella',
-      last_name: 'Zavatti',
+      first_name: 'Sam',
+      last_name: 'Rivera',
       relationship_type: 'client',
     });
     renderPanel({
@@ -379,9 +379,9 @@ describe('ContactsPanel', () => {
 
     expect(screen.queryByRole('button', { name: 'Merge contacts' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('checkbox', { name: 'Select Ann Lee' }));
-    await user.click(screen.getByRole('checkbox', { name: 'Select Gabriella Zavatti' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Select Sam Rivera' }));
     await user.click(screen.getByRole('button', { name: 'Merge contacts' }));
-    await user.click(screen.getByRole('radio', { name: /Gabriella Zavatti/i }));
+    await user.click(screen.getByRole('radio', { name: /Sam Rivera/i }));
     const confirmMerge = screen.getAllByRole('button', { name: 'Merge contacts' })[1];
     await user.click(confirmMerge!);
 

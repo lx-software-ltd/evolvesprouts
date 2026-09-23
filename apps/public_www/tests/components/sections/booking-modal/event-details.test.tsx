@@ -34,9 +34,9 @@ describe('BookingEventDetails (event variant)', () => {
           },
         ]}
         originalAmount={1280}
-        venueName='PMQ'
+        venueName='Example Hall'
         venueAddress='35 Aberdeen Street, Central'
-        directionHref='https://maps.google.com/?q=PMQ'
+        directionHref='https://maps.google.com/?q=Example+Hall'
         detailsVariant='event'
       />,
     );

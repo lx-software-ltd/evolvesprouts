@@ -131,8 +131,8 @@ describe('Events section', () => {
             id: 'partner-chip-event',
             title: 'Partner chip event card',
             location: 'physical',
-            address: 'PMQ, Central',
-            address_url: 'https://maps.google.com/?q=PMQ+Central',
+            address: 'Example Hall, Central',
+            address_url: 'https://maps.google.com/?q=Example+Hall+Central',
             tags: ['12mo+'],
             categories: ['Workshop'],
             partners: ['bimbo-concept'],
@@ -211,8 +211,8 @@ describe('Events section', () => {
           {
             title: 'Paid event card',
             location: 'physical',
-            address: 'PMQ, Central',
-            address_url: 'https://maps.google.com/?q=PMQ+Central',
+            address: 'Example Hall, Central',
+            address_url: 'https://maps.google.com/?q=Example+Hall+Central',
             dates: [
               {
                 start_datetime: '2099-12-05T10:00:00Z',
@@ -264,8 +264,8 @@ describe('Events section', () => {
           {
             title: 'Comma separated price card',
             location: 'physical',
-            address: 'PMQ, Central',
-            address_url: 'https://maps.google.com/?q=PMQ+Central',
+            address: 'Example Hall, Central',
+            address_url: 'https://maps.google.com/?q=Example+Hall+Central',
             dates: [
               {
                 start_datetime: '2099-12-07T10:00:00Z',
@@ -344,7 +344,7 @@ describe('Events section', () => {
           {
             title: 'Direction-ready event card',
             location: 'physical',
-            location_name: 'PMQ, Central',
+            location_name: 'Example Hall, Central',
             location_address: '35 Aberdeen Street, Central',
             location_url:
               'https://www.google.com/maps/dir/?api=1&destination=35+Aberdeen+Street,+Central',
@@ -366,7 +366,7 @@ describe('Events section', () => {
     await screen.findByText('Direction-ready event card');
 
     expect(container.querySelector('.es-events-location-heading')).toBeNull();
-    expect(screen.getByText('PMQ, Central')).toBeInTheDocument();
+    expect(screen.getByText('Example Hall, Central')).toBeInTheDocument();
     expect(screen.getByText('35 Aberdeen Street, Central')).toBeInTheDocument();
 
     const locationIcons = container.querySelectorAll('[data-event-location-icon="true"]');
@@ -401,8 +401,8 @@ describe('Events section', () => {
             title: 'Event booking card',
             booking_system: 'event-booking',
             location: 'physical',
-            address: 'PMQ, Central',
-            address_url: 'https://maps.google.com/?q=PMQ+Central',
+            address: 'Example Hall, Central',
+            address_url: 'https://maps.google.com/?q=Example+Hall+Central',
             dates: [
               {
                 start_datetime: '2099-12-10T10:00:00Z',
@@ -419,8 +419,8 @@ describe('Events section', () => {
             service_tier: '1-3',
             cohort: 'apr-26',
             location: 'physical',
-            address: 'PMQ, Central',
-            address_url: 'https://maps.google.com/?q=PMQ+Central',
+            address: 'Example Hall, Central',
+            address_url: 'https://maps.google.com/?q=Example+Hall+Central',
             dates: [
               {
                 id: 'part-1',
@@ -472,8 +472,8 @@ describe('Events section', () => {
         {
           title: 'Shared future event card',
           location: 'physical',
-          address: 'PMQ, Central',
-          address_url: 'https://maps.google.com/?q=PMQ+Central',
+          address: 'Example Hall, Central',
+          address_url: 'https://maps.google.com/?q=Example+Hall+Central',
           dates: [
             {
               start_datetime: '2099-12-10T10:00:00Z',
@@ -485,8 +485,8 @@ describe('Events section', () => {
         {
           title: 'Shared past event card',
           location: 'physical',
-          address: 'PMQ, Central',
-          address_url: 'https://maps.google.com/?q=PMQ+Central',
+          address: 'Example Hall, Central',
+          address_url: 'https://maps.google.com/?q=Example+Hall+Central',
           dates: [
             {
               start_datetime: '2024-02-01T09:00:00Z',
