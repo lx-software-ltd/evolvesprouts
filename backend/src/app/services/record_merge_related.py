@@ -219,15 +219,7 @@ def resolve_open_lead_conflicts(
     preferred_lead_id: UUID | None = None,
 ) -> None:
     """Collapse extra non-manual open leads so one-open-per-contact still holds."""
-    open_leads = list(
-        session.scalars(
-            select(SalesLead).where(
-                SalesLead.contact_id == keeper_id,
-                SalesLead.is_manual.is_(False),
-                SalesLead.funnel_stage.in_(tuple(OPEN_FUNNEL_STAGES)),
-            )
-        ).all()
-    )
+    open_leads = _open_leads_for_keeper(session, keeper_id)
     if len(open_leads) < 2:
         return
     preferred = next(
@@ -243,6 +235,39 @@ def resolve_open_lead_conflicts(
         actor_sub=actor_sub,
         event_source=event_source,
     )
+
+
+def _open_leads_for_keeper(session: Session, keeper_id: UUID) -> list[SalesLead]:
+    """Open non-manual leads on ``keeper_id``, including unflushed moves.
+
+    ``absorb_loser_record`` assigns ``contact_id`` inside ``no_autoflush``, so a
+    SELECT still returns the previous contact. Those pending rows have to be
+    collapsed before the next flush or ``sales_leads_one_open_contact_idx``
+    rejects the merge.
+    """
+    loaded = list(
+        session.scalars(
+            select(SalesLead).where(
+                SalesLead.contact_id == keeper_id,
+                SalesLead.is_manual.is_(False),
+                SalesLead.funnel_stage.in_(tuple(OPEN_FUNNEL_STAGES)),
+            )
+        ).all()
+    )
+    by_id = {lead.id: lead for lead in loaded}
+    for obj in session.identity_map.values():
+        if not isinstance(obj, SalesLead) or obj.id in by_id:
+            continue
+        if obj in session.deleted:
+            continue
+        if obj.contact_id != keeper_id or not _is_open_non_manual(obj):
+            continue
+        by_id[obj.id] = obj
+    return list(by_id.values())
+
+
+def _is_open_non_manual(lead: SalesLead) -> bool:
+    return (not lead.is_manual) and lead.funnel_stage in OPEN_FUNNEL_STAGES
 
 
 def _open_lead_sort_key(lead: SalesLead) -> tuple[int, datetime]:
