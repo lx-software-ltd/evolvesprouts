@@ -224,12 +224,15 @@ and `invoice_number`. These assets cannot be deleted, have their file replaced, 
 be made public.
 
 Migration `0016_delete_expenses_missing_vendor` removes expenses with no vendor
-(`vendor_id` null and legacy `vendor_name` null or whitespace-only), removes the
-expense whose legacy `vendor_name` is a contact-person placeholder
-(`Contact Person:%`), sets `vendor_id`
+(`vendor_id` null and legacy `vendor_name` null or whitespace-only). It also
+removes the legacy contact-person expense: when
+`LEGACY_EXPENSE_CONTACT_VENDOR_NAME` is set, the trimmed `vendor_name` must
+equal that value; when the variable is unset or blank, the match is the
+prefix `Contact Person:%`. The migration then sets `vendor_id`
 from the unique active vendor org named `EPrint100` where `vendor_name` was
 `EPrint100` and `vendor_id` was null, deletes orphan attachment assets (same
-rules as before), and drops column `expenses.vendor_name`.
+rules as before), and drops column `expenses.vendor_name`. Seed data inserts
+no expenses, so neither match changes the seed load.
 
 ## Access control logic
 
