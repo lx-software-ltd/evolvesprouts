@@ -110,7 +110,7 @@ describe('LandingPage calendar rehydrate', () => {
     expect(screen.queryByRole('heading', { name: 'Page not found' })).not.toBeInTheDocument();
     const heroSection = document.querySelector('#landing-page-hero');
     expect(heroSection).not.toBeNull();
-    expect(heroSection).toHaveTextContent('Wan Chai');
+    expect(heroSection).toHaveTextContent('Hong Kong');
     expect(mockedReportInternalError).not.toHaveBeenCalled();
     const emailConfigErrors = consoleErrorSpy.mock.calls.filter((call) =>
       call.some(
@@ -155,7 +155,7 @@ describe('LandingPage calendar rehydrate', () => {
 
     const heroSection = document.querySelector('#landing-page-hero');
     expect(heroSection).not.toBeNull();
-    expect(heroSection).toHaveTextContent('Wan Chai');
+    expect(heroSection).toHaveTextContent('Hong Kong');
     expect(heroSection).toHaveTextContent('Workshop');
   });
 });
