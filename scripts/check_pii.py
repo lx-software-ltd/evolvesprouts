@@ -11,7 +11,9 @@ Normalization, applied to each line and to each pair of consecutive lines:
 - hash emails matched in that text
 - hash the digits of a phone-like run when the digit length is 8 to 20
 - replace every other character outside ``[a-z0-9.+@]`` with a space
-- hash each token (a leading ``@`` is stripped) and each 2- to 6-token window
+- hash each token (a leading ``@`` is stripped, and leading or trailing
+  ``.`` is stripped so sentence punctuation does not hide a match) and each
+  2- to 6-token window
 """
 
 from __future__ import annotations
@@ -24,7 +26,22 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DENYLIST_PATH = ROOT / "scripts" / "pii-denylist.sha256"
-SCAN_SUFFIXES = {".py", ".ts", ".tsx", ".md", ".sql"}
+SCAN_SUFFIXES = {
+    ".css",
+    ".dart",
+    ".html",
+    ".js",
+    ".md",
+    ".mdc",
+    ".mjs",
+    ".py",
+    ".sh",
+    ".sql",
+    ".ts",
+    ".tsx",
+    ".yaml",
+    ".yml",
+}
 EMAIL_RE = re.compile(r"[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}")
 PHONE_RE = re.compile(r"\d[\d\s().+\-]{6,}\d")
 TOKEN_RE = re.compile(r"[^a-z0-9.+@]+")
@@ -56,6 +73,7 @@ def _candidates(text: str) -> set[str]:
     for token in TOKEN_RE.sub(" ", lowered).split():
         if token.startswith("@"):
             token = token[1:]
+        token = token.strip(".")
         if token:
             tokens.append(token)
     for size in range(1, 7):

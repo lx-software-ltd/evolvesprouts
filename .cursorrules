@@ -62,7 +62,9 @@ repo root
 
 - Real personal names, phone numbers, email addresses, street addresses,
   bank account numbers, and business-registration numbers must not appear in
-  `.py`, `.ts`, `.tsx`, `.md`, or `.sql`.
+  source or docs. The hashed check covers `.py`, `.ts`, `.tsx`, `.js`,
+  `.mjs`, `.dart`, `.sql`, `.md`, `.mdc`, `.yml`, `.yaml`, `.sh`, `.html`,
+  and `.css`.
 - Tests use fictional fixtures.
 - Business identity (founder name, public contact email, business phone,
   business address) is read from GitHub variables
