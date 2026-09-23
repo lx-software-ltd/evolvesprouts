@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 from uuid import UUID
 
 from sqlalchemy import delete, select
@@ -142,10 +142,11 @@ def ensure_location_exists(session: Session, location_id: UUID | None) -> None:
         raise ValidationError("location_id not found", field="location_id")
 
 
-def _loaded_collection(parent: Any, attribute: str) -> Any | None:
+def _loaded_collection(parent: Any, attribute: str) -> list[Any] | None:
+    """Return a relationship collection only when this instance already has it."""
     if parent is None or attribute in instance_state(parent).unloaded:
         return None
-    return getattr(parent, attribute)
+    return cast(list[Any], getattr(parent, attribute))
 
 
 def _assignable_tag_ids(session: Session, tag_ids: list[UUID]) -> list[UUID]:
@@ -208,7 +209,10 @@ def replace_contact_tags(
         session,
         existing,
         wanted,
-        collection=_loaded_collection(session.get(Contact, contact_id), "contact_tags"),
+        collection=cast(
+            list[ContactTag] | None,
+            _loaded_collection(session.get(Contact, contact_id), "contact_tags"),
+        ),
         add_link=lambda tag_id: ContactTag(contact_id=contact_id, tag_id=tag_id),
     )
 
@@ -227,7 +231,10 @@ def replace_family_tags(
         session,
         existing,
         wanted,
-        collection=_loaded_collection(session.get(Family, family_id), "family_tags"),
+        collection=cast(
+            list[FamilyTag] | None,
+            _loaded_collection(session.get(Family, family_id), "family_tags"),
+        ),
         add_link=lambda tag_id: FamilyTag(family_id=family_id, tag_id=tag_id),
     )
 
@@ -250,8 +257,11 @@ def replace_organization_tags(
         session,
         existing,
         wanted,
-        collection=_loaded_collection(
-            session.get(Organization, organization_id), "organization_tags"
+        collection=cast(
+            list[OrganizationTag] | None,
+            _loaded_collection(
+                session.get(Organization, organization_id), "organization_tags"
+            ),
         ),
         add_link=lambda tag_id: OrganizationTag(
             organization_id=organization_id, tag_id=tag_id
