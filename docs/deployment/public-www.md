@@ -63,6 +63,7 @@ Public WWW API configuration is provided at build time via:
 - GitHub variable `NEXT_PUBLIC_GTM_ALLOWED_HOSTS` (optional comma-separated
   hostname allowlist for runtime GTM gating)
 - GitHub variable `NEXT_PUBLIC_EMAIL`
+- GitHub variable `NEXT_PUBLIC_FOUNDER_NAME` (founder display name on `llms.txt`)
 - GitHub variable `NEXT_PUBLIC_WHATSAPP_URL`
 - GitHub variable `NEXT_PUBLIC_INSTAGRAM_URL`
 - GitHub variable `NEXT_PUBLIC_LINKEDIN_URL`

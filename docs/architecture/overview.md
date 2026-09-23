@@ -132,6 +132,8 @@ See [`docs/architecture/database-schema.md`](database-schema.md) for full table 
   (staging -> production).
 - Public website CI validates content, lint, tests, static build, and
   production-only npm dependency audit (`npm audit --omit=dev`).
+- Public website `llms.txt` founder line reads GitHub variable
+  `NEXT_PUBLIC_FOUNDER_NAME`.
 - Dependabot enabled for automated dependency updates (see below).
 - Infrastructure tests validate CDK templates for new and imported
   database resources.

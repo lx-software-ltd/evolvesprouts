@@ -275,8 +275,8 @@ About the Founder, Upcoming Events, Contact Us
 |---|---|
 | Provider | iCloud Mail (Apple iCloud+) |
 | Custom domain | `evolvesprouts.com` |
-| Primary address | `ida@evolvesprouts.com` |
-| Contact address (website) | Configured via `NEXT_PUBLIC_EMAIL` env var |
+| Primary address | GitHub variable `NEXT_PUBLIC_EMAIL` |
+| Contact address (website) | GitHub variable `NEXT_PUBLIC_EMAIL` |
 
 ### How email relates to the codebase
 
@@ -299,7 +299,7 @@ programmatic sending. The SES sender domain must be verified in AWS.
 
 #### 2. Business email (iCloud Mail)
 
-The `ida@evolvesprouts.com` inbox is used for:
+The `NEXT_PUBLIC_EMAIL` inbox is used for:
 - Direct replies to leads and clients
 - Receiving forwarded or direct mail as needed (programmatic form alerts go to
   `SUPPORT_EMAIL` for contact inquiries and to Cognito `ADMIN_GROUP` user emails for sales recaps)
@@ -615,7 +615,7 @@ Audited via Meta Graph API using cursor-bot system user on 2026-03-17.
 
 | Field | Value | Issue |
 |---|---|---|
-| Display name | Evolve Sprouts \| Ida De Gregorio | OK |
+| Display name | Evolve Sprouts \| GitHub variable `NEXT_PUBLIC_FOUNDER_NAME` | OK |
 | Followers | 308 | Low; growing slowly |
 | Following | 703 | High ratio — consider unfollowing non-strategic accounts |
 | Posts | 101 | Good volume |
@@ -681,7 +681,7 @@ mention the core product. Recommended replacement (512 char limit):
 > • Prepared Home assessments
 > • Parent consultations
 >
-> Founded by Ida De Gregorio, AMI Montessori-certified.
+> Founded by the person named in GitHub variable `NEXT_PUBLIC_FOUNDER_NAME`, AMI Montessori-certified.
 >
 > 📩 Message us for a free intro session!
 > 🌐 www.evolvesprouts.com
@@ -699,7 +699,7 @@ Updated via API on 2026-03-17:
 | Field | Before | After |
 |---|---|---|
 | Website | `http://Evolvesprouts.com/` | `https://www.evolvesprouts.com/` |
-| About | Generic description | Montessori-based helper training and family support for Hong Kong families with children aged 0-6. Founded by Ida De Gregorio, AMI Montessori-certified. |
+| About | Generic description | Montessori-based helper training and family support for Hong Kong families with children aged 0-6. Founded by the person named in GitHub variable `NEXT_PUBLIC_FOUNDER_NAME`, AMI Montessori-certified. |
 | Followers | 13 | 13 (dormant page — not a priority) |
 
 ### WhatsApp catalog / shop
