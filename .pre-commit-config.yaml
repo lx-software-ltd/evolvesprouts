@@ -52,6 +52,13 @@ repos:
         pass_filenames: false
         always_run: true
 
+      - id: check-pii
+        name: Check hashed PII denylist
+        entry: bash scripts/check-pii.sh
+        language: system
+        pass_filenames: false
+        always_run: true
+
   # TypeScript/JavaScript linting
   - repo: local
     hooks:

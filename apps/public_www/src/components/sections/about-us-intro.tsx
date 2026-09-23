@@ -56,7 +56,7 @@ export function AboutUsIntro({ content }: AboutUsIntroProps) {
 
         <div className='es-ida-intro-image-wrap mx-auto w-full max-w-[400px] lg:order-1 lg:ml-0 lg:mr-auto'>
           <Image
-            src='/images/about-us/ida-degregorio-evolvesprouts-3.webp'
+            src='/images/about-us/founder-portrait-3.webp'
             alt={content.imageAlt}
             width={764}
             height={841}

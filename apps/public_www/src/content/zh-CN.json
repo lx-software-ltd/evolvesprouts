@@ -1738,7 +1738,7 @@
       ]
     },
     "coaches": {
-      "ida": {
+      "founder": {
         "eyebrow": "你的教练",
         "title": "Ida De Gregorio",
         "subtitle": "Evolve Sprouts 创始人",
@@ -1781,7 +1781,7 @@
         "faqSectionLabel": "常见问题",
         "outlineSectionLabel": "重要性说明",
         "descriptionSectionLabel": "课程流程",
-        "aboutUsIdaCoachSectionLabel": "你的教练"
+        "aboutUsFounderCoachSectionLabel": "你的教练"
       }
     }
   },

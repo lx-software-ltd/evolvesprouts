@@ -1738,7 +1738,7 @@
       ]
     },
     "coaches": {
-      "ida": {
+      "founder": {
         "eyebrow": "Your coach",
         "title": "Ida De Gregorio",
         "subtitle": "Founder, Evolve Sprouts",
@@ -1781,7 +1781,7 @@
         "faqSectionLabel": "Frequently asked questions",
         "outlineSectionLabel": "Why this matters",
         "descriptionSectionLabel": "Session walkthrough",
-        "aboutUsIdaCoachSectionLabel": "Your coach"
+        "aboutUsFounderCoachSectionLabel": "Your coach"
       }
     }
   },

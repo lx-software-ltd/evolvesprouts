@@ -38,9 +38,9 @@ describe('LandingPageCta section', () => {
     subtitle: 'A practical workshop',
     originalAmount: 350,
     locationName: 'Baumhaus',
-    locationAddress: "Baumhaus, 1/F Kar Yau Building, 36-44 Queen's Rd E, Wan Chai",
+    locationAddress: "Example Hall, 1/F, Example Tower, 1 Sample Street, Hong Kong",
     directionHref:
-      'https://www.google.com/maps/dir/?api=1&destination=Baumhaus,+1/F+Kar+Yau+Building,+36-44+Queen%27s+Rd+E,+Wan+Chai',
+      'https://www.google.com/maps/dir/?api=1&destination=Example+Hall,+1+Sample+Street,+Hong+Kong',
     dateParts: [
       {
         id: 'session-1',

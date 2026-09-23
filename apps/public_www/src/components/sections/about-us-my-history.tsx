@@ -38,9 +38,9 @@ export function AboutUsMyHistory({ content }: AboutUsMyHistoryProps) {
     .map((paragraph) => paragraph.trim())
     .filter((paragraph) => paragraph.length > 0);
   const storyImageSources = [
-    '/images/about-us/ida-degregorio-ims.webp',
-    '/images/about-us/ida-degregorio-my-best-auntie-1.webp',
-    '/images/about-us/ida-degregorio-my-best-auntie-2.webp',
+    '/images/about-us/founder-ims.webp',
+    '/images/about-us/founder-my-best-auntie-1.webp',
+    '/images/about-us/founder-my-best-auntie-2.webp',
   ];
   const mobileImageAnchorIndexes = buildMobileImageAnchorIndexes(
     storyParagraphs.length,

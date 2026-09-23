@@ -84,6 +84,7 @@ mandatory `.cursorrules` integration anchors are removed or weakened.
   ```
   NEXT_PUBLIC_SITE_ORIGIN=http://localhost:3001
   NEXT_PUBLIC_EMAIL=dev@example.com
+  NEXT_PUBLIC_FOUNDER_NAME=Founder Name
   NEXT_PUBLIC_BUSINESS_NAME=Evolve Sprouts
   NEXT_PUBLIC_BUSINESS_ADDRESS=Hong Kong
   NEXT_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA

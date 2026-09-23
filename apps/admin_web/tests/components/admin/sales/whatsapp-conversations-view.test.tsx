@@ -23,8 +23,8 @@ const { listState, mockListMessages, inboxImportApi } = vi.hoisted(() => {
     conversations: [
       {
         id: 'conv-1',
-        waId: '85294479843',
-        profileName: 'Kitie Wong',
+        waId: '85251111111',
+        profileName: 'Mei Chan',
         contactId: 'contact-1',
         contactName: 'Jane Doe',
         leadId: 'lead-1',
@@ -116,8 +116,8 @@ describe('WhatsAppConversationsView', () => {
     expect(screen.getByRole('button', { name: 'Import export', hidden: true })).toBeDisabled();
 
     expect(screen.getByRole('link', { name: 'Jane Doe' })).toHaveAttribute('href', '/contacts?contact=contact-1');
-    expect(screen.queryByText('Kitie Wong')).not.toBeInTheDocument();
-    expect(screen.getAllByText('85294479843').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Mei Chan')).not.toBeInTheDocument();
+    expect(screen.getAllByText('85251111111').length).toBeGreaterThan(0);
     expect(screen.queryByRole('columnheader', { name: 'Operations' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /View conversation/ })).not.toBeInTheDocument();
   });

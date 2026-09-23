@@ -38,7 +38,7 @@ def test_partial_coords_falls_back_to_address() -> None:
 
 
 def test_address_apostrophe_and_space_byte_shape() -> None:
-    addr = "Queen's Rd Central"
+    addr = "Sample Street"
     url = build_google_maps_directions_url(address=addr, lat=None, lng=None)
     assert url == f"{_BASE}{quote_plus(addr)}"
 

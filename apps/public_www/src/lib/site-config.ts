@@ -10,6 +10,7 @@ export interface PublicSiteConfig {
   contactEmail: string;
   businessAddress?: string;
   businessPhoneNumber?: string;
+  founderName?: string;
 }
 
 function normalizeOptionalEnvValue(raw: string | undefined): string | undefined {
@@ -192,5 +193,6 @@ export function resolvePublicSiteConfig(): PublicSiteConfig {
     contactEmail: resolveRequiredContactEmail(),
     businessAddress: normalizeOptionalEnvValue(process.env.NEXT_PUBLIC_BUSINESS_ADDRESS),
     businessPhoneNumber: normalizeOptionalEnvValue(process.env.NEXT_PUBLIC_BUSINESS_PHONE_NUMBER),
+    founderName: normalizeOptionalEnvValue(process.env.NEXT_PUBLIC_FOUNDER_NAME),
   };
 }

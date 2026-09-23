@@ -47,7 +47,7 @@ def test_sync_maps_graph_conversation_without_leads(
                         "participants": {
                             "data": [
                                 {"id": "page-1", "name": "Page"},
-                                {"id": "igsid-9", "username": "kitie"},
+                                {"id": "igsid-9", "username": "mei"},
                             ]
                         },
                     }
@@ -62,7 +62,7 @@ def test_sync_maps_graph_conversation_without_leads(
                     {
                         "id": "m_old",
                         "created_time": "2026-01-02T03:04:05+0000",
-                        "from": {"id": "igsid-9", "username": "kitie"},
+                        "from": {"id": "igsid-9", "username": "mei"},
                         "message": "Hello from IG",
                     },
                     {
@@ -90,10 +90,10 @@ def test_sync_maps_graph_conversation_without_leads(
     assert counters["stored"] == 2
     assert stored[0]["create_leads"] is False
     assert stored[0]["platform_user_id"] == "igsid-9"
-    assert stored[0]["instagram_handle"] == "kitie"
+    assert stored[0]["instagram_handle"] == "mei"
     assert stored[0]["direction"] is MetaMessageDirection.INBOUND
     assert stored[1]["direction"] is MetaMessageDirection.OUTBOUND
-    assert stored[1]["instagram_handle"] == "kitie"
+    assert stored[1]["instagram_handle"] == "mei"
 
 
 def test_counterparty_splits_display_name_from_username() -> None:
@@ -105,7 +105,7 @@ def test_counterparty_splits_display_name_from_username() -> None:
                     {
                         "id": "igsid-9",
                         "name": "Feier Wang",
-                        "username": "@Kitie.W",
+                        "username": "@Mei.C",
                     },
                 ]
             }
@@ -114,7 +114,7 @@ def test_counterparty_splits_display_name_from_username() -> None:
     )
     assert user_id == "igsid-9"
     assert profile == "Feier Wang"
-    assert handle == "kitie.w"
+    assert handle == "mei.c"
 
 
 def test_sync_skips_own_instagram_handle_conversation(
@@ -145,7 +145,7 @@ def test_sync_skips_own_instagram_handle_conversation(
                         "participants": {
                             "data": [
                                 {"id": "page-1"},
-                                {"id": "igsid-9", "username": "kitie"},
+                                {"id": "igsid-9", "username": "mei"},
                             ]
                         },
                     },
@@ -157,7 +157,7 @@ def test_sync_skips_own_instagram_handle_conversation(
                     {
                         "id": "m_ok",
                         "created_time": "2026-01-02T03:04:05+0000",
-                        "from": {"id": "igsid-9", "username": "kitie"},
+                        "from": {"id": "igsid-9", "username": "mei"},
                         "message": "Hello",
                     }
                 ]
@@ -253,7 +253,7 @@ def test_sync_retries_conversation_list_with_smaller_limit(
                         "participants": {
                             "data": [
                                 {"id": "page-1"},
-                                {"id": "igsid-9", "username": "kitie"},
+                                {"id": "igsid-9", "username": "mei"},
                             ]
                         },
                     }

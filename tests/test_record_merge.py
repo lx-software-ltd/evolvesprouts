@@ -26,7 +26,7 @@ def _contact(**overrides: object) -> SimpleNamespace:
         id=uuid4(),
         email=None,
         instagram_handle=None,
-        first_name="Gabriella",
+        first_name="Sam",
         last_name=None,
         job_title=None,
         phone_region=None,
@@ -55,13 +55,13 @@ def test_fill_keeper_identity_copies_missing_phone_and_last_name() -> None:
         created_at=datetime(2026, 4, 20, tzinfo=UTC),
     )
     loser = _contact(
-        last_name="Zavatti",
+        last_name="Rivera",
         phone_region="HK",
         phone_national_number="51234567",
         created_at=datetime(2026, 9, 7, tzinfo=UTC),
     )
     fill_keeper_identity(keeper, loser, conflict_field="contact_ids")
-    assert keeper.last_name == "Zavatti"
+    assert keeper.last_name == "Rivera"
     assert keeper.phone_region == "HK"
     assert keeper.phone_national_number == "51234567"
     assert keeper.source == ContactSource.MANUAL

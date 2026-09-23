@@ -239,6 +239,7 @@ To enable public website CRM API calls (including My Best Auntie discount code l
 - `NEXT_PUBLIC_BANK_ACCOUNT_HOLDER`
 - `NEXT_PUBLIC_BANK_ACCOUNT_NUMBER`
 - `NEXT_PUBLIC_EMAIL`
+- `NEXT_PUBLIC_FOUNDER_NAME` (founder display name on `llms.txt`)
 - `NEXT_PUBLIC_WHATSAPP_URL`
 - `NEXT_PUBLIC_INSTAGRAM_URL`
 - `NEXT_PUBLIC_LINKEDIN_URL`

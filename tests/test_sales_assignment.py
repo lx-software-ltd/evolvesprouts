@@ -199,12 +199,12 @@ def test_notify_lead_assignee_reads_contact(monkeypatch: Any) -> None:
         assigned_to="user-1",
         lead_type=SimpleNamespace(value="consultation"),
         contact=SimpleNamespace(
-            first_name="Kitie",
+            first_name="Mei",
             last_name="Wong",
-            email="kitie@example.com",
+            email="mei@example.com",
         ),
     )
     sa.notify_lead_assignee(object(), lead, previous=None)
     assert captured["assigned_to"] == "user-1"
-    assert captured["contact_first_name"] == "Kitie"
+    assert captured["contact_first_name"] == "Mei"
     assert captured["lead_type"] == "consultation"

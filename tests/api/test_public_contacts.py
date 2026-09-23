@@ -79,7 +79,7 @@ def test_public_contacts_lists_with_admin_payload(
             pass
 
         def list_for_admin(self, **kwargs: object) -> list[object]:
-            assert kwargs.get("query") == "kitie"
+            assert kwargs.get("query") == "mei"
             assert kwargs.get("active") is True
             return [row]
 
@@ -105,9 +105,9 @@ def test_public_contacts_lists_with_admin_payload(
         "serialize_contact_summary",
         lambda r, **kwargs: {
             "id": str(r.id),
-            "first_name": "Kitie",
-            "email": "kitie@example.com",
-            "phone_e164": "+85294479843",
+            "first_name": "Mei",
+            "email": "mei@example.com",
+            "phone_e164": "+85251111111",
             "standalone_note_count": kwargs["standalone_note_count"],
             "has_completion_certificate": kwargs["has_completion_certificate"],
         },
@@ -117,7 +117,7 @@ def test_public_contacts_lists_with_admin_payload(
         _token_event(
             api_gateway_event,
             "/v1/public/contacts",
-            query_params={"query": "kitie", "active": "true"},
+            query_params={"query": "mei", "active": "true"},
         ),
         "GET",
         "/v1/public/contacts",
@@ -125,8 +125,8 @@ def test_public_contacts_lists_with_admin_payload(
     assert response["statusCode"] == 200
     body = json.loads(response["body"])
     assert body["total_count"] == 1
-    assert body["items"][0]["email"] == "kitie@example.com"
-    assert body["items"][0]["phone_e164"] == "+85294479843"
+    assert body["items"][0]["email"] == "mei@example.com"
+    assert body["items"][0]["phone_e164"] == "+85251111111"
     assert body["items"][0]["standalone_note_count"] == 2
     assert body["items"][0]["has_completion_certificate"] is True
 
@@ -161,7 +161,7 @@ def test_public_contacts_get_returns_contact(
     monkeypatch.setattr(
         pcontacts,
         "serialize_contact_summary",
-        lambda r, **_k: {"id": str(r.id), "first_name": "Kitie"},
+        lambda r, **_k: {"id": str(r.id), "first_name": "Mei"},
     )
 
     path = f"/v1/public/contacts/{contact_id}"
@@ -173,7 +173,7 @@ def test_public_contacts_get_returns_contact(
     assert response["statusCode"] == 200
     body = json.loads(response["body"])
     assert body["contact"]["id"] == str(contact_id)
-    assert body["contact"]["first_name"] == "Kitie"
+    assert body["contact"]["first_name"] == "Mei"
 
 
 def test_public_contacts_get_not_found(

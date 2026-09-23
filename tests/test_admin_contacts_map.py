@@ -17,7 +17,7 @@ from app.db.models.enums import ContactType, OrganizationType
 
 def _location(
     *,
-    address: str | None = "12 Queen's Road Central",
+    address: str | None = "12 Sample Street",
     lat: float | None = 22.2819,
     lng: float | None = 114.1582,
     area_name: str = "Central",

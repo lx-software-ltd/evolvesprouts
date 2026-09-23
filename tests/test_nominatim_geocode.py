@@ -61,10 +61,10 @@ def test_geocode_strips_address_through_floor_segment(monkeypatch: Any) -> None:
 
     monkeypatch.setattr(nominatim_geocode, "http_invoke", capture_url)
 
-    addr = "507, 5/F, Arion Commercial Centre, 2-12 Queen's Road West, Sheung Wan"
+    addr = "1, 1/F, Example Tower, 1 Sample Street, Hong Kong"
     nominatim_geocode.geocode_address_with_context(address=addr, country_iso_codes=None)
     q = parse_qs(urlparse(seen[0]).query).get("q", [""])[0]
-    assert q == "Arion Commercial Centre, 2-12 Queen's Road West, Sheung Wan"
+    assert q == "Example Tower, 1 Sample Street, Hong Kong"
 
 
 def test_geocode_strips_g_floor_segment(monkeypatch: Any) -> None:
@@ -86,11 +86,11 @@ def test_geocode_strips_g_floor_segment(monkeypatch: Any) -> None:
     monkeypatch.setattr(nominatim_geocode, "http_invoke", capture_url)
 
     nominatim_geocode.geocode_address_with_context(
-        address="Shop 3, G/F, 10 Queen's Road",
+        address="Shop 3, G/F, 10 Sample Road",
         country_iso_codes=None,
     )
     q = parse_qs(urlparse(seen[0]).query).get("q", [""])[0]
-    assert q == "10 Queen's Road"
+    assert q == "10 Sample Road"
 
 
 def test_geocode_strips_floor_segment_with_spaces(monkeypatch: Any) -> None:

@@ -43,7 +43,7 @@ INSERT INTO `district` VALUES (3,'Central');
 
 INSERT_FAMILY_POS = """
 INSERT INTO `family` VALUES
-(47,NULL,'2025-06-02 10:02:31',1,NULL,NULL,'Bump & Co',22.35062700,114.18491610,'Line1',NULL,3,'company',NULL,NULL);
+(47,NULL,'2025-06-02 10:02:31',1,NULL,NULL,'Example Co',22.00000000,114.00000000,'Line1',NULL,3,'company',NULL,NULL);
 """
 
 CREATE_PERSON = """
@@ -70,7 +70,7 @@ CREATE TABLE `person` (
 
 INSERT_PERSON_POS = """
 INSERT INTO `person` VALUES
-(100,47,'parent','Ann','Smith','hello@bump-and-co.com',NULL,NULL,'98765432',196,NULL,NULL,NULL,NULL,0,NULL);
+(100,47,'parent','Ann','Smith','hello@example.com',NULL,NULL,'98765432',196,NULL,NULL,NULL,NULL,0,NULL);
 """
 
 CREATE_COUNTRY = """
@@ -95,10 +95,10 @@ def test_family_positional_without_insert_column_list() -> None:
     assert len(rows) == 1
     r = rows[0]
     assert r.legacy_id == 47
-    assert r.name == "Bump & Co"
+    assert r.name == "Example Co"
     assert r.kind == "company"
     assert r.address_line1 == "Line1"
-    assert r.latitude == "22.35062700"
+    assert r.latitude == "22.00000000"
 
 
 def test_person_positional_maps_phone_country_id() -> None:
@@ -108,7 +108,7 @@ def test_person_positional_maps_phone_country_id() -> None:
     p = rows[0]
     assert p.legacy_id == 100
     assert p.family_id == 47
-    assert p.email == "hello@bump-and-co.com"
+    assert p.email == "hello@example.com"
     assert p.phone_country_code_id == 196
 
 

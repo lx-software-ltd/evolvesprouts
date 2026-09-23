@@ -13,6 +13,7 @@ const LOCALE_FILES = [
   ['zh-HK', 'zh-HK.json'],
 ];
 const CONTACT_EMAIL_ENV_NAME = 'NEXT_PUBLIC_EMAIL';
+const FOUNDER_NAME_ENV_NAME = 'NEXT_PUBLIC_FOUNDER_NAME';
 const STRIPE_PUBLISHABLE_KEY_ENV_NAME = 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY';
 const CONTACT_EMAIL_PLACEHOLDER = '{{CONTACT_EMAIL}}';
 const CONTACT_EMAIL_MAILTO_PLACEHOLDER = `mailto:${CONTACT_EMAIL_PLACEHOLDER}`;
@@ -303,6 +304,15 @@ function validateConfiguredContactEmail(errors) {
   }
 }
 
+function validateConfiguredFounderName(errors) {
+  const normalizedValue = process.env[FOUNDER_NAME_ENV_NAME]?.trim() ?? '';
+  if (!normalizedValue) {
+    errors.push(
+      `${FOUNDER_NAME_ENV_NAME} must be configured for llms.txt founder lines.`,
+    );
+  }
+}
+
 function validateConfiguredStripePublishableKey(errors) {
   const normalizedValue = process.env[STRIPE_PUBLISHABLE_KEY_ENV_NAME]?.trim() ?? '';
   if (!normalizedValue) {
@@ -531,6 +541,7 @@ async function main() {
   const errors = [];
 
   validateConfiguredContactEmail(errors);
+  validateConfiguredFounderName(errors);
   validateConfiguredStripePublishableKey(errors);
 
   for (const [locale] of LOCALE_FILES) {

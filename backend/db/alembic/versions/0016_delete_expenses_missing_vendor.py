@@ -4,8 +4,10 @@ Data steps (in order):
 1. Null `amends_expense_id` pointing at expenses that will be deleted.
 2. Collect attachment asset ids for rows to delete, then delete those expenses
    (cascade removes `expense_attachments`), then delete unreferenced assets.
-3. Delete expenses with `vendor_name` exactly
-   'Contact Person: Luca Cacchiani' (and orphan assets same as above).
+3. Delete the legacy contact-person expense (and orphan assets same as
+   above). When ``LEGACY_EXPENSE_CONTACT_VENDOR_NAME`` is set, match that
+   trimmed ``vendor_name`` exactly. When it is unset or blank, match the
+   prefix ``Contact Person:%``.
 4. Set `vendor_id` for expenses whose `vendor_name` is 'EPrint100' from the
    active vendor organization named 'EPrint100' (`relationship_type` = vendor,
    `archived_at` IS NULL). Rows are skipped if zero or multiple such orgs exist.
@@ -29,21 +31,49 @@ Downgrade: Restores nullable `vendor_name`; cannot restore deleted rows.
 
 from __future__ import annotations
 
+import os
 from typing import Union
 
 import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0016_del_exp_no_vendor"
+LEGACY_CONTACT_VENDOR_ENV = "LEGACY_EXPENSE_CONTACT_VENDOR_NAME"
+_VENDOR_COLUMNS = frozenset({"tgt.vendor_name", "e.vendor_name"})
 down_revision: Union[str, None] = "0015_add_client_document_tag"
 branch_labels: Union[str, tuple[str, ...], None] = None
 depends_on: Union[str, tuple[str, ...], None] = None
 
 
+def contact_vendor_predicate(column_name: str) -> tuple[str, dict[str, str]]:
+    """Exact vendor match when configured; otherwise the contact-person prefix.
+
+    The configured name is bound as a parameter and is never interpolated
+    into the SQL text.
+    """
+    if column_name not in _VENDOR_COLUMNS:
+        raise ValueError("unsupported vendor column")
+    exact_name = os.environ.get(LEGACY_CONTACT_VENDOR_ENV, "").strip()
+    if exact_name:
+        return (
+            f"trim({column_name}) = :legacy_contact_vendor_name",
+            {"legacy_contact_vendor_name": exact_name},
+        )
+    return (f"trim({column_name}) LIKE 'Contact Person:%'", {})
+
+
+def _execute(sql: str, params: dict[str, str]) -> None:
+    statement = sa.text(sql)
+    if params:
+        statement = statement.bindparams(**params)
+    op.execute(statement)
+
+
 def upgrade() -> None:
     """Run expense clean-up, EPrint100 backfill, and drop vendor_name."""
-    op.execute(
-        """
+    target_predicate, target_params = contact_vendor_predicate("tgt.vendor_name")
+    _execute(
+        f"""
         UPDATE expenses e
         SET amends_expense_id = NULL
         FROM expenses tgt
@@ -51,9 +81,10 @@ def upgrade() -> None:
           AND (
               (tgt.vendor_id IS NULL
                AND (tgt.vendor_name IS NULL OR trim(tgt.vendor_name) = ''))
-              OR trim(tgt.vendor_name) = 'Contact Person: Luca Cacchiani'
+              OR {target_predicate}
           )
-        """
+        """,
+        target_params,
     )
 
     op.execute(
@@ -65,8 +96,9 @@ def upgrade() -> None:
     )
     op.execute("TRUNCATE _tmp_expense_attachment_asset_ids")
 
-    op.execute(
-        """
+    expense_predicate, expense_params = contact_vendor_predicate("e.vendor_name")
+    _execute(
+        f"""
         INSERT INTO _tmp_expense_attachment_asset_ids (id)
         SELECT DISTINCT ea.asset_id
         FROM expense_attachments ea
@@ -75,19 +107,21 @@ def upgrade() -> None:
             FROM expenses e
             WHERE (e.vendor_id IS NULL
                    AND (e.vendor_name IS NULL OR trim(e.vendor_name) = ''))
-               OR trim(e.vendor_name) = 'Contact Person: Luca Cacchiani'
+               OR {expense_predicate}
         )
         ON CONFLICT (id) DO NOTHING
-        """
+        """,
+        expense_params,
     )
 
-    op.execute(
-        """
+    _execute(
+        f"""
         DELETE FROM expenses e
         WHERE (e.vendor_id IS NULL
                AND (e.vendor_name IS NULL OR trim(e.vendor_name) = ''))
-           OR trim(e.vendor_name) = 'Contact Person: Luca Cacchiani'
-        """
+           OR {expense_predicate}
+        """,
+        expense_params,
     )
 
     op.execute(

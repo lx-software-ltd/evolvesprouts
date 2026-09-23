@@ -58,6 +58,24 @@ repo root
   `example.com`, and the fixed AR invoice PDF footer clause **"Proudly registered in Hong Kong"**
   (product jurisdiction line chosen under remediation Option B; not deployment-specific configuration).
 
+## PII in source (MANDATORY)
+
+- Real personal names, phone numbers, email addresses, street addresses,
+  bank account numbers, and business-registration numbers must not appear in
+  source or docs. The hashed check covers `.py`, `.ts`, `.tsx`, `.js`,
+  `.mjs`, `.dart`, `.sql`, `.md`, `.mdc`, `.yml`, `.yaml`, `.sh`, `.html`,
+  and `.css`.
+- Tests use fictional fixtures.
+- Business identity (founder name, public contact email, business phone,
+  business address) is read from GitHub variables
+  (`NEXT_PUBLIC_FOUNDER_NAME`, `NEXT_PUBLIC_EMAIL`,
+  `NEXT_PUBLIC_BUSINESS_PHONE_NUMBER`, `NEXT_PUBLIC_BUSINESS_ADDRESS`)
+  and may be hardcoded only in `apps/public_www/src/content/**/*.json`
+  and test-fixture JSON.
+- `scripts/check-pii.sh` enforces a hashed denylist. Do not add plaintext
+  denylist entries to the repository.
+- Git author and `Co-authored-by` trailers are outside this check.
+
 ## Workflow (MANDATORY)
 
 1. Analyze the user request and relevant repository context.

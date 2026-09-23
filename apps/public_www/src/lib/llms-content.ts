@@ -82,12 +82,20 @@ function buildFaqSummaryLink(content: SiteContent): string {
   );
 }
 
+function founderDisplayName(): string {
+  return resolvePublicSiteConfig().founderName ?? '';
+}
+
 function buildKeyInformation(content: SiteContent): string {
+  const founderName = founderDisplayName();
+  const foundedBy = founderName
+    ? `**Founded by**: ${founderName}, Montessori-certified practitioner`
+    : '**Founded by**: a Montessori-certified practitioner';
   const items = [
     `**Location**: Hong Kong`,
     `**Area served**: ${content.seo.localBusinessAreaServed}`,
     `**Languages**: English, Simplified Chinese (简体中文), Traditional Chinese (繁體中文)`,
-    `**Founded by**: Ida De Gregorio, Montessori-certified practitioner`,
+    foundedBy,
     `**Target audience**: Families with children aged 0-6 in Hong Kong, especially those working with domestic helpers`,
   ];
   return bulletList(items);
@@ -177,8 +185,10 @@ export function buildLlmsTxt(content: SiteContent): string {
 }
 
 function buildFounderSection(content: SiteContent): string {
+  const founderName = founderDisplayName();
+  const heading = founderName ? `### The Founder: ${founderName}` : '### The Founder';
   return lines(
-    '### The Founder: Ida De Gregorio',
+    heading,
     '',
     content.aboutUs.hero.subtitle,
     content.aboutUs.hero.description,

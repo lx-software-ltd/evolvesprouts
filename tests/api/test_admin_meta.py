@@ -48,7 +48,7 @@ def test_admin_meta_lists_conversations(
         channel=MetaChannel.INSTAGRAM,
         platform_user_id="igsid-1",
         page_id="ig-page-1",
-        profile_name="Kitie",
+        profile_name="Mei",
         contact_id=None,
         contact=None,
         lead_id=None,
@@ -94,7 +94,7 @@ def test_admin_meta_lists_conversations(
     assert body["total_count"] == 1
     assert body["items"][0]["platform_user_id"] == "igsid-1"
     assert body["items"][0]["channel"] == "instagram"
-    assert body["items"][0]["profile_name"] == "Kitie"
+    assert body["items"][0]["profile_name"] == "Mei"
 
 
 def test_admin_meta_lists_messages(
@@ -107,7 +107,7 @@ def test_admin_meta_lists_messages(
         channel=MetaChannel.FACEBOOK,
         platform_user_id="psid-1",
         page_id="page-1",
-        profile_name="Kitie",
+        profile_name="Mei",
         contact_id=None,
         contact=None,
         lead_id=None,

@@ -26,7 +26,7 @@ const { listState, mockListMessages, inboxImportApi } = vi.hoisted(() => {
         channel: 'instagram' as const,
         platformUserId: 'igsid-1',
         pageId: 'ig-page-1',
-        profileName: 'Kitie Wong',
+        profileName: 'Mei Chan',
         contactId: 'contact-1',
         contactName: 'Jane Doe',
         leadId: 'lead-1',
@@ -113,7 +113,7 @@ describe('MetaConversationsView', () => {
       screen.getByRole('button', { name: 'Import recent history' })
     );
     expect(screen.getByRole('link', { name: 'Jane Doe' })).toHaveAttribute('href', '/contacts?contact=contact-1');
-    expect(screen.queryByText('Kitie Wong')).not.toBeInTheDocument();
+    expect(screen.queryByText('Mei Chan')).not.toBeInTheDocument();
     expect(screen.getAllByText('igsid-1').length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: /View conversation/ })).not.toBeInTheDocument();
 

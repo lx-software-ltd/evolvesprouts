@@ -70,10 +70,10 @@ def test_public_conversation_name_never_uses_scoped_id() -> None:
     named = SimpleNamespace(
         channel=MetaChannel.FACEBOOK,
         platform_user_id="psid-123456",
-        profile_name="Kitie Wong",
+        profile_name="Mei Chan",
         contact=None,
     )
-    assert pmeta.public_conversation_name(named) == "Kitie Wong"
+    assert pmeta.public_conversation_name(named) == "Mei Chan"
 
 
 def test_public_meta_lists_without_scoped_ids(
@@ -86,7 +86,7 @@ def test_public_meta_lists_without_scoped_ids(
         channel=MetaChannel.INSTAGRAM,
         platform_user_id="igsid-secret",
         page_id="page-secret",
-        profile_name="Kitie",
+        profile_name="Mei",
         contact=None,
         first_inbound_at=datetime(2026, 8, 1, tzinfo=UTC),
         last_message_at=datetime(2026, 8, 2, tzinfo=UTC),
@@ -118,7 +118,7 @@ def test_public_meta_lists_without_scoped_ids(
     assert response["statusCode"] == 200
     body = json.loads(response["body"])
     item = body["items"][0]
-    assert item["name"] == "Kitie"
+    assert item["name"] == "Mei"
     assert item["channel"] == "instagram"
     assert item["id"] == str(conversation_id)
     assert "platform_user_id" not in item
@@ -137,7 +137,7 @@ def test_public_meta_messages_omit_platform_ids(
         channel=MetaChannel.FACEBOOK,
         platform_user_id="psid-secret",
         page_id="page-secret",
-        profile_name="Kitie",
+        profile_name="Mei",
         contact=None,
         first_inbound_at=datetime(2026, 8, 1, tzinfo=UTC),
         last_message_at=datetime(2026, 8, 2, tzinfo=UTC),

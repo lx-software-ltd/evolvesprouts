@@ -117,9 +117,9 @@ describe('BookFreeCallLandingPage', () => {
       screen.queryByRole('heading', { name: enContent.testimonials.title }),
     ).toBeNull();
     expect(
-      screen.queryByRole('heading', { name: enContent.aboutUs.coaches.ida.title }),
+      screen.queryByRole('heading', { name: enContent.aboutUs.coaches.founder.title }),
     ).toBeNull();
-    expect(document.querySelector('[data-figma-node="about-us-ida-coach"]')).toBeNull();
+    expect(document.querySelector('[data-figma-node="about-us-founder-coach"]')).toBeNull();
 
     expect(document.getElementById('landing-page-cta')).toBeNull();
   });

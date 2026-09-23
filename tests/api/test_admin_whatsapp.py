@@ -47,8 +47,8 @@ def test_admin_whatsapp_lists_conversations(
     conversation_id = uuid4()
     row = SimpleNamespace(
         id=conversation_id,
-        wa_id="85294479843",
-        profile_name="Kitie",
+        wa_id="85251111111",
+        profile_name="Mei",
         contact_id=None,
         contact=None,
         lead_id=None,
@@ -87,8 +87,8 @@ def test_admin_whatsapp_lists_conversations(
     assert response["statusCode"] == 200
     body = json.loads(response["body"])
     assert body["total_count"] == 1
-    assert body["items"][0]["wa_id"] == "85294479843"
-    assert body["items"][0]["profile_name"] == "Kitie"
+    assert body["items"][0]["wa_id"] == "85251111111"
+    assert body["items"][0]["profile_name"] == "Mei"
 
 
 def test_admin_whatsapp_lists_messages(
@@ -98,8 +98,8 @@ def test_admin_whatsapp_lists_messages(
     conversation_id = uuid4()
     conversation = SimpleNamespace(
         id=conversation_id,
-        wa_id="85294479843",
-        profile_name="Kitie",
+        wa_id="85251111111",
+        profile_name="Mei",
         contact_id=None,
         contact=None,
         lead_id=None,
