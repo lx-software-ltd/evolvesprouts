@@ -17,7 +17,9 @@ migration_0016 = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(migration_0016)
 
 
-def test_configured_name_is_bound_and_not_interpolated(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_configured_name_is_bound_and_not_interpolated(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setenv(
         migration_0016.LEGACY_CONTACT_VENDOR_ENV,
         "Contact Person: Example Client",

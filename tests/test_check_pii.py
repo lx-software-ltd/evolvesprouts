@@ -27,8 +27,8 @@ def test_email_trailing_period_is_stripped_from_tokens() -> None:
 
 
 def test_interior_dots_stay_in_tokens() -> None:
-    candidates = check_pii._candidates("See example.com today.")
-    assert "example.com" in candidates
+    candidates = check_pii._candidates("See note.v2 today.")
+    assert "note.v2" in candidates
 
 
 def test_handle_strips_at_sign_and_trailing_period() -> None:
