@@ -1,24 +1,47 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
+from sqlalchemy import create_engine, event, select
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Session, selectinload
 
 from app.api.admin_entities_helpers import (
     FAMILY_RELATIONSHIP_TYPES,
     ORGANIZATION_RELATIONSHIP_TYPES,
+    replace_contact_tags,
+    replace_family_tags,
+    replace_organization_tags,
     replace_service_instance_tags,
     require_assignable_tag,
     request_id,
     parse_contact_type_filter,
     parse_relationship_type,
 )
+from app.db.base import Base
 from app.db.models import RelationshipType, ServiceInstanceTag
-from app.db.models.enums import ContactType
+from app.db.models.contact import Contact
+from app.db.models.enums import (
+    ContactSource,
+    ContactType,
+    MailchimpSyncStatus,
+    OrganizationType,
+)
+from app.db.models.family import Family
+from app.db.models.organization import Organization
+from app.db.models.tag import ContactTag, FamilyTag, OrganizationTag, Tag
 from app.exceptions import ValidationError
+
+
+@compiles(JSONB, "sqlite")
+def _compile_jsonb_for_sqlite(element: JSONB, compiler: Any, **kwargs: Any) -> str:
+    return "JSON"
 
 
 def test_request_id_reads_api_gateway_request_id() -> None:
@@ -179,6 +202,165 @@ def test_replace_service_instance_tags_rejects_archived_tag() -> None:
             tag_ids=[active_id, archived_id],
         )
     assert exc.value.field == "tag_ids"
+
+
+def _tag_session() -> Session:
+    engine = create_engine("sqlite://")
+
+    @event.listens_for(engine, "connect")
+    def _register_now(dbapi_connection: Any, _connection_record: Any) -> None:
+        dbapi_connection.create_function(
+            "now",
+            0,
+            lambda: datetime.now(UTC).isoformat(),
+        )
+
+    Base.metadata.create_all(
+        engine,
+        tables=[
+            Tag.__table__,
+            Contact.__table__,
+            ContactTag.__table__,
+            Family.__table__,
+            FamilyTag.__table__,
+            Organization.__table__,
+            OrganizationTag.__table__,
+        ],
+    )
+    return Session(engine)
+
+
+def _tag(name: str) -> Tag:
+    return Tag(id=uuid4(), name=name, created_by="test")
+
+
+def test_replace_contact_tags_keeps_loaded_links_and_saves_parent() -> None:
+    session = _tag_session()
+    kept = _tag("kept")
+    dropped = _tag("dropped")
+    added = _tag("added")
+    contact = Contact(
+        id=uuid4(),
+        first_name="Elizabeth",
+        contact_type=ContactType.PARENT,
+        relationship_type=RelationshipType.PROSPECT,
+        source=ContactSource.CONTACT_FORM,
+        mailchimp_status=MailchimpSyncStatus.PENDING,
+    )
+    session.add_all([kept, dropped, added, contact])
+    session.flush()
+    session.add_all(
+        [
+            ContactTag(contact_id=contact.id, tag_id=kept.id),
+            ContactTag(contact_id=contact.id, tag_id=dropped.id),
+        ]
+    )
+    session.commit()
+
+    loaded = session.execute(
+        select(Contact)
+        .where(Contact.id == contact.id)
+        .options(selectinload(Contact.contact_tags))
+    ).scalar_one()
+    replace_contact_tags(
+        session,
+        contact_id=loaded.id,
+        tag_ids=[kept.id, added.id, kept.id],
+    )
+    loaded.last_name = "McKenzie"
+    session.add(loaded)
+    session.commit()
+
+    again = session.get(Contact, contact.id)
+    assert again is not None
+    assert again.last_name == "McKenzie"
+    assert {row.tag_id for row in again.contact_tags} == {kept.id, added.id}
+    session.close()
+
+
+def test_replace_family_and_organization_tags_survive_parent_add() -> None:
+    session = _tag_session()
+    family_tag = _tag("family")
+    family_dropped = _tag("family-dropped")
+    org_tag = _tag("org")
+    family = Family(
+        id=uuid4(),
+        family_name="Mckenzie",
+        relationship_type=RelationshipType.PROSPECT,
+    )
+    organization = Organization(
+        id=uuid4(),
+        name="Mckenzie",
+        organization_type=OrganizationType.OTHER,
+        relationship_type=RelationshipType.PROSPECT,
+    )
+    session.add_all([family_tag, family_dropped, org_tag, family, organization])
+    session.flush()
+    session.add(FamilyTag(family_id=family.id, tag_id=family_tag.id))
+    session.add(FamilyTag(family_id=family.id, tag_id=family_dropped.id))
+    session.add(OrganizationTag(organization_id=organization.id, tag_id=org_tag.id))
+    session.commit()
+
+    loaded_family = session.execute(
+        select(Family)
+        .where(Family.id == family.id)
+        .options(selectinload(Family.family_tags))
+    ).scalar_one()
+    replace_family_tags(session, family_id=loaded_family.id, tag_ids=[family_tag.id])
+    loaded_family.family_name = "McKenzie"
+    session.add(loaded_family)
+
+    loaded_org = session.execute(
+        select(Organization)
+        .where(Organization.id == organization.id)
+        .options(selectinload(Organization.organization_tags))
+    ).scalar_one()
+    replace_organization_tags(
+        session, organization_id=loaded_org.id, tag_ids=[org_tag.id]
+    )
+    loaded_org.name = "McKenzie Co"
+    session.add(loaded_org)
+    session.commit()
+
+    stored_family = session.get(Family, family.id)
+    stored_org = session.get(Organization, organization.id)
+    assert stored_family is not None
+    assert stored_org is not None
+    assert stored_family.family_name == "McKenzie"
+    assert {row.tag_id for row in stored_family.family_tags} == {family_tag.id}
+    assert stored_org.name == "McKenzie Co"
+    session.close()
+
+
+def test_replace_contact_tags_rejects_archived_without_dropping_links() -> None:
+    session = _tag_session()
+    active = _tag("active")
+    archived = _tag("archived")
+    archived.archived_at = datetime.now(UTC)
+    contact = Contact(
+        id=uuid4(),
+        first_name="Elizabeth",
+        contact_type=ContactType.PARENT,
+        relationship_type=RelationshipType.PROSPECT,
+        source=ContactSource.CONTACT_FORM,
+        mailchimp_status=MailchimpSyncStatus.PENDING,
+    )
+    session.add_all([active, archived, contact])
+    session.flush()
+    session.add(ContactTag(contact_id=contact.id, tag_id=active.id))
+    session.commit()
+
+    with pytest.raises(ValidationError, match="tag is archived"):
+        replace_contact_tags(
+            session,
+            contact_id=contact.id,
+            tag_ids=[active.id, archived.id],
+        )
+    session.rollback()
+    reloaded = session.get(Contact, contact.id)
+    assert reloaded is not None
+    assert {row.tag_id for row in reloaded.contact_tags} == {active.id}
+    session.close()
 
 
 def test_require_assignable_tag_raises_for_archived() -> None:
