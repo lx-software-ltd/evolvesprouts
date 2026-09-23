@@ -377,7 +377,7 @@
   .es-my-best-auntie-description-section,
   .es-consultations-focus-details-section,
   .es-my-history-section,
-  .es-about-us-ida-coach-section {
+  .es-about-us-founder-coach-section {
     --es-section-bg-image: url('/images/evolvesprouts-logo.svg');
     --es-section-bg-position: center -900px;
     --es-section-bg-size: 2000px auto;
@@ -394,7 +394,7 @@
   .es-my-best-auntie-description-section,
   .es-consultations-focus-details-section,
   .es-my-history-section,
-  .es-about-us-ida-coach-section {
+  .es-about-us-founder-coach-section {
     background-color: var(--es-color-surface-muted, #F8F8F8);
   }
 
@@ -453,11 +453,11 @@
     background-color: var(--figma-colors-frame-2147235259, #FFEEE3);
   }
 
-  .es-about-us-ida-coach-subtitle {
+  .es-about-us-founder-coach-subtitle {
     color: var(--site-heading-text);
   }
 
-  .es-about-us-ida-coach-description .es-highlight-word,
+  .es-about-us-founder-coach-description .es-highlight-word,
   .es-landing-page-outline-paragraph .es-highlight-word {
     font-weight: 700;
   }

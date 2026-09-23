@@ -42,7 +42,7 @@ const pageSectionFiles = [
   'consultations/consultations-booking.tsx',
   'consultations/consultations-focus-details.tsx',
   'consultations/consultations-comparison.tsx',
-  'about-us-ida-coach.tsx',
+  'about-us-founder-coach.tsx',
   'sprouts-squad-community.tsx',
   'event-notification.tsx',
   'free-intro-session.tsx',

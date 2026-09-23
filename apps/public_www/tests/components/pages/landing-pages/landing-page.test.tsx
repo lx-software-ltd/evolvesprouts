@@ -207,9 +207,9 @@ vi.mock('@/components/sections/landing-pages/landing-page-cta', () => ({
     </section>
   ),
 }));
-vi.mock('@/components/sections/about-us-ida-coach', () => ({
-  AboutUsIdaCoach: ({ content }: { content: { title: string } }) => (
-    <section data-testid='about-us-ida-coach'>{content.title}</section>
+vi.mock('@/components/sections/about-us-founder-coach', () => ({
+  AboutUsFounderCoach: ({ content }: { content: { title: string } }) => (
+    <section data-testid='about-us-founder-coach'>{content.title}</section>
   ),
 }));
 
@@ -256,7 +256,7 @@ describe('LandingPage composition', () => {
     expect(screen.getByTestId('landing-page-details')).toBeInTheDocument();
     expect(screen.getByTestId('landing-page-cta')).toBeInTheDocument();
     expect(screen.getByTestId('testimonials')).toBeInTheDocument();
-    expect(screen.getByTestId('about-us-ida-coach')).toBeInTheDocument();
+    expect(screen.getByTestId('about-us-founder-coach')).toBeInTheDocument();
     expect(screen.getByTestId('landing-page-faq')).toBeInTheDocument();
     expect(screen.getByTestId('landing-page-outline')).toHaveAttribute(
       'data-shared-cta',
@@ -314,11 +314,11 @@ describe('LandingPage composition', () => {
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(
       screen.getByTestId('landing-page-cta').compareDocumentPosition(
-        screen.getByTestId('about-us-ida-coach'),
+        screen.getByTestId('about-us-founder-coach'),
       ),
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(
-      screen.getByTestId('about-us-ida-coach').compareDocumentPosition(
+      screen.getByTestId('about-us-founder-coach').compareDocumentPosition(
         screen.getByTestId('landing-page-faq'),
       ),
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);

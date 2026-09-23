@@ -7,7 +7,7 @@ import {
   type SiteContent,
 } from '@/content';
 import { PageLayout } from '@/components/shared/page-layout';
-import { AboutUsIdaCoach } from '@/components/sections/about-us-ida-coach';
+import { AboutUsFounderCoach } from '@/components/sections/about-us-founder-coach';
 import { Testimonials } from '@/components/sections/testimonials';
 import { LandingPageCtaBridge } from '@/components/pages/landing-pages/landing-page-cta-bridge';
 import { LandingPageEventJsonLd } from '@/components/pages/landing-pages/landing-page-event-jsonld';
@@ -129,10 +129,10 @@ export function LandingPage({
                 ariaLabel={siteContent.landingPages.common.a11y.ctaSectionLabel}
               />
             ) : null}
-            <AboutUsIdaCoach
-              content={siteContent.aboutUs.coaches.ida}
+            <AboutUsFounderCoach
+              content={siteContent.aboutUs.coaches.founder}
               ariaLabel={
-                siteContent.landingPages.common.a11y.aboutUsIdaCoachSectionLabel
+                siteContent.landingPages.common.a11y.aboutUsFounderCoachSectionLabel
               }
             />
             <LandingPageFaq

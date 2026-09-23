@@ -35,8 +35,8 @@ vi.mock('@/components/shared/page-layout', () => ({
   ),
 }));
 
-vi.mock('@/components/sections/about-us-ida-coach', () => ({
-  AboutUsIdaCoach: () => <div data-testid='about-us-ida-coach' />,
+vi.mock('@/components/sections/about-us-founder-coach', () => ({
+  AboutUsFounderCoach: () => <div data-testid='about-us-founder-coach' />,
 }));
 vi.mock('@/components/sections/testimonials', () => ({
   Testimonials: () => <div data-testid='testimonials' />,

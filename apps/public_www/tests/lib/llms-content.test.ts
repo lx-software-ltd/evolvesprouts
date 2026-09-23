@@ -4,7 +4,7 @@ import enContent from '@/content/en.json';
 import { buildLlmsFullTxt, buildLlmsTxt } from '@/lib/llms-content';
 
 const TEST_CONTACT_EMAIL = process.env.NEXT_PUBLIC_EMAIL ?? 'tests@example.com';
-const FOUNDER_NAME = enContent.aboutUs.coaches.ida.title;
+const FOUNDER_NAME = enContent.aboutUs.coaches.founder.title;
 process.env.NEXT_PUBLIC_FOUNDER_NAME = FOUNDER_NAME;
 
 describe('buildLlmsTxt', () => {

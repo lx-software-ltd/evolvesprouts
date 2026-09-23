@@ -4,10 +4,10 @@ import { SectionContainer } from '@/components/sections/shared/section-container
 import { SectionHeader } from '@/components/sections/shared/section-header';
 import { SectionShell } from '@/components/sections/shared/section-shell';
 import { renderQuotedDescriptionText } from '@/components/sections/shared/render-highlighted-text';
-import type { AboutUsIdaCoachContent } from '@/content';
+import type { AboutUsFounderCoachContent } from '@/content';
 
-interface AboutUsIdaCoachProps {
-  content: AboutUsIdaCoachContent;
+interface AboutUsFounderCoachProps {
+  content: AboutUsFounderCoachContent;
   ariaLabel?: string;
 }
 
@@ -18,24 +18,24 @@ function splitDescriptionParagraphs(description: string): string[] {
     .filter((paragraph) => paragraph.length > 0);
 }
 
-export function AboutUsIdaCoach({
+export function AboutUsFounderCoach({
   content,
   ariaLabel,
-}: AboutUsIdaCoachProps) {
+}: AboutUsFounderCoachProps) {
   const descriptionParagraphs = splitDescriptionParagraphs(content.description);
 
   return (
     <SectionShell
-      id='about-us-ida-coach'
+      id='about-us-founder-coach'
       ariaLabel={ariaLabel ?? content.title}
-      dataFigmaNode='about-us-ida-coach'
-      className='es-section-bg-overlay es-about-us-ida-coach-section'
+      dataFigmaNode='about-us-founder-coach'
+      className='es-section-bg-overlay es-about-us-founder-coach-section'
     >
       <SectionContainer className='grid gap-8 lg:grid-cols-[minmax(0,20%)_minmax(0,80%)] lg:items-start'>
         <div className='mx-auto w-full max-w-[220px] lg:mx-0 lg:max-w-[190px]'>
           <div className='aspect-square overflow-hidden rounded-full border-4 es-border-soft es-bg-surface-soft'>
             <Image
-              src='/images/about-us/ida-degregorio-evolvesprouts-1.webp'
+              src='/images/about-us/founder-portrait-1.webp'
               alt={content.imageAlt}
               width={560}
               height={560}
@@ -50,14 +50,14 @@ export function AboutUsIdaCoach({
             title={content.title}
             align='left'
           />
-          <p className='mt-3 es-type-subtitle es-about-us-ida-coach-subtitle'>
+          <p className='mt-3 es-type-subtitle es-about-us-founder-coach-subtitle'>
             {content.subtitle}
           </p>
           <div className='mt-5 space-y-4'>
             {descriptionParagraphs.map((paragraph, index) => (
               <p
                 key={`${paragraph}-${index}`}
-                className='es-type-body es-about-us-ida-coach-description'
+                className='es-type-body es-about-us-founder-coach-description'
               >
                 {renderQuotedDescriptionText(
                   paragraph,
