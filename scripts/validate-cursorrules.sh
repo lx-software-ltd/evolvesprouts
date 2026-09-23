@@ -34,6 +34,7 @@ require_file ".cursor/rules/00_mandatory_cursorrules.mdc"
 
 # Keep checks focused on stable, high-value compliance anchors.
 require_literal ".cursorrules" "## Scope and applicability (MANDATORY)" "Missing mandatory scope section"
+require_literal ".cursorrules" "## PII in source (MANDATORY)" "Missing PII in source section"
 require_literal ".cursorrules" "## Workflow (MANDATORY)" "Missing mandatory workflow section"
 require_literal ".cursorrules" "Wait for explicit user approval." "Missing explicit user approval guardrail"
 require_literal ".cursorrules" "Treat all write operations as implementation and blocked before approval." "Missing strict pre-approval write-operation guardrail"
