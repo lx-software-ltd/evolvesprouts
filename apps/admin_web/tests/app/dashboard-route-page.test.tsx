@@ -34,8 +34,9 @@ vi.mock('@/lib/sales-daily-plan-api', () => ({
 import DashboardRoutePage from '@/app/(dashboard)/dashboard/page';
 
 describe('DashboardRoutePage', () => {
-  it('renders a level-one Dashboard heading', () => {
+  it('renders dashboard cards without a page-level Dashboard heading', () => {
     render(<DashboardRoutePage />);
-    expect(screen.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 1, name: 'Dashboard' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Sale Plan of the Day' })).toBeInTheDocument();
   });
 });
