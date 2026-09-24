@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/lib/expenses-api', () => ({
@@ -32,11 +32,15 @@ vi.mock('@/lib/sales-daily-plan-api', () => ({
 }));
 
 import DashboardRoutePage from '@/app/(dashboard)/dashboard/page';
+import { ADMIN_TAX_FISCAL_YEAR_EMPTY_MESSAGE } from '@/lib/admin-tax-fiscal-year';
 
 describe('DashboardRoutePage', () => {
-  it('renders dashboard cards without a page title', () => {
+  it('renders dashboard cards without a page title', async () => {
     render(<DashboardRoutePage />);
     expect(screen.queryByRole('heading', { name: 'Dashboard' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Sale Plan of the Day' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(ADMIN_TAX_FISCAL_YEAR_EMPTY_MESSAGE)).toBeInTheDocument();
+    });
   });
 });
