@@ -45,10 +45,10 @@ packages:
     dependency: "direct main"
     description:
       name: amplify_auth_cognito
-      sha256: efcf68f69917a98826865b76909599dc4bfbbe657cf1cf17e60e41861f7d7288
+      sha256: "3c7ac9ac27bb6c48aed95a31ed1cedb92d0392b1e6f616776e4936e4fca18eac"
       url: "https://pub.dev"
     source: hosted
-    version: "2.15.0"
+    version: "2.15.1"
   amplify_auth_cognito_dart:
     dependency: transitive
     description:
