@@ -153,7 +153,7 @@ jobs:
 
       - name: Upload to TestFlight
         if: env.APPSTORE_ISSUER_ID != '' && env.APPSTORE_API_KEY_ID != '' && env.APPSTORE_API_PRIVATE_KEY != ''
-        uses: apple-actions/upload-testflight-build@5e75ff58276689011512ba87a381d93dc67dbcf8 # v5.3.0
+        uses: apple-actions/upload-testflight-build@1fc69ca369a60b813eaaa2d936eda22794b52e17 # v5.4.0
         with:
           app-path: apps/evolvesprouts_app/build/ios/ipa/*.ipa
           issuer-id: ${{ env.APPSTORE_ISSUER_ID }}
