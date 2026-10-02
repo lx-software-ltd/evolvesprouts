@@ -519,6 +519,74 @@ function assertApiTokenAuthorizerHasNoReservedConcurrency(template: Template): v
   }
 }
 
+function assertFinanceReadonlyDataApi(template: Template): void {
+  const clusters = template.findResources("AWS::RDS::DBCluster");
+  const clusterEntries = Object.entries(clusters);
+  if (clusterEntries.length !== 1) {
+    throw new Error(
+      `Expected one DB cluster; found ${clusterEntries.length}`,
+    );
+  }
+  const [, cluster] = clusterEntries[0];
+  if (cluster.Properties?.EnableHttpEndpoint !== true) {
+    throw new Error(
+      `DB cluster must set EnableHttpEndpoint; found ${JSON.stringify(cluster.Properties?.EnableHttpEndpoint)}`,
+    );
+  }
+
+  const secrets = template.findResources("AWS::SecretsManager::Secret");
+  const financeSecret = Object.entries(secrets).find(([, resource]) => {
+    return (
+      resource.Properties?.Name ===
+      "evolvesprouts-db-finance-readonly-credentials"
+    );
+  });
+  if (!financeSecret) {
+    throw new Error(
+      "Expected secret evolvesprouts-db-finance-readonly-credentials",
+    );
+  }
+  const [financeLogicalId, financeResource] = financeSecret;
+  const templateJson = JSON.stringify(
+    financeResource.Properties?.GenerateSecretString?.SecretStringTemplate,
+  );
+  if (!templateJson.includes("evolvesprouts_finance_ro")) {
+    throw new Error(
+      `Finance secret must use username evolvesprouts_finance_ro; found ${templateJson}`,
+    );
+  }
+
+  const proxies = template.findResources("AWS::RDS::DBProxy");
+  for (const [logicalId, resource] of Object.entries(proxies)) {
+    const auth = JSON.stringify(resource.Properties?.Auth ?? []);
+    if (auth.includes(financeLogicalId)) {
+      throw new Error(
+        `RDS Proxy ${logicalId} must not authenticate with the finance read-only secret`,
+      );
+    }
+  }
+
+  const outputs = template.findOutputs("FinanceReadonlyDatabaseSecretArn");
+  if (!outputs.FinanceReadonlyDatabaseSecretArn) {
+    throw new Error("Expected output FinanceReadonlyDatabaseSecretArn");
+  }
+
+  const functions = template.findResources("AWS::Lambda::Function");
+  const migration = Object.entries(functions).find(([, resource]) => {
+    const handler = resource.Properties?.Handler;
+    return handler === "lambda/migrations/handler.lambda_handler";
+  });
+  if (!migration) {
+    throw new Error("Expected migrations Lambda");
+  }
+  const variables = migration[1].Properties?.Environment?.Variables ?? {};
+  if (!("DATABASE_FINANCE_READONLY_SECRET_ARN" in variables)) {
+    throw new Error(
+      "Migrations Lambda must set DATABASE_FINANCE_READONLY_SECRET_ARN",
+    );
+  }
+}
+
 function main(): void {
   const app = new cdk.App();
   const stack = new ApiStack(app, "TestApi", {
@@ -537,6 +605,7 @@ function main(): void {
   assertInboxImportUsesDedicatedPageToken(stack);
   assertSalesDailyPlanSchedule(stack);
   assertInboundInvoiceSharesReceiptRuleSet(template);
+  assertFinanceReadonlyDataApi(template);
 
   console.log("api-stack API Gateway stage cache assertions passed.");
 }

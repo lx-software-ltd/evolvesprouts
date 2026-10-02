@@ -43,6 +43,11 @@ Flutter mobile app, Next.js admin console, and AWS serverless backend.
 - RDS Proxy uses IAM authentication; Lambda generates IAM tokens.
 - IAM DB roles `evolvesprouts_app` (read) and `evolvesprouts_admin` (write)
   are created via migrations and granted `rds_iam`.
+- The Aurora Data API stays enabled on the CDK-managed cluster
+  (`enableDataApi`). `evolvesprouts_finance_ro` is a password role (no
+  `rds_iam`) with `SELECT` only on `customer_payments`, `expenses`,
+  `organizations`, and `customer_invoices`. Its secret is
+  `evolvesprouts-db-finance-readonly-credentials`.
 - DB connections enforce TLS and use small pools tuned for Lambda.
 - Migrations Lambda uses password auth directly against the cluster endpoint.
 

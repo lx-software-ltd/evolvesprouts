@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from typing import Any
+from urllib.parse import urlparse
 
 from psycopg import sql
 
@@ -20,10 +21,19 @@ from .utils import _psycopg_connect
 logger = get_logger(__name__)
 
 _ALLOWED_PROXY_USERS = {"evolvesprouts_app", "evolvesprouts_admin"}
+# Password login for the Data API. Kept out of _ALLOWED_PROXY_USERS so the
+# proxy path cannot GRANT rds_iam, which would block password authentication.
+_ALLOWED_FINANCE_READONLY_USERS = {"evolvesprouts_finance_ro"}
+_FINANCE_READONLY_TABLES = (
+    "customer_payments",
+    "expenses",
+    "organizations",
+    "customer_invoices",
+)
 
 
 def _sync_proxy_user_passwords(database_url: str) -> None:
-    """Ensure proxy user passwords match Secrets Manager values."""
+    """Ensure proxy and finance read-only passwords match Secrets Manager."""
     secret_arns = [
         os.getenv("DATABASE_APP_USER_SECRET_ARN"),
         os.getenv("DATABASE_ADMIN_USER_SECRET_ARN"),
@@ -32,8 +42,9 @@ def _sync_proxy_user_passwords(database_url: str) -> None:
     for secret_arn in secret_arns:
         if secret_arn:
             user_secrets.append(_load_db_user_secret(secret_arn))
+    finance_secret = _load_finance_readonly_secret()
 
-    if not user_secrets:
+    if not user_secrets and finance_secret is None:
         return
 
     with _psycopg_connect(database_url) as connection:
@@ -70,8 +81,102 @@ def _sync_proxy_user_passwords(database_url: str) -> None:
                         "Updated database password for proxy user",
                         extra={"db_user": username},
                     )
-            _grant_table_permissions(cursor)
+            if user_secrets:
+                _grant_table_permissions(cursor)
+            if finance_secret is not None:
+                finance_username, finance_password = finance_secret
+                _sync_finance_readonly_role(
+                    cursor,
+                    finance_username,
+                    finance_password,
+                    _database_name(database_url),
+                )
         connection.commit()
+
+
+def _load_finance_readonly_secret() -> tuple[str, str] | None:
+    """Load the finance read-only secret when its ARN is configured."""
+    secret_arn = os.getenv("DATABASE_FINANCE_READONLY_SECRET_ARN", "").strip()
+    if not secret_arn:
+        return None
+    username, password = _load_db_user_secret(secret_arn)
+    _validate_db_username(username, _ALLOWED_FINANCE_READONLY_USERS)
+    return username, password
+
+
+def _database_name(database_url: str) -> str:
+    """Return the database name used for GRANT CONNECT."""
+    name = urlparse(database_url).path.lstrip("/").split("/", 1)[0]
+    if not name:
+        name = os.getenv("DATABASE_NAME", "").strip()
+    if not name:
+        raise RuntimeError("Database name is required to grant CONNECT")
+    return name
+
+
+def _sync_finance_readonly_role(
+    cursor: Any,
+    username: str,
+    password: str,
+    database_name: str,
+) -> None:
+    """Create or update the password-only finance role and its grants.
+
+    The role is not a member of rds_iam. Grants are limited to CONNECT, USAGE
+    on public, and SELECT on the finance tables. New tables stay hidden
+    because this role has no ALTER DEFAULT PRIVILEGES.
+    """
+    cursor.execute(
+        "SELECT 1 FROM pg_roles WHERE rolname = %s",
+        (username,),
+    )
+    if cursor.fetchone() is None:
+        cursor.execute(
+            sql.SQL("CREATE ROLE {} WITH LOGIN PASSWORD {}").format(
+                sql.Identifier(username),
+                sql.Literal(password),
+            )
+        )
+        logger.info(
+            "Created password login role for finance read-only user",
+            extra={"db_user": username},
+        )
+    else:
+        cursor.execute(
+            sql.SQL("ALTER ROLE {} PASSWORD {}").format(
+                sql.Identifier(username),
+                sql.Literal(password),
+            )
+        )
+        logger.info(
+            "Updated database password for finance read-only user",
+            extra={"db_user": username},
+        )
+    _grant_finance_readonly_permissions(cursor, username, database_name)
+
+
+def _grant_finance_readonly_permissions(
+    cursor: Any,
+    username: str,
+    database_name: str,
+) -> None:
+    """Grant the narrow finance read-only privileges."""
+    role = sql.Identifier(username)
+    cursor.execute(
+        sql.SQL("GRANT CONNECT ON DATABASE {} TO {}").format(
+            sql.Identifier(database_name),
+            role,
+        )
+    )
+    cursor.execute(sql.SQL("GRANT USAGE ON SCHEMA public TO {}").format(role))
+    tables = sql.SQL(", ").join(
+        sql.Identifier(table) for table in _FINANCE_READONLY_TABLES
+    )
+    cursor.execute(sql.SQL("GRANT SELECT ON TABLE {} TO {}").format(tables, role))
+    logger.info(
+        "Granted finance read-only table permissions",
+        extra={"db_user": username},
+    )
 
 
 def _grant_table_permissions(cursor: Any) -> None:

@@ -632,8 +632,14 @@ while remaining blocked for all other third-party origins.
 - Always use SSL: `sslmode=require`
 - Prefer IAM authentication for RDS Proxy
 - Use separate database users for different access levels:
-  - `evolvesprouts_app` - read-only for search
-  - `evolvesprouts_admin` - read-write for admin
+  - `evolvesprouts_app` - read-only for search (`rds_iam`; RDS Proxy only)
+  - `evolvesprouts_admin` - read-write for admin (`rds_iam`; RDS Proxy only)
+  - `evolvesprouts_finance_ro` - password login for the Aurora Data API.
+    `CONNECT` on the database, `USAGE` on schema `public`, and `SELECT` on
+    `customer_payments`, `expenses`, `organizations`, and `customer_invoices`.
+    No `rds_iam` membership and no `ALTER DEFAULT PRIVILEGES`, so later tables
+    stay hidden. `evolvesprouts_app` cannot be reused for this login because
+    `rds_iam` blocks password authentication.
 - If importing an existing Secrets Manager credential secret encrypted
   with a customer-managed KMS key, ensure Lambda roles can decrypt it
   (set `EXISTING_DB_CREDENTIALS_SECRET_KMS_KEY_ARN` or use auto-detect).

@@ -286,6 +286,7 @@ Cognito operations are proxied through `AwsApiProxyFunction` instead.
 | Resource Type | Logical ID | Physical Name/ID | Notes |
 |--------------|------------|------------------|-------|
 | Secret | `DBCredentialsSecret` | `evolvesprouts-database-credentials` | Auto-generates password for `postgres` user |
+| Secret | `DbFinanceReadonlySecret` | `evolvesprouts-db-finance-readonly-credentials` | Always created. JSON `username` is `evolvesprouts_finance_ro` with a generated password. Encrypted with `DatabaseSecretKey` when that key exists. Password login for the Aurora Data API; not attached to the RDS Proxy |
 
 ### KMS
 
@@ -311,6 +312,7 @@ Cognito operations are proxied through `AwsApiProxyFunction` instead.
 
 **Cluster Configuration:**
 - Engine: Aurora PostgreSQL 16.4
+- Data API: enabled (`EnableHttpEndpoint`; in-place cluster update)
 - Min Capacity: 0.5 ACU
 - Max Capacity: 2 ACU
 - Database Name: `evolvesprouts`
@@ -436,7 +438,7 @@ For each function above, the following resources are created:
 |----------|------------------------|
 | `EvolvesproutsAdminFunction` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, read/write DynamoDB table `evolvesprouts-poll-responses` (`POLL_RESPONSES_TABLE_NAME`) for training poll answer upserts, invoke `AwsApiProxyFunction`, SNS publish to media, expense parser, and Eventbrite sync topics, SES send email + **SendTemplatedEmail** (internal + `AuthEmailFromAddress` identities), Secrets Manager read for Mailchimp secret (public form marketing hooks) and the new `PublicWwwConfigSecret` JSON object, S3 read/write for the assets bucket; `DEPLOYMENT_STAGE` set to `production` in deployed stacks; `PUBLIC_WWW_CONFIG_SECRET_ARN` env var points at `PublicWwwConfigSecret` whose JSON object holds `BASE_URL` / `STAGING_SITE_ORIGIN` / optional `INSTAGRAM_URL` / `LINKEDIN_URL` / `WHATSAPP_URL` / `BUSINESS_PHONE_NUMBER` for transactional HTML shell data, plus optional `BUSINESS_NAME` / `BUSINESS_LEGAL_NAME` / `BUSINESS_ADDRESS` / `BUSINESS_REGISTRATION` / `BANK_*` / `FPS_MERCHANT_NAME` / `FPS_MOBILE_NUMBER` / `BILLING_EMAIL` for AR invoice PDFs (sourced from CDK `PublicWww*` parameters / GitHub `vars.NEXT_PUBLIC_*`); `INVOICE_DISPLAY_TIMEZONE` / `INVOICE_PAYMENT_TERMS_DAYS` remain plain env vars; `SALES_RECAP_DISPLAY_TIMEZONE` from CDK parameter `SalesRecapDisplayTimezone` (optional; recap **Submitted at**; app default if empty); `DEFAULT_PHONE_REGION` from CDK parameter `DefaultPhoneRegion` (ISO alpha-2) for parsing public phone fields when region is omitted. The `PUBLIC_WWW_*` values are packed into a single secret to keep the Lambda environment-variable string under AWS's 4 KB hard limit; `app.config.public_www` reads it once per cold start through the existing Secrets Manager VPC interface endpoint and caches it in-process for five minutes |
 | `AwsApiProxyFunction` | Cognito admin operations (`ListUsers`, `ListUsersInGroup`, `AdminGetUser`, `AdminCreateUser`, `AdminDeleteUser`, `AdminDisableUser`, `AdminEnableUser`, `AdminAddUserToGroup`, `AdminRemoveUserFromGroup`, `AdminListGroupsForUser`, `AdminUserGlobalSignOut`, `AdminUpdateUserAttributes`) |
-| `EvolvesproutsMigrationFunction` | Read DB secret, direct connect to Aurora as `postgres`, Cognito user management, CloudFormation invoke permission |
+| `EvolvesproutsMigrationFunction` | Read DB secret, app user secret, admin user secret, and `DbFinanceReadonlySecret`, direct connect to Aurora as `postgres`, Cognito user management, CloudFormation invoke permission. After Alembic it creates or updates `evolvesprouts_finance_ro` (password login, no `rds_iam`) and grants `CONNECT` on `evolvesprouts`, `USAGE` on schema `public`, and `SELECT` on `customer_payments`, `expenses`, `organizations`, and `customer_invoices` only |
 | `ImportLegacyVenuesFunction` | Read admin DB secret, connect to RDS Proxy as `evolvesprouts_admin`, S3 read on `ImportDumpBucket` only |
 | `HealthCheckFunction` | Read DB secret, connect to RDS Proxy as `evolvesprouts_app` |
 | `ApiTokenAuthorizerFunction` | Read admin DB secret, connect to RDS Proxy as `evolvesprouts_admin` |
@@ -739,6 +741,7 @@ These raster files ship with `EvolvesproutsAdminFunction` under `backend/src/app
 |-------------|-------|-------------|
 | `ApiUrl` | API Gateway REST API URL | Base URL for API endpoints |
 | `DatabaseSecretArn` | Secrets Manager secret ARN | ARN of database credentials secret |
+| `FinanceReadonlyDatabaseSecretArn` | Secrets Manager secret ARN | ARN of `evolvesprouts-db-finance-readonly-credentials` (`evolvesprouts_finance_ro`) |
 | `DatabaseProxyEndpoint` | RDS Proxy endpoint | Endpoint for database connections via proxy |
 | `ImportLegacyVenuesFunctionName` | Lambda function name | Physical name of `ImportLegacyVenuesFunction` (workflow auto-resolves from stack output when GitHub var is unset) |
 | `ImportLegacyFunctionName` | Lambda function name | Same value as `ImportLegacyVenuesFunctionName` (alias output) |
