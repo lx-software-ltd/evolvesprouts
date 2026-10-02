@@ -119,6 +119,8 @@ See [`docs/architecture/database-schema.md`](database-schema.md) for full table 
 - Seed data stored in `backend/db/seed/seed_data.sql`.
 - Migrations run via a custom resource Lambda using password auth.
 - Application traffic uses IAM auth via the proxy and the `evolvesprouts_app` role.
+- The cluster Data API is enabled for `evolvesprouts_finance_ro`, a password
+  role limited to `SELECT` on the finance tables.
 - Deployments reuse existing DB clusters, proxies, and VPCs when detected.
 
 ## CI/CD

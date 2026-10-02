@@ -294,7 +294,7 @@ Aurora PostgreSQL Serverless v2 (evolvesprouts-db-cluster)
 | Writer | `evolvesprouts-db-writer` |
 | Capacity | 0.5–2 ACU |
 | Database name | `evolvesprouts` |
-| Access | RDS Proxy with IAM auth (runtime); direct cluster endpoint with password (migrations) |
+| Access | RDS Proxy with IAM auth (runtime); direct cluster endpoint with password (migrations); Aurora Data API for `evolvesprouts_finance_ro` |
 | Monitoring | Enhanced monitoring (60s interval) |
 | Logs | PostgreSQL logs exported to CloudWatch |
 
@@ -305,6 +305,7 @@ Aurora PostgreSQL Serverless v2 (evolvesprouts-db-cluster)
 | `postgres` | Full admin | Migration Lambda (direct cluster connection) |
 | `evolvesprouts_admin` | Read-write | AdminFunction, processors, bootstrap, API key rotation |
 | `evolvesprouts_app` | Read-only | HealthCheckFunction |
+| `evolvesprouts_finance_ro` | `SELECT` on `customer_payments`, `expenses`, `organizations`, `customer_invoices` (password login, no `rds_iam`) | External finance mirror via the Data API |
 
 ### Migrations
 

@@ -2575,6 +2575,8 @@ export class ApiStack extends cdk.Stack {
         DATABASE_PORT: database.cluster.clusterEndpoint.port.toString(),
         DATABASE_APP_USER_SECRET_ARN: database.appUserSecret.secretArn,
         DATABASE_ADMIN_USER_SECRET_ARN: database.adminUserSecret.secretArn,
+        DATABASE_FINANCE_READONLY_SECRET_ARN:
+          database.financeReadonlySecret.secretArn,
         SEED_FILE_PATH: "/var/task/db/seed/seed_data.sql",
         COGNITO_USER_POOL_ID: userPool.userPoolId,
         ACTIVE_COUNTRY_CODES: activeCountryCodes.valueAsString,
@@ -2583,6 +2585,7 @@ export class ApiStack extends cdk.Stack {
     database.grantSecretRead(migrationFunction);
     database.grantAppUserSecretRead(migrationFunction);
     database.grantAdminUserSecretRead(migrationFunction);
+    database.grantFinanceReadonlySecretRead(migrationFunction);
     database.grantConnect(migrationFunction, "postgres");
     migrationFunction.node.addDependency(database.cluster);
     migrationFunction.addToRolePolicy(
@@ -3751,6 +3754,7 @@ export class ApiStack extends cdk.Stack {
       [
         database.appUserSecret.secretArn,
         database.adminUserSecret.secretArn,
+        database.financeReadonlySecret.secretArn,
       ].join("|")
     );
     const migrationsForceRunId =
@@ -3814,6 +3818,12 @@ export class ApiStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, "DatabaseSecretArn", {
       value: database.secret?.secretArn ?? "",
+    });
+
+    new cdk.CfnOutput(this, "FinanceReadonlyDatabaseSecretArn", {
+      value: database.financeReadonlySecret.secretArn,
+      description:
+        "Password secret for evolvesprouts_finance_ro (Data API, SELECT on finance tables)",
     });
 
     new cdk.CfnOutput(this, "DatabaseProxyEndpoint", {

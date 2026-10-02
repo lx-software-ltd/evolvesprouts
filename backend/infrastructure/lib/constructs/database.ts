@@ -74,7 +74,8 @@ export interface DatabaseConstructProps {
  * Creates:
  * - Security groups for database and proxy
  * - Secrets Manager secret for database credentials
- * - Aurora PostgreSQL Serverless v2 cluster
+ * - Password secret for the finance read-only role (Data API)
+ * - Aurora PostgreSQL Serverless v2 cluster with the Data API enabled
  * - RDS Proxy with IAM authentication
  */
 export class DatabaseConstruct extends Construct {
@@ -88,6 +89,8 @@ export class DatabaseConstruct extends Construct {
   public readonly appUserSecret: secretsmanager.ISecret;
   /** Admin database user secret (evolvesprouts_admin). */
   public readonly adminUserSecret: secretsmanager.ISecret;
+  /** Finance mirror secret (evolvesprouts_finance_ro, password login). */
+  public readonly financeReadonlySecret: secretsmanager.ISecret;
   /** Security group for the database cluster. */
   public readonly dbSecurityGroup: ec2.ISecurityGroup;
   /** Security group for the RDS Proxy. */
@@ -100,6 +103,8 @@ export class DatabaseConstruct extends Construct {
   private readonly appUserSecretKmsKey?: kms.IKey;
   /** KMS key used to encrypt the admin user secret. */
   public readonly adminUserSecretKmsKey?: kms.IKey;
+  /** KMS key used to encrypt the finance read-only secret. */
+  private readonly financeReadonlySecretKmsKey?: kms.IKey;
 
   constructor(scope: Construct, id: string, props: DatabaseConstructProps) {
     super(scope, id);
@@ -351,6 +356,28 @@ export class DatabaseConstruct extends Construct {
     this.adminUserSecret = adminUserSecret;
     this.adminUserSecretKmsKey = adminUserSecretKmsKey;
 
+    // Password login for the external finance mirror (Aurora Data API).
+    // This secret stays off the RDS Proxy. evolvesprouts_app cannot be reused:
+    // GRANT rds_iam blocks the password login the Data API requires.
+    const financeReadonlySecret = new secretsmanager.Secret(
+      this,
+      "DbFinanceReadonlySecret",
+      {
+        secretName: name("db-finance-readonly-credentials"),
+        generateSecretString: {
+          secretStringTemplate: JSON.stringify({
+            username: "evolvesprouts_finance_ro",
+          }),
+          generateStringKey: "password",
+          excludePunctuation: true,
+          includeSpace: false,
+        },
+        ...(defaultSecretKmsKey ? { encryptionKey: defaultSecretKmsKey } : {}),
+      }
+    );
+    this.financeReadonlySecret = financeReadonlySecret;
+    this.financeReadonlySecretKmsKey = defaultSecretKmsKey;
+
     // Aurora PostgreSQL Serverless v2 cluster
     if (useExistingCluster) {
       const readerEndpoint = dbClusterReaderEndpoint ?? dbClusterEndpoint;
@@ -391,6 +418,9 @@ export class DatabaseConstruct extends Construct {
         // RDS Proxy for Lambda app connections. Setting this to true causes
         // "PAM authentication failed" errors for direct password connections.
         iamAuthentication: false,
+        // Keep on: the external finance mirror reads through the Data API,
+        // and omitting the flag would switch the endpoint off on deploy.
+        enableDataApi: true,
         // Always set storageEncrypted: true - encryption cannot be disabled
         // after cluster creation, and setting to undefined on subsequent
         // deployments would cause CloudFormation to attempt replacement.
@@ -507,6 +537,16 @@ export class DatabaseConstruct extends Construct {
     this.adminUserSecret.grantRead(fn);
     if (this.adminUserSecretKmsKey) {
       this.adminUserSecretKmsKey.grantDecrypt(fn);
+    }
+  }
+
+  /**
+   * Grant a Lambda function permission to read the finance read-only secret.
+   */
+  public grantFinanceReadonlySecretRead(fn: cdk.aws_lambda.IFunction): void {
+    this.financeReadonlySecret.grantRead(fn);
+    if (this.financeReadonlySecretKmsKey) {
+      this.financeReadonlySecretKmsKey.grantDecrypt(fn);
     }
   }
 }

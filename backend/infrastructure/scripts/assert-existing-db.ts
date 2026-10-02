@@ -69,7 +69,12 @@ function assertExistingResources(): void {
   const template = Template.fromStack(stack);
   template.resourceCountIs("AWS::RDS::DBCluster", 0);
   template.resourceCountIs("AWS::RDS::DBProxy", 0);
-  template.resourceCountIs("AWS::SecretsManager::Secret", 0);
+  // Imported credentials are not recreated. The finance read-only secret is
+  // still created so the Data API role exists in every environment.
+  template.resourceCountIs("AWS::SecretsManager::Secret", 1);
+  template.hasResourceProperties("AWS::SecretsManager::Secret", {
+    Name: "test-db-finance-readonly-credentials",
+  });
 }
 
 function assertNewResources(): void {
@@ -97,7 +102,11 @@ function assertNewResources(): void {
   const template = Template.fromStack(stack);
   template.resourceCountIs("AWS::RDS::DBCluster", 1);
   template.resourceCountIs("AWS::RDS::DBProxy", 1);
-  template.resourceCountIs("AWS::SecretsManager::Secret", 3);
+  // Master, app, admin, and finance read-only credentials.
+  template.resourceCountIs("AWS::SecretsManager::Secret", 4);
+  template.hasResourceProperties("AWS::RDS::DBCluster", {
+    EnableHttpEndpoint: true,
+  });
 }
 
 function main(): void {

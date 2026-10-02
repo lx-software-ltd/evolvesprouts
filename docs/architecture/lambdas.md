@@ -533,8 +533,15 @@ their primary responsibilities.
 - Function: EvolvesproutsMigrationFunction
 - Handler: backend/lambda/migrations/handler.py
 - Trigger: CloudFormation custom resource during deploy
-- Purpose: run Alembic migrations and optional seed SQL
+- Purpose: run Alembic migrations and optional seed SQL, then sync proxy
+  users and the password-only `evolvesprouts_finance_ro` role
 - DB access: direct cluster endpoint with password auth
+- Finance role: reads `DATABASE_FINANCE_READONLY_SECRET_ARN`
+  (`evolvesprouts-db-finance-readonly-credentials`). Creates the role with
+  `LOGIN PASSWORD` and does not grant `rds_iam`. Grants `CONNECT` on the
+  database, `USAGE` on schema `public`, and `SELECT` on `customer_payments`,
+  `expenses`, `organizations`, and `customer_invoices`. No
+  `ALTER DEFAULT PRIVILEGES` for this role.
 - Audit: DML from Alembic, seed SQL, and `_sync_active_countries` sets
   `user_id = alembic` (also syncs `geographic_areas.active` from
   `ACTIVE_COUNTRY_CODES`)
