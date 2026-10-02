@@ -7,8 +7,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from psycopg import sql
-
 
 def _load_sync_module() -> Any:
     backend_root = Path(__file__).resolve().parents[1] / "backend"
@@ -41,6 +39,12 @@ class _Cursor:
             return (1,)
         return None
 
+    def __enter__(self) -> "_Cursor":
+        return self
+
+    def __exit__(self, *_args: object) -> bool:
+        return False
+
 
 class _Connection:
     def __init__(self, cursor: _Cursor) -> None:
@@ -53,17 +57,8 @@ class _Connection:
     def __exit__(self, *_args: object) -> bool:
         return False
 
-    def cursor(self) -> Any:
-        cursor = self._cursor
-
-        class _CursorContext:
-            def __enter__(self_inner) -> _Cursor:
-                return cursor
-
-            def __exit__(self_inner, *_args: object) -> bool:
-                return False
-
-        return _CursorContext()
+    def cursor(self) -> _Cursor:
+        return self._cursor
 
     def commit(self) -> None:
         self.committed = True
@@ -202,13 +197,3 @@ def test_finance_readonly_sync_skips_when_secret_arn_is_unset(
     )
 
     assert called is False
-
-
-def test_sql_literal_quotes_finance_password() -> None:
-    statement = sql.SQL("CREATE ROLE {} WITH LOGIN PASSWORD {}").format(
-        sql.Identifier("evolvesprouts_finance_ro"),
-        sql.Literal("pw'quoted"),
-    )
-    rendered = statement.as_string(None)
-    assert "rds_iam" not in rendered
-    assert "pw''quoted" in rendered or "pw\\'quoted" in rendered

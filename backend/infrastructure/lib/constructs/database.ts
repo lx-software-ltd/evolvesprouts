@@ -418,9 +418,8 @@ export class DatabaseConstruct extends Construct {
         // RDS Proxy for Lambda app connections. Setting this to true causes
         // "PAM authentication failed" errors for direct password connections.
         iamAuthentication: false,
-        // In-place EnableHttpEndpoint update. Aurora PostgreSQL 16.4
-        // Serverless v2 supports the Data API. The flag stays on so a
-        // product deploy does not turn the endpoint off.
+        // Keep on: the external finance mirror reads through the Data API,
+        // and omitting the flag would switch the endpoint off on deploy.
         enableDataApi: true,
         // Always set storageEncrypted: true - encryption cannot be disabled
         // after cluster creation, and setting to undefined on subsequent
