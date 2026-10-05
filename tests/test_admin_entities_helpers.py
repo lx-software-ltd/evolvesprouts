@@ -11,7 +11,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import create_engine, event, select
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.exc import IntegrityError, UnsupportedCompilationError
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy.orm.attributes import instance_state
@@ -448,10 +448,14 @@ def test_tag_session_rejects_orphan_contact_tag() -> None:
 def test_sqlite_jsonb_compiler_does_not_outlive_tag_session() -> None:
     from sqlalchemy.dialects.sqlite import dialect as sqlite_dialect
 
+    # SQLAlchemy 2.1 compiles PostgreSQL JSONB on SQLite as JSONB. The tag
+    # session installs a temporary compiler that renders JSON, and must remove
+    # it so later compiles use the native rendering again.
+    assert str(JSONB().compile(dialect=sqlite_dialect())) == "JSONB"
     with _tag_session() as session:
         assert session.get(Tag, uuid4()) is None
-    with pytest.raises(UnsupportedCompilationError):
-        JSONB().compile(dialect=sqlite_dialect())
+        assert str(JSONB().compile(dialect=sqlite_dialect())) == "JSON"
+    assert str(JSONB().compile(dialect=sqlite_dialect())) == "JSONB"
 
 
 def test_require_assignable_tag_raises_for_archived() -> None:

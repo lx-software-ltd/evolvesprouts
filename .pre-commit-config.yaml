@@ -21,9 +21,9 @@ repos:
       - id: mypy
         files: ^backend/src/
         additional_dependencies:
-          # Pin the 2.x/2.0 series used by backend/pyproject.toml. An unpinned
-          # sqlalchemy>=2.0 now resolves to 2.1.x, which breaks mypy 1.8.0
-          # (invalid untyped-decorator codes, Select[] mismatches, crash).
+          # mypy 1.8.0 cannot type-check SQLAlchemy 2.1 (invalid
+          # untyped-decorator codes, Select[] mismatches, crash). Keep this
+          # hook on the 2.0 series even though the app depends on 2.1.
           - pydantic>=2.0,<3
           - sqlalchemy>=2.0,<2.1
           - types-boto3

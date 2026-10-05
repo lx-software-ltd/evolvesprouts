@@ -60,9 +60,11 @@ def test_invoice_list_newest_applies_cursor_status_currency_and_search() -> None
     assert "customer_invoices.currency = 'HKD'" in sql
     assert "customer_invoices.created_at <" in sql
     assert str(cursor_id) in sql
-    # ``%`` and ``_`` in user input are escaped so they match literally
-    # (the psycopg dialect doubles ``%`` and ``\\`` when rendering literals).
-    assert "ILIKE '%%50\\\\%%\\\\_off%%' ESCAPE '\\\\'" in sql
+    # ``%`` and ``_`` in user input are escaped so they match literally.
+    # psycopg still doubles ``%`` in literal rendering. SQLAlchemy 2.1's
+    # PostgreSQL dialect follows standard_conforming_strings, so a backslash
+    # is no longer doubled in the rendered literal.
+    assert "ILIKE '%%50\\%%\\_off%%' ESCAPE '\\'" in sql
 
 
 @pytest.mark.parametrize("settlement", INVOICE_SETTLEMENT_FILTERS)
