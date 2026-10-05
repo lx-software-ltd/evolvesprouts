@@ -1,5 +1,5 @@
 alembic==1.20.0
-boto3==1.43.98
+boto3==1.43.103
 pyjwt[crypto]==2.15.0
 pydantic==2.13.5
 psycopg[binary]==3.3.6
