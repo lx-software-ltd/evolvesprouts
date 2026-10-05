@@ -17,13 +17,13 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "aws-cdk-lib": "^2.270.0",
+    "aws-cdk-lib": "^2.271.0",
     "constructs": "^10.8.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "@types/node": "^25.9.8",
-    "aws-cdk": "^2.1142.0",
+    "aws-cdk": "^2.1143.0",
     "eslint": "^9.39.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
