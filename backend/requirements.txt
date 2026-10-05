@@ -3,7 +3,7 @@ boto3==1.43.103
 pyjwt[crypto]==2.15.0
 pydantic==2.13.5
 psycopg[binary]==3.3.6
-sqlalchemy==2.0.54
+sqlalchemy==2.1.1
 phonenumbers==9.0.40
 reportlab==5.0.1
 pypdf==6.19.0
