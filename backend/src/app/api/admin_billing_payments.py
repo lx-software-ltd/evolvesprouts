@@ -69,6 +69,22 @@ def _enrollment_unlinked_or_cancelled(
     return status == EnrollmentStatus.CANCELLED
 
 
+def _enrollment_allows_orphan_delete(
+    payment: CustomerPayment,
+    enrollment_status_by_id: dict[UUID, EnrollmentStatus],
+) -> bool:
+    """Pending rows stay deletable while the enrollment is still active.
+
+    Free and zero-amount rows stay blocked until the enrollment is unlinked
+    or cancelled, so a succeeded free booking is not removed by accident.
+    """
+    if payment.status == BillingPaymentStatus.PENDING:
+        return True
+    return _enrollment_unlinked_or_cancelled(
+        payment.enrollment_id, enrollment_status_by_id
+    )
+
+
 def _batch_orphan_payment_deletable(
     session: Session, rows: list[CustomerPayment]
 ) -> dict[UUID, bool]:
@@ -89,9 +105,7 @@ def _batch_orphan_payment_deletable(
         ok = (
             p.direction == BillingPaymentDirection.INBOUND
             and _pending_or_free_payment(p)
-            and _enrollment_unlinked_or_cancelled(
-                p.enrollment_id, enrollment_status_by_id
-            )
+            and _enrollment_allows_orphan_delete(p, enrollment_status_by_id)
             and p.id not in allocation_pay_ids
             and p.id not in receipt_pay_ids
             and p.id not in refund_parent_ids
@@ -108,7 +122,7 @@ def _validate_orphan_delete(session: Session, p: CustomerPayment) -> None:
             "Only pending inbound or free ($0) payments can be deleted",
             field="paymentId",
         )
-    if p.enrollment_id is not None:
+    if p.status != BillingPaymentStatus.PENDING and p.enrollment_id is not None:
         en = session.get(Enrollment, p.enrollment_id)
         if en is not None and en.status != EnrollmentStatus.CANCELLED:
             raise ValidationError(

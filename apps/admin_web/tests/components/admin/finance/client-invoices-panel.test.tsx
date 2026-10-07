@@ -1103,9 +1103,10 @@ describe('ClientInvoicesPanel', () => {
           id: payId,
           direction: 'inbound',
           status: 'pending',
-          method: 'bank_transfer',
+          method: 'fps',
           amount: '10',
           currency: 'HKD',
+          enrollmentId: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
           createdAt: '2026-01-01T00:00:00+00:00',
           orphanPaymentDeletable: true,
         },
@@ -1121,6 +1122,9 @@ describe('ClientInvoicesPanel', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /delete customer payment/i })).toBeInTheDocument();
     });
+    expect(
+      screen.getByText(/Pending payments can be deleted even when they are linked to an enrollment/i),
+    ).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: /^delete payment$/i }));
 

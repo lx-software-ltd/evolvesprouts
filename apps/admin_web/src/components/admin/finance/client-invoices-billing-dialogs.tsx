@@ -125,7 +125,7 @@ export function ClientInvoicesBillingDialogs({
       <ConfirmDialog
         open={deletePaymentDialogOpen}
         title='Delete customer payment'
-        description='Permanently removes this payment row. Allowed only when the server marks the row as deletable (pending or free payment, no active enrollment link, and no allocations or receipt).'
+        description='Permanently removes this payment row. Pending payments can be deleted even when they are linked to an enrollment. Free or zero-amount payments still require the enrollment to be unlinked or cancelled. The payment must have no allocations, receipt, or refunds.'
         confirmLabel='Delete payment'
         cancelLabel='Cancel'
         variant='danger'
