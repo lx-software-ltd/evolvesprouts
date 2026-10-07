@@ -7,7 +7,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any, Callable, Mapping
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -42,6 +42,33 @@ ISSUE_PENDING_PAYMENT_METHOD = "fps"
 logger = get_logger(__name__)
 
 
+def _invoice_has_succeeded_stripe_payment(
+    session: Session, enrollment_ids: list[UUID]
+) -> bool:
+    """True when an enrollment on the invoice already has a succeeded Stripe charge.
+
+    The issue-time stub is one inbound row for the whole invoice total. Creating
+    it would duplicate a Stripe payment already recorded for that enrollment
+    (public booking or a manual ``stripe_card`` row).
+    """
+    if not enrollment_ids:
+        return False
+    found = session.execute(
+        select(CustomerPayment.id)
+        .where(
+            CustomerPayment.enrollment_id.in_(enrollment_ids),
+            CustomerPayment.direction == BillingPaymentDirection.INBOUND,
+            CustomerPayment.status == BillingPaymentStatus.SUCCEEDED,
+            or_(
+                CustomerPayment.stripe_payment_intent_id.is_not(None),
+                CustomerPayment.method == "stripe_card",
+            ),
+        )
+        .limit(1)
+    ).scalar_one_or_none()
+    return found is not None
+
+
 def create_pending_payment_for_issued_invoice(
     session: Session,
     inv: CustomerInvoice,
@@ -51,7 +78,8 @@ def create_pending_payment_for_issued_invoice(
 ) -> CustomerPayment | None:
     """Create a pending inbound payment stub after invoice issue.
 
-    Skips zero-total invoices. Does not allocate to the invoice. Sets
+    Skips zero-total invoices and invoices whose enrollments already have a
+    succeeded Stripe payment. Does not allocate to the invoice. Sets
     ``enrollment_id`` only when the invoice has exactly one enrollment line;
     customized and multi-enrollment invoices leave it unset.
     """
@@ -59,6 +87,8 @@ def create_pending_payment_for_issued_invoice(
         return None
 
     enrollment_ids = distinct_enrollment_ids_on_invoice(session, inv.id)
+    if _invoice_has_succeeded_stripe_payment(session, enrollment_ids):
+        return None
     enrollment_id = enrollment_ids[0] if len(enrollment_ids) == 1 else None
 
     contact_id: UUID | None = None

@@ -5842,7 +5842,7 @@ export interface paths {
         post?: never;
         /**
          * Delete orphan inbound customer payment
-         * @description Removes an inbound payment row only when it is safe cleanup: the payment must be pending **or** free ($0 method or zero amount), not linked to an active enrollment (enrollment id null, enrollment cancelled, or enrollment row missing), and must have no invoice allocations, no customer receipt row, and no refund rows pointing at it.
+         * @description Removes an inbound payment row only when it is safe cleanup. Pending payments may be deleted even when linked to an enrollment that is not cancelled. Free ($0 method) or zero-amount payments may be deleted only when the enrollment id is null, the enrollment is cancelled, or the enrollment row is missing. The payment must have no invoice allocations, no customer receipt row, and no refund rows pointing at it.
          */
         delete: {
             parameters: {
@@ -6247,7 +6247,7 @@ export interface paths {
         put?: never;
         /**
          * Issue invoice (assign number, PDF hash)
-         * @description Issues a draft invoice (number, snapshot dates, PDF). For positive-total invoices, also creates one pending inbound `customer_payments` row with amount and currency copied from the invoice and method `fps`. `enrollment_id` is set only when the invoice has exactly one enrollment line; customized and multi-enrollment invoices leave it unset. Zero-total invoices skip payment creation (`paymentId` is null). The payment is not allocated at issue time.
+         * @description Issues a draft invoice (number, snapshot dates, PDF). For positive-total invoices, also creates one pending inbound `customer_payments` row with amount and currency copied from the invoice and method `fps`, unless a succeeded inbound Stripe payment already exists for an enrollment on the invoice (`method` `stripe_card` or a Stripe payment intent id). `enrollment_id` is set only when the invoice has exactly one enrollment line; customized and multi-enrollment invoices leave it unset. Zero-total invoices and invoices that already have that Stripe payment skip payment creation (`paymentId` is null). The payment is not allocated at issue time.
          */
         post: {
             parameters: {
@@ -6273,7 +6273,7 @@ export interface paths {
                             issuedPdfSha256?: string | null;
                             /**
                              * Format: uuid
-                             * @description Pending inbound customer payment created at issue. Null for zero-total invoices.
+                             * @description Pending inbound customer payment created at issue. Null for zero-total invoices and when a succeeded Stripe payment already exists for an enrollment on the invoice.
                              */
                             paymentId?: string | null;
                         };
@@ -9093,7 +9093,7 @@ export interface components {
             party: string;
             /** @description Remaining payment amount not allocated to invoices (payment currency). Included on all CustomerPaymentSummary responses (list, detail, create, confirm, patch). */
             unappliedAmount: string;
-            /** @description True when DELETE /v1/admin/billing/payments/{id} is allowed for this row (pending or free/zero inbound; enrollment unlinked or cancelled; no allocations, receipt, or refund children). */
+            /** @description True when DELETE /v1/admin/billing/payments/{id} is allowed for this row. Pending inbound payments qualify even when linked to an active enrollment. Free or zero-amount payments qualify only when the enrollment is unlinked or cancelled. Allocations, a receipt, or refund children always block delete. */
             orphanPaymentDeletable: boolean;
             /** Format: date-time */
             succeededAt?: string | null;

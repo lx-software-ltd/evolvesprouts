@@ -1010,6 +1010,7 @@ def test_create_pending_payment_for_issued_invoice_links_single_enrollment(
         obj.id = uuid4()
 
     session.add.side_effect = _add
+    session.execute.return_value.scalar_one_or_none.return_value = None
     monkeypatch.setattr(
         admin_billing_payment_create_mod,
         "distinct_enrollment_ids_on_invoice",
@@ -1091,6 +1092,7 @@ def test_create_pending_payment_for_issued_invoice_multi_enrollment_unsets_enrol
     )
     session = MagicMock()
     session.add.side_effect = lambda obj: setattr(obj, "id", uuid4())
+    session.execute.return_value.scalar_one_or_none.return_value = None
     monkeypatch.setattr(
         admin_billing_payment_create_mod,
         "distinct_enrollment_ids_on_invoice",
@@ -1112,6 +1114,33 @@ def test_create_pending_payment_for_issued_invoice_multi_enrollment_unsets_enrol
     assert pay.enrollment_id is None
     assert pay.contact_id is None
     assert pay.method == "fps"
+
+
+def test_create_pending_payment_for_issued_invoice_skips_existing_stripe_payment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    en_id = uuid4()
+    inv = _issued_invoice_for_payment_stub(
+        total=Decimal("250"),
+        bill_to_contact_id=uuid4(),
+    )
+    session = MagicMock()
+    session.execute.return_value.scalar_one_or_none.return_value = uuid4()
+    monkeypatch.setattr(
+        admin_billing_payment_create_mod,
+        "distinct_enrollment_ids_on_invoice",
+        lambda _s, _i: [en_id],
+    )
+
+    pay = admin_billing_payment_create_mod.create_pending_payment_for_issued_invoice(
+        session,
+        inv,
+        user_sub="user-1",
+        request_id=None,  # type: ignore[arg-type]
+    )
+    assert pay is None
+    session.add.assert_not_called()
+    session.execute.assert_called_once()
 
 
 def test_create_pending_payment_for_issued_invoice_skips_zero_total(

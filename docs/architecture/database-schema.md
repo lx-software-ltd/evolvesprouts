@@ -914,10 +914,14 @@ Migration `0055_customer_billing_ar` introduces:
 Issuing a **positive-total** invoice (`POST /v1/admin/billing/invoices/{id}/issue`) also
 inserts one pending inbound `customer_payments` row with the invoice `total` and `currency`,
 method `fps`, and `enrollment_id` only when the invoice has exactly one enrollment line
-(customized and multi-enrollment invoices leave it unset). That stub is **not** allocated
-at issue time, so settlement (`amount_allocated` / `paid_at`) stays unchanged until staff
-allocate later. Zero-total issues do not create a payment. Voiding the invoice leaves the
-pending stub in place (eligible for orphan delete while still pending and unallocated).
+(customized and multi-enrollment invoices leave it unset), unless a succeeded inbound
+Stripe payment already exists for an enrollment on the invoice (`stripe_card` or a
+Stripe payment intent id). That stub is **not** allocated at issue time, so settlement
+(`amount_allocated` / `paid_at`) stays unchanged until staff allocate later. Zero-total
+issues and Stripe-covered issues do not create a payment. Voiding the invoice leaves any
+pending stub in place. Pending stubs can be deleted while they have no allocations,
+receipt, or refunds, including when `enrollment_id` still points at an active enrollment.
+Free or zero-amount payments stay deletable only when the enrollment is unlinked or cancelled.
 
 For offline inbound payments, the `customer_payments` row may be **pending** until staff
 confirm the payment via `POST /v1/admin/billing/payments/{id}/confirm` or an equivalent succeeded path;

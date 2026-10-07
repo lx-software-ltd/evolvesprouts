@@ -2439,3 +2439,110 @@ def test_refund_created_audit_includes_reconciliation_fields(
     assert nv["contact_id"] is None
     assert nv["external_reference"] is None
     assert "succeeded_at" in nv
+
+
+class _OrphanDeleteRepo:
+    """Stub linkage lookups for orphan-delete eligibility tests."""
+
+    allocations: set[Any] = set()
+    receipts: set[Any] = set()
+    refunds: set[Any] = set()
+    enrollment_status: dict[Any, EnrollmentStatus] = {}
+
+    def __init__(self, _session: Any) -> None:
+        pass
+
+    def payment_ids_with_allocations(self, _ids: list[Any]) -> set[Any]:
+        return set(self.allocations)
+
+    def payment_ids_with_receipts(self, _ids: list[Any]) -> set[Any]:
+        return set(self.receipts)
+
+    def refunded_payment_ids(self, _ids: list[Any]) -> set[Any]:
+        return set(self.refunds)
+
+    def enrollment_status_by_id(self, _ids: list[Any]) -> dict[Any, EnrollmentStatus]:
+        return dict(self.enrollment_status)
+
+    def has_allocations(self, payment_id: Any) -> bool:
+        return payment_id in self.allocations
+
+    def has_receipt(self, payment_id: Any) -> bool:
+        return payment_id in self.receipts
+
+    def has_refunds(self, payment_id: Any) -> bool:
+        return payment_id in self.refunds
+
+
+def _pending_payment(*, enrollment_id: Any) -> SimpleNamespace:
+    return SimpleNamespace(
+        id=uuid4(),
+        direction=BillingPaymentDirection.INBOUND,
+        status=BillingPaymentStatus.PENDING,
+        method="fps",
+        amount=Decimal("100"),
+        enrollment_id=enrollment_id,
+    )
+
+
+def test_pending_payment_on_active_enrollment_is_deletable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    en_id = uuid4()
+    pay = _pending_payment(enrollment_id=en_id)
+    repo = _OrphanDeleteRepo
+    repo.allocations = set()
+    repo.receipts = set()
+    repo.refunds = set()
+    repo.enrollment_status = {en_id: EnrollmentStatus.REGISTERED}
+    monkeypatch.setattr(admin_billing_payments_mod, "CustomerPaymentRepository", repo)
+
+    out = admin_billing_payments_mod._batch_orphan_payment_deletable(MagicMock(), [pay])
+    assert out[pay.id] is True
+
+    session = MagicMock()
+    admin_billing_payments_mod._validate_orphan_delete(session, pay)
+    session.get.assert_not_called()
+
+
+def test_pending_payment_with_allocation_is_not_deletable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pay = _pending_payment(enrollment_id=None)
+    repo = _OrphanDeleteRepo
+    repo.allocations = {pay.id}
+    repo.receipts = set()
+    repo.refunds = set()
+    repo.enrollment_status = {}
+    monkeypatch.setattr(admin_billing_payments_mod, "CustomerPaymentRepository", repo)
+
+    out = admin_billing_payments_mod._batch_orphan_payment_deletable(MagicMock(), [pay])
+    assert out[pay.id] is False
+
+
+def test_free_payment_on_active_enrollment_is_not_deletable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    en_id = uuid4()
+    pay = SimpleNamespace(
+        id=uuid4(),
+        direction=BillingPaymentDirection.INBOUND,
+        status=BillingPaymentStatus.SUCCEEDED,
+        method="free",
+        amount=Decimal("0"),
+        enrollment_id=en_id,
+    )
+    repo = _OrphanDeleteRepo
+    repo.allocations = set()
+    repo.receipts = set()
+    repo.refunds = set()
+    repo.enrollment_status = {en_id: EnrollmentStatus.CONFIRMED}
+    monkeypatch.setattr(admin_billing_payments_mod, "CustomerPaymentRepository", repo)
+
+    out = admin_billing_payments_mod._batch_orphan_payment_deletable(MagicMock(), [pay])
+    assert out[pay.id] is False
+
+    session = MagicMock()
+    session.get.return_value = SimpleNamespace(status=EnrollmentStatus.CONFIRMED)
+    with pytest.raises(ValidationError, match="not cancelled"):
+        admin_billing_payments_mod._validate_orphan_delete(session, pay)
