@@ -234,7 +234,6 @@ describe('services tables value formatting', () => {
           onLoadMore={vi.fn()}
           onDuplicateInstance={vi.fn()}
           onDeleteInstance={vi.fn()}
-          serviceFilter={{ value: '', options: [], onChange: vi.fn() }}
           serviceTypeFilter={{ value: '', onChange: vi.fn() }}
           statusFilter={{ value: '', onChange: vi.fn() }}
           searchFilter={{ value: '', onChange: vi.fn() }}
@@ -290,8 +289,7 @@ describe('services tables value formatting', () => {
         onLoadMore={vi.fn()}
         onDuplicateInstance={vi.fn()}
         onDeleteInstance={vi.fn()}
-        serviceFilter={{ value: '', options: [], onChange: vi.fn() }}
-        serviceTypeFilter={{ value: '', onChange: vi.fn() }}
+          serviceTypeFilter={{ value: '', onChange: vi.fn() }}
         statusFilter={{ value: '', onChange: vi.fn() }}
         searchFilter={{ value: '', onChange: vi.fn() }}
       />
@@ -344,8 +342,7 @@ describe('services tables value formatting', () => {
         onLoadMore={vi.fn()}
         onDuplicateInstance={vi.fn()}
         onDeleteInstance={vi.fn()}
-        serviceFilter={{ value: '', options: [], onChange: vi.fn() }}
-        serviceTypeFilter={{ value: '', onChange: vi.fn() }}
+          serviceTypeFilter={{ value: '', onChange: vi.fn() }}
         statusFilter={{ value: '', onChange: vi.fn() }}
         searchFilter={{ value: '', onChange: vi.fn() }}
       />

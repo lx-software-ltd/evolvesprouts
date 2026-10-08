@@ -60,7 +60,7 @@ export function ClientInvoicesInvoicesTable({
   refund,
 }: ClientInvoicesInvoicesTableProps) {
   const { invoiceSearchFilterId, invoiceSettlementFilterId } = ids;
-  const { currencyOptions, defaultCurrency } = currency;
+  const { defaultCurrency } = currency;
   const { busyAction, editorBusy } = busy;
   const {
     expanded,
@@ -73,8 +73,6 @@ export function ClientInvoicesInvoicesTable({
     setInvoiceStatusFilter,
     invoiceSettlementFilter,
     setInvoiceSettlementFilter,
-    invoiceCurrencyFilter,
-    setInvoiceCurrencyFilter,
     invoiceSearchInput,
     setInvoiceSearchInput,
     loadMoreInvoices,
@@ -146,20 +144,6 @@ export function ClientInvoicesInvoicesTable({
                 <option value='partially_paid'>Partially paid</option>
                 <option value='paid'>Paid</option>
                 <option value='no_charge'>No charge</option>
-              </Select>
-            </AdminFilterField>
-            <AdminFilterField label='Currency' htmlFor='billing-invoice-currency-filter' className='sm:basis-44'>
-              <Select
-                id='billing-invoice-currency-filter'
-                value={invoiceCurrencyFilter}
-                onChange={(e) => setInvoiceCurrencyFilter(e.target.value)}
-              >
-                <option value=''>All currencies</option>
-                {currencyOptions.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
               </Select>
             </AdminFilterField>
           </AdminFilterBar>
