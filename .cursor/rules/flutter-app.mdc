@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Flutter
 
-- Separate code into `lib/models/`, `lib/viewmodels/`, `lib/views/widgets/`, `lib/views/screens/`, `lib/services/`, and `lib/utils/`. [why: screens imported repositories directly]
-- Prefer `StatelessWidget` and `const` constructors. Use Riverpod and the shared `ThemeData`. [why: local state and one-off themes diverged]
-- Name files and directories in snake_case, types in UpperCamelCase, and members in lowerCamelCase. [why: generated and hand-written files used different schemes]
-- Order imports as `dart:*`, then `package:*`, then project-relative imports. [why: analyzer import order]
+- Separate code into `lib/models/`, `lib/viewmodels/`, `lib/views/widgets/`, `lib/views/screens/`, `lib/services/`, and `lib/utils/`. [why: convention]
+- Prefer `StatelessWidget` and `const` constructors. Use Riverpod and the shared `ThemeData`. [why: convention]
+- Name files and directories in snake_case, types in UpperCamelCase, and members in lowerCamelCase. [why: convention]
+- Order imports as `dart:*`, then `package:*`, then project-relative imports. [why: convention]

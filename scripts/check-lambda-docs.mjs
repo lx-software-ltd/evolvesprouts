@@ -69,11 +69,18 @@ const knownPrefixedIds = new Set([
 ]);
 
 const constructIds = new Set();
-for (const match of cdkText.matchAll(/createPythonFunction\(\s*"([A-Za-z0-9]+)"/g)) {
-  constructIds.add(match[1]);
-}
-for (const match of cdkText.matchAll(/\.create\(\s*"([A-Za-z0-9]+)"/g)) {
-  constructIds.add(match[1]);
+const constructIdPatterns = [
+  /createPythonFunction\(\s*"([A-Za-z0-9]+)"/g,
+  /\.create\(\s*"([A-Za-z0-9]+)"/g,
+  /new\s+PythonLambda\(\s*[^,\n]+,\s*"([A-Za-z0-9]+)"/g,
+  /new\s+lambda\.Function\(\s*[^,\n]+,\s*"([A-Za-z0-9]+)"/g,
+  /new\s+lambda\.DockerImageFunction\(\s*[^,\n]+,\s*"([A-Za-z0-9]+)"/g,
+  /new\s+NodejsFunction\(\s*[^,\n]+,\s*"([A-Za-z0-9]+)"/g,
+];
+for (const pattern of constructIdPatterns) {
+  for (const match of cdkText.matchAll(pattern)) {
+    constructIds.add(match[1]);
+  }
 }
 for (const constructId of constructIds) {
   if (/evolvesprouts/i.test(constructId) && !knownPrefixedIds.has(constructId)) {

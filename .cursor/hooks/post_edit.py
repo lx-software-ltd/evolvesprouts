@@ -24,15 +24,43 @@ def _tool_input(payload: dict) -> dict:
 
 
 def _edited_path(payload: dict) -> Path | None:
+    """Resolve the edited file from the documented hook payloads.
+
+    ``afterFileEdit`` sends a top-level ``file_path``. ``postToolUse`` for the
+    ``Write`` tool sends ``tool_input.path``. ``target_notebook`` covers the
+    notebook edit tool when that payload is forwarded on ``afterFileEdit``.
+    """
+    candidates: list[str] = []
+    top_level = payload.get("file_path")
+    if isinstance(top_level, str) and top_level:
+        candidates.append(top_level)
     raw = _tool_input(payload)
-    candidate = raw.get("path") or raw.get("file_path") or ""
-    if not candidate:
+    for key in ("path", "file_path", "target_notebook"):
+        value = raw.get(key)
+        if isinstance(value, str) and value:
+            candidates.append(value)
+    if not candidates:
         return None
-    path = Path(str(candidate))
+    path = Path(candidates[0])
     if not path.is_absolute():
         workspace = payload.get("cwd") or Path.cwd()
         path = Path(str(workspace)) / path
     return path
+
+
+def _ruff_argv() -> list[str] | None:
+    found = shutil.which("ruff")
+    if found:
+        return [found]
+    probe = subprocess.run(
+        [sys.executable, "-m", "ruff", "--version"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if probe.returncode == 0:
+        return [sys.executable, "-m", "ruff"]
+    return None
 
 
 def _digest(path: Path) -> str:
@@ -62,11 +90,14 @@ def format_and_lint(path: Path) -> str:
     before = _digest(path)
     notes: list[str] = []
     if path.suffix == ".py":
-        ruff = shutil.which("ruff")
+        ruff = _ruff_argv()
         if ruff is None:
-            return ""
-        _run([ruff, "format", str(path)])
-        check = _run([ruff, "check", str(path)])
+            return (
+                "Ruff is not installed, so this Python edit was not formatted. "
+                "Install it with python3 -m pip install 'ruff>=0.13.0'."
+            )
+        _run([*ruff, "format", str(path)])
+        check = _run([*ruff, "check", str(path)])
         if check.returncode != 0:
             notes.append((check.stdout or check.stderr).strip())
     else:

@@ -13,6 +13,7 @@ Plan in chat and wait for explicit approval before any write. A human pairs on t
 - `backend/lambda/authorizers/**`
 - `backend/infrastructure/**`
 - `.github/workflows/deploy-*.yml`
+- `.github/workflows/verify-rulesets.yml`
 - `scripts/check-pii.sh`, `scripts/check_pii.py`, and `scripts/pii-denylist.sha256`
 
 ## Yellow

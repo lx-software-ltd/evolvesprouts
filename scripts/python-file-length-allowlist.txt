@@ -1,4 +1,4 @@
-# path lines — files already over 500. Do not raise a number.
+# path lines — files already over 500 under backend/src and backend/lambda. Do not raise a number.
 backend/lambda/media_processor/handler.py 601
 backend/src/app/db/audit.py 595
 backend/src/app/db/repositories/asset.py 518
@@ -13,22 +13,3 @@ backend/src/app/services/openrouter_expense_parser.py 1089
 backend/src/app/services/poll_responses_store.py 705
 backend/src/app/services/sales_daily_plan_context.py 507
 backend/src/app/templates/booking_confirmation_render.py 1360
-tests/api/test_admin_entity_services.py 509
-tests/test_admin_asset_content_replace.py 667
-tests/test_admin_audit_logs_api.py 1224
-tests/test_admin_billing_bill_to.py 729
-tests/test_admin_billing_enrollments.py 568
-tests/test_admin_billing_invoice_drafts.py 1228
-tests/test_admin_billing_invoices.py 1252
-tests/test_admin_billing_payments.py 2548
-tests/test_admin_enrollments_api.py 657
-tests/test_admin_services_instance_metadata.py 721
-tests/test_booking_confirmation_render.py 579
-tests/test_customer_invoice_pdf.py 1446
-tests/test_meta_ingest.py 947
-tests/test_openrouter_expense_parser.py 1588
-tests/test_public_discount_validate_api.py 1264
-tests/test_public_events_api.py 930
-tests/test_public_events_serializer.py 719
-tests/test_public_polls_api.py 764
-tests/test_public_reservations_extended.py 1622

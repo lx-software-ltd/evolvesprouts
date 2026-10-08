@@ -2,6 +2,7 @@ import * as cdk from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 
 import { ApiStack } from "../lib/api-stack";
+import { assertApiStackInvariants } from "./stack-invariants.test";
 
 function synthApiTemplate(): Template {
   const app = new cdk.App();
@@ -587,37 +588,6 @@ function assertFinanceReadonlyDataApi(template: Template): void {
   }
 }
 
-const SECRET_NAME = /^evolvesprouts-[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-function assertExplicitSecretNames(template: Template): void {
-  const secrets = template.findResources("AWS::SecretsManager::Secret");
-  const entries = Object.entries(secrets);
-  if (entries.length === 0) {
-    throw new Error("Expected at least one Secrets Manager secret");
-  }
-  for (const [logicalId, resource] of entries) {
-    const name = (resource.Properties ?? {}).Name;
-    if (typeof name !== "string" || !SECRET_NAME.test(name)) {
-      throw new Error(
-        `Secret ${logicalId} must set secretName to evolvesprouts-<kebab-case>. Found ${JSON.stringify(name)}`,
-      );
-    }
-  }
-}
-
-function assertNoWildcardCors(template: Template): void {
-  const serialized = JSON.stringify(template.toJSON());
-  if (/"AllowOrigins"\s*:\s*\[[^\]]*"\*"\s*\]/.test(serialized)) {
-    throw new Error("API Gateway AllowOrigins must not include *");
-  }
-  if (/"Access-Control-Allow-Origin"\s*:\s*"'\*'"/.test(serialized)) {
-    throw new Error("Access-Control-Allow-Origin must not be *");
-  }
-  if (/"Access-Control-Allow-Origin"\s*:\s*"\*"/.test(serialized)) {
-    throw new Error("Access-Control-Allow-Origin must not be *");
-  }
-}
-
 function main(): void {
   const app = new cdk.App();
   const stack = new ApiStack(app, "TestApi", {
@@ -637,8 +607,7 @@ function main(): void {
   assertSalesDailyPlanSchedule(stack);
   assertInboundInvoiceSharesReceiptRuleSet(template);
   assertFinanceReadonlyDataApi(template);
-  assertExplicitSecretNames(template);
-  assertNoWildcardCors(template);
+  assertApiStackInvariants(stack, template);
 
   console.log("api-stack API Gateway stage cache assertions passed.");
 }

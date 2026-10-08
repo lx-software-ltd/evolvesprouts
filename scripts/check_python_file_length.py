@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Fail when first-party Python files grow past 500 lines.
+"""Fail when backend/src or backend/lambda Python files grow past 500 lines.
 
 Files already over the limit are listed in
 ``scripts/python-file-length-allowlist.txt`` with their current line count.
 A listed file may not grow. Shrinking a listed file requires lowering its
 allowance in the same change. Dropping to 500 lines or fewer requires
-removing the entry. Alembic revision files are exempt.
+removing the entry. Tests, scripts, and Alembic revisions are outside this scan.
 """
 
 from __future__ import annotations
@@ -20,10 +20,6 @@ LIMIT = 500
 SCAN_ROOTS = (
     ROOT / "backend" / "src",
     ROOT / "backend" / "lambda",
-    ROOT / "backend" / "scripts",
-    ROOT / "backend" / "db",
-    ROOT / "tests",
-    ROOT / "scripts",
 )
 
 

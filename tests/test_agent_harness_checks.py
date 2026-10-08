@@ -106,3 +106,65 @@ def test_ruleset_evaluator_rejects_a_weak_main_ruleset() -> None:
     )
     assert any("approving review" in error for error in errors)
     assert verifier.evaluate(rulesets=[], legacy_protection=None, legacy_tags=None)
+
+
+def test_legacy_protection_forbidden_does_not_abort_ruleset_checks() -> None:
+    verifier = _load(
+        "verify_github_rulesets", ROOT / "scripts" / "verify_github_rulesets.py"
+    )
+    assert verifier.legacy_read_is_absent(
+        "gh api repos/example/branches/main/protection failed: HTTP 403"
+    )
+    assert verifier.legacy_read_is_absent("Not Found")
+    assert not verifier.legacy_read_is_absent("HTTP 500")
+    disabled = {
+        "name": "main-protection",
+        "target": "branch",
+        "enforcement": "disabled",
+        "conditions": {"ref_name": {"include": ["refs/heads/main"]}},
+        "rules": [{"type": "deletion"}, {"type": "non_fast_forward"}],
+    }
+    tags = {
+        "name": "release-tags",
+        "target": "tag",
+        "enforcement": "active",
+        "conditions": {"ref_name": {"include": ["refs/tags/v*"]}},
+        "rules": [{"type": "deletion"}],
+    }
+    errors = verifier.evaluate(
+        rulesets=[disabled, tags], legacy_protection=None, legacy_tags=None
+    )
+    assert errors == ["No active ruleset targets main."]
+
+
+def test_pytest_coverage_floor_is_enforced_in_ci() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "test.yml").read_text(encoding="utf-8")
+    assert "--cov-fail-under=70" in workflow
+    pyproject = (ROOT / "backend" / "pyproject.toml").read_text(encoding="utf-8")
+    assert "fail_under =" not in pyproject
+
+
+def test_python_length_ratchet_scans_backend_source_only() -> None:
+    checker = _load(
+        "check_python_file_length", ROOT / "scripts" / "check_python_file_length.py"
+    )
+    roots = {path.relative_to(ROOT).as_posix() for path in checker.SCAN_ROOTS}
+    assert roots == {"backend/src", "backend/lambda"}
+
+
+def test_post_edit_reads_documented_hook_paths() -> None:
+    hook = _load("post_edit", ROOT / ".cursor" / "hooks" / "post_edit.py")
+    from_edit = hook._edited_path({"file_path": "/tmp/example.py"})
+    assert from_edit == hook.Path("/tmp/example.py")
+    from_write = hook._edited_path(
+        {"tool_input": {"path": "apps/admin_web/src/app/page.tsx"}, "cwd": "/workspace"}
+    )
+    assert from_write == hook.Path("/workspace/apps/admin_web/src/app/page.tsx")
+
+
+def test_hooks_use_documented_events() -> None:
+    hooks = (ROOT / ".cursor" / "hooks.json").read_text(encoding="utf-8")
+    assert '"afterFileEdit"' in hooks
+    assert '"matcher": "Write"' in hooks
+    assert "StrReplace" not in hooks
+    assert "guard_shell.sh" in hooks

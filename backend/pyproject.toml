@@ -60,7 +60,7 @@ source = ["app"]
 branch = false
 
 [tool.coverage.report]
-# Floor is one point under the measured suite so coverage cannot regress.
-fail_under = 70
+# pytest-cov does not read fail_under. The gate is --cov-fail-under=70
+# on the pytest invocation in .github/workflows/test.yml.
 show_missing = true
 skip_empty = true

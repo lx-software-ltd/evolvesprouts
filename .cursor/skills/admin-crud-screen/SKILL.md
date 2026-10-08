@@ -64,7 +64,7 @@ Any button that starts a request uses `Button` with `loading`. The default loadi
 
 ## Operations
 
-`AdminRowActions` renders icon-only controls of equal size, with a border, a white background, and a tooltip. More than two actions: the first stays inline and the rest go in the overflow menu. Destructive actions use the `danger` tone and still confirm.
+`AdminRowActions` renders `AdminIconButton` and `AdminIconLink` controls. Every control is the same size, with a border, a white background, and a tooltip. More than two actions: the first stays inline and the rest go in the overflow menu. Destructive actions use the `danger` tone and still confirm.
 
 ## Done
 

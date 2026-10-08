@@ -16,6 +16,8 @@ Run the narrowest command that exercises the edit, then the area lint.
 
 A UI behavior change is verified in the browser (click, type, submit, and the other screens that share the state), not by a single screenshot.
 
+When web behavior changes, update the app's existing tests and fixtures. Keep mock responses aligned with `docs/api/*.yaml` and the current UI. Do not add Playwright.
+
 Paste the commands and the result into the pull request. CI remains the merge gate. Integration tests that need Postgres run in CI via `TEST_DATABASE_URL`.
 
 ## Done

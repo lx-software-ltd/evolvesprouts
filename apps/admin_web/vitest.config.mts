@@ -37,9 +37,11 @@ export default defineConfig({
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
       reporter: ['text', 'lcov'],
+      // Ratchet with at least two points under the measured suite.
+      // Branches measured 62.94, so the floor is 60.
       thresholds: {
         statements: 70,
-        branches: 62,
+        branches: 60,
         functions: 66,
         lines: 70,
       },

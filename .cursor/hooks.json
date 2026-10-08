@@ -3,15 +3,21 @@
   "hooks": {
     "beforeShellExecution": [
       {
-        "command": ".cursor/hooks/guard_shell.py",
+        "command": ".cursor/hooks/guard_shell.sh",
         "timeout": 10,
         "failClosed": true
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": ".cursor/hooks/post_edit.py",
+        "timeout": 60
       }
     ],
     "postToolUse": [
       {
         "command": ".cursor/hooks/post_edit.py",
-        "matcher": "Write|StrReplace|EditNotebook|ApplyPatch",
+        "matcher": "Write",
         "timeout": 60
       }
     ],

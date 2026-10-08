@@ -12,7 +12,7 @@ Applies to Cursor agents working in this repository.
 
 Autonomy follows blast radius. The map is `docs/architecture/zones.md`.
 
-- **Red.** Plan in chat and wait for explicit approval before any write. A human pairs on the change. Paths include database migrations and seed data, billing and invoice PDFs, auth and authorizers, CDK, deploy workflows, and PII tooling.
+- **Red.** Plan in chat and wait for explicit approval before any write. A human pairs on the change. Paths include database migrations and seed data, billing and invoice PDFs, auth and authorizers, CDK, deploy workflows, the ruleset verification workflow, and PII tooling.
 - **Yellow.** Write a short plan under `docs/plans/` from `docs/plans/_template.md`, add or update tests first, then implement. Paths include the rest of the backend, admin web source, and the Flutter app.
 - **Green.** Implement and verify. Summarise intent in the pull request. Paths include the public website, the training site, docs, and test-only edits outside red paths.
 
@@ -44,4 +44,4 @@ A change is done when the `verify-change` skill's checks pass and the pull reque
 
 ## Hooks
 
-`.cursor/hooks.json` denies force-push, pushes to `main`, `git reset --hard`, `rm -rf` outside `/tmp`, destructive SQL, `cdk deploy`, and `aws delete-*`. It asks before `git commit --amend` and `alembic downgrade`. After an edit it formats Python with Ruff and web files with ESLint, and reports failures back. On stop it re-prompts when the local harness scripts fail.
+`.cursor/hooks.json` denies force-push, pushes to `main`, `git reset --hard`, `rm -rf` outside `/tmp`, destructive SQL, `cdk deploy`, and `aws delete-*`. It asks before `git commit --amend` and `alembic downgrade`. The shell guard is a shell wrapper so a missing `python3` does not fail closed. `afterFileEdit` formats the edited file (`file_path`). `postToolUse` on the `Write` tool reports Ruff or ESLint failures as `additional_context`. On stop it re-prompts when the local harness scripts fail.

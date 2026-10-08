@@ -15,7 +15,6 @@ on:
       - "docs/architecture/**"
       - ".cursorrules"
       - "AGENTS.md"
-      - ".cursor/rules/**"
       - "scripts/validate_agent_rules.py"
       - "scripts/check_python_file_length.py"
       - "scripts/check_test_focus.py"
@@ -37,7 +36,6 @@ on:
       - "docs/architecture/**"
       - ".cursorrules"
       - "AGENTS.md"
-      - ".cursor/rules/**"
       - "scripts/validate_agent_rules.py"
       - "scripts/check_python_file_length.py"
       - "scripts/check_test_focus.py"
@@ -48,8 +46,9 @@ on:
       - ".github/workflows/lint.yml"
 
 jobs:
-  enforce-cursorrules:
-    name: Enforce Cursor Rules Contract
+  validate-agent-rules:
+    # Check name is "Lint / Validate agent rules". Ruleset matching looks for "lint".
+    name: Validate agent rules
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

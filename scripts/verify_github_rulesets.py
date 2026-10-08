@@ -142,9 +142,26 @@ def evaluate(
     legacy_tags: list[Any] | None,
 ) -> list[str]:
     branch_errors = evaluate_branch_rulesets(rulesets)
-    if branch_errors == ["No active ruleset targets main."]:
+    if (
+        branch_errors == ["No active ruleset targets main."]
+        and legacy_protection is not None
+    ):
         branch_errors = evaluate_legacy_protection(legacy_protection)
     return branch_errors + evaluate_tag_protection(rulesets, legacy_tags)
+
+
+def legacy_read_is_absent(detail: str) -> bool:
+    """Classic protection endpoints 404 when unset and 403 without admin rights.
+
+    A 403 must not abort verification before the rulesets API is evaluated.
+    """
+    text = detail.lower()
+    return (
+        "404" in text
+        or "not found" in text
+        or "403" in text
+        or "resource not accessible" in text
+    )
 
 
 def _gh_json(path: str) -> Any:
@@ -179,7 +196,7 @@ def load_live(
         protection = _gh_json(f"repos/{repo}/branches/main/protection")
         legacy_protection = protection if isinstance(protection, dict) else None
     except RuntimeError as exc:
-        if "404" in str(exc) or "Not Found" in str(exc):
+        if legacy_read_is_absent(str(exc)):
             legacy_protection = None
         else:
             raise
@@ -188,7 +205,7 @@ def load_live(
         tags = _gh_json(f"repos/{repo}/tags/protection")
         legacy_tags = tags if isinstance(tags, list) and tags else None
     except RuntimeError as exc:
-        if "404" in str(exc) or "Not Found" in str(exc):
+        if legacy_read_is_absent(str(exc)):
             legacy_tags = None
         else:
             raise
