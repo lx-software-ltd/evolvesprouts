@@ -43,20 +43,18 @@ _TRAILING_BUILDING_NUMBER = re.compile(r"(?i)^(?=.*[a-z]).+\s+\d+[a-z]?$")
 
 def _classify_geocode_segment(part: str) -> str:
     """Return ``street``, ``place``, or ``drop`` for one comma-separated part."""
+    if _STREET_TYPE.search(part):
+        return "street"
     if (
         _FLOOR_SEGMENT.search(part)
         or _UNIT_SEGMENT.search(part)
         or _STRUCTURE_SEGMENT.search(part)
+        or _ESTATE_SEGMENT.search(part)
+        or _TRAILING_BUILDING_NUMBER.match(part)
     ):
         return "drop"
-    if _ESTATE_SEGMENT.search(part) and _STREET_TYPE.search(part) is None:
-        return "drop"
-    if _STREET_TYPE.search(part):
-        return "street"
     if _HOUSE_NUMBER.match(part) and re.search(r"[A-Za-z]", part):
         return "street"
-    if _TRAILING_BUILDING_NUMBER.match(part):
-        return "drop"
     return "place"
 
 

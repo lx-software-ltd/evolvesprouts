@@ -124,6 +124,8 @@ def test_geocode_strips_g_floor_segment(monkeypatch: Any) -> None:
             "1/F Example Building, 36-44 Queen's Rd E",
             "36-44 Queen's Rd E",
         ),
+        ("12 Garden Court Road, Example Bay", "12 Garden Court Road, Example Bay"),
+        ("Garden Court, 1 Sample Street", "1 Sample Street"),
         (
             "9 Example Concept Children's Residency @ Sample Place Apartments",
             "9 Example Concept Children's Residency @ Sample Place Apartments",
