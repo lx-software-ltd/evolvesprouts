@@ -104,7 +104,7 @@ def test_geocode_strips_g_floor_segment(monkeypatch: Any) -> None:
         ("Shop 3, G/F, 10 Sample Road", "10 Sample Road"),
         ("A, 12 / f, B Street", "B Street"),
         (
-            "Tower 1, Star Crest, 9 Example Street",
+            "Tower 1, Sample Crest, 9 Example Street",
             "9 Example Street",
         ),
         (
@@ -112,8 +112,8 @@ def test_geocode_strips_g_floor_segment(monkeypatch: Any) -> None:
             "555 Sample Road, Example Bay",
         ),
         (
-            "2/F, Strand 50, 50 Example Strand, Sample Wan",
-            "50 Example Strand, Sample Wan",
+            "2/F, Wharf 50, 50 Example Wharf, Sample Wan",
+            "50 Example Wharf, Sample Wan",
         ),
         ("Example Bay", "Example Bay"),
         (
@@ -121,8 +121,8 @@ def test_geocode_strips_g_floor_segment(monkeypatch: Any) -> None:
             "Example Shan",
         ),
         (
-            "1/F Example Building, 36-44 Queen's Rd E",
-            "36-44 Queen's Rd E",
+            "1/F Example Building, 12-14 Sample Rd W",
+            "12-14 Sample Rd W",
         ),
         ("12 Garden Court Road, Example Bay", "12 Garden Court Road, Example Bay"),
         ("Garden Court, 1 Sample Street", "1 Sample Street"),
