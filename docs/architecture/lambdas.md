@@ -377,7 +377,8 @@ their primary responsibilities.
   `client_document` tag, forbidden when the asset is expense-linked), geographic area browsing, location CRUD
   and geocoding (`POST /v1/admin/locations/geocode` uses `NOMINATIM_USER_AGENT` and
   `NOMINATIM_REFERER` with the HTTP proxy to OpenStreetMap's geocoder; the
-  `countrycodes` parameter is built from the root area `code` plus the sovereign
+  query keeps street number, road, and neighbourhood and drops unit/floor/block/tower/estate
+  segments; the `countrycodes` parameter is built from the root area `code` plus the sovereign
   country row's `code` when `geographic_areas.sovereign_country_id` is set),
   (list supports optional `area_id`, `search` on address, cursor pagination, and `total_count`),
   CRM contact/family/organization management with soft-archive, locations, tags,

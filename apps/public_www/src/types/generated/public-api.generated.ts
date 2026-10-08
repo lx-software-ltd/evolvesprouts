@@ -2035,7 +2035,9 @@ export interface paths {
         put?: never;
         /**
          * Geocode a location address (token API)
-         * @description Requires an `admin` scoped API token.
+         * @description Requires an `admin` scoped API token. The free-text query keeps the
+         *     street-number, street/road, and neighbourhood portions of the submitted
+         *     address and drops unit, floor, block, tower, and estate/building segments.
          */
         post: {
             parameters: {
