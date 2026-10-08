@@ -1,0 +1,26 @@
+---
+description: Repository-wide constraints for every Cursor session
+alwaysApply: true
+---
+
+# Repository core
+
+These constraints apply to every change. Path-scoped rules in this directory and skills under `.cursor/skills/` add area procedures. Follow the zone workflow in `AGENTS.md`. [why: a single approval gate was either ignored or applied to every typo]
+
+- Never hardcode secrets, API keys, passwords, or tokens. [why: committed credentials]
+- Never hardcode environment-specific domains, origins, base URLs, emails, ARNs, account IDs, regions, or deployment configuration. Read them from parameters, environment variables, or repository config. [why: agents baked production hosts into source]
+- Allowed literals are protocol constants, `localhost` for local development, `example.com` in non-behavioral tests and docs, and the invoice PDF footer clause "Proudly registered in Hong Kong". [why: product jurisdiction line, not a deployment setting]
+- For CDK `new secretsmanager.Secret(...)`, set `secretName` to `${resourcePrefix}-<kebab-case>`. [why: unnamed secrets drifted across stacks]
+- Do not put real personal names, phone numbers, email addresses, street addresses, bank account numbers, or business-registration numbers in source or docs. Tests use fictional fixtures. Business identity comes from `NEXT_PUBLIC_FOUNDER_NAME`, `NEXT_PUBLIC_EMAIL`, `NEXT_PUBLIC_BUSINESS_PHONE_NUMBER`, and `NEXT_PUBLIC_BUSINESS_ADDRESS`, and may be hardcoded only in `apps/public_www/src/content/**/*.json` and test-fixture JSON. [why: scripts/check-pii.sh]
+- Do not add plaintext denylist entries. `scripts/check-pii.sh` enforces the hash list. [why: the denylist itself leaked PII]
+- Never log unmasked PII. Use `mask_email()` and `mask_pii()`. [why: production logs captured contact data]
+- Never use `print()` in production Python. Use `get_logger()`. [why: Ruff T201]
+- Never use `random` for security tokens. Use `secrets`. [why: predictable tokens]
+- Never use `Cors.ALL_ORIGINS`. [why: any origin could call the API]
+- Use `noEcho: true` for secret CDK parameters. [why: parameter values in deploy logs]
+- Keep production attestation fail-closed (`ATTESTATION_FAIL_CLOSED=true`). [why: failed attestation was treated as success]
+- Validate and sanitize user input. [why: handlers trusted request bodies]
+- Require SSL for database connections (`sslmode=require`). [why: in-VPC connections without TLS]
+- Keep first-party Python files at or under 500 lines, except Alembic revisions. The allowlist only shrinks. [why: scripts/check_python_file_length.py]
+- Do not add a new file when the same behavior already exists. [why: parallel helpers for the same job]
+- S3 bucket names must be 63 characters or fewer. [why: AWS rejects longer names at deploy]

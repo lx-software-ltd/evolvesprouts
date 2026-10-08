@@ -4,21 +4,12 @@ Supporting Hong Kong families to raise their children through positive education
 
 ## AI agent rules
 
-Repository-wide AI execution rules are defined in `.cursorrules`.
+Cursor loads `AGENTS.md` and `.cursor/rules/*.mdc`. Always-on constraints are
+in `.cursor/rules/00-repository-core.mdc`. Area rules attach by path, and
+procedures live in `.cursor/skills/`. `.cursorrules` is a legacy pointer.
 
-To improve automatic rule loading across different agent runtimes, this
-repository also includes:
-
-- `AGENTS.md` for agent frameworks that auto-discover `AGENTS.md`
-- `.cursor/rules/00_mandatory_cursorrules.mdc` for Cursor rule auto-apply
-  (`alwaysApply: true`), which also instructs agents to **read** repository root
-  `.cursorrules` explicitly when a runtime might not inject it
-- `scripts/validate-cursorrules.sh` for CI and pre-commit enforcement
-
-Prompt-level instruction precedence is controlled by each agent runtime and
-cannot be changed from repository files alone. This repository enforces its AI
-rule contract by failing automation when mandatory `.cursorrules` anchors are
-removed or weakened.
+`scripts/validate_agent_rules.py` fails CI and pre-commit when those files
+grow past their size budget, lose a `[why:]` tag, or drop a required skill.
 
 ## Setup
 

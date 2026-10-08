@@ -23,6 +23,12 @@ export default defineConfig({
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
       reporter: ['text', 'lcov'],
+      thresholds: {
+        statements: 65,
+        branches: 57,
+        functions: 71,
+        lines: 65,
+      },
     },
   },
 });

@@ -667,7 +667,7 @@ incremental testing:
 4. Shared marketing subscribe helper (§7.5): `marketing_subscribe.py`.
 5. Shared template constants (§7.6.1): `constants.py`.
 6. Run `pre-commit run ruff-format --all-files` after all Python changes.
-7. Run `bash scripts/validate-cursorrules.sh`.
+7. Run `python3 scripts/validate_agent_rules.py`.
 
 ### Phase 2: Backend handler changes
 

@@ -46,11 +46,21 @@ app = ["assets/invoice/*.png"]
 line-length = 88
 target-version = "py312"
 
+[tool.ruff.lint]
+extend-select = ["T201"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["T201"]
+"scripts/**" = ["T201"]
+"backend/scripts/**" = ["T201"]
+".cursor/hooks/**" = ["T201"]
+
 [tool.coverage.run]
 source = ["app"]
 branch = false
 
 [tool.coverage.report]
-fail_under = 1
+# Floor is one point under the measured suite so coverage cannot regress.
+fail_under = 70
 show_missing = true
 skip_empty = true

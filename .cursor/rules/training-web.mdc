@@ -1,0 +1,12 @@
+---
+description: Training site constraints
+globs: apps/training/**
+alwaysApply: false
+---
+
+# Training web
+
+- Use TypeScript, functional components, and server components by default. [why: client components were added for static markup]
+- Keep styling in CSS classes. No `style` and no `CSSProperties`. [why: inline styles bypassed the shared sheet]
+- Keep user-visible copy in the content file that owns the screen. [why: poll copy was duplicated in components]
+- Poll answer writes use the public CRM key against `PUT /www/v1/polls/{slug}/answers`. [why: the page called the admin API]

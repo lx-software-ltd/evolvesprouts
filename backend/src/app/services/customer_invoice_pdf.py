@@ -32,7 +32,7 @@ dependencies at runtime.
 HKD amounts render with the ``HK$`` symbol (see architecture docs).
 
 Footer jurisdiction copy ("Proudly registered in Hong Kong") is intentional product
-copy for client invoices; exception documented in repository ``.cursorrules``.
+copy for client invoices; exception documented in ``.cursor/rules/00-repository-core.mdc``.
 """
 
 from __future__ import annotations

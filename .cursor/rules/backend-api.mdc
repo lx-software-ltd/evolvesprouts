@@ -1,0 +1,16 @@
+---
+description: API, Lambda, and database rules for backend changes
+globs: backend/**,docs/api/**,docs/architecture/**
+alwaysApply: false
+---
+
+# Backend and API
+
+- Register new API routes in `backend/infrastructure/lib/api-stack.ts` and keep API Gateway paths aligned with Lambda handlers. [why: the spec and the gateway drifted]
+- For every new or changed endpoint, update the CDK route, `docs/api/admin.yaml` or `docs/api/public.yaml`, and `docs/architecture/lambdas.md` in the same change. [why: three-way drift]
+- Do not call boto3 `cognito-idp` directly from in-VPC Lambdas. Use `app.services.aws_proxy.invoke()` or `http_invoke()`. [why: in-VPC functions cannot reach Cognito without the proxy]
+- Put asset route handlers under `backend/src/app/api/assets/**`. Use `*_assets.py` for routes and `assets_*.py` for helpers (`assets_common.py`, `assets_storage.py`, `assets_serializers.py`). Keep `backend/src/app/api/admin.py` as dispatch only. [why: admin.py became an unreviewable module]
+- Alembic revision ids are at most 32 characters and match `NNNN_short_description`. [why: tests/test_alembic_revision_contract.py]
+- Every schema change assesses `backend/db/seed/seed_data.sql` for compatibility, NOT NULL and CHECK columns, renames, new tables, enum values, and foreign-key insert order. Say in the PR when no seed change is needed. [why: migrations passed and seed then failed]
+- Follow the `db-migration` skill for schema work and the `admin-api-endpoint` skill for routes. [why: the checklist was prose agents skipped]
+- Endpoint details belong in OpenAPI specs. Architecture docs describe design and decisions. [why: lambdas.md and the spec diverged]

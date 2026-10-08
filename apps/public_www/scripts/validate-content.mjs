@@ -37,7 +37,59 @@ const DISALLOWED_SECTION_ROOT_KEYS = {
   freeIntroSession: ['heading', 'supportParagraph'],
   termsAndConditions: ['intro'],
   privacyPolicy: ['intro'],
+  contactUs: ['contactUsForm', 'contactFaq'],
 };
+
+const LOWER_CAMEL_KEY = /^[a-z][a-zA-Z0-9]*$/;
+const META_KEY = /^_[a-zA-Z][a-zA-Z0-9]*$/;
+const KEBAB_SLUG_KEY = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const SNAKE_CASE_KEY = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/;
+const LEGACY_LOCATION_KEYS = new Set([
+  'address',
+  'address_url',
+  'locationName',
+  'locationAddress',
+  'locationUrl',
+]);
+
+export function collectLocaleKeyErrors(value, locale, errors, keyPath = '') {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return;
+  }
+  for (const key of Object.keys(value)) {
+    const nextPath = keyPath ? `${keyPath}.${key}` : key;
+    const allowed = LOWER_CAMEL_KEY.test(key) || META_KEY.test(key) || KEBAB_SLUG_KEY.test(key);
+    if (!allowed) {
+      errors.push(`${locale}.${nextPath}: key "${key}" must be lowerCamelCase`);
+    }
+    if (key === 'contactUsForm' || key === 'contactFaq') {
+      errors.push(`${locale}.${nextPath}: legacy key "${key}" is not allowed`);
+    }
+    collectLocaleKeyErrors(value[key], locale, errors, nextPath);
+  }
+}
+
+export function collectFamilyConsultationKeyErrors(value, errors, keyPath = 'family-consultations') {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => {
+      collectFamilyConsultationKeyErrors(item, errors, `${keyPath}[${index}]`);
+    });
+    return;
+  }
+  if (!value || typeof value !== 'object') {
+    return;
+  }
+  for (const key of Object.keys(value)) {
+    const nextPath = `${keyPath}.${key}`;
+    if (!SNAKE_CASE_KEY.test(key)) {
+      errors.push(`${nextPath}: key "${key}" must be snake_case`);
+    }
+    if (LEGACY_LOCATION_KEYS.has(key)) {
+      errors.push(`${nextPath}: legacy location key "${key}" is not allowed`);
+    }
+    collectFamilyConsultationKeyErrors(value[key], errors, nextPath);
+  }
+}
 
 function readObjectAtPath(source, sectionPath) {
   const pathSegments = sectionPath.split('.');
@@ -551,7 +603,11 @@ async function main() {
     validateSemanticRules(localeContent, locale, errors, localeRoutePaths);
     validateNoDisallowedSectionRootKeys(localeContent, locale, errors);
     validateRequiredNonEmptyCopyKeys(localeContent, locale, errors);
+    collectLocaleKeyErrors(localeContent, locale, errors);
   }
+
+  const familyConsultations = await loadJson(path.join(CONTENT_DIR, 'family-consultations.json'));
+  collectFamilyConsultationKeyErrors(familyConsultations, errors);
 
   if (errors.length > 0) {
     console.error('Content validation failed.');
@@ -564,8 +620,13 @@ async function main() {
   console.log('Content validation passed.');
 }
 
-main().catch((error) => {
-  console.error('Content validation crashed.');
-  console.error(error);
-  process.exit(1);
-});
+const invokedDirectly =
+  process.argv[1] !== undefined && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (invokedDirectly) {
+  main().catch((error) => {
+    console.error('Content validation crashed.');
+    console.error(error);
+    process.exit(1);
+  });
+}

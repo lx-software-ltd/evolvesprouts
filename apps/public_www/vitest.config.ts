@@ -25,6 +25,12 @@ export default defineConfig({
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['../../shared/styles/generated/**'],
       reporter: ['text', 'lcov'],
+      thresholds: {
+        statements: 81,
+        branches: 72,
+        functions: 84,
+        lines: 81,
+      },
     },
   },
 });

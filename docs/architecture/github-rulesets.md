@@ -32,7 +32,7 @@ These workflows must pass before merging to `main`:
 
 | Check | Workflow | Purpose |
 |-------|----------|---------|
-| `lint` | `.github/workflows/lint.yml` | Code style, linting, and `.cursorrules` contract enforcement |
+| `lint` | `.github/workflows/lint.yml` | Code style, linting, and agent-rule validation |
 | `test` | `.github/workflows/test.yml` | Unit and integration tests |
 
 ---
@@ -123,15 +123,16 @@ gh api repos/{owner}/{repo}/rulesets \
 A CI workflow (`.github/workflows/verify-rulesets.yml`) runs weekly and on
 demand to verify that branch protection rules are correctly configured.
 
-The verification checks:
-- Branch protection exists for `main`
-- Required status checks are configured
-- Force push protection is enabled
-- Deletion protection is enabled
+The verification checks fail the job when any of these are missing:
+- An active ruleset targets `main` (or legacy branch protection does)
+- At least one approving review is required
+- Required status checks include names containing `lint` and `test`
+- Force pushes and deletions are blocked
+- An active ruleset protects `v*` tags
 
-The `lint` workflow includes a dedicated `.cursorrules` contract validation
-job (`scripts/validate-cursorrules.sh`). If mandatory rule anchors are removed,
-the lint status fails and merge is blocked by branch protection.
+The `lint` workflow runs `scripts/validate_agent_rules.py`. If required rule
+files are removed or grow past their budget, the lint status fails and merge
+is blocked by branch protection.
 
 ---
 

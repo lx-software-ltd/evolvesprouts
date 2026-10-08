@@ -1,0 +1,17 @@
+---
+description: Public website content, structure, and XSS constraints
+globs: apps/public_www/**
+alwaysApply: false
+---
+
+# Public website
+
+- Do not use `dangerouslySetInnerHTML`, `eval()`, or `new Function()`. Keep `csp:inject` and `csp:validate` in the build. [why: stored HTML was rendered unsafely]
+- Do not use `style` or `CSSProperties`. Do not embed inline `<svg>` in components. Reusable vectors live in `public/images/*.svg`. [why: eslint]
+- Page composition goes in `src/components/pages/**`, primitives in `src/components/shared/**`, sections in `src/components/sections/**`, and section helpers in `src/components/sections/shared/**`. Tests go in `apps/public_www/tests/**`, not beside source. [why: tests landed under src]
+- `en.json` is the locale schema. Change `zh-CN.json` and `zh-HK.json` in the same edit. User-visible copy, including alt text and aria labels, lives in locale JSON. [why: hardcoded English shipped in one locale]
+- Locale key segments are lowerCamelCase. Shared chrome copy lives under `common.*`. Interpolation strings use a `*Template` suffix and named placeholders. [why: validate-content.mjs]
+- Do not reintroduce `contactUs.contactUsForm` or `contactUs.contactFaq`. [why: validate-content.mjs]
+- `family-consultations.json` uses snake_case. Location fields are `location_name`, `location_address`, and `location_url`. [why: validate-content.mjs]
+- `SectionShell` `id` and `dataFigmaNode` match the section file key, unless a stable anchor is already part of navigation. [why: in-page links broke when ids were renamed]
+- Follow `.cursor/skills/public-www-section/SKILL.md` when adding a section. [why: component names drifted from content keys]

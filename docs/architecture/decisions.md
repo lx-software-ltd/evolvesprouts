@@ -282,8 +282,8 @@ Lambdas or NAT Gateway.
 **Branch protection for `main`:**
 - Require pull request with at least 1 approval.
 - Require `lint` and `test` status checks to pass.
-- The `lint` workflow includes `.cursorrules` contract validation via
-  `scripts/validate-cursorrules.sh`.
+- The `lint` workflow includes agent-rule validation via
+  `scripts/validate_agent_rules.py`.
 - Require branches to be up to date before merging.
 - Block force pushes and deletions.
 
@@ -1410,6 +1410,20 @@ the full CRM contact over the public API key. QR is the operator path for
 creating a contact-bound link. The Forms answers table is for reviewing
 submissions, so its contact control filters respondents rather than minting
 URLs.
+
+## Agent harness
+
+**Decision:** Cursor rules are path-scoped `.mdc` files plus short skills. `.cursorrules` is a pointer. Autonomy follows `docs/architecture/zones.md`. Repeated constraints are enforced by lint, tests, or hooks rather than by a long always-on prompt.
+
+**Why:**
+- An 800-line always-on rulebook was injected into every task, including tasks it did not apply to.
+- Several mandatory rules were prose only, and some (Python file length) were already violated.
+- Destructive commands and formatting belong in hooks, which run whether or not the model remembers them.
+
+**Consequences:**
+- `scripts/validate_agent_rules.py` checks file size, `[why:]` tags, and required skills.
+- `.cursor/hooks.json` blocks destructive shell commands, formats edits, and re-prompts when local checks fail.
+- Red-zone paths still require a written plan and explicit approval before edits.
 
 ## Keeping Documentation Up to Date
 
