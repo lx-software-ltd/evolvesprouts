@@ -15,8 +15,12 @@ on:
       - "docs/architecture/**"
       - ".cursorrules"
       - "AGENTS.md"
-      - ".cursor/rules/**"
-      - "scripts/validate-cursorrules.sh"
+      - "scripts/validate_agent_rules.py"
+      - "scripts/check_python_file_length.py"
+      - "scripts/check_test_focus.py"
+      - "scripts/check-lambda-docs.mjs"
+      - "scripts/python-file-length-allowlist.txt"
+      - ".cursor/**"
       - ".pre-commit-config.yaml"
       - ".github/workflows/lint.yml"
   push:
@@ -32,14 +36,19 @@ on:
       - "docs/architecture/**"
       - ".cursorrules"
       - "AGENTS.md"
-      - ".cursor/rules/**"
-      - "scripts/validate-cursorrules.sh"
+      - "scripts/validate_agent_rules.py"
+      - "scripts/check_python_file_length.py"
+      - "scripts/check_test_focus.py"
+      - "scripts/check-lambda-docs.mjs"
+      - "scripts/python-file-length-allowlist.txt"
+      - ".cursor/**"
       - ".pre-commit-config.yaml"
       - ".github/workflows/lint.yml"
 
 jobs:
-  enforce-cursorrules:
-    name: Enforce Cursor Rules Contract
+  validate-agent-rules:
+    # Check name is "Lint / Validate agent rules". Ruleset matching looks for "lint".
+    name: Validate agent rules
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -48,8 +57,8 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
 
-      - name: Validate .cursorrules contract
-        run: bash scripts/validate-cursorrules.sh
+      - name: Validate agent rules
+        run: python3 scripts/validate_agent_rules.py
 
   lint-dart:
     name: Lint Dart
@@ -227,6 +236,9 @@ jobs:
 
       - name: Check CDK routes match admin OpenAPI spec
         run: node scripts/check-cdk-admin-api-routes.mjs
+
+      - name: Check Lambda docs match handlers
+        run: node scripts/check-lambda-docs.mjs
 
   lint-openapi:
     name: Lint OpenAPI

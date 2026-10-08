@@ -53,6 +53,35 @@ const eslintConfig = [
     },
   },
   {
+    files: ['src/**/*.{tsx,jsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "JSXAttribute[name.name='style']",
+          message: 'Inline style props are not allowed. Move styling to CSS files.',
+        },
+        {
+          selector: "TSTypeReference[typeName.name='CSSProperties']",
+          message: 'CSSProperties types are not allowed. Move styling to CSS files.',
+        },
+        {
+          selector: "TSTypeReference[typeName.right.name='CSSProperties']",
+          message: 'React.CSSProperties is not allowed. Move styling to CSS files.',
+        },
+        {
+          selector: 'TSAnyKeyword',
+          message: 'Explicit `any` is not allowed. Use a specific type.',
+        },
+        {
+          selector: "JSXOpeningElement[name.name='svg']",
+          message:
+            'Do not embed inline SVG in app code. Put reusable vectors in public/images and reference them from img or CSS mask-image.',
+        },
+      ],
+    },
+  },
+  {
     ignores: ['node_modules/**'],
   },
 ];

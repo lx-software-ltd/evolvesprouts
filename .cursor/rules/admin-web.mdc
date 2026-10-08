@@ -1,0 +1,20 @@
+---
+description: Admin web API, shell, and CRUD constraints
+globs: apps/admin_web/**
+alwaysApply: false
+---
+
+# Admin web
+
+- Generate admin API types from `docs/api/admin.yaml` into `apps/admin_web/src/types/generated/admin-api.generated.ts`. Do not hand-edit the file. Run `npm run generate:admin-api-types` and `npm run check:admin-api-types` when the spec or client types change. [why: convention]
+- Call admin APIs through `adminApiRequest` in `src/lib/api-admin-client.ts`. Responses have no `{ data }` envelope. [why: convention]
+- Build list paths with `buildAdminListPath`. Page size is `ADMIN_LIST_PAGE_SIZE`; the cap is `ADMIN_API_MAX_LIST_LIMIT`. One `src/lib/<resource>-api.ts` module per resource. [why: convention]
+- Read server state with the shared TanStack Query client and `adminQueryKeys`. Do not hand-roll fetch loops. Hooks live in `src/hooks/`. [why: convention]
+- Shared reference data uses the `useShared*` hooks in `src/hooks/use-admin-catalog.ts`. After a mutation, call the exported `invalidateShared*` helper. [why: convention]
+- Export list fetchers at module scope so `prefetchPaginatedList` can call them. [why: convention]
+- Navigation order is Dashboard, then Assets, Audit, Calendar, Contacts, Finance, Sales, Services, Tags, Website. The default landing route stays Finance. [why: convention]
+- In-area view switchers use `AdminTabStrip` as a button group, not ARIA tabs. [why: convention]
+- Styling lives in CSS classes. No `style`, no `CSSProperties`, and no inline `<svg>` in feature components. Icons are SVGR imports from `src/components/icons/svg/`. [why: convention]
+- Expand and collapse through `AdminExpandRegion` and the duration tokens in `src/app/globals.css`. [why: convention]
+- When behavior changes, update the screen's tests and fixtures and keep mocks aligned with `docs/api/admin.yaml`. Do not add Playwright. [why: convention]
+- Read `.cursor/skills/admin-crud-screen/SKILL.md` before adding or changing a list, filter, editor, or row action. [why: convention]

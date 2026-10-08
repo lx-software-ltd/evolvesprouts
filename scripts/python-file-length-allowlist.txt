@@ -1,0 +1,15 @@
+# path lines — files already over 500 under backend/src and backend/lambda. Do not raise a number.
+backend/lambda/media_processor/handler.py 601
+backend/src/app/db/audit.py 595
+backend/src/app/db/repositories/asset.py 518
+backend/src/app/db/repositories/sales_lead.py 576
+backend/src/app/db/repositories/service_instance.py 510
+backend/src/app/imports/entities/_legacy_event_common.py 782
+backend/src/app/imports/entities/contacts.py 637
+backend/src/app/services/customer_billing.py 598
+backend/src/app/services/customer_invoice_pdf.py 1199
+backend/src/app/services/lead_close_suggestion.py 504
+backend/src/app/services/openrouter_expense_parser.py 1089
+backend/src/app/services/poll_responses_store.py 705
+backend/src/app/services/sales_daily_plan_context.py 507
+backend/src/app/templates/booking_confirmation_render.py 1360

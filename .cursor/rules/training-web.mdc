@@ -1,0 +1,13 @@
+---
+description: Training site constraints
+globs: apps/training/**
+alwaysApply: false
+---
+
+# Training web
+
+- Use TypeScript, functional components, and server components by default. [why: convention]
+- Keep styling in CSS classes. No `style` and no `CSSProperties`. [why: convention]
+- Keep user-visible copy in the content file that owns the screen. [why: convention]
+- Poll answer writes use the public CRM key against `PUT /www/v1/polls/{slug}/answers`. [why: convention]
+- When behavior changes, update the existing tests and fixtures. Do not add Playwright. [why: convention]

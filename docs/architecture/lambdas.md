@@ -365,7 +365,7 @@ their primary responsibilities.
   `MAILCHIMP_*` welcome journey vars (see `aws-messaging.md`)
 - **AR PDF template versions (DB `pdf_template_version` column, shared by invoices and receipts):** issued customer invoices set `INVOICE_PDF_TEMPLATE_VERSION` = `billing-invoice-v21`; receipts set `RECEIPT_PDF_TEMPLATE_VERSION` = `billing-receipt-v1`.
 - **Invoice currency display:** `HKD` amounts render with the `HK$` prefix in AR invoice PDFs.
-- **AR invoice footer (Option B):** when both legal/trading and registration are set, the centered footer is `{legal_name} | Proudly registered in Hong Kong | BR: {reg}` with `legal_name` = `PUBLIC_WWW_BUSINESS_LEGAL_NAME` or `PUBLIC_WWW_BUSINESS_NAME` (resolved from `PUBLIC_WWW_CONFIG_SECRET_ARN`), and with fallbacks: legal only → legal; registration only → `BR: {reg}`; both empty → no footer. The **"Proudly registered in Hong Kong"** fragment is fixed product copy (see `.cursorrules` exception).
+- **AR invoice footer (Option B):** when both legal/trading and registration are set, the centered footer is `{legal_name} | Proudly registered in Hong Kong | BR: {reg}` with `legal_name` = `PUBLIC_WWW_BUSINESS_LEGAL_NAME` or `PUBLIC_WWW_BUSINESS_NAME` (resolved from `PUBLIC_WWW_CONFIG_SECRET_ARN`), and with fallbacks: legal only → legal; registration only → `BR: {reg}`; both empty → no footer. The **"Proudly registered in Hong Kong"** fragment is fixed product copy (see `.cursor/rules/00-repository-core.mdc`).
 - **Snapshot dates:** on issue, `customer_invoices.invoice_date` and `customer_invoices.due_date` are persisted (see `docs/architecture/database-schema.md`); the PDF uses these when present; draft previews compute dates in **UTC** when columns are null.
 - **Server-Timing:** every response carries `Server-Timing: app;dur=<handler ms>`; the first
   invocation of a container appends `cold;dur=<ms since module import>` so cold starts show up
@@ -644,6 +644,29 @@ their primary responsibilities.
     `wa.me/<digits>` for reliable email-client rendering. Lambdas read it via
     the existing Secrets Manager VPC interface endpoint with a five-minute
     in-process cache; see `app.config.public_www`.)
+
+### Lead AI suggestion processor
+- Function: LeadAiSuggestionFunction
+- Handler: backend/lambda/lead_ai_suggestion/handler.py
+- Stack: nested stack `evolvesprouts-Messaging`
+- Trigger: SQS queue (`evolvesprouts-lead-ai-suggestion-queue`) with plain JSON
+  bodies `{ "job_id": "<uuid>" }`. Failed messages land on
+  `evolvesprouts-lead-ai-suggestion-dlq` after 3 receives.
+- Purpose: turn a stored lead close-suggestion job into model advice via
+  OpenRouter (`AwsApiProxyFunction`). The admin API enqueues the job; this
+  function does not accept HTTP traffic.
+- DB access: RDS Proxy with IAM auth (`evolvesprouts_admin`)
+- VPC: Yes
+- Permissions: Secrets Manager read for the admin DB secret and the OpenRouter
+  key, Lambda invoke permission for `AwsApiProxyFunction`
+- Environment:
+  - `DATABASE_SECRET_ARN`, `DATABASE_NAME`, `DATABASE_USERNAME`,
+    `DATABASE_PROXY_ENDPOINT`, `DATABASE_IAM_AUTH`
+  - `OPENROUTER_API_KEY_SECRET_ARN`, `OPENROUTER_CHAT_COMPLETIONS_URL`,
+    `OPENROUTER_MODEL`
+  - `AWS_PROXY_FUNCTION_ARN`
+  - `LEAD_AI_SUGGESTION_LAMBDA_TIMEOUT_SECONDS` (120),
+    `LEAD_AI_OPENROUTER_TIMEOUT_SECONDS` (90)
 
 ### Sales daily plan processor
 - Function: SalesDailyPlanFunction

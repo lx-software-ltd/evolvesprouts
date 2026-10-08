@@ -48,9 +48,30 @@ repos:
   # Repository-level .cursorrules enforcement
   - repo: local
     hooks:
-      - id: validate-cursorrules-contract
-        name: Validate .cursorrules contract
-        entry: bash scripts/validate-cursorrules.sh
+      - id: validate-agent-rules
+        name: Validate agent rules
+        entry: python3 scripts/validate_agent_rules.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-python-file-length
+        name: Check Python file length
+        entry: python3 scripts/check_python_file_length.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-test-focus
+        name: Check focused or skipped tests
+        entry: python3 scripts/check_test_focus.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-lambda-docs
+        name: Check Lambda docs
+        entry: node scripts/check-lambda-docs.mjs
         language: system
         pass_filenames: false
         always_run: true

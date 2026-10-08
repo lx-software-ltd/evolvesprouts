@@ -1,0 +1,27 @@
+---
+description: Repository-wide constraints for every Cursor session
+alwaysApply: true
+---
+
+# Repository core
+
+These constraints apply to every change. Path-scoped rules in this directory and skills under `.cursor/skills/` add area procedures. When two rules conflict, follow the more specific path rule. Follow the zone workflow in `AGENTS.md`. [why: convention]
+
+- Never hardcode secrets, API keys, passwords, or tokens. [why: convention]
+- Never hardcode environment-specific domains, origins, base URLs, emails, ARNs, account IDs, regions, or deployment configuration. Read them from parameters, environment variables, or repository config. [why: convention]
+- Allowed literals are protocol constants, `localhost` for local development, `example.com` in non-behavioral tests and docs, and the invoice PDF footer clause "Proudly registered in Hong Kong". [why: convention]
+- For CDK `new secretsmanager.Secret(...)`, set `secretName` to `${resourcePrefix}-<kebab-case>`. [why: convention]
+- Do not put real personal names, phone numbers, email addresses, street addresses, bank account numbers, or business-registration numbers in source or docs. Tests use fictional fixtures. Business identity comes from `NEXT_PUBLIC_FOUNDER_NAME`, `NEXT_PUBLIC_EMAIL`, `NEXT_PUBLIC_BUSINESS_PHONE_NUMBER`, and `NEXT_PUBLIC_BUSINESS_ADDRESS`, and may be hardcoded only in `apps/public_www/src/content/**/*.json` and test-fixture JSON. [why: 2fbc06dd hashed PII denylist]
+- Do not add plaintext denylist entries. `scripts/check-pii.sh` enforces the hash list. [why: 2fbc06dd hashed PII denylist]
+- Never log unmasked PII. Use `mask_email()` and `mask_pii()`. [why: convention]
+- Never use `print()` in production Python. Use `get_logger()`. [why: 90a441e4 replaced Alembic print() with logging]
+- Never use `random` for security tokens. Use `secrets`. [why: convention]
+- Never use `Cors.ALL_ORIGINS`. [why: convention]
+- Use `noEcho: true` for secret CDK parameters. [why: convention]
+- Keep production attestation fail-closed (`ATTESTATION_FAIL_CLOSED=true`). [why: convention]
+- Validate and sanitize user input. [why: convention]
+- Require SSL for database connections (`sslmode=require`). [why: f37c986b enforced sslmode=require]
+- Keep Python files under `backend/src` and `backend/lambda` at or under 500 lines. The allowlist only shrinks. Alembic revisions are not in that scan. [why: convention]
+- Do not add a new file when the same behavior already exists. [why: convention]
+- S3 bucket names must be 63 characters or fewer. [why: convention]
+- Prefer type hints, small modules, and pytest for Python. [why: convention]

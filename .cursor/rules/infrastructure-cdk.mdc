@@ -1,0 +1,14 @@
+---
+description: CDK naming, secrets, and deploy constraints
+globs: backend/infrastructure/**
+alwaysApply: false
+---
+
+# CDK
+
+- Set physical Lambda names to `${resourcePrefix}-${constructId}`. Do not use a construct id that repeats the product or `resourcePrefix` token. `EvolvesproutsAdminFunction` and `EvolvesproutsMigrationFunction` are existing deployed names and must not be copied. [why: convention]
+- Renaming a Lambda construct id replaces the CloudFormation resource. Update `docs/architecture/lambdas.md`, `docs/architecture/aws-assets-map.md`, and IAM examples that use the physical name. [why: convention]
+- `secretName` on `new secretsmanager.Secret(...)` is `${resourcePrefix}-<kebab-case>` with no spaces, underscores, or camelCase. The prefix is the `resourcePrefix` assignment in `api-stack.ts`. Do not add it to `params/production.json`, because deploy forwards every key in that file as a CloudFormation parameter. [why: convention]
+- Do not use `Cors.ALL_ORIGINS`. [why: convention]
+- Use `noEcho: true` on secret parameters. [why: convention]
+- Derive domains, ARNs, account IDs, and regions from parameters or environment variables. [why: convention]

@@ -2,6 +2,7 @@ import * as cdk from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 
 import { ApiStack } from "../lib/api-stack";
+import { assertApiStackInvariants } from "./stack-invariants.test";
 
 function synthApiTemplate(): Template {
   const app = new cdk.App();
@@ -606,6 +607,7 @@ function main(): void {
   assertSalesDailyPlanSchedule(stack);
   assertInboundInvoiceSharesReceiptRuleSet(template);
   assertFinanceReadonlyDataApi(template);
+  assertApiStackInvariants(stack, template);
 
   console.log("api-stack API Gateway stage cache assertions passed.");
 }

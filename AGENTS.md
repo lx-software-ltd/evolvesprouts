@@ -1,114 +1,47 @@
 # Agent Operating Instructions
 
-Applies to any AI coding agent that works in this repository (including web
-agents).
+Applies to Cursor agents working in this repository.
 
-## Mandatory bootstrap step
+## Bootstrap
 
-1. Read `@.cursorrules` before any analysis, plan, command, or code edit.
-2. Treat the rules in `.cursorrules` as mandatory for the full session.
-3. Re-read `.cursorrules` immediately if it changes during the task.
-4. If instructions conflict, use this precedence:
-   system instructions > developer instructions > user instructions >
-   `.cursorrules`.
+1. Always-applied constraints are in `.cursor/rules/00-repository-core.mdc`. Path-scoped rules in `.cursor/rules/` attach for the area you edit. Read a scoped rule before editing its area when it is not already in context.
+2. Procedures live in `.cursor/skills/*/SKILL.md`: `db-migration`, `admin-api-endpoint`, `admin-crud-screen`, `public-www-section`, and `verify-change`.
+3. `.cursorrules` is a legacy pointer. Do not add rules there.
 
-## Headless, cloud, and IDE agent runtimes
+## Zones
 
-Many agent runtimes (including Cursor Agent / Background Agent) **do not**
-reliably inject the repository root `.cursorrules` file into the model context.
-**Before your first repository tool call in a session**, read the file
-`.cursorrules` at the repository root using your file-reading tool, unless the
-full current contents of that file are already present in your context.
+Autonomy follows blast radius. The map is `docs/architecture/zones.md`.
 
-Cursor local chat can use `@.cursorrules`; that mention does not replace reading
-the file when your runtime might omit it.
+- **Red.** Plan in chat and wait for explicit approval before any write. A human pairs on the change. Paths include database migrations and seed data, billing and invoice PDFs, auth and authorizers, CDK, deploy workflows, the ruleset verification workflow, and PII tooling.
+- **Yellow.** Write a short plan under `docs/plans/` from `docs/plans/_template.md`, add or update tests first, then implement. Paths include the rest of the backend, admin web source, and the Flutter app.
+- **Green.** Implement and verify. Summarise intent in the pull request. Paths include the public website, the training site, docs, and test-only edits outside red paths.
 
-## Enforcement intent
+The stricter zone wins when a change touches more than one. If scope grows into a stricter zone, stop and ask.
 
-Do not begin implementation work until `.cursorrules` has been loaded and
-applied.
-Do not perform implementation actions until explicit user approval is received
-for the current task.
-Treat all write operations as implementation actions, including file
-create/edit/delete, dependency changes, migrations, generated artifacts, and
-git write operations (`git add`, `git commit`, `git push`).
-If implementation scope changes after approval, pause and request renewed
-explicit user approval before continuing.
-
-## Repository-enforced guardrail
-
-The repository enforces a `.cursorrules` contract via
-`scripts/validate-cursorrules.sh` (wired into pre-commit and CI lint checks).
-This does not alter runtime prompt precedence, but it blocks merges when
-mandatory `.cursorrules` integration anchors are removed or weakened.
-
-## Cursor Cloud specific instructions
-
-### Services overview
+## Cursor Cloud
 
 | Service | Path | Dev command | Port |
-|---------|------|-------------|------|
-| Admin Web (Next.js) | `apps/admin_web/` | `npm run dev -- --webpack --port 3000` | 3000 |
-| Public Website (Next.js) | `apps/public_www/` | `npm run dev -- --port 3001` | 3001 |
-| Training Web (Next.js) | `apps/training/` | `npm run dev` | 3002 |
-| Backend (Python/Lambda) | `backend/` | Tests only (`pytest tests/`) | N/A |
-| CDK Infrastructure (TS) | `backend/infrastructure/` | `npx tsc --noEmit` | N/A |
+| --- | --- | --- | --- |
+| Admin Web | `apps/admin_web/` | `npm run dev -- --webpack --port 3000` | 3000 |
+| Public Website | `apps/public_www/` | `npm run dev -- --port 3001` | 3001 |
+| Training Web | `apps/training/` | `npm run dev` | 3002 |
+| Backend | `backend/` | `pytest tests/` | n/a |
+| CDK | `backend/infrastructure/` | `npx tsc --noEmit` | n/a |
 
-### Running lint
+Lint: `ruff check backend/ tests/ --config=backend/pyproject.toml`; `npm run lint` in each app; `npm run lint` in `backend/infrastructure`.
 
-- **Python backend**: `ruff check backend/ tests/ --config=backend/pyproject.toml`
-- **Admin web**: `cd apps/admin_web && npm run lint`
-- **Public website**: `cd apps/public_www && npm run lint`
-- **Training web**: `cd apps/training && npm run lint`
-- **Pre-commit (all)**: `pre-commit run --all-files` (requires `pre-commit install` first)
+Tests: `pytest tests/`; `npx vitest run` in each app; `npm run test:infra` in `backend/infrastructure`. Postgres integration tests run in CI with `TEST_DATABASE_URL`.
 
-### Running tests
+Before committing Python, run `pre-commit run ruff-format --all-files`.
 
-- **Python backend**: `pytest tests/ -x` (926 tests, ~7s, no DB needed for unit tests)
-- **Admin web**: `cd apps/admin_web && npx vitest run` (443 tests)
-- **Public website**: `cd apps/public_www && npx vitest run` (739 tests)
-- **Training web**: `cd apps/training && npx vitest run`
-- **CDK infra**: `cd backend/infrastructure && npm run test:infra`
+Admin web dev and build need `--webpack` for SVGR. Admin sign-in needs `NEXT_PUBLIC_COGNITO_*`. Website QR needs `NEXT_PUBLIC_PUBLIC_SITE_BASE_URL` and `NEXT_PUBLIC_TRAINING_SITE_BASE_URL`. Contacts map needs `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`.
 
-### Environment variables for dev servers
+Public website local env minimum: `NEXT_PUBLIC_SITE_ORIGIN=http://localhost:3001` and `NEXT_PUBLIC_EMAIL=dev@example.com`. Training local env minimum: `NEXT_PUBLIC_SITE_ORIGIN=http://localhost:3002` and `NEXT_PUBLIC_PUBLIC_WWW_ORIGIN=http://localhost:3001`. Full setup is in `docs/architecture/setup.md`.
 
-- **Admin web** requires Cognito env vars (`NEXT_PUBLIC_COGNITO_*`) for auth
-  flows. Without them, the app renders but sign-in won't work.
-- **Admin web** Website QR also needs `NEXT_PUBLIC_PUBLIC_SITE_BASE_URL` (www)
-  and `NEXT_PUBLIC_TRAINING_SITE_BASE_URL` (training) for link previews.
-- **Admin web** Contacts → Map needs `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` (Maps
-  JavaScript API, HTTP-referrer restricted). Without it the tab renders a
-  configuration message instead of the map.
-- **Public website** requires `NEXT_PUBLIC_SITE_ORIGIN` and
-  `NEXT_PUBLIC_EMAIL` at minimum. Create `apps/public_www/.env.local` with:
-  ```
-  NEXT_PUBLIC_SITE_ORIGIN=http://localhost:3001
-  NEXT_PUBLIC_EMAIL=dev@example.com
-  NEXT_PUBLIC_FOUNDER_NAME=Founder Name
-  NEXT_PUBLIC_BUSINESS_NAME=Evolve Sprouts
-  NEXT_PUBLIC_BUSINESS_ADDRESS=Hong Kong
-  NEXT_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA
-  NEXT_PUBLIC_API_BASE_URL=/www
-  ```
-- **Training web** requires `NEXT_PUBLIC_SITE_ORIGIN` and
- `NEXT_PUBLIC_PUBLIC_WWW_ORIGIN` at minimum. Poll pages also need
- `NEXT_PUBLIC_TRAINING_API_KEY` (or `NEXT_PUBLIC_WWW_CRM_API_KEY`) for
- `PUT /www/v1/polls/{slug}/answers`. Create `apps/training/.env.local`
- with:
- ```
- NEXT_PUBLIC_SITE_ORIGIN=http://localhost:3002
- NEXT_PUBLIC_PUBLIC_WWW_ORIGIN=http://localhost:3001
- NEXT_PUBLIC_API_BASE_URL=/www
- NEXT_PUBLIC_TRAINING_API_KEY=<same public CRM API key as public_www>
- ```
+## Evidence
 
-### Non-obvious caveats
+A change is done when the `verify-change` skill's checks pass and the pull request template is filled in. Hooks format edits and block destructive shell commands. CI remains the merge gate.
 
-- Admin web uses `--webpack` flag for dev/build (required for SVGR support):
-  `next dev --webpack` / `next build --webpack`.
-- The backend has no running server locally; it is Lambda-based. Tests use
-  `unittest.mock` and optional Postgres (`TEST_DATABASE_URL`) for integration cases.
-- `backend/infrastructure` install is a normal `npm ci` (no postinstall
-  patcher for bundled `aws-cdk-lib` dependencies).
-- Python formatting must use `pre-commit run ruff-format --all-files` before
-  committing any Python changes (per `.cursorrules`).
+## Hooks
+
+`.cursor/hooks.json` denies force-push, pushes to `main`, `git reset --hard`, `rm -rf` outside `/tmp`, destructive SQL, `cdk deploy`, and `aws delete-*`. It asks before `git commit --amend` and `alembic downgrade`. The shell guard is a shell wrapper so a missing `python3` does not fail closed. `afterFileEdit` formats the edited file (`file_path`). `postToolUse` on the `Write` tool reports Ruff or ESLint failures as `additional_context`. On stop it re-prompts when the local harness scripts fail.
