@@ -34,12 +34,11 @@ function noop() {}
 
 /**
  * Row and filter state for the Instances table: server-side scope filters
- * (service, type, party), client-side status/search narrowing, the single
+ * (type, party), client-side status/search narrowing, the single
  * expanded instance (URL-synced), the draft's chosen service, the
  * "duplicate as draft" template, and the party deep-link auto-expansion.
  */
 export function useInstancesSection({ active, locations, party, partyFilterKey }: UseInstancesSectionOptions) {
-  const [serviceFilter, setServiceFilter] = useState('');
   const [serviceTypeFilter, setServiceTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<InstancesListStatusFilter>(
     DEFAULT_INSTANCES_LIST_STATUS_FILTER
@@ -58,7 +57,6 @@ export function useInstancesSection({ active, locations, party, partyFilterKey }
     active
       ? {
           listAllInstances: true,
-          filterServiceId: serviceFilter || null,
           filterServiceType: serviceTypeFilter || null,
           filterContactId: party.contactId || null,
           filterFamilyId: party.familyId || null,
@@ -135,8 +133,6 @@ export function useInstancesSection({ active, locations, party, partyFilterKey }
 
   return {
     filters: {
-      service: serviceFilter,
-      setService: setServiceFilter,
       serviceType: serviceTypeFilter,
       setServiceType: setServiceTypeFilter,
       status: statusFilter,

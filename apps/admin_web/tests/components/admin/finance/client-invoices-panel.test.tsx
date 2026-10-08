@@ -929,21 +929,17 @@ describe('ClientInvoicesPanel', () => {
     revokeUrl.mockRestore();
   });
 
-  it('passes currency filter to listCustomerInvoices', async () => {
+  it('omits the currency filter and does not pass currency to listCustomerInvoices', async () => {
     render(<ClientInvoicesPanel />);
 
     await waitFor(() => expect(billingMocks.listCustomerInvoices).toHaveBeenCalled());
 
-    const user = userEvent.setup();
-    const currencyFilter = document.getElementById('billing-invoice-currency-filter') as HTMLSelectElement;
-    await user.selectOptions(currencyFilter, 'USD');
-
-    await waitFor(() => {
-      expect(billingMocks.listCustomerInvoices).toHaveBeenCalledWith(
-        expect.objectContaining({ currency: 'USD' }),
-        expect.any(AbortSignal),
-      );
-    });
+    expect(document.getElementById('billing-invoice-currency-filter')).toBeNull();
+    expect(screen.queryByLabelText('Currency')).not.toBeInTheDocument();
+    expect(billingMocks.listCustomerInvoices).toHaveBeenCalledWith(
+      expect.not.objectContaining({ currency: expect.anything() }),
+      expect.any(AbortSignal),
+    );
   });
 
   it('passes debounced text filter q to listCustomerInvoices', async () => {

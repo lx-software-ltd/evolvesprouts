@@ -200,8 +200,6 @@ export function useClientInvoicesPanel() {
     setInvoiceStatusFilter: invoiceList.setInvoiceStatusFilter,
     invoiceSettlementFilter: invoiceList.invoiceSettlementFilter,
     setInvoiceSettlementFilter: invoiceList.setInvoiceSettlementFilter,
-    invoiceCurrencyFilter: invoiceList.invoiceCurrencyFilter,
-    setInvoiceCurrencyFilter: invoiceList.setInvoiceCurrencyFilter,
     invoiceSearchInput: invoiceList.invoiceSearchInput,
     setInvoiceSearchInput: invoiceList.setInvoiceSearchInput,
     selectedInvoiceId,

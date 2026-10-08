@@ -8,7 +8,6 @@ import type { useLocationList } from '@/hooks/use-location-list';
 import type { useServiceList } from '@/hooks/use-service-list';
 import type { RelatedPartyQuery } from '@/lib/contact-related-links';
 import type { EntityTagRef } from '@/lib/entity-api';
-import { formatServiceTitleWithTier } from '@/lib/format';
 import type { ServiceInstance } from '@/types/services';
 
 import { InstanceDetailPanel } from './instance-detail-panel';
@@ -76,14 +75,6 @@ export function InstancesView({
         searchFilter={{ value: instances.filters.search, onChange: instances.filters.setSearch }}
         serviceTypeFilter={{ value: instances.filters.serviceType, onChange: instances.filters.setServiceType }}
         statusFilter={{ value: instances.filters.status, onChange: instances.filters.setStatus }}
-        serviceFilter={{
-          value: instances.filters.service,
-          options: serviceOptions.map((service) => ({
-            id: service.id,
-            title: formatServiceTitleWithTier(service.title, service.serviceTier),
-          })),
-          onChange: instances.filters.setService,
-        }}
         onDuplicateInstance={instances.duplicateInstance}
         onDeleteInstance={async (instanceId, serviceId) => {
           if (instances.selectedId === instanceId) {

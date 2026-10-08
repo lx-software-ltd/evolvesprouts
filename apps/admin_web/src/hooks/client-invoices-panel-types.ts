@@ -162,8 +162,6 @@ export interface ClientInvoicesInvoicesTableSlice {
   setInvoiceStatusFilter: (value: InvoiceStatusFilter) => void;
   invoiceSettlementFilter: InvoiceSettlementFilter;
   setInvoiceSettlementFilter: (value: InvoiceSettlementFilter) => void;
-  invoiceCurrencyFilter: string;
-  setInvoiceCurrencyFilter: (value: string) => void;
   invoiceSearchInput: string;
   setInvoiceSearchInput: (value: string) => void;
   selectedInvoiceId: string | null;

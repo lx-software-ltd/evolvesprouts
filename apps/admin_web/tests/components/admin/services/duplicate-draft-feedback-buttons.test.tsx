@@ -135,7 +135,6 @@ describe('duplicate-as-draft feedback (services tables)', () => {
           draftDetail={null}
           renderDetail={() => null}
           onLoadMore={vi.fn()}
-          serviceFilter={{ value: '', options: [], onChange: vi.fn() }}
           serviceTypeFilter={{ value: '', onChange: vi.fn() }}
           statusFilter={{ value: '', onChange: vi.fn() }}
           searchFilter={{ value: '', onChange: vi.fn() }}

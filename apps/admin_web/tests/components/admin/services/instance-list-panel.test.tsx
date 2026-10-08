@@ -65,7 +65,6 @@ function renderPanel(overrides: Partial<ComponentProps<typeof InstanceListPanel>
     renderDetail: (instance) => <div data-testid='row-editor'>editor for {instance.id}</div>,
     onDuplicateInstance: vi.fn(),
     onDeleteInstance: vi.fn().mockResolvedValue(undefined),
-    serviceFilter: { value: '', options: [{ id: 'service-1', title: 'Parent service' }], onChange: vi.fn() },
     serviceTypeFilter: { value: '', onChange: vi.fn() },
     statusFilter: { value: 'not_completed', onChange: vi.fn() },
     searchFilter: { value: '', onChange: vi.fn() },
@@ -85,10 +84,10 @@ describe('InstanceListPanel', () => {
     expect(screen.queryByRole('heading')).toBeNull();
     expect(screen.getByRole('button', { name: 'New instance' })).toBeInTheDocument();
     expect(screen.getByLabelText('Search')).toBeInTheDocument();
-    expect(screen.getByLabelText('Search').parentElement).toHaveClass('sm:basis-[14.4rem]');
+    expect(screen.getByLabelText('Search').parentElement).toHaveClass('sm:basis-72');
     expect(screen.getByLabelText('Type')).toBeInTheDocument();
     expect(screen.getByLabelText('Status')).toBeInTheDocument();
-    expect(screen.getByLabelText('Service')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Service')).toBeNull();
     expect(screen.getByRole('button', { name: 'Duplicate instance as new draft' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete instance' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Copy booking link' })).toBeNull();
@@ -139,8 +138,6 @@ describe('InstanceListPanel', () => {
     expect(props.searchFilter.onChange).toHaveBeenCalledWith('spring');
     fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'completed' } });
     expect(props.statusFilter.onChange).toHaveBeenCalledWith('completed');
-    fireEvent.change(screen.getByLabelText('Service'), { target: { value: 'service-1' } });
-    expect(props.serviceFilter.onChange).toHaveBeenCalledWith('service-1');
     fireEvent.change(screen.getByLabelText('Type'), { target: { value: 'event' } });
     expect(props.serviceTypeFilter.onChange).toHaveBeenCalledWith('event');
     expect(screen.queryByRole('button', { name: /Apply/ })).toBeNull();

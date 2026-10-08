@@ -40,11 +40,6 @@ import { SERVICE_TYPES } from '@/types/services';
 
 const COLUMN_COUNT = 7;
 
-export interface InstanceServiceFilterOption {
-  id: string;
-  title: string;
-}
-
 export interface InstanceListPanelProps {
   /** Rows after the client-side status/search narrowing, newest first. */
   instances: ServiceInstance[];
@@ -65,11 +60,6 @@ export interface InstanceListPanelProps {
   /** Resolve true when the draft flow started (e.g. instance loaded); omit feedback on failure. */
   onDuplicateInstance: (instance: ServiceInstance) => Promise<boolean> | boolean | void;
   onDeleteInstance: (instanceId: string, serviceId: string) => Promise<void>;
-  serviceFilter: {
-    value: string;
-    options: InstanceServiceFilterOption[];
-    onChange: (serviceId: string) => void;
-  };
   serviceTypeFilter: {
     value: string;
     onChange: (serviceType: string) => void;
@@ -105,7 +95,6 @@ export function InstanceListPanel({
   renderDetail,
   onDuplicateInstance,
   onDeleteInstance,
-  serviceFilter,
   serviceTypeFilter,
   statusFilter,
   searchFilter,
@@ -163,7 +152,7 @@ export function InstanceListPanel({
               />
             }
           >
-            <AdminFilterField label='Search' htmlFor='instances-filter-search' className='sm:basis-[14.4rem]'>
+            <AdminFilterField label='Search' htmlFor='instances-filter-search' className='sm:basis-72'>
               <Input
                 id='instances-filter-search'
                 value={searchFilter.value}
@@ -200,20 +189,6 @@ export function InstanceListPanel({
                 <option value=''>All statuses</option>
                 <option value='not_completed'>Not Completed</option>
                 <option value='completed'>Completed</option>
-              </Select>
-            </AdminFilterField>
-            <AdminFilterField label='Service' htmlFor='instances-filter-service' className='sm:basis-56'>
-              <Select
-                id='instances-filter-service'
-                value={serviceFilter.value}
-                onChange={(event) => serviceFilter.onChange(event.target.value)}
-              >
-                <option value=''>All services</option>
-                {serviceFilter.options.map((entry) => (
-                  <option key={entry.id} value={entry.id}>
-                    {entry.title}
-                  </option>
-                ))}
               </Select>
             </AdminFilterField>
           </AdminFilterBar>

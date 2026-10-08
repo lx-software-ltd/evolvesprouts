@@ -32,14 +32,12 @@ export type InvoiceSettlementFilter =
 export interface InvoiceListFilters {
   status: InvoiceStatusFilter;
   settlement: InvoiceSettlementFilter;
-  currency: string;
   search: string;
 }
 
 const DEFAULT_INVOICE_LIST_FILTERS: InvoiceListFilters = {
   status: '',
   settlement: 'not_completed',
-  currency: '',
   search: '',
 };
 
@@ -71,7 +69,6 @@ export function useClientInvoicesInvoiceList({
     async ({
       status,
       settlement,
-      currency,
       search,
       cursor,
       limit,
@@ -81,7 +78,6 @@ export function useClientInvoicesInvoiceList({
         {
           status: status || undefined,
           settlement: settlement || undefined,
-          currency: currency || undefined,
           q: search.trim() || undefined,
           contactId: contactFilterId || undefined,
           familyId: familyFilterId || undefined,
@@ -370,9 +366,6 @@ export function useClientInvoicesInvoiceList({
     invoiceSettlementFilter: invoiceFilters.settlement,
     setInvoiceSettlementFilter: (value: InvoiceSettlementFilter) =>
       setInvoiceFilter('settlement', value),
-    invoiceCurrencyFilter: invoiceFilters.currency,
-    setInvoiceCurrencyFilter: (value: string) =>
-      setInvoiceFilter('currency', value),
     invoiceSearchInput: invoiceFilters.search,
     setInvoiceSearchInput: (value: string) => setInvoiceFilter('search', value),
     selectedIssuedInvoice,

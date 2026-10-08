@@ -135,8 +135,6 @@ const { mockUseServicesPage, state } = vi.hoisted(() => {
     },
     instances: {
       filters: {
-        service: '',
-        setService: vi.fn(),
         serviceType: '',
         setServiceType: vi.fn(),
         status: 'not_completed' as const,
@@ -392,7 +390,7 @@ describe('ServicesPage', () => {
     expect(within(filterBar).getByLabelText('Search')).toBeInTheDocument();
     expect(within(filterBar).getByLabelText('Type')).toBeInTheDocument();
     expect(within(filterBar).getByLabelText('Status')).toBeInTheDocument();
-    expect(within(filterBar).getByLabelText('Service')).toBeInTheDocument();
+    expect(within(filterBar).queryByLabelText('Service')).not.toBeInTheDocument();
     expect(within(filterBar).queryByRole('button', { name: /apply/i })).not.toBeInTheDocument();
     expect(within(region).getByRole('table')).toBeInTheDocument();
     expect(screen.queryByTestId('instance-editor')).not.toBeInTheDocument();
@@ -408,8 +406,6 @@ describe('ServicesPage', () => {
     expect(state.instances.filters.setSearch).toHaveBeenCalledWith('y');
     await user.selectOptions(screen.getByLabelText('Status'), 'completed');
     expect(state.instances.filters.setStatus).toHaveBeenCalledWith('completed');
-    await user.selectOptions(screen.getByLabelText('Service'), 'service-1');
-    expect(state.instances.filters.setService).toHaveBeenCalledWith('service-1');
   });
 
   it('renders the instance editor in place with the enrollments section wired for saved rows', () => {
