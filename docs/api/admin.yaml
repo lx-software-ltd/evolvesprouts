@@ -682,11 +682,11 @@ paths:
       summary: Geocode a venue address
       description: |
         Resolves latitude and longitude using OpenStreetMap's public geocoder via
-        the AWS HTTP proxy. The free-text query uses the submitted address with
-        unit/floor prefixes removed through the first comma-separated segment
-        that contains ``/F`` (case-insensitive), e.g. ``G/F`` or ``5/F``. District
-        and country names from the
-        geographic area are not appended. The ``countrycodes`` query parameter is
+        the AWS HTTP proxy. The free-text query keeps the street-number, street/road,
+        and neighbourhood portions of the submitted address. Comma-separated unit,
+        floor, block, tower, and estate/building segments are dropped (including
+        floor markers such as ``G/F`` or ``5/F``). District and country names from
+        the geographic area are not appended. The ``countrycodes`` query parameter is
         built from the root area ISO code plus the sovereign country row's code
         when ``sovereign_country_id`` is set (see ``GET /v1/admin/geographic-areas``).
       security:

@@ -64,7 +64,7 @@ def test_geocode_strips_address_through_floor_segment(monkeypatch: Any) -> None:
     addr = "1, 1/F, Example Tower, 1 Sample Street, Hong Kong"
     nominatim_geocode.geocode_address_with_context(address=addr, country_iso_codes=None)
     q = parse_qs(urlparse(seen[0]).query).get("q", [""])[0]
-    assert q == "Example Tower, 1 Sample Street, Hong Kong"
+    assert q == "1 Sample Street, Hong Kong"
 
 
 def test_geocode_strips_g_floor_segment(monkeypatch: Any) -> None:
@@ -91,6 +91,49 @@ def test_geocode_strips_g_floor_segment(monkeypatch: Any) -> None:
     )
     q = parse_qs(urlparse(seen[0]).query).get("q", [""])[0]
     assert q == "10 Sample Road"
+
+
+@pytest.mark.parametrize(
+    ("address", "expected"),
+    (
+        ("123 Main St", "123 Main St"),
+        (
+            "1, 1/F, Example Tower, 1 Sample Street, Hong Kong",
+            "1 Sample Street, Hong Kong",
+        ),
+        ("Shop 3, G/F, 10 Sample Road", "10 Sample Road"),
+        ("A, 12 / f, B Street", "B Street"),
+        (
+            "Tower 1, Star Crest, 9 Example Street",
+            "9 Example Street",
+        ),
+        (
+            "Block 40, Level 20, Lower Example Villa, 555 Sample Road, Example Bay",
+            "555 Sample Road, Example Bay",
+        ),
+        (
+            "2/F, Strand 50, 50 Example Strand, Sample Wan",
+            "50 Example Strand, Sample Wan",
+        ),
+        ("Example Bay", "Example Bay"),
+        (
+            "Flat F, Tower 1, Court A, Example Range, Example Shan",
+            "Example Shan",
+        ),
+        (
+            "1/F Example Building, 36-44 Queen's Rd E",
+            "36-44 Queen's Rd E",
+        ),
+        (
+            "9 Example Concept Children's Residency @ Sample Place Apartments",
+            "9 Example Concept Children's Residency @ Sample Place Apartments",
+        ),
+    ),
+)
+def test_geocode_query_keeps_street_and_neighbourhood(
+    address: str, expected: str
+) -> None:
+    assert nominatim_geocode._geocode_query_text(address) == expected
 
 
 def test_geocode_strips_floor_segment_with_spaces(monkeypatch: Any) -> None:

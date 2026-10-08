@@ -13,22 +13,74 @@ from app.services.aws_proxy import AwsProxyError, http_invoke
 from app.utils import require_env
 
 _NOMINATIM_SEARCH = "https://nominatim.openstreetmap.org/search"
-# Comma-separated segment contains a floor marker ``/F`` (case-insensitive), e.g. ``G/F``, ``5/F``.
-_FLOOR_SEGMENT = re.compile(r"/\s*[Ff]")
+# Floor markers such as ``G/F``, ``5/F``, ``LG/F``, ``Level 20``.
+_FLOOR_SEGMENT = re.compile(
+    r"(?i)/\s*f\b|\b(?:g|lg|ug|m)\s*/\s*f\b|\b(?:level|lvl|floor|fl)\s*\d+"
+)
+_UNIT_SEGMENT = re.compile(
+    r"(?i)\b(?:flat|unit|apt|apartment|suite|room|rm|shop|studio)\b"
+)
+_STRUCTURE_SEGMENT = re.compile(r"(?i)\b(?:block|blk|tower|twr|court|wing|phase|ph)\b")
+_ESTATE_SEGMENT = re.compile(
+    r"(?i)\b(?:estate|villas?|buildings?|bldg|mansion|range|"
+    r"residenc(?:e|y)|apartments?|centre|center|plaza|mall)\b"
+)
+_STREET_TYPE = re.compile(
+    r"(?i)\b(?:"
+    r"streets?|st|roads?|rd|avenues?|ave|lanes?|ln|"
+    r"drives?|dr|crescents?|cres|terraces?|ter|"
+    r"paths?|ways?|highways?|hwy|boulevards?|blvd|"
+    r"places?|pl|closes?|circles?|circu(?:it|s)|"
+    r"rows?|parades?|quays?|promenades?|walks?|"
+    r"rises?|hills?|gaps?|alleys?"
+    r")\b"
+)
+# Leading house number or range, e.g. ``9``, ``1A``, ``36-44``.
+_HOUSE_NUMBER = re.compile(r"^\d+[a-z]?(?:\s*[-–]\s*\d+[a-z]?)?\b", re.IGNORECASE)
+# Building-style ``Name 50`` (words then a trailing number, no street type).
+_TRAILING_BUILDING_NUMBER = re.compile(r"(?i)^(?=.*[a-z]).+\s+\d+[a-z]?$")
+
+
+def _classify_geocode_segment(part: str) -> str:
+    """Return ``street``, ``place``, or ``drop`` for one comma-separated part."""
+    if (
+        _FLOOR_SEGMENT.search(part)
+        or _UNIT_SEGMENT.search(part)
+        or _STRUCTURE_SEGMENT.search(part)
+    ):
+        return "drop"
+    if _ESTATE_SEGMENT.search(part) and _STREET_TYPE.search(part) is None:
+        return "drop"
+    if _STREET_TYPE.search(part):
+        return "street"
+    if _HOUSE_NUMBER.match(part) and re.search(r"[A-Za-z]", part):
+        return "street"
+    if _TRAILING_BUILDING_NUMBER.match(part):
+        return "drop"
+    return "place"
 
 
 def _geocode_query_text(address: str) -> str:
-    """Free-text query for the geocoder: drop segments through one with ``/F``."""
+    """Free-text query: street number/road plus neighbourhood, not unit or estate."""
     raw = address.strip()
     if not raw:
         return ""
-    parts = [p.strip() for p in raw.split(",")]
-    parts = [p for p in parts if p]
-    for i, part in enumerate(parts):
-        if _FLOOR_SEGMENT.search(part):
-            tail = ", ".join(parts[i + 1 :]).strip()
-            return tail if tail else raw
-    return raw
+    parts = [p.strip() for p in raw.split(",") if p.strip()]
+    if not parts:
+        return ""
+
+    kinds = [_classify_geocode_segment(part) for part in parts]
+    street_indexes = [i for i, kind in enumerate(kinds) if kind == "street"]
+    if street_indexes:
+        start = street_indexes[0]
+        kept = [
+            parts[i]
+            for i in range(start, len(parts))
+            if kinds[i] in ("street", "place")
+        ]
+    else:
+        kept = [parts[i] for i, kind in enumerate(kinds) if kind == "place"]
+    return ", ".join(kept) if kept else raw
 
 
 def _countrycodes_param(country_iso_codes: Sequence[str] | None) -> str | None:
@@ -56,9 +108,9 @@ def geocode_address_with_context(
     """Return (lat, lng, display_name) for a free-text address.
 
     Args:
-        address: Street or venue address. Comma-separated segments through the
-            first that contains ``/F`` (case-insensitive), e.g. ``G/F`` or ``5/F``,
-            are dropped from the geocoder query.
+        address: Street or venue address. The geocoder query keeps the street
+            number, street/road, and neighbourhood portions. Unit, floor,
+            block, tower, and estate/building segments are dropped.
         country_iso_codes: Optional ISO 3166-1 alpha-2 values (e.g. from
             ``geographic_areas`` and ``sovereign_country_id``) for the
             ``countrycodes`` query parameter (comma-separated OR filter).
