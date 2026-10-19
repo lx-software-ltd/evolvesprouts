@@ -36,6 +36,7 @@ export function useEnrollmentParentPickers(canCreate: boolean) {
 
   useEffect(() => {
     if (!canCreate) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
       setContacts([]);
       setFamilies([]);
       setOrganizations([]);

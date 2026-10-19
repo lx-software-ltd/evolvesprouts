@@ -99,6 +99,7 @@ export function useCertificateIssueDraft({ track, issueCertificate, onIssued }: 
 
   useEffect(() => {
     if (!serviceId.trim()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
       setInstanceId('');
       setContactId('');
       setCompletedEnrollments([]);
@@ -113,6 +114,7 @@ export function useCertificateIssueDraft({ track, issueCertificate, onIssued }: 
     const sid = serviceId.trim();
     const iid = instanceId.trim();
     if (!sid || !iid) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
       setCompletedEnrollments([]);
       setEnrollmentsError('');
       setContactId('');
@@ -146,6 +148,7 @@ export function useCertificateIssueDraft({ track, issueCertificate, onIssued }: 
 
   useEffect(() => {
     if (!selectedInstance) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
       setPartnerOrganizationId('');
       return;
     }
@@ -202,6 +205,7 @@ export function useCertificateIssueDraft({ track, issueCertificate, onIssued }: 
 
   useEffect(() => {
     if (!draftPayload) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
       setPreviewUrl('');
       setPreviewError('');
       return;

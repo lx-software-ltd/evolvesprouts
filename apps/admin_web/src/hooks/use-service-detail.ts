@@ -41,6 +41,7 @@ export function useServiceDetail(serviceId: string | null) {
   }, [serviceId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
     void refetch();
     return () => {
       abortRef.current?.abort();

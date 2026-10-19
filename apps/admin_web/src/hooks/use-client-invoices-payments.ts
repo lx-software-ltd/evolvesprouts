@@ -160,6 +160,7 @@ export function useClientInvoicesPayments({
 
   useEffect(() => {
     if (!selectedId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
       setDetail(null);
       setDetailError('');
       return;
@@ -171,6 +172,7 @@ export function useClientInvoicesPayments({
 
   useEffect(() => {
     if (!selectedId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
       resetManualPaymentCreateFields();
       return;
     }

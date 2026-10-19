@@ -45,6 +45,7 @@ export function LeadsBulkActions({
     if (!mergeOpen) {
       return;
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
     setKeeperLeadId((current) => current || selectedLeads[0]?.id || '');
   }, [mergeOpen, selectedLeads]);
 

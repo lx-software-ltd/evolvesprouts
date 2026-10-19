@@ -176,6 +176,7 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
 
   useEffect(() => {
     const controller = new AbortController();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
     void loadSummaries(controller.signal);
     return () => controller.abort();
   }, [loadSummaries]);
@@ -189,6 +190,7 @@ export function WebsiteAnswersPanel<TRow extends WebsiteAnswersRow>({
 
   useEffect(() => {
     if (!contactRequired || respondentContactIds.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
       setContactLabels({});
       return;
     }

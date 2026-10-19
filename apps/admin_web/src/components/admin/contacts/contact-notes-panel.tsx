@@ -64,6 +64,7 @@ export function ContactNotesPanel({
   useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
     setLoadError('');
     setActionError('');
     setExpandedNoteId(null);

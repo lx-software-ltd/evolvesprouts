@@ -74,6 +74,7 @@ export function LeadAiSuggestionPanel({ leadId }: LeadAiSuggestionPanelProps) {
   }, [leadId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
     void loadSuggestion();
     return () => {
       abortRef.current?.abort();

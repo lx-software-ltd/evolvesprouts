@@ -50,6 +50,7 @@ export function SalePlanOutreachItem({
   const busy = disabled || pending !== null;
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
     setDraft(item.savedDraftReply || item.draftReply || '');
   }, [item.savedDraftReply, item.draftReply]);
 
