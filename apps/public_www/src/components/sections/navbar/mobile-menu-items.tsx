@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { ButtonPrimitive } from '@/components/shared/button-primitive';
 import enContent from '@/content/en.json';
@@ -73,10 +73,11 @@ function MobileMenuItem({
 }) {
   const itemIsActive = isMenuItemActive(currentPath, item);
   const [isExpanded, setIsExpanded] = useState(itemIsActive);
-
-  useEffect(() => {
+  const [expandedForActive, setExpandedForActive] = useState(itemIsActive);
+  if (itemIsActive !== expandedForActive) {
+    setExpandedForActive(itemIsActive);
     setIsExpanded(itemIsActive);
-  }, [itemIsActive]);
+  }
 
   return (
     <li className='space-y-2'>

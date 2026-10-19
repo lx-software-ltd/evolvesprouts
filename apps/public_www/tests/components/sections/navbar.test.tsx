@@ -9,6 +9,7 @@ import type { ComponentProps, ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Navbar } from '@/components/sections/navbar';
+import { MobileMenuItems } from '@/components/sections/navbar/mobile-menu-items';
 import enContent from '@/content/en.json';
 
 vi.mock('next/navigation', () => ({
@@ -253,6 +254,45 @@ describe('Navbar desktop submenu accessibility', () => {
       name: 'Toggle Our Services submenu',
     });
     expect(trainingCoursesToggle.className).toContain('es-navbar-mobile-pill-reset');
+  });
+
+  it('follows the active path when expanding the mobile submenu', () => {
+    const { rerender } = render(
+      <MobileMenuItems
+        items={enContent.navbar.menuItems}
+        currentPath='/services/consultations'
+        locale='en'
+        onNavigate={() => undefined}
+      />,
+    );
+    const toggle = screen.getByRole('button', { name: 'Toggle Our Services submenu' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+    rerender(
+      <MobileMenuItems
+        items={enContent.navbar.menuItems}
+        currentPath='/about-us'
+        locale='en'
+        onNavigate={() => undefined}
+      />,
+    );
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+    rerender(
+      <MobileMenuItems
+        items={enContent.navbar.menuItems}
+        currentPath='/services/consultations'
+        locale='en'
+        onNavigate={() => undefined}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Toggle Our Services submenu' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
   });
 
   it('condenses fixed navbar after scrolling via DOM class toggle', async () => {
