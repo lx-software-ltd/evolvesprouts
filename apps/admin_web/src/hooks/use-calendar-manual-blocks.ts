@@ -82,6 +82,7 @@ export function useCalendarManualBlocks() {
   }, [listFrom, listTo]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
     void loadRows();
   }, [loadRows]);
 

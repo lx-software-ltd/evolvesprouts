@@ -84,6 +84,7 @@ export function BillToPartySearchOrCreateField({
   const previousStatus = useRef(value.status);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
     setInputValue('');
     setResults([]);
     setHighlightIndex(0);
@@ -93,6 +94,7 @@ export function BillToPartySearchOrCreateField({
 
   useEffect(() => {
     if (value.status === 'existing') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
       setInputValue(value.label);
     } else if (value.status === 'empty' && previousStatus.current !== 'empty') {
       setInputValue('');
@@ -102,6 +104,7 @@ export function BillToPartySearchOrCreateField({
 
   useEffect(() => {
     if (!enabled) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
       setResults([]);
       setSearching(false);
       setSearchError('');

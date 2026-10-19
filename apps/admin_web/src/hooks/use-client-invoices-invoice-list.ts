@@ -154,6 +154,7 @@ export function useClientInvoicesInvoiceList({
   );
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
     setIssuedInvoiceEmailError('');
     const inv = selectedIssuedInvoice;
 

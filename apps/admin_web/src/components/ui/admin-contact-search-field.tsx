@@ -45,6 +45,7 @@ export function AdminContactSearchField({
 
   useEffect(() => {
     if (value.status === 'selected') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
       setInputValue(value.label);
     } else if (previousStatus.current === 'selected') {
       setInputValue('');
@@ -55,6 +56,7 @@ export function AdminContactSearchField({
   useEffect(() => {
     const q = inputValue.trim();
     if (value.status === 'selected' && q === value.label.trim()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
       setResults([]);
       setSearching(false);
       setSearchError('');

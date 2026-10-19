@@ -28,6 +28,7 @@ export function useVendorSpendDefaultCurrency(expenses: Expense[] | null) {
 
   useEffect(() => {
     if (expenses === null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
       setByVendorId(new Map());
       setError('');
       setIsLoading(false);

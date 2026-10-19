@@ -121,6 +121,7 @@ export function useClientInvoicesDraft({
 
   useEffect(() => {
     const ac = new AbortController();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
     void loadEnrollmentPicker(ac.signal);
     return () => ac.abort();
   }, [loadEnrollmentPicker]);

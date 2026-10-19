@@ -39,6 +39,7 @@ export function useLeadAnalytics() {
   }, [dateRange.dateFrom, dateRange.dateTo]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
     void refetch();
   }, [refetch]);
 

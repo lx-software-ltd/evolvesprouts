@@ -15,6 +15,7 @@ export function useEnrollmentDiscountOptions(serviceId: string | null, instanceI
     const service = serviceId?.trim();
     const instance = instanceId?.trim();
     if (!service || !instance) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
       setOptions([]);
       setError('');
       setIsLoading(false);

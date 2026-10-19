@@ -48,6 +48,7 @@ export function useAssetGrants(selectedAssetId: string | null): UseAssetGrantsRe
 
   useEffect(() => {
     if (!selectedAssetId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
       setGrants([]);
       setGrantsError('');
       return;

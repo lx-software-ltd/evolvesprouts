@@ -115,6 +115,54 @@ describe('usePaginatedList', () => {
     });
   });
 
+  it('does not refetch when the caller passes a new queryKey array with the same entries', async () => {
+    resetAdminQueryClientForTests({ queries: { staleTime: 60_000 } });
+    const fetcher = vi.fn(async () => ({ items: ['a'], nextCursor: null, totalCount: 1 }));
+    const { result, rerender } = renderHook(() =>
+      usePaginatedList({
+        fetcher,
+        defaultFilters: { query: '' } as Filters,
+        queryKey: ['admin', 'stable-list'],
+      })
+    );
+
+    await waitFor(() => expect(result.current.items).toEqual(['a']));
+    rerender();
+    await waitFor(() => expect(result.current.items).toEqual(['a']));
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports loading while an explicit refetch is in flight', async () => {
+    let resolveFetch: (value: { items: string[]; nextCursor: null }) => void = () => undefined;
+    const fetcher = vi.fn(
+      () =>
+        new Promise<{ items: string[]; nextCursor: null }>((resolve) => {
+          resolveFetch = resolve;
+        })
+    );
+    const { result } = renderHook(() =>
+      usePaginatedList({
+        fetcher,
+        defaultFilters: { query: '' } as Filters,
+        fetchOnMount: false,
+      })
+    );
+
+    expect(result.current.isLoading).toBe(false);
+    let pending: Promise<void> = Promise.resolve();
+    act(() => {
+      pending = result.current.refetch();
+    });
+    expect(result.current.isLoading).toBe(true);
+
+    await act(async () => {
+      resolveFetch({ items: ['row'], nextCursor: null });
+      await pending;
+    });
+    await waitFor(() => expect(result.current.items).toEqual(['row']));
+    expect(result.current.isLoading).toBe(false);
+  });
+
   it('does not set error state for aborted requests', async () => {
     const fetcher = vi.fn(async () => {
       throw new DOMException('Aborted', 'AbortError');

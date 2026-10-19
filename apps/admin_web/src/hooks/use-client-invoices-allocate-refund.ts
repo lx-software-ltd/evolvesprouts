@@ -131,6 +131,7 @@ export function useClientInvoicesAllocateRefund({
   useEffect(() => {
     const trimmed = allocateInvoiceId.trim();
     if (trimmed === '') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
       setAllocateInvoiceLines([]);
       setAllocateInvoiceLinesError('');
       setAllocateInvoiceLinesLoading(false);
@@ -209,6 +210,7 @@ export function useClientInvoicesAllocateRefund({
   useEffect(() => {
     const trimmed = refundInvoiceId.trim();
     if (trimmed === '') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset or load when inputs change
       setRefundPaymentsForInvoice([]);
       setRefundPaymentsLoading(false);
       setRefundPaymentsError('');
