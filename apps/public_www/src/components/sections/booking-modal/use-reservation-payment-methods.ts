@@ -85,7 +85,6 @@ export function useReservationPaymentMethods({
   const prevIsFreeReservationRef = useRef(isFreeReservation);
   useEffect(() => {
     if (prevIsFreeReservationRef.current && !isFreeReservation) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset payment method when leaving free tier
       setSelectedPaymentMethod(getDefaultPaymentMethod(paymentMethodFlags));
     }
     prevIsFreeReservationRef.current = isFreeReservation;

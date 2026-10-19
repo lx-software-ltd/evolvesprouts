@@ -249,6 +249,7 @@ export function useReservationDiscount({
       return;
     }
     autoApplyAttemptedRef.current = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- apply a prefilled referral code once
     void applyDiscountFromCode(raw, { ctaLocation: 'referral_auto', autoApply: true });
   }, [applyDiscountFromCode, discountRule, prefilledDiscountCode]);
 
