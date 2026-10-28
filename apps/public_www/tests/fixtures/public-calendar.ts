@@ -158,5 +158,31 @@ export const publicCalendarFixture = {
         'https://www.google.com/maps/dir/?api=1&destination=1%2FF%2C+1+Sample+Street%2C+Hong+Kong',
       slug: 'may-2026-the-missing-piece',
     },
+    {
+      title: 'Mealtimes',
+      description:
+        "Two hours on the thing that decides the mood of your whole day. For your helper, with seven others, practising — not sitting and listening. Includes the parents' call on Tuesday 1 December.",
+      tags: ['1-4', 'Helpers'],
+      categories: ['Workshop'],
+      location: 'physical',
+      booking_system: 'event-booking',
+      service_type: 'event',
+      service_key: 'events',
+      dates: [
+        {
+          start_datetime: '2026-11-28T01:00:00Z',
+          end_datetime: '2026-11-28T03:00:00Z',
+          part: 1,
+        },
+      ],
+      spaces_total: 8,
+      spaces_left: 8,
+      price: 900,
+      currency: 'HKD',
+      is_fully_booked: false,
+      location_name: 'Hong Kong Island',
+      location_address: '',
+      slug: 'nov-2026-mealtimes-workshop',
+    },
   ],
 };

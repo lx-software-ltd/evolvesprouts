@@ -308,4 +308,42 @@ describe('structured-data builders', () => {
       },
     });
   });
+
+  it('builds landing page event schema for the November 2026 Mealtimes workshop', () => {
+    const structuredDataContent = getLandingPageStructuredDataContentFromPayload(
+      publicCalendarFixture,
+      'nov-2026-mealtimes-workshop',
+    );
+    const schema = buildLandingPageEventSchema({
+      locale: 'en',
+      pagePath: '/nov-2026-mealtimes-workshop',
+      structuredDataContent,
+    });
+
+    expect(schema).toMatchObject({
+      '@type': 'Event',
+      name: 'Mealtimes',
+      description:
+        "Two hours on the thing that decides the mood of your whole day. For your helper, with seven others, practising — not sitting and listening. Includes the parents' call on Tuesday 1 December.",
+      startDate: '2026-11-28T01:00:00.000Z',
+      endDate: '2026-11-28T03:00:00.000Z',
+      location: {
+        '@type': 'Place',
+        name: 'Hong Kong Island',
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: 'Hong Kong Island',
+          addressLocality: 'Hong Kong',
+          addressCountry: 'HK',
+        },
+      },
+      offers: {
+        '@type': 'Offer',
+        price: '900',
+        priceCurrency: 'HKD',
+        availability: 'https://schema.org/InStock',
+        validFrom: expect.any(String),
+      },
+    });
+  });
 });

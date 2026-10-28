@@ -4,6 +4,7 @@ import enContent from '@/content/en.json';
 import zhHKContent from '@/content/zh-HK.json';
 import easterWorkshopLandingContent from '@/content/landing-pages/easter-2026-montessori-play-coaching-workshop.json';
 import missingPieceLandingContent from '@/content/landing-pages/may-2026-the-missing-piece.json';
+import mealtimesLandingContent from '@/content/landing-pages/nov-2026-mealtimes-workshop.json';
 import { publicCalendarFixture } from '../fixtures/public-calendar';
 import {
   createCrmApiClient,
@@ -820,6 +821,45 @@ describe('events-data', () => {
       offerPrice: '150',
       offerCurrency: 'HKD',
       offerAvailability: 'InStock',
+    });
+  });
+
+  it('resolves the November 2026 Mealtimes landing page from the calendar payload', () => {
+    const heroEventContent = getLandingPageHeroEventContentFromPayload(
+      publicCalendarFixture,
+      'nov-2026-mealtimes-workshop',
+    );
+
+    expect(heroEventContent).not.toBeNull();
+    expect(heroEventContent).toMatchObject({
+      title: 'Mealtimes',
+      startDateTime: '2026-11-28T01:00:00Z',
+      endDateTime: '2026-11-28T03:00:00Z',
+      categoryChips: ['Workshop'],
+    });
+
+    const bookingEventContent = getLandingPageBookingEventContentFromPayload(
+      publicCalendarFixture,
+      'nov-2026-mealtimes-workshop',
+      'en',
+    );
+
+    expect(bookingEventContent).not.toBeNull();
+    expect(bookingEventContent).toMatchObject({
+      status: 'open',
+      spacesLeft: 8,
+      eyebrowDateLabel: formatExpectedLandingPageEyebrowDate('2026-11-28T01:00:00Z', 'en'),
+      ctaPriceLabel: 'HK$900',
+      bookingPayload: {
+        variant: 'event',
+        serviceKey: 'events',
+        instanceSlug: 'nov-2026-mealtimes-workshop',
+        title: 'Mealtimes',
+        locationName: 'Hong Kong Island',
+        selectedDateLabel: '28 Nov 2026',
+        selectedDateStartTime: '2026-11-28T01:00:00Z',
+        topicsFieldConfig: mealtimesLandingContent.en.cta.bookingTopicsField,
+      },
     });
   });
 
