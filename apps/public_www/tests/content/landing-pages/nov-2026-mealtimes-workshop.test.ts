@@ -5,12 +5,33 @@ import mealtimes from '@/content/landing-pages/nov-2026-mealtimes-workshop.json'
 const locales = ['en', 'zh-CN', 'zh-HK'] as const;
 
 describe('nov-2026-mealtimes-workshop landing page', () => {
+  it('omits the hero eyebrow in every locale', () => {
+    for (const locale of locales) {
+      expect(mealtimes[locale].hero).not.toHaveProperty('eyebrow');
+    }
+  });
+
   it('keeps the parents call and family count as the only static hero chips', () => {
     for (const locale of locales) {
       const chips = mealtimes[locale].hero.quickFactChips ?? [];
       expect(chips.map((chip) => chip.type)).toEqual(['date', 'visits']);
       expect(chips[0]?.label).toContain('Tue 1 Dec');
       expect(chips[1]?.label).toBe('8 families');
+    }
+  });
+
+  it('uses the five Saturday run-of-show slots in every locale', () => {
+    const expectedTitles = [
+      '9:00 — Why she isn\'t hungry at dinner',
+      '9:20 — Building the plate',
+      '9:45 — Hands on: pouring, serving herself, clearing her own place',
+      '10:30 — What to say instead',
+      '10:50 — One thing this week',
+    ];
+    for (const locale of locales) {
+      expect(mealtimes[locale].description.items.map((item) => item.title)).toEqual(
+        expectedTitles,
+      );
     }
   });
 
