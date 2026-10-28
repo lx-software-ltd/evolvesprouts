@@ -1,6 +1,15 @@
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 
 import mealtimes from '@/content/landing-pages/nov-2026-mealtimes-workshop.json';
+
+const mealtimesHeroImagePath = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '../../../public/images/hero/mealtimes-workshop-hero.webp',
+);
 
 const locales = ['en', 'zh-CN', 'zh-HK'] as const;
 
@@ -8,6 +17,27 @@ describe('nov-2026-mealtimes-workshop landing page', () => {
   it('omits the hero eyebrow in every locale', () => {
     for (const locale of locales) {
       expect(mealtimes[locale].hero).not.toHaveProperty('eyebrow');
+    }
+  });
+
+  it('stores the mealtime hero as a transparent webp', async () => {
+    const meta = await sharp(mealtimesHeroImagePath).metadata();
+    expect(meta.hasAlpha).toBe(true);
+    const { data } = await sharp(mealtimesHeroImagePath)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    expect(data[3]).toBe(0);
+  });
+
+  it('uses the high-chair mealtime photo in every locale', () => {
+    for (const locale of locales) {
+      expect(mealtimes[locale].hero.imageSrc).toBe(
+        '/images/hero/mealtimes-workshop-hero.webp',
+      );
+      expect(mealtimes[locale].hero.imageAlt).toBe(
+        'Smiling toddler in a high chair holding broccoli',
+      );
     }
   });
 
