@@ -164,6 +164,8 @@ export interface LandingPageLocaleContent {
     ctaAnchorHref?: string;
     ctaAnchorLabel?: string;
   };
+  /** Optional trainer block. Falls back to the About Us founder coach. */
+  coach?: AboutUsFounderCoachContent;
   introCall?: {
     bookingSectionTitle: string;
     /** Shown before the WhatsApp link when no slots load or as helper copy under the picker. */

@@ -288,7 +288,7 @@ their primary responsibilities.
   `/www/v1/calendar/public` (public calendar feed: returns **event** and
   **training_course** `service_instances` for published services; consultation
   is intentionally excluded. Instances with an empty `service_instances.slug` are omitted.
-  Visibility: instances with any session not yet ended, or **event** instances whose last session ended within the prior 90 days (finished **training_course** rows are omitted).
+  Visibility: instances with any session not yet ended, or **event** instances whose last session ended within the prior 90 days (finished **training_course** rows are omitted). Scheduled **event** instances are omitted; scheduled **training_course** instances stay. Event reservations accept `open`, `full`, and `in_progress` only.
   Each item includes `service_type`,
   `slug` (public instance slug from `service_instances.slug`), parent `service_key`
   (nullable `services.service_key`; required for public discount validate and reservation

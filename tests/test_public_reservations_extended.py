@@ -17,7 +17,7 @@ from app.api.public_reservations import (
     _validate_reservation_payload,
 )
 from app.db.models import InstanceSessionSlot
-from app.db.models.enums import DiscountType, ServiceType
+from app.db.models.enums import DiscountType, InstanceStatus, ServiceType
 
 
 class _FakeBeginNestedCM:
@@ -34,9 +34,11 @@ def _resolved_instance_stub(
     *,
     service_key: str = "my-best-auntie-training-course",
     service_type_value: str = "training_course",
+    status: InstanceStatus = InstanceStatus.OPEN,
 ) -> SimpleNamespace:
     return SimpleNamespace(
         id=instance_id,
+        status=status,
         service=SimpleNamespace(
             id=service_id,
             service_key=service_key,
@@ -798,6 +800,74 @@ def test_handle_public_reservation_event_booking_skips_booking_child_allocation(
     assert resp["statusCode"] == 202
     booking_child_spy.assert_not_called()
     assert enrollment_target["instance_id"] == template_instance_id
+
+
+def test_handle_public_reservation_rejects_scheduled_event(
+    api_gateway_event: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "app.api.public_reservations.verify_turnstile_token",
+        lambda *_a, **_k: True,
+    )
+    monkeypatch.setattr(
+        "app.api.public_reservations._validate_payment_confirmation",
+        lambda *_a, **_k: None,
+    )
+    monkeypatch.setattr(
+        "app.api.public_reservations.set_audit_context",
+        lambda *a, **k: None,
+    )
+
+    class _FakeInstanceRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def get_with_service_by_slug(self, slug: str) -> SimpleNamespace | None:
+            if slug.strip().lower() == "test-cohort":
+                return _resolved_instance_stub(
+                    uuid4(),
+                    uuid4(),
+                    service_key="saturday-workshops-for-helpers",
+                    service_type_value="event",
+                    status=InstanceStatus.SCHEDULED,
+                )
+            return None
+
+    class _FakeSession:
+        def begin(self) -> _FakeBeginNestedCM:
+            return _FakeBeginNestedCM()
+
+    class _FakeSessionCM:
+        def __enter__(self) -> _FakeSession:
+            return _FakeSession()
+
+        def __exit__(self, *_a: object) -> bool:
+            return False
+
+    monkeypatch.setattr(
+        "app.api.public_reservations.ServiceInstanceRepository",
+        _FakeInstanceRepo,
+    )
+    monkeypatch.setattr(
+        "app.api.public_reservations.Session",
+        lambda _e: _FakeSessionCM(),
+    )
+    monkeypatch.setattr(
+        "app.api.public_reservations.get_engine",
+        lambda: object(),
+    )
+
+    body = _reservation_body(
+        bookingSystem="event-booking",
+        serviceKey="saturday-workshops-for-helpers",
+    )
+    event = _post_event(api_gateway_event, body)
+    resp = _handle_public_reservation(event, "POST")
+    assert resp["statusCode"] == 400
+    payload = json.loads(resp["body"])
+    assert payload["field"] == "serviceInstanceSlug"
+    assert payload["error"] == "This event is not open for booking"
 
 
 def test_handle_public_reservation_mba_style_skips_booking_child_allocation(

@@ -1,0 +1,413 @@
+{
+  "en": {
+    "meta": {
+      "title": "Mealtimes: Saturday workshop for helpers",
+      "description": "Two hours on the thing that decides the mood of your whole day. For your helper, with seven others, practising — not sitting and listening.",
+      "socialImage": {
+        "url": "/images/seo/evolvesprouts-og-default.png",
+        "alt": "Mealtimes workshop by Evolve Sprouts"
+      }
+    },
+    "hero": {
+      "eyebrow": "Saturday workshops for helpers · Hong Kong",
+      "subtitle": "",
+      "description": "Two hours on the thing that decides the mood of your whole day. For your helper, with seven others, practising — not sitting and listening.",
+      "imageAlt": "Smiling toddler holding wooden blocks",
+      "imageSrc": "/images/hero/child-hero.webp",
+      "imageMaxWidthPercent": 90,
+      "quickFactChips": [
+        {
+          "type": "date",
+          "label": "Parents' call Tue 1 Dec, 8:30pm on Zoom"
+        },
+        {
+          "type": "visits",
+          "label": "8 families"
+        }
+      ]
+    },
+    "outline": {
+      "eyebrow": "Why helpers only in the room",
+      "title": "Helpers change when they watch other helpers do it",
+      "description": "Far more than when the mum asks again. And because nobody speaks honestly with their employer sitting beside them.\n\n\"It's not about doing more. It's about setting things up differently.\"",
+      "highlightPhrase": "setting things up differently"
+    },
+    "description": {
+      "eyebrow": "What we actually work on",
+      "title": "The child who won't eat",
+      "description": "The bowl on the floor. The forty-five-minute dinner. The helper who keeps spooning it in because it's faster, and because nobody ever showed her another way.",
+      "items": [
+        {
+          "title": "9:00 — What is really happening",
+          "description": "When a toddler refuses food, most of it isn't about the food."
+        },
+        {
+          "title": "9:20 — Hands on",
+          "description": "Pouring, serving, and a real table set up the way it should be at home. Real jugs, real spills."
+        },
+        {
+          "title": "10:10 — What to say instead",
+          "description": "Don't say / say, practised out loud until it sounds natural."
+        },
+        {
+          "title": "10:40 — One thing this week",
+          "description": "Each helper picks the one thing she will set up this week, and leaves with it written down."
+        }
+      ]
+    },
+    "details": {
+      "eyebrow": "How it works",
+      "title": "Two hours for her, forty minutes for you",
+      "description": "",
+      "items": [
+        {
+          "icon": "🍽️",
+          "title": "Saturday, helpers only",
+          "description": "Two hours of practice, not a lecture. Eight helpers in the room."
+        },
+        {
+          "icon": "💻",
+          "title": "Tuesday parents' call",
+          "description": "40 minutes on Zoom, Tuesday 1 December at 8:30pm, once the children are down. What she learned, what it should look like at your table, and the three things parents usually do that undo it."
+        },
+        {
+          "icon": "✉️",
+          "title": "Saturday evening note",
+          "description": "A short message the same evening so you know what to look for."
+        },
+        {
+          "icon": "👨‍👩‍👧",
+          "title": "One payment, one family",
+          "description": "HK$900 covers your helper on the Saturday and you on the Tuesday."
+        }
+      ]
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "items": [
+        {
+          "question": "Who is it for?",
+          "answer": "Families in Hong Kong with a child roughly 1 to 4, and a helper who is at the table for most of those meals."
+        },
+        {
+          "question": "Do parents attend the Saturday?",
+          "answer": "No. Helpers only in the room on Saturday. Parents join the Tuesday call."
+        },
+        {
+          "question": "Where is it?",
+          "answer": "Hong Kong Island. The exact address is sent a week before."
+        },
+        {
+          "question": "Is this a course?",
+          "answer": "No. One Saturday roughly every six weeks, each on its own. Come to the one you need. 28 Nov 2026 — Mealtimes (booking now). 12 Dec 2026 — Tantrums and limits. 16 Jan 2027 — Getting dressed, getting out of the door. 20 Feb 2027 — Toys, play, and leaving them alone."
+        },
+        {
+          "question": "What does HK$900 include?",
+          "answer": "Both sessions for one family: the Saturday workshop for your helper, and the Tuesday parents' call. Eight families, then it closes."
+        }
+      ]
+    },
+    "cta": {
+      "eyebrow": "⚡ {spotsLeft} spots left - {date}",
+      "eyebrowShowLogo": false,
+      "title": "8 families, then it closes.",
+      "description": "Add your helper's name so we can prepare the session. The exact address is sent a week before.",
+      "buttonLabel": "Reserve my spot",
+      "buttonLabelTemplate": "Reserve my spot - {price}",
+      "fullyBookedButtonLabel": "Fully booked - Get in touch to join the waiting list",
+      "fullyBookedWaitlistMessageTemplate": "I would like to join the waiting list for the event {eventTitle}.",
+      "bookingTopicsField": {
+        "label": "Your helper's name",
+        "placeholder": "The name we should expect on Saturday",
+        "required": true
+      }
+    },
+    "coach": {
+      "eyebrow": "Your trainer",
+      "title": "Ida De Gregorio",
+      "subtitle": "Founder, Evolve Sprouts",
+      "description": "Ida is AMI trained for ages 0–3 and 3–6. She previously taught at an international Montessori school in Hong Kong and holds an MEd from HKU. She has a Child Nutrition certification from Stanford, and she works inside Hong Kong homes with parents and helpers. She is Italian, has lived here for ten years, and is a mother of two.",
+      "highlightedPhrase": "Child Nutrition certification from Stanford",
+      "tags": [
+        "AMI Montessori (0–3 and 3–6)",
+        "MEd, HKU",
+        "Child Nutrition, Stanford"
+      ],
+      "imageAlt": "Ida De Gregorio from Evolve Sprouts"
+    }
+  },
+  "zh-CN": {
+    "meta": {
+      "title": "Mealtimes: Saturday workshop for helpers",
+      "description": "Two hours on the thing that decides the mood of your whole day. For your helper, with seven others, practising — not sitting and listening.",
+      "socialImage": {
+        "url": "/images/seo/evolvesprouts-og-default.png",
+        "alt": "Mealtimes workshop by Evolve Sprouts"
+      }
+    },
+    "hero": {
+      "eyebrow": "Saturday workshops for helpers · Hong Kong",
+      "subtitle": "",
+      "description": "Two hours on the thing that decides the mood of your whole day. For your helper, with seven others, practising — not sitting and listening.",
+      "imageAlt": "Smiling toddler holding wooden blocks",
+      "imageSrc": "/images/hero/child-hero.webp",
+      "imageMaxWidthPercent": 90,
+      "quickFactChips": [
+        {
+          "type": "date",
+          "label": "Parents' call Tue 1 Dec, 8:30pm on Zoom"
+        },
+        {
+          "type": "visits",
+          "label": "8 families"
+        }
+      ]
+    },
+    "outline": {
+      "eyebrow": "Why helpers only in the room",
+      "title": "Helpers change when they watch other helpers do it",
+      "description": "Far more than when the mum asks again. And because nobody speaks honestly with their employer sitting beside them.\n\n\"It's not about doing more. It's about setting things up differently.\"",
+      "highlightPhrase": "setting things up differently"
+    },
+    "description": {
+      "eyebrow": "What we actually work on",
+      "title": "The child who won't eat",
+      "description": "The bowl on the floor. The forty-five-minute dinner. The helper who keeps spooning it in because it's faster, and because nobody ever showed her another way.",
+      "items": [
+        {
+          "title": "9:00 — What is really happening",
+          "description": "When a toddler refuses food, most of it isn't about the food."
+        },
+        {
+          "title": "9:20 — Hands on",
+          "description": "Pouring, serving, and a real table set up the way it should be at home. Real jugs, real spills."
+        },
+        {
+          "title": "10:10 — What to say instead",
+          "description": "Don't say / say, practised out loud until it sounds natural."
+        },
+        {
+          "title": "10:40 — One thing this week",
+          "description": "Each helper picks the one thing she will set up this week, and leaves with it written down."
+        }
+      ]
+    },
+    "details": {
+      "eyebrow": "How it works",
+      "title": "Two hours for her, forty minutes for you",
+      "description": "",
+      "items": [
+        {
+          "icon": "🍽️",
+          "title": "Saturday, helpers only",
+          "description": "Two hours of practice, not a lecture. Eight helpers in the room."
+        },
+        {
+          "icon": "💻",
+          "title": "Tuesday parents' call",
+          "description": "40 minutes on Zoom, Tuesday 1 December at 8:30pm, once the children are down. What she learned, what it should look like at your table, and the three things parents usually do that undo it."
+        },
+        {
+          "icon": "✉️",
+          "title": "Saturday evening note",
+          "description": "A short message the same evening so you know what to look for."
+        },
+        {
+          "icon": "👨‍👩‍👧",
+          "title": "One payment, one family",
+          "description": "HK$900 covers your helper on the Saturday and you on the Tuesday."
+        }
+      ]
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "items": [
+        {
+          "question": "Who is it for?",
+          "answer": "Families in Hong Kong with a child roughly 1 to 4, and a helper who is at the table for most of those meals."
+        },
+        {
+          "question": "Do parents attend the Saturday?",
+          "answer": "No. Helpers only in the room on Saturday. Parents join the Tuesday call."
+        },
+        {
+          "question": "Where is it?",
+          "answer": "Hong Kong Island. The exact address is sent a week before."
+        },
+        {
+          "question": "Is this a course?",
+          "answer": "No. One Saturday roughly every six weeks, each on its own. Come to the one you need. 28 Nov 2026 — Mealtimes (booking now). 12 Dec 2026 — Tantrums and limits. 16 Jan 2027 — Getting dressed, getting out of the door. 20 Feb 2027 — Toys, play, and leaving them alone."
+        },
+        {
+          "question": "What does HK$900 include?",
+          "answer": "Both sessions for one family: the Saturday workshop for your helper, and the Tuesday parents' call. Eight families, then it closes."
+        }
+      ]
+    },
+    "cta": {
+      "eyebrow": "⚡ {spotsLeft} spots left - {date}",
+      "eyebrowShowLogo": false,
+      "title": "8 families, then it closes.",
+      "description": "Add your helper's name so we can prepare the session. The exact address is sent a week before.",
+      "buttonLabel": "Reserve my spot",
+      "buttonLabelTemplate": "Reserve my spot - {price}",
+      "fullyBookedButtonLabel": "Fully booked - Get in touch to join the waiting list",
+      "fullyBookedWaitlistMessageTemplate": "I would like to join the waiting list for the event {eventTitle}.",
+      "bookingTopicsField": {
+        "label": "Your helper's name",
+        "placeholder": "The name we should expect on Saturday",
+        "required": true
+      }
+    },
+    "coach": {
+      "eyebrow": "Your trainer",
+      "title": "Ida De Gregorio",
+      "subtitle": "Founder, Evolve Sprouts",
+      "description": "Ida is AMI trained for ages 0–3 and 3–6. She previously taught at an international Montessori school in Hong Kong and holds an MEd from HKU. She has a Child Nutrition certification from Stanford, and she works inside Hong Kong homes with parents and helpers. She is Italian, has lived here for ten years, and is a mother of two.",
+      "highlightedPhrase": "Child Nutrition certification from Stanford",
+      "tags": [
+        "AMI Montessori (0–3 and 3–6)",
+        "MEd, HKU",
+        "Child Nutrition, Stanford"
+      ],
+      "imageAlt": "Ida De Gregorio from Evolve Sprouts"
+    }
+  },
+  "zh-HK": {
+    "meta": {
+      "title": "Mealtimes: Saturday workshop for helpers",
+      "description": "Two hours on the thing that decides the mood of your whole day. For your helper, with seven others, practising — not sitting and listening.",
+      "socialImage": {
+        "url": "/images/seo/evolvesprouts-og-default.png",
+        "alt": "Mealtimes workshop by Evolve Sprouts"
+      }
+    },
+    "hero": {
+      "eyebrow": "Saturday workshops for helpers · Hong Kong",
+      "subtitle": "",
+      "description": "Two hours on the thing that decides the mood of your whole day. For your helper, with seven others, practising — not sitting and listening.",
+      "imageAlt": "Smiling toddler holding wooden blocks",
+      "imageSrc": "/images/hero/child-hero.webp",
+      "imageMaxWidthPercent": 90,
+      "quickFactChips": [
+        {
+          "type": "date",
+          "label": "Parents' call Tue 1 Dec, 8:30pm on Zoom"
+        },
+        {
+          "type": "visits",
+          "label": "8 families"
+        }
+      ]
+    },
+    "outline": {
+      "eyebrow": "Why helpers only in the room",
+      "title": "Helpers change when they watch other helpers do it",
+      "description": "Far more than when the mum asks again. And because nobody speaks honestly with their employer sitting beside them.\n\n\"It's not about doing more. It's about setting things up differently.\"",
+      "highlightPhrase": "setting things up differently"
+    },
+    "description": {
+      "eyebrow": "What we actually work on",
+      "title": "The child who won't eat",
+      "description": "The bowl on the floor. The forty-five-minute dinner. The helper who keeps spooning it in because it's faster, and because nobody ever showed her another way.",
+      "items": [
+        {
+          "title": "9:00 — What is really happening",
+          "description": "When a toddler refuses food, most of it isn't about the food."
+        },
+        {
+          "title": "9:20 — Hands on",
+          "description": "Pouring, serving, and a real table set up the way it should be at home. Real jugs, real spills."
+        },
+        {
+          "title": "10:10 — What to say instead",
+          "description": "Don't say / say, practised out loud until it sounds natural."
+        },
+        {
+          "title": "10:40 — One thing this week",
+          "description": "Each helper picks the one thing she will set up this week, and leaves with it written down."
+        }
+      ]
+    },
+    "details": {
+      "eyebrow": "How it works",
+      "title": "Two hours for her, forty minutes for you",
+      "description": "",
+      "items": [
+        {
+          "icon": "🍽️",
+          "title": "Saturday, helpers only",
+          "description": "Two hours of practice, not a lecture. Eight helpers in the room."
+        },
+        {
+          "icon": "💻",
+          "title": "Tuesday parents' call",
+          "description": "40 minutes on Zoom, Tuesday 1 December at 8:30pm, once the children are down. What she learned, what it should look like at your table, and the three things parents usually do that undo it."
+        },
+        {
+          "icon": "✉️",
+          "title": "Saturday evening note",
+          "description": "A short message the same evening so you know what to look for."
+        },
+        {
+          "icon": "👨‍👩‍👧",
+          "title": "One payment, one family",
+          "description": "HK$900 covers your helper on the Saturday and you on the Tuesday."
+        }
+      ]
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "items": [
+        {
+          "question": "Who is it for?",
+          "answer": "Families in Hong Kong with a child roughly 1 to 4, and a helper who is at the table for most of those meals."
+        },
+        {
+          "question": "Do parents attend the Saturday?",
+          "answer": "No. Helpers only in the room on Saturday. Parents join the Tuesday call."
+        },
+        {
+          "question": "Where is it?",
+          "answer": "Hong Kong Island. The exact address is sent a week before."
+        },
+        {
+          "question": "Is this a course?",
+          "answer": "No. One Saturday roughly every six weeks, each on its own. Come to the one you need. 28 Nov 2026 — Mealtimes (booking now). 12 Dec 2026 — Tantrums and limits. 16 Jan 2027 — Getting dressed, getting out of the door. 20 Feb 2027 — Toys, play, and leaving them alone."
+        },
+        {
+          "question": "What does HK$900 include?",
+          "answer": "Both sessions for one family: the Saturday workshop for your helper, and the Tuesday parents' call. Eight families, then it closes."
+        }
+      ]
+    },
+    "cta": {
+      "eyebrow": "⚡ {spotsLeft} spots left - {date}",
+      "eyebrowShowLogo": false,
+      "title": "8 families, then it closes.",
+      "description": "Add your helper's name so we can prepare the session. The exact address is sent a week before.",
+      "buttonLabel": "Reserve my spot",
+      "buttonLabelTemplate": "Reserve my spot - {price}",
+      "fullyBookedButtonLabel": "Fully booked - Get in touch to join the waiting list",
+      "fullyBookedWaitlistMessageTemplate": "I would like to join the waiting list for the event {eventTitle}.",
+      "bookingTopicsField": {
+        "label": "Your helper's name",
+        "placeholder": "The name we should expect on Saturday",
+        "required": true
+      }
+    },
+    "coach": {
+      "eyebrow": "Your trainer",
+      "title": "Ida De Gregorio",
+      "subtitle": "Founder, Evolve Sprouts",
+      "description": "Ida is AMI trained for ages 0–3 and 3–6. She previously taught at an international Montessori school in Hong Kong and holds an MEd from HKU. She has a Child Nutrition certification from Stanford, and she works inside Hong Kong homes with parents and helpers. She is Italian, has lived here for ten years, and is a mother of two.",
+      "highlightedPhrase": "Child Nutrition certification from Stanford",
+      "tags": [
+        "AMI Montessori (0–3 and 3–6)",
+        "MEd, HKU",
+        "Child Nutrition, Stanford"
+      ],
+      "imageAlt": "Ida De Gregorio from Evolve Sprouts"
+    }
+  }
+}

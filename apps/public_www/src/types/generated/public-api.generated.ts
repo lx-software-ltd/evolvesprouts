@@ -2956,7 +2956,9 @@ export interface paths {
          *     Source of truth is the backend `service_instances` projection for
          *     published `event` and `training_course` services (consultation is never
          *     included). Instances with an empty `service_instances.slug` are
-         *     omitted from this feed.
+         *     omitted from this feed. Scheduled `event` instances are omitted even
+         *     when they have a slug and an upcoming session. Scheduled
+         *     `training_course` instances stay on this feed.
          *
          *     Visibility: each instance must either have at least one session slot with
          *     `ends_at` not before the server clock (upcoming or in progress), **or**
@@ -3029,7 +3031,9 @@ export interface paths {
          *     Source of truth is the backend `service_instances` projection for
          *     published `event` and `training_course` services (consultation is never
          *     included). Instances with an empty `service_instances.slug` are
-         *     omitted from this feed.
+         *     omitted from this feed. Scheduled `event` instances are omitted even
+         *     when they have a slug and an upcoming session. Scheduled
+         *     `training_course` instances stay on this feed.
          *
          *     Visibility: each instance must either have at least one session slot with
          *     `ends_at` not before the server clock (upcoming or in progress), **or**
@@ -4932,7 +4936,7 @@ export interface components {
             /** @description Optional cohort or session date label (YYYY-MM-DD or display string). */
             cohortDate?: string;
             discountCode?: string;
-            /** @description Public `service_instances.slug` for the booked cohort/instance (`event-booking` and `my-best-auntie-booking`). **Required** for those flows together with `serviceKey`. For `consultation-booking` and `intro-call-booking`, omit this field or send a legacy template slug for compatibility; the server resolves catalog rows by `serviceKey` only and ignores `serviceInstanceSlug` when present (logged at debug level). */
+            /** @description Public `service_instances.slug` for the booked cohort/instance (`event-booking` and `my-best-auntie-booking`). **Required** for those flows together with `serviceKey`. For `consultation-booking` and `intro-call-booking`, omit this field or send a legacy template slug for compatibility; the server resolves catalog rows by `serviceKey` only and ignores `serviceInstanceSlug` when present (logged at debug level). An `event` instance is reservable only when its status is `open`, `full`, or `in_progress`. `scheduled`, `cancelled`, and `completed` event instances return 400 with `field: serviceInstanceSlug`. */
             serviceInstanceSlug?: string | null;
             /** @description Optional human-readable cohort label for the booked instance (for example the MBA cohort title shown in the booking UI). Included in the internal sales recap and may be stored on the enrollment lead event metadata; not used for booking identity. */
             serviceInstanceCohort?: string;

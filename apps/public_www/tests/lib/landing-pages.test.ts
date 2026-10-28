@@ -132,6 +132,7 @@ describe('landing-pages registry', () => {
     const otherFiles = [
       'easter-2026-montessori-play-coaching-workshop.json',
       'may-2026-the-missing-piece.json',
+      'nov-2026-mealtimes-workshop.json',
     ];
     for (const fileName of otherFiles) {
       const p = path.join(dir, fileName);

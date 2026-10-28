@@ -2161,7 +2161,9 @@ paths:
         Source of truth is the backend `service_instances` projection for
         published `event` and `training_course` services (consultation is never
         included). Instances with an empty `service_instances.slug` are
-        omitted from this feed.
+        omitted from this feed. Scheduled `event` instances are omitted even
+        when they have a slug and an upcoming session. Scheduled
+        `training_course` instances stay on this feed.
 
         Visibility: each instance must either have at least one session slot with
         `ends_at` not before the server clock (upcoming or in progress), **or**
@@ -2251,7 +2253,9 @@ paths:
         Source of truth is the backend `service_instances` projection for
         published `event` and `training_course` services (consultation is never
         included). Instances with an empty `service_instances.slug` are
-        omitted from this feed.
+        omitted from this feed. Scheduled `event` instances are omitted even
+        when they have a slug and an upcoming session. Scheduled
+        `training_course` instances stay on this feed.
 
         Visibility: each instance must either have at least one session slot with
         `ends_at` not before the server clock (upcoming or in progress), **or**
@@ -4286,6 +4290,9 @@ components:
             For `consultation-booking` and `intro-call-booking`, omit this field or send a legacy
             template slug for compatibility; the server resolves catalog rows by `serviceKey` only
             and ignores `serviceInstanceSlug` when present (logged at debug level).
+            An `event` instance is reservable only when its status is `open`, `full`, or
+            `in_progress`. `scheduled`, `cancelled`, and `completed` event instances return
+            400 with `field: serviceInstanceSlug`.
         serviceInstanceCohort:
           type: string
           maxLength: 200

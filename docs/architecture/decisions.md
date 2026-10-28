@@ -834,6 +834,19 @@ a slug. Unknown instance slug or a key that does not match the instance's parent
 with structured rejection reasons on slug-mode requests; unknown `service_key` in slug-less validate
 requests returns **404** `unknown_service_key`.
 
+## Scheduled events stay off the public calendar
+
+**Decision:** A `service_instances` row whose parent service type is `event` and whose
+status is `scheduled` is omitted from `GET /v1/calendar/public` and
+`GET /www/v1/calendar/public`. `POST /v1/reservations` for an event instance succeeds
+only when that status is `open`, `full`, or `in_progress`. Scheduled `training_course`
+instances stay on the feed and stay reservable. The repository query and calendar
+blockers are unchanged, so a scheduled event still blocks the venue.
+
+**Why:** Operators keep future workshop dates in admin before they go on sale. Mapping
+`scheduled` to the public status `open` made those dates bookable. Training cohorts
+use `scheduled` as their public state and stay bookable.
+
 ## Display-only capacity left override on service instances
 
 **Decision:** `service_instances.capacity_left_override` (nullable integer ≥ 0) soft-caps how

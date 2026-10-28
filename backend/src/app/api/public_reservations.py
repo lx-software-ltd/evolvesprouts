@@ -13,16 +13,17 @@ from sqlalchemy.orm import Session
 
 from app.api.admin_request import parse_body
 from app.api.discount_enrollment_scope import ensure_discount_code_eligible_for_instance
+from app.api.public_event_visibility import event_instance_is_bookable
 from app.api.public_form_hooks import first_name_from_full_name
-from app.api.public_reservations_intro_call import (
-    _enforce_intro_call_invariants,
-    _resolve_booking_identity,
-    _resolve_consultation_or_intro_service,
-)
 from app.api.public_reservations_billing import (
     _apply_enrollment_bill_to,
     _validate_discount_code_redemption_scope,
     _validate_public_bill_to_membership,
+)
+from app.api.public_reservations_intro_call import (
+    _enforce_intro_call_invariants,
+    _resolve_booking_identity,
+    _resolve_consultation_or_intro_service,
 )
 from app.api.public_reservations_persistence import (
     _PUBLIC_RESERVATION_ENROLLMENT_ACTOR,
@@ -143,6 +144,11 @@ def _handle_public_reservation(
                         session, reservation_payload
                     )
                     catalog_service = scheduled_instance.service
+                    if not event_instance_is_bookable(scheduled_instance):
+                        raise ValidationError(
+                            "This event is not open for booking",
+                            field="serviceInstanceSlug",
+                        )
 
                 reservation_payload = {
                     **reservation_payload,

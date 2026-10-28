@@ -23,6 +23,7 @@ def _instance_row(
     capacity_left_override: int | None = None,
     slug: str | None = "spring-workshop",
     service_key: str | None = None,
+    service_type: Any = ServiceType.EVENT,
 ) -> Any:
     starts = datetime(2026, 4, 20, 18, 0, tzinfo=UTC)
     ends = datetime(2026, 4, 20, 20, 0, tzinfo=UTC)
@@ -32,7 +33,7 @@ def _instance_row(
     service = SimpleNamespace(
         title="Parent Service",
         description="Parent description",
-        service_type=ServiceType.EVENT,
+        service_type=service_type,
         service_key=service_key,
         booking_system=None,
         event_details=SimpleNamespace(event_category=SimpleNamespace(value="workshop")),
@@ -71,6 +72,7 @@ def _instance_row(
         eventbrite_event_url="https://www.eventbrite.com/e/demo"
         if with_eventbrite_url
         else None,
+        training_details=None,
         external_url=None,
         cohort=None,
         instance_tags=[],
@@ -282,6 +284,65 @@ def test_handle_public_events_includes_instance_when_slug_is_set(
     body = json.loads(response["body"])
     assert len(body["items"]) == 1
     assert body["items"][0]["slug"] == "spring-workshop-2026-04-20"
+
+
+def test_handle_public_events_omits_scheduled_events_and_keeps_training(
+    monkeypatch: Any, api_gateway_event: Any
+) -> None:
+    class _FakeSession:
+        pass
+
+    class _SessionCtx:
+        def __init__(self, _engine: Any) -> None:
+            pass
+
+        def __enter__(self) -> _FakeSession:
+            return _FakeSession()
+
+        def __exit__(self, *_args: object) -> bool:
+            return False
+
+    scheduled_event = _instance_row(
+        status=public_events.InstanceStatus.SCHEDULED,
+        slug="dec-2026-tantrums-and-limits-workshop",
+    )
+    scheduled_training = _instance_row(
+        status=public_events.InstanceStatus.SCHEDULED,
+        slug="may-26-my-best-auntie",
+        service_type=ServiceType.TRAINING_COURSE,
+    )
+
+    class _FakeRepository:
+        def __init__(self, _session: Any) -> None:
+            pass
+
+        def list_public_offerings(
+            self,
+            *,
+            limit: int,
+            now: datetime,
+            service_types: Any,
+            slug: str | None,
+            service_key: str | None,
+        ) -> list[Any]:
+            return [scheduled_event, scheduled_training]
+
+        def get_enrollment_counts_for_instances(
+            self, instance_ids: list[Any]
+        ) -> dict[Any, int]:
+            return {instance_id: 0 for instance_id in instance_ids}
+
+    monkeypatch.setattr(public_events, "Session", _SessionCtx)
+    monkeypatch.setattr(public_events, "get_engine", lambda: object())
+    monkeypatch.setattr(public_events, "ServiceInstanceRepository", _FakeRepository)
+
+    response = public_events.handle_public_events(
+        api_gateway_event(method="GET", path="/v1/calendar/public"),
+        "GET",
+    )
+    body = json.loads(response["body"])
+    assert [item["slug"] for item in body["items"]] == ["may-26-my-best-auntie"]
+    assert body["events"] == body["items"]
 
 
 def test_handle_public_events_slug_filter(
