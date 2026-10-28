@@ -11,6 +11,17 @@ describe('nov-2026-mealtimes-workshop landing page', () => {
     }
   });
 
+  it('uses the high-chair mealtime photo in every locale', () => {
+    for (const locale of locales) {
+      expect(mealtimes[locale].hero.imageSrc).toBe(
+        '/images/hero/mealtimes-workshop-hero.webp',
+      );
+      expect(mealtimes[locale].hero.imageAlt).toBe(
+        'Smiling toddler in a high chair holding broccoli',
+      );
+    }
+  });
+
   it('keeps the parents call and family count as the only static hero chips', () => {
     for (const locale of locales) {
       const chips = mealtimes[locale].hero.quickFactChips ?? [];
