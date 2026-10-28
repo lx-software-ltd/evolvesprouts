@@ -5,6 +5,12 @@ import mealtimes from '@/content/landing-pages/nov-2026-mealtimes-workshop.json'
 const locales = ['en', 'zh-CN', 'zh-HK'] as const;
 
 describe('nov-2026-mealtimes-workshop landing page', () => {
+  it('omits the hero eyebrow in every locale', () => {
+    for (const locale of locales) {
+      expect(mealtimes[locale].hero).not.toHaveProperty('eyebrow');
+    }
+  });
+
   it('keeps the parents call and family count as the only static hero chips', () => {
     for (const locale of locales) {
       const chips = mealtimes[locale].hero.quickFactChips ?? [];
