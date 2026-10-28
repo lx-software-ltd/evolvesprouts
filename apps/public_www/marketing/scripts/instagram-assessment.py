@@ -11,7 +11,7 @@ Required environment variables:
     EVOLVESPROUTS_META_INSTAGRAM_BUSINESS_ACCOUNT_ID  IG business account ID
 
 Usage:
-    python3 instagram-assessment.py [--out PATH] [--media-limit N]
+    python3 instagram-assessment.py [--out PATH] [--media-limit N] [--reels]
 
 `--out` mirrors stdout to the given file (plaintext).
 """
@@ -33,6 +33,8 @@ FEED_METRICS = (
 )
 REEL_BASE_METRICS = "reach,views,likes,comments,saved,shares,total_interactions"
 REEL_METRICS = f"{REEL_BASE_METRICS},ig_reels_avg_watch_time"
+# Skip rate and Facebook crosspost views are only served for recent reels.
+REEL_EXTENDED_METRICS = f"{REEL_METRICS},reels_skip_rate,facebook_views,reposts"
 ACCOUNT_TOTAL_METRICS = (
     "profile_views,accounts_engaged,total_interactions,likes,comments,"
     "shares,saves,replies,website_clicks,views"
@@ -62,7 +64,7 @@ def _auth_headers():
     return {"Authorization": f"Bearer {token}"}
 
 
-def _get(endpoint, params=None):
+def _get(endpoint, params=None, quiet=False):
     resp = requests.get(
         f"{BASE_URL}/{endpoint}",
         params=params or {},
@@ -72,8 +74,9 @@ def _get(endpoint, params=None):
     is_json = resp.headers.get("content-type", "").startswith("application/json")
     body = resp.json() if is_json else {}
     if resp.status_code != 200:
-        message = body.get("error", {}).get("message", f"HTTP {resp.status_code}")
-        print(f"  API Error for {endpoint}: {message}")
+        if not quiet:
+            message = body.get("error", {}).get("message", f"HTTP {resp.status_code}")
+            print(f"  API Error for {endpoint}: {message}")
         return None
     return body
 
@@ -326,11 +329,12 @@ def _print_recent_media(ig_id, followers, limit):
     for item in (data or {}).get("data", []):
         product = item.get("media_product_type")
         metric_list = REEL_METRICS if product == "REELS" else FEED_METRICS
-        insights = _get(f"{item['id']}/insights", {"metric": metric_list})
-        if insights is None and product == "REELS":
-            # Older reels reject the watch-time metrics; keep the basic row.
-            insights = _get(f"{item['id']}/insights", {"metric": REEL_BASE_METRICS})
-        metrics = _insight_values(insights)
+        if product == "REELS":
+            metrics = _reel_metrics(item["id"])
+        else:
+            metrics = _insight_values(
+                _get(f"{item['id']}/insights", {"metric": metric_list})
+            )
         caption = (item.get("caption") or "").replace("\n", " ")[:90]
         reach = metrics.get("reach", 0) or 0
         print(
@@ -357,7 +361,84 @@ def _print_recent_media(ig_id, followers, limit):
     print()
 
 
-def main(media_limit):
+def _all_reels(ig_id, max_pages=10):
+    """Page through the media edge and return every reel, newest first."""
+    reels = []
+    data = _get(
+        f"{ig_id}/media",
+        {
+            "fields": "id,caption,media_product_type,timestamp,permalink",
+            "limit": 50,
+        },
+    )
+    pages = 0
+    while data and pages < max_pages:
+        reels.extend(
+            m for m in data.get("data", []) if m.get("media_product_type") == "REELS"
+        )
+        next_url = data.get("paging", {}).get("next")
+        if not next_url:
+            break
+        resp = requests.get(next_url, headers=_auth_headers(), timeout=30)
+        data = resp.json() if resp.status_code == 200 else None
+        pages += 1
+    return reels
+
+
+def _reel_metrics(media_id):
+    # Older reels reject the newer metrics with an opaque "Fatal" error, so
+    # fall back silently and only report when even the basic set fails.
+    for metric_list in (REEL_EXTENDED_METRICS, REEL_METRICS):
+        insights = _get(f"{media_id}/insights", {"metric": metric_list}, quiet=True)
+        if insights is not None:
+            return _insight_values(insights)
+    return _insight_values(_get(f"{media_id}/insights", {"metric": REEL_BASE_METRICS}))
+
+
+def _print_all_reels(ig_id, followers):
+    """One row per reel so reels can be compared against each other."""
+    print("--- ALL REELS (newest first) ---")
+    print(
+        "  Avg watch is in seconds. Skip rate and FB views are only returned for "
+        "recent reels; '-' means the API did not serve them.\n"
+    )
+    header = (
+        f"  {'posted (HKT)':<17} {'reach':>5} {'views':>5} {'v/r':>4} {'avgw':>5} "
+        f"{'skip%':>5} {'like':>4} {'cmt':>3} {'save':>4} {'shr':>3} {'int':>3} "
+        f"{'ER%':>4} {'fbv':>4}  caption"
+    )
+    print(header)
+    for reel in _all_reels(ig_id):
+        m = _reel_metrics(reel["id"])
+        if not m:
+            continue
+        reach = m.get("reach", 0) or 0
+        views = m.get("views", 0) or 0
+        interactions = m.get("total_interactions", 0) or 0
+        posted = (
+            datetime.strptime(reel["timestamp"], "%Y-%m-%dT%H:%M:%S%z")
+            .astimezone(HKT)
+            .strftime("%Y-%m-%d %H:%M")
+        )
+        skip = m.get("reels_skip_rate")
+        fbv = m.get("facebook_views")
+        caption = (reel.get("caption") or "").replace("\n", " ")[:60]
+        print(
+            f"  {posted:<17} {reach:>5,} {views:>5,} "
+            f"{(views / reach if reach else 0):>4.2f} "
+            f"{(m.get('ig_reels_avg_watch_time') or 0) / 1000:>5.1f} "
+            f"{(f'{skip:.0f}' if skip is not None else '-'):>5} "
+            f"{m.get('likes', 0):>4} {m.get('comments', 0):>3} {m.get('saved', 0):>4} "
+            f"{m.get('shares', 0):>3} {interactions:>3} "
+            f"{(100 * interactions / reach if reach else 0):>4.1f} "
+            f"{(fbv if fbv is not None else '-'):>4}  {caption}"
+        )
+        print(f"  {'':<17} {reel.get('permalink')}")
+    print(f"\n  Followers today: {followers:,} (earlier reels ran on a smaller base).")
+    print()
+
+
+def main(media_limit, reels_only=False):
     ig_id = os.environ.get("EVOLVESPROUTS_META_INSTAGRAM_BUSINESS_ACCOUNT_ID", "")
     if not ig_id:
         sys.exit("EVOLVESPROUTS_META_INSTAGRAM_BUSINESS_ACCOUNT_ID not set")
@@ -369,6 +450,11 @@ def main(media_limit):
     )
 
     followers = _print_account(ig_id)
+    if reels_only:
+        _print_all_reels(ig_id, followers)
+        print("--- INSTAGRAM REELS ASSESSMENT COMPLETE ---")
+        return
+
     _print_stories(ig_id, followers)
     _print_account_insights(ig_id, followers)
     _print_demographics(ig_id)
@@ -390,6 +476,13 @@ def _parse_args():
         default=12,
         help="How many recent feed posts / reels to pull insights for.",
     )
+    parser.add_argument(
+        "--reels",
+        action="store_true",
+        help="Only print one comparison row per reel across the whole account "
+        "(skip rate, avg watch, Facebook crosspost views) instead of the "
+        "full assessment.",
+    )
     return parser.parse_args()
 
 
@@ -402,9 +495,9 @@ def _run_main():
         with open(args.out, "w", encoding="utf-8") as fh:
             tee = _Tee(sys.stdout, fh)
             with contextlib.redirect_stdout(tee):
-                main(args.media_limit)
+                main(args.media_limit, args.reels)
     else:
-        main(args.media_limit)
+        main(args.media_limit, args.reels)
 
 
 if __name__ == "__main__":

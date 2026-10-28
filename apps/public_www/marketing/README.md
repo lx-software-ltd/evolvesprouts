@@ -17,6 +17,7 @@ marketing/
 ├── reports/
 │   ├── ads-performance-assessment-YYYY-MM-DD.md   # narrative snapshots
 │   ├── instagram-organic-assessment-YYYY-MM-DD.md # organic / stories snapshots
+│   ├── instagram-reels-assessment-YYYY-MM-DD.md   # reel-vs-reel comparisons
 │   ├── ga4-manual-setup-steps.md                  # GA4 UI checklist
 │   ├── google-ads-manual-setup-steps.md           # Google Ads UI checklist
 │   └── meta-ads-manual-setup-steps.md             # Meta UI checklist
@@ -59,7 +60,10 @@ python3 scripts/ga4-assessment.py
 
 `instagram-assessment.py` reports the stories that are live at run time.
 Story insights are only available for 24 hours, so run it within a day of
-posting a story set, not only on the Monday pull.
+posting a story set, not only on the Monday pull. Add `--reels` to print
+one comparison row per Reel across the whole account (reach, average
+watch, skip rate, interaction rate, Facebook crosspost views) instead of
+the full assessment.
 
 ### Capturing raw output (`--out`)
 
