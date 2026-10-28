@@ -20,6 +20,21 @@ describe('nov-2026-mealtimes-workshop landing page', () => {
     }
   });
 
+  it('uses the five Saturday run-of-show slots in every locale', () => {
+    const expectedTitles = [
+      '9:00 — Why she isn\'t hungry at dinner',
+      '9:20 — Building the plate',
+      '9:45 — Hands on: pouring, serving herself, clearing her own place',
+      '10:30 — What to say instead',
+      '10:50 — One thing this week',
+    ];
+    for (const locale of locales) {
+      expect(mealtimes[locale].description.items.map((item) => item.title)).toEqual(
+        expectedTitles,
+      );
+    }
+  });
+
   it('overrides the trainer bio with the mealtimes credentials in every locale', () => {
     for (const locale of locales) {
       const coach = mealtimes[locale].coach;
