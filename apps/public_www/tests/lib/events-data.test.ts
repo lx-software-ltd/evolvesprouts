@@ -852,7 +852,7 @@ describe('events-data', () => {
       ctaPriceLabel: 'HK$900',
       bookingPayload: {
         variant: 'event',
-        serviceKey: 'events',
+        serviceKey: 'saturday-workshops-for-helpers',
         instanceSlug: 'nov-2026-mealtimes-workshop',
         title: 'Mealtimes',
         locationName: 'Hong Kong Island',

@@ -130,7 +130,7 @@ export function LandingPage({
               />
             ) : null}
             <AboutUsFounderCoach
-              content={siteContent.aboutUs.coaches.founder}
+              content={pageContent.coach ?? siteContent.aboutUs.coaches.founder}
               ariaLabel={
                 siteContent.landingPages.common.a11y.aboutUsFounderCoachSectionLabel
               }

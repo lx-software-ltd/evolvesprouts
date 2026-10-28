@@ -12,6 +12,7 @@ import {
 import { buildLandingPageSharedCtaPropsFromCalendar } from '@/lib/landing-page-cta-resolve';
 import * as siteConfig from '@/lib/site-config';
 import easterWorkshopContent from '@/content/landing-pages/easter-2026-montessori-play-coaching-workshop.json';
+import mealtimesWorkshopContent from '@/content/landing-pages/nov-2026-mealtimes-workshop.json';
 
 const { landingPageRehydrateRootSpy } = vi.hoisted(() => ({
   landingPageRehydrateRootSpy: vi.fn(),
@@ -208,8 +209,15 @@ vi.mock('@/components/sections/landing-pages/landing-page-cta', () => ({
   ),
 }));
 vi.mock('@/components/sections/about-us-founder-coach', () => ({
-  AboutUsFounderCoach: ({ content }: { content: { title: string } }) => (
-    <section data-testid='about-us-founder-coach'>{content.title}</section>
+  AboutUsFounderCoach: ({
+    content,
+  }: {
+    content: { title: string; highlightedPhrase?: string };
+  }) => (
+    <section data-testid='about-us-founder-coach'>
+      {content.title}
+      <span data-testid='founder-highlight'>{content.highlightedPhrase}</span>
+    </section>
   ),
 }));
 
@@ -330,6 +338,31 @@ describe('LandingPage composition', () => {
     );
     expect(screen.getByTestId('landing-page-cta-eyebrow')).toHaveTextContent(
       '⚡ 6 spots left - Monday 6 April',
+    );
+    expect(screen.getByTestId('founder-highlight')).toHaveTextContent(
+      enContent.aboutUs.coaches.founder.highlightedPhrase,
+    );
+  });
+
+  it('uses the landing-page coach override when the page defines one', () => {
+    render(
+      <LandingPage
+        locale='en'
+        slug='nov-2026-mealtimes-workshop'
+        pagePath='/nov-2026-mealtimes-workshop'
+        siteContent={enContent}
+        pageContent={mealtimesWorkshopContent.en}
+        heroEventContent={mockHeroEventContent}
+        bookingEventContent={mockBookingEventContent}
+        structuredDataContent={null}
+      />,
+    );
+
+    expect(screen.getByTestId('founder-highlight')).toHaveTextContent(
+      'Child Nutrition certification from Stanford',
+    );
+    expect(screen.getByTestId('about-us-founder-coach')).toHaveTextContent(
+      'Ida De Gregorio',
     );
   });
 });

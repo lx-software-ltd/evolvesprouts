@@ -17,16 +17,8 @@
       "imageMaxWidthPercent": 90,
       "quickFactChips": [
         {
-          "type": "time",
-          "label": "Sat 9–11am, helpers only"
-        },
-        {
           "type": "date",
           "label": "Parents' call Tue 1 Dec, 8:30pm on Zoom"
-        },
-        {
-          "type": "location",
-          "label": "Hong Kong Island, address sent a week before"
         },
         {
           "type": "visits",
@@ -129,6 +121,19 @@
         "placeholder": "The name we should expect on Saturday",
         "required": true
       }
+    },
+    "coach": {
+      "eyebrow": "Your trainer",
+      "title": "Ida De Gregorio",
+      "subtitle": "Founder, Evolve Sprouts",
+      "description": "Ida is AMI trained for ages 0–3 and 3–6. She previously taught at an international Montessori school in Hong Kong and holds an MEd from HKU. She has a Child Nutrition certification from Stanford, and she works inside Hong Kong homes with parents and helpers. She is Italian, has lived here for ten years, and is a mother of two.",
+      "highlightedPhrase": "Child Nutrition certification from Stanford",
+      "tags": [
+        "AMI Montessori (0–3 and 3–6)",
+        "MEd, HKU",
+        "Child Nutrition, Stanford"
+      ],
+      "imageAlt": "Ida De Gregorio from Evolve Sprouts"
     }
   },
   "zh-CN": {
@@ -149,16 +154,8 @@
       "imageMaxWidthPercent": 90,
       "quickFactChips": [
         {
-          "type": "time",
-          "label": "Sat 9–11am, helpers only"
-        },
-        {
           "type": "date",
           "label": "Parents' call Tue 1 Dec, 8:30pm on Zoom"
-        },
-        {
-          "type": "location",
-          "label": "Hong Kong Island, address sent a week before"
         },
         {
           "type": "visits",
@@ -261,6 +258,19 @@
         "placeholder": "The name we should expect on Saturday",
         "required": true
       }
+    },
+    "coach": {
+      "eyebrow": "Your trainer",
+      "title": "Ida De Gregorio",
+      "subtitle": "Founder, Evolve Sprouts",
+      "description": "Ida is AMI trained for ages 0–3 and 3–6. She previously taught at an international Montessori school in Hong Kong and holds an MEd from HKU. She has a Child Nutrition certification from Stanford, and she works inside Hong Kong homes with parents and helpers. She is Italian, has lived here for ten years, and is a mother of two.",
+      "highlightedPhrase": "Child Nutrition certification from Stanford",
+      "tags": [
+        "AMI Montessori (0–3 and 3–6)",
+        "MEd, HKU",
+        "Child Nutrition, Stanford"
+      ],
+      "imageAlt": "Ida De Gregorio from Evolve Sprouts"
     }
   },
   "zh-HK": {
@@ -281,16 +291,8 @@
       "imageMaxWidthPercent": 90,
       "quickFactChips": [
         {
-          "type": "time",
-          "label": "Sat 9–11am, helpers only"
-        },
-        {
           "type": "date",
           "label": "Parents' call Tue 1 Dec, 8:30pm on Zoom"
-        },
-        {
-          "type": "location",
-          "label": "Hong Kong Island, address sent a week before"
         },
         {
           "type": "visits",
@@ -393,6 +395,19 @@
         "placeholder": "The name we should expect on Saturday",
         "required": true
       }
+    },
+    "coach": {
+      "eyebrow": "Your trainer",
+      "title": "Ida De Gregorio",
+      "subtitle": "Founder, Evolve Sprouts",
+      "description": "Ida is AMI trained for ages 0–3 and 3–6. She previously taught at an international Montessori school in Hong Kong and holds an MEd from HKU. She has a Child Nutrition certification from Stanford, and she works inside Hong Kong homes with parents and helpers. She is Italian, has lived here for ten years, and is a mother of two.",
+      "highlightedPhrase": "Child Nutrition certification from Stanford",
+      "tags": [
+        "AMI Montessori (0–3 and 3–6)",
+        "MEd, HKU",
+        "Child Nutrition, Stanford"
+      ],
+      "imageAlt": "Ida De Gregorio from Evolve Sprouts"
     }
   }
 }

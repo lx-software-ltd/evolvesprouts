@@ -167,7 +167,7 @@ export const publicCalendarFixture = {
       location: 'physical',
       booking_system: 'event-booking',
       service_type: 'event',
-      service_key: 'events',
+      service_key: 'saturday-workshops-for-helpers',
       dates: [
         {
           start_datetime: '2026-11-28T01:00:00Z',
