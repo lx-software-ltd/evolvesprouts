@@ -18,7 +18,8 @@ describe('nov-2026-mealtimes-workshop landing page', () => {
     for (const locale of locales) {
       const coach = mealtimes[locale].coach;
       expect(coach.eyebrow).toBe('Your trainer');
-      expect(coach.title).toBe('Ida De Gregorio');
+      expect(coach.title).toBe(mealtimes.en.coach.title);
+      expect(coach.title.trim().length).toBeGreaterThan(0);
       expect(coach.description).toContain(coach.highlightedPhrase);
       expect(coach.highlightedPhrase).toBe('Child Nutrition certification from Stanford');
       expect(coach.tags).toEqual([

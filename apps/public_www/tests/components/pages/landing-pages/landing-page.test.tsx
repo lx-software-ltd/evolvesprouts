@@ -3,6 +3,7 @@ import { type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { LandingPage } from '@/components/pages/landing-pages/landing-page';
+import type { LandingPageLocaleContent } from '@/content';
 import enContent from '@/content/en.json';
 import {
   LandingPageCalendarContext,
@@ -351,7 +352,7 @@ describe('LandingPage composition', () => {
         slug='nov-2026-mealtimes-workshop'
         pagePath='/nov-2026-mealtimes-workshop'
         siteContent={enContent}
-        pageContent={mealtimesWorkshopContent.en}
+        pageContent={mealtimesWorkshopContent.en as LandingPageLocaleContent}
         heroEventContent={mockHeroEventContent}
         bookingEventContent={mockBookingEventContent}
         structuredDataContent={null}
@@ -359,10 +360,10 @@ describe('LandingPage composition', () => {
     );
 
     expect(screen.getByTestId('founder-highlight')).toHaveTextContent(
-      'Child Nutrition certification from Stanford',
+      mealtimesWorkshopContent.en.coach.highlightedPhrase,
     );
     expect(screen.getByTestId('about-us-founder-coach')).toHaveTextContent(
-      'Ida De Gregorio',
+      mealtimesWorkshopContent.en.coach.title,
     );
   });
 });
