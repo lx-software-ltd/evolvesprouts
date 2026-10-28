@@ -19,6 +19,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.api.instance_capacity import compute_capacity_left_effective
+from app.api.public_event_visibility import include_on_public_calendar
 from app.db.engine import get_engine
 from app.db.models import Service, ServiceInstance
 from app.db.models.enums import InstanceStatus, ServiceType
@@ -163,6 +164,8 @@ def _fetch_public_offerings(
     )
     out: list[dict[str, Any]] = []
     for instance in rows:
+        if not include_on_public_calendar(instance):
+            continue
         raw_slug = instance.slug
         slug = (raw_slug or "").strip()
         if not slug or not PUBLIC_INSTANCE_SLUG_PATTERN.fullmatch(slug):
