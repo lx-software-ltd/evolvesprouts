@@ -588,6 +588,61 @@ function assertFinanceReadonlyDataApi(template: Template): void {
   }
 }
 
+const LOG_STREAM_SCOPED_ACTIONS = new Set([
+  "logs:PutLogEvents",
+  "logs:GetLogEvents",
+  "logs:CreateLogStream",
+  "logs:DeleteLogStream",
+]);
+
+function flattenArn(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (value && typeof value === "object" && "Fn::Join" in value) {
+    const [, parts] = (value as { "Fn::Join": [string, unknown[]] })["Fn::Join"];
+    return parts.map((part) => (typeof part === "string" ? part : "<token>")).join("");
+  }
+  return JSON.stringify(value);
+}
+
+// From April 26, 2027 CloudWatch Logs only authorizes log-group actions
+// against a log-group ARN; a log-stream ARN (`...:*`) no longer grants them.
+function assertLogGroupActionsUseLogGroupArn(template: Template): void {
+  const policies = template.findResources("AWS::IAM::Policy");
+  for (const [logicalId, resource] of Object.entries(policies)) {
+    const statements: Record<string, unknown>[] =
+      resource.Properties?.PolicyDocument?.Statement ?? [];
+    for (const statement of statements) {
+      if (statement.Effect !== "Allow") {
+        continue;
+      }
+      const actions = ([] as unknown[]).concat(statement.Action ?? []);
+      const groupActions = actions.filter(
+        (action): action is string =>
+          typeof action === "string" &&
+          action.startsWith("logs:") &&
+          !LOG_STREAM_SCOPED_ACTIONS.has(action),
+      );
+      if (groupActions.length === 0) {
+        continue;
+      }
+      const arns = ([] as unknown[])
+        .concat(statement.Resource ?? [])
+        .map(flattenArn)
+        .filter((arn) => arn.includes(":logs:"));
+      const isStreamArn = (arn: string): boolean =>
+        arn.endsWith(":*") || arn.includes(":log-stream:");
+      if (arns.some(isStreamArn) && !arns.some((arn) => !isStreamArn(arn))) {
+        throw new Error(
+          `${logicalId} grants ${groupActions.join(", ")} only on log-stream ARNs ` +
+            `(${arns.join(", ")}); add the log-group ARN`,
+        );
+      }
+    }
+  }
+}
+
 function main(): void {
   const app = new cdk.App();
   const stack = new ApiStack(app, "TestApi", {
@@ -607,6 +662,7 @@ function main(): void {
   assertSalesDailyPlanSchedule(stack);
   assertInboundInvoiceSharesReceiptRuleSet(template);
   assertFinanceReadonlyDataApi(template);
+  assertLogGroupActionsUseLogGroupArn(template);
   assertApiStackInvariants(stack, template);
 
   console.log("api-stack API Gateway stage cache assertions passed.");
