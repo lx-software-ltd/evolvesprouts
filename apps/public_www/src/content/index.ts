@@ -100,7 +100,12 @@ export interface LandingPageLocaleContent {
     /** When set with ``ctaAnchorLabel``, hero primary CTA scrolls to this path/hash instead of opening the booking modal. */
     ctaAnchorHref?: string;
     ctaAnchorLabel?: string;
-    /** Static hero chips merged before CRM calendar chips (same styling as event-driven landings). */
+    /**
+     * Hero chips in display order. A chip with ``from: "event"`` pulls the matching
+     * CRM calendar chip (date, time, location, or remaining categories). Static
+     * chips keep their ``label``. When no chip uses ``from: "event"``, static chips
+     * still prepend and CRM chips append (existing landings).
+     */
     quickFactChips?: ReadonlyArray<{
       type:
         | 'category'
@@ -111,7 +116,8 @@ export interface LandingPageLocaleContent {
         | 'price'
         | 'time'
         | 'visits';
-      label: string;
+      label?: string;
+      from?: 'event';
     }>;
   };
   outline?: {

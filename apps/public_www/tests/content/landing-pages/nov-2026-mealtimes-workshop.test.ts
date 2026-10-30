@@ -41,12 +41,27 @@ describe('nov-2026-mealtimes-workshop landing page', () => {
     }
   });
 
-  it('keeps the parents call and family count as the only static hero chips', () => {
+  it('orders hero chips as workshop date, time, parents call, location, families, then category', () => {
     for (const locale of locales) {
       const chips = mealtimes[locale].hero.quickFactChips ?? [];
-      expect(chips.map((chip) => chip.type)).toEqual(['date', 'visits']);
-      expect(chips[0]?.label).toContain('Tue 1 Dec');
-      expect(chips[1]?.label).toBe('8 families');
+      expect(chips.map((chip) => chip.type)).toEqual([
+        'date',
+        'time',
+        'date',
+        'location',
+        'visits',
+        'category',
+      ]);
+      expect(chips.map((chip) => chip.from)).toEqual([
+        'event',
+        'event',
+        undefined,
+        'event',
+        undefined,
+        'event',
+      ]);
+      expect(chips[2]?.label).toContain('Tue 1 Dec');
+      expect(chips[4]?.label).toBe('8 families');
     }
   });
 

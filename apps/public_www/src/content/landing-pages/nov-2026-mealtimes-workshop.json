@@ -17,11 +17,27 @@
       "quickFactChips": [
         {
           "type": "date",
+          "from": "event"
+        },
+        {
+          "type": "time",
+          "from": "event"
+        },
+        {
+          "type": "date",
           "label": "Parents' call Tue 1 Dec, 8:30pm on Zoom"
+        },
+        {
+          "type": "location",
+          "from": "event"
         },
         {
           "type": "visits",
           "label": "8 families"
+        },
+        {
+          "type": "category",
+          "from": "event"
         }
       ]
     },
@@ -157,11 +173,27 @@
       "quickFactChips": [
         {
           "type": "date",
+          "from": "event"
+        },
+        {
+          "type": "time",
+          "from": "event"
+        },
+        {
+          "type": "date",
           "label": "Parents' call Tue 1 Dec, 8:30pm on Zoom"
+        },
+        {
+          "type": "location",
+          "from": "event"
         },
         {
           "type": "visits",
           "label": "8 families"
+        },
+        {
+          "type": "category",
+          "from": "event"
         }
       ]
     },
@@ -297,11 +329,27 @@
       "quickFactChips": [
         {
           "type": "date",
+          "from": "event"
+        },
+        {
+          "type": "time",
+          "from": "event"
+        },
+        {
+          "type": "date",
           "label": "Parents' call Tue 1 Dec, 8:30pm on Zoom"
+        },
+        {
+          "type": "location",
+          "from": "event"
         },
         {
           "type": "visits",
           "label": "8 families"
+        },
+        {
+          "type": "category",
+          "from": "event"
         }
       ]
     },
