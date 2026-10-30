@@ -5,6 +5,12 @@ export function collectLocaleKeyErrors(
   keyPath?: string,
 ): void;
 
+export function collectLandingPageHeroChipErrors(
+  content: unknown,
+  fileLabel: string,
+  errors: string[],
+): void;
+
 export function collectFamilyConsultationKeyErrors(
   value: unknown,
   errors: string[],

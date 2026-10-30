@@ -81,6 +81,26 @@ export type FooterContent = SiteContent['footer'];
 export type LinksHubContent = SiteContent['links']['hub'];
 export type LandingPagesCommonContent = SiteContent['landingPages']['common'];
 
+export type LandingPageHeroChip =
+  | {
+      type:
+        | 'category'
+        | 'cohort'
+        | 'date'
+        | 'duration'
+        | 'location'
+        | 'price'
+        | 'time'
+        | 'visits';
+      label: string;
+      from?: never;
+    }
+  | {
+      type: 'category' | 'date' | 'location' | 'time';
+      from: 'event';
+      label?: string;
+    };
+
 export interface LandingPageLocaleContent {
   meta: {
     title: string;
@@ -101,24 +121,12 @@ export interface LandingPageLocaleContent {
     ctaAnchorHref?: string;
     ctaAnchorLabel?: string;
     /**
-     * Hero chips in display order. A chip with ``from: "event"`` pulls the matching
-     * CRM calendar chip (date, time, location, or remaining categories). Static
-     * chips keep their ``label``. When no chip uses ``from: "event"``, static chips
-     * still prepend and CRM chips append (existing landings).
+     * Hero chips in display order. A static chip requires ``label``. A chip with
+     * ``from: "event"`` pulls the matching CRM calendar chip and is limited to
+     * ``date``, ``time``, ``location``, or ``category``. When no chip uses
+     * ``from: "event"``, static chips still prepend and CRM chips append.
      */
-    quickFactChips?: ReadonlyArray<{
-      type:
-        | 'category'
-        | 'cohort'
-        | 'date'
-        | 'duration'
-        | 'location'
-        | 'price'
-        | 'time'
-        | 'visits';
-      label?: string;
-      from?: 'event';
-    }>;
+    quickFactChips?: ReadonlyArray<LandingPageHeroChip>;
   };
   outline?: {
     eyebrow?: string;
