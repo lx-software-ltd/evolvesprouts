@@ -175,27 +175,90 @@ function buildHeroChips(
   return dedupedChips;
 }
 
+function takeEventChipsOfType(
+  unusedEventChips: HeroQuickFactChip[],
+  type: HeroQuickFactChip['type'],
+): HeroQuickFactChip[] {
+  if (type === 'category') {
+    const taken = unusedEventChips.filter((chip) => chip.type === 'category');
+    unusedEventChips.splice(
+      0,
+      unusedEventChips.length,
+      ...unusedEventChips.filter((chip) => chip.type !== 'category'),
+    );
+    return taken;
+  }
+
+  const index = unusedEventChips.findIndex((chip) => chip.type === type);
+  if (index < 0) {
+    return [];
+  }
+  return unusedEventChips.splice(index, 1);
+}
+
+function pushUniqueHeroChip(
+  merged: HeroQuickFactChip[],
+  seen: Set<string>,
+  chip: HeroQuickFactChip,
+): void {
+  const label = chip.label.trim();
+  if (!label || seen.has(label)) {
+    return;
+  }
+  seen.add(label);
+  merged.push({
+    type: chip.type,
+    label,
+  });
+}
+
 function mergeLandingPageHeroChips(
   jsonChips: LandingPageLocaleContent['hero']['quickFactChips'],
   eventChips: HeroQuickFactChip[],
 ): HeroQuickFactChip[] {
-  const fromJson: HeroQuickFactChip[] = (jsonChips ?? [])
-    .map((chip) => ({
-      type: chip.type,
-      label: chip.label.trim(),
-    }))
-    .filter((chip) => chip.label.length > 0);
+  const specs = jsonChips ?? [];
+  const usesCustomOrder = specs.some((chip) => chip.from === 'event');
 
+  if (!usesCustomOrder) {
+    const fromJson: HeroQuickFactChip[] = specs
+      .map((chip) => ({
+        type: chip.type,
+        label: chip.label?.trim() ?? '',
+      }))
+      .filter((chip) => chip.label.length > 0);
+
+    const seen = new Set<string>();
+    const merged: HeroQuickFactChip[] = [];
+    for (const chip of [...fromJson, ...eventChips]) {
+      pushUniqueHeroChip(merged, seen, chip);
+    }
+    return merged;
+  }
+
+  const unusedEventChips = [...eventChips];
   const seen = new Set<string>();
   const merged: HeroQuickFactChip[] = [];
-  for (const chip of [...fromJson, ...eventChips]) {
-    const label = chip.label.trim();
-    if (!label || seen.has(label)) {
-      continue;
+
+  for (const spec of specs) {
+    if (spec.from === 'event') {
+      const taken = takeEventChipsOfType(unusedEventChips, spec.type);
+      if (taken.length > 0) {
+        for (const chip of taken) {
+          pushUniqueHeroChip(merged, seen, chip);
+        }
+        continue;
+      }
     }
-    seen.add(label);
-    merged.push(chip);
+
+    const fallbackLabel = spec.label?.trim() ?? '';
+    if (fallbackLabel) {
+      pushUniqueHeroChip(merged, seen, {
+        type: spec.type,
+        label: fallbackLabel,
+      });
+    }
   }
+
   return merged;
 }
 
@@ -266,7 +329,10 @@ export function LandingPageHero({
             </div>
           ) : null}
           <p className='es-type-body'>{renderQuotedDescriptionText(content.description)}</p>
-          <HeroQuickFactChips chips={chips} />
+          <HeroQuickFactChips
+            chips={chips}
+            data-testid='landing-page-hero-chips'
+          />
           {content.ctaAnchorHref && content.ctaAnchorLabel ? (
             <SectionCtaAnchor
               href={content.ctaAnchorHref}

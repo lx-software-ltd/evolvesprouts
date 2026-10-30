@@ -6,7 +6,9 @@ import { LandingPageHero } from '@/components/sections/landing-pages/landing-pag
 import enContent from '@/content/en.json';
 import easterWorkshopContent from '@/content/landing-pages/easter-2026-montessori-play-coaching-workshop.json';
 import missingPieceContent from '@/content/landing-pages/may-2026-the-missing-piece.json';
+import mealtimesWorkshopContent from '@/content/landing-pages/nov-2026-mealtimes-workshop.json';
 import type { EventBookingModalPayload } from '@/lib/events-data';
+import type { LandingPageLocaleContent } from '@/content';
 
 vi.mock('next/image', () => ({
   default: ({
@@ -240,5 +242,177 @@ describe('LandingPageHero section', () => {
     expect(screen.getByTestId('landing-page-partner-logo-little-hk')).toHaveClass('h-8');
     const heroImage = screen.getByRole('img', { name: missingPieceContent.en.hero.imageAlt });
     expect(heroImage).toHaveAttribute('src', missingPieceContent.en.hero.imageSrc);
+  });
+
+  it('renders Mealtimes chips in the customized workshop-first order', () => {
+    const eventContent = {
+      title: 'Mealtimes',
+      startDateTime: '2026-11-28T01:00:00Z',
+      endDateTime: '2026-11-28T03:00:00Z',
+      locationLabel: 'Hong Kong Island',
+      partners: [],
+      categoryChips: ['Workshop'],
+    };
+    const timeFormatter = new Intl.DateTimeFormat('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'Asia/Hong_Kong',
+    });
+    const expectedTimeChip = `${timeFormatter.format(new Date(eventContent.startDateTime))} - ${timeFormatter.format(new Date(eventContent.endDateTime))}`;
+    const bookingPayload: EventBookingModalPayload = {
+      variant: 'event',
+      bookingSystem: 'event-booking',
+      serviceKey: 'mealtimes-workshop-test',
+      instanceSlug: 'nov-2026-mealtimes-workshop',
+      title: eventContent.title,
+      subtitle: 'Saturday workshop',
+      originalAmount: 900,
+      locationName: 'Hong Kong Island',
+      locationAddress: '',
+      directionHref: '',
+      dateParts: [
+        {
+          id: 'session-1',
+          startDateTime: eventContent.startDateTime,
+          endDateTime: eventContent.endDateTime,
+          description: 'Saturday workshop',
+        },
+      ],
+      selectedDateLabel: '28 Nov 2026',
+      selectedDateStartTime: eventContent.startDateTime,
+    };
+
+    render(
+      <LandingPageHero
+        slug='nov-2026-mealtimes-workshop'
+        content={mealtimesWorkshopContent.en.hero as LandingPageLocaleContent['hero']}
+        ctaContent={mealtimesWorkshopContent.en.cta}
+        ctaPriceLabel='HK$900'
+        commonContent={enContent.landingPages.common}
+        locale='en'
+        title={eventContent.title}
+        eventContent={eventContent}
+        bookingPayload={bookingPayload}
+        isFullyBooked={false}
+        bookingModalContent={enContent.bookingModal}
+      />,
+    );
+
+    const chipLabels = Array.from(
+      screen.getByTestId('landing-page-hero-chips').querySelectorAll('span.rounded-full'),
+    ).map((chip) => chip.textContent?.trim());
+
+    expect(chipLabels).toEqual([
+      'Saturday 28 November 2026',
+      expectedTimeChip,
+      "Parents' call Tue 1 Dec, 8:30pm on Zoom",
+      'Hong Kong Island',
+      '8 families',
+      'Workshop',
+    ]);
+  });
+
+  it('keeps only static Mealtimes chips when the calendar event is missing', () => {
+    render(
+      <LandingPageHero
+        slug='nov-2026-mealtimes-workshop'
+        content={mealtimesWorkshopContent.en.hero as LandingPageLocaleContent['hero']}
+        ctaContent={mealtimesWorkshopContent.en.cta}
+        commonContent={enContent.landingPages.common}
+        locale='en'
+        title='Mealtimes'
+        eventContent={null}
+        bookingPayload={null}
+        isFullyBooked={false}
+        bookingModalContent={enContent.bookingModal}
+      />,
+    );
+
+    const chipLabels = Array.from(
+      screen.getByTestId('landing-page-hero-chips').querySelectorAll('span.rounded-full'),
+    ).map((chip) => chip.textContent?.trim());
+
+    expect(chipLabels).toEqual([
+      "Parents' call Tue 1 Dec, 8:30pm on Zoom",
+      '8 families',
+    ]);
+  });
+
+  it('still prepends static chips when a landing page does not customize event order', () => {
+    const eventContent = {
+      title: 'Easter 2026 Montessori Play Coaching Workshop',
+      startDateTime: '2026-04-06T02:00:00Z',
+      endDateTime: '2026-04-06T03:00:00Z',
+      locationLabel: 'Wan Chai',
+      partners: [],
+      categoryChips: ['Workshop'],
+    };
+    const timeFormatter = new Intl.DateTimeFormat('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'Asia/Hong_Kong',
+    });
+    const expectedTimeChip = `${timeFormatter.format(new Date(eventContent.startDateTime))} - ${timeFormatter.format(new Date(eventContent.endDateTime))}`;
+    const bookingPayload: EventBookingModalPayload = {
+      variant: 'event',
+      bookingSystem: 'event-booking',
+      serviceKey: 'easter-workshop-test',
+      instanceSlug: 'easter-workshop-test-instance',
+      title: eventContent.title,
+      subtitle: 'A practical workshop',
+      originalAmount: 350,
+      locationName: 'Baumhaus',
+      locationAddress: "Example Hall, 1/F, Example Tower, 1 Sample Street, Hong Kong",
+      directionHref:
+        'https://www.google.com/maps/dir/?api=1&destination=Example+Hall,+1+Sample+Street,+Hong+Kong',
+      dateParts: [
+        {
+          id: 'session-1',
+          startDateTime: eventContent.startDateTime,
+          endDateTime: eventContent.endDateTime,
+          description: 'A practical workshop',
+        },
+      ],
+      selectedDateLabel: '06 Apr 2026',
+      selectedDateStartTime: eventContent.startDateTime,
+    };
+
+    render(
+      <LandingPageHero
+        slug='easter-2026-montessori-play-coaching-workshop'
+        content={{
+          ...easterWorkshopContent.en.hero,
+          quickFactChips: [
+            {
+              type: 'visits',
+              label: '12 families',
+            },
+          ],
+        }}
+        ctaContent={easterWorkshopContent.en.cta}
+        ctaPriceLabel='HK$350'
+        commonContent={enContent.landingPages.common}
+        locale='en'
+        title={eventContent.title}
+        eventContent={eventContent}
+        bookingPayload={bookingPayload}
+        isFullyBooked={false}
+        bookingModalContent={enContent.bookingModal}
+      />,
+    );
+
+    const chipLabels = Array.from(
+      screen.getByTestId('landing-page-hero-chips').querySelectorAll('span.rounded-full'),
+    ).map((chip) => chip.textContent?.trim());
+
+    expect(chipLabels).toEqual([
+      '12 families',
+      'Monday 06 April 2026',
+      expectedTimeChip,
+      'Wan Chai',
+      'Workshop',
+    ]);
   });
 });

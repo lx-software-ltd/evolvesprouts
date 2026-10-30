@@ -69,6 +69,69 @@ export function collectLocaleKeyErrors(value, locale, errors, keyPath = '') {
   }
 }
 
+const HERO_CHIP_TYPES = new Set([
+  'category',
+  'cohort',
+  'date',
+  'duration',
+  'location',
+  'price',
+  'time',
+  'visits',
+]);
+const EVENT_HERO_CHIP_TYPES = new Set(['category', 'date', 'location', 'time']);
+
+export function collectLandingPageHeroChipErrors(content, fileLabel, errors) {
+  if (!content || typeof content !== 'object' || Array.isArray(content)) {
+    return;
+  }
+
+  for (const locale of Object.keys(content)) {
+    const chips = content[locale]?.hero?.quickFactChips;
+    if (chips === undefined) {
+      continue;
+    }
+    const chipPath = `${fileLabel}.${locale}.hero.quickFactChips`;
+    if (!Array.isArray(chips)) {
+      errors.push(`${chipPath} must be an array`);
+      continue;
+    }
+
+    chips.forEach((chip, index) => {
+      const pathLabel = `${chipPath}[${index}]`;
+      if (!chip || typeof chip !== 'object' || Array.isArray(chip)) {
+        errors.push(`${pathLabel} must be an object`);
+        return;
+      }
+
+      if (chip.from !== undefined) {
+        if (chip.from !== 'event') {
+          errors.push(`${pathLabel}.from must be "event"`);
+        }
+        if (!EVENT_HERO_CHIP_TYPES.has(chip.type)) {
+          errors.push(
+            `${pathLabel}.type must be category, date, location, or time when from is "event"`,
+          );
+        }
+        if (
+          chip.label !== undefined
+          && (typeof chip.label !== 'string' || chip.label.trim() === '')
+        ) {
+          errors.push(`${pathLabel}.label must be a non-empty string when set`);
+        }
+        return;
+      }
+
+      if (!HERO_CHIP_TYPES.has(chip.type)) {
+        errors.push(`${pathLabel}.type is not a hero chip type`);
+      }
+      if (typeof chip.label !== 'string' || chip.label.trim() === '') {
+        errors.push(`${pathLabel}.label is required for a static hero chip`);
+      }
+    });
+  }
+}
+
 export function collectFamilyConsultationKeyErrors(value, errors, keyPath = 'family-consultations') {
   if (Array.isArray(value)) {
     value.forEach((item, index) => {
@@ -608,6 +671,13 @@ async function main() {
 
   const familyConsultations = await loadJson(path.join(CONTENT_DIR, 'family-consultations.json'));
   collectFamilyConsultationKeyErrors(familyConsultations, errors);
+
+  const landingPagesDir = path.join(CONTENT_DIR, 'landing-pages');
+  const landingPageFiles = (await readdir(landingPagesDir)).filter((filename) => filename.endsWith('.json'));
+  for (const filename of landingPageFiles) {
+    const landingPage = await loadJson(path.join(landingPagesDir, filename));
+    collectLandingPageHeroChipErrors(landingPage, filename, errors);
+  }
 
   if (errors.length > 0) {
     console.error('Content validation failed.');
