@@ -10,11 +10,14 @@ marketing/
 ├── scripts/
 │   ├── google-ads-assessment.py   # Google Ads API (campaigns, keywords, ads)
 │   ├── meta-ads-assessment.py     # Meta Marketing API (campaigns, ad sets, ads)
+│   ├── instagram-assessment.py    # Instagram Graph API (live stories, organic reach, posts)
 │   ├── ga4-assessment.py          # GA4 Data API (traffic, funnel, events)
 │   ├── ga4-create-audiences.py    # GA4 Admin API (create remarketing audiences)
 │   └── requirements.txt           # Python dependencies
 ├── reports/
 │   ├── ads-performance-assessment-YYYY-MM-DD.md   # narrative snapshots
+│   ├── instagram-organic-assessment-YYYY-MM-DD.md # organic / stories snapshots
+│   ├── instagram-reels-assessment-YYYY-MM-DD.md   # reel-vs-reel comparisons
 │   ├── ga4-manual-setup-steps.md                  # GA4 UI checklist
 │   ├── google-ads-manual-setup-steps.md           # Google Ads UI checklist
 │   └── meta-ads-manual-setup-steps.md             # Meta UI checklist
@@ -39,8 +42,9 @@ All scripts use Cursor Cloud Agent secrets (injected as env vars):
 | `EVOLVESPROUTS_GOOGLE_ADS_CUSTOMER_ID` | google-ads | MCC (manager) account ID |
 | `EVOLVESPROUTS_GOOGLE_SERVICE_ACCOUNT_JSON` | google-ads, ga4 | GCP service account credentials |
 | `EVOLVESPROUTS_GA4_PROPERTY_ID` | ga4 | GA4 property ID |
-| `EVOLVESPROUTS_META_SYSTEM_USER_ACCESS_TOKEN` | meta-ads | System user access token |
+| `EVOLVESPROUTS_META_SYSTEM_USER_ACCESS_TOKEN` | meta-ads, instagram | System user access token |
 | `EVOLVESPROUTS_META_AD_ACCOUNT_ID` | meta-ads | Ad account ID (`act_...`) |
+| `EVOLVESPROUTS_META_INSTAGRAM_BUSINESS_ACCOUNT_ID` | instagram | Instagram business account ID |
 | `EVOLVESPROUTS_GOOGLE_CLIENT_EMAIL` | ga4-create-audiences | Service account email |
 
 ## Usage
@@ -50,8 +54,16 @@ Run from the `marketing/` directory:
 ```bash
 python3 scripts/google-ads-assessment.py
 python3 scripts/meta-ads-assessment.py
+python3 scripts/instagram-assessment.py
 python3 scripts/ga4-assessment.py
 ```
+
+`instagram-assessment.py` reports the stories that are live at run time.
+Story insights are only available for 24 hours, so run it within a day of
+posting a story set, not only on the Monday pull. Add `--reels` to print
+one comparison row per Reel across the whole account (reach, average
+watch, skip rate, interaction rate, Facebook crosspost views) instead of
+the full assessment.
 
 ### Capturing raw output (`--out`)
 
@@ -64,6 +76,7 @@ markdown report you will author alongside it:
 DATE=$(date -u +%F)
 python3 scripts/google-ads-assessment.py --out "generated-reports/$DATE-google-ads.txt"
 python3 scripts/meta-ads-assessment.py   --out "generated-reports/$DATE-meta-ads.txt"
+python3 scripts/instagram-assessment.py  --out "generated-reports/$DATE-instagram.txt"
 python3 scripts/ga4-assessment.py        --out "generated-reports/$DATE-ga4.txt"
 ```
 
