@@ -34,11 +34,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # ubuntu-latest ships Java 25. Gradle 8.14 cannot run on it, and this
+      # app compiles for Java 17.
+      - name: Set up Java
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
       - name: Set up Flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: "stable"
           cache: true
+
+      - name: Point Flutter at Java 17
+        run: flutter config --jdk-dir "$JAVA_HOME"
 
       - name: Configure Android signing
         run: |
