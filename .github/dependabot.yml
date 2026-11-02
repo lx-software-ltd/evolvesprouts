@@ -58,6 +58,10 @@ updates:
       # aws-cdk-lib currently pins yaml@1.10.2 transitively; the 1.x patched
       # version (>=1.10.3) is not resolvable in Dependabot security jobs yet.
       - dependency-name: "yaml"
+      # GHSA-g3hv-75wg-m249 marks every minimatch below 11.0.1. aws-cdk-lib
+      # requires minimatch@^10.2.6, and ESLint 9 still requires 3.1.5. There is
+      # no compatible release, and that security job records a hard error.
+      - dependency-name: "minimatch"
 
   # Python - Lambda backend
   - package-ecosystem: "pip"
@@ -220,5 +224,49 @@ updates:
       # TypeScript 7.0 drops the compiler API used by openapi-typescript, and
       # typescript-eslint still peers typescript <6.1.0. Keep majors ignored
       # until both support TS 7 (see PRs #1876 / #1877).
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+
+  # NPM - Training site
+  # Listed explicitly so security updates are not auto-grouped. An ungrouped
+  # "no update possible" result finishes green; the default group records
+  # security_update_not_possible and fails the job.
+  - package-ecosystem: "npm"
+    directory: "/apps/training"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "web"
+    groups:
+      vitest:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+      minor-and-patch:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "vitest"
+          - "@vitest/*"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # ESLint 10 major bump blocked until eslint-config-next ships native
+      # ESLint 10 support (tracked in Issue #402 / F-14).
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint-config-next"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@eslint/compat"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript-eslint"
+        update-types: ["version-update:semver-major"]
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
