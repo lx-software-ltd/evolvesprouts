@@ -304,6 +304,7 @@ describe('LandingPageHero section', () => {
     ).map((chip) => chip.textContent?.trim());
 
     expect(chipLabels).toEqual([
+      'Workshop for auntie',
       'Saturday 28 November 2026',
       expectedTimeChip,
       "Parents' call Tue 1 Dec, 8:30pm on Zoom",
@@ -334,6 +335,7 @@ describe('LandingPageHero section', () => {
     ).map((chip) => chip.textContent?.trim());
 
     expect(chipLabels).toEqual([
+      'Workshop for auntie',
       "Parents' call Tue 1 Dec, 8:30pm on Zoom",
       '8 families',
     ]);

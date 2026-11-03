@@ -16,6 +16,10 @@
       "imageMaxWidthPercent": 90,
       "quickFactChips": [
         {
+          "type": "category",
+          "label": "Workshop for auntie"
+        },
+        {
           "type": "date",
           "from": "event"
         },
@@ -172,6 +176,10 @@
       "imageMaxWidthPercent": 90,
       "quickFactChips": [
         {
+          "type": "category",
+          "label": "Workshop for auntie"
+        },
+        {
           "type": "date",
           "from": "event"
         },
@@ -327,6 +335,10 @@
       "imageSrc": "/images/hero/mealtimes-workshop-hero.webp",
       "imageMaxWidthPercent": 90,
       "quickFactChips": [
+        {
+          "type": "category",
+          "label": "Workshop for auntie"
+        },
         {
           "type": "date",
           "from": "event"
