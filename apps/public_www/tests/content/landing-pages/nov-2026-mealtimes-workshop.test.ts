@@ -41,7 +41,7 @@ describe('nov-2026-mealtimes-workshop landing page', () => {
     }
   });
 
-  it('orders hero chips as workshop date, time, parents call, location, families, then category', () => {
+  it('orders hero chips as workshop date, time, parents call, location, families, then auntie workshop', () => {
     for (const locale of locales) {
       const chips = mealtimes[locale].hero.quickFactChips ?? [];
       expect(chips.map((chip) => chip.type)).toEqual([
@@ -58,10 +58,11 @@ describe('nov-2026-mealtimes-workshop landing page', () => {
         undefined,
         'event',
         undefined,
-        'event',
+        undefined,
       ]);
       expect(chips[2]?.label).toContain('Tue 1 Dec');
       expect(chips[4]?.label).toBe('8 families');
+      expect(chips[5]?.label).toBe('Workshop for auntie');
     }
   });
 

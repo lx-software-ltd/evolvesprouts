@@ -309,7 +309,7 @@ describe('LandingPageHero section', () => {
       "Parents' call Tue 1 Dec, 8:30pm on Zoom",
       'Hong Kong Island',
       '8 families',
-      'Workshop',
+      'Workshop for auntie',
     ]);
   });
 
@@ -336,6 +336,7 @@ describe('LandingPageHero section', () => {
     expect(chipLabels).toEqual([
       "Parents' call Tue 1 Dec, 8:30pm on Zoom",
       '8 families',
+      'Workshop for auntie',
     ]);
   });
 

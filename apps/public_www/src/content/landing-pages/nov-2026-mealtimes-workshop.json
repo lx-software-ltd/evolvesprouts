@@ -37,7 +37,7 @@
         },
         {
           "type": "category",
-          "from": "event"
+          "label": "Workshop for auntie"
         }
       ]
     },
@@ -193,7 +193,7 @@
         },
         {
           "type": "category",
-          "from": "event"
+          "label": "Workshop for auntie"
         }
       ]
     },
@@ -349,7 +349,7 @@
         },
         {
           "type": "category",
-          "from": "event"
+          "label": "Workshop for auntie"
         }
       ]
     },
