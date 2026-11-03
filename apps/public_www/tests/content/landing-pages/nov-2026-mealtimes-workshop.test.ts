@@ -41,10 +41,11 @@ describe('nov-2026-mealtimes-workshop landing page', () => {
     }
   });
 
-  it('orders hero chips as workshop date, time, parents call, location, families, then auntie workshop', () => {
+  it('keeps the live chip order and prepends the auntie workshop chip', () => {
     for (const locale of locales) {
       const chips = mealtimes[locale].hero.quickFactChips ?? [];
       expect(chips.map((chip) => chip.type)).toEqual([
+        'category',
         'date',
         'time',
         'date',
@@ -53,16 +54,17 @@ describe('nov-2026-mealtimes-workshop landing page', () => {
         'category',
       ]);
       expect(chips.map((chip) => chip.from)).toEqual([
+        undefined,
         'event',
         'event',
         undefined,
         'event',
         undefined,
-        undefined,
+        'event',
       ]);
-      expect(chips[2]?.label).toContain('Tue 1 Dec');
-      expect(chips[4]?.label).toBe('8 families');
-      expect(chips[5]?.label).toBe('Workshop for auntie');
+      expect(chips[0]?.label).toBe('Workshop for auntie');
+      expect(chips[3]?.label).toContain('Tue 1 Dec');
+      expect(chips[5]?.label).toBe('8 families');
     }
   });
 

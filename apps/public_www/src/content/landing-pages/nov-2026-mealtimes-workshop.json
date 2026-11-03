@@ -16,6 +16,10 @@
       "imageMaxWidthPercent": 90,
       "quickFactChips": [
         {
+          "type": "category",
+          "label": "Workshop for auntie"
+        },
+        {
           "type": "date",
           "from": "event"
         },
@@ -37,7 +41,7 @@
         },
         {
           "type": "category",
-          "label": "Workshop for auntie"
+          "from": "event"
         }
       ]
     },
@@ -172,6 +176,10 @@
       "imageMaxWidthPercent": 90,
       "quickFactChips": [
         {
+          "type": "category",
+          "label": "Workshop for auntie"
+        },
+        {
           "type": "date",
           "from": "event"
         },
@@ -193,7 +201,7 @@
         },
         {
           "type": "category",
-          "label": "Workshop for auntie"
+          "from": "event"
         }
       ]
     },
@@ -328,6 +336,10 @@
       "imageMaxWidthPercent": 90,
       "quickFactChips": [
         {
+          "type": "category",
+          "label": "Workshop for auntie"
+        },
+        {
           "type": "date",
           "from": "event"
         },
@@ -349,7 +361,7 @@
         },
         {
           "type": "category",
-          "label": "Workshop for auntie"
+          "from": "event"
         }
       ]
     },
