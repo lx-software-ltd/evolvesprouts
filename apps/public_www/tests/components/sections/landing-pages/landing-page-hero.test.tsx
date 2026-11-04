@@ -457,6 +457,7 @@ describe('LandingPageHero section', () => {
     expect(group).toContainElement(whatsapp);
     expect(primary).not.toHaveClass('mt-3');
     expect(whatsapp).toHaveAttribute('href', 'https://wa.me/85290000000?text=Hi');
+    expect(whatsapp).toHaveClass('es-btn--primary');
     expect(whatsapp).toHaveClass('es-btn--outline');
     expect(whatsapp).toHaveAttribute('target', '_blank');
   });

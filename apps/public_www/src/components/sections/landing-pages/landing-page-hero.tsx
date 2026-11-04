@@ -386,8 +386,8 @@ export function LandingPageHero({
                 {primaryCta}
                 <SectionCtaAnchor
                   href={whatsappCta.href}
-                  variant='outline'
-                  className='w-fit'
+                  variant='primary'
+                  className='es-btn--outline w-fit'
                   data-testid='landing-page-hero-whatsapp-cta'
                   onClick={() => {
                     trackAnalyticsEvent('whatsapp_click', {

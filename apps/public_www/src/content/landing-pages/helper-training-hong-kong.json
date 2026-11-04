@@ -9,7 +9,7 @@
       }
     },
     "hero": {
-      "subtitle": "My Best Auntie: Hong Kong's Montessori-based domestic helper training. Small-group sessions, coaching in your home, and parent calls, all in one 9-week programme.",
+      "subtitle": "Montessori-based domestic helper training: group sessions, coaching in your home and parent calls, in one 9-week programme.",
       "description": "Your helper spends more waking hours with your child than anyone else. In 9 weeks she learns practical Montessori skills for meals, play, transitions and independence, in your home and with your routines. No prior experience needed.",
       "imageAlt": "Ida De Gregorio from Evolve Sprouts",
       "imageSrc": "/images/hero/my-best-auntie-hero.webp",
@@ -17,9 +17,18 @@
       "ctaAnchorHref": "#my-best-auntie-booking",
       "ctaAnchorLabel": "See dates & book",
       "quickFactChips": [
-        { "type": "duration", "label": "9 weeks" },
-        { "type": "visits", "label": "3 home visits" },
-        { "type": "category", "label": "AMI Montessori-certified trainer" }
+        {
+          "type": "duration",
+          "label": "9 weeks"
+        },
+        {
+          "type": "visits",
+          "label": "3 home visits"
+        },
+        {
+          "type": "category",
+          "label": "AMI Montessori-certified trainer"
+        }
       ]
     },
     "description": {
@@ -135,7 +144,7 @@
       }
     },
     "hero": {
-      "subtitle": "My Best Auntie：香港以蒙特梭利为基础的家政助手培训。小组课、上门指导与家长通话，全部包含在一个 9 周课程中。",
+      "subtitle": "以蒙特梭利为基础的家政助手培训：小组课、上门指导与家长通话，尽在一个 9 周课程。",
       "description": "你的阿姨和孩子在一起的时间比任何人都长。9 周内，她会在你家中、按你的日常流程，学会用餐、游戏、过渡与独立的实用蒙特梭利技能。无需任何经验基础。",
       "imageAlt": "Evolve Sprouts 的 Ida De Gregorio",
       "imageSrc": "/images/hero/my-best-auntie-hero.webp",
@@ -143,9 +152,18 @@
       "ctaAnchorHref": "#my-best-auntie-booking",
       "ctaAnchorLabel": "查看日期并报名",
       "quickFactChips": [
-        { "type": "duration", "label": "9 周" },
-        { "type": "visits", "label": "3 次上门指导" },
-        { "type": "category", "label": "AMI 蒙特梭利认证导师" }
+        {
+          "type": "duration",
+          "label": "9 周"
+        },
+        {
+          "type": "visits",
+          "label": "3 次上门指导"
+        },
+        {
+          "type": "category",
+          "label": "AMI 蒙特梭利认证导师"
+        }
       ]
     },
     "description": {
@@ -261,7 +279,7 @@
       }
     },
     "hero": {
-      "subtitle": "My Best Auntie：香港以蒙特梭利為基礎嘅家傭培訓。小組課、上門指導同家長通話，全部包含喺一個 9 週課程入面。",
+      "subtitle": "以蒙特梭利為基礎嘅家傭培訓：小組課、上門指導同家長通話，盡在一個 9 週課程。",
       "description": "你嘅姨姨同孩子相處嘅時間比任何人都長。9 週內，佢會喺你屋企、按你嘅日常流程，學識用餐、遊戲、過渡同獨立嘅實用蒙特梭利技能。無需任何經驗基礎。",
       "imageAlt": "Evolve Sprouts 的 Ida De Gregorio",
       "imageSrc": "/images/hero/my-best-auntie-hero.webp",
@@ -269,9 +287,18 @@
       "ctaAnchorHref": "#my-best-auntie-booking",
       "ctaAnchorLabel": "查看日期並報名",
       "quickFactChips": [
-        { "type": "duration", "label": "9 週" },
-        { "type": "visits", "label": "3 次上門指導" },
-        { "type": "category", "label": "AMI 蒙特梭利認證導師" }
+        {
+          "type": "duration",
+          "label": "9 週"
+        },
+        {
+          "type": "visits",
+          "label": "3 次上門指導"
+        },
+        {
+          "type": "category",
+          "label": "AMI 蒙特梭利認證導師"
+        }
       ]
     },
     "description": {
