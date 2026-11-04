@@ -7,42 +7,43 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
-
 from app.db.models.enums import (
     ContactSource,
     MailchimpSyncStatus,
     RelationshipType,
 )
-from app.exceptions import ValidationError
+from app.exceptions import ConflictError, ValidationError
 from app.services.record_merge import (
     archive_email_if_discarded,
     fill_keeper_identity,
+    raise_merge_integrity,
 )
+from sqlalchemy.exc import IntegrityError
 
 
 def _contact(**overrides: object) -> SimpleNamespace:
     now = datetime(2026, 4, 1, tzinfo=UTC)
-    values = dict(
-        id=uuid4(),
-        email=None,
-        instagram_handle=None,
-        first_name="Sam",
-        last_name=None,
-        job_title=None,
-        phone_region=None,
-        phone_national_number=None,
-        date_of_birth=None,
-        contact_type=None,
-        relationship_type=RelationshipType.PROSPECT,
-        source=ContactSource.WHATSAPP,
-        source_detail="whatsapp_webhook",
-        location_id=None,
-        archived_at=None,
-        created_at=now,
-        mailchimp_status=MailchimpSyncStatus.PENDING,
-        mailchimp_subscriber_id=None,
-        source_metadata=None,
-    )
+    values = {
+        "id": uuid4(),
+        "email": None,
+        "instagram_handle": None,
+        "first_name": "Sam",
+        "last_name": None,
+        "job_title": None,
+        "phone_region": None,
+        "phone_national_number": None,
+        "date_of_birth": None,
+        "contact_type": None,
+        "relationship_type": RelationshipType.PROSPECT,
+        "source": ContactSource.WHATSAPP,
+        "source_detail": "whatsapp_webhook",
+        "location_id": None,
+        "archived_at": None,
+        "created_at": now,
+        "mailchimp_status": MailchimpSyncStatus.PENDING,
+        "mailchimp_subscriber_id": None,
+        "source_metadata": None,
+    }
     values.update(overrides)
     return SimpleNamespace(**values)
 
@@ -82,6 +83,26 @@ def test_fill_keeper_identity_takes_loser_email_when_keeper_empty() -> None:
     loser = _contact(email="g@example.com")
     fill_keeper_identity(keeper, loser, conflict_field="lead_ids")
     assert keeper.email == "g@example.com"
+
+
+def test_open_lead_index_violation_becomes_conflict() -> None:
+    message = (
+        "duplicate key value violates unique constraint "
+        '"sales_leads_one_open_contact_idx"'
+    )
+    exc = IntegrityError("UPDATE sales_leads", {}, Exception(message))
+    with pytest.raises(ConflictError, match="open sales lead") as caught:
+        raise_merge_integrity(exc)
+    assert caught.value.status_code == 409
+
+
+def test_other_integrity_error_stays_an_integrity_error() -> None:
+    message = (
+        'duplicate key value violates unique constraint "contacts_email_unique_idx"'
+    )
+    exc = IntegrityError("INSERT contacts", {}, Exception(message))
+    with pytest.raises(IntegrityError):
+        raise_merge_integrity(exc)
 
 
 def test_archive_email_skipped_when_keeper_retains_address() -> None:

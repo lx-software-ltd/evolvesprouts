@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import UTC, datetime
-from typing import Iterable
 from uuid import UUID
 
 from sqlalchemy import delete, select, update
@@ -106,8 +106,22 @@ def reassign_related_records(
                 actor_sub=actor_sub,
                 event_source=event_source,
             )
-        else:
-            lead.contact_id = to_id
+            continue
+        if _is_open_automated(lead):
+            keeper_open = _open_automated_lead(session, to_id, exclude_id=lead.id)
+            if keeper_open is not None:
+                # Fold before changing contact_id. A later autoflush would
+                # otherwise save two open automated leads and hit
+                # sales_leads_one_open_contact_idx.
+                collapse_lead_rows(
+                    session,
+                    keeper_open,
+                    [lead],
+                    actor_sub=actor_sub,
+                    event_source=event_source,
+                )
+                continue
+        lead.contact_id = to_id
 
 
 def reassign_enrollment_rows(
@@ -196,6 +210,9 @@ def collapse_lead_rows(
         )
 
     session.execute(delete(SalesLead).where(SalesLead.id.in_(merged_ids)))
+    for merged in merged_leads:
+        if merged.id in merged_ids and merged in session:
+            session.expunge(merged)
     session.add(
         SalesLeadEvent(
             lead_id=keeper.id,
@@ -242,6 +259,30 @@ def resolve_open_lead_conflicts(
         extras,
         actor_sub=actor_sub,
         event_source=event_source,
+    )
+
+
+def _is_open_automated(lead: SalesLead) -> bool:
+    return not lead.is_manual and lead.funnel_stage in OPEN_FUNNEL_STAGES
+
+
+def _open_automated_lead(
+    session: Session, contact_id: UUID, *, exclude_id: UUID
+) -> SalesLead | None:
+    """Return the contact's open automated lead, ignoring pending moves.
+
+    Called inside ``no_autoflush`` so a lead whose ``contact_id`` was only
+    changed in memory is not written before this lookup.
+    """
+    return session.scalar(
+        select(SalesLead)
+        .where(
+            SalesLead.contact_id == contact_id,
+            SalesLead.id != exclude_id,
+            SalesLead.is_manual.is_(False),
+            SalesLead.funnel_stage.in_(tuple(OPEN_FUNNEL_STAGES)),
+        )
+        .limit(1)
     )
 
 

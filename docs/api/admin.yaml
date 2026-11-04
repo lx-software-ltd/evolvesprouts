@@ -1340,7 +1340,9 @@ paths:
         (notes, enrollments, invoices, payments, conversations, certificates,
         tags, and remaining leads). Orphaned loser contacts are deleted.
         Non-selected leads on loser contacts remain on the keeper contact as
-        separate lead rows except uniqueness conflicts.
+        separate lead rows except uniqueness conflicts. An incoming open
+        automated lead is folded onto the keeper contact's open lead before
+        the move is saved. A remaining one-open-lead conflict returns 409.
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -1362,6 +1364,14 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          description: >
+            The selected leads belong to contacts that each already have an
+            open automated sales lead, and the merge could not fold them.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /v1/admin/leads/analytics:
     get:
@@ -3318,8 +3328,10 @@ paths:
         invoices, payments, conversations, certificates, tags, and sales leads)
         move onto the keeper. Sales leads stay as separate rows except uniqueness
         conflicts (same-guide dedupe and one open automated lead per contact).
-        Orphaned loser contacts are deleted. Conflicting emails, Instagram
-        handles, families, or organisations return 400.
+        An incoming open automated lead is folded onto the keeper's open lead
+        before the move is saved. Orphaned loser contacts are deleted.
+        Conflicting emails, Instagram handles, families, or organisations
+        return 400. A remaining one-open-lead conflict returns 409.
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -3341,6 +3353,14 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          description: >
+            Both contacts already have an open automated sales lead and the
+            merge could not fold them.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /v1/admin/contacts/mailchimp-sync-run:
     post:
