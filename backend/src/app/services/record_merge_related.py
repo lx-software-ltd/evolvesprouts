@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from typing import Iterable
 from uuid import UUID
 
 from sqlalchemy import delete, select, update
@@ -37,6 +35,18 @@ OPEN_FUNNEL_STAGES = frozenset(
     }
 )
 
+# Match 0086_one_open_lead_contact: positive pipeline progress outranks
+# unqualified. Closed stages outrank every open stage.
+_FUNNEL_STAGE_RANK = {
+    FunnelStage.UNQUALIFIED: 0,
+    FunnelStage.NEW: 1,
+    FunnelStage.CONTACTED: 2,
+    FunnelStage.ENGAGED: 3,
+    FunnelStage.QUALIFIED: 4,
+    FunnelStage.CONVERTED: 5,
+    FunnelStage.LOST: 5,
+}
+
 
 def reassign_related_records(
     session: Session,
@@ -45,8 +55,13 @@ def reassign_related_records(
     to_id: UUID,
     actor_sub: str,
     event_source: str,
+    skip_lead_ids: frozenset[UUID] | None = None,
 ) -> None:
-    """Point related rows at ``to_id``; collapse lead uniqueness conflicts."""
+    """Point related rows at ``to_id``; collapse lead uniqueness conflicts.
+
+    ``skip_lead_ids`` are selected lead-merge rows. Leave them on the loser
+    until ``collapse_lead_rows`` folds them onto the chosen keeper lead.
+    """
     session.execute(
         update(CompletionCertificate)
         .where(CompletionCertificate.contact_id == from_id)
@@ -82,10 +97,13 @@ def reassign_related_records(
     )
     reassign_enrollment_rows(session, from_id, to_id)
 
+    skip = skip_lead_ids or frozenset()
     loser_leads = list(
         session.scalars(select(SalesLead).where(SalesLead.contact_id == from_id)).all()
     )
     for lead in loser_leads:
+        if lead.id in skip:
+            continue
         conflict = session.scalar(
             select(SalesLead.id).where(
                 SalesLead.contact_id == to_id,
@@ -106,8 +124,22 @@ def reassign_related_records(
                 actor_sub=actor_sub,
                 event_source=event_source,
             )
-        else:
-            lead.contact_id = to_id
+            continue
+        if _is_open_automated(lead):
+            keeper_open = _open_automated_lead(session, to_id, exclude_id=lead.id)
+            if keeper_open is not None:
+                # Fold before changing contact_id. A later autoflush would
+                # otherwise save two open automated leads and hit
+                # sales_leads_one_open_contact_idx.
+                collapse_lead_rows(
+                    session,
+                    keeper_open,
+                    [lead],
+                    actor_sub=actor_sub,
+                    event_source=event_source,
+                )
+                continue
+        lead.contact_id = to_id
 
 
 def reassign_enrollment_rows(
@@ -152,21 +184,24 @@ def remap_referrer_ids(
 def collapse_lead_rows(
     session: Session,
     keeper: SalesLead,
-    merged_leads: Iterable[SalesLead],
+    merged_leads: list[SalesLead],
     *,
     actor_sub: str,
     event_source: str,
 ) -> None:
     """Move child rows onto ``keeper`` and delete the extra lead rows."""
+    extras = [lead for lead in merged_leads if lead.id != keeper.id]
     merged_ids: list[UUID] = []
-    for lead in merged_leads:
-        if lead.id == keeper.id:
-            continue
+    for lead in extras:
         merged_ids.append(lead.id)
         if _LEAD_TYPE_RANK.get(lead.lead_type, 0) > _LEAD_TYPE_RANK.get(
             keeper.lead_type, 0
         ):
             keeper.lead_type = lead.lead_type
+        if _FUNNEL_STAGE_RANK.get(lead.funnel_stage, 0) > _FUNNEL_STAGE_RANK.get(
+            keeper.funnel_stage, 0
+        ):
+            keeper.funnel_stage = lead.funnel_stage
         if keeper.assigned_to is None and lead.assigned_to is not None:
             keeper.assigned_to = lead.assigned_to
         if lead.is_manual:
@@ -179,6 +214,10 @@ def collapse_lead_rows(
             keeper.lost_at = lead.lost_at
         if keeper.lost_reason is None and lead.lost_reason is not None:
             keeper.lost_reason = lead.lost_reason
+        if lead.updated_at is not None and (
+            keeper.updated_at is None or lead.updated_at > keeper.updated_at
+        ):
+            keeper.updated_at = lead.updated_at
 
     if not merged_ids:
         return
@@ -196,6 +235,9 @@ def collapse_lead_rows(
         )
 
     session.execute(delete(SalesLead).where(SalesLead.id.in_(merged_ids)))
+    for merged in extras:
+        if merged in session:
+            session.expunge(merged)
     session.add(
         SalesLeadEvent(
             lead_id=keeper.id,
@@ -210,41 +252,25 @@ def collapse_lead_rows(
     )
 
 
-def resolve_open_lead_conflicts(
-    session: Session,
-    *,
-    keeper_id: UUID,
-    actor_sub: str,
-    event_source: str,
-    preferred_lead_id: UUID | None = None,
-) -> None:
-    """Collapse extra non-manual open leads so one-open-per-contact still holds."""
-    open_leads = list(
-        session.scalars(
-            select(SalesLead).where(
-                SalesLead.contact_id == keeper_id,
-                SalesLead.is_manual.is_(False),
-                SalesLead.funnel_stage.in_(tuple(OPEN_FUNNEL_STAGES)),
-            )
-        ).all()
-    )
-    if len(open_leads) < 2:
-        return
-    preferred = next(
-        (lead for lead in open_leads if lead.id == preferred_lead_id),
-        None,
-    )
-    keeper_lead = preferred or max(open_leads, key=_open_lead_sort_key)
-    extras = [lead for lead in open_leads if lead.id != keeper_lead.id]
-    collapse_lead_rows(
-        session,
-        keeper_lead,
-        extras,
-        actor_sub=actor_sub,
-        event_source=event_source,
-    )
+def _is_open_automated(lead: SalesLead) -> bool:
+    return not lead.is_manual and lead.funnel_stage in OPEN_FUNNEL_STAGES
 
 
-def _open_lead_sort_key(lead: SalesLead) -> tuple[int, datetime]:
-    updated = lead.updated_at or datetime.min.replace(tzinfo=UTC)
-    return (_LEAD_TYPE_RANK.get(lead.lead_type, 0), updated)
+def _open_automated_lead(
+    session: Session, contact_id: UUID, *, exclude_id: UUID
+) -> SalesLead | None:
+    """Return the contact's open automated lead, ignoring pending moves.
+
+    Called inside ``no_autoflush`` so a lead whose ``contact_id`` was only
+    changed in memory is not written before this lookup.
+    """
+    return session.scalar(
+        select(SalesLead)
+        .where(
+            SalesLead.contact_id == contact_id,
+            SalesLead.id != exclude_id,
+            SalesLead.is_manual.is_(False),
+            SalesLead.funnel_stage.in_(tuple(OPEN_FUNNEL_STAGES)),
+        )
+        .limit(1)
+    )

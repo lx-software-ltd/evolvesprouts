@@ -1167,9 +1167,13 @@ conversations.
 fold one record's identity and related rows onto a keeper. `merge_contacts`
 (`POST /v1/admin/contacts/merge`) uses those helpers and keeps sales leads as
 separate rows except uniqueness conflicts (`sales_leads_guide_dedup_idx` and
-`sales_leads_one_open_contact_idx`). `merge_leads` (`POST /v1/admin/leads/merge`)
-calls the same helpers for loser contacts, then additionally collapses the
-**selected** lead rows onto the keeper lead.
+`sales_leads_one_open_contact_idx`). An incoming open automated lead is folded
+onto the keeper contact's existing open lead before `contact_id` is saved, and
+the surviving row keeps the higher lead-type rank and the further-along funnel
+stage. A leftover violation of that index returns 409. `merge_leads`
+(`POST /v1/admin/leads/merge`) collapses the **selected** lead rows onto the
+keeper lead first, then uses the same helpers for loser contacts so a selected
+lead is not folded onto a different open lead on that contact.
 
 **Why:**
 - Operators need a contact-first merge (duplicate WhatsApp vs CRM client)

@@ -6,11 +6,16 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models import Contact, SalesLead
 from app.exceptions import NotFoundError, ValidationError
-from app.services.record_merge import absorb_loser_record, collapse_lead_rows
+from app.services.record_merge import (
+    absorb_loser_record,
+    collapse_lead_rows,
+    raise_merge_integrity,
+)
 
 EVENT_SOURCE = "admin_lead_merge"
 
@@ -58,35 +63,34 @@ def merge_leads(
     loser_contact_ids = {
         lead.contact_id for lead in merged_leads if lead.contact_id != keeper.contact_id
     }
-    for loser_contact_id in loser_contact_ids:
-        loser_contact = session.get(Contact, loser_contact_id)
-        if loser_contact is None:
-            raise NotFoundError("Contact", str(loser_contact_id))
-        email = absorb_loser_record(
+    selected_ids = frozenset(unique_ids)
+    try:
+        collapse_lead_rows(
             session,
-            keeper_contact,
-            loser_contact,
+            keeper,
+            merged_leads,
             actor_sub=actor_sub,
-            conflict_field="lead_ids",
             event_source=EVENT_SOURCE,
-            preferred_lead_id=keeper.id,
         )
-        if email:
-            mailchimp_archive_emails.append(email)
+        for loser_contact_id in loser_contact_ids:
+            loser_contact = session.get(Contact, loser_contact_id)
+            if loser_contact is None:
+                raise NotFoundError("Contact", str(loser_contact_id))
+            email = absorb_loser_record(
+                session,
+                keeper_contact,
+                loser_contact,
+                actor_sub=actor_sub,
+                conflict_field="lead_ids",
+                event_source=EVENT_SOURCE,
+                skip_lead_ids=selected_ids,
+            )
+            if email:
+                mailchimp_archive_emails.append(email)
 
-    keeper.contact_id = keeper_contact.id
-    surviving_merged: list[SalesLead] = []
-    for merged_lead in merged_leads:
-        loaded = session.get(SalesLead, merged_lead.id)
-        if loaded is not None and loaded.id != keeper.id:
-            surviving_merged.append(loaded)
-    collapse_lead_rows(
-        session,
-        keeper,
-        surviving_merged,
-        actor_sub=actor_sub,
-        event_source=EVENT_SOURCE,
-    )
-    keeper.updated_at = datetime.now(UTC)
-    session.flush()
+        keeper.contact_id = keeper_contact.id
+        keeper.updated_at = datetime.now(UTC)
+        session.flush()
+    except IntegrityError as exc:
+        raise_merge_integrity(exc)
     return keeper, mailchimp_archive_emails

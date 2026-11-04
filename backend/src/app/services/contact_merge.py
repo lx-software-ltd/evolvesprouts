@@ -6,11 +6,12 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models import Contact
 from app.exceptions import NotFoundError, ValidationError
-from app.services.record_merge import absorb_loser_record
+from app.services.record_merge import absorb_loser_record, raise_merge_integrity
 
 EVENT_SOURCE = "admin_contact_merge"
 
@@ -45,20 +46,23 @@ def merge_contacts(
 
     keeper = next(contact for contact in contacts if contact.id == keeper_contact_id)
     mailchimp_archive_emails: list[str] = []
-    for contact in contacts:
-        if contact.id == keeper.id:
-            continue
-        email = absorb_loser_record(
-            session,
-            keeper,
-            contact,
-            actor_sub=actor_sub,
-            conflict_field="contact_ids",
-            event_source=EVENT_SOURCE,
-        )
-        if email:
-            mailchimp_archive_emails.append(email)
+    try:
+        for contact in contacts:
+            if contact.id == keeper.id:
+                continue
+            email = absorb_loser_record(
+                session,
+                keeper,
+                contact,
+                actor_sub=actor_sub,
+                conflict_field="contact_ids",
+                event_source=EVENT_SOURCE,
+            )
+            if email:
+                mailchimp_archive_emails.append(email)
 
-    keeper.updated_at = datetime.now(UTC)
-    session.flush()
+        keeper.updated_at = datetime.now(UTC)
+        session.flush()
+    except IntegrityError as exc:
+        raise_merge_integrity(exc)
     return keeper, mailchimp_archive_emails

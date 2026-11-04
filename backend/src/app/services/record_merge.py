@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from typing import NoReturn
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.admin_contacts_helpers import REFERRAL_CONTACT_METADATA_KEY
@@ -22,12 +24,11 @@ from app.db.repositories.contact import (
     _should_replace_first_name,
     _should_replace_source,
 )
-from app.exceptions import ValidationError
+from app.exceptions import ConflictError, ValidationError
 from app.services.record_merge_related import (
     collapse_lead_rows,
     reassign_related_records,
     remap_referrer_ids,
-    resolve_open_lead_conflicts,
 )
 
 _MAILCHIMP_REMOVE_STATUSES = frozenset(
@@ -57,6 +58,20 @@ __all__ = [
 ]
 
 
+_OPEN_LEAD_INDEX = "sales_leads_one_open_contact_idx"
+_OPEN_LEAD_CONFLICT = (
+    "These records each have an open sales lead. Close one lead, then merge again."
+)
+
+
+def raise_merge_integrity(exc: IntegrityError) -> NoReturn:
+    """Turn the one-open-lead index into HTTP 409. Other failures stay 500s."""
+    detail = f"{getattr(exc, 'orig', '')} {exc}"
+    if _OPEN_LEAD_INDEX in detail:
+        raise ConflictError(_OPEN_LEAD_CONFLICT) from exc
+    raise exc
+
+
 def absorb_loser_record(
     session: Session,
     keeper: Contact,
@@ -65,7 +80,7 @@ def absorb_loser_record(
     actor_sub: str,
     conflict_field: str,
     event_source: str,
-    preferred_lead_id: UUID | None = None,
+    skip_lead_ids: frozenset[UUID] | None = None,
 ) -> str | None:
     """Fold ``loser`` onto ``keeper`` and delete ``loser``.
 
@@ -84,13 +99,7 @@ def absorb_loser_record(
             to_id=keeper.id,
             actor_sub=actor_sub,
             event_source=event_source,
-        )
-        resolve_open_lead_conflicts(
-            session,
-            keeper_id=keeper.id,
-            actor_sub=actor_sub,
-            event_source=event_source,
-            preferred_lead_id=preferred_lead_id,
+            skip_lead_ids=skip_lead_ids,
         )
     remap_referrer_ids(session, loser.id, keeper.id)
     session.delete(loser)
@@ -158,8 +167,7 @@ def fill_keeper_identity(
     if keeper.archived_at is not None and loser.archived_at is None:
         keeper.archived_at = None
 
-    if keeper.created_at > loser.created_at:
-        keeper.created_at = loser.created_at
+    keeper.created_at = min(keeper.created_at, loser.created_at)
 
     if (
         keeper.mailchimp_status not in _MAILCHIMP_REMOVE_STATUSES

@@ -120,8 +120,11 @@ their primary responsibilities.
   reconciliation job exists. **Caching:** share-link tokens stay stable on replace;
   CDN or browser caching keyed only by URL (not `s3_key`) may show stale bytes until TTL—
   downloads keyed by changing `s3_key` generally avoid that.
-  `/v1/admin/leads/merge` (POST merges selected leads; folds loser contacts through
-  shared record-merge helpers and deletes orphaned contacts),
+  `/v1/admin/leads/merge` (POST merges selected leads; collapses selected lead
+  rows onto the keeper lead first, then folds loser contacts through shared
+  record-merge helpers; leftover open automated leads fold onto the keeper
+  contact's open lead; deletes orphaned contacts; returns 409 when that
+  one-open-lead index still conflicts),
   `/v1/admin/leads/{id}/ai-suggestion` (GET latest stored close suggestion / POST
   enqueues async generation on `LeadAiSuggestionFunction` via SQS; poll
   `/v1/admin/leads/{id}/ai-suggestion/jobs/{job_id}` for status and timing),
@@ -153,7 +156,10 @@ their primary responsibilities.
   `has_service_instance`, and `has_invoice`;
   `POST /v1/admin/contacts/merge` merges selected contacts onto a keeper, moving
   sales leads, enrollments, invoices, payments, conversations, certificates, notes,
-  and tags, then deleting orphaned contacts;
+  and tags, then deleting orphaned contacts; an incoming open automated lead is
+  folded onto the keeper's open lead before the move is saved; the surviving lead
+  keeps the higher lead-type rank and the further-along funnel stage; a leftover
+  one-open-lead conflict returns 409;
   `POST /v1/admin/contacts/mailchimp-sync-run`, `POST /v1/admin/contacts/mailchimp-sync-orphans`, and
   `GET /v1/admin/contacts/mailchimp-sync-status` for production Mailchimp audience sync, orphan cleanup, and status counters;
   `GET /v1/admin/contacts/map-pins` returns confirmed family, organisation, and contact
