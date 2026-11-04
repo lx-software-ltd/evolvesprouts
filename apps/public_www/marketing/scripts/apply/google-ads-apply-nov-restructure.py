@@ -61,7 +61,9 @@ import argparse
 import os
 import sys
 import tempfile
+from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.request import Request, urlopen
 
 from google.ads.googleads.client import GoogleAdsClient
 from google.api_core import protobuf_helpers
@@ -799,9 +801,26 @@ def do_assets(client, svc, apply_changes):
 
 
 # ------------------------------------------------------------ helper LP url
+def _landing_page_is_live(url):
+    """Refuse to repoint ads at a page that is not deployed yet (non-200)."""
+    req = Request(url, method="HEAD", headers={"User-Agent": "evolvesprouts-ads-apply"})
+    try:
+        with urlopen(req, timeout=15) as resp:
+            return resp.status == 200
+    except HTTPError as exc:
+        print(f"  landing page returned HTTP {exc.code}: {url}")
+    except URLError as exc:
+        print(f"  landing page unreachable ({exc.reason}): {url}")
+    return False
+
+
 def do_helper_lp_url(client, svc, apply_changes):
     print("\n== HELPER TRAINING ADS -> PAID LANDING PAGE ==")
-    target = _with_utm(f"{SITE_ORIGIN}{HELPER_LP_PATH}", HELPER_LP_UTMS)
+    plain_url = f"{SITE_ORIGIN}{HELPER_LP_PATH}"
+    if not _landing_page_is_live(plain_url):
+        print("  ABORT: deploy the landing page first, then re-run this step.")
+        return
+    target = _with_utm(plain_url, HELPER_LP_UTMS)
     rows = _rows(
         svc,
         "SELECT ad_group_ad.ad.resource_name, ad_group_ad.ad.id, ad_group_ad.ad.final_urls "
