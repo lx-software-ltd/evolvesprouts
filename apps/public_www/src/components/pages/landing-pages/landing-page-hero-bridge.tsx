@@ -2,7 +2,10 @@
 
 import { useContext } from 'react';
 
-import { LandingPageHero } from '@/components/sections/landing-pages/landing-page-hero';
+import {
+  LandingPageHero,
+  type LandingPageHeroWhatsappCta,
+} from '@/components/sections/landing-pages/landing-page-hero';
 import type {
   BookingModalContent,
   LandingPagesCommonContent,
@@ -20,6 +23,7 @@ interface LandingPageHeroBridgeProps {
   locale: Locale;
   metaTitle: string;
   bookingModalContent: BookingModalContent;
+  whatsappCta?: LandingPageHeroWhatsappCta | null;
   ariaLabel?: string;
 }
 
@@ -31,6 +35,7 @@ export function LandingPageHeroBridge({
   locale,
   metaTitle,
   bookingModalContent,
+  whatsappCta,
   ariaLabel,
 }: LandingPageHeroBridgeProps) {
   const calendar = useContext(LandingPageCalendarContext);
@@ -58,6 +63,7 @@ export function LandingPageHeroBridge({
       bookingModalContent={bookingModalContent}
       thankYouWhatsappHref={sharedCtaProps.thankYouWhatsappHref}
       thankYouWhatsappCtaLabel={sharedCtaProps.thankYouWhatsappCtaLabel}
+      whatsappCta={whatsappCta}
       ariaLabel={ariaLabel}
     />
   );

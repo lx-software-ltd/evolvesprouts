@@ -27,11 +27,20 @@ import type {
   EventBookingModalPayload,
   LandingPageHeroEventContent,
 } from '@/lib/events-data';
+import { trackAnalyticsEvent } from '@/lib/analytics';
+import { trackMetaPixelEvent } from '@/lib/meta-pixel';
+import { PIXEL_CONTENT_NAME } from '@/lib/meta-pixel-taxonomy';
 import { resolveHeroImageMaxWidthClass } from '@/lib/page-hero-image';
 import {
   formatHeroFullDateLine,
   formatSiteTimeRange,
 } from '@/lib/site-datetime';
+
+/** Secondary hero CTA that opens WhatsApp; the href is resolved from site config at render time. */
+export interface LandingPageHeroWhatsappCta {
+  href: string;
+  label: string;
+}
 
 interface LandingPageHeroProps {
   slug: string;
@@ -49,6 +58,7 @@ interface LandingPageHeroProps {
   bookingModalContent: BookingModalContent;
   thankYouWhatsappHref?: string;
   thankYouWhatsappCtaLabel?: string;
+  whatsappCta?: LandingPageHeroWhatsappCta | null;
   ariaLabel?: string;
 }
 
@@ -278,8 +288,11 @@ export function LandingPageHero({
   bookingModalContent,
   thankYouWhatsappHref,
   thankYouWhatsappCtaLabel,
+  whatsappCta,
   ariaLabel,
 }: LandingPageHeroProps) {
+  const hasWhatsappCta = Boolean(whatsappCta?.href && whatsappCta.label);
+  const primaryCtaSpacingClassName = hasWhatsappCta ? '' : 'mt-3';
   const heroImageMaxWidthClassName = useMemo(
     () => resolveHeroImageMaxWidthClass(content),
     [content],
@@ -333,32 +346,64 @@ export function LandingPageHero({
             chips={chips}
             data-testid='landing-page-hero-chips'
           />
-          {content.ctaAnchorHref && content.ctaAnchorLabel ? (
-            <SectionCtaAnchor
-              href={content.ctaAnchorHref}
-              className='mt-3 w-fit'
-            >
-              {content.ctaAnchorLabel}
-            </SectionCtaAnchor>
-          ) : (
-            <LandingPageBookingCtaAction
-              locale={locale}
-              slug={slug}
-              content={ctaContent}
-              ctaPriceLabel={ctaPriceLabel}
-              commonContent={commonContent}
-              bookingPayload={bookingPayload}
-              isFullyBooked={isFullyBooked}
-              fullyBookedCtaLabel={fullyBookedCtaLabel}
-              fullyBookedWaitlistHref={fullyBookedWaitlistHref}
-              bookingModalContent={bookingModalContent}
-              thankYouWhatsappHref={thankYouWhatsappHref}
-              thankYouWhatsappCtaLabel={thankYouWhatsappCtaLabel}
-              analyticsSectionId='landing-page-hero'
-              ctaLocation='landing_page'
-              buttonClassName='mt-3'
-            />
-          )}
+          {(() => {
+            const primaryCta = content.ctaAnchorHref && content.ctaAnchorLabel ? (
+              <SectionCtaAnchor
+                href={content.ctaAnchorHref}
+                className={`${primaryCtaSpacingClassName} w-fit`.trim()}
+              >
+                {content.ctaAnchorLabel}
+              </SectionCtaAnchor>
+            ) : (
+              <LandingPageBookingCtaAction
+                locale={locale}
+                slug={slug}
+                content={ctaContent}
+                ctaPriceLabel={ctaPriceLabel}
+                commonContent={commonContent}
+                bookingPayload={bookingPayload}
+                isFullyBooked={isFullyBooked}
+                fullyBookedCtaLabel={fullyBookedCtaLabel}
+                fullyBookedWaitlistHref={fullyBookedWaitlistHref}
+                bookingModalContent={bookingModalContent}
+                thankYouWhatsappHref={thankYouWhatsappHref}
+                thankYouWhatsappCtaLabel={thankYouWhatsappCtaLabel}
+                analyticsSectionId='landing-page-hero'
+                ctaLocation='landing_page'
+                buttonClassName={primaryCtaSpacingClassName || undefined}
+              />
+            );
+
+            if (!hasWhatsappCta || !whatsappCta) {
+              return primaryCta;
+            }
+
+            return (
+              <div
+                data-testid='landing-page-hero-cta-group'
+                className='mt-3 flex flex-wrap items-center gap-3'
+              >
+                {primaryCta}
+                <SectionCtaAnchor
+                  href={whatsappCta.href}
+                  variant='outline'
+                  className='w-fit'
+                  data-testid='landing-page-hero-whatsapp-cta'
+                  onClick={() => {
+                    trackAnalyticsEvent('whatsapp_click', {
+                      sectionId: 'landing-page-hero',
+                      ctaLocation: 'landing_page',
+                    });
+                    trackMetaPixelEvent('Contact', {
+                      content_name: PIXEL_CONTENT_NAME.whatsapp,
+                    });
+                  }}
+                >
+                  {whatsappCta.label}
+                </SectionCtaAnchor>
+              </div>
+            );
+          })()}
         </div>
         <div
           className={`es-landing-page-hero-image-wrap mx-auto w-full justify-self-center ${heroImageMaxWidthClassName}`}

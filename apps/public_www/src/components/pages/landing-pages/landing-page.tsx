@@ -12,6 +12,7 @@ import { Testimonials } from '@/components/sections/testimonials';
 import { LandingPageCtaBridge } from '@/components/pages/landing-pages/landing-page-cta-bridge';
 import { LandingPageEventJsonLd } from '@/components/pages/landing-pages/landing-page-event-jsonld';
 import { LandingPageHeroBridge } from '@/components/pages/landing-pages/landing-page-hero-bridge';
+import type { LandingPageHeroWhatsappCta } from '@/components/sections/landing-pages/landing-page-hero';
 import { LandingPageDescription } from '@/components/sections/landing-pages/landing-page-description';
 import { LandingPageDetails } from '@/components/sections/landing-pages/landing-page-details';
 import { LandingPageFaq } from '@/components/sections/landing-pages/landing-page-faq';
@@ -24,7 +25,10 @@ import type {
   LandingPageStructuredDataContent,
 } from '@/lib/events-data';
 
-export type LandingPageLayoutVariant = 'default' | 'book-free-call';
+export type LandingPageLayoutVariant =
+  | 'default'
+  | 'book-free-call'
+  | 'course-booking';
 
 export interface LandingPageProps {
   locale: Locale;
@@ -37,7 +41,15 @@ export interface LandingPageProps {
   structuredDataContent: LandingPageStructuredDataContent | null;
   /** Optional slot between testimonials and the CTA bridge (e.g. intro-call booking). */
   introCallSectionBeforeCta?: ReactNode;
-  /** Reorders sections for the intro-call landing page (no outline / mid-page CTA strip). */
+  /** `course-booking` only: cohort picker rendered directly under the hero. */
+  bookingSectionAfterHero?: ReactNode;
+  /** Optional secondary hero CTA that opens WhatsApp (paid landing pages). */
+  heroWhatsappCta?: LandingPageHeroWhatsappCta | null;
+  /**
+   * `book-free-call` drops outline / mid-page CTA strip around the intro-call picker;
+   * `course-booking` puts the cohort picker right under the hero so price, dates and
+   * the checkout button sit above the fold for paid traffic.
+   */
   layoutVariant?: LandingPageLayoutVariant;
 }
 
@@ -51,6 +63,8 @@ export function LandingPage({
   bookingEventContent,
   structuredDataContent,
   introCallSectionBeforeCta,
+  bookingSectionAfterHero,
+  heroWhatsappCta,
   layoutVariant = 'default',
 }: LandingPageProps) {
   const publicSiteConfig = resolvePublicSiteConfig();
@@ -80,9 +94,39 @@ export function LandingPage({
           locale={locale}
           metaTitle={pageContent.meta.title}
           bookingModalContent={siteContent.bookingModal}
+          whatsappCta={heroWhatsappCta}
           ariaLabel={siteContent.landingPages.common.a11y.heroSectionLabel}
         />
-        {layoutVariant === 'book-free-call' ? (
+        {layoutVariant === 'course-booking' ? (
+          <>
+            {bookingSectionAfterHero}
+            <LandingPageDescription
+              content={pageContent.description}
+              ariaLabel={
+                siteContent.landingPages.common.a11y.descriptionSectionLabel
+              }
+            />
+            <LandingPageDetails
+              content={pageContent.details}
+              ariaLabel={siteContent.landingPages.common.a11y.detailsSectionLabel}
+              commonAccessibility={siteContent.common.accessibility}
+            />
+            <Testimonials
+              content={siteContent.testimonials}
+              commonAccessibility={siteContent.common.accessibility}
+            />
+            <AboutUsFounderCoach
+              content={pageContent.coach ?? siteContent.aboutUs.coaches.founder}
+              ariaLabel={
+                siteContent.landingPages.common.a11y.aboutUsFounderCoachSectionLabel
+              }
+            />
+            <LandingPageFaq
+              content={pageContent.faq}
+              ariaLabel={siteContent.landingPages.common.a11y.faqSectionLabel}
+            />
+          </>
+        ) : layoutVariant === 'book-free-call' ? (
           <>
             <LandingPageDetails
               content={pageContent.details}

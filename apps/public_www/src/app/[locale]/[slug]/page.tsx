@@ -7,7 +7,12 @@ import {
 } from '@/content';
 import { LandingPage } from '@/components/pages/landing-pages/landing-page';
 import { BookFreeCallLandingPage } from '@/components/pages/landing-pages/book-a-free-call';
+import {
+  HELPER_TRAINING_LANDING_PAGE_SLUG,
+  HelperTrainingLandingPage,
+} from '@/components/pages/landing-pages/helper-training-hong-kong';
 import { StructuredDataScript } from '@/components/shared/structured-data-script';
+import { fetchMyBestAuntieCohortsForPage } from '@/lib/fetch-my-best-auntie-cohorts';
 import {
   getMenuLabel,
   resolveLocalePageContext,
@@ -79,6 +84,45 @@ export default async function LandingPageRoute({ params }: LandingPageRouteProps
 
   const pagePath = buildLandingPagePath(landingPageSlug);
 
+  const breadcrumbScript = (
+    <StructuredDataScript
+      id={`landing-page-breadcrumb-jsonld-${locale}`}
+      data={buildBreadcrumbSchema({
+        locale,
+        items: [
+          {
+            name: getMenuLabel(siteContent, ROUTES.home),
+            path: ROUTES.home,
+          },
+          {
+            name: pageContent.meta.title,
+            path: pagePath,
+          },
+        ],
+      })}
+    />
+  );
+
+  if (landingPageSlug === HELPER_TRAINING_LANDING_PAGE_SLUG) {
+    const cohorts = await fetchMyBestAuntieCohortsForPage({
+      reportContext: HELPER_TRAINING_LANDING_PAGE_SLUG,
+      locale,
+    });
+
+    return (
+      <>
+        <HelperTrainingLandingPage
+          locale={locale}
+          pagePath={pagePath}
+          siteContent={siteContent}
+          pageContent={pageContent}
+          cohorts={cohorts}
+        />
+        {breadcrumbScript}
+      </>
+    );
+  }
+
   const { payload: calendarPayload } = await fetchLandingPageCalendarPayload({
     slug: landingPageSlug,
   });
@@ -122,22 +166,7 @@ export default async function LandingPageRoute({ params }: LandingPageRouteProps
           structuredDataContent={structuredDataContent}
         />
       )}
-      <StructuredDataScript
-        id={`landing-page-breadcrumb-jsonld-${locale}`}
-        data={buildBreadcrumbSchema({
-          locale,
-          items: [
-            {
-              name: getMenuLabel(siteContent, ROUTES.home),
-              path: ROUTES.home,
-            },
-            {
-              name: pageContent.meta.title,
-              path: pagePath,
-            },
-          ],
-        })}
-      />
+      {breadcrumbScript}
     </>
   );
 }

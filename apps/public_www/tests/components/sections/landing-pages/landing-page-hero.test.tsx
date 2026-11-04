@@ -417,4 +417,47 @@ describe('LandingPageHero section', () => {
       'Workshop',
     ]);
   });
+
+  it('renders an outline WhatsApp CTA beside the anchor CTA only when whatsappCta is provided', () => {
+    const anchorHero: LandingPageLocaleContent['hero'] = {
+      ...easterWorkshopContent.en.hero,
+      ctaAnchorHref: '#my-best-auntie-booking',
+      ctaAnchorLabel: 'See dates & book',
+    };
+    const baseProps = {
+      slug: 'helper-training-hong-kong',
+      content: anchorHero,
+      ctaContent: easterWorkshopContent.en.cta,
+      commonContent: enContent.landingPages.common,
+      locale: 'en' as const,
+      title: 'Helper training',
+      eventContent: null,
+      bookingPayload: null,
+      isFullyBooked: false,
+      bookingModalContent: enContent.bookingModal,
+    };
+
+    const { unmount } = render(<LandingPageHero {...baseProps} />);
+    expect(screen.queryByTestId('landing-page-hero-whatsapp-cta')).toBeNull();
+    expect(screen.queryByTestId('landing-page-hero-cta-group')).toBeNull();
+    expect(screen.getByRole('link', { name: 'See dates & book' })).toHaveClass('mt-3');
+    unmount();
+
+    render(
+      <LandingPageHero
+        {...baseProps}
+        whatsappCta={{ href: 'https://wa.me/85290000000?text=Hi', label: 'Ask on WhatsApp' }}
+      />,
+    );
+
+    const group = screen.getByTestId('landing-page-hero-cta-group');
+    const primary = screen.getByRole('link', { name: 'See dates & book' });
+    const whatsapp = screen.getByTestId('landing-page-hero-whatsapp-cta');
+    expect(group).toContainElement(primary);
+    expect(group).toContainElement(whatsapp);
+    expect(primary).not.toHaveClass('mt-3');
+    expect(whatsapp).toHaveAttribute('href', 'https://wa.me/85290000000?text=Hi');
+    expect(whatsapp).toHaveClass('es-btn--outline');
+    expect(whatsapp).toHaveAttribute('target', '_blank');
+  });
 });
