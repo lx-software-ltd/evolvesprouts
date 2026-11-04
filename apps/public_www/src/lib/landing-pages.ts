@@ -5,6 +5,7 @@ import type {
 } from '@/content';
 import easter2026MontessoriPlayCoachingWorkshop from '@/content/landing-pages/easter-2026-montessori-play-coaching-workshop.json';
 import bookAFreeCallJson from '@/content/landing-pages/book-a-free-call.json';
+import helperTrainingHongKongJson from '@/content/landing-pages/helper-training-hong-kong.json';
 import may2026TheMissingPiece from '@/content/landing-pages/may-2026-the-missing-piece.json';
 import nov2026MealtimesWorkshopJson from '@/content/landing-pages/nov-2026-mealtimes-workshop.json';
 import { createDefaultLocaleRedirectPage } from '@/lib/locale-page';
@@ -12,11 +13,13 @@ import { RESERVED_PATH_SEGMENTS } from '@/lib/routes';
 
 /** JSON literal chip `type` is inferred as `string`; assert to satisfy `LandingPageContent`. */
 const bookAFreeCall = bookAFreeCallJson as LandingPageContent;
+const helperTrainingHongKong = helperTrainingHongKongJson as LandingPageContent;
 const nov2026MealtimesWorkshop = nov2026MealtimesWorkshopJson as LandingPageContent;
 
 const LANDING_PAGES = {
   'book-a-free-call': bookAFreeCall,
   'easter-2026-montessori-play-coaching-workshop': easter2026MontessoriPlayCoachingWorkshop,
+  'helper-training-hong-kong': helperTrainingHongKong,
   'may-2026-the-missing-piece': may2026TheMissingPiece,
   'nov-2026-mealtimes-workshop': nov2026MealtimesWorkshop,
 } satisfies Record<string, LandingPageContent>;

@@ -1,0 +1,407 @@
+{
+  "en": {
+    "meta": {
+      "title": "Helper Training in Hong Kong: 9 Weeks That Change How Your Child Is Cared For",
+      "description": "My Best Auntie is Hong Kong's Montessori-based domestic helper training programme. Three small-group sessions, three home visits and three parent calls over 9 weeks. See upcoming cohorts, pricing and book online.",
+      "socialImage": {
+        "url": "/images/seo/evolvesprouts-og-default.png",
+        "alt": "My Best Auntie helper training in Hong Kong"
+      }
+    },
+    "hero": {
+      "subtitle": "Montessori-based domestic helper training: group sessions, coaching in your home and parent calls, in one 9-week programme.",
+      "description": "Your helper spends more waking hours with your child than anyone else. In 9 weeks she learns practical Montessori skills for meals, play, transitions and independence, in your home and with your routines. No prior experience needed.",
+      "imageAlt": "Ida De Gregorio from Evolve Sprouts",
+      "imageSrc": "/images/hero/my-best-auntie-hero.webp",
+      "imageMaxWidthPercent": 90,
+      "ctaAnchorHref": "#my-best-auntie-booking",
+      "ctaAnchorLabel": "See dates & book",
+      "quickFactChips": [
+        {
+          "type": "duration",
+          "label": "9 weeks"
+        },
+        {
+          "type": "visits",
+          "label": "3 home visits"
+        },
+        {
+          "type": "category",
+          "label": "AMI Montessori-certified trainer"
+        }
+      ]
+    },
+    "description": {
+      "eyebrow": "What's included",
+      "title": "Everything your helper needs to make it stick",
+      "description": "Group learning builds the knowledge. Private coaching in your home makes it work with your child, your routines and your space.",
+      "items": [
+        {
+          "title": "3 small-group training sessions",
+          "description": "Live sessions exclusively for helpers. Child development, gentle guidance and independence, taught in a respectful space without employer pressure."
+        },
+        {
+          "title": "3 private home visits",
+          "description": "I observe your helper with your child inside your real routines, align expectations, adjust responses and coach precise language on the spot."
+        },
+        {
+          "title": "3 parent strategy calls",
+          "description": "We step back, assess progress and realign. You know what is working, what needs adjusting, and how to stop small issues becoming long-term patterns."
+        },
+        {
+          "title": "Scripts, tools and real-life examples",
+          "description": "Ready-to-use language for tantrums, meal refusal, bedtime battles and screen meltdowns. Guide without shouting, redirect without punishment."
+        },
+        {
+          "title": "WhatsApp support for helpers and parents",
+          "description": "A private community for enrolled helpers plus direct access for parents between sessions, so consistency does not collapse under daily pressure."
+        },
+        {
+          "title": "Written reports after every visit",
+          "description": "Clear summaries with observations, focus areas and immediate next steps, plus a final report with recommendations for the next stage."
+        }
+      ]
+    },
+    "details": {
+      "eyebrow": "Good to know",
+      "title": "Before you book",
+      "description": "",
+      "items": [
+        {
+          "icon": "👶",
+          "title": "Who it's for",
+          "description": "Families in Hong Kong with a child aged 0-6 and a domestic helper who looks after them day to day. Pick your child's age group in the booking panel to see matching cohorts."
+        },
+        {
+          "icon": "📅",
+          "title": "Format and timing",
+          "description": "9 weeks in three blocks: set up the home, gentle guidance and boundaries, then fostering independence. Each block has one group session, one home visit and one parent call."
+        },
+        {
+          "icon": "🌏",
+          "title": "Language",
+          "description": "Sessions are in English with demonstrations, visual guidance and repetition. Fluent English is not required. Message me on WhatsApp if you have a question about language."
+        },
+        {
+          "icon": "💳",
+          "title": "Price and payment",
+          "description": "The price for each cohort is shown in the booking panel. Reserve your seat and pay securely online in one step; you receive a confirmation email straight away."
+        },
+        {
+          "icon": "💬",
+          "title": "Not sure yet?",
+          "description": "Use the WhatsApp button at the top of this page. Tell me about your child and your helper and I will tell you honestly whether this programme is the right fit."
+        }
+      ]
+    },
+    "faq": {
+      "title": "Frequently asked questions",
+      "items": [
+        {
+          "question": "Is the programme suitable for helpers with no childcare experience?",
+          "answer": "Yes. My Best Auntie is designed for all experience levels. No Montessori knowledge or prior childcare training is required, just a willingness to learn."
+        },
+        {
+          "question": "How is this different from a standard helper training course?",
+          "answer": "Unlike generic helper training, My Best Auntie is Montessori-based with home visits, personalised coaching and ongoing support. We observe your helper with your child in your home and give specific, actionable guidance, not just classroom theory."
+        },
+        {
+          "question": "How long is the programme?",
+          "answer": "9 weeks, with three group training sessions, three home visits and three parent alignment calls. It is designed to create lasting behavioural change, not a one-off lecture."
+        },
+        {
+          "question": "Can my helper join if she speaks limited English?",
+          "answer": "Yes. The training uses clear language, demonstrations, visual guidance and repetition. Fluent English is not required. Understanding and consistency are what matter."
+        },
+        {
+          "question": "What will my child gain?",
+          "answer": "Your child's caregiver learns practical Montessori techniques for daily routines, gentle discipline without threats or bribes, age-appropriate activities for 0-6 and how to foster independence in a small Hong Kong home. Your child builds confidence, emotional regulation and real skills through everyday moments."
+        },
+        {
+          "question": "What if my helper and I disagree on discipline?",
+          "answer": "This is very common. We align the adults first so your child receives consistent messages, expectations and routines from everyone at home."
+        },
+        {
+          "question": "Do you guarantee results?",
+          "answer": "Children are not machines, so no ethical professional guarantees instant perfection. What I do guarantee is clear guidance, practical strategy and honest support throughout the 9 weeks."
+        }
+      ]
+    },
+    "courseBooking": {
+      "priceChipTemplate": "From {currency}{price}",
+      "nextCohortChipTemplate": "Next cohort: {cohortLabel}",
+      "whatsappCtaLabel": "Ask on WhatsApp",
+      "whatsappPrefillMessage": "Hi, I'd like to know more about the My Best Auntie helper training programme."
+    }
+  },
+  "zh-CN": {
+    "meta": {
+      "title": "香港家政助手培训：改变孩子每日被照顾方式的 9 周课程",
+      "description": "My Best Auntie 是香港以蒙特梭利为基础的家政助手培训课程。9 周内包含三节小组课、三次家访和三次家长通话。查看近期开课日期与价格，并在线报名。",
+      "socialImage": {
+        "url": "/images/seo/evolvesprouts-og-default.png",
+        "alt": "My Best Auntie 香港家政助手培训"
+      }
+    },
+    "hero": {
+      "subtitle": "以蒙特梭利为基础的家政助手培训：小组课、上门指导与家长通话，尽在一个 9 周课程。",
+      "description": "你的阿姨和孩子在一起的时间比任何人都长。9 周内，她会在你家中、按你的日常流程，学会用餐、游戏、过渡与独立的实用蒙特梭利技能。无需任何经验基础。",
+      "imageAlt": "Evolve Sprouts 的 Ida De Gregorio",
+      "imageSrc": "/images/hero/my-best-auntie-hero.webp",
+      "imageMaxWidthPercent": 90,
+      "ctaAnchorHref": "#my-best-auntie-booking",
+      "ctaAnchorLabel": "查看日期并报名",
+      "quickFactChips": [
+        {
+          "type": "duration",
+          "label": "9 周"
+        },
+        {
+          "type": "visits",
+          "label": "3 次上门指导"
+        },
+        {
+          "type": "category",
+          "label": "AMI 蒙特梭利认证导师"
+        }
+      ]
+    },
+    "description": {
+      "eyebrow": "课程包含",
+      "title": "让方法真正落地所需的一切",
+      "description": "小组学习建立知识，私人上门指导让方法在你家、你的日常和你的空间里真正发挥作用。",
+      "items": [
+        {
+          "title": "3 节小组培训课",
+          "description": "仅面向阿姨的线下课程。在被尊重、没有雇主压力的空间里，学习儿童发展、温和引导与独立能力培养。"
+        },
+        {
+          "title": "3 次私人家访",
+          "description": "我会在你家真实的日常中观察阿姨与孩子的互动，对齐期待、调整回应，并当场示范精准表达。"
+        },
+        {
+          "title": "3 次家长策略通话",
+          "description": "我们会退一步评估进展并重新校准方向。你会清楚知道什么有效、什么需要调整，以及如何避免小问题演变为长期模式。"
+        },
+        {
+          "title": "话术、工具与真实案例",
+          "description": "可直接使用的话术，应对发脾气、拒绝进食、睡前拉锯和屏幕崩溃。不靠吼叫也能引导，不靠惩罚也能转移。"
+        },
+        {
+          "title": "阿姨与家长的 WhatsApp 支持",
+          "description": "面向已报名阿姨的私密社群，以及家长在课与课之间的直接提问渠道，让一致性不在日常压力下崩塌。"
+        },
+        {
+          "title": "每次到访后的书面报告",
+          "description": "清晰的总结，包括观察要点、聚焦方向和可立即执行的下一步，并在课程结束时提供含后续建议的总结报告。"
+        }
+      ]
+    },
+    "details": {
+      "eyebrow": "温馨提示",
+      "title": "报名前请知悉",
+      "description": "",
+      "items": [
+        {
+          "icon": "👶",
+          "title": "适合对象",
+          "description": "居住在香港、有 0-6 岁孩子且由家政助手日常照顾的家庭。在报名面板中选择孩子的年龄组，即可查看对应的开课班次。"
+        },
+        {
+          "icon": "📅",
+          "title": "形式与时间",
+          "description": "9 周分为三个阶段：布置家居环境、温和引导与界限、培养独立。每个阶段包含一节小组课、一次家访和一次家长通话。"
+        },
+        {
+          "icon": "🌏",
+          "title": "语言",
+          "description": "课程以英语进行，并配合示范、视觉引导与重复练习。流利英语并非必须。如有语言方面的疑问，请在 WhatsApp 联系我。"
+        },
+        {
+          "icon": "💳",
+          "title": "价格与付款",
+          "description": "每个班次的价格显示在报名面板中。一步完成预留席位与安全在线付款，并即时收到确认邮件。"
+        },
+        {
+          "icon": "💬",
+          "title": "还在犹豫？",
+          "description": "点击页面顶部的 WhatsApp 按钮，告诉我你的孩子和阿姨的情况，我会如实告诉你这个课程是否适合你们。"
+        }
+      ]
+    },
+    "faq": {
+      "title": "常见问题",
+      "items": [
+        {
+          "question": "课程适合没有育儿经验的阿姨吗？",
+          "answer": "适合。My Best Auntie 面向所有经验水平的阿姨。无需蒙特梭利知识或之前的育儿培训经历，只需要愿意学习的心。"
+        },
+        {
+          "question": "这跟一般的阿姨培训课程有什么不同？",
+          "answer": "不同于普通的助手培训，My Best Auntie 以蒙特梭利为基础，包含家访、个性化辅导和持续支持。我们会在你家中观察阿姨与孩子的互动，提供具体可行的指导，而不只是课堂理论。"
+        },
+        {
+          "question": "课程有多长？",
+          "answer": "为期 9 周，包含三次小组培训、三次家访和三次家长沟通电话。课程旨在实现持久的行为改变，而非一次性讲座。"
+        },
+        {
+          "question": "如果我的阿姨英语不太好，可以参加吗？",
+          "answer": "可以。培训采用清晰的语言、示范、视觉引导和重复练习。流利的英语并非必须，理解和一致性才是关键。"
+        },
+        {
+          "question": "我的孩子能获得什么？",
+          "answer": "孩子的照护者将学到蒙特梭利日常实操技巧、不用威胁或贿赂的温和纪律方法、适合 0-6 岁的活动，以及如何在香港小户型中培养独立性。孩子会通过日常时刻建立自信、情绪调节和真正的技能。"
+        },
+        {
+          "question": "如果我和阿姨在纪律上意见不一致怎么办？",
+          "answer": "这非常常见。我们会先帮助成人达成一致，让孩子从家中每个人那里接收到同一套信息、期待与日常规律。"
+        },
+        {
+          "question": "你们能保证结果吗？",
+          "answer": "孩子不是机器，没有任何负责任的专业人士会承诺立刻完美见效。我保证的是在这 9 周里提供清晰建议、务实策略和真诚支持。"
+        }
+      ]
+    },
+    "courseBooking": {
+      "priceChipTemplate": "{currency}{price} 起",
+      "nextCohortChipTemplate": "下期开课：{cohortLabel}",
+      "whatsappCtaLabel": "WhatsApp 咨询",
+      "whatsappPrefillMessage": "你好，我想了解 My Best Auntie 家政助手培训课程。"
+    }
+  },
+  "zh-HK": {
+    "meta": {
+      "title": "香港家傭培訓：改變孩子每日被照顧方式嘅 9 週課程",
+      "description": "My Best Auntie 係香港以蒙特梭利為基礎嘅家傭培訓課程。9 週內包含三節小組課、三次家訪同三次家長通話。查看近期開課日期同價錢，並即時網上報名。",
+      "socialImage": {
+        "url": "/images/seo/evolvesprouts-og-default.png",
+        "alt": "My Best Auntie 香港家傭培訓"
+      }
+    },
+    "hero": {
+      "subtitle": "以蒙特梭利為基礎嘅家傭培訓：小組課、上門指導同家長通話，盡在一個 9 週課程。",
+      "description": "你嘅姨姨同孩子相處嘅時間比任何人都長。9 週內，佢會喺你屋企、按你嘅日常流程，學識用餐、遊戲、過渡同獨立嘅實用蒙特梭利技能。無需任何經驗基礎。",
+      "imageAlt": "Evolve Sprouts 的 Ida De Gregorio",
+      "imageSrc": "/images/hero/my-best-auntie-hero.webp",
+      "imageMaxWidthPercent": 90,
+      "ctaAnchorHref": "#my-best-auntie-booking",
+      "ctaAnchorLabel": "查看日期並報名",
+      "quickFactChips": [
+        {
+          "type": "duration",
+          "label": "9 週"
+        },
+        {
+          "type": "visits",
+          "label": "3 次上門指導"
+        },
+        {
+          "type": "category",
+          "label": "AMI 蒙特梭利認證導師"
+        }
+      ]
+    },
+    "description": {
+      "eyebrow": "課程包含",
+      "title": "令方法真正落地所需嘅一切",
+      "description": "小組學習建立知識，私人上門指導令方法喺你屋企、你嘅日常同你嘅空間入面真正發揮作用。",
+      "items": [
+        {
+          "title": "3 節小組培訓課",
+          "description": "只開放予姨姨參與嘅現場課程。喺被尊重、冇僱主壓力嘅空間中，學習兒童發展、溫和引導同培養獨立。"
+        },
+        {
+          "title": "3 次私人家訪",
+          "description": "我會喺你屋企真實嘅日常入面觀察姨姨同孩子嘅互動，對齊期望、調整回應，並即場示範精準用語。"
+        },
+        {
+          "title": "3 次家長策略通話",
+          "description": "我哋會抽離一步評估進度並重新校準方向。你會清楚知道邊啲有效、邊啲要調整，以及點樣避免小問題演變成長期模式。"
+        },
+        {
+          "title": "話術、工具同真實案例",
+          "description": "可即用嘅話術，應對發脾氣、拒絕進食、瞓覺前拉鋸同螢幕崩潰。唔靠喝罵都能引導，唔靠懲罰都能轉移。"
+        },
+        {
+          "title": "姨姨同家長嘅 WhatsApp 支援",
+          "description": "專為已報讀姨姨而設嘅私密社群，加上家長喺課與課之間嘅直接提問渠道，令一致性唔會喺日常壓力下瓦解。"
+        },
+        {
+          "title": "每次到訪後嘅書面報告",
+          "description": "清晰嘅摘要，包括觀察重點、聚焦範圍同可即時執行嘅下一步，並喺課程完結時提供含後續建議嘅總結報告。"
+        }
+      ]
+    },
+    "details": {
+      "eyebrow": "溫馨提示",
+      "title": "報名前請知悉",
+      "description": "",
+      "items": [
+        {
+          "icon": "👶",
+          "title": "適合對象",
+          "description": "居住喺香港、有 0-6 歲孩子並由家傭日常照顧嘅家庭。喺報名面板揀孩子嘅年齡組，就可以睇到對應嘅開課班次。"
+        },
+        {
+          "icon": "📅",
+          "title": "形式同時間",
+          "description": "9 週分為三個階段：佈置家居環境、溫和引導同界線、培養獨立。每個階段包含一節小組課、一次家訪同一次家長通話。"
+        },
+        {
+          "icon": "🌏",
+          "title": "語言",
+          "description": "課程以英文進行，並配合示範、視覺引導同重複練習。流利英文並非必須。如對語言有疑問，請喺 WhatsApp 聯絡我。"
+        },
+        {
+          "icon": "💳",
+          "title": "價錢同付款",
+          "description": "每個班次嘅價錢顯示喺報名面板。一步完成預留座位同安全網上付款，並即時收到確認電郵。"
+        },
+        {
+          "icon": "💬",
+          "title": "仲未決定？",
+          "description": "撳頁面頂部嘅 WhatsApp 按鈕，話我知你嘅孩子同姨姨嘅情況，我會坦白話你知呢個課程啱唔啱你哋。"
+        }
+      ]
+    },
+    "faq": {
+      "title": "常見問題",
+      "items": [
+        {
+          "question": "課程適合無育兒經驗嘅姨姨嗎？",
+          "answer": "適合。My Best Auntie 面向所有經驗水平嘅姨姨。無需蒙特梭利知識或之前嘅育兒培訓經歷，只需要願意學習嘅心。"
+        },
+        {
+          "question": "同一般嘅姨姨培訓課程有咩分別？",
+          "answer": "不同於一般嘅姨姨培訓，My Best Auntie 以蒙特梭利為基礎，包含家訪、個人化輔導同持續支援。我哋會喺你屋企觀察姨姨同孩子嘅互動，提供具體可行嘅指導，而唔只係課堂理論。"
+        },
+        {
+          "question": "課程有幾長？",
+          "answer": "為期 9 週，包含三次小組培訓、三次家訪同三次家長溝通電話。課程旨在實現持久嘅行為改變，而非一次性講座。"
+        },
+        {
+          "question": "如果我嘅姨姨英文唔太好，可以參加嗎？",
+          "answer": "可以。培訓採用清晰語言、示範、視覺引導同重複練習。流利英文並非必須，理解同一致性先係最重要。"
+        },
+        {
+          "question": "我嘅孩子能獲得啲咩？",
+          "answer": "孩子嘅照護者將學到蒙特梭利日常實操技巧、不用威脅或賄賂嘅溫和紀律方法、適合 0-6 歲嘅活動，以及點樣喺香港細單位入面培養獨立性。孩子會透過日常時刻建立自信、情緒調節同真正嘅技能。"
+        },
+        {
+          "question": "如果我同姨姨喺管教上意見不一致點算？",
+          "answer": "呢個好常見。我哋會先協助成人對齊，令孩子從屋企每一個人度接收到一致嘅訊號、期望同日常規律。"
+        },
+        {
+          "question": "你哋會保證結果嗎？",
+          "answer": "孩子唔係機器，任何負責任嘅專業人士都唔會承諾即時完美見效。我保證嘅係喺呢 9 週入面提供清晰方向、務實策略同真誠支持。"
+        }
+      ]
+    },
+    "courseBooking": {
+      "priceChipTemplate": "{currency}{price} 起",
+      "nextCohortChipTemplate": "下期開課：{cohortLabel}",
+      "whatsappCtaLabel": "WhatsApp 查詢",
+      "whatsappPrefillMessage": "你好，我想了解 My Best Auntie 家傭培訓課程。"
+    }
+  }
+}

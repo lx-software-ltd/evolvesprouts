@@ -211,9 +211,27 @@ export interface LandingPageLocaleContent {
     afternoonSectionLabel: string;
     slotGroupAriaLabelTemplate: string;
   };
+  /**
+   * Course-booking landing pages (e.g. helper-training-hong-kong) embed the My Best
+   * Auntie cohort picker and derive hero chips from the CRM calendar.
+   */
+  courseBooking?: {
+    /** Hero chip; `{currency}` and `{price}` come from the cheapest open cohort. */
+    priceChipTemplate: string;
+    /** Hero chip; `{cohortLabel}` is the next open cohort month (e.g. "Jan 2027"). */
+    nextCohortChipTemplate: string;
+    /** Secondary hero CTA that opens WhatsApp. */
+    whatsappCtaLabel: string;
+    whatsappPrefillMessage: string;
+  };
 }
 
 export type LandingPageCtaContent = NonNullable<LandingPageLocaleContent['cta']>;
+
+/** Course-booking block; present only on landing pages that embed the cohort picker. */
+export type LandingPageCourseBookingContent = NonNullable<
+  LandingPageLocaleContent['courseBooking']
+>;
 
 export type LandingPageOutlineContent = NonNullable<
   LandingPageLocaleContent['outline']

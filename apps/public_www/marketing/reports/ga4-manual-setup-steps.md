@@ -342,3 +342,62 @@ is a code PR, not part of the current branch.
 Follow the convention documented in
 `apps/public_www/marketing/README.md`.
 
+
+## 12. Google Signals and the Google Ads audience export (2026-11-04)
+
+**Why**: The GA4 audiences (`Course Page Visitors`, `Booking Intent —
+Did Not Complete`, etc.) appear in Google Ads with a search-network
+size of **0**, so they cannot be used for targeting or observation.
+The Admin API shows the audiences exist and the Ads link has
+`adsPersonalizationEnabled = true`. The blocker is that **Google
+Signals is DISABLED** on property `525520074`: without it GA4 will not
+export audiences to Google Ads search inventory.
+
+This is a privacy decision, not a bug, so it is left to a human.
+
+### 12a. Decide
+
+Turning on Google Signals means GA4 collects signed-in Google user
+data for cross-device reporting and remarketing. It requires:
+
+- [ ] A privacy-policy update disclosing Google Signals / remarketing
+      and linking to Google's ad settings page.
+- [ ] Consent Mode v2 in place so `ad_user_data` and
+      `ad_personalization` are honoured for EU/UK visitors. See §3.
+
+If the answer is "not now", skip to 12c and rely on the Google Ads
+native remarketing tag instead (no Signals needed).
+
+### 12b. Enable (if approved)
+
+- [ ] **GA4 → Admin → Data collection and modification → Data
+      collection → Google signals data collection → Turn on**.
+- [ ] Leave "Granular location and device data collection" on.
+- [ ] Wait 24–48 h, then check **Google Ads → Tools → Audience
+      manager → Your data segments**. The GA4 audiences should show a
+      non-zero search size (they need ≥ 1,000 active users in 30 days
+      to serve on Search).
+- [ ] Only then add them as Observation on the two search campaigns
+      (see `google-ads-manual-setup-steps.md` §7, step 9).
+
+### 12c. Alternative: Google Ads remarketing tag
+
+If Signals stays off, create the audience inside Google Ads:
+
+- [ ] **Google Ads → Tools → Data manager → Google tag → Remarketing →
+      On**.
+- [ ] Create a "Website visitors: course page" segment with URL
+      contains `my-best-auntie-training-course` OR
+      `helper-training-hong-kong`.
+- [ ] This needs the Google Ads tag (`AW-…`) on the site, which is
+      **not** currently installed; it is a code change in
+      `apps/public_www` and should ship behind the same consent gate
+      as GA4.
+
+### 12d. Second Google Ads link
+
+The property has two Google Ads links. One is the managed account;
+the other customer ID is not in the MCC.
+
+- [ ] **GA4 → Admin → Product links → Google Ads links**. Confirm who
+      owns the second customer ID. Delete the link if nobody does.

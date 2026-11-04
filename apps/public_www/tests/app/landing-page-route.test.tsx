@@ -3,7 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import enContent from '@/content/en.json';
 import easterWorkshopContent from '@/content/landing-pages/easter-2026-montessori-play-coaching-workshop.json';
+import helperTrainingContent from '@/content/landing-pages/helper-training-hong-kong.json';
 const mockFetchLandingPageCalendarPayload = vi.hoisted(() => vi.fn());
+const mockFetchMyBestAuntieCohortsForPage = vi.hoisted(() => vi.fn());
+
+vi.mock('@/lib/fetch-my-best-auntie-cohorts', () => ({
+  fetchMyBestAuntieCohortsForPage: mockFetchMyBestAuntieCohortsForPage,
+}));
 
 vi.mock('next/navigation', () => ({
   notFound: vi.fn(() => {
@@ -82,6 +88,35 @@ describe('LandingPageRoute', () => {
       heroEventContent: null,
       bookingEventContent: null,
       pageContent: easterWorkshopContent.en,
+    });
+    expect(mockFetchMyBestAuntieCohortsForPage).not.toHaveBeenCalled();
+  });
+
+  it('loads My Best Auntie cohorts instead of a landing-page calendar for helper-training-hong-kong', async () => {
+    const cohorts = [{ slug: 'my-best-auntie-1-3-apr-26' }];
+    mockFetchMyBestAuntieCohortsForPage.mockResolvedValue(cohorts);
+
+    const { default: LandingPageRoute } = await import('@/app/[locale]/[slug]/page');
+    const tree = await LandingPageRoute({
+      params: Promise.resolve({ locale: 'en', slug: 'helper-training-hong-kong' }),
+    });
+
+    expect(mockFetchLandingPageCalendarPayload).not.toHaveBeenCalled();
+    expect(mockFetchMyBestAuntieCohortsForPage).toHaveBeenCalledWith({
+      reportContext: 'helper-training-hong-kong',
+      locale: 'en',
+    });
+
+    const children = (tree as { props?: { children?: ReactNode } }).props?.children;
+    const pageEl = Children.toArray(children).find(
+      (node) =>
+        isValidElement(node) && (node.props as { cohorts?: unknown }).cohorts === cohorts,
+    );
+    expect(isValidElement(pageEl)).toBe(true);
+    expect((pageEl as { props: Record<string, unknown> }).props).toMatchObject({
+      locale: 'en',
+      pagePath: '/helper-training-hong-kong',
+      pageContent: helperTrainingContent.en,
     });
   });
 });
