@@ -36,7 +36,7 @@ import tempfile
 from google.ads.googleads.client import GoogleAdsClient
 from google.api_core import protobuf_helpers
 
-API_VERSION = "v20"
+API_VERSION = "v26"
 CLIENT_CUSTOMER_ID = "4991144901"
 
 TARGET_NAMES = [

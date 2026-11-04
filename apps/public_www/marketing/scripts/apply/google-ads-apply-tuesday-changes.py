@@ -38,7 +38,7 @@ from urllib.parse import urlencode, urlsplit, urlunsplit, parse_qsl
 
 from google.ads.googleads.client import GoogleAdsClient
 
-API_VERSION = "v20"
+API_VERSION = "v26"
 CLIENT_CUSTOMER_ID = "4991144901"
 CAMPAIGN_ID = 23659032602
 HELPER_TRAINING_AG_ID = 195059847980
