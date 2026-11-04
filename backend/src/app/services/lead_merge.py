@@ -63,7 +63,15 @@ def merge_leads(
     loser_contact_ids = {
         lead.contact_id for lead in merged_leads if lead.contact_id != keeper.contact_id
     }
+    selected_ids = frozenset(unique_ids)
     try:
+        collapse_lead_rows(
+            session,
+            keeper,
+            merged_leads,
+            actor_sub=actor_sub,
+            event_source=EVENT_SOURCE,
+        )
         for loser_contact_id in loser_contact_ids:
             loser_contact = session.get(Contact, loser_contact_id)
             if loser_contact is None:
@@ -75,24 +83,12 @@ def merge_leads(
                 actor_sub=actor_sub,
                 conflict_field="lead_ids",
                 event_source=EVENT_SOURCE,
-                preferred_lead_id=keeper.id,
+                skip_lead_ids=selected_ids,
             )
             if email:
                 mailchimp_archive_emails.append(email)
 
         keeper.contact_id = keeper_contact.id
-        surviving_merged: list[SalesLead] = []
-        for merged_lead in merged_leads:
-            loaded = session.get(SalesLead, merged_lead.id)
-            if loaded is not None and loaded.id != keeper.id:
-                surviving_merged.append(loaded)
-        collapse_lead_rows(
-            session,
-            keeper,
-            surviving_merged,
-            actor_sub=actor_sub,
-            event_source=EVENT_SOURCE,
-        )
         keeper.updated_at = datetime.now(UTC)
         session.flush()
     except IntegrityError as exc:

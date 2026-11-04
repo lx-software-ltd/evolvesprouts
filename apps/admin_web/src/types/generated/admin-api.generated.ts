@@ -1512,7 +1512,7 @@ export interface paths {
         put?: never;
         /**
          * Merge selected sales leads
-         * @description Merges two or more leads into the chosen keeper lead. When selected leads belong to different contacts, loser identity and related records are folded onto the keeper contact through the shared record-merge helpers (notes, enrollments, invoices, payments, conversations, certificates, tags, and remaining leads). Orphaned loser contacts are deleted. Non-selected leads on loser contacts remain on the keeper contact as separate lead rows except uniqueness conflicts. An incoming open automated lead is folded onto the keeper contact's open lead before the move is saved. A remaining one-open-lead conflict returns 409.
+         * @description Merges two or more leads into the chosen keeper lead. When selected leads belong to different contacts, loser identity and related records are folded onto the keeper contact through the shared record-merge helpers (notes, enrollments, invoices, payments, conversations, certificates, tags, and remaining leads). Orphaned loser contacts are deleted. Non-selected leads on loser contacts remain on the keeper contact as separate lead rows except uniqueness conflicts. Selected lead rows are collapsed onto the keeper lead first. A leftover open automated lead on a loser contact is folded onto the keeper contact's open lead before the move is saved. The surviving lead keeps the higher lead-type rank and the further-along funnel stage. A remaining one-open-lead conflict returns 409.
          */
         post: {
             parameters: {
@@ -4257,7 +4257,7 @@ export interface paths {
         put?: never;
         /**
          * Merge selected CRM contacts
-         * @description Merges two or more contacts into the chosen keeper contact. Loser fields fill empty keeper identity fields. Related records (notes, enrollments, invoices, payments, conversations, certificates, tags, and sales leads) move onto the keeper. Sales leads stay as separate rows except uniqueness conflicts (same-guide dedupe and one open automated lead per contact). An incoming open automated lead is folded onto the keeper's open lead before the move is saved. Orphaned loser contacts are deleted. Conflicting emails, Instagram handles, families, or organisations return 400. A remaining one-open-lead conflict returns 409.
+         * @description Merges two or more contacts into the chosen keeper contact. Loser fields fill empty keeper identity fields. Related records (notes, enrollments, invoices, payments, conversations, certificates, tags, and sales leads) move onto the keeper. Sales leads stay as separate rows except uniqueness conflicts (same-guide dedupe and one open automated lead per contact). An incoming open automated lead is folded onto the keeper's open lead before the move is saved. The surviving lead keeps the higher lead-type rank and the further-along funnel stage. Orphaned loser contacts are deleted. Conflicting emails, Instagram handles, families, or organisations return 400. A remaining one-open-lead conflict returns 409.
          */
         post: {
             parameters: {

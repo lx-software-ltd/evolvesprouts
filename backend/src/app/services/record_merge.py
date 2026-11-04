@@ -29,7 +29,6 @@ from app.services.record_merge_related import (
     collapse_lead_rows,
     reassign_related_records,
     remap_referrer_ids,
-    resolve_open_lead_conflicts,
 )
 
 _MAILCHIMP_REMOVE_STATUSES = frozenset(
@@ -81,7 +80,7 @@ def absorb_loser_record(
     actor_sub: str,
     conflict_field: str,
     event_source: str,
-    preferred_lead_id: UUID | None = None,
+    skip_lead_ids: frozenset[UUID] | None = None,
 ) -> str | None:
     """Fold ``loser`` onto ``keeper`` and delete ``loser``.
 
@@ -100,13 +99,7 @@ def absorb_loser_record(
             to_id=keeper.id,
             actor_sub=actor_sub,
             event_source=event_source,
-        )
-        resolve_open_lead_conflicts(
-            session,
-            keeper_id=keeper.id,
-            actor_sub=actor_sub,
-            event_source=event_source,
-            preferred_lead_id=preferred_lead_id,
+            skip_lead_ids=skip_lead_ids,
         )
     remap_referrer_ids(session, loser.id, keeper.id)
     session.delete(loser)
