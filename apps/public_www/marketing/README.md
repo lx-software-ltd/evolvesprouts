@@ -53,6 +53,10 @@ python3 scripts/meta-ads-assessment.py
 python3 scripts/ga4-assessment.py
 ```
 
+`google-ads-assessment.py` (Google Ads API v26) also accepts
+`--days <n>` (default 90) to set the trailing window for the monthly
+trend, search-term relevance and impression-share sections.
+
 ### Capturing raw output (`--out`)
 
 Each assessment script accepts an optional `--out <path>` flag that tees

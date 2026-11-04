@@ -200,3 +200,77 @@ exists today.
 - At least 1 responsive search ad per ad group.
 - All text assets pinned only when strictly necessary — unpinned text
   yields higher ad strength.
+
+---
+
+## 10. After the 2026-11-04 restructure
+
+Context: `ads-performance-assessment-2026-11-04.md`. The account edits
+in that report were applied with
+`scripts/apply/google-ads-apply-nov-restructure.py --apply --all`.
+The items below have no API path or are deliberately gated on a human.
+
+### 10a. Point Helper Training ads at the paid landing page (after deploy)
+
+Run once the `/en/helper-training-hong-kong` page is live in
+production (the script fetches the page and refuses to proceed on a
+non-200 response):
+
+```bash
+python3 scripts/apply/google-ads-apply-nov-restructure.py --apply --steps helper-lp-url
+```
+
+Then, in **Keywords → Quality Score columns**, watch "Landing page
+experience" on the Helper Training keywords for 14 days. It should
+move from Below average / Average to Above average. If it does not,
+the page copy and the ad copy have drifted apart; fix the ad first.
+
+### 10b. Approve the new Consultations RSA
+
+- [ ] **Campaigns → My Best Auntie — Consultations — HK → Ads**. The
+      RSA created by the script shows "Eligible (review in progress)"
+      for up to 24 h. If it is still under review or shows "Limited",
+      open it and resubmit; no copy changes are needed.
+
+### 10c. Call asset (UI only)
+
+The business phone number is a build-time environment value, so the
+script does not create call assets.
+
+- [ ] **Assets → + Call** → enter the business WhatsApp/phone number.
+- [ ] Apply at **account level**; schedule **Mon–Sat 09:00–20:00 HKT**.
+- [ ] Conversion action for calls: leave at the default
+      "Calls from ads" with a 60-second threshold.
+
+### 10d. Image assets (UI only)
+
+- [ ] **Assets → + Image** on both search campaigns. Upload 1 square
+      (1200×1200) and 1 landscape (1200×628) crop of the helper
+      training hero image used on the landing page.
+- [ ] Reject stock imagery; use the same photo family as the website
+      so the ad and landing page match.
+
+### 10e. Enhanced Conversions for Web
+
+Still open from §1. Do this only after the consent review in
+`ga4-manual-setup-steps.md` is signed off.
+
+### 10f. Unlinked / unrecognised Google Ads link in GA4
+
+The GA4 Admin API shows **two** Google Ads links on the property. One
+is this account; the other customer ID does not appear in the MCC.
+
+- [ ] **GA4 → Admin → Product links → Google Ads links**. Identify the
+      second customer ID. If nobody recognises it, **delete** the link:
+      it receives this property's audiences and key events.
+
+### 10g. Review date and kill criterion
+
+- [ ] Calendar reminder for **2026-12-16** (6 weeks). Run
+      `scripts/google-ads-assessment.py --days 42`.
+- [ ] If the two search campaigns together produced **fewer than 10
+      primary conversions** or **cost more than HK$300 per primary
+      conversion**, pause both and move the budget to Meta per
+      `meta-ads-manual-setup-steps.md`.
+- [ ] Do **not** switch to Target CPA until there are at least 15
+      primary conversions in a trailing 30-day window.
