@@ -51,22 +51,32 @@ Required env vars:
     EVOLVESPROUTS_GOOGLE_ADS_DEVELOPER_TOKEN
     EVOLVESPROUTS_GOOGLE_SERVICE_ACCOUNT_JSON
 
-Usage:
-    python3 scripts/apply/google-ads-apply-nov-restructure.py --dry-run --all
-    python3 scripts/apply/google-ads-apply-nov-restructure.py --apply --all
-    python3 scripts/apply/google-ads-apply-nov-restructure.py --apply --steps helper-lp-url
+Usage (from apps/public_www/marketing, after the venv in README.md):
+    python scripts/apply/google-ads-apply-nov-restructure.py --dry-run --all
+    python scripts/apply/google-ads-apply-nov-restructure.py --apply --all
+    python scripts/apply/google-ads-apply-nov-restructure.py --apply --steps helper-lp-url
 """
 
 import argparse
 import os
 import sys
 import tempfile
+from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
-from google.ads.googleads.client import GoogleAdsClient
-from google.api_core import protobuf_helpers
+_SCRIPTS_DIR = Path(__file__).resolve().parent.parent
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+
+try:
+    from google.ads.googleads.client import GoogleAdsClient
+    from google.api_core import protobuf_helpers
+except ModuleNotFoundError as exc:
+    from require_deps import exit_missing_google
+
+    exit_missing_google(exc)
 
 API_VERSION = "v26"
 CLIENT_CUSTOMER_ID = "4991144901"

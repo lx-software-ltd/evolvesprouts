@@ -34,9 +34,19 @@ import argparse
 import os
 import sys
 import tempfile
-from urllib.parse import urlencode, urlsplit, urlunsplit, parse_qsl
+from pathlib import Path
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from google.ads.googleads.client import GoogleAdsClient
+_SCRIPTS_DIR = Path(__file__).resolve().parent.parent
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+
+try:
+    from google.ads.googleads.client import GoogleAdsClient
+except ModuleNotFoundError as exc:
+    from require_deps import exit_missing_google
+
+    exit_missing_google(exc)
 
 API_VERSION = "v26"
 CLIENT_CUSTOMER_ID = "4991144901"
@@ -115,7 +125,9 @@ def _client():
     f = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False)
     f.write(sa_json)
     f.close()
-    manager_id = os.environ.get("EVOLVESPROUTS_GOOGLE_ADS_CUSTOMER_ID", "").replace("-", "")
+    manager_id = os.environ.get("EVOLVESPROUTS_GOOGLE_ADS_CUSTOMER_ID", "").replace(
+        "-", ""
+    )
     dev_token = os.environ.get("EVOLVESPROUTS_GOOGLE_ADS_DEVELOPER_TOKEN", "")
     if not manager_id or not dev_token:
         sys.exit("Missing GOOGLE_ADS_CUSTOMER_ID or DEVELOPER_TOKEN")
@@ -308,6 +320,7 @@ def do_utm_tagging(client, svc, apply_changes):
         ad_updates.append((ad.resource_name, new_urls))
 
     from google.api_core import protobuf_helpers
+
     ad_svc = client.get_service("AdService")
     ad_ops = []
     for ad_resource_name, new_urls in ad_updates:

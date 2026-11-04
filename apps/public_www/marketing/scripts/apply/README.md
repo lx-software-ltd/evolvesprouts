@@ -4,6 +4,11 @@ Live, write-enabled scripts that operate on Google Ads, Meta, and GA4
 via their respective APIs. Complement the read-only assessment scripts
 one directory up.
 
+Install the same venv as the assessment scripts first
+(`marketing/README.md` Prerequisites). A raw `python3` on Alpine
+raises `ModuleNotFoundError: google` because `google-ads` is not on
+the system interpreter.
+
 Every apply script follows the same contract:
 
 - `--dry-run` (default): list the operations that would run.

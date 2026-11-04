@@ -30,9 +30,19 @@ import sys
 import tempfile
 from collections import defaultdict
 from datetime import date, timedelta
+from pathlib import Path
 
-from google.ads.googleads.client import GoogleAdsClient
-from google.ads.googleads.errors import GoogleAdsException
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+
+try:
+    from google.ads.googleads.client import GoogleAdsClient
+    from google.ads.googleads.errors import GoogleAdsException
+except ModuleNotFoundError as exc:
+    from require_deps import exit_missing_google
+
+    exit_missing_google(exc)
 
 API_VERSION = "v26"
 FALLBACK_CLIENT_ID = "4991144901"

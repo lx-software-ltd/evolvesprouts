@@ -32,9 +32,19 @@ import argparse
 import os
 import sys
 import tempfile
+from pathlib import Path
 
-from google.ads.googleads.client import GoogleAdsClient
-from google.api_core import protobuf_helpers
+_SCRIPTS_DIR = Path(__file__).resolve().parent.parent
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+
+try:
+    from google.ads.googleads.client import GoogleAdsClient
+    from google.api_core import protobuf_helpers
+except ModuleNotFoundError as exc:
+    from require_deps import exit_missing_google
+
+    exit_missing_google(exc)
 
 API_VERSION = "v26"
 CLIENT_CUSTOMER_ID = "4991144901"
@@ -54,7 +64,9 @@ def _client():
     f = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False)
     f.write(sa_json)
     f.close()
-    manager_id = os.environ.get("EVOLVESPROUTS_GOOGLE_ADS_CUSTOMER_ID", "").replace("-", "")
+    manager_id = os.environ.get("EVOLVESPROUTS_GOOGLE_ADS_CUSTOMER_ID", "").replace(
+        "-", ""
+    )
     dev_token = os.environ.get("EVOLVESPROUTS_GOOGLE_ADS_DEVELOPER_TOKEN", "")
     return GoogleAdsClient.load_from_dict(
         {

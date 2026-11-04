@@ -23,11 +23,26 @@ marketing/
 
 ## Prerequisites
 
-Install Python dependencies:
+Install Python dependencies into a venv (required on Alpine and any
+PEP 668 "externally managed" Python — `pip install` into system
+Python is blocked, which surfaces as `ModuleNotFoundError: google`):
 
 ```bash
-pip install -r scripts/requirements.txt
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -U pip
+python -m pip install -r scripts/requirements.txt
 ```
+
+On Alpine Linux, install the venv module first:
+
+```bash
+apk add --no-cache python3 py3-pip py3-virtualenv
+```
+
+If pip then tries to compile `grpcio` (no musllinux wheel for that
+platform), also `apk add --no-cache gcc g++ musl-dev linux-headers python3-dev`.
+Do not `pip install google` — that is a different, unrelated package.
 
 ## Required environment variables
 
