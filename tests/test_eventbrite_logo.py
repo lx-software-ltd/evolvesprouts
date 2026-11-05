@@ -52,6 +52,8 @@ def _patch_media(
     upload_url: str = _UPLOAD_URL,
     upload_status: int = 204,
     upload_data: Any = _DEFAULT_UPLOAD_DATA,
+    instructions: dict[str, Any] | None = None,
+    created: dict[str, Any] | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     media_calls: list[dict[str, Any]] = []
     uploads: list[dict[str, Any]] = []
@@ -60,6 +62,8 @@ def _patch_media(
         media_calls.append(kwargs)
         path = str(kwargs["path"])
         if path.startswith("/media/upload/?"):
+            if instructions is not None:
+                return dict(instructions)
             payload = {
                 "upload_method": "POST",
                 "upload_token": "token-1",
@@ -72,7 +76,7 @@ def _patch_media(
                 payload["upload_data"] = upload_data
             return payload
         if path == "/media/upload/":
-            return {"id": "logo-9"}
+            return dict(created) if created is not None else {"id": "logo-9"}
         raise AssertionError(path)
 
     def _http(**kwargs: Any) -> dict[str, Any]:
@@ -219,6 +223,131 @@ def test_image_bff_url_uploads_to_the_configured_url(
     assert calls[2]["payload"]["event"]["logo_id"] == "logo-9"
 
 
+def test_sparse_instructions_still_upload(monkeypatch: Any, tmp_path: Any) -> None:
+    """No method, no file field name, a wrapped policy, and a numeric field."""
+    _banner(tmp_path)
+    monkeypatch.setenv("EVENTBRITE_BANNERS_DIR", str(tmp_path / "banners"))
+    monkeypatch.setenv("EVENTBRITE_MEDIA_UPLOAD_URL", _IMAGE_UPLOAD_URL)
+    monkeypatch.setenv("EVENTBRITE_DEFAULT_TIMEZONE", "UTC")
+    instance = _workshop()
+    instance.slug = "sample-workshop"
+    calls = _install_sync_fakes(monkeypatch, instance)
+    media_calls, uploads = _patch_media(
+        monkeypatch,
+        instructions={
+            "upload_token": " token-2 ",
+            "upload_url": _IMAGE_UPLOAD_URL,
+            "upload_data": {
+                "policy": "line-one\nline-two",
+                "success_action_status": 201,
+                "key": "abc",
+            },
+        },
+        created={"image": {"id": "logo-10"}},
+    )
+
+    result = sync_instance_to_eventbrite(session=_Session(), instance_id=instance.id)
+
+    assert result["status"] == "synced"
+    body = uploads[0]["body_bytes"]
+    assert b"line-one\nline-two" in body
+    assert b'name="success_action_status"\r\n\r\n201\r\n' in body
+    assert body.index(b'name="key"') < body.index(b'name="file"')
+    assert media_calls[1]["payload"]["upload_token"] == "token-2"
+    assert calls[2]["payload"]["event"]["logo_id"] == "logo-10"
+
+
+@pytest.mark.parametrize(
+    ("instructions", "reason"),
+    [
+        (
+            {"upload_method": "PUT", "upload_token": "t", "upload_url": "URL"},
+            "upload method is not POST",
+        ),
+        (
+            {"upload_url": "URL", "upload_data": {"key": "abc"}},
+            "upload token is missing",
+        ),
+        (
+            {"upload_token": "t", "upload_url": "URL", "upload_data": {"a b": "x"}},
+            "upload field name is not allowed",
+        ),
+        (
+            {"upload_token": "t", "upload_url": "URL", "upload_data": {"key": None}},
+            "upload field value is not text",
+        ),
+        (
+            {"upload_token": "t", "upload_url": "URL", "upload_data": ["key"]},
+            "upload fields are not an object",
+        ),
+        (
+            {"upload_token": "t", "upload_url": "URL", "file_parameter_name": "a b"},
+            "file field name is not allowed",
+        ),
+    ],
+)
+def test_bad_instructions_log_the_reason_and_field_names(
+    monkeypatch: Any, tmp_path: Any, instructions: dict[str, Any], reason: str
+) -> None:
+    _banner(tmp_path)
+    monkeypatch.setenv("EVENTBRITE_BANNERS_DIR", str(tmp_path / "banners"))
+    monkeypatch.setenv("EVENTBRITE_MEDIA_UPLOAD_URL", _IMAGE_UPLOAD_URL)
+    monkeypatch.setenv("EVENTBRITE_DEFAULT_TIMEZONE", "UTC")
+    instance = _workshop()
+    instance.slug = "sample-workshop"
+    calls = _install_sync_fakes(monkeypatch, instance)
+    warnings: list[dict[str, Any]] = []
+    monkeypatch.setattr(
+        eventbrite_logo.logger,
+        "warning",
+        lambda *_args, **kwargs: warnings.append(kwargs.get("extra") or {}),
+    )
+    payload = {
+        key: (_IMAGE_UPLOAD_URL if value == "URL" else value)
+        for key, value in instructions.items()
+    }
+    _media_calls, uploads = _patch_media(monkeypatch, instructions=payload)
+
+    result = sync_instance_to_eventbrite(session=_Session(), instance_id=instance.id)
+
+    assert result["status"] == "synced"
+    assert uploads == []
+    assert "logo_id" not in calls[2]["payload"]["event"]
+    assert warnings[0]["reason"] == reason
+    assert warnings[0]["instruction_keys"] == sorted(payload)
+    assert "status" not in warnings[0]
+    assert instance.eventbrite_last_payload_hash != _compute_instance_hash(instance)
+
+
+def test_finalize_without_an_id_logs_the_reason(
+    monkeypatch: Any, tmp_path: Any
+) -> None:
+    _banner(tmp_path)
+    monkeypatch.setenv("EVENTBRITE_BANNERS_DIR", str(tmp_path / "banners"))
+    monkeypatch.setenv("EVENTBRITE_MEDIA_UPLOAD_URL", _IMAGE_UPLOAD_URL)
+    monkeypatch.setenv("EVENTBRITE_DEFAULT_TIMEZONE", "UTC")
+    instance = _workshop()
+    instance.slug = "sample-workshop"
+    calls = _install_sync_fakes(monkeypatch, instance)
+    warnings: list[dict[str, Any]] = []
+    monkeypatch.setattr(
+        eventbrite_logo.logger,
+        "warning",
+        lambda *_args, **kwargs: warnings.append(kwargs.get("extra") or {}),
+    )
+    _media_calls, uploads = _patch_media(
+        monkeypatch, upload_url=_IMAGE_UPLOAD_URL, created={"url": "x"}
+    )
+
+    result = sync_instance_to_eventbrite(session=_Session(), instance_id=instance.id)
+
+    assert result["status"] == "synced"
+    assert len(uploads) == 1
+    assert "logo_id" not in calls[2]["payload"]["event"]
+    assert warnings[0]["reason"] == "upload response has no image id"
+    assert warnings[0]["upload_fields"] == ["key", "policy"]
+
+
 @pytest.mark.parametrize(
     "returned",
     [
@@ -311,6 +440,7 @@ def test_failed_upload_does_not_fail_the_sync(monkeypatch: Any, tmp_path: Any) -
     assert warnings[0]["status"] == 500
     assert warnings[0]["upload_fields"] == ["key", "policy"]
     assert "message" not in warnings[0]
+    assert "reason" not in warnings[0]
     assert "secret-policy" not in str(warnings)
     assert instance.eventbrite_last_payload_hash != _compute_instance_hash(instance)
 

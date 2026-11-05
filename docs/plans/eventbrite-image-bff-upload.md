@@ -42,3 +42,15 @@ Redeploy with `EventbriteMediaUploadUrl` set to `https://s3.amazonaws.com/eventb
 ## Open questions
 
 Whether the new endpoint accepts the same multipart body as the S3 bucket. The next sync log shows the HTTP status and the `upload_data` field names.
+
+## Follow-up: unusable instructions
+
+The first sync after deploy logged `ValueError` with the six S3 field names present, and the proxy log shows no POST to the upload URL. So an instruction check refused the response before any upload. The log did not say which.
+
+- `upload_method` and `file_parameter_name` default to POST and `file` when missing.
+- `upload_token` only needs to be a non-empty string.
+- Field values may span lines or be numbers. They sit in multipart bodies, not headers, so line breaks cannot inject a header. Field names are still restricted.
+- The finalize response may carry the id under `image` or `media`.
+- Every refusal logs a constant `reason` and the instruction key names. Values are never logged.
+
+Done when `pytest tests/test_eventbrite_logo.py` passes with the new cases.

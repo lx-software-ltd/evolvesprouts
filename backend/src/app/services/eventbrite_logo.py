@@ -45,6 +45,10 @@ class _ImageUploadError(ValueError):
         super().__init__("image upload status")
 
 
+class _InstructionsError(ValueError):
+    """Eventbrite's upload instructions were unusable. The message is a constant."""
+
+
 def upload_event_logo(
     *,
     instance: Any,
@@ -85,9 +89,12 @@ def upload_event_logo(
             extra["status"] = status_code
         if isinstance(exc, EventbriteApiError):
             extra["message"] = str(exc)
-        upload_fields = getattr(exc, "upload_fields", None)
-        if isinstance(upload_fields, list):
-            extra["upload_fields"] = upload_fields
+        if isinstance(exc, _InstructionsError):
+            extra["reason"] = str(exc)
+        for key in ("upload_fields", "instruction_keys"):
+            names = getattr(exc, key, None)
+            if isinstance(names, list):
+                extra[key] = names
         logger.warning("Eventbrite header image was not uploaded", extra=extra)
         return None, hash_without_banner
     if not logo_id:
@@ -126,7 +133,6 @@ def _upload_banner(
             },
         )
         return None
-    field_names = _upload_field_names(instructions.get("upload_data"))
     try:
         return _submit_banner(
             instance,
@@ -145,7 +151,7 @@ def _upload_banner(
         RuntimeError,
         ValueError,
     ) as exc:
-        _remember_upload_fields(exc, field_names)
+        _remember_instruction_names(exc, instructions)
         raise
 
 
@@ -160,13 +166,16 @@ def _submit_banner(
     width: int,
     height: int,
 ) -> str:
-    if str(instructions.get("upload_method") or "").upper() != "POST":
-        raise ValueError("Eventbrite image upload method is not POST")
-    upload_token = _single_line(instructions.get("upload_token"))
+    # Eventbrite documents POST and ``file``. Missing keys use those defaults.
+    if str(instructions.get("upload_method") or "POST").upper() != "POST":
+        raise _InstructionsError("upload method is not POST")
+    upload_token = str(instructions.get("upload_token") or "").strip()
+    if not upload_token:
+        raise _InstructionsError("upload token is missing")
     fields = _upload_fields(instructions.get("upload_data"))
-    file_field = str(instructions.get("file_parameter_name") or "").strip()
+    file_field = str(instructions.get("file_parameter_name") or "file").strip()
     if not _FILE_FIELD_NAME.fullmatch(file_field):
-        raise ValueError("Eventbrite image file field name is not allowed")
+        raise _InstructionsError("file field name is not allowed")
     slug = str(getattr(instance, "slug", "") or "").strip()
     body, content_type = _multipart_body(
         fields,
@@ -200,15 +209,28 @@ def _submit_banner(
             },
         },
     )
-    logo_id = str(created.get("id") or "").strip()
-    if not logo_id:
-        raise ValueError("Eventbrite image upload response missing id")
-    return logo_id
+    return _media_id(created)
 
 
-def _remember_upload_fields(exc: Exception, names: list[str]) -> None:
+def _media_id(created: dict[str, Any]) -> str:
+    for candidate in (created, created.get("image"), created.get("media")):
+        if isinstance(candidate, dict):
+            value = str(candidate.get("id") or "").strip()
+            if value:
+                return value
+    raise _InstructionsError("upload response has no image id")
+
+
+def _remember_instruction_names(exc: Exception, instructions: dict[str, Any]) -> None:
+    """Attach field names, never values, so the warning can name them."""
     if not isinstance(getattr(exc, "upload_fields", None), list):
-        exc.upload_fields = list(names)  # type: ignore[attr-defined]
+        exc.upload_fields = _upload_field_names(  # type: ignore[attr-defined]
+            instructions.get("upload_data")
+        )
+    if not isinstance(getattr(exc, "instruction_keys", None), list):
+        exc.instruction_keys = sorted(  # type: ignore[attr-defined]
+            str(key)[:40] for key in instructions
+        )
 
 
 def _same_upload_target(upload_url: str, expected_url: str) -> bool:
@@ -289,23 +311,24 @@ def _upload_field_names(value: Any) -> list[str]:
 
 
 def _upload_fields(value: Any) -> dict[str, str]:
-    if value is None or value == {}:
+    if not value:
         return {}
-    if not isinstance(value, dict) or not value:
-        raise ValueError("Eventbrite image upload fields are missing")
+    if not isinstance(value, dict):
+        raise _InstructionsError("upload fields are not an object")
     fields: dict[str, str] = {}
     for key, item in value.items():
         name = str(key)
         if not _FILE_FIELD_NAME.fullmatch(name):
-            raise ValueError("Eventbrite image upload field name is not allowed")
-        fields[name] = _single_line(item)
+            raise _InstructionsError("upload field name is not allowed")
+        fields[name] = _field_value(item)
     return fields
 
 
-def _single_line(value: Any) -> str:
-    if not isinstance(value, str) or not value or "\r" in value or "\n" in value:
-        raise ValueError("Eventbrite image upload field is not a single line")
-    return value
+def _field_value(value: Any) -> str:
+    """Values sit in multipart bodies, so line breaks are harmless there."""
+    if isinstance(value, bool) or not isinstance(value, (str, int, float)):
+        raise _InstructionsError("upload field value is not text")
+    return str(value)
 
 
 def _multipart_body(

@@ -168,7 +168,11 @@ and DLQ support.
   host form (`<bucket>.s3.amazonaws.com/`). The file is always POSTed to
   `EVENTBRITE_MEDIA_UPLOAD_URL`, the proxy allowlist entry. A refused
   URL is logged as scheme, host, and path. Upload instructions may omit
-  `upload_data`.
+  `upload_method`, `upload_data`, and `file_parameter_name`; the
+  defaults are POST, no fields, and `file`. Field values may span lines
+  and may be numbers. Unusable instructions log a constant `reason` and
+  the instruction key names. The finalize response may carry the image
+  id at the top level or under `image`.
   Each overview title has an empty paragraph before it, because
   Eventbrite drops heading margins.
   A missing banner or a failed upload does not fail the sync. The hash
