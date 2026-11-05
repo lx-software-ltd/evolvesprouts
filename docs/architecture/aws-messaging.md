@@ -162,7 +162,13 @@ and DLQ support.
   those JSON files to `content/landing-pages`. A matching
   `eventbrite-banners/<slug>.png` is uploaded as the event logo. The
   banner is the hero photo with the Evolve Sprouts tree behind it, on
-  a 2:1 canvas. The upload URL must equal `EVENTBRITE_MEDIA_UPLOAD_URL`.
+  a 2:1 canvas. The upload URL Eventbrite returns must name the same S3
+  bucket as `EVENTBRITE_MEDIA_UPLOAD_URL`, over HTTPS, in path form
+  (`s3.amazonaws.com/<bucket>/`) or host form (`<bucket>.s3.amazonaws.com/`).
+  The file is always POSTed to `EVENTBRITE_MEDIA_UPLOAD_URL`, the proxy
+  allowlist entry. A refused URL is logged as scheme, host, and path.
+  Each overview title has an empty paragraph before it, because
+  Eventbrite drops heading margins.
   A missing banner or a failed upload does not fail the sync. The hash
   includes the banner checksum only when a banner is sent. When a usable
   banner is not uploaded, the stored hash omits that checksum so the next

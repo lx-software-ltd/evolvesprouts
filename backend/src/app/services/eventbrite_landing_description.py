@@ -15,6 +15,8 @@ logger = get_logger(__name__)
 
 _ENV_LANDING_PAGES_DIR = "EVENTBRITE_LANDING_PAGES_DIR"
 _MAX_HTML_CHARS = 60000
+# Eventbrite strips heading margins and CSS, so an empty line doubles the gap.
+_TITLE_SPACER = "<p><br></p>"
 
 
 def eventbrite_summary_text(instance: Any) -> str:
@@ -174,15 +176,20 @@ def _section(block: dict[str, Any]) -> str:
     title = _text(block.get("title"))
     body = _paragraphs(_text(block.get("description")))
     items = _item_list(block.get("items"))
-    heading = f"<h2>{html.escape(title)}</h2>" if title else ""
-    return f"{heading}{body}{items}"
+    return f"{_heading(title)}{body}{items}"
+
+
+def _heading(title: str) -> str:
+    if not title:
+        return ""
+    return f"{_TITLE_SPACER}<h2>{html.escape(title)}</h2>"
 
 
 def _coach(block: dict[str, Any]) -> str:
     eyebrow = _text(block.get("eyebrow")) or _text(block.get("title"))
     title = _text(block.get("title"))
     subtitle = _text(block.get("subtitle"))
-    heading = f"<h2>{html.escape(eyebrow)}</h2>" if eyebrow else ""
+    heading = _heading(eyebrow)
     name = ""
     if title and title != eyebrow:
         name = f"<p><strong>{html.escape(title)}</strong></p>"

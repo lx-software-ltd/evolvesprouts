@@ -7,6 +7,7 @@ import re
 from hashlib import sha256
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 from uuid import uuid4
 
 from app.services.aws_proxy import AwsProxyError, http_invoke
@@ -21,6 +22,11 @@ _ENV_MEDIA_UPLOAD_URL = "EVENTBRITE_MEDIA_UPLOAD_URL"
 _MAX_BANNER_BYTES = 2 * 1024 * 1024
 _PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 _FILE_FIELD_NAME = re.compile(r"^[A-Za-z0-9_-]+$")
+_S3_BUCKET = re.compile(r"[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]")
+_S3_HOST = re.compile(
+    r"(?:(?P<bucket>[a-z0-9][a-z0-9.-]{1,61}[a-z0-9])\.)?"
+    r"s3(?:[.-](?:external-1|[a-z]{2}(?:-[a-z]+)+-\d))?\.amazonaws\.com"
+)
 
 
 def eventbrite_banner_sha256(instance: Any) -> str | None:
@@ -108,10 +114,13 @@ def _upload_banner(
         token=token,
     )
     upload_url = str(instructions.get("upload_url") or "").strip()
-    if upload_url != expected_url:
+    if not _same_upload_target(upload_url, expected_url):
         logger.warning(
             "Eventbrite header image skipped because the upload URL is not allowed",
-            extra={"instance_id": str(getattr(instance, "id", "") or "")},
+            extra={
+                "instance_id": str(getattr(instance, "id", "") or ""),
+                "upload_url": _loggable_url(upload_url),
+            },
         )
         return None
     if str(instructions.get("upload_method") or "").upper() != "POST":
@@ -130,7 +139,7 @@ def _upload_banner(
     )
     response = http_invoke(
         method="POST",
-        url=upload_url,
+        url=expected_url,
         headers={"Content-Type": content_type},
         body_bytes=body,
         timeout=30,
@@ -158,6 +167,52 @@ def _upload_banner(
     if not logo_id:
         raise ValueError("Eventbrite image upload response missing id")
     return logo_id
+
+
+def _same_upload_target(upload_url: str, expected_url: str) -> bool:
+    """True when both URLs name the same S3 bucket, in path or host form."""
+    if upload_url == expected_url:
+        return True
+    returned = _s3_bucket(upload_url)
+    return returned is not None and returned == _s3_bucket(expected_url)
+
+
+def _s3_bucket(url: str) -> str | None:
+    try:
+        parts = urlsplit(url)
+        port = parts.port
+    except ValueError:
+        return None
+    if (
+        parts.scheme != "https"
+        or port is not None
+        or parts.username
+        or parts.password
+        or parts.query
+        or parts.fragment
+    ):
+        return None
+    host = (parts.hostname or "").lower()
+    match = _S3_HOST.fullmatch(host)
+    if match is None:
+        return None
+    path = parts.path.strip("/")
+    hosted_bucket = match.group("bucket")
+    if hosted_bucket:
+        return None if path else hosted_bucket
+    if not path or "/" in path or not _S3_BUCKET.fullmatch(path):
+        return None
+    return path
+
+
+def _loggable_url(url: str) -> str:
+    """Scheme, host, and path only. Signed query strings stay out of logs."""
+    try:
+        parts = urlsplit(url)
+        host = parts.hostname or ""
+    except ValueError:
+        return ""
+    return f"{parts.scheme}://{host}{parts.path}"[:200]
 
 
 def _upload_fields(value: Any) -> dict[str, str]:

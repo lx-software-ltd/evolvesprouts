@@ -121,6 +121,20 @@ def test_description_uses_landing_page_sections(
     assert "Do not include this call to action" not in html
 
 
+def test_each_title_has_a_spacer_line_before_it(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _write_page(tmp_path, "sample-workshop", _FIXTURE)
+    monkeypatch.setenv("EVENTBRITE_LANDING_PAGES_DIR", str(tmp_path))
+
+    html = eventbrite_overview_html(_Instance(slug="sample-workshop"))
+
+    assert html.startswith("<p><br></p><h2>Why this room</h2>")
+    assert html.count("<h2>") == 5
+    assert html.count("<p><br></p><h2>") == 5
+
+
 def test_description_falls_back_when_slug_has_no_page(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -208,6 +222,8 @@ def test_real_mealtimes_page_fills_overview(monkeypatch: pytest.MonkeyPatch) -> 
     assert html != ""
     assert "Two hours on the thing that decides" not in html
     assert "The child who won&#x27;t eat" in html or "The child who won't eat" in html
+    assert "<p><br></p><h2>Helpers change when they watch" in html
+    assert "<p><br></p><h2>The child who won" in html
     assert "Building the plate" in html
     assert "Who is it for?" in html
     assert "Reserve my spot" not in html
