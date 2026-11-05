@@ -58,10 +58,10 @@ updates:
       # aws-cdk-lib currently pins yaml@1.10.2 transitively; the 1.x patched
       # version (>=1.10.3) is not resolvable in Dependabot security jobs yet.
       - dependency-name: "yaml"
-      # GHSA-g3hv-75wg-m249 marks every minimatch below 11.0.1. aws-cdk-lib
-      # requires minimatch@^10.2.6, and ESLint 9 still requires 3.1.5. There is
-      # no compatible release, and that security job records a hard error.
-      - dependency-name: "minimatch"
+      # Do not ignore minimatch. A security-only job whose only target is an
+      # ignored package fails as all_versions_ignored. GHSA-g3hv-75wg-m249 is
+      # cleared by the minimatch@10 -> 11.0.4 override and the aws-cdk-lib
+      # bundled-dep postinstall patcher.
 
   # Python - Lambda backend
   - package-ecosystem: "pip"
