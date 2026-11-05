@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import UTC, datetime
-from hashlib import sha256
-from decimal import Decimal
-from typing import Any
-from uuid import UUID
 import json
 import os
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from decimal import Decimal
+from hashlib import sha256
+from typing import Any
+from uuid import UUID
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy.orm import Session
 
@@ -27,6 +28,8 @@ from app.utils.logging import get_logger
 logger = get_logger(__name__)
 
 _DEFAULT_EVENTBRITE_API_BASE_URL = "https://www.eventbriteapi.com/v3"
+_ENV_EVENTBRITE_DEFAULT_TIMEZONE = "EVENTBRITE_DEFAULT_TIMEZONE"
+_DEFAULT_EVENTBRITE_TIMEZONE = "UTC"
 
 
 class EventbriteSyncError(Exception):
@@ -249,7 +252,7 @@ def _build_event_payload(instance: Any) -> dict[str, Any]:
     first_slot = ordered_slots[0]
     last_slot = ordered_slots[-1]
 
-    timezone = _extract_timezone_name(first_slot.starts_at) or "UTC"
+    timezone_name = _eventbrite_timezone_name()
     currency = _resolve_currency(instance)
     title = (instance.title or instance.service.title or "").strip()
     if not title:
@@ -263,14 +266,12 @@ def _build_event_payload(instance: Any) -> dict[str, Any]:
         "name": {"html": title},
         "description": {"html": description},
         "start": {
-            "timezone": timezone,
-            "utc": first_slot.starts_at.astimezone(UTC)
-            .replace(microsecond=0)
-            .isoformat(),
+            "timezone": timezone_name,
+            "utc": _format_eventbrite_utc(first_slot.starts_at),
         },
         "end": {
-            "timezone": timezone,
-            "utc": last_slot.ends_at.astimezone(UTC).replace(microsecond=0).isoformat(),
+            "timezone": timezone_name,
+            "utc": _format_eventbrite_utc(last_slot.ends_at),
         },
         "currency": currency,
         "online_event": resolved_delivery_mode == ServiceDeliveryMode.ONLINE,
@@ -285,7 +286,7 @@ def _build_ticket_class_payload(tier: Any) -> dict[str, Any]:
         "name": tier.name,
         "description": tier.description,
         "free": is_free,
-        "quantity_total": str(tier.max_quantity)
+        "quantity_total": int(tier.max_quantity)
         if tier.max_quantity is not None
         else None,
     }
@@ -342,6 +343,7 @@ def _compute_instance_hash(instance: Any) -> str:
             }
             for tier in sorted(instance.ticket_tiers, key=lambda row: row.sort_order)
         ],
+        "timezone": _eventbrite_timezone_name(),
     }
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return sha256(encoded).hexdigest()
@@ -366,14 +368,43 @@ def _eventbrite_api_base_url() -> str:
     ).strip()
 
 
-def _extract_timezone_name(value: datetime) -> str | None:
-    timezone_info = value.tzinfo
-    if timezone_info is None:
-        return None
-    name = timezone_info.tzname(value)
-    if isinstance(name, str) and name.strip():
-        return name.strip()
-    return None
+def _format_eventbrite_utc(value: datetime) -> str:
+    """Format an instant as Eventbrite ``YYYY-MM-DDThh:mm:ssZ``."""
+    if value.tzinfo is None:
+        raise EventbriteSyncError("Event session times must include a timezone")
+    return value.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _eventbrite_timezone_name() -> str:
+    """IANA timezone Eventbrite should display.
+
+    Unset, invalid, and ``Etc/`` zones use ``UTC``. A bad value is logged
+    and does not fail the sync.
+    """
+    configured = os.getenv(_ENV_EVENTBRITE_DEFAULT_TIMEZONE, "").strip()
+    if not configured:
+        return _DEFAULT_EVENTBRITE_TIMEZONE
+    if _is_eventbrite_timezone(configured):
+        return configured
+    logger.warning(
+        "Invalid Eventbrite timezone, using UTC",
+        extra={
+            "env": _ENV_EVENTBRITE_DEFAULT_TIMEZONE,
+            "zone_id": configured,
+        },
+    )
+    return _DEFAULT_EVENTBRITE_TIMEZONE
+
+
+def _is_eventbrite_timezone(zone_id: str) -> bool:
+    """True for ``UTC`` or an area/location IANA name Eventbrite can store."""
+    if zone_id != "UTC" and (zone_id.startswith("Etc/") or "/" not in zone_id):
+        return False
+    try:
+        ZoneInfo(zone_id)
+    except (ZoneInfoNotFoundError, ValueError):
+        return False
+    return True
 
 
 def _decimal_to_minor_units(value: Decimal) -> int:

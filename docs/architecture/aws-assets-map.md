@@ -689,6 +689,7 @@ configured by stack custom resources (including retention and KMS association).
 | `EventbriteTokenSecretArn` | String | No | Yes | Optional Secrets Manager ARN containing Eventbrite API token JSON (`{"token":"..."}`) |
 | `EventbriteOrganizationId` | String | No | No | Optional Eventbrite organization ID for DB-to-Eventbrite sync |
 | `EventbriteApiBaseUrl` | String | No | No | Eventbrite API base URL (default: `https://www.eventbriteapi.com/v3`) |
+| `EventbriteDefaultTimezone` | String | No | No | IANA area/location timezone for Eventbrite listings (`EVENTBRITE_DEFAULT_TIMEZONE`; GitHub var `CDK_PARAM_EVENTBRITE_DEFAULT_TIMEZONE`; empty uses `UTC`) |
 | `MediaDefaultResourceKey` | String | Yes | No | Default media resource key used when request payload omits `resource_key` |
 | `MailchimpMediaDownloadMergeTag` | String | No | No | Mailchimp audience merge field tag for media download URL (`/v1/assets/email-download/{token}`; empty default; set e.g. `MMDLURL` after creating the field) |
 | `MailchimpFreeResourceJourneyId` | String | No | No | Mailchimp Customer Journey ID for free-resource journey trigger API (empty disables) |

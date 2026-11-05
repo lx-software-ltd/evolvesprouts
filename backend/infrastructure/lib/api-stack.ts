@@ -81,6 +81,7 @@ interface EventbriteSyncNestedStackProps extends cdk.NestedStackProps {
   eventbriteApiBaseUrl: string;
   eventbriteOrganizationId: string;
   eventbriteTokenSecretArn: string;
+  eventbriteDefaultTimezone: string;
 }
 
 class EventbriteSyncNestedStack extends cdk.NestedStack {
@@ -157,6 +158,7 @@ class EventbriteSyncNestedStack extends cdk.NestedStack {
         EVENTBRITE_API_BASE_URL: props.eventbriteApiBaseUrl,
         EVENTBRITE_ORGANIZATION_ID: props.eventbriteOrganizationId,
         EVENTBRITE_TOKEN_SECRET_ARN: props.eventbriteTokenSecretArn,
+        EVENTBRITE_DEFAULT_TIMEZONE: props.eventbriteDefaultTimezone,
       },
     }).function;
 
@@ -1858,6 +1860,18 @@ export class ApiStack extends cdk.Stack {
         description: "Base URL for Eventbrite API.",
       }
     );
+    const eventbriteDefaultTimezone = new cdk.CfnParameter(
+      this,
+      "EventbriteDefaultTimezone",
+      {
+        type: "String",
+        default: "",
+        description:
+          "IANA area/location timezone for Eventbrite event listings " +
+          "(EVENTBRITE_DEFAULT_TIMEZONE). GitHub CDK_PARAM_EVENTBRITE_DEFAULT_TIMEZONE. " +
+          "Empty uses UTC.",
+      }
+    );
 
     const assetDownloadPublicKey = new cloudfront.PublicKey(
       this,
@@ -2314,6 +2328,7 @@ export class ApiStack extends cdk.Stack {
         eventbriteApiBaseUrl: eventbriteApiBaseUrl.valueAsString,
         eventbriteOrganizationId: eventbriteOrganizationId.valueAsString,
         eventbriteTokenSecretArn: eventbriteTokenSecret.valueAsString,
+        eventbriteDefaultTimezone: eventbriteDefaultTimezone.valueAsString,
       }
     );
     eventbriteSync.topic.grantPublish(adminFunction);
