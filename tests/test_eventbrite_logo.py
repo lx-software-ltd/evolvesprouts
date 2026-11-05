@@ -223,6 +223,87 @@ def test_image_bff_url_uploads_to_the_configured_url(
     assert calls[2]["payload"]["event"]["logo_id"] == "logo-9"
 
 
+def test_signed_bucket_uploads_to_s3_when_the_advertised_url_is_a_stub(
+    monkeypatch: Any, tmp_path: Any
+) -> None:
+    """Eventbrite advertises image-bff, which accepts anything and stores nothing."""
+    _banner(tmp_path)
+    monkeypatch.setenv("EVENTBRITE_BANNERS_DIR", str(tmp_path / "banners"))
+    monkeypatch.setenv("EVENTBRITE_MEDIA_UPLOAD_URL", _UPLOAD_URL)
+    monkeypatch.setenv("EVENTBRITE_DEFAULT_TIMEZONE", "UTC")
+    instance = _workshop()
+    instance.slug = "sample-workshop"
+    calls = _install_sync_fakes(monkeypatch, instance)
+    _media_calls, uploads = _patch_media(
+        monkeypatch,
+        upload_url=_IMAGE_UPLOAD_URL,
+        upload_data={
+            "AWSAccessKeyId": "AKIA",
+            "bucket": "eventbrite-uploader-incoming-prod",
+            "acl": "private",
+            "key": "abc",
+            "policy": "secret-policy",
+            "signature": "sig",
+        },
+    )
+
+    result = sync_instance_to_eventbrite(session=_Session(), instance_id=instance.id)
+
+    assert result["status"] == "synced"
+    assert uploads[0]["url"] == _UPLOAD_URL
+    body = uploads[0]["body_bytes"]
+    assert body.index(b'name="bucket"') < body.index(b'name="file"')
+    assert calls[2]["payload"]["event"]["logo_id"] == "logo-9"
+    assert instance.eventbrite_last_payload_hash == _compute_instance_hash(instance)
+
+
+def test_other_signed_bucket_is_refused(monkeypatch: Any, tmp_path: Any) -> None:
+    _banner(tmp_path)
+    monkeypatch.setenv("EVENTBRITE_BANNERS_DIR", str(tmp_path / "banners"))
+    monkeypatch.setenv("EVENTBRITE_MEDIA_UPLOAD_URL", _UPLOAD_URL)
+    monkeypatch.setenv("EVENTBRITE_DEFAULT_TIMEZONE", "UTC")
+    instance = _workshop()
+    instance.slug = "sample-workshop"
+    calls = _install_sync_fakes(monkeypatch, instance)
+    warnings: list[dict[str, Any]] = []
+    monkeypatch.setattr(
+        eventbrite_logo.logger,
+        "warning",
+        lambda *_args, **kwargs: warnings.append(kwargs.get("extra") or {}),
+    )
+    _media_calls, uploads = _patch_media(
+        monkeypatch,
+        upload_url=_IMAGE_UPLOAD_URL,
+        upload_data={"bucket": "other-bucket", "policy": "secret-policy"},
+    )
+
+    result = sync_instance_to_eventbrite(session=_Session(), instance_id=instance.id)
+
+    assert result["status"] == "synced"
+    assert uploads == []
+    assert "logo_id" not in calls[2]["payload"]["event"]
+    assert warnings[0]["upload_url"] == _IMAGE_UPLOAD_URL
+    assert warnings[0]["bucket"] == "other-bucket"
+    assert "secret-policy" not in str(warnings)
+
+
+def test_hash_changes_with_the_upload_url(monkeypatch: Any, tmp_path: Any) -> None:
+    """A new upload target resends the banner, replacing a dead image."""
+    _banner(tmp_path)
+    monkeypatch.setenv("EVENTBRITE_BANNERS_DIR", str(tmp_path / "banners"))
+    monkeypatch.setenv("EVENTBRITE_DEFAULT_TIMEZONE", "UTC")
+    instance = _workshop()
+    instance.slug = "sample-workshop"
+    monkeypatch.setenv("EVENTBRITE_MEDIA_UPLOAD_URL", _IMAGE_UPLOAD_URL)
+    via_stub = _compute_instance_hash(instance)
+    monkeypatch.setenv("EVENTBRITE_MEDIA_UPLOAD_URL", _UPLOAD_URL)
+    via_bucket = _compute_instance_hash(instance)
+    again = _compute_instance_hash(instance)
+
+    assert via_stub != via_bucket
+    assert via_bucket == again
+
+
 def test_sparse_instructions_still_upload(monkeypatch: Any, tmp_path: Any) -> None:
     """No method, no file field name, a wrapped policy, and a numeric field."""
     _banner(tmp_path)

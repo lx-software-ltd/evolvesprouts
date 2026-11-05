@@ -30,11 +30,16 @@ _S3_HOST = re.compile(
 
 
 def eventbrite_banner_sha256(instance: Any) -> str | None:
-    """Checksum of the banner that would be uploaded, if one is usable."""
+    """Checksum of the banner that would be uploaded, if one is usable.
+
+    The upload URL is part of it, so a new upload target resends the
+    banner and replaces an image record whose file never arrived.
+    """
     banner = _usable_banner(instance)
     if banner is None:
         return None
-    return sha256(banner).hexdigest()
+    target = os.getenv(_ENV_MEDIA_UPLOAD_URL, "").strip().encode()
+    return sha256(target + b"\n" + banner).hexdigest()
 
 
 class _ImageUploadError(ValueError):
@@ -124,12 +129,19 @@ def _upload_banner(
         token=token,
     )
     upload_url = str(instructions.get("upload_url") or "").strip()
-    if not _same_upload_target(upload_url, expected_url):
+    bucket = _signed_bucket(instructions.get("upload_data"))
+    # Eventbrite advertises www.eventbrite.com/image-bff/api/upload, which
+    # answers "Upload completed" to anything and stores nothing. The signed
+    # policy still names the S3 bucket, so the bucket decides where to post.
+    if not _same_upload_target(upload_url, expected_url) and not (
+        bucket and bucket == _s3_bucket(expected_url)
+    ):
         logger.warning(
             "Eventbrite header image skipped because the upload URL is not allowed",
             extra={
                 "instance_id": str(getattr(instance, "id", "") or ""),
                 "upload_url": _loggable_url(upload_url),
+                "bucket": bucket[:80],
             },
         )
         return None
@@ -262,6 +274,14 @@ def _canonical_upload_url(url: str) -> str | None:
     if not host:
         return None
     return f"https://{host}{parts.path.rstrip('/')}"
+
+
+def _signed_bucket(upload_data: Any) -> str:
+    """Bucket named by the signed POST policy. Empty when absent or odd."""
+    if not isinstance(upload_data, dict):
+        return ""
+    bucket = str(upload_data.get("bucket") or "").strip().lower()
+    return bucket if _S3_BUCKET.fullmatch(bucket) else ""
 
 
 def _s3_bucket(url: str) -> str | None:

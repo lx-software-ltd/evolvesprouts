@@ -54,3 +54,14 @@ The first sync after deploy logged `ValueError` with the six S3 field names pres
 - Every refusal logs a constant `reason` and the instruction key names. Values are never logged.
 
 Done when `pytest tests/test_eventbrite_logo.py` passes with the new cases.
+
+## Follow-up: the advertised URL is a stub
+
+With the instruction checks relaxed, the 9:09 PM HKT sync ran the whole chain: POST to image-bff, finalize, event update with the image id. The listing still had no image. A bare POST to `https://www.eventbrite.com/image-bff/api/upload` with junk fields and an 8-byte file returns `200 {"success":true,"message":"Upload completed"}`, while the same POST to `https://s3.amazonaws.com/eventbrite-uploader-incoming-prod/` returns `403 AccessDenied`. The stub stores nothing; the bucket evaluates the signed policy.
+
+- `EventbriteMediaUploadUrl` returns to the S3 bucket URL in the stack default and `production.json`.
+- The sync accepts instructions when the advertised URL is the configured one or when `upload_data.bucket` is the configured bucket. The file is posted to the configured URL either way.
+- The banner checksum includes the upload URL, so this deploy resends the banner and replaces the dead image record on the next save.
+- A refusal logs the bucket name with the URL.
+
+Done when `pytest tests/test_eventbrite_logo.py` and `npm run test:infra` pass.
