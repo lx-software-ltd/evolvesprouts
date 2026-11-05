@@ -8186,6 +8186,14 @@ components:
           description: >
             Public Eventbrite event URL written by the sync processor.
             Null until a create or update stores a URL. Distinct from `external_url`.
+        eventbrite_last_error:
+          type: string
+          nullable: true
+          readOnly: true
+          description: >
+            Last Eventbrite sync failure, or a notice when the row is synced
+            but Eventbrite would not publish or unpublish. Null when the last
+            sync had nothing to report. Blank stored text is returned as null.
         external_url:
           type: string
           format: uri

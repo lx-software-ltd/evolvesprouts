@@ -77,6 +77,8 @@ def upload_event_logo(
         status_code = getattr(exc, "status_code", None)
         if isinstance(status_code, int):
             extra["status"] = status_code
+        if isinstance(exc, EventbriteApiError):
+            extra["message"] = str(exc)
         logger.warning("Eventbrite header image was not uploaded", extra=extra)
         return None, hash_without_banner
     if not logo_id:

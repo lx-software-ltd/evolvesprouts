@@ -113,6 +113,7 @@ def test_sync_creates_updates_ticket_and_publishes(monkeypatch: Any) -> None:
     assert [call["path"] for call in calls] == [
         "/organizations/org-1/events/",
         "/events/1001/",
+        "/events/1001/",
         "/events/1001/ticket_classes/",
         "/events/1001/publish/",
     ]
@@ -120,7 +121,7 @@ def test_sync_creates_updates_ticket_and_publishes(monkeypatch: Any) -> None:
     assert created["start"]["utc"] == "2026-11-20T10:00:00Z"
     assert created["end"]["utc"] == "2026-11-20T12:00:00Z"
     assert created["start"]["timezone"] == "Asia/Hong_Kong"
-    ticket = calls[2]["payload"]["ticket_class"]
+    ticket = calls[3]["payload"]["ticket_class"]
     assert ticket["quantity_total"] == 12
     assert isinstance(ticket["quantity_total"], int)
     assert ticket["cost"] == "HKD,15000"
@@ -136,11 +137,12 @@ def test_sync_creates_updates_ticket_and_publishes(monkeypatch: Any) -> None:
     assert third["status"] == "synced"
     assert [call["path"] for call in calls] == [
         "/events/1001/",
+        "/events/1001/",
         f"/events/1001/ticket_classes/{instance.eventbrite_ticket_class_map[str(instance.ticket_tiers[0].id)]}/",
         "/events/1001/publish/",
     ]
-    assert calls[0]["payload"]["event"]["start"]["timezone"] == "America/New_York"
-    assert "venue_id" not in calls[0]["payload"]["event"]
+    assert calls[1]["payload"]["event"]["start"]["timezone"] == "America/New_York"
+    assert "venue_id" not in calls[1]["payload"]["event"]
 
 
 class _Area:
@@ -215,7 +217,7 @@ def test_sync_publishes_overview_and_creates_venue(
         if "structured_content" in path:
             return {"ok": True}
         if path == "/events/1001/" and method == "GET":
-            return {"id": "1001", "venue_id": None}
+            return {"id": "1001", "venue_id": None, "status": "draft"}
         return {"id": "1001", "url": "https://www.eventbrite.com/e/1001"}
 
     monkeypatch.setattr(eventbrite_sync, "eventbrite_request", _request)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from app.db.models import ServiceDeliveryMode
@@ -52,6 +53,33 @@ def eventbrite_venue_body(instance: Any) -> dict[str, Any] | None:
         address["latitude"] = str(latitude)
         address["longitude"] = str(longitude)
     return {"name": name, "address": address}
+
+
+def attach_eventbrite_venue(
+    instance: Any,
+    *,
+    venue_id: str | None,
+    organization_id: str,
+    call: Callable[..., dict[str, Any]],
+    missing_id_error: type[Exception],
+) -> str | None:
+    """Create or update the Eventbrite venue and return its id."""
+    body = eventbrite_venue_body(instance)
+    if body is None:
+        return None
+    wrapped = {"venue": body}
+    if venue_id:
+        call(method="POST", path=f"/venues/{venue_id}/", payload=wrapped)
+        return venue_id
+    created = call(
+        method="POST",
+        path=f"/organizations/{organization_id}/venues/",
+        payload=wrapped,
+    )
+    created_id = str(created.get("id") or "").strip()
+    if not created_id:
+        raise missing_id_error("Eventbrite venue create response missing id")
+    return created_id
 
 
 def _is_online(instance: Any) -> bool:

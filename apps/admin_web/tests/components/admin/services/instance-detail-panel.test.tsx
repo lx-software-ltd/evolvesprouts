@@ -469,6 +469,7 @@ describe('InstanceDetailPanel', () => {
       waitlistEnabled: true,
       eventbriteSyncStatus: 'pending',
       eventbriteEventUrl: null,
+      eventbriteLastError: null,
       externalUrl: null,
       partnerOrganizations: [],
       instructorId: 'inst-1',
@@ -582,6 +583,7 @@ describe('InstanceDetailPanel', () => {
       waitlistEnabled: false,
       eventbriteSyncStatus: 'pending',
       eventbriteEventUrl: null,
+      eventbriteLastError: null,
       externalUrl: null,
       partnerOrganizations: [],
       instructorId: null,
@@ -691,6 +693,7 @@ describe('InstanceDetailPanel', () => {
       waitlistEnabled: false,
       eventbriteSyncStatus: 'pending',
       eventbriteEventUrl: null,
+      eventbriteLastError: null,
       externalUrl: null,
       partnerOrganizations: [],
       instructorId: null,
@@ -1084,6 +1087,7 @@ describe('InstanceDetailPanel', () => {
       waitlistEnabled: false,
       eventbriteSyncStatus: 'pending',
       eventbriteEventUrl: null,
+      eventbriteLastError: null,
       externalUrl: null,
       partnerOrganizations: [],
       instructorId: null,
@@ -1174,6 +1178,7 @@ describe('InstanceDetailPanel', () => {
       waitlistEnabled: false,
       eventbriteSyncStatus: 'pending',
       eventbriteEventUrl: null,
+      eventbriteLastError: null,
       externalUrl: null,
       partnerOrganizations: [],
       instructorId: null,
@@ -1268,6 +1273,7 @@ describe('InstanceDetailPanel', () => {
       waitlistEnabled: false,
       eventbriteSyncStatus: 'pending',
       eventbriteEventUrl: null,
+      eventbriteLastError: null,
       externalUrl: null,
       partnerOrganizations: [],
       instructorId: null,
@@ -1360,6 +1366,7 @@ describe('InstanceDetailPanel', () => {
       waitlistEnabled: false,
       eventbriteSyncStatus: 'failed',
       eventbriteEventUrl: null,
+      eventbriteLastError: null,
       externalUrl: null,
       partnerOrganizations: [],
       instructorId: null,
@@ -1418,8 +1425,8 @@ describe('InstanceDetailPanel', () => {
     expect(screen.getByRole('button', { name: 'Update instance' })).toBeInTheDocument();
   });
 
-  it('shows an Eventbrite event link under the status field when a URL is present', () => {
-    const instance: ServiceInstance = {
+  function eventbriteLinkInstance(): ServiceInstance {
+    return {
       id: 'inst-eb-link',
       serviceId: 'service-1',
       parentServiceTitle: null,
@@ -1439,6 +1446,7 @@ describe('InstanceDetailPanel', () => {
       waitlistEnabled: false,
       eventbriteSyncStatus: 'synced',
       eventbriteEventUrl: 'https://www.eventbrite.com/e/mealtime-workshop',
+      eventbriteLastError: null,
       externalUrl: null,
       partnerOrganizations: [],
       instructorId: null,
@@ -1462,11 +1470,13 @@ describe('InstanceDetailPanel', () => {
       consultationDetails: null,
       resolvedConsultationDetails: null,
     };
+  }
 
+  it('shows an Eventbrite event link under the status field when a URL is present', () => {
     render(
       <InstanceDetailPanel
         {...defaultEntityTagProps}
-        instance={instance}
+        instance={eventbriteLinkInstance()}
         selectedServiceId='service-1'
         serviceOptions={[
           buildServiceSummary({
@@ -1491,5 +1501,75 @@ describe('InstanceDetailPanel', () => {
     expect(link).toHaveAttribute('href', 'https://www.eventbrite.com/e/mealtime-workshop');
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('shows an Eventbrite notice under the event link', () => {
+    const notice =
+      'Eventbrite would not unpublish this event: orders exist. The listing stays published until this is handled in Eventbrite.';
+    render(
+      <InstanceDetailPanel
+        {...defaultEntityTagProps}
+        instance={{
+          ...eventbriteLinkInstance(),
+          eventbriteLastError: notice,
+        }}
+        selectedServiceId='service-1'
+        serviceOptions={[
+          buildServiceSummary({
+            id: 'service-1',
+            serviceType: 'event',
+            title: 'Mealtime Workshop',
+            locationId: 'location-1',
+          }),
+        ]}
+        locationOptions={[buildLocationSummary()]}
+        isLoadingLocations={false}
+        serviceType='event'
+        isSaving={false}
+        error=''
+        onSelectService={vi.fn()}
+        onCreate={vi.fn()}
+        onUpdate={vi.fn()}
+      />
+    );
+
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent(notice);
+    expect(status).toHaveClass('text-amber-800');
+    expect(screen.getByLabelText('Eventbrite')).toHaveAttribute(
+      'aria-describedby',
+      'instance-eventbrite-notice',
+    );
+    expect(screen.getByRole('link', { name: 'Open Eventbrite event' })).toBeInTheDocument();
+  });
+
+  it('shows a failed Eventbrite error when there is no event link', () => {
+    render(
+      <InstanceDetailPanel
+        {...defaultEntityTagProps}
+        instance={{
+          ...eventbriteLinkInstance(),
+          eventbriteSyncStatus: 'failed',
+          eventbriteEventUrl: null,
+          eventbriteLastError: 'Eventbrite API request failed (500): unavailable',
+        }}
+        selectedServiceId='service-1'
+        serviceOptions={[buildServiceSummary({ locationId: 'location-1' })]}
+        locationOptions={[buildLocationSummary()]}
+        isLoadingLocations={false}
+        serviceType='event'
+        isSaving={false}
+        error=''
+        onSelectService={vi.fn()}
+        onCreate={vi.fn()}
+        onUpdate={vi.fn()}
+      />
+    );
+
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent('Eventbrite API request failed (500): unavailable');
+    expect(status).toHaveClass('text-red-700');
+    expect(screen.queryByRole('link', { name: 'Open Eventbrite event' })).not.toBeInTheDocument();
   });
 });

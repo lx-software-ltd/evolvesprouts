@@ -23,6 +23,41 @@ type ApiSchemas = components['schemas'];
 
 const INSTANCE_EDITOR_FORM_ID = 'instance-editor-form';
 
+function eventbriteHint(instance: ServiceInstance): ReactNode {
+  const notice = instance.eventbriteLastError?.trim() ?? '';
+  const url = instance.eventbriteEventUrl;
+  if (!url && !notice) {
+    return undefined;
+  }
+  const noticeClass =
+    instance.eventbriteSyncStatus === 'failed'
+      ? 'block wrap-anywhere text-red-700'
+      : 'block wrap-anywhere text-amber-800';
+  return (
+    <>
+      {url ? (
+        <a
+          href={url}
+          target='_blank'
+          rel='noopener noreferrer'
+          className='font-medium text-slate-900 underline-offset-2 hover:underline'
+        >
+          Open Eventbrite event
+        </a>
+      ) : null}
+      {notice ? (
+        <span
+          id='instance-eventbrite-notice'
+          role='status'
+          className={url ? `mt-1 ${noticeClass}` : noticeClass}
+        >
+          {notice}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
 export interface InstanceDetailPanelProps {
   /** Full record for edit mode; `null` while creating. */
   instance: ServiceInstance | null;
@@ -229,24 +264,16 @@ export function InstanceDetailPanel({
             <AdminField
               label='Eventbrite'
               htmlFor='instance-eventbrite-sync'
-              hint={
-                instance.eventbriteEventUrl ? (
-                  <a
-                    href={instance.eventbriteEventUrl}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    className='font-medium text-slate-900 underline-offset-2 hover:underline'
-                  >
-                    Open Eventbrite event
-                  </a>
-                ) : undefined
-              }
+              hint={eventbriteHint(instance)}
             >
               <Input
                 id='instance-eventbrite-sync'
                 value={formatEnumLabel(instance.eventbriteSyncStatus)}
                 readOnly
                 aria-readonly
+                aria-describedby={
+                  instance.eventbriteLastError?.trim() ? 'instance-eventbrite-notice' : undefined
+                }
               />
             </AdminField>
           ) : null}
