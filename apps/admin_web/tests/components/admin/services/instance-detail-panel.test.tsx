@@ -468,6 +468,7 @@ describe('InstanceDetailPanel', () => {
       capacityLeftEffective: 4,
       waitlistEnabled: true,
       eventbriteSyncStatus: 'pending',
+      eventbriteEventUrl: null,
       externalUrl: null,
       partnerOrganizations: [],
       instructorId: 'inst-1',
@@ -580,6 +581,7 @@ describe('InstanceDetailPanel', () => {
       capacityLeftEffective: null,
       waitlistEnabled: false,
       eventbriteSyncStatus: 'pending',
+      eventbriteEventUrl: null,
       externalUrl: null,
       partnerOrganizations: [],
       instructorId: null,
@@ -688,6 +690,7 @@ describe('InstanceDetailPanel', () => {
       capacityLeftEffective: 10,
       waitlistEnabled: false,
       eventbriteSyncStatus: 'pending',
+      eventbriteEventUrl: null,
       externalUrl: null,
       partnerOrganizations: [],
       instructorId: null,
@@ -1080,6 +1083,7 @@ describe('InstanceDetailPanel', () => {
       capacityLeftEffective: null,
       waitlistEnabled: false,
       eventbriteSyncStatus: 'pending',
+      eventbriteEventUrl: null,
       externalUrl: null,
       partnerOrganizations: [],
       instructorId: null,
@@ -1169,6 +1173,7 @@ describe('InstanceDetailPanel', () => {
       capacityLeftEffective: 5,
       waitlistEnabled: false,
       eventbriteSyncStatus: 'pending',
+      eventbriteEventUrl: null,
       externalUrl: null,
       partnerOrganizations: [],
       instructorId: null,
@@ -1262,6 +1267,7 @@ describe('InstanceDetailPanel', () => {
       capacityLeftEffective: 2,
       waitlistEnabled: false,
       eventbriteSyncStatus: 'pending',
+      eventbriteEventUrl: null,
       externalUrl: null,
       partnerOrganizations: [],
       instructorId: null,
@@ -1353,6 +1359,7 @@ describe('InstanceDetailPanel', () => {
       capacityLeftEffective: null,
       waitlistEnabled: false,
       eventbriteSyncStatus: 'failed',
+      eventbriteEventUrl: null,
       externalUrl: null,
       partnerOrganizations: [],
       instructorId: null,
@@ -1407,6 +1414,82 @@ describe('InstanceDetailPanel', () => {
     const eventbrite = screen.getByLabelText('Eventbrite');
     expect(eventbrite).toHaveValue('Failed');
     expect(eventbrite).toHaveAttribute('readonly');
+    expect(screen.queryByRole('link', { name: 'Open Eventbrite event' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Update instance' })).toBeInTheDocument();
+  });
+
+  it('shows an Eventbrite event link under the status field when a URL is present', () => {
+    const instance: ServiceInstance = {
+      id: 'inst-eb-link',
+      serviceId: 'service-1',
+      parentServiceTitle: null,
+      parentServiceTier: null,
+      parentServiceKey: null,
+      parentServiceType: 'event',
+      title: 'Mealtime Workshop',
+      slug: 'mealtime-workshop',
+      description: null,
+      coverImageS3Key: null,
+      status: 'open',
+      deliveryMode: 'in_person',
+      locationId: 'location-1',
+      maxCapacity: null,
+      capacityLeftOverride: null,
+      capacityLeftEffective: null,
+      waitlistEnabled: false,
+      eventbriteSyncStatus: 'synced',
+      eventbriteEventUrl: 'https://www.eventbrite.com/e/mealtime-workshop',
+      externalUrl: null,
+      partnerOrganizations: [],
+      instructorId: null,
+      cohort: null,
+      notes: '',
+      tagIds: [],
+      createdBy: 'admin',
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+      resolvedTitle: 'Mealtime Workshop',
+      resolvedSlug: 'mealtime-workshop',
+      resolvedDescription: null,
+      resolvedCoverImageS3Key: null,
+      resolvedDeliveryMode: null,
+      resolvedLocationId: 'location-1',
+      sessionSlots: [],
+      trainingDetails: null,
+      resolvedTrainingDetails: null,
+      eventTicketTiers: [],
+      resolvedEventTicketTiers: [],
+      consultationDetails: null,
+      resolvedConsultationDetails: null,
+    };
+
+    render(
+      <InstanceDetailPanel
+        {...defaultEntityTagProps}
+        instance={instance}
+        selectedServiceId='service-1'
+        serviceOptions={[
+          buildServiceSummary({
+            id: 'service-1',
+            serviceType: 'event',
+            title: 'Mealtime Workshop',
+            locationId: 'location-1',
+          }),
+        ]}
+        locationOptions={[buildLocationSummary()]}
+        isLoadingLocations={false}
+        serviceType='event'
+        isSaving={false}
+        error=''
+        onSelectService={vi.fn()}
+        onCreate={vi.fn()}
+        onUpdate={vi.fn()}
+      />
+    );
+
+    const link = screen.getByRole('link', { name: 'Open Eventbrite event' });
+    expect(link).toHaveAttribute('href', 'https://www.eventbrite.com/e/mealtime-workshop');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   });
 });

@@ -26,6 +26,14 @@ import {
   type TrainingInstanceDetailsRow,
 } from '@/types/services';
 
+function parseHttpUrl(value: unknown): string | null {
+  const raw = asNullableString(value)?.trim() ?? '';
+  if (!/^https?:\/\//i.test(raw)) {
+    return null;
+  }
+  return raw;
+}
+
 function parseSessionSlot(value: unknown): SessionSlot {
   const item = isRecord(value) ? value : {};
   return {
@@ -286,6 +294,7 @@ export function parseInstance(value: unknown): ServiceInstance {
       typeof item.capacity_enrolled_count === 'number' ? item.capacity_enrolled_count : 0,
     waitlistEnabled: asBoolean(item.waitlist_enabled, false),
     eventbriteSyncStatus: normalizeEventbriteSyncStatusFromApi(item.eventbrite_sync_status),
+    eventbriteEventUrl: parseHttpUrl(item.eventbrite_event_url),
     externalUrl: asNullableString(item.external_url),
     partnerOrganizations: Array.isArray(item.partner_organizations)
       ? item.partner_organizations

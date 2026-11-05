@@ -8502,6 +8502,11 @@ export interface components {
             eventbrite_sync_status: components["schemas"]["EventbriteSyncStatus"];
             /**
              * Format: uri
+             * @description Public Eventbrite event URL written by the sync processor. Null until a create or update stores a URL. Distinct from `external_url`.
+             */
+            readonly eventbrite_event_url?: string | null;
+            /**
+             * Format: uri
              * @description Optional external registration or info URL (http/https only). Distinct from Eventbrite sync URLs on the instance.
              */
             external_url?: string | null;

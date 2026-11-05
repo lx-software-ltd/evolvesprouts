@@ -70,6 +70,7 @@ const INSTANCE_FIXTURE: ServiceInstance = {
   capacityLeftEffective: null,
   waitlistEnabled: false,
   eventbriteSyncStatus: 'pending',
+  eventbriteEventUrl: null,
   externalUrl: null,
   partnerOrganizations: [],
   instructorId: null,
