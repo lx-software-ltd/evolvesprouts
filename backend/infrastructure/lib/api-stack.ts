@@ -1868,9 +1868,10 @@ export class ApiStack extends cdk.Stack {
       "EventbriteMediaUploadUrl",
       {
         type: "String",
-        default: "https://www.eventbrite.com/image-bff/api/upload",
+        default:
+          "https://s3.amazonaws.com/eventbrite-uploader-incoming-prod/",
         description:
-          "Eventbrite image upload URL. The sync posts the banner here and refuses any other upload URL.",
+          "S3 bucket URL named by Eventbrite's signed image-upload policy. The sync posts the banner here and refuses instructions for any other bucket.",
       }
     );
     const eventbriteDefaultTimezone = new cdk.CfnParameter(
