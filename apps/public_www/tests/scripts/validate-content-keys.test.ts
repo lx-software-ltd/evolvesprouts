@@ -1,4 +1,4 @@
-import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -6,7 +6,6 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { composeBanner } from '../../scripts/build-eventbrite-banners.mjs';
 import {
   collectEventbriteBannerErrors,
   collectFamilyConsultationKeyErrors,
@@ -173,12 +172,12 @@ describe('eventbrite banners', () => {
       path.join(APP_ROOT, 'src', 'content', 'landing-pages', filename),
       path.join(pages, filename),
     );
-    const page = JSON.parse(await readFile(path.join(pages, filename), 'utf8')) as {
-      en: { hero: { imageSrc: string } };
-    };
-    const banner = Buffer.from(await composeBanner(page.en.hero.imageSrc));
-    banner[banner.length - 32] ^= 0xff;
-    await writeFile(path.join(banners, 'nov-2026-mealtimes-workshop.png'), banner);
+    const stale = await sharp({
+      create: { width: 4, height: 2, channels: 3, background: '#ffffff' },
+    })
+      .png()
+      .toBuffer();
+    await writeFile(path.join(banners, 'nov-2026-mealtimes-workshop.png'), stale);
 
     const errors: string[] = [];
     await collectEventbriteBannerErrors(pages, banners, errors);
