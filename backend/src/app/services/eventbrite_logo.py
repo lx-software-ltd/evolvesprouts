@@ -130,9 +130,9 @@ def _upload_banner(
     )
     upload_url = str(instructions.get("upload_url") or "").strip()
     bucket = _signed_bucket(instructions.get("upload_data"))
-    # Eventbrite advertises www.eventbrite.com/image-bff/api/upload, which
-    # answers "Upload completed" to anything and stores nothing. The signed
-    # policy still names the S3 bucket, so the bucket decides where to post.
+    # The advertised URL is image-bff, which stores the file asynchronously
+    # and answers a generic 200. When the configured target is an S3 bucket
+    # instead, instructions whose signed policy names that bucket also pass.
     if not _same_upload_target(upload_url, expected_url) and not (
         bucket and bucket == _s3_bucket(expected_url)
     ):

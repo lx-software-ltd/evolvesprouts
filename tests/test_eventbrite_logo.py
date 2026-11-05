@@ -223,10 +223,10 @@ def test_image_bff_url_uploads_to_the_configured_url(
     assert calls[2]["payload"]["event"]["logo_id"] == "logo-9"
 
 
-def test_signed_bucket_uploads_to_s3_when_the_advertised_url_is_a_stub(
+def test_signed_bucket_uploads_to_a_configured_s3_bucket(
     monkeypatch: Any, tmp_path: Any
 ) -> None:
-    """Eventbrite advertises image-bff, which accepts anything and stores nothing."""
+    """A configured bucket accepts instructions whose policy names that bucket."""
     _banner(tmp_path)
     monkeypatch.setenv("EVENTBRITE_BANNERS_DIR", str(tmp_path / "banners"))
     monkeypatch.setenv("EVENTBRITE_MEDIA_UPLOAD_URL", _UPLOAD_URL)
@@ -295,12 +295,12 @@ def test_hash_changes_with_the_upload_url(monkeypatch: Any, tmp_path: Any) -> No
     instance = _workshop()
     instance.slug = "sample-workshop"
     monkeypatch.setenv("EVENTBRITE_MEDIA_UPLOAD_URL", _IMAGE_UPLOAD_URL)
-    via_stub = _compute_instance_hash(instance)
+    via_image_bff = _compute_instance_hash(instance)
     monkeypatch.setenv("EVENTBRITE_MEDIA_UPLOAD_URL", _UPLOAD_URL)
     via_bucket = _compute_instance_hash(instance)
     again = _compute_instance_hash(instance)
 
-    assert via_stub != via_bucket
+    assert via_image_bff != via_bucket
     assert via_bucket == again
 
 
