@@ -22,6 +22,7 @@ from app.db.models import (
 )
 from app.db.repositories import ServiceInstanceRepository
 from app.services.eventbrite_client import EventbriteApiError, eventbrite_request
+from app.services.eventbrite_landing_description import eventbrite_description_html
 from app.services.secrets import get_secret_json
 from app.utils.logging import get_logger
 
@@ -257,7 +258,7 @@ def _build_event_payload(instance: Any) -> dict[str, Any]:
     title = (instance.title or instance.service.title or "").strip()
     if not title:
         raise EventbriteSyncError("Event title is required")
-    description = (instance.description or instance.service.description or "").strip()
+    description = eventbrite_description_html(instance)
     if not description:
         description = title
 
@@ -318,6 +319,7 @@ def _compute_instance_hash(instance: Any) -> str:
         "service_id": str(instance.service_id),
         "title": instance.title,
         "description": instance.description,
+        "description_html": eventbrite_description_html(instance),
         "status": instance.status.value,
         "delivery_mode": instance.delivery_mode.value
         if instance.delivery_mode

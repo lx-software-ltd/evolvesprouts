@@ -6,10 +6,10 @@ import argparse
 import hashlib
 import logging
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 _DEFAULT_MAX_CACHE_ENTRIES = 3
@@ -22,6 +22,26 @@ def _ensure_python_version() -> None:
 
 def _run_pip(command: list[str], cwd: Path, env: dict[str, str]) -> None:
     subprocess.run(command, check=True, cwd=cwd, env=env)
+
+
+def copy_landing_pages(source_root: Path, output_dir: Path) -> None:
+    """Copy public landing-page JSON into the Lambda bundle.
+
+    Eventbrite sync reads these files by instance slug. ``extraCopyPaths``
+    cannot leave ``backend/``, and CDK stages this bundle before deploy.
+    """
+    landing_pages = (
+        source_root.parent / "apps" / "public_www" / "src" / "content" / "landing-pages"
+    )
+    if not landing_pages.is_dir():
+        raise FileNotFoundError(f"Missing landing page directory: {landing_pages}")
+    json_files = sorted(path for path in landing_pages.glob("*.json") if path.is_file())
+    if not json_files:
+        raise FileNotFoundError(f"No landing page JSON files in {landing_pages}")
+    destination = output_dir / "content" / "landing-pages"
+    destination.mkdir(parents=True, exist_ok=True)
+    for path in json_files:
+        shutil.copy2(path, destination / path.name)
 
 
 def _copy_tree(source: Path, destination: Path) -> None:
@@ -220,6 +240,7 @@ def build_bundle(
 
     _copy_tree(source_root / "lambda", output_dir / "lambda")
     _copy_tree(source_root / "src", output_dir / "src")
+    copy_landing_pages(source_root, output_dir)
     shared_config = source_root.parent / "shared" / "config"
     if shared_config.is_dir():
         _copy_tree(shared_config, output_dir / "shared" / "config")

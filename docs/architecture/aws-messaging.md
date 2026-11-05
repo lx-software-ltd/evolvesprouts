@@ -150,6 +150,14 @@ and DLQ support.
   name, or an `Etc/` zone is sent as `UTC` and logged. The payload hash
   includes that timezone, so changing it resyncs the event. Ticket
   `quantity_total` is an integer.
+- When `service_instances.slug` matches a file in
+  `apps/public_www/src/content/landing-pages`, `description.html` is the
+  English landing-page overview (hero, outline, agenda, how it works, FAQ,
+  and coach). The call to action is omitted. Any other slug keeps the short
+  instance or service description. Invalid JSON does not fail the sync.
+  The payload hash includes the rendered HTML. The Lambda bundle copies
+  those JSON files to `content/landing-pages`. The header image is not
+  uploaded.
 - Updates `service_instances` Eventbrite sync metadata fields
   (`eventbrite_sync_status`, `eventbrite_last_*`, ticket-class map, retry count).
 

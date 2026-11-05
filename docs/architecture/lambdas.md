@@ -9,6 +9,8 @@ their primary responsibilities.
 - Packaging: deterministic bundling (no bytecode files, repeatable output).
 - CDK runs `backend/scripts/run-cdk-app.sh`, which builds the local
   bundle via `backend/scripts/build_lambda_bundle.py` before synth/deploy.
+  That bundle also copies `apps/public_www/src/content/landing-pages/*.json`
+  to `content/landing-pages` so Eventbrite sync can read them by slug.
 - Lambda dependency wheels are cached under
   `backend/.lambda-build/dependency-cache` keyed by `backend/requirements.txt`
   content and target runtime metadata to avoid reinstalling pip dependencies on
@@ -904,8 +906,10 @@ their primary responsibilities.
 - Trigger: SQS queue (`evolvesprouts-eventbrite-sync-queue`)
 - Purpose: process async Eventbrite synchronization requests for event service instances
   and upsert Eventbrite event/ticket metadata while keeping DB as source of truth.
-  Event times are sent as `YYYY-MM-DDThh:mm:ssZ`. Timezone behaviour is in
-  `docs/architecture/aws-messaging.md`.
+  When the instance slug matches a landing-page JSON file, the Eventbrite
+  overview is that page's English copy. Otherwise it stays the short
+  description. Event times are sent as `YYYY-MM-DDThh:mm:ssZ`. Timezone
+  behaviour is in `docs/architecture/aws-messaging.md`.
 - DB access: RDS Proxy with IAM auth (`evolvesprouts_admin`)
 - VPC: Yes
 - Permissions: Secrets Manager read for Eventbrite token, Lambda invoke permission
