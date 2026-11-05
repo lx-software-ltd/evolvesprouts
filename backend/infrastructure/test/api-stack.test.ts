@@ -246,6 +246,82 @@ function assertInboxImportUsesDedicatedPageToken(stack: cdk.Stack): void {
   }
 }
 
+function assertEventbriteMediaUploadUrl(stack: cdk.Stack): void {
+  const uploadUrl =
+    "https://s3.amazonaws.com/eventbrite-uploader-incoming-prod/";
+  const template = Template.fromStack(stack);
+  const parameters = template.findParameters("EventbriteMediaUploadUrl");
+  const parameter = parameters.EventbriteMediaUploadUrl;
+  if (!parameter || parameter.Default !== uploadUrl) {
+    throw new Error(
+      `Expected EventbriteMediaUploadUrl default ${uploadUrl}; found ${JSON.stringify(parameter)}`,
+    );
+  }
+  const functions = template.findResources("AWS::Lambda::Function");
+  const proxy = Object.values(functions).find((resource) => {
+    const name = (resource.Properties ?? {}).FunctionName;
+    return name === "evolvesprouts-AwsApiProxyFunction";
+  });
+  if (!proxy) {
+    throw new Error(
+      "Expected Lambda FunctionName evolvesprouts-AwsApiProxyFunction",
+    );
+  }
+  const proxyVars =
+    ((proxy.Properties ?? {}).Environment ?? {}).Variables ?? {};
+  const allowed = JSON.stringify(
+    (proxyVars as Record<string, unknown>).ALLOWED_HTTP_URLS,
+  );
+  if (!allowed.includes("EventbriteMediaUploadUrl")) {
+    throw new Error(
+      `ALLOWED_HTTP_URLS must reference EventbriteMediaUploadUrl; found ${allowed}`,
+    );
+  }
+  const nested = stack.node.tryFindChild("EventbriteSync");
+  if (!(nested instanceof cdk.NestedStack)) {
+    throw new Error("Expected EventbriteSync nested stack on ApiStack");
+  }
+  const nestedTemplate = Template.fromStack(nested);
+  const nestedFunctions = nestedTemplate.findResources("AWS::Lambda::Function");
+  const processor = Object.values(nestedFunctions).find((resource) => {
+    const name = (resource.Properties ?? {}).FunctionName;
+    return name === "evolvesprouts-EventbriteSyncProcessor";
+  });
+  if (!processor) {
+    throw new Error(
+      "Expected Lambda FunctionName evolvesprouts-EventbriteSyncProcessor",
+    );
+  }
+  if ((processor.Properties ?? {}).Timeout !== 120) {
+    throw new Error(
+      `EventbriteSyncProcessor timeout must be 120; found ${JSON.stringify((processor.Properties ?? {}).Timeout)}`,
+    );
+  }
+  const processorVars =
+    ((processor.Properties ?? {}).Environment ?? {}).Variables ?? {};
+  const configured = (processorVars as Record<string, unknown>)
+    .EVENTBRITE_MEDIA_UPLOAD_URL;
+  const ref =
+    configured && typeof configured === "object"
+      ? (configured as Record<string, unknown>).Ref
+      : undefined;
+  if (typeof ref !== "string" || ref.length === 0) {
+    throw new Error(
+      `EVENTBRITE_MEDIA_UPLOAD_URL must Ref a parameter; found ${JSON.stringify(configured)}`,
+    );
+  }
+  const queues = nestedTemplate.findResources("AWS::SQS::Queue");
+  const syncQueue = Object.values(queues).find((resource) => {
+    const queueName = (resource.Properties ?? {}).QueueName;
+    return queueName === "evolvesprouts-eventbrite-sync-queue";
+  });
+  if (!syncQueue || (syncQueue.Properties ?? {}).VisibilityTimeout !== 240) {
+    throw new Error(
+      `eventbrite-sync-queue visibility must be 240; found ${JSON.stringify(syncQueue?.Properties ?? null)}`,
+    );
+  }
+}
+
 function assertEventbriteProcessorTimezone(stack: cdk.Stack): void {
   const template = Template.fromStack(stack);
   const parameters = template.findParameters("EventbriteDefaultTimezone");
@@ -697,6 +773,7 @@ function main(): void {
   assertInboxImportHasNoReservedConcurrency(stack);
   assertInboxImportUsesDedicatedPageToken(stack);
   assertEventbriteProcessorTimezone(stack);
+  assertEventbriteMediaUploadUrl(stack);
   assertSalesDailyPlanSchedule(stack);
   assertInboundInvoiceSharesReceiptRuleSet(template);
   assertFinanceReadonlyDataApi(template);

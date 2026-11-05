@@ -26,6 +26,8 @@ on:
     paths:
       - 'backend/**'
       - 'scripts/**'
+      - 'apps/public_www/src/content/landing-pages/**'
+      - 'apps/public_www/src/content/eventbrite-banners/**'
       - '.github/workflows/deploy-backend.yml'
 
 permissions:

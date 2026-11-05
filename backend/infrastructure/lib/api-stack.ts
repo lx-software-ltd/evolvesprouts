@@ -79,6 +79,7 @@ interface EventbriteSyncNestedStackProps extends cdk.NestedStackProps {
   databaseProxyEndpoint: string;
   awsProxyFunctionArn: string;
   eventbriteApiBaseUrl: string;
+  eventbriteMediaUploadUrl: string;
   eventbriteOrganizationId: string;
   eventbriteTokenSecretArn: string;
   eventbriteDefaultTimezone: string;
@@ -116,7 +117,8 @@ class EventbriteSyncNestedStack extends cdk.NestedStack {
 
     this.queue = new sqs.Queue(this, "EventbriteSyncQueue", {
       queueName: name("eventbrite-sync-queue"),
-      visibilityTimeout: cdk.Duration.seconds(120),
+      // Stay above the processor timeout so a running sync is not redelivered.
+      visibilityTimeout: cdk.Duration.seconds(240),
       deadLetterQueue: {
         queue: this.deadLetterQueue,
         maxReceiveCount: 3,
@@ -145,7 +147,7 @@ class EventbriteSyncNestedStack extends cdk.NestedStack {
     this.processorFunction = lambdaFactory.create("EventbriteSyncProcessor", {
       functionName: name("EventbriteSyncProcessor"),
       handler: "lambda/eventbrite_sync_processor/handler.lambda_handler",
-      timeout: cdk.Duration.seconds(60),
+      timeout: cdk.Duration.seconds(120),
       manageLogGroup: false,
       deadLetterQueue: this.processorLambdaDlq,
       environment: {
@@ -156,6 +158,7 @@ class EventbriteSyncNestedStack extends cdk.NestedStack {
         DATABASE_IAM_AUTH: "true",
         AWS_PROXY_FUNCTION_ARN: props.awsProxyFunctionArn,
         EVENTBRITE_API_BASE_URL: props.eventbriteApiBaseUrl,
+        EVENTBRITE_MEDIA_UPLOAD_URL: props.eventbriteMediaUploadUrl,
         EVENTBRITE_ORGANIZATION_ID: props.eventbriteOrganizationId,
         EVENTBRITE_TOKEN_SECRET_ARN: props.eventbriteTokenSecretArn,
         EVENTBRITE_DEFAULT_TIMEZONE: props.eventbriteDefaultTimezone,
@@ -1860,6 +1863,17 @@ export class ApiStack extends cdk.Stack {
         description: "Base URL for Eventbrite API.",
       }
     );
+    const eventbriteMediaUploadUrl = new cdk.CfnParameter(
+      this,
+      "EventbriteMediaUploadUrl",
+      {
+        type: "String",
+        default:
+          "https://s3.amazonaws.com/eventbrite-uploader-incoming-prod/",
+        description:
+          "Exact Eventbrite image-upload bucket URL. The sync refuses any other upload URL.",
+      }
+    );
     const eventbriteDefaultTimezone = new cdk.CfnParameter(
       this,
       "EventbriteDefaultTimezone",
@@ -2040,6 +2054,7 @@ export class ApiStack extends cdk.Stack {
       `https://${mailchimpServerPrefix.valueAsString}.api.mailchimp.com/3.0/`,
       "https://api.stripe.com/v1/",
       eventbriteApiBaseUrl.valueAsString,
+      eventbriteMediaUploadUrl.valueAsString,
       openrouterChatCompletionsUrl.valueAsString,
       "https://graph.facebook.com",
     ];
@@ -2326,6 +2341,7 @@ export class ApiStack extends cdk.Stack {
         databaseProxyEndpoint: database.proxy.endpoint,
         awsProxyFunctionArn: awsProxyFunction.functionArn,
         eventbriteApiBaseUrl: eventbriteApiBaseUrl.valueAsString,
+        eventbriteMediaUploadUrl: eventbriteMediaUploadUrl.valueAsString,
         eventbriteOrganizationId: eventbriteOrganizationId.valueAsString,
         eventbriteTokenSecretArn: eventbriteTokenSecret.valueAsString,
         eventbriteDefaultTimezone: eventbriteDefaultTimezone.valueAsString,

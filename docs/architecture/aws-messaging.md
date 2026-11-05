@@ -121,7 +121,7 @@ and DLQ support.
 ### SQS Queue: `evolvesprouts-eventbrite-sync-queue`
 
 - Subscribes to Eventbrite sync SNS topic.
-- 120 second visibility timeout.
+- 240 second visibility timeout, above the processor's 120 second timeout.
 - 3 retry attempts before DLQ.
 - KMS encryption using the shared queue key.
 
@@ -150,6 +150,29 @@ and DLQ support.
   name, or an `Etc/` zone is sent as `UTC` and logged. The payload hash
   includes that timezone, so changing it resyncs the event. Ticket
   `quantity_total` is an integer.
+- `description.html` stays the short instance or service description.
+  When `service_instances.slug` matches a file in
+  `apps/public_www/src/content/landing-pages`, the longer English copy
+  (outline, agenda, how it works, FAQ, and coach) is published as
+  structured content (`purpose=listing`, `publish=true`). The hero line
+  is left out because the summary already shows it. The call to action
+  is omitted. Invalid JSON does not fail the sync. The payload hash
+  includes that HTML only when a landing page matched, so other events
+  do not resync just because the field exists. The Lambda bundle copies
+  those JSON files to `content/landing-pages`. A matching
+  `eventbrite-banners/<slug>.png` is uploaded as the event logo. The
+  banner is the hero photo with the Evolve Sprouts tree behind it, on
+  a 2:1 canvas. The upload URL must equal `EVENTBRITE_MEDIA_UPLOAD_URL`.
+  A missing banner or a failed upload does not fail the sync. The hash
+  includes the banner checksum only when a banner is sent. When a usable
+  banner is not uploaded, the stored hash omits that checksum so the next
+  save retries. The failure log records the HTTP status and the error
+  type, not the signed upload fields.
+- A physical event with a location name and an ISO country code on its
+  geographic area gets an Eventbrite venue (created, or updated when the
+  event already has `venue_id`). Online events and locations without a
+  country code stay without a venue. The hash includes the venue only
+  when one is sent.
 - Updates `service_instances` Eventbrite sync metadata fields
   (`eventbrite_sync_status`, `eventbrite_last_*`, ticket-class map, retry count).
 

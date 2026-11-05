@@ -6,10 +6,10 @@ import argparse
 import hashlib
 import logging
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 _DEFAULT_MAX_CACHE_ENTRIES = 3
@@ -22,6 +22,41 @@ def _ensure_python_version() -> None:
 
 def _run_pip(command: list[str], cwd: Path, env: dict[str, str]) -> None:
     subprocess.run(command, check=True, cwd=cwd, env=env)
+
+
+def copy_landing_pages(source_root: Path, output_dir: Path) -> None:
+    """Copy public landing-page JSON and Eventbrite banners into the bundle.
+
+    Eventbrite sync reads these files by instance slug. ``extraCopyPaths``
+    cannot leave ``backend/``. CDK stages this one bundle for every
+    function, so the banners are included in each function's files.
+    """
+    content = source_root.parent / "apps" / "public_www" / "src" / "content"
+    _copy_matching_files(
+        content / "landing-pages",
+        output_dir / "content" / "landing-pages",
+        ".json",
+    )
+    _copy_matching_files(
+        content / "eventbrite-banners",
+        output_dir / "content" / "eventbrite-banners",
+        ".png",
+    )
+
+
+def _copy_matching_files(source: Path, destination: Path, suffix: str) -> None:
+    if not source.is_dir():
+        raise FileNotFoundError(f"Missing content directory: {source}")
+    files = sorted(
+        path
+        for path in source.glob(f"*{suffix}")
+        if path.is_file() and path.suffix == suffix
+    )
+    if not files:
+        raise FileNotFoundError(f"No {suffix} files in {source}")
+    destination.mkdir(parents=True, exist_ok=True)
+    for path in files:
+        shutil.copy2(path, destination / path.name)
 
 
 def _copy_tree(source: Path, destination: Path) -> None:
@@ -220,6 +255,7 @@ def build_bundle(
 
     _copy_tree(source_root / "lambda", output_dir / "lambda")
     _copy_tree(source_root / "src", output_dir / "src")
+    copy_landing_pages(source_root, output_dir)
     shared_config = source_root.parent / "shared" / "config"
     if shared_config.is_dir():
         _copy_tree(shared_config, output_dir / "shared" / "config")

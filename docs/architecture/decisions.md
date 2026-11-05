@@ -155,7 +155,9 @@ Lambdas or NAT Gateway.
   endpoint).
 - Client helpers in `backend/src/app/services/aws_proxy.py`:
   - `invoke(service, action, params)` for AWS calls
-  - `http_invoke(method, url, headers, body, timeout)` for HTTP calls
+  - `http_invoke(method, url, headers, body, timeout)` for HTTP calls.
+    `body_bytes` sends a file as base64, capped at 4 MB, and cannot be
+    combined with `body`.
 - Current consumers include Cognito admin operations, Turnstile verification,
   Mailchimp sync, and expense invoice parsing (OpenRouter).
 

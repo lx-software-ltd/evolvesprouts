@@ -1,10 +1,19 @@
-import { describe, expect, it } from 'vitest';
+import { copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import sharp from 'sharp';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  collectEventbriteBannerErrors,
   collectFamilyConsultationKeyErrors,
   collectLandingPageHeroChipErrors,
   collectLocaleKeyErrors,
 } from '../../scripts/validate-content.mjs';
+
+const APP_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 describe('locale content key contract', () => {
   it('accepts lowerCamelCase, meta keys, and kebab slugs', () => {
@@ -96,5 +105,85 @@ describe('family consultations key contract', () => {
     );
     expect(errors.some((error) => error.includes('locationName'))).toBe(true);
     expect(errors.some((error) => error.includes('address_url'))).toBe(true);
+  });
+});
+
+describe('eventbrite banners', () => {
+  let directory = '';
+
+  afterEach(async () => {
+    if (directory) {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('accepts a 2:1 png named for the landing page', async () => {
+    directory = await mkdtemp(path.join(tmpdir(), 'eb-banner-'));
+    const pages = path.join(directory, 'pages');
+    const banners = path.join(directory, 'banners');
+    await mkdir(pages);
+    await mkdir(banners);
+    await writeFile(path.join(pages, 'sample.json'), '{}');
+    const png = await sharp({
+      create: { width: 4, height: 2, channels: 3, background: '#ffffff' },
+    })
+      .png()
+      .toBuffer();
+    await writeFile(path.join(banners, 'sample.png'), png);
+
+    const errors: string[] = [];
+    await collectEventbriteBannerErrors(pages, banners, errors);
+
+    expect(errors).toEqual([]);
+  });
+
+  it('rejects a missing banner and a banner that is not 2:1', async () => {
+    directory = await mkdtemp(path.join(tmpdir(), 'eb-banner-'));
+    const pages = path.join(directory, 'pages');
+    const banners = path.join(directory, 'banners');
+    await mkdir(pages);
+    await mkdir(banners);
+    await writeFile(path.join(pages, 'missing.json'), '{}');
+    await writeFile(path.join(pages, 'square.json'), '{}');
+    const square = await sharp({
+      create: { width: 2, height: 2, channels: 3, background: '#ffffff' },
+    })
+      .png()
+      .toBuffer();
+    await writeFile(path.join(banners, 'square.png'), square);
+
+    const errors: string[] = [];
+    await collectEventbriteBannerErrors(pages, banners, errors);
+
+    expect(errors).toEqual([
+      'missing.json: missing Eventbrite banner missing.png',
+      'square.json: Eventbrite banner must be a 2:1 PNG',
+    ]);
+  });
+
+  it('rejects a banner that does not match the current hero', async () => {
+    directory = await mkdtemp(path.join(tmpdir(), 'eb-banner-'));
+    const pages = path.join(directory, 'pages');
+    const banners = path.join(directory, 'banners');
+    await mkdir(pages);
+    await mkdir(banners);
+    const filename = 'nov-2026-mealtimes-workshop.json';
+    await copyFile(
+      path.join(APP_ROOT, 'src', 'content', 'landing-pages', filename),
+      path.join(pages, filename),
+    );
+    const stale = await sharp({
+      create: { width: 4, height: 2, channels: 3, background: '#ffffff' },
+    })
+      .png()
+      .toBuffer();
+    await writeFile(path.join(banners, 'nov-2026-mealtimes-workshop.png'), stale);
+
+    const errors: string[] = [];
+    await collectEventbriteBannerErrors(pages, banners, errors);
+
+    expect(errors).toEqual([
+      'nov-2026-mealtimes-workshop.json: Eventbrite banner is stale; run npm run images:eventbrite-banners',
+    ]);
   });
 });

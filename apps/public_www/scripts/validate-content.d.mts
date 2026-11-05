@@ -16,3 +16,9 @@ export function collectFamilyConsultationKeyErrors(
   errors: string[],
   keyPath?: string,
 ): void;
+
+export function collectEventbriteBannerErrors(
+  landingPagesDir: string,
+  bannerDir: string,
+  errors: string[],
+): Promise<void>;
