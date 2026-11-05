@@ -15,15 +15,12 @@ _WANTS_HIDDEN = {InstanceStatus.CANCELLED, InstanceStatus.COMPLETED}
 _PUBLIC_REMOTE = {"live", "started"}
 _CLOSED_REMOTE = {"ended", "completed", "canceled"}
 
-UNPUBLISH_NOTICE = (
-    "Eventbrite would not unpublish this event because it has orders. "
-    "Tickets stay on sale until this is handled in Eventbrite."
-)
 UNKNOWN_STATUS_NOTICE = "Eventbrite event status was missing, so publish was skipped."
+_UNPUBLISH_FALLBACK = "Eventbrite rejected the request."
 
 
 class UnpublishRejected(Exception):
-    """Eventbrite refused to unpublish. The listing stays on sale."""
+    """Eventbrite refused to unpublish. The listing stays published."""
 
 
 def publish_action(instance_status: Any, remote_status: str) -> str:
@@ -42,12 +39,75 @@ def publish_action(instance_status: Any, remote_status: str) -> str:
     return "none"
 
 
+def is_closed_remote(remote_status: str) -> bool:
+    return remote_status.strip().lower() in _CLOSED_REMOTE
+
+
+def eventbrite_error_detail(message: str) -> str:
+    """Return the Eventbrite sentence from an API error, or the whole message."""
+    text = message.strip()
+    marker = "): "
+    index = text.rfind(marker)
+    if index != -1:
+        text = text[index + len(marker) :].strip()
+    return text or _UNPUBLISH_FALLBACK
+
+
+def unpublish_notice(instance_status: Any, eventbrite_message: str) -> str:
+    detail = eventbrite_error_detail(eventbrite_message)
+    lead = f"Eventbrite would not unpublish this event: {detail}"
+    if instance_status == InstanceStatus.COMPLETED:
+        return f"{lead} A paid event can be unpublished after it is paid out."
+    return f"{lead} The listing stays published until this is handled in Eventbrite."
+
+
 def closed_event_notice(remote_status: str) -> str:
     status = remote_status.strip().lower()
     return (
         f"Eventbrite event is {status} and cannot be published again. "
         "A new Eventbrite event is required."
     )
+
+
+def closed_remote_notice(instance_status: Any, remote_status: str) -> str:
+    if instance_status in _WANTS_PUBLIC:
+        return closed_event_notice(remote_status)
+    status = remote_status.strip().lower() or "closed"
+    return f"Eventbrite event is {status}, so this sync left it unchanged."
+
+
+def notice_for_closed_remote(
+    *,
+    instance_status: Any,
+    remote_status: str,
+    event_id: str,
+) -> str:
+    """Notice for a remote event that can no longer be edited."""
+    notice = closed_remote_notice(instance_status, remote_status)
+    logger.warning(
+        "Eventbrite event is closed, so updates were skipped",
+        extra={
+            "event_id": event_id,
+            "remote_status": remote_status.strip().lower(),
+        },
+    )
+    return notice
+
+
+def guard_unpublish(call: Callable[[str, str], Any]) -> Callable[[str, str], Any]:
+    """Turn a 400 from unpublish into UnpublishRejected. Other errors pass through."""
+
+    def _call(method: str, path: str) -> Any:
+        from app.services.eventbrite_sync import EventbriteSyncError
+
+        try:
+            return call(method, path)
+        except EventbriteSyncError as exc:
+            if path.endswith("/unpublish/") and "(400)" in str(exc):
+                raise UnpublishRejected(str(exc)) from exc
+            raise
+
+    return _call
 
 
 def apply_publish_state(
@@ -65,12 +125,13 @@ def apply_publish_state(
     if action == "unpublish":
         try:
             call("POST", f"/events/{event_id}/unpublish/")
-        except UnpublishRejected:
+        except UnpublishRejected as exc:
+            detail = eventbrite_error_detail(str(exc))
             logger.warning(
                 "Eventbrite unpublish was rejected",
-                extra={"event_id": event_id},
+                extra={"event_id": event_id, "eventbrite_message": detail},
             )
-            return UNPUBLISH_NOTICE
+            return unpublish_notice(instance_status, detail)
         return None
     if action == "closed":
         logger.warning(

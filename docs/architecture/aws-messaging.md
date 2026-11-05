@@ -172,11 +172,17 @@ and DLQ support.
 - Publish follows the remote event status. An open or full instance
   publishes only a `draft`. A live or started event is updated and left
   published. A cancelled or completed instance unpublishes a live or
-  started event. If Eventbrite rejects that unpublish because the event
-  has orders, the sync stays `synced` and `eventbrite_last_error` says
-  tickets stay on sale. An ended, completed, or canceled remote event is
-  not published again; the same field says a new Eventbrite event is
-  required. A missing remote status skips publish and records that.
+  started event. A 400 from unpublish stays `synced`. The log and
+  `eventbrite_last_error` quote Eventbrite's message. A completed
+  instance also says a paid event can be unpublished after it is paid
+  out. Any other instance says the listing stays published. Any other
+  unpublish status fails the sync. An ended, completed, or canceled
+  remote event is left unchanged: no event, venue, image, or ticket
+  write. An open or full instance records that a new Eventbrite event
+  is required. A hidden instance records that the sync left it
+  unchanged. A missing remote status still updates the event and skips
+  publish. Admin instance responses include `eventbrite_last_error`,
+  and the instance editor shows it under the Eventbrite status.
 - A physical event with a location name and an ISO country code on its
   geographic area gets an Eventbrite venue (created, or updated when the
   event already has `venue_id`). Online events and locations without a

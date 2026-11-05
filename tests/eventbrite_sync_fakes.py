@@ -98,12 +98,17 @@ def _install_sync_fakes(
     instance: _Instance,
     *,
     remote_status: str = "draft",
+    fail_paths: dict[str, Exception] | None = None,
 ) -> list[dict[str, Any]]:
     calls: list[dict[str, Any]] = []
+    failures = fail_paths or {}
 
     def _request(**kwargs: Any) -> dict[str, Any]:
         calls.append(kwargs)
         path = str(kwargs["path"])
+        for suffix, error in failures.items():
+            if path.endswith(suffix):
+                raise error
         if path.startswith("/organizations/") and path.endswith("/events/"):
             return {
                 "id": "1001",

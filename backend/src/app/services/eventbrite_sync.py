@@ -30,9 +30,17 @@ from app.services.eventbrite_logo import (
     eventbrite_banner_sha256,
     upload_event_logo,
 )
-from app.services.eventbrite_publish import UnpublishRejected, apply_publish_state
+from app.services.eventbrite_publish import (
+    apply_publish_state,
+    guard_unpublish,
+    is_closed_remote,
+    notice_for_closed_remote,
+)
 from app.services.eventbrite_tickets import build_ticket_class_payload
-from app.services.eventbrite_venue import eventbrite_venue_body
+from app.services.eventbrite_venue import (
+    attach_eventbrite_venue,
+    eventbrite_venue_body,
+)
 from app.services.secrets import get_secret_json
 from app.utils.logging import get_logger
 
@@ -98,39 +106,58 @@ def sync_instance_to_eventbrite(
             path=f"/events/{instance.eventbrite_event_id}/",
             config=config,
         )
-        venue_id = _attach_venue(
-            instance,
-            config=config,
-            venue_id=str(remote.get("venue_id") or "").strip() or None,
-        )
-        logo_id, payload_hash = upload_event_logo(
-            instance=instance,
-            token=config.token,
-            api_base_url=_eventbrite_api_base_url(),
-            payload_hash=payload_hash,
-            hash_without_banner=_compute_instance_hash(instance, include_banner=False),
-        )
-        _update_event(
-            instance,
-            config=config,
-            venue_id=venue_id,
-            logo_id=logo_id,
-        )
-        _sync_structured_overview(instance, config=config)
-        ticket_map = _sync_ticket_classes(instance, config=config)
-        notice = apply_publish_state(
-            instance_status=instance.status,
-            remote_status=str(remote.get("status") or ""),
-            event_id=str(instance.eventbrite_event_id),
-            call=_eventbrite_caller(config),
-        )
-
-        instance.eventbrite_ticket_class_map = ticket_map
-        instance.eventbrite_last_payload_hash = payload_hash
-        instance.eventbrite_last_synced_at = datetime.now(UTC)
-        instance.eventbrite_last_error = notice
-        instance.eventbrite_retry_count = 0
-        instance.eventbrite_sync_status = EventbriteSyncStatus.SYNCED
+        remote_status = str(remote.get("status") or "")
+        event_id = str(instance.eventbrite_event_id)
+        if is_closed_remote(remote_status):
+            _mark_eventbrite_synced(
+                instance,
+                payload_hash=payload_hash,
+                notice=notice_for_closed_remote(
+                    instance_status=instance.status,
+                    remote_status=remote_status,
+                    event_id=event_id,
+                ),
+            )
+        else:
+            venue_id = attach_eventbrite_venue(
+                instance,
+                venue_id=str(remote.get("venue_id") or "").strip() or None,
+                organization_id=config.organization_id,
+                call=lambda **kwargs: _eventbrite_call(config=config, **kwargs),
+                missing_id_error=EventbriteSyncError,
+            )
+            logo_id, payload_hash = upload_event_logo(
+                instance=instance,
+                token=config.token,
+                api_base_url=_eventbrite_api_base_url(),
+                payload_hash=payload_hash,
+                hash_without_banner=_compute_instance_hash(
+                    instance, include_banner=False
+                ),
+            )
+            _update_event(
+                instance,
+                config=config,
+                venue_id=venue_id,
+                logo_id=logo_id,
+            )
+            _sync_structured_overview(instance, config=config)
+            ticket_map = _sync_ticket_classes(instance, config=config)
+            _mark_eventbrite_synced(
+                instance,
+                payload_hash=payload_hash,
+                notice=apply_publish_state(
+                    instance_status=instance.status,
+                    remote_status=remote_status,
+                    event_id=event_id,
+                    call=guard_unpublish(
+                        lambda method, path: _eventbrite_call(
+                            method=method, path=path, config=config
+                        )
+                    ),
+                ),
+                ticket_map=ticket_map,
+            )
         session.commit()
         logger.info(
             "Eventbrite sync succeeded",
@@ -276,47 +303,20 @@ def _sync_ticket_classes(instance: Any, *, config: _EventbriteConfig) -> dict[st
     return next_map
 
 
-def _eventbrite_caller(config: _EventbriteConfig) -> Any:
-    def _call(method: str, path: str) -> dict[str, Any]:
-        try:
-            return _eventbrite_call(method=method, path=path, config=config)
-        except EventbriteSyncError as exc:
-            if path.endswith("/unpublish/") and "(400)" in str(exc):
-                raise UnpublishRejected(str(exc)) from exc
-            raise
-
-    return _call
-
-
-def _attach_venue(
+def _mark_eventbrite_synced(
     instance: Any,
     *,
-    config: _EventbriteConfig,
-    venue_id: str | None,
-) -> str | None:
-    """Create or update the Eventbrite venue and return its id."""
-    body = eventbrite_venue_body(instance)
-    if body is None:
-        return None
-    wrapped = {"venue": body}
-    if venue_id:
-        _eventbrite_call(
-            method="POST",
-            path=f"/venues/{venue_id}/",
-            config=config,
-            payload=wrapped,
-        )
-        return venue_id
-    created = _eventbrite_call(
-        method="POST",
-        path=f"/organizations/{config.organization_id}/venues/",
-        config=config,
-        payload=wrapped,
-    )
-    created_id = str(created.get("id") or "").strip()
-    if not created_id:
-        raise EventbriteSyncError("Eventbrite venue create response missing id")
-    return created_id
+    payload_hash: str,
+    notice: str | None,
+    ticket_map: dict[str, str] | None = None,
+) -> None:
+    if ticket_map is not None:
+        instance.eventbrite_ticket_class_map = ticket_map
+    instance.eventbrite_last_payload_hash = payload_hash
+    instance.eventbrite_last_synced_at = datetime.now(UTC)
+    instance.eventbrite_last_error = notice
+    instance.eventbrite_retry_count = 0
+    instance.eventbrite_sync_status = EventbriteSyncStatus.SYNCED
 
 
 def _sync_structured_overview(instance: Any, *, config: _EventbriteConfig) -> None:

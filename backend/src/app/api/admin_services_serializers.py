@@ -8,7 +8,6 @@ from uuid import UUID
 
 from app.api.admin_entities_helpers import serialize_tag_ref
 from app.api.instance_capacity import compute_capacity_left_effective
-
 from app.db.models import (
     DiscountCode,
     Enrollment,
@@ -224,6 +223,14 @@ def _capacity_enrollment_count_from_loaded(instance: ServiceInstance) -> int:
     return sum(1 for row in enrollments if row.status in CAPACITY_ENROLLMENT_STATUSES)
 
 
+def _eventbrite_last_error(instance: ServiceInstance) -> str | None:
+    raw = instance.eventbrite_last_error
+    if not isinstance(raw, str):
+        return None
+    text = raw.strip()
+    return text or None
+
+
 def serialize_instance(
     instance: ServiceInstance,
     *,
@@ -298,6 +305,7 @@ def serialize_instance(
             else EventbriteSyncStatus.PENDING.value
         ),
         "eventbrite_event_url": instance.eventbrite_event_url,
+        "eventbrite_last_error": _eventbrite_last_error(instance),
         "external_url": instance.external_url,
         "partner_organizations": [
             {

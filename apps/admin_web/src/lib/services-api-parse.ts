@@ -295,6 +295,7 @@ export function parseInstance(value: unknown): ServiceInstance {
     waitlistEnabled: asBoolean(item.waitlist_enabled, false),
     eventbriteSyncStatus: normalizeEventbriteSyncStatusFromApi(item.eventbrite_sync_status),
     eventbriteEventUrl: parseHttpUrl(item.eventbrite_event_url),
+    eventbriteLastError: asNullableString(item.eventbrite_last_error)?.trim() || null,
     externalUrl: asNullableString(item.external_url),
     partnerOrganizations: Array.isArray(item.partner_organizations)
       ? item.partner_organizations

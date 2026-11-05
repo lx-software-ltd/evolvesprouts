@@ -311,6 +311,8 @@ export interface ServiceInstance {
   eventbriteSyncStatus: EventbriteSyncStatus;
   /** Public Eventbrite event URL when sync has stored one. */
   eventbriteEventUrl: string | null;
+  /** Sync failure, or a notice when Eventbrite stayed published or was left unchanged. */
+  eventbriteLastError: string | null;
   externalUrl: string | null;
   partnerOrganizations: PartnerOrgRef[];
   instructorId: string | null;

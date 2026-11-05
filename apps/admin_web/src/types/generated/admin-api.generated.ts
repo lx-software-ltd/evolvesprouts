@@ -8505,6 +8505,8 @@ export interface components {
              * @description Public Eventbrite event URL written by the sync processor. Null until a create or update stores a URL. Distinct from `external_url`.
              */
             readonly eventbrite_event_url?: string | null;
+            /** @description Last Eventbrite sync failure, or a notice when the row is synced but Eventbrite would not publish or unpublish. Null when the last sync had nothing to report. Blank stored text is returned as null. */
+            readonly eventbrite_last_error?: string | null;
             /**
              * Format: uri
              * @description Optional external registration or info URL (http/https only). Distinct from Eventbrite sync URLs on the instance.

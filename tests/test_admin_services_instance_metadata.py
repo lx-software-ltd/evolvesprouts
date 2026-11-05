@@ -757,3 +757,14 @@ def test_serialize_instance_includes_eventbrite_event_url() -> None:
         payload["eventbrite_event_url"]
         == "https://www.eventbrite.com/e/mealtime-workshop"
     )
+    assert payload["eventbrite_last_error"] is None
+
+    instance.eventbrite_last_error = (
+        "Eventbrite would not unpublish this event: orders exist."
+    )
+    payload = serialize_instance(instance)
+    assert payload["eventbrite_last_error"] == instance.eventbrite_last_error
+
+    instance.eventbrite_last_error = "  "
+    payload = serialize_instance(instance)
+    assert payload["eventbrite_last_error"] is None

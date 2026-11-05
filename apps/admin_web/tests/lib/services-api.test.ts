@@ -458,6 +458,29 @@ describe('services-api', () => {
     expect(parsed.parentServiceKey).toBe('family-consultation-essentials');
     expect(parsed.eventbriteSyncStatus).toBe('skipped');
     expect(parsed.eventbriteEventUrl).toBeNull();
+    expect(parsed.eventbriteLastError).toBeNull();
+  });
+
+  it('parseInstance keeps a trimmed Eventbrite notice and drops other types', () => {
+    const parsed = parseInstance({
+      id: 'inst-eb-notice',
+      service_id: 'svc-1',
+      slug: 'mealtime-workshop',
+      resolved_slug: 'mealtime-workshop',
+      status: 'open',
+      eventbrite_last_error: '  Eventbrite would not unpublish this event.  ',
+    });
+    expect(parsed.eventbriteLastError).toBe('Eventbrite would not unpublish this event.');
+
+    const ignored = parseInstance({
+      id: 'inst-eb-notice-bad',
+      service_id: 'svc-1',
+      slug: 'mealtime-workshop',
+      resolved_slug: 'mealtime-workshop',
+      status: 'open',
+      eventbrite_last_error: 400,
+    });
+    expect(ignored.eventbriteLastError).toBeNull();
   });
 
   it('parseInstance keeps an http Eventbrite event URL', () => {
