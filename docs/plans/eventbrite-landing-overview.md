@@ -5,7 +5,7 @@
 
 ## Goal
 
-When a service instance slug matches a public landing-page file, the Eventbrite `description.html` is built from that page's English copy (hero, outline, agenda, how it works, FAQ, and coach). The payload hash includes that HTML so a JSON edit resyncs on the next save. The Lambda bundle includes the JSON files.
+When a service instance slug matches a public landing-page file, Eventbrite structured content is that page's English copy (outline, agenda, how it works, FAQ, and coach). `description.html` stays the short summary. A physical location with a country code is sent as the venue. The payload hash gains the overview or venue only when one is sent. The Lambda bundle includes the JSON files.
 
 ## Non-goals
 
@@ -18,6 +18,8 @@ When a service instance slug matches a public landing-page file, the Eventbrite 
 ## Files
 
 - `backend/src/app/services/eventbrite_landing_description.py`
+- `backend/src/app/services/eventbrite_venue.py`
+- `backend/src/app/db/repositories/eventbrite_instance.py`
 - `backend/src/app/services/eventbrite_sync.py`
 - `backend/scripts/build_lambda_bundle.py`
 - `tests/test_eventbrite_landing_description.py`

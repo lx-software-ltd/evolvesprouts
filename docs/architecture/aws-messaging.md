@@ -150,14 +150,22 @@ and DLQ support.
   name, or an `Etc/` zone is sent as `UTC` and logged. The payload hash
   includes that timezone, so changing it resyncs the event. Ticket
   `quantity_total` is an integer.
-- When `service_instances.slug` matches a file in
-  `apps/public_www/src/content/landing-pages`, `description.html` is the
-  English landing-page overview (hero, outline, agenda, how it works, FAQ,
-  and coach). The call to action is omitted. Any other slug keeps the short
-  instance or service description. Invalid JSON does not fail the sync.
-  The payload hash includes the rendered HTML. The Lambda bundle copies
+- `description.html` stays the short instance or service description.
+  When `service_instances.slug` matches a file in
+  `apps/public_www/src/content/landing-pages`, the longer English copy
+  (outline, agenda, how it works, FAQ, and coach) is published as
+  structured content (`purpose=listing`, `publish=true`). The hero line
+  is left out because the summary already shows it. The call to action
+  is omitted. Invalid JSON does not fail the sync. The payload hash
+  includes that HTML only when a landing page matched, so other events
+  do not resync just because the field exists. The Lambda bundle copies
   those JSON files to `content/landing-pages`. The header image is not
   uploaded.
+- A physical event with a location name and an ISO country code on its
+  geographic area gets an Eventbrite venue (created, or updated when the
+  event already has `venue_id`). Online events and locations without a
+  country code stay without a venue. The hash includes the venue only
+  when one is sent.
 - Updates `service_instances` Eventbrite sync metadata fields
   (`eventbrite_sync_status`, `eventbrite_last_*`, ticket-class map, retry count).
 

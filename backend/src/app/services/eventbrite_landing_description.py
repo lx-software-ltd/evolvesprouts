@@ -17,22 +17,56 @@ _ENV_LANDING_PAGES_DIR = "EVENTBRITE_LANDING_PAGES_DIR"
 _MAX_HTML_CHARS = 60000
 
 
-def eventbrite_description_html(instance: Any) -> str:
-    """Landing-page overview, or the short instance description."""
-    short = _short_description(instance)
+def eventbrite_summary_text(instance: Any) -> str:
+    """Short text Eventbrite shows above the overview."""
+    return _short_description(instance)
+
+
+def eventbrite_overview_html(instance: Any) -> str:
+    """Structured-content HTML, or empty when no landing page matches."""
     page = _load_matching_page(instance)
     if page is None:
-        return short
+        return ""
     rendered = _render_page(page).strip()
     if not rendered:
-        return short
+        return ""
     if len(rendered) > _MAX_HTML_CHARS:
         logger.warning(
             "Landing page overview is too long for Eventbrite",
             extra={"slug": _instance_slug(instance), "length": len(rendered)},
         )
-        return short
+        return ""
     return rendered
+
+
+def structured_content_payload(html_body: str) -> dict[str, Any]:
+    """Body for ``POST /events/{id}/structured_content/{version}/``."""
+    return {
+        "modules": [
+            {
+                "type": "text",
+                "data": {
+                    "body": {
+                        "alignment": "left",
+                        "text": html_body,
+                        "type": "text",
+                    }
+                },
+            }
+        ],
+        "publish": True,
+        "purpose": "listing",
+    }
+
+
+def next_structured_content_version(current: dict[str, Any]) -> int:
+    """Version to publish. Eventbrite starts at 1 and only accepts a new one."""
+    raw = current.get("page_version_number")
+    try:
+        version = int(raw or 0)
+    except (TypeError, ValueError):
+        version = 0
+    return max(version, 0) + 1
 
 
 def _short_description(instance: Any) -> str:
@@ -68,7 +102,7 @@ def _landing_pages_dir() -> Path | None:
         return None
 
     module_path = Path(__file__).resolve()
-    candidates = [Path("/var/task/content/landing-pages")]
+    candidates = []
     if len(module_path.parents) > 3:
         candidates.append(module_path.parents[3] / "content" / "landing-pages")
     if len(module_path.parents) > 4:
@@ -125,19 +159,19 @@ def _load_en_page(path: Path, slug: str) -> dict[str, Any] | None:
 
 
 def _render_page(page: dict[str, Any]) -> str:
+    """Skip the hero. Eventbrite already shows that sentence as the summary."""
     parts = [
-        _paragraphs(_text(_mapping(page.get("hero")).get("description"))),
         _section(_mapping(page.get("outline"))),
         _section(_mapping(page.get("description"))),
         _section(_mapping(page.get("details"))),
-        _section(_mapping(page.get("faq")), title_key="title"),
+        _section(_mapping(page.get("faq"))),
         _coach(_mapping(page.get("coach"))),
     ]
     return "".join(part for part in parts if part)
 
 
-def _section(block: dict[str, Any], *, title_key: str = "title") -> str:
-    title = _text(block.get(title_key))
+def _section(block: dict[str, Any]) -> str:
+    title = _text(block.get("title"))
     body = _paragraphs(_text(block.get("description")))
     items = _item_list(block.get("items"))
     heading = f"<h2>{html.escape(title)}</h2>" if title else ""

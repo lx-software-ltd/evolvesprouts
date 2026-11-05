@@ -906,9 +906,11 @@ their primary responsibilities.
 - Trigger: SQS queue (`evolvesprouts-eventbrite-sync-queue`)
 - Purpose: process async Eventbrite synchronization requests for event service instances
   and upsert Eventbrite event/ticket metadata while keeping DB as source of truth.
-  When the instance slug matches a landing-page JSON file, the Eventbrite
-  overview is that page's English copy. Otherwise it stays the short
-  description. Event times are sent as `YYYY-MM-DDThh:mm:ssZ`. Timezone
+  When the instance slug matches a landing-page JSON file, that page's
+  English copy is published as Eventbrite structured content. The short
+  description stays the summary. A physical location with a country code
+  is sent as the venue. Event times are sent as `YYYY-MM-DDThh:mm:ssZ`.
+  Timezone
   behaviour is in `docs/architecture/aws-messaging.md`.
 - DB access: RDS Proxy with IAM auth (`evolvesprouts_admin`)
 - VPC: Yes

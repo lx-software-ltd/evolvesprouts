@@ -20,9 +20,15 @@ from app.db.models import (
     ServiceDeliveryMode,
     ServiceType,
 )
-from app.db.repositories import ServiceInstanceRepository
+from app.db.repositories.eventbrite_instance import load_instance_for_eventbrite_sync
 from app.services.eventbrite_client import EventbriteApiError, eventbrite_request
-from app.services.eventbrite_landing_description import eventbrite_description_html
+from app.services.eventbrite_landing_description import (
+    eventbrite_overview_html,
+    eventbrite_summary_text,
+    next_structured_content_version,
+    structured_content_payload,
+)
+from app.services.eventbrite_venue import eventbrite_venue_body
 from app.services.secrets import get_secret_json
 from app.utils.logging import get_logger
 
@@ -49,8 +55,7 @@ def sync_instance_to_eventbrite(
     instance_id: UUID,
 ) -> dict[str, Any]:
     """Create or update one Eventbrite event from a DB instance."""
-    repository = ServiceInstanceRepository(session)
-    instance = repository.get_by_id_with_details(instance_id)
+    instance = load_instance_for_eventbrite_sync(session, instance_id)
     if instance is None:
         raise EventbriteSyncError("Instance not found")
     if instance.service is None:
@@ -84,7 +89,9 @@ def sync_instance_to_eventbrite(
         if instance.eventbrite_event_id is None:
             raise EventbriteSyncError("Eventbrite event id is missing after create")
 
-        _update_event(instance, config=config)
+        venue_id = _attach_venue(instance, config=config)
+        _update_event(instance, config=config, venue_id=venue_id)
+        _sync_structured_overview(instance, config=config)
         ticket_map = _sync_ticket_classes(instance, config=config)
         _apply_publish_state(instance, config=config)
 
@@ -177,11 +184,16 @@ def _create_event(
     return event_id, _extract_event_url(response)
 
 
-def _update_event(instance: Any, *, config: _EventbriteConfig) -> None:
+def _update_event(
+    instance: Any,
+    *,
+    config: _EventbriteConfig,
+    venue_id: str | None,
+) -> None:
     event_id = str(instance.eventbrite_event_id or "").strip()
     if not event_id:
         raise EventbriteSyncError("Eventbrite event id is required for update")
-    body = {"event": _build_event_payload(instance)}
+    body = {"event": _build_event_payload(instance, venue_id=venue_id)}
     response = _eventbrite_call(
         method="POST",
         path=f"/events/{event_id}/",
@@ -246,7 +258,70 @@ def _apply_publish_state(instance: Any, *, config: _EventbriteConfig) -> None:
         )
 
 
-def _build_event_payload(instance: Any) -> dict[str, Any]:
+def _attach_venue(instance: Any, *, config: _EventbriteConfig) -> str | None:
+    """Create or update the Eventbrite venue and return its id."""
+    body = eventbrite_venue_body(instance)
+    if body is None:
+        return None
+    event_id = str(instance.eventbrite_event_id or "").strip()
+    if not event_id:
+        raise EventbriteSyncError("Eventbrite event id is required for a venue")
+    current = _eventbrite_call(
+        method="GET",
+        path=f"/events/{event_id}/",
+        config=config,
+    )
+    venue_id = str(current.get("venue_id") or "").strip()
+    wrapped = {"venue": body}
+    if venue_id:
+        _eventbrite_call(
+            method="POST",
+            path=f"/venues/{venue_id}/",
+            config=config,
+            payload=wrapped,
+        )
+        return venue_id
+    created = _eventbrite_call(
+        method="POST",
+        path=f"/organizations/{config.organization_id}/venues/",
+        config=config,
+        payload=wrapped,
+    )
+    created_id = str(created.get("id") or "").strip()
+    if not created_id:
+        raise EventbriteSyncError("Eventbrite venue create response missing id")
+    return created_id
+
+
+def _sync_structured_overview(instance: Any, *, config: _EventbriteConfig) -> None:
+    """Publish the landing-page overview as structured content."""
+    overview = eventbrite_overview_html(instance)
+    if not overview:
+        return
+    event_id = str(instance.eventbrite_event_id or "").strip()
+    if not event_id:
+        raise EventbriteSyncError("Eventbrite event id is required for the overview")
+    path = f"/events/{event_id}/structured_content/?purpose=listing"
+    try:
+        current = _eventbrite_call(method="GET", path=path, config=config)
+    except EventbriteSyncError as exc:
+        if "(404)" not in str(exc):
+            raise
+        current = {}
+    version = next_structured_content_version(current)
+    _eventbrite_call(
+        method="POST",
+        path=f"/events/{event_id}/structured_content/{version}/",
+        config=config,
+        payload=structured_content_payload(overview),
+    )
+
+
+def _build_event_payload(
+    instance: Any,
+    *,
+    venue_id: str | None = None,
+) -> dict[str, Any]:
     ordered_slots = sorted(instance.session_slots, key=lambda item: item.sort_order)
     if not ordered_slots:
         raise EventbriteSyncError("Event instances require at least one session slot")
@@ -258,7 +333,7 @@ def _build_event_payload(instance: Any) -> dict[str, Any]:
     title = (instance.title or instance.service.title or "").strip()
     if not title:
         raise EventbriteSyncError("Event title is required")
-    description = eventbrite_description_html(instance)
+    description = eventbrite_summary_text(instance)
     if not description:
         description = title
 
@@ -278,6 +353,8 @@ def _build_event_payload(instance: Any) -> dict[str, Any]:
         "online_event": resolved_delivery_mode == ServiceDeliveryMode.ONLINE,
         "listed": True,
     }
+    if venue_id:
+        payload["venue_id"] = venue_id
     return payload
 
 
@@ -319,7 +396,6 @@ def _compute_instance_hash(instance: Any) -> str:
         "service_id": str(instance.service_id),
         "title": instance.title,
         "description": instance.description,
-        "description_html": eventbrite_description_html(instance),
         "status": instance.status.value,
         "delivery_mode": instance.delivery_mode.value
         if instance.delivery_mode
@@ -347,6 +423,12 @@ def _compute_instance_hash(instance: Any) -> str:
         ],
         "timezone": _eventbrite_timezone_name(),
     }
+    overview = eventbrite_overview_html(instance)
+    if overview:
+        payload["overview_html"] = overview
+    venue = eventbrite_venue_body(instance)
+    if venue is not None:
+        payload["venue"] = venue
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return sha256(encoded).hexdigest()
 
