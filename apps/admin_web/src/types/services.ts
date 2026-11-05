@@ -309,6 +309,8 @@ export interface ServiceInstance {
   waitlistEnabled: boolean;
   /** Eventbrite async publish pipeline state from admin instance payloads. */
   eventbriteSyncStatus: EventbriteSyncStatus;
+  /** Public Eventbrite event URL when sync has stored one. */
+  eventbriteEventUrl: string | null;
   externalUrl: string | null;
   partnerOrganizations: PartnerOrgRef[];
   instructorId: string | null;

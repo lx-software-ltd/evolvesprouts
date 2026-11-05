@@ -297,6 +297,7 @@ def serialize_instance(
             if instance.eventbrite_sync_status is not None
             else EventbriteSyncStatus.PENDING.value
         ),
+        "eventbrite_event_url": instance.eventbrite_event_url,
         "external_url": instance.external_url,
         "partner_organizations": [
             {

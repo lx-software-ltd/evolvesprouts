@@ -8176,6 +8176,16 @@ components:
         eventbrite_sync_status:
           $ref: "#/components/schemas/EventbriteSyncStatus"
           description: Eventbrite publish pipeline state for this instance row.
+        eventbrite_event_url:
+          type: string
+          format: uri
+          pattern: ^https?://
+          nullable: true
+          maxLength: 500
+          readOnly: true
+          description: >
+            Public Eventbrite event URL written by the sync processor.
+            Null until a create or update stores a URL. Distinct from `external_url`.
         external_url:
           type: string
           format: uri
