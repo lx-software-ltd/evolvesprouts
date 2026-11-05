@@ -246,6 +246,43 @@ function assertInboxImportUsesDedicatedPageToken(stack: cdk.Stack): void {
   }
 }
 
+function assertEventbriteProcessorTimezone(stack: cdk.Stack): void {
+  const template = Template.fromStack(stack);
+  const parameters = template.findParameters("EventbriteDefaultTimezone");
+  const parameter = parameters.EventbriteDefaultTimezone;
+  if (!parameter || parameter.Default !== "") {
+    throw new Error(
+      "Expected EventbriteDefaultTimezone parameter with an empty default",
+    );
+  }
+  const nested = stack.node.tryFindChild("EventbriteSync");
+  if (!(nested instanceof cdk.NestedStack)) {
+    throw new Error("Expected EventbriteSync nested stack on ApiStack");
+  }
+  const nestedTemplate = Template.fromStack(nested);
+  const functions = nestedTemplate.findResources("AWS::Lambda::Function");
+  const match = Object.entries(functions).find(([, resource]) => {
+    const name = (resource.Properties ?? {}).FunctionName;
+    return name === "evolvesprouts-EventbriteSyncProcessor";
+  });
+  if (!match) {
+    throw new Error(
+      "Expected Lambda FunctionName evolvesprouts-EventbriteSyncProcessor",
+    );
+  }
+  const vars = ((match[1].Properties ?? {}).Environment ?? {}).Variables ?? {};
+  const value = (vars as Record<string, unknown>).EVENTBRITE_DEFAULT_TIMEZONE;
+  const ref =
+    value && typeof value === "object"
+      ? (value as Record<string, unknown>).Ref
+      : undefined;
+  if (typeof ref !== "string" || ref.length === 0) {
+    throw new Error(
+      `EventbriteSyncProcessor EVENTBRITE_DEFAULT_TIMEZONE must Ref a parameter; found ${JSON.stringify(value)}`,
+    );
+  }
+}
+
 function assertInboxImportHasNoReservedConcurrency(stack: cdk.Stack): void {
   const nested = stack.node.tryFindChild("InboxImport");
   if (!(nested instanceof cdk.NestedStack)) {
@@ -659,6 +696,7 @@ function main(): void {
   assertMailchimpWebhookInactivityAlarm(template);
   assertInboxImportHasNoReservedConcurrency(stack);
   assertInboxImportUsesDedicatedPageToken(stack);
+  assertEventbriteProcessorTimezone(stack);
   assertSalesDailyPlanSchedule(stack);
   assertInboundInvoiceSharesReceiptRuleSet(template);
   assertFinanceReadonlyDataApi(template);

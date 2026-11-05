@@ -286,7 +286,7 @@ def _build_ticket_class_payload(tier: Any) -> dict[str, Any]:
         "name": tier.name,
         "description": tier.description,
         "free": is_free,
-        "quantity_total": str(tier.max_quantity)
+        "quantity_total": int(tier.max_quantity)
         if tier.max_quantity is not None
         else None,
     }
@@ -343,6 +343,7 @@ def _compute_instance_hash(instance: Any) -> str:
             }
             for tier in sorted(instance.ticket_tiers, key=lambda row: row.sort_order)
         ],
+        "timezone": _eventbrite_timezone_name(),
     }
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return sha256(encoded).hexdigest()
@@ -371,21 +372,39 @@ def _format_eventbrite_utc(value: datetime) -> str:
     """Format an instant as Eventbrite ``YYYY-MM-DDThh:mm:ssZ``."""
     if value.tzinfo is None:
         raise EventbriteSyncError("Event session times must include a timezone")
-    return value.astimezone(UTC).replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return value.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _eventbrite_timezone_name() -> str:
-    """IANA timezone Eventbrite should display, or ``UTC`` when unset."""
+    """IANA timezone Eventbrite should display.
+
+    Unset, invalid, and ``Etc/`` zones use ``UTC``. A bad value is logged
+    and does not fail the sync.
+    """
     configured = os.getenv(_ENV_EVENTBRITE_DEFAULT_TIMEZONE, "").strip()
     if not configured:
         return _DEFAULT_EVENTBRITE_TIMEZONE
+    if _is_eventbrite_timezone(configured):
+        return configured
+    logger.warning(
+        "Invalid Eventbrite timezone, using UTC",
+        extra={
+            "env": _ENV_EVENTBRITE_DEFAULT_TIMEZONE,
+            "zone_id": configured,
+        },
+    )
+    return _DEFAULT_EVENTBRITE_TIMEZONE
+
+
+def _is_eventbrite_timezone(zone_id: str) -> bool:
+    """True for ``UTC`` or an area/location IANA name Eventbrite can store."""
+    if zone_id != "UTC" and (zone_id.startswith("Etc/") or "/" not in zone_id):
+        return False
     try:
-        ZoneInfo(configured)
+        ZoneInfo(zone_id)
     except (ZoneInfoNotFoundError, ValueError):
-        raise EventbriteSyncError(
-            "EVENTBRITE_DEFAULT_TIMEZONE must be an IANA timezone name"
-        ) from None
-    return configured
+        return False
+    return True
 
 
 def _decimal_to_minor_units(value: Decimal) -> int:

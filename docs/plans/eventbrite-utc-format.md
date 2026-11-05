@@ -1,36 +1,42 @@
 # Plan: Eventbrite sync UTC format
 
 **Status**: Done
-**Zone**: yellow
+**Zone**: red
+
+The stack parameter and deploy workflow are included because the processor otherwise cannot receive a display timezone. Schema, seed data, and auth stay untouched.
 
 ## Goal
 
-Eventbrite event create and update send `start.utc` and `end.utc` as `YYYY-MM-DDThh:mm:ssZ`. The `timezone` field is the IANA name in `EVENTBRITE_DEFAULT_TIMEZONE` when that value is valid, and `UTC` when the variable is unset.
+Eventbrite event create and update send `start.utc` and `end.utc` as `YYYY-MM-DDThh:mm:ssZ`. The `timezone` field is `EVENTBRITE_DEFAULT_TIMEZONE` when that value is `UTC` or an area/location IANA name. Unset, invalid, and `Etc/` values use `UTC` and do not fail the sync. The payload hash includes that timezone. Ticket quantity is an integer. The processor Lambda receives the timezone from CDK parameter `EventbriteDefaultTimezone`.
 
 ## Non-goals
 
-- CDK, deploy workflow, or a new CloudFormation parameter. Wiring `EVENTBRITE_DEFAULT_TIMEZONE` into the processor Lambda is a later infrastructure change.
-- Redriving the Eventbrite sync dead-letter queue.
-- Changing the idempotency payload hash.
+- Redriving `evolvesprouts-eventbrite-sync-dlq`. Those messages still carry the old payload and would fail again until this build is deployed.
+- Setting the GitHub variable `CDK_PARAM_EVENTBRITE_DEFAULT_TIMEZONE`. An empty value keeps timezone `UTC`.
 - Schema or seed data.
 
 ## Files
 
 - `backend/src/app/services/eventbrite_sync.py`
 - `tests/test_eventbrite_sync_payload.py`
+- `backend/infrastructure/lib/api-stack.ts`
+- `backend/infrastructure/params/production.json`
+- `backend/infrastructure/test/api-stack.test.ts`
+- `.github/workflows/deploy-backend.yml`
 - `docs/architecture/lambdas.md`
 - `docs/architecture/aws-messaging.md`
+- `docs/architecture/aws-assets-map.md`
 
 ## Invariants this change preserves
 
-- Ticket class sync, publish, and unpublish requests stay the same.
+- Ticket class sync, publish, and unpublish requests stay the same apart from `quantity_total` being a JSON number.
 - A missing session slot, title, or currency still fails the sync.
 - An unchanged synced payload still returns `noop`.
-- Unset `EVENTBRITE_DEFAULT_TIMEZONE` still sends timezone `UTC`, which is what Postgres `timestamptz` values produce today.
+- Unset `EVENTBRITE_DEFAULT_TIMEZONE` still sends timezone `UTC`.
 
 ## Done when
 
-`pytest tests/test_eventbrite_sync_payload.py` passes. `pre-commit run ruff-format --all-files` passes.
+`pytest tests/test_eventbrite_sync_payload.py tests/test_eventbrite_client_service.py tests/test_eventbrite_sync_processor_handler.py` passes. `pre-commit run ruff` and `pre-commit run ruff-format` pass on the edited Python files. `npm run test:infra` passes in `backend/infrastructure`.
 
 ## Rollback
 
@@ -38,4 +44,4 @@ Revert the commit. Instances left in `failed` can be synced again after the prev
 
 ## Open questions
 
-None. Production keeps timezone `UTC` until the processor environment sets `EVENTBRITE_DEFAULT_TIMEZONE`.
+None. Listings stay on `UTC` until `CDK_PARAM_EVENTBRITE_DEFAULT_TIMEZONE` is set to an IANA area/location name and the stack is deployed.

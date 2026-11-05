@@ -83,6 +83,7 @@
   "AssetDownloadCustomDomainCertificateArn": "arn:aws:acm:us-east-1:588024549699:certificate/6fe57a34-8eba-45a9-bcb4-3fa10eb56656",
   "EventbriteTokenSecretArn": "<FROM_GITHUB_SECRET: CDK_PARAM_EVENTBRITE_TOKEN_SECRET_ARN>",
   "EventbriteOrganizationId": "<FROM_GITHUB_VAR: CDK_PARAM_EVENTBRITE_ORGANIZATION_ID>",
+  "EventbriteDefaultTimezone": "<FROM_GITHUB_VAR: CDK_PARAM_EVENTBRITE_DEFAULT_TIMEZONE>",
   "MailchimpWelcomeJourneyId": "<FROM_GITHUB_VAR: CDK_PARAM_MAILCHIMP_WELCOME_JOURNEY_ID>",
   "MailchimpWelcomeJourneyStepId": "<FROM_GITHUB_VAR: CDK_PARAM_MAILCHIMP_WELCOME_JOURNEY_STEP_ID>"
 }
