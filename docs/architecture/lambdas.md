@@ -903,7 +903,10 @@ their primary responsibilities.
 - Handler: backend/lambda/eventbrite_sync_processor/handler.py
 - Trigger: SQS queue (`evolvesprouts-eventbrite-sync-queue`)
 - Purpose: process async Eventbrite synchronization requests for event service instances
-  and upsert Eventbrite event/ticket metadata while keeping DB as source of truth
+  and upsert Eventbrite event/ticket metadata while keeping DB as source of truth.
+  `start.utc` and `end.utc` use `YYYY-MM-DDThh:mm:ssZ`. `timezone` is
+  `EVENTBRITE_DEFAULT_TIMEZONE` when that value is a valid IANA name,
+  otherwise `UTC`.
 - DB access: RDS Proxy with IAM auth (`evolvesprouts_admin`)
 - VPC: Yes
 - Permissions: Secrets Manager read for Eventbrite token, Lambda invoke permission
@@ -915,6 +918,8 @@ their primary responsibilities.
   - `EVENTBRITE_API_BASE_URL`
   - `EVENTBRITE_ORGANIZATION_ID`
   - `EVENTBRITE_TOKEN_SECRET_ARN`
+  - `EVENTBRITE_DEFAULT_TIMEZONE` (optional IANA name for the event
+    `timezone` field; unset uses `UTC`. The CDK stack does not pass it.)
 
 ### AWS / HTTP proxy
 - Function: AwsApiProxyFunction

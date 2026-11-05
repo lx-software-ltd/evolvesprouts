@@ -145,6 +145,9 @@ and DLQ support.
 - Triggered by `evolvesprouts-eventbrite-sync-queue`.
 - Loads event instances from DB and computes an idempotency payload hash.
 - Upserts Eventbrite event and ticket classes through `AwsApiProxyFunction`.
+- Sends `start.utc` and `end.utc` as `YYYY-MM-DDThh:mm:ssZ`. The `timezone`
+  field is `EVENTBRITE_DEFAULT_TIMEZONE` when set to a valid IANA name,
+  otherwise `UTC`.
 - Updates `service_instances` Eventbrite sync metadata fields
   (`eventbrite_sync_status`, `eventbrite_last_*`, ticket-class map, retry count).
 
@@ -422,6 +425,7 @@ SQS retries or mailbox forwarding duplicates.
 | `EVENTBRITE_API_BASE_URL` | Eventbrite API base URL for sync processor |
 | `EVENTBRITE_ORGANIZATION_ID` | Eventbrite organization ID used for event upserts |
 | `EVENTBRITE_TOKEN_SECRET_ARN` | Secrets Manager ARN for Eventbrite API token JSON |
+| `EVENTBRITE_DEFAULT_TIMEZONE` | Optional IANA timezone for the Eventbrite event `timezone` field. Unset uses `UTC`. The processor reads this variable; the CDK stack does not pass it. |
 
 ## Sales daily plan of the day
 
