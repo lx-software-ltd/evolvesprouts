@@ -85,6 +85,9 @@ def upload_event_logo(
             extra["status"] = status_code
         if isinstance(exc, EventbriteApiError):
             extra["message"] = str(exc)
+        upload_fields = getattr(exc, "upload_fields", None)
+        if isinstance(upload_fields, list):
+            extra["upload_fields"] = upload_fields
         logger.warning("Eventbrite header image was not uploaded", extra=extra)
         return None, hash_without_banner
     if not logo_id:
@@ -123,6 +126,40 @@ def _upload_banner(
             },
         )
         return None
+    field_names = _upload_field_names(instructions.get("upload_data"))
+    try:
+        return _submit_banner(
+            instance,
+            banner,
+            token=token,
+            api_base_url=api_base_url,
+            expected_url=expected_url,
+            instructions=instructions,
+            width=width,
+            height=height,
+        )
+    except (
+        EventbriteApiError,
+        AwsProxyError,
+        OSError,
+        RuntimeError,
+        ValueError,
+    ) as exc:
+        _remember_upload_fields(exc, field_names)
+        raise
+
+
+def _submit_banner(
+    instance: Any,
+    banner: bytes,
+    *,
+    token: str,
+    api_base_url: str,
+    expected_url: str,
+    instructions: dict[str, Any],
+    width: int,
+    height: int,
+) -> str:
     if str(instructions.get("upload_method") or "").upper() != "POST":
         raise ValueError("Eventbrite image upload method is not POST")
     upload_token = _single_line(instructions.get("upload_token"))
@@ -169,12 +206,40 @@ def _upload_banner(
     return logo_id
 
 
+def _remember_upload_fields(exc: Exception, names: list[str]) -> None:
+    if not isinstance(getattr(exc, "upload_fields", None), list):
+        exc.upload_fields = list(names)  # type: ignore[attr-defined]
+
+
 def _same_upload_target(upload_url: str, expected_url: str) -> bool:
-    """True when both URLs name the same S3 bucket, in path or host form."""
-    if upload_url == expected_url:
+    """True for the same HTTPS URL, ignoring a trailing slash, or one S3 bucket."""
+    returned = _canonical_upload_url(upload_url)
+    expected = _canonical_upload_url(expected_url)
+    if returned is not None and returned == expected:
         return True
-    returned = _s3_bucket(upload_url)
-    return returned is not None and returned == _s3_bucket(expected_url)
+    bucket = _s3_bucket(upload_url)
+    return bucket is not None and bucket == _s3_bucket(expected_url)
+
+
+def _canonical_upload_url(url: str) -> str | None:
+    try:
+        parts = urlsplit(url.strip())
+        port = parts.port
+    except ValueError:
+        return None
+    if (
+        parts.scheme != "https"
+        or port is not None
+        or parts.username
+        or parts.password
+        or parts.query
+        or parts.fragment
+    ):
+        return None
+    host = (parts.hostname or "").lower()
+    if not host:
+        return None
+    return f"https://{host}{parts.path.rstrip('/')}"
 
 
 def _s3_bucket(url: str) -> str | None:
@@ -215,7 +280,17 @@ def _loggable_url(url: str) -> str:
     return f"{parts.scheme}://{host}{parts.path}"[:200]
 
 
+def _upload_field_names(value: Any) -> list[str]:
+    if not isinstance(value, dict):
+        return []
+    names = [str(key) for key in value if _FILE_FIELD_NAME.fullmatch(str(key))]
+    names.sort()
+    return names
+
+
 def _upload_fields(value: Any) -> dict[str, str]:
+    if value is None or value == {}:
+        return {}
     if not isinstance(value, dict) or not value:
         raise ValueError("Eventbrite image upload fields are missing")
     fields: dict[str, str] = {}

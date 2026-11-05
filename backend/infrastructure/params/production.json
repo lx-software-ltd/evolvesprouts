@@ -84,6 +84,7 @@
   "EventbriteTokenSecretArn": "<FROM_GITHUB_SECRET: CDK_PARAM_EVENTBRITE_TOKEN_SECRET_ARN>",
   "EventbriteOrganizationId": "<FROM_GITHUB_VAR: CDK_PARAM_EVENTBRITE_ORGANIZATION_ID>",
   "EventbriteDefaultTimezone": "<FROM_GITHUB_VAR: CDK_PARAM_EVENTBRITE_DEFAULT_TIMEZONE>",
+  "EventbriteMediaUploadUrl": "https://www.eventbrite.com/image-bff/api/upload",
   "MailchimpWelcomeJourneyId": "<FROM_GITHUB_VAR: CDK_PARAM_MAILCHIMP_WELCOME_JOURNEY_ID>",
   "MailchimpWelcomeJourneyStepId": "<FROM_GITHUB_VAR: CDK_PARAM_MAILCHIMP_WELCOME_JOURNEY_STEP_ID>"
 }

@@ -931,7 +931,7 @@ their primary responsibilities.
   - `EVENTBRITE_DEFAULT_TIMEZONE` (CDK `EventbriteDefaultTimezone`,
     GitHub var `CDK_PARAM_EVENTBRITE_DEFAULT_TIMEZONE`)
   - `EVENTBRITE_MEDIA_UPLOAD_URL` (CDK `EventbriteMediaUploadUrl`;
-    default `https://s3.amazonaws.com/eventbrite-uploader-incoming-prod/`;
+    default `https://www.eventbrite.com/image-bff/api/upload`;
     the sync refuses any other upload URL)
 
 ### AWS / HTTP proxy

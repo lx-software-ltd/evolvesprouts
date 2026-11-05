@@ -162,19 +162,22 @@ and DLQ support.
   those JSON files to `content/landing-pages`. A matching
   `eventbrite-banners/<slug>.png` is uploaded as the event logo. The
   banner is the hero photo with the Evolve Sprouts tree behind it, on
-  a 2:1 canvas. The upload URL Eventbrite returns must name the same S3
-  bucket as `EVENTBRITE_MEDIA_UPLOAD_URL`, over HTTPS, in path form
-  (`s3.amazonaws.com/<bucket>/`) or host form (`<bucket>.s3.amazonaws.com/`).
-  The file is always POSTed to `EVENTBRITE_MEDIA_UPLOAD_URL`, the proxy
-  allowlist entry. A refused URL is logged as scheme, host, and path.
+  a 2:1 canvas. The upload URL Eventbrite returns must be
+  `EVENTBRITE_MEDIA_UPLOAD_URL` over HTTPS, ignoring a trailing slash,
+  or the same S3 bucket in path form (`s3.amazonaws.com/<bucket>/`) or
+  host form (`<bucket>.s3.amazonaws.com/`). The file is always POSTed to
+  `EVENTBRITE_MEDIA_UPLOAD_URL`, the proxy allowlist entry. A refused
+  URL is logged as scheme, host, and path. Upload instructions may omit
+  `upload_data`.
   Each overview title has an empty paragraph before it, because
   Eventbrite drops heading margins.
   A missing banner or a failed upload does not fail the sync. The hash
   includes the banner checksum only when a banner is sent. When a usable
   banner is not uploaded, the stored hash omits that checksum so the next
-  save retries. The failure log records the HTTP status. An Eventbrite
-  API error also records that error text. Signed upload fields are not
-  logged. GET requests omit `Content-Type`.
+  save retries. The failure log records the HTTP status and the
+  `upload_data` field names. An Eventbrite API error also records that
+  error text. Signed upload field values are not logged. GET requests
+  omit `Content-Type`.
 - Publish follows the remote event status. An open or full instance
   publishes only a `draft`. A live or started event is updated and left
   published. A cancelled or completed instance unpublishes a live or
