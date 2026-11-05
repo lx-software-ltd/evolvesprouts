@@ -1,16 +1,20 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import sharp from 'sharp';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { composeBanner } from '../../scripts/build-eventbrite-banners.mjs';
 import {
   collectEventbriteBannerErrors,
   collectFamilyConsultationKeyErrors,
   collectLandingPageHeroChipErrors,
   collectLocaleKeyErrors,
 } from '../../scripts/validate-content.mjs';
+
+const APP_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 describe('locale content key contract', () => {
   it('accepts lowerCamelCase, meta keys, and kebab slugs', () => {
@@ -155,6 +159,32 @@ describe('eventbrite banners', () => {
     expect(errors).toEqual([
       'missing.json: missing Eventbrite banner missing.png',
       'square.json: Eventbrite banner must be a 2:1 PNG',
+    ]);
+  });
+
+  it('rejects a banner that does not match the current hero', async () => {
+    directory = await mkdtemp(path.join(tmpdir(), 'eb-banner-'));
+    const pages = path.join(directory, 'pages');
+    const banners = path.join(directory, 'banners');
+    await mkdir(pages);
+    await mkdir(banners);
+    const filename = 'nov-2026-mealtimes-workshop.json';
+    await copyFile(
+      path.join(APP_ROOT, 'src', 'content', 'landing-pages', filename),
+      path.join(pages, filename),
+    );
+    const page = JSON.parse(await readFile(path.join(pages, filename), 'utf8')) as {
+      en: { hero: { imageSrc: string } };
+    };
+    const banner = Buffer.from(await composeBanner(page.en.hero.imageSrc));
+    banner[banner.length - 32] ^= 0xff;
+    await writeFile(path.join(banners, 'nov-2026-mealtimes-workshop.png'), banner);
+
+    const errors: string[] = [];
+    await collectEventbriteBannerErrors(pages, banners, errors);
+
+    expect(errors).toEqual([
+      'nov-2026-mealtimes-workshop.json: Eventbrite banner is stale; run npm run images:eventbrite-banners',
     ]);
   });
 });

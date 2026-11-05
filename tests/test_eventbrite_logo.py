@@ -12,7 +12,7 @@ from app.services.eventbrite_sync import (
     sync_instance_to_eventbrite,
 )
 
-from tests.test_eventbrite_sync_payload import (
+from tests.eventbrite_sync_fakes import (
     _install_sync_fakes,
     _Session,
     _workshop,
@@ -90,6 +90,7 @@ def test_sync_uploads_banner_before_the_event_update(
     result = sync_instance_to_eventbrite(session=_Session(), instance_id=instance.id)
 
     assert result["status"] == "synced"
+    assert instance.eventbrite_last_payload_hash == _compute_instance_hash(instance)
     assert [call["path"] for call in calls] == [
         "/organizations/org-1/events/",
         "/events/1001/",
@@ -98,6 +99,10 @@ def test_sync_uploads_banner_before_the_event_update(
     ]
     assert calls[1]["payload"]["event"]["logo_id"] == "logo-9"
     assert "logo_id" not in calls[0]["payload"]["event"]
+    calls.clear()
+    second = sync_instance_to_eventbrite(session=_Session(), instance_id=instance.id)
+    assert second["status"] == "noop"
+    assert calls == []
     assert [call["path"] for call in media_calls] == [
         "/media/upload/?type=image-event-logo",
         "/media/upload/",
@@ -138,6 +143,7 @@ def test_wrong_upload_url_is_refused_and_sync_continues(
     assert "logo_id" not in calls[1]["payload"]["event"]
     assert warnings
     assert all("secret-policy" not in str(extra) for extra in warnings)
+    assert instance.eventbrite_last_payload_hash != _compute_instance_hash(instance)
 
 
 def test_failed_upload_does_not_fail_the_sync(monkeypatch: Any, tmp_path: Any) -> None:
@@ -148,13 +154,31 @@ def test_failed_upload_does_not_fail_the_sync(monkeypatch: Any, tmp_path: Any) -
     instance = _workshop()
     instance.slug = "sample-workshop"
     calls = _install_sync_fakes(monkeypatch, instance)
-    _patch_media(monkeypatch, upload_status=500)
+    warnings: list[dict[str, Any]] = []
+    monkeypatch.setattr(
+        eventbrite_logo.logger,
+        "warning",
+        lambda *_args, **kwargs: warnings.append(kwargs.get("extra") or {}),
+    )
+    media_calls, uploads = _patch_media(monkeypatch, upload_status=500)
 
     result = sync_instance_to_eventbrite(session=_Session(), instance_id=instance.id)
 
     assert result["status"] == "synced"
     assert "logo_id" not in calls[1]["payload"]["event"]
     assert instance.eventbrite_sync_status.value == "synced"
+    assert warnings[0]["status"] == 500
+    assert "secret-policy" not in str(warnings)
+    assert instance.eventbrite_last_payload_hash != _compute_instance_hash(instance)
+
+    calls.clear()
+    media_calls.clear()
+    uploads.clear()
+    second = sync_instance_to_eventbrite(session=_Session(), instance_id=instance.id)
+
+    assert second["status"] == "synced"
+    assert media_calls[0]["path"] == "/media/upload/?type=image-event-logo"
+    assert uploads[0]["url"] == _UPLOAD_URL
 
 
 def test_hash_changes_only_when_a_banner_exists(

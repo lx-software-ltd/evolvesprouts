@@ -250,6 +250,47 @@ def test_handle_http_keeps_text_body(monkeypatch: Any) -> None:
     assert captured["data"] == b'{"ok":true}'
 
 
+def test_handle_http_omits_an_empty_text_body(monkeypatch: Any) -> None:
+    monkeypatch.setenv("ALLOWED_HTTP_URLS", "https://api.example.com/")
+    aws_proxy._ALLOWED_HTTP_URLS = None
+    captured: dict[str, bytes | None] = {}
+
+    class _FakeResponse:
+        status = 204
+
+        def read(self) -> bytes:
+            return b""
+
+        def getheaders(self) -> list[tuple[str, str]]:
+            return []
+
+        def __enter__(self) -> "_FakeResponse":
+            return self
+
+        def __exit__(self, *_: object) -> None:
+            pass
+
+    def _fake_urlopen(req: Any, *, timeout: int = 10) -> _FakeResponse:
+        captured["data"] = req.data
+        return _FakeResponse()
+
+    import urllib.request
+
+    monkeypatch.setattr(urllib.request, "urlopen", _fake_urlopen)
+
+    response = aws_proxy._handle_http(
+        {
+            "type": "http",
+            "method": "POST",
+            "url": "https://api.example.com/v1/test",
+            "body": "",
+        }
+    )
+
+    assert response["result"]["status"] == 204
+    assert captured["data"] is None
+
+
 def test_handle_http_rejects_both_body_forms(monkeypatch: Any) -> None:
     monkeypatch.setenv("ALLOWED_HTTP_URLS", "https://api.example.com/")
     aws_proxy._ALLOWED_HTTP_URLS = None

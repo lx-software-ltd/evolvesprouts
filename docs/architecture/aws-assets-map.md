@@ -409,7 +409,7 @@ Each Lambda function created by `PythonLambda` construct includes:
 | `SalesDailyPlanFunction` | `lambda/sales_daily_plan/handler.lambda_handler` | 512 MB | 180s | Yes | SQS-triggered org-wide sales daily plan (nested stack `evolvesprouts-Messaging`) |
 | `SalesDailyPlanSchedulerFunction` | `lambda/sales_daily_plan_scheduler/handler.lambda_handler` | 256 MB | 30s | Yes | EventBridge 06:00 HKT enqueue for sales daily plan (nested stack `evolvesprouts-Messaging`) |
 | `InboundInvoiceEmailProcessor` | `lambda/inbound_invoice_email/handler.lambda_handler` | 512 MB | 30s | Yes | SQS-triggered inbound invoice email processor |
-| `EventbriteSyncProcessor` | `lambda/eventbrite_sync_processor/handler.lambda_handler` | 512 MB | 60s | Yes | SQS-triggered Eventbrite sync processor |
+| `EventbriteSyncProcessor` | `lambda/eventbrite_sync_processor/handler.lambda_handler` | 512 MB | 120s | Yes | SQS-triggered Eventbrite sync processor |
 
 ### Lambda Resources Per Function
 
@@ -689,6 +689,7 @@ configured by stack custom resources (including retention and KMS association).
 | `EventbriteTokenSecretArn` | String | No | Yes | Optional Secrets Manager ARN containing Eventbrite API token JSON (`{"token":"..."}`) |
 | `EventbriteOrganizationId` | String | No | No | Optional Eventbrite organization ID for DB-to-Eventbrite sync |
 | `EventbriteApiBaseUrl` | String | No | No | Eventbrite API base URL (default: `https://www.eventbriteapi.com/v3`) |
+| `EventbriteMediaUploadUrl` | String | No | No | Exact Eventbrite image-upload bucket URL (default: `https://s3.amazonaws.com/eventbrite-uploader-incoming-prod/`). The sync refuses any other upload URL. |
 | `EventbriteDefaultTimezone` | String | No | No | IANA area/location timezone for Eventbrite listings (`EVENTBRITE_DEFAULT_TIMEZONE`; GitHub var `CDK_PARAM_EVENTBRITE_DEFAULT_TIMEZONE`; empty uses `UTC`) |
 | `MediaDefaultResourceKey` | String | Yes | No | Default media resource key used when request payload omits `resource_key` |
 | `MailchimpMediaDownloadMergeTag` | String | No | No | Mailchimp audience merge field tag for media download URL (`/v1/assets/email-download/{token}`; empty default; set e.g. `MMDLURL` after creating the field) |

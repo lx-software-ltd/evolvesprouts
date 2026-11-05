@@ -94,10 +94,12 @@ def sync_instance_to_eventbrite(
             raise EventbriteSyncError("Eventbrite event id is missing after create")
 
         venue_id = _attach_venue(instance, config=config)
-        logo_id = upload_event_logo(
+        logo_id, payload_hash = upload_event_logo(
             instance=instance,
             token=config.token,
             api_base_url=_eventbrite_api_base_url(),
+            payload_hash=payload_hash,
+            hash_without_banner=_compute_instance_hash(instance, include_banner=False),
         )
         _update_event(
             instance,
@@ -315,7 +317,6 @@ def _attach_venue(instance: Any, *, config: _EventbriteConfig) -> str | None:
 
 
 def _sync_structured_overview(instance: Any, *, config: _EventbriteConfig) -> None:
-    """Publish the landing-page overview as structured content."""
     overview = eventbrite_overview_html(instance)
     if not overview:
         return
@@ -397,7 +398,7 @@ def _extract_event_url(response: dict[str, Any]) -> str | None:
     return None
 
 
-def _compute_instance_hash(instance: Any) -> str:
+def _compute_instance_hash(instance: Any, *, include_banner: bool = True) -> str:
     payload = {
         "id": str(instance.id),
         "service_id": str(instance.service_id),
@@ -436,9 +437,10 @@ def _compute_instance_hash(instance: Any) -> str:
     venue = eventbrite_venue_body(instance)
     if venue is not None:
         payload["venue"] = venue
-    banner_sha256 = eventbrite_banner_sha256(instance)
-    if banner_sha256:
-        payload["banner_sha256"] = banner_sha256
+    if include_banner:
+        banner_sha256 = eventbrite_banner_sha256(instance)
+        if banner_sha256:
+            payload["banner_sha256"] = banner_sha256
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return sha256(encoded).hexdigest()
 
@@ -463,14 +465,12 @@ def _eventbrite_api_base_url() -> str:
 
 
 def _format_eventbrite_utc(value: datetime) -> str:
-    """Format an instant as Eventbrite ``YYYY-MM-DDThh:mm:ssZ``."""
     if value.tzinfo is None:
         raise EventbriteSyncError("Event session times must include a timezone")
     return value.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _eventbrite_timezone_name() -> str:
-    """IANA timezone for the listing. Invalid and ``Etc/`` zones use UTC."""
     configured = os.getenv(_ENV_EVENTBRITE_DEFAULT_TIMEZONE, "").strip()
     if not configured:
         return _DEFAULT_EVENTBRITE_TIMEZONE
@@ -487,7 +487,6 @@ def _eventbrite_timezone_name() -> str:
 
 
 def _is_eventbrite_timezone(zone_id: str) -> bool:
-    """True for ``UTC`` or an area/location IANA name Eventbrite can store."""
     if zone_id != "UTC" and (zone_id.startswith("Etc/") or "/" not in zone_id):
         return False
     try:

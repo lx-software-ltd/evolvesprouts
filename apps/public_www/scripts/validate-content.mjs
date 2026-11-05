@@ -1,4 +1,5 @@
 import { readdir, readFile } from 'node:fs/promises';
+import { composeBanner } from './build-eventbrite-banners.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -106,6 +107,28 @@ export async function collectEventbriteBannerErrors(landingPagesDir, bannerDir, 
     }
     if (bytes.length > EVENTBRITE_BANNER_MAX_BYTES) {
       errors.push(`${filename}: Eventbrite banner exceeds 2 MB`);
+    }
+    let page;
+    try {
+      page = JSON.parse(await readFile(path.join(landingPagesDir, filename), 'utf8'));
+    } catch {
+      errors.push(`${filename}: landing page JSON could not be read`);
+      continue;
+    }
+    const imageSrc = page?.en?.hero?.imageSrc;
+    if (typeof imageSrc !== 'string' || imageSrc.length === 0) {
+      continue;
+    }
+    let expected;
+    try {
+      expected = await composeBanner(imageSrc);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      errors.push(`${filename}: Eventbrite banner could not be built (${message})`);
+      continue;
+    }
+    if (!bytes.equals(expected)) {
+      errors.push(`${filename}: Eventbrite banner is stale; run npm run images:eventbrite-banners`);
     }
   }
 }

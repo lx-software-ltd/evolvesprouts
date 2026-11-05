@@ -16,6 +16,8 @@ paths: apps/public_www/**
 
 `family-consultations.json` is the exception to camelCase: keys stay snake_case, and location fields use `location_name`, `location_address`, and `location_url`.
 
+A landing page that Eventbrite syncs also needs a banner. After adding the page or changing its hero, run `npm run images:eventbrite-banners` and commit `src/content/eventbrite-banners/<slug>.png`. `npm run validate:content` fails when that PNG is missing, not 2:1, over 2 MB, or different from the current hero. A backend deploy also runs when those landing-page or banner files change, so the Eventbrite sync Lambda picks them up.
+
 ## Done
 
 `npm run validate:content` and `npm run lint` in `apps/public_www` pass.

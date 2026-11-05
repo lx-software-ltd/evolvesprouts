@@ -34,8 +34,9 @@ Each landing page gets a 1456×728 PNG banner: the Evolve Sprouts tree behind th
 
 - Text HTTP proxy calls stay string bodies.
 - A missing or invalid banner does not fail the sync.
-- An upload failure does not fail the sync.
+- An upload failure does not fail the sync. The stored hash then omits the banner checksum, so the next save retries. The log records the HTTP status, not the signed upload fields.
 - Events without a banner keep the previous payload hash.
+- A successful upload stores the hash that includes the banner, so an unchanged event does not upload again.
 - `description.html`, structured content, venue, tickets, and publish behaviour stay as they are.
 - No new database column and no seed change.
 

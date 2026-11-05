@@ -121,7 +121,7 @@ and DLQ support.
 ### SQS Queue: `evolvesprouts-eventbrite-sync-queue`
 
 - Subscribes to Eventbrite sync SNS topic.
-- 120 second visibility timeout.
+- 240 second visibility timeout, above the processor's 120 second timeout.
 - 3 retry attempts before DLQ.
 - KMS encryption using the shared queue key.
 
@@ -164,7 +164,10 @@ and DLQ support.
   banner is the hero photo with the Evolve Sprouts tree behind it, on
   a 2:1 canvas. The upload URL must equal `EVENTBRITE_MEDIA_UPLOAD_URL`.
   A missing banner or a failed upload does not fail the sync. The hash
-  includes the banner checksum only when a banner is sent.
+  includes the banner checksum only when a banner is sent. When a usable
+  banner is not uploaded, the stored hash omits that checksum so the next
+  save retries. The failure log records the HTTP status and the error
+  type, not the signed upload fields.
 - A physical event with a location name and an ISO country code on its
   geographic area gets an Eventbrite venue (created, or updated when the
   event already has `venue_id`). Online events and locations without a

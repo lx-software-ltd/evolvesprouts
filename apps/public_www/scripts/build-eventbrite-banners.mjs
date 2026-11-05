@@ -15,6 +15,13 @@ const LOGO_PATH = path.join(PUBLIC_DIR, 'images', 'evolvesprouts-logo.svg');
 const CANVAS_WIDTH = 1456;
 const CANVAS_HEIGHT = 728;
 const MAX_BYTES = 2 * 1024 * 1024;
+// The logo SVG is a 2048 square. The wordmark sits between the ground
+// swoosh (ends near y=1368) and the roots (start near y=1496). Cover that
+// band so the letters do not peek out beside the photo. The tree, swoosh,
+// and roots stay where the public site draws them.
+const LOGO_VIEW_SIZE = 2048;
+const LOGO_WORDMARK_TOP = 1376;
+const LOGO_WORDMARK_BOTTOM = 1472;
 
 function photoPath(imageSrc) {
   if (typeof imageSrc !== 'string' || !imageSrc.startsWith('/images/')) {
@@ -28,7 +35,7 @@ function photoPath(imageSrc) {
   return resolved;
 }
 
-async function composeBanner(imageSrc) {
+export async function composeBanner(imageSrc) {
   const source = photoPath(imageSrc);
   const photo = sharp(source);
   const meta = await photo.metadata();
@@ -39,8 +46,24 @@ async function composeBanner(imageSrc) {
   }
 
   const treeSize = photoWidth;
+  const wordmarkTop = Math.round((treeSize * LOGO_WORDMARK_TOP) / LOGO_VIEW_SIZE);
+  const wordmarkBottom = Math.round((treeSize * LOGO_WORDMARK_BOTTOM) / LOGO_VIEW_SIZE);
+  const wordmarkCover = await sharp({
+    create: {
+      width: treeSize,
+      height: Math.max(1, wordmarkBottom - wordmarkTop),
+      channels: 4,
+      background: '#ffffff',
+    },
+  })
+    .png()
+    .toBuffer();
   const [logo, photoBuffer] = await Promise.all([
-    sharp(LOGO_PATH).resize(treeSize, treeSize, { fit: 'fill' }).png().toBuffer(),
+    sharp(LOGO_PATH)
+      .resize(treeSize, treeSize, { fit: 'fill' })
+      .composite([{ input: wordmarkCover, left: 0, top: wordmarkTop }])
+      .png()
+      .toBuffer(),
     photo.toBuffer(),
   ]);
   const groupWidth = Math.max(photoWidth, treeSize);

@@ -368,7 +368,7 @@ def _http_body_bytes(event: Mapping[str, Any]) -> bytes | None | dict[str, Any]:
                 },
             }
         return decoded
-    if raw_body is None:
+    if raw_body is None or raw_body == "":
         return None
     if not isinstance(raw_body, str):
         return {

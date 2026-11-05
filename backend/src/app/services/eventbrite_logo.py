@@ -31,21 +31,33 @@ def eventbrite_banner_sha256(instance: Any) -> str | None:
     return sha256(banner).hexdigest()
 
 
+class _ImageUploadError(ValueError):
+    """S3 rejected the banner. ``status_code`` is safe to log."""
+
+    def __init__(self, status_code: int) -> None:
+        self.status_code = status_code
+        super().__init__("image upload status")
+
+
 def upload_event_logo(
     *,
     instance: Any,
     token: str,
     api_base_url: str,
-) -> str | None:
-    """Upload the banner and return its Eventbrite image id.
+    payload_hash: str,
+    hash_without_banner: str,
+) -> tuple[str | None, str]:
+    """Upload the banner and return its image id plus the hash to store.
 
-    A missing banner or a failed upload returns None and does not fail the sync.
+    A missing banner returns the full hash. A usable banner that was not
+    uploaded returns the hash without the banner checksum, so the next
+    save retries. Neither case fails the sync.
     """
     banner = _usable_banner(instance)
     if banner is None:
-        return None
+        return None, payload_hash
     try:
-        return _upload_banner(
+        logo_id = _upload_banner(
             instance,
             banner,
             token=token,
@@ -58,14 +70,18 @@ def upload_event_logo(
         RuntimeError,
         ValueError,
     ) as exc:
-        logger.warning(
-            "Eventbrite header image was not uploaded",
-            extra={
-                "instance_id": str(getattr(instance, "id", "") or ""),
-                "error_type": type(exc).__name__,
-            },
-        )
-        return None
+        extra: dict[str, Any] = {
+            "instance_id": str(getattr(instance, "id", "") or ""),
+            "error_type": type(exc).__name__,
+        }
+        status_code = getattr(exc, "status_code", None)
+        if isinstance(status_code, int):
+            extra["status"] = status_code
+        logger.warning("Eventbrite header image was not uploaded", extra=extra)
+        return None, hash_without_banner
+    if not logo_id:
+        return None, hash_without_banner
+    return logo_id, payload_hash
 
 
 def _upload_banner(
@@ -119,7 +135,7 @@ def _upload_banner(
     )
     status = int(response.get("status") or 0)
     if status < 200 or status >= 300:
-        raise ValueError(f"image upload status {status}")
+        raise _ImageUploadError(status)
     created = eventbrite_request(
         method="POST",
         base_url=api_base_url,
@@ -127,6 +143,8 @@ def _upload_banner(
         token=token,
         payload={
             "upload_token": upload_token,
+            # The banner is already 2:1, so the crop is the whole image.
+            # An inset origin would no longer be exactly twice as wide.
             "crop_mask": {
                 "top_left": {"x": 0, "y": 0},
                 "width": width,

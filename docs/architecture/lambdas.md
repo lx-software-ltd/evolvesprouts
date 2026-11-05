@@ -13,6 +13,8 @@ their primary responsibilities.
   to `content/landing-pages`, and
   `apps/public_www/src/content/eventbrite-banners/*.png` to
   `content/eventbrite-banners`, so Eventbrite sync can read them by slug.
+  CDK stages one shared bundle, so the banners are copied into every
+  function. `extraCopyPaths` cannot leave `backend/`.
 - Lambda dependency wheels are cached under
   `backend/.lambda-build/dependency-cache` keyed by `backend/requirements.txt`
   content and target runtime metadata to avoid reinstalling pip dependencies on
@@ -928,7 +930,8 @@ their primary responsibilities.
   - `EVENTBRITE_TOKEN_SECRET_ARN`
   - `EVENTBRITE_DEFAULT_TIMEZONE` (CDK `EventbriteDefaultTimezone`,
     GitHub var `CDK_PARAM_EVENTBRITE_DEFAULT_TIMEZONE`)
-  - `EVENTBRITE_MEDIA_UPLOAD_URL` (Eventbrite's image upload bucket;
+  - `EVENTBRITE_MEDIA_UPLOAD_URL` (CDK `EventbriteMediaUploadUrl`;
+    default `https://s3.amazonaws.com/eventbrite-uploader-incoming-prod/`;
     the sync refuses any other upload URL)
 
 ### AWS / HTTP proxy

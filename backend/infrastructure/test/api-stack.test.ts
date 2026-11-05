@@ -250,6 +250,13 @@ function assertEventbriteMediaUploadUrl(stack: cdk.Stack): void {
   const uploadUrl =
     "https://s3.amazonaws.com/eventbrite-uploader-incoming-prod/";
   const template = Template.fromStack(stack);
+  const parameters = template.findParameters("EventbriteMediaUploadUrl");
+  const parameter = parameters.EventbriteMediaUploadUrl;
+  if (!parameter || parameter.Default !== uploadUrl) {
+    throw new Error(
+      `Expected EventbriteMediaUploadUrl default ${uploadUrl}; found ${JSON.stringify(parameter)}`,
+    );
+  }
   const functions = template.findResources("AWS::Lambda::Function");
   const proxy = Object.values(functions).find((resource) => {
     const name = (resource.Properties ?? {}).FunctionName;
@@ -265,9 +272,9 @@ function assertEventbriteMediaUploadUrl(stack: cdk.Stack): void {
   const allowed = JSON.stringify(
     (proxyVars as Record<string, unknown>).ALLOWED_HTTP_URLS,
   );
-  if (!allowed.includes(uploadUrl)) {
+  if (!allowed.includes("EventbriteMediaUploadUrl")) {
     throw new Error(
-      `ALLOWED_HTTP_URLS must include the Eventbrite upload bucket; found ${allowed}`,
+      `ALLOWED_HTTP_URLS must reference EventbriteMediaUploadUrl; found ${allowed}`,
     );
   }
   const nested = stack.node.tryFindChild("EventbriteSync");
@@ -285,13 +292,32 @@ function assertEventbriteMediaUploadUrl(stack: cdk.Stack): void {
       "Expected Lambda FunctionName evolvesprouts-EventbriteSyncProcessor",
     );
   }
+  if ((processor.Properties ?? {}).Timeout !== 120) {
+    throw new Error(
+      `EventbriteSyncProcessor timeout must be 120; found ${JSON.stringify((processor.Properties ?? {}).Timeout)}`,
+    );
+  }
   const processorVars =
     ((processor.Properties ?? {}).Environment ?? {}).Variables ?? {};
   const configured = (processorVars as Record<string, unknown>)
     .EVENTBRITE_MEDIA_UPLOAD_URL;
-  if (configured !== uploadUrl) {
+  const ref =
+    configured && typeof configured === "object"
+      ? (configured as Record<string, unknown>).Ref
+      : undefined;
+  if (typeof ref !== "string" || ref.length === 0) {
     throw new Error(
-      `EVENTBRITE_MEDIA_UPLOAD_URL must be the Eventbrite upload bucket; found ${JSON.stringify(configured)}`,
+      `EVENTBRITE_MEDIA_UPLOAD_URL must Ref a parameter; found ${JSON.stringify(configured)}`,
+    );
+  }
+  const queues = nestedTemplate.findResources("AWS::SQS::Queue");
+  const syncQueue = Object.values(queues).find((resource) => {
+    const queueName = (resource.Properties ?? {}).QueueName;
+    return queueName === "evolvesprouts-eventbrite-sync-queue";
+  });
+  if (!syncQueue || (syncQueue.Properties ?? {}).VisibilityTimeout !== 240) {
+    throw new Error(
+      `eventbrite-sync-queue visibility must be 240; found ${JSON.stringify(syncQueue?.Properties ?? null)}`,
     );
   }
 }

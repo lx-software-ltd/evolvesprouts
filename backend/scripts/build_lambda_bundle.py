@@ -28,7 +28,8 @@ def copy_landing_pages(source_root: Path, output_dir: Path) -> None:
     """Copy public landing-page JSON and Eventbrite banners into the bundle.
 
     Eventbrite sync reads these files by instance slug. ``extraCopyPaths``
-    cannot leave ``backend/``, and CDK stages this bundle before deploy.
+    cannot leave ``backend/``. CDK stages this one bundle for every
+    function, so the banners are included in each function's files.
     """
     content = source_root.parent / "apps" / "public_www" / "src" / "content"
     _copy_matching_files(
