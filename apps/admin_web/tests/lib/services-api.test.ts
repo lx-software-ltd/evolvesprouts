@@ -457,6 +457,32 @@ describe('services-api', () => {
     expect(parsed.serviceId).toBe('svc-1');
     expect(parsed.parentServiceKey).toBe('family-consultation-essentials');
     expect(parsed.eventbriteSyncStatus).toBe('skipped');
+    expect(parsed.eventbriteEventUrl).toBeNull();
+  });
+
+  it('parseInstance keeps an http Eventbrite event URL', () => {
+    const parsed = parseInstance({
+      id: 'inst-eb-url',
+      service_id: 'svc-1',
+      slug: 'mealtime-workshop',
+      resolved_slug: 'mealtime-workshop',
+      status: 'open',
+      eventbrite_sync_status: 'synced',
+      eventbrite_event_url: 'https://www.eventbrite.com/e/mealtime-workshop',
+    });
+    expect(parsed.eventbriteEventUrl).toBe('https://www.eventbrite.com/e/mealtime-workshop');
+  });
+
+  it('parseInstance drops a non-http Eventbrite event URL', () => {
+    const parsed = parseInstance({
+      id: 'inst-eb-bad-url',
+      service_id: 'svc-1',
+      slug: 'mealtime-workshop',
+      resolved_slug: 'mealtime-workshop',
+      status: 'open',
+      eventbrite_event_url: 'javascript:alert(1)',
+    });
+    expect(parsed.eventbriteEventUrl).toBeNull();
   });
 
   it('parseInstance defaults eventbrite_sync_status to pending when omitted', () => {

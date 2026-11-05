@@ -226,7 +226,22 @@ export function InstanceDetailPanel({
             />
           </AdminField>
           {mode === 'edit' && instance ? (
-            <AdminField label='Eventbrite' htmlFor='instance-eventbrite-sync'>
+            <AdminField
+              label='Eventbrite'
+              htmlFor='instance-eventbrite-sync'
+              hint={
+                instance.eventbriteEventUrl ? (
+                  <a
+                    href={instance.eventbriteEventUrl}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='font-medium text-slate-900 underline-offset-2 hover:underline'
+                  >
+                    Open Eventbrite event
+                  </a>
+                ) : undefined
+              }
+            >
               <Input
                 id='instance-eventbrite-sync'
                 value={formatEnumLabel(instance.eventbriteSyncStatus)}

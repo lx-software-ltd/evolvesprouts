@@ -293,6 +293,7 @@ def test_training_instance_round_trip_cohort_tags_in_memory() -> None:
     assert [t["name"] for t in payload["tags"]] == ["alpha", "Beta"]
     assert payload["tag_ids"] == [str(tag_aa.id), str(tag_ba.id)]
     assert payload["eventbrite_sync_status"] == "pending"
+    assert payload["eventbrite_event_url"] is None
 
 
 def test_serialize_instance_resolves_from_parent_service_when_missing() -> None:
@@ -719,3 +720,40 @@ def test_serialize_tier_consultation_service_emits_own_consultation_details() ->
         "currency": "HKD",
         "package_sessions": None,
     }
+
+
+def test_serialize_instance_includes_eventbrite_event_url() -> None:
+    from app.api.admin_services_serializers import serialize_instance
+
+    service = _minimal_training_service()
+    instance = ServiceInstance(
+        id=uuid4(),
+        service_id=service.id,
+        title=None,
+        slug="eventbrite-url-instance",
+        description=None,
+        cover_image_s3_key=None,
+        status=InstanceStatus.OPEN,
+        delivery_mode=None,
+        location_id=None,
+        max_capacity=None,
+        waitlist_enabled=False,
+        instructor_id=None,
+        cohort=None,
+        notes=None,
+        created_by="tester",
+        external_url=None,
+        eventbrite_event_url="https://www.eventbrite.com/e/mealtime-workshop",
+    )
+    instance.service = service
+    instance.instance_tags = []
+    instance.training_details = None
+    instance.session_slots = []
+    instance.ticket_tiers = []
+    instance.partner_organization_links = []
+
+    payload = serialize_instance(instance)
+    assert (
+        payload["eventbrite_event_url"]
+        == "https://www.eventbrite.com/e/mealtime-workshop"
+    )

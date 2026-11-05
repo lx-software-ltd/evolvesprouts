@@ -55,6 +55,7 @@ const INSTANCE_ROW: ServiceInstance = {
   capacityLeftEffective: 7,
   waitlistEnabled: false,
   eventbriteSyncStatus: 'pending',
+  eventbriteEventUrl: null,
   externalUrl: null,
   partnerOrganizations: [],
   instructorId: null,
