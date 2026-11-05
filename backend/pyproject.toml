@@ -14,7 +14,7 @@ dependencies = [
   "pydantic==2.14.1",
   "psycopg[binary]==3.3.6",
   "sqlalchemy==2.1.6",
-  "phonenumbers==9.0.41",
+  "phonenumbers==9.0.42",
   "reportlab==5.1.0",
   "pypdf==6.21.4",
   "segno==1.6.6",
