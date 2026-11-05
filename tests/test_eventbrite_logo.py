@@ -21,6 +21,8 @@ from tests.eventbrite_sync_fakes import (
 )
 
 _UPLOAD_URL = "https://s3.amazonaws.com/eventbrite-uploader-incoming-prod/"
+_IMAGE_UPLOAD_URL = "https://www.eventbrite.com/image-bff/api/upload"
+_DEFAULT_UPLOAD_DATA: Any = object()
 
 
 def _png(width: int, height: int, pixel: bytes = b"\x00\x00\x00") -> bytes:
@@ -49,6 +51,7 @@ def _patch_media(
     *,
     upload_url: str = _UPLOAD_URL,
     upload_status: int = 204,
+    upload_data: Any = _DEFAULT_UPLOAD_DATA,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     media_calls: list[dict[str, Any]] = []
     uploads: list[dict[str, Any]] = []
@@ -57,13 +60,17 @@ def _patch_media(
         media_calls.append(kwargs)
         path = str(kwargs["path"])
         if path.startswith("/media/upload/?"):
-            return {
+            payload = {
                 "upload_method": "POST",
                 "upload_token": "token-1",
                 "upload_url": upload_url,
-                "upload_data": {"key": "abc", "policy": "secret-policy"},
                 "file_parameter_name": "file",
             }
+            if upload_data is _DEFAULT_UPLOAD_DATA:
+                payload["upload_data"] = {"key": "abc", "policy": "secret-policy"}
+            elif upload_data is not None:
+                payload["upload_data"] = upload_data
+            return payload
         if path == "/media/upload/":
             return {"id": "logo-9"}
         raise AssertionError(path)
@@ -180,6 +187,66 @@ def test_same_bucket_in_another_form_uploads_to_the_configured_url(
     assert calls[2]["payload"]["event"]["logo_id"] == "logo-9"
 
 
+@pytest.mark.parametrize("upload_data", [{}, None])
+@pytest.mark.parametrize(
+    "returned",
+    [
+        _IMAGE_UPLOAD_URL,
+        f"{_IMAGE_UPLOAD_URL}/",
+        "https://WWW.EVENTBRITE.COM/image-bff/api/upload/",
+    ],
+)
+def test_image_bff_url_uploads_to_the_configured_url(
+    monkeypatch: Any, tmp_path: Any, returned: str, upload_data: Any
+) -> None:
+    _banner(tmp_path)
+    monkeypatch.setenv("EVENTBRITE_BANNERS_DIR", str(tmp_path / "banners"))
+    monkeypatch.setenv("EVENTBRITE_MEDIA_UPLOAD_URL", _IMAGE_UPLOAD_URL)
+    monkeypatch.setenv("EVENTBRITE_DEFAULT_TIMEZONE", "UTC")
+    instance = _workshop()
+    instance.slug = "sample-workshop"
+    calls = _install_sync_fakes(monkeypatch, instance)
+    _media_calls, uploads = _patch_media(
+        monkeypatch, upload_url=returned, upload_data=upload_data
+    )
+
+    result = sync_instance_to_eventbrite(session=_Session(), instance_id=instance.id)
+
+    assert result["status"] == "synced"
+    assert uploads[0]["url"] == _IMAGE_UPLOAD_URL
+    assert b'name="file"' in uploads[0]["body_bytes"]
+    assert b"secret-policy" not in uploads[0]["body_bytes"]
+    assert calls[2]["payload"]["event"]["logo_id"] == "logo-9"
+
+
+@pytest.mark.parametrize(
+    "returned",
+    [
+        f"{_IMAGE_UPLOAD_URL}/extra",
+        "https://www.eventbrite.com/image-bff/api/upload-other",
+        f"{_IMAGE_UPLOAD_URL}?x=1",
+        "https://evil.example/image-bff/api/upload",
+    ],
+)
+def test_image_bff_lookalikes_are_refused(
+    monkeypatch: Any, tmp_path: Any, returned: str
+) -> None:
+    _banner(tmp_path)
+    monkeypatch.setenv("EVENTBRITE_BANNERS_DIR", str(tmp_path / "banners"))
+    monkeypatch.setenv("EVENTBRITE_MEDIA_UPLOAD_URL", _IMAGE_UPLOAD_URL)
+    monkeypatch.setenv("EVENTBRITE_DEFAULT_TIMEZONE", "UTC")
+    instance = _workshop()
+    instance.slug = "sample-workshop"
+    calls = _install_sync_fakes(monkeypatch, instance)
+    _media_calls, uploads = _patch_media(monkeypatch, upload_url=returned)
+
+    result = sync_instance_to_eventbrite(session=_Session(), instance_id=instance.id)
+
+    assert result["status"] == "synced"
+    assert uploads == []
+    assert "logo_id" not in calls[2]["payload"]["event"]
+
+
 @pytest.mark.parametrize(
     "returned",
     [
@@ -242,6 +309,7 @@ def test_failed_upload_does_not_fail_the_sync(monkeypatch: Any, tmp_path: Any) -
     assert "logo_id" not in calls[2]["payload"]["event"]
     assert instance.eventbrite_sync_status.value == "synced"
     assert warnings[0]["status"] == 500
+    assert warnings[0]["upload_fields"] == ["key", "policy"]
     assert "message" not in warnings[0]
     assert "secret-policy" not in str(warnings)
     assert instance.eventbrite_last_payload_hash != _compute_instance_hash(instance)

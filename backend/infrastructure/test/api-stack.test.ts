@@ -248,7 +248,7 @@ function assertInboxImportUsesDedicatedPageToken(stack: cdk.Stack): void {
 
 function assertEventbriteMediaUploadUrl(stack: cdk.Stack): void {
   const uploadUrl =
-    "https://s3.amazonaws.com/eventbrite-uploader-incoming-prod/";
+    "https://www.eventbrite.com/image-bff/api/upload";
   const template = Template.fromStack(stack);
   const parameters = template.findParameters("EventbriteMediaUploadUrl");
   const parameter = parameters.EventbriteMediaUploadUrl;
