@@ -93,17 +93,30 @@ class _Session:
         return None
 
 
-def _install_sync_fakes(monkeypatch: Any, instance: _Instance) -> list[dict[str, Any]]:
+def _install_sync_fakes(
+    monkeypatch: Any,
+    instance: _Instance,
+    *,
+    remote_status: str = "draft",
+) -> list[dict[str, Any]]:
     calls: list[dict[str, Any]] = []
 
     def _request(**kwargs: Any) -> dict[str, Any]:
         calls.append(kwargs)
         path = str(kwargs["path"])
         if path.startswith("/organizations/") and path.endswith("/events/"):
-            return {"id": "1001", "url": "https://www.eventbrite.com/e/1001"}
+            return {
+                "id": "1001",
+                "url": "https://www.eventbrite.com/e/1001",
+                "status": "draft",
+            }
         if path.endswith("/ticket_classes/"):
             return {"id": "2002"}
-        return {"id": "1001", "url": "https://www.eventbrite.com/e/1001"}
+        return {
+            "id": "1001",
+            "url": "https://www.eventbrite.com/e/1001",
+            "status": remote_status,
+        }
 
     monkeypatch.setenv("EVENTBRITE_API_TOKEN", "token-value")
     monkeypatch.setenv("EVENTBRITE_ORGANIZATION_ID", "org-1")

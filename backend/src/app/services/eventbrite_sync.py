@@ -15,7 +15,6 @@ from sqlalchemy.orm import Session
 
 from app.db.models import (
     EventbriteSyncStatus,
-    InstanceStatus,
     ServiceDeliveryMode,
     ServiceType,
 )
@@ -31,6 +30,7 @@ from app.services.eventbrite_logo import (
     eventbrite_banner_sha256,
     upload_event_logo,
 )
+from app.services.eventbrite_publish import UnpublishRejected, apply_publish_state
 from app.services.eventbrite_tickets import build_ticket_class_payload
 from app.services.eventbrite_venue import eventbrite_venue_body
 from app.services.secrets import get_secret_json
@@ -93,7 +93,16 @@ def sync_instance_to_eventbrite(
         if instance.eventbrite_event_id is None:
             raise EventbriteSyncError("Eventbrite event id is missing after create")
 
-        venue_id = _attach_venue(instance, config=config)
+        remote = _eventbrite_call(
+            method="GET",
+            path=f"/events/{instance.eventbrite_event_id}/",
+            config=config,
+        )
+        venue_id = _attach_venue(
+            instance,
+            config=config,
+            venue_id=str(remote.get("venue_id") or "").strip() or None,
+        )
         logo_id, payload_hash = upload_event_logo(
             instance=instance,
             token=config.token,
@@ -109,12 +118,17 @@ def sync_instance_to_eventbrite(
         )
         _sync_structured_overview(instance, config=config)
         ticket_map = _sync_ticket_classes(instance, config=config)
-        _apply_publish_state(instance, config=config)
+        notice = apply_publish_state(
+            instance_status=instance.status,
+            remote_status=str(remote.get("status") or ""),
+            event_id=str(instance.eventbrite_event_id),
+            call=_eventbrite_caller(config),
+        )
 
         instance.eventbrite_ticket_class_map = ticket_map
         instance.eventbrite_last_payload_hash = payload_hash
         instance.eventbrite_last_synced_at = datetime.now(UTC)
-        instance.eventbrite_last_error = None
+        instance.eventbrite_last_error = notice
         instance.eventbrite_retry_count = 0
         instance.eventbrite_sync_status = EventbriteSyncStatus.SYNCED
         session.commit()
@@ -262,39 +276,28 @@ def _sync_ticket_classes(instance: Any, *, config: _EventbriteConfig) -> dict[st
     return next_map
 
 
-def _apply_publish_state(instance: Any, *, config: _EventbriteConfig) -> None:
-    event_id = str(instance.eventbrite_event_id or "").strip()
-    if not event_id:
-        raise EventbriteSyncError("Eventbrite event id is required for publish state")
-    if instance.status in {InstanceStatus.OPEN, InstanceStatus.FULL}:
-        _eventbrite_call(
-            method="POST",
-            path=f"/events/{event_id}/publish/",
-            config=config,
-        )
-        return
-    if instance.status in {InstanceStatus.CANCELLED, InstanceStatus.COMPLETED}:
-        _eventbrite_call(
-            method="POST",
-            path=f"/events/{event_id}/unpublish/",
-            config=config,
-        )
+def _eventbrite_caller(config: _EventbriteConfig) -> Any:
+    def _call(method: str, path: str) -> dict[str, Any]:
+        try:
+            return _eventbrite_call(method=method, path=path, config=config)
+        except EventbriteSyncError as exc:
+            if path.endswith("/unpublish/") and "(400)" in str(exc):
+                raise UnpublishRejected(str(exc)) from exc
+            raise
+
+    return _call
 
 
-def _attach_venue(instance: Any, *, config: _EventbriteConfig) -> str | None:
+def _attach_venue(
+    instance: Any,
+    *,
+    config: _EventbriteConfig,
+    venue_id: str | None,
+) -> str | None:
     """Create or update the Eventbrite venue and return its id."""
     body = eventbrite_venue_body(instance)
     if body is None:
         return None
-    event_id = str(instance.eventbrite_event_id or "").strip()
-    if not event_id:
-        raise EventbriteSyncError("Eventbrite event id is required for a venue")
-    current = _eventbrite_call(
-        method="GET",
-        path=f"/events/{event_id}/",
-        config=config,
-    )
-    venue_id = str(current.get("venue_id") or "").strip()
     wrapped = {"venue": body}
     if venue_id:
         _eventbrite_call(

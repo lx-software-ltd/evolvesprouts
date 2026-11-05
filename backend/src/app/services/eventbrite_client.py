@@ -32,14 +32,14 @@ def eventbrite_request(
 
     def _call() -> dict[str, Any]:
         body = json.dumps(payload) if payload is not None else None
+        headers = {"Authorization": f"Bearer {token}"}
+        if payload is not None:
+            headers["Content-Type"] = "application/json"
         try:
             response = http_invoke(
                 method=method,
                 url=f"{base_url.rstrip('/')}{path}",
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "Content-Type": "application/json",
-                },
+                headers=headers,
                 body=body,
                 timeout=20,
             )

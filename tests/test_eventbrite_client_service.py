@@ -4,7 +4,6 @@ import json
 from typing import Any
 
 import pytest
-
 from app.services import eventbrite_client
 from app.services.aws_proxy import AwsProxyError
 from app.services.eventbrite_client import EventbriteApiError, eventbrite_request
@@ -30,6 +29,37 @@ def test_eventbrite_request_returns_parsed_json(monkeypatch: Any) -> None:
     )
 
     assert result == {"events": []}
+
+
+def test_eventbrite_request_sets_json_content_type_only_with_a_body(
+    monkeypatch: Any,
+) -> None:
+    captured: list[dict[str, Any]] = []
+
+    def _invoke(**kwargs: Any) -> dict[str, Any]:
+        captured.append(kwargs)
+        return {"status": 200, "body": "{}"}
+
+    monkeypatch.setattr(eventbrite_client, "http_invoke", _invoke)
+
+    eventbrite_request(
+        method="GET",
+        base_url="https://www.eventbriteapi.com/v3",
+        path="/media/upload/",
+        token="token-value",
+    )
+    eventbrite_request(
+        method="POST",
+        base_url="https://www.eventbriteapi.com/v3",
+        path="/events/1001/",
+        token="token-value",
+        payload={"event": {"name": {"html": "Mealtime"}}},
+    )
+
+    assert "Content-Type" not in captured[0]["headers"]
+    assert captured[0]["body"] is None
+    assert captured[1]["headers"]["Content-Type"] == "application/json"
+    assert captured[1]["body"] == '{"event": {"name": {"html": "Mealtime"}}}'
 
 
 def test_eventbrite_request_raises_on_proxy_error(monkeypatch: Any) -> None:

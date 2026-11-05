@@ -166,8 +166,17 @@ and DLQ support.
   A missing banner or a failed upload does not fail the sync. The hash
   includes the banner checksum only when a banner is sent. When a usable
   banner is not uploaded, the stored hash omits that checksum so the next
-  save retries. The failure log records the HTTP status and the error
-  type, not the signed upload fields.
+  save retries. The failure log records the HTTP status. An Eventbrite
+  API error also records that error text. Signed upload fields are not
+  logged. GET requests omit `Content-Type`.
+- Publish follows the remote event status. An open or full instance
+  publishes only a `draft`. A live or started event is updated and left
+  published. A cancelled or completed instance unpublishes a live or
+  started event. If Eventbrite rejects that unpublish because the event
+  has orders, the sync stays `synced` and `eventbrite_last_error` says
+  tickets stay on sale. An ended, completed, or canceled remote event is
+  not published again; the same field says a new Eventbrite event is
+  required. A missing remote status skips publish and records that.
 - A physical event with a location name and an ISO country code on its
   geographic area gets an Eventbrite venue (created, or updated when the
   event already has `venue_id`). Online events and locations without a

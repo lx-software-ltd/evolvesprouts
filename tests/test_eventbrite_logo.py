@@ -7,6 +7,7 @@ import zlib
 from typing import Any
 
 from app.services import eventbrite_logo
+from app.services.eventbrite_client import EventbriteApiError
 from app.services.eventbrite_sync import (
     _compute_instance_hash,
     sync_instance_to_eventbrite,
@@ -94,10 +95,11 @@ def test_sync_uploads_banner_before_the_event_update(
     assert [call["path"] for call in calls] == [
         "/organizations/org-1/events/",
         "/events/1001/",
+        "/events/1001/",
         "/events/1001/ticket_classes/",
         "/events/1001/publish/",
     ]
-    assert calls[1]["payload"]["event"]["logo_id"] == "logo-9"
+    assert calls[2]["payload"]["event"]["logo_id"] == "logo-9"
     assert "logo_id" not in calls[0]["payload"]["event"]
     calls.clear()
     second = sync_instance_to_eventbrite(session=_Session(), instance_id=instance.id)
@@ -140,7 +142,7 @@ def test_wrong_upload_url_is_refused_and_sync_continues(
 
     assert result["status"] == "synced"
     assert uploads == []
-    assert "logo_id" not in calls[1]["payload"]["event"]
+    assert "logo_id" not in calls[2]["payload"]["event"]
     assert warnings
     assert all("secret-policy" not in str(extra) for extra in warnings)
     assert instance.eventbrite_last_payload_hash != _compute_instance_hash(instance)
@@ -165,9 +167,10 @@ def test_failed_upload_does_not_fail_the_sync(monkeypatch: Any, tmp_path: Any) -
     result = sync_instance_to_eventbrite(session=_Session(), instance_id=instance.id)
 
     assert result["status"] == "synced"
-    assert "logo_id" not in calls[1]["payload"]["event"]
+    assert "logo_id" not in calls[2]["payload"]["event"]
     assert instance.eventbrite_sync_status.value == "synced"
     assert warnings[0]["status"] == 500
+    assert "message" not in warnings[0]
     assert "secret-policy" not in str(warnings)
     assert instance.eventbrite_last_payload_hash != _compute_instance_hash(instance)
 
@@ -179,6 +182,41 @@ def test_failed_upload_does_not_fail_the_sync(monkeypatch: Any, tmp_path: Any) -
     assert second["status"] == "synced"
     assert media_calls[0]["path"] == "/media/upload/?type=image-event-logo"
     assert uploads[0]["url"] == _UPLOAD_URL
+
+
+def test_logo_warning_includes_the_eventbrite_message(
+    monkeypatch: Any, tmp_path: Any
+) -> None:
+    _banner(tmp_path)
+    monkeypatch.setenv("EVENTBRITE_BANNERS_DIR", str(tmp_path / "banners"))
+    monkeypatch.setenv("EVENTBRITE_MEDIA_UPLOAD_URL", _UPLOAD_URL)
+    monkeypatch.setenv("EVENTBRITE_DEFAULT_TIMEZONE", "UTC")
+    instance = _workshop()
+    instance.slug = "sample-workshop"
+    _install_sync_fakes(monkeypatch, instance)
+    warnings: list[dict[str, Any]] = []
+    monkeypatch.setattr(
+        eventbrite_logo.logger,
+        "warning",
+        lambda *_args, **kwargs: warnings.append(kwargs.get("extra") or {}),
+    )
+
+    def _reject(**_kwargs: Any) -> dict[str, Any]:
+        raise EventbriteApiError(
+            status_code=400,
+            message="Eventbrite API request failed (400): ARGUMENTS_ERROR",
+        )
+
+    monkeypatch.setattr(eventbrite_logo, "eventbrite_request", _reject)
+
+    result = sync_instance_to_eventbrite(session=_Session(), instance_id=instance.id)
+
+    assert result["status"] == "synced"
+    assert warnings[0]["status"] == 400
+    assert warnings[0]["message"] == (
+        "Eventbrite API request failed (400): ARGUMENTS_ERROR"
+    )
+    assert "policy" not in warnings[0]["message"]
 
 
 def test_hash_changes_only_when_a_banner_exists(
