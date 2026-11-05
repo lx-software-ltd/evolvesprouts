@@ -246,6 +246,56 @@ function assertInboxImportUsesDedicatedPageToken(stack: cdk.Stack): void {
   }
 }
 
+function assertEventbriteMediaUploadUrl(stack: cdk.Stack): void {
+  const uploadUrl =
+    "https://s3.amazonaws.com/eventbrite-uploader-incoming-prod/";
+  const template = Template.fromStack(stack);
+  const functions = template.findResources("AWS::Lambda::Function");
+  const proxy = Object.values(functions).find((resource) => {
+    const name = (resource.Properties ?? {}).FunctionName;
+    return name === "evolvesprouts-AwsApiProxyFunction";
+  });
+  if (!proxy) {
+    throw new Error(
+      "Expected Lambda FunctionName evolvesprouts-AwsApiProxyFunction",
+    );
+  }
+  const proxyVars =
+    ((proxy.Properties ?? {}).Environment ?? {}).Variables ?? {};
+  const allowed = JSON.stringify(
+    (proxyVars as Record<string, unknown>).ALLOWED_HTTP_URLS,
+  );
+  if (!allowed.includes(uploadUrl)) {
+    throw new Error(
+      `ALLOWED_HTTP_URLS must include the Eventbrite upload bucket; found ${allowed}`,
+    );
+  }
+  const nested = stack.node.tryFindChild("EventbriteSync");
+  if (!(nested instanceof cdk.NestedStack)) {
+    throw new Error("Expected EventbriteSync nested stack on ApiStack");
+  }
+  const nestedTemplate = Template.fromStack(nested);
+  const nestedFunctions = nestedTemplate.findResources("AWS::Lambda::Function");
+  const processor = Object.values(nestedFunctions).find((resource) => {
+    const name = (resource.Properties ?? {}).FunctionName;
+    return name === "evolvesprouts-EventbriteSyncProcessor";
+  });
+  if (!processor) {
+    throw new Error(
+      "Expected Lambda FunctionName evolvesprouts-EventbriteSyncProcessor",
+    );
+  }
+  const processorVars =
+    ((processor.Properties ?? {}).Environment ?? {}).Variables ?? {};
+  const configured = (processorVars as Record<string, unknown>)
+    .EVENTBRITE_MEDIA_UPLOAD_URL;
+  if (configured !== uploadUrl) {
+    throw new Error(
+      `EVENTBRITE_MEDIA_UPLOAD_URL must be the Eventbrite upload bucket; found ${JSON.stringify(configured)}`,
+    );
+  }
+}
+
 function assertEventbriteProcessorTimezone(stack: cdk.Stack): void {
   const template = Template.fromStack(stack);
   const parameters = template.findParameters("EventbriteDefaultTimezone");
@@ -697,6 +747,7 @@ function main(): void {
   assertInboxImportHasNoReservedConcurrency(stack);
   assertInboxImportUsesDedicatedPageToken(stack);
   assertEventbriteProcessorTimezone(stack);
+  assertEventbriteMediaUploadUrl(stack);
   assertSalesDailyPlanSchedule(stack);
   assertInboundInvoiceSharesReceiptRuleSet(template);
   assertFinanceReadonlyDataApi(template);

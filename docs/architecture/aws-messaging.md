@@ -159,8 +159,12 @@ and DLQ support.
   is omitted. Invalid JSON does not fail the sync. The payload hash
   includes that HTML only when a landing page matched, so other events
   do not resync just because the field exists. The Lambda bundle copies
-  those JSON files to `content/landing-pages`. The header image is not
-  uploaded.
+  those JSON files to `content/landing-pages`. A matching
+  `eventbrite-banners/<slug>.png` is uploaded as the event logo. The
+  banner is the hero photo with the Evolve Sprouts tree behind it, on
+  a 2:1 canvas. The upload URL must equal `EVENTBRITE_MEDIA_UPLOAD_URL`.
+  A missing banner or a failed upload does not fail the sync. The hash
+  includes the banner checksum only when a banner is sent.
 - A physical event with a location name and an ISO country code on its
   geographic area gets an Eventbrite venue (created, or updated when the
   event already has `venue_id`). Online events and locations without a

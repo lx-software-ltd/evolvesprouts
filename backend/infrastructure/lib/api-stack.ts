@@ -79,6 +79,7 @@ interface EventbriteSyncNestedStackProps extends cdk.NestedStackProps {
   databaseProxyEndpoint: string;
   awsProxyFunctionArn: string;
   eventbriteApiBaseUrl: string;
+  eventbriteMediaUploadUrl: string;
   eventbriteOrganizationId: string;
   eventbriteTokenSecretArn: string;
   eventbriteDefaultTimezone: string;
@@ -156,6 +157,7 @@ class EventbriteSyncNestedStack extends cdk.NestedStack {
         DATABASE_IAM_AUTH: "true",
         AWS_PROXY_FUNCTION_ARN: props.awsProxyFunctionArn,
         EVENTBRITE_API_BASE_URL: props.eventbriteApiBaseUrl,
+        EVENTBRITE_MEDIA_UPLOAD_URL: props.eventbriteMediaUploadUrl,
         EVENTBRITE_ORGANIZATION_ID: props.eventbriteOrganizationId,
         EVENTBRITE_TOKEN_SECRET_ARN: props.eventbriteTokenSecretArn,
         EVENTBRITE_DEFAULT_TIMEZONE: props.eventbriteDefaultTimezone,
@@ -2034,12 +2036,17 @@ export class ApiStack extends cdk.Stack {
       "cognito-idp:admin_user_global_sign_out",
       "cognito-idp:admin_update_user_attributes",
     ];
+    // Eventbrite's documented image-upload bucket. The sync refuses any
+    // upload_url that is not this exact string.
+    const eventbriteMediaUploadUrl =
+      "https://s3.amazonaws.com/eventbrite-uploader-incoming-prod/";
     const allowedProxyHttpUrls = [
       "https://nominatim.openstreetmap.org/search",
       "https://challenges.cloudflare.com/turnstile/v0/siteverify",
       `https://${mailchimpServerPrefix.valueAsString}.api.mailchimp.com/3.0/`,
       "https://api.stripe.com/v1/",
       eventbriteApiBaseUrl.valueAsString,
+      eventbriteMediaUploadUrl,
       openrouterChatCompletionsUrl.valueAsString,
       "https://graph.facebook.com",
     ];
@@ -2326,6 +2333,7 @@ export class ApiStack extends cdk.Stack {
         databaseProxyEndpoint: database.proxy.endpoint,
         awsProxyFunctionArn: awsProxyFunction.functionArn,
         eventbriteApiBaseUrl: eventbriteApiBaseUrl.valueAsString,
+        eventbriteMediaUploadUrl,
         eventbriteOrganizationId: eventbriteOrganizationId.valueAsString,
         eventbriteTokenSecretArn: eventbriteTokenSecret.valueAsString,
         eventbriteDefaultTimezone: eventbriteDefaultTimezone.valueAsString,

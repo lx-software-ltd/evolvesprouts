@@ -25,10 +25,11 @@ Environment (proxy Lambda):
 
 from __future__ import annotations
 
+import base64
 import json
 import os
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 from urllib.parse import urlparse
 
 import boto3
@@ -36,7 +37,6 @@ from botocore.config import Config
 from botocore.exceptions import ConnectTimeoutError, ReadTimeoutError
 
 from app.services.aws_clients import get_client
-
 from app.utils.logging import configure_logging, get_logger
 
 configure_logging()
@@ -54,6 +54,7 @@ _HTTP_PROXY_USER_AGENT = "EvolveSproutsProxy/1.0"
 # calls are not clipped to 60s, and keep headroom under AwsApiProxyFunction's
 # 120s Lambda timeout so the proxy can still return a payload.
 _MAX_HTTP_TIMEOUT_SECONDS = 90
+_MAX_HTTP_BODY_BYTES = 4 * 1024 * 1024
 # botocore defaults to a 60s read timeout and retries Lambda Invoke. A 06:00
 # HKT OpenRouter call that takes ~80s then gets a second overlapping invoke,
 # and the worker Lambda dies at 120s still marked PROCESSING.
@@ -149,17 +150,20 @@ def _handle_http(event: Mapping[str, Any]) -> dict[str, Any]:
         method:  HTTP method (GET, POST, PUT, DELETE, PATCH, HEAD)
         url:     Full URL
         headers: Optional dict of request headers
-        body:    Optional request body (string)
+        body:    Optional request body (string). Not with ``body_base64``.
+        body_base64: Optional file body. Not with ``body``. At most 4 MB.
         timeout: Optional timeout in seconds (default 10, max 90)
     """
-    import urllib.request
     import urllib.error
+    import urllib.request
 
     method: str = (event.get("method") or "GET").upper()
     url: str = event.get("url") or ""
     headers: dict[str, str] = event.get("headers") or {}
-    body: str | None = event.get("body")
     timeout: int = min(int(event.get("timeout") or 10), _MAX_HTTP_TIMEOUT_SECONDS)
+    encoded_body = _http_body_bytes(event)
+    if isinstance(encoded_body, dict):
+        return encoded_body
 
     if not any(k.lower() == "user-agent" for k in headers):
         headers["User-Agent"] = _HTTP_PROXY_USER_AGENT
@@ -191,7 +195,6 @@ def _handle_http(event: Mapping[str, Any]) -> dict[str, Any]:
     logger.info(f"Proxying HTTP {method} {url}")
 
     try:
-        encoded_body = body.encode("utf-8") if body else None
         req = urllib.request.Request(
             url,
             data=encoded_body,
@@ -329,14 +332,63 @@ def invoke(service: str, action: str, params: dict[str, Any]) -> dict[str, Any]:
     )
 
 
+def _http_body_bytes(event: Mapping[str, Any]) -> bytes | None | dict[str, Any]:
+    """Decode the outbound body. A dict result is an error response."""
+    raw_body = event.get("body", None)
+    raw_b64 = event.get("body_base64", None)
+    if raw_body is not None and raw_b64 is not None:
+        return {
+            "error": {
+                "code": "InvalidBody",
+                "message": "body and body_base64 cannot both be set",
+            },
+        }
+    if raw_b64 is not None:
+        if not isinstance(raw_b64, str):
+            return {
+                "error": {
+                    "code": "InvalidBody",
+                    "message": "body_base64 must be a string",
+                },
+            }
+        try:
+            decoded = base64.b64decode(raw_b64, validate=True)
+        except ValueError:
+            return {
+                "error": {
+                    "code": "InvalidBody",
+                    "message": "body_base64 is not valid base64",
+                },
+            }
+        if len(decoded) > _MAX_HTTP_BODY_BYTES:
+            return {
+                "error": {
+                    "code": "BodyTooLarge",
+                    "message": "body_base64 exceeds 4 MB",
+                },
+            }
+        return decoded
+    if raw_body is None:
+        return None
+    if not isinstance(raw_body, str):
+        return {
+            "error": {"code": "InvalidBody", "message": "body must be a string"},
+        }
+    return raw_body.encode("utf-8")
+
+
 def http_invoke(
     method: str,
     url: str,
     headers: dict[str, str] | None = None,
     body: str | None = None,
+    body_bytes: bytes | None = None,
     timeout: int = 10,
 ) -> dict[str, Any]:
     """Make an HTTP request via the proxy Lambda.
+
+    ``body`` is text. ``body_bytes`` is a file and is sent as base64.
+    The two cannot be combined.
 
     Returns:
         ``{"status": int, "headers": dict, "body": str}``
@@ -345,14 +397,19 @@ def http_invoke(
         AwsProxyError: on proxy-level failure (not HTTP errors – those
                        are returned in the result with the status code).
         RuntimeError:  if the proxy ARN is not configured.
+        ValueError:    if both body forms are set.
     """
-    return _invoke_proxy(
-        {
-            "type": "http",
-            "method": method,
-            "url": url,
-            "headers": headers or {},
-            "body": body,
-            "timeout": timeout,
-        }
-    )
+    if body is not None and body_bytes is not None:
+        raise ValueError("body and body_bytes cannot both be set")
+    payload: dict[str, Any] = {
+        "type": "http",
+        "method": method,
+        "url": url,
+        "headers": headers or {},
+        "timeout": timeout,
+    }
+    if body_bytes is not None:
+        payload["body_base64"] = base64.b64encode(body_bytes).decode("ascii")
+    else:
+        payload["body"] = body
+    return _invoke_proxy(payload)

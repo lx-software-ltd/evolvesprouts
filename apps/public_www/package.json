@@ -7,6 +7,7 @@
     "smoke:staging": "node ./scripts/smoke-staging.mjs",
     "audit:assets": "node ./scripts/audit-assets.mjs",
     "images:optimize": "node ./scripts/optimize-images.mjs",
+    "images:eventbrite-banners": "node ./scripts/build-eventbrite-banners.mjs",
     "validate:content": "node ./scripts/validate-content.mjs",
     "validate:token-fallbacks": "node ./scripts/validate-token-fallbacks.mjs",
     "figma:auth": "node ./scripts/figma/generate-refresh-token.mjs",

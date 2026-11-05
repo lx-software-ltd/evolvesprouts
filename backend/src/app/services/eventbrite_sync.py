@@ -6,7 +6,6 @@ import json
 import os
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from decimal import Decimal
 from hashlib import sha256
 from typing import Any
 from uuid import UUID
@@ -28,6 +27,11 @@ from app.services.eventbrite_landing_description import (
     next_structured_content_version,
     structured_content_payload,
 )
+from app.services.eventbrite_logo import (
+    eventbrite_banner_sha256,
+    upload_event_logo,
+)
+from app.services.eventbrite_tickets import build_ticket_class_payload
 from app.services.eventbrite_venue import eventbrite_venue_body
 from app.services.secrets import get_secret_json
 from app.utils.logging import get_logger
@@ -90,7 +94,17 @@ def sync_instance_to_eventbrite(
             raise EventbriteSyncError("Eventbrite event id is missing after create")
 
         venue_id = _attach_venue(instance, config=config)
-        _update_event(instance, config=config, venue_id=venue_id)
+        logo_id = upload_event_logo(
+            instance=instance,
+            token=config.token,
+            api_base_url=_eventbrite_api_base_url(),
+        )
+        _update_event(
+            instance,
+            config=config,
+            venue_id=venue_id,
+            logo_id=logo_id,
+        )
         _sync_structured_overview(instance, config=config)
         ticket_map = _sync_ticket_classes(instance, config=config)
         _apply_publish_state(instance, config=config)
@@ -189,11 +203,18 @@ def _update_event(
     *,
     config: _EventbriteConfig,
     venue_id: str | None,
+    logo_id: str | None = None,
 ) -> None:
     event_id = str(instance.eventbrite_event_id or "").strip()
     if not event_id:
         raise EventbriteSyncError("Eventbrite event id is required for update")
-    body = {"event": _build_event_payload(instance, venue_id=venue_id)}
+    body = {
+        "event": _build_event_payload(
+            instance,
+            venue_id=venue_id,
+            logo_id=logo_id,
+        )
+    }
     response = _eventbrite_call(
         method="POST",
         path=f"/events/{event_id}/",
@@ -215,7 +236,7 @@ def _sync_ticket_classes(instance: Any, *, config: _EventbriteConfig) -> dict[st
     for tier in sorted(instance.ticket_tiers, key=lambda row: row.sort_order):
         local_tier_id = str(tier.id)
         remote_ticket_class_id = existing_map.get(local_tier_id)
-        ticket_body = {"ticket_class": _build_ticket_class_payload(tier)}
+        ticket_body = {"ticket_class": build_ticket_class_payload(tier)}
         if remote_ticket_class_id:
             _eventbrite_call(
                 method="POST",
@@ -321,6 +342,7 @@ def _build_event_payload(
     instance: Any,
     *,
     venue_id: str | None = None,
+    logo_id: str | None = None,
 ) -> dict[str, Any]:
     ordered_slots = sorted(instance.session_slots, key=lambda item: item.sort_order)
     if not ordered_slots:
@@ -355,23 +377,8 @@ def _build_event_payload(
     }
     if venue_id:
         payload["venue_id"] = venue_id
-    return payload
-
-
-def _build_ticket_class_payload(tier: Any) -> dict[str, Any]:
-    is_free = _is_zero_or_less(tier.price)
-    payload: dict[str, Any] = {
-        "name": tier.name,
-        "description": tier.description,
-        "free": is_free,
-        "quantity_total": int(tier.max_quantity)
-        if tier.max_quantity is not None
-        else None,
-    }
-    payload = {key: value for key, value in payload.items() if value is not None}
-    if not is_free:
-        amount = _decimal_to_minor_units(tier.price)
-        payload["cost"] = f"{tier.currency.upper()},{amount}"
+    if logo_id:
+        payload["logo_id"] = logo_id
     return payload
 
 
@@ -429,6 +436,9 @@ def _compute_instance_hash(instance: Any) -> str:
     venue = eventbrite_venue_body(instance)
     if venue is not None:
         payload["venue"] = venue
+    banner_sha256 = eventbrite_banner_sha256(instance)
+    if banner_sha256:
+        payload["banner_sha256"] = banner_sha256
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return sha256(encoded).hexdigest()
 
@@ -460,11 +470,7 @@ def _format_eventbrite_utc(value: datetime) -> str:
 
 
 def _eventbrite_timezone_name() -> str:
-    """IANA timezone Eventbrite should display.
-
-    Unset, invalid, and ``Etc/`` zones use ``UTC``. A bad value is logged
-    and does not fail the sync.
-    """
+    """IANA timezone for the listing. Invalid and ``Etc/`` zones use UTC."""
     configured = os.getenv(_ENV_EVENTBRITE_DEFAULT_TIMEZONE, "").strip()
     if not configured:
         return _DEFAULT_EVENTBRITE_TIMEZONE
@@ -489,11 +495,3 @@ def _is_eventbrite_timezone(zone_id: str) -> bool:
     except (ZoneInfoNotFoundError, ValueError):
         return False
     return True
-
-
-def _decimal_to_minor_units(value: Decimal) -> int:
-    return int((value * Decimal("100")).quantize(Decimal("1")))
-
-
-def _is_zero_or_less(value: Decimal) -> bool:
-    return value <= Decimal("0")

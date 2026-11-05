@@ -24,13 +24,18 @@ def _copy_landing_pages():
     return module.copy_landing_pages
 
 
-def test_copy_landing_pages_copies_json_only(tmp_path: Path) -> None:
+def test_copy_landing_pages_copies_json_and_banners(tmp_path: Path) -> None:
     copy_landing_pages = _copy_landing_pages()
     source = tmp_path / "backend"
-    pages = tmp_path / "apps" / "public_www" / "src" / "content" / "landing-pages"
+    content = tmp_path / "apps" / "public_www" / "src" / "content"
+    pages = content / "landing-pages"
+    banners = content / "eventbrite-banners"
     pages.mkdir(parents=True)
+    banners.mkdir()
     (pages / "sample.json").write_text("{}", encoding="utf-8")
     (pages / "notes.txt").write_text("nope", encoding="utf-8")
+    (banners / "sample.png").write_bytes(b"\x89PNG")
+    (banners / "notes.txt").write_text("nope", encoding="utf-8")
     output = tmp_path / "out"
     output.mkdir()
 
@@ -39,10 +44,25 @@ def test_copy_landing_pages_copies_json_only(tmp_path: Path) -> None:
     copied = output / "content" / "landing-pages"
     assert (copied / "sample.json").read_text(encoding="utf-8") == "{}"
     assert not (copied / "notes.txt").exists()
+    copied_banners = output / "content" / "eventbrite-banners"
+    assert (copied_banners / "sample.png").read_bytes() == b"\x89PNG"
+    assert not (copied_banners / "notes.txt").exists()
 
 
 def test_copy_landing_pages_requires_the_directory(tmp_path: Path) -> None:
     copy_landing_pages = _copy_landing_pages()
+    output = tmp_path / "out"
+    output.mkdir()
+
+    with pytest.raises(FileNotFoundError):
+        copy_landing_pages(tmp_path / "backend", output)
+
+
+def test_copy_landing_pages_requires_banners(tmp_path: Path) -> None:
+    copy_landing_pages = _copy_landing_pages()
+    pages = tmp_path / "apps" / "public_www" / "src" / "content" / "landing-pages"
+    pages.mkdir(parents=True)
+    (pages / "sample.json").write_text("{}", encoding="utf-8")
     output = tmp_path / "out"
     output.mkdir()
 

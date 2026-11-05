@@ -69,6 +69,47 @@ export function collectLocaleKeyErrors(value, locale, errors, keyPath = '') {
   }
 }
 
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const EVENTBRITE_BANNER_MAX_BYTES = 2 * 1024 * 1024;
+
+function eventbriteBannerSize(bytes) {
+  if (!Buffer.isBuffer(bytes) || bytes.length < 24 || !bytes.subarray(0, 8).equals(PNG_SIGNATURE)) {
+    return null;
+  }
+  if (bytes.subarray(12, 16).toString('ascii') !== 'IHDR') {
+    return null;
+  }
+  return {
+    width: bytes.readUInt32BE(16),
+    height: bytes.readUInt32BE(20),
+  };
+}
+
+export async function collectEventbriteBannerErrors(landingPagesDir, bannerDir, errors) {
+  const filenames = (await readdir(landingPagesDir))
+    .filter((filename) => filename.endsWith('.json'))
+    .sort();
+  for (const filename of filenames) {
+    const slug = filename.slice(0, -'.json'.length);
+    const bannerPath = path.join(bannerDir, `${slug}.png`);
+    let bytes;
+    try {
+      bytes = await readFile(bannerPath);
+    } catch {
+      errors.push(`${filename}: missing Eventbrite banner ${slug}.png`);
+      continue;
+    }
+    const size = eventbriteBannerSize(bytes);
+    if (!size || size.height < 1 || size.width !== size.height * 2) {
+      errors.push(`${filename}: Eventbrite banner must be a 2:1 PNG`);
+      continue;
+    }
+    if (bytes.length > EVENTBRITE_BANNER_MAX_BYTES) {
+      errors.push(`${filename}: Eventbrite banner exceeds 2 MB`);
+    }
+  }
+}
+
 const HERO_CHIP_TYPES = new Set([
   'category',
   'cohort',
@@ -678,6 +719,11 @@ async function main() {
     const landingPage = await loadJson(path.join(landingPagesDir, filename));
     collectLandingPageHeroChipErrors(landingPage, filename, errors);
   }
+  await collectEventbriteBannerErrors(
+    landingPagesDir,
+    path.join(CONTENT_DIR, 'eventbrite-banners'),
+    errors,
+  );
 
   if (errors.length > 0) {
     console.error('Content validation failed.');

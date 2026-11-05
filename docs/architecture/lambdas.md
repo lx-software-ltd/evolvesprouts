@@ -10,7 +10,9 @@ their primary responsibilities.
 - CDK runs `backend/scripts/run-cdk-app.sh`, which builds the local
   bundle via `backend/scripts/build_lambda_bundle.py` before synth/deploy.
   That bundle also copies `apps/public_www/src/content/landing-pages/*.json`
-  to `content/landing-pages` so Eventbrite sync can read them by slug.
+  to `content/landing-pages`, and
+  `apps/public_www/src/content/eventbrite-banners/*.png` to
+  `content/eventbrite-banners`, so Eventbrite sync can read them by slug.
 - Lambda dependency wheels are cached under
   `backend/.lambda-build/dependency-cache` keyed by `backend/requirements.txt`
   content and target runtime metadata to avoid reinstalling pip dependencies on
@@ -908,8 +910,9 @@ their primary responsibilities.
   and upsert Eventbrite event/ticket metadata while keeping DB as source of truth.
   When the instance slug matches a landing-page JSON file, that page's
   English copy is published as Eventbrite structured content. The short
-  description stays the summary. A physical location with a country code
-  is sent as the venue. Event times are sent as `YYYY-MM-DDThh:mm:ssZ`.
+  description stays the summary. A matching banner PNG is uploaded as
+  the event logo. A physical location with a country code is sent as
+  the venue. Event times are sent as `YYYY-MM-DDThh:mm:ssZ`.
   Timezone
   behaviour is in `docs/architecture/aws-messaging.md`.
 - DB access: RDS Proxy with IAM auth (`evolvesprouts_admin`)
@@ -925,6 +928,8 @@ their primary responsibilities.
   - `EVENTBRITE_TOKEN_SECRET_ARN`
   - `EVENTBRITE_DEFAULT_TIMEZONE` (CDK `EventbriteDefaultTimezone`,
     GitHub var `CDK_PARAM_EVENTBRITE_DEFAULT_TIMEZONE`)
+  - `EVENTBRITE_MEDIA_UPLOAD_URL` (Eventbrite's image upload bucket;
+    the sync refuses any other upload URL)
 
 ### AWS / HTTP proxy
 - Function: AwsApiProxyFunction
@@ -942,7 +947,8 @@ their primary responsibilities.
     `cognito-idp:admin_create_user`, `cognito-idp:admin_disable_user`,
     `cognito-idp:admin_enable_user`)
   - `ALLOWED_HTTP_URLS`: comma-separated URL prefixes for outbound HTTP
-    requests (e.g. `https://api.example.com/v1/`)
+    requests (e.g. `https://api.example.com/v1/`). File uploads use
+    `body_base64` and are capped at 4 MB. Text bodies stay `body`.
 - Security: only invocable by Lambdas granted `lambda:InvokeFunction`;
   IAM role scoped to specific AWS actions; all requests validated
   against the allow-lists before execution

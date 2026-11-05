@@ -25,22 +25,36 @@ def _run_pip(command: list[str], cwd: Path, env: dict[str, str]) -> None:
 
 
 def copy_landing_pages(source_root: Path, output_dir: Path) -> None:
-    """Copy public landing-page JSON into the Lambda bundle.
+    """Copy public landing-page JSON and Eventbrite banners into the bundle.
 
     Eventbrite sync reads these files by instance slug. ``extraCopyPaths``
     cannot leave ``backend/``, and CDK stages this bundle before deploy.
     """
-    landing_pages = (
-        source_root.parent / "apps" / "public_www" / "src" / "content" / "landing-pages"
+    content = source_root.parent / "apps" / "public_www" / "src" / "content"
+    _copy_matching_files(
+        content / "landing-pages",
+        output_dir / "content" / "landing-pages",
+        ".json",
     )
-    if not landing_pages.is_dir():
-        raise FileNotFoundError(f"Missing landing page directory: {landing_pages}")
-    json_files = sorted(path for path in landing_pages.glob("*.json") if path.is_file())
-    if not json_files:
-        raise FileNotFoundError(f"No landing page JSON files in {landing_pages}")
-    destination = output_dir / "content" / "landing-pages"
+    _copy_matching_files(
+        content / "eventbrite-banners",
+        output_dir / "content" / "eventbrite-banners",
+        ".png",
+    )
+
+
+def _copy_matching_files(source: Path, destination: Path, suffix: str) -> None:
+    if not source.is_dir():
+        raise FileNotFoundError(f"Missing content directory: {source}")
+    files = sorted(
+        path
+        for path in source.glob(f"*{suffix}")
+        if path.is_file() and path.suffix == suffix
+    )
+    if not files:
+        raise FileNotFoundError(f"No {suffix} files in {source}")
     destination.mkdir(parents=True, exist_ok=True)
-    for path in json_files:
+    for path in files:
         shutil.copy2(path, destination / path.name)
 
 

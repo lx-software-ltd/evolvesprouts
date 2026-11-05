@@ -9,7 +9,7 @@ When a service instance slug matches a public landing-page file, Eventbrite stru
 
 ## Non-goals
 
-- Eventbrite header image upload. The current hero is a small WebP, and the media host is not on the proxy allow-list.
+- Eventbrite header image upload. Done in `docs/plans/eventbrite-header-image.md`.
 - Restoring the dropped `landing_page` column.
 - Chinese copy. Eventbrite gets the `en` block.
 - Call-to-action, spot counts, and booking-field labels.
