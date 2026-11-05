@@ -6,6 +6,7 @@ import struct
 import zlib
 from typing import Any
 
+import pytest
 from app.services import eventbrite_logo
 from app.services.eventbrite_client import EventbriteApiError
 from app.services.eventbrite_sync import (
@@ -145,7 +146,78 @@ def test_wrong_upload_url_is_refused_and_sync_continues(
     assert "logo_id" not in calls[2]["payload"]["event"]
     assert warnings
     assert all("secret-policy" not in str(extra) for extra in warnings)
+    assert warnings[0]["upload_url"] == "https://evil.example/bucket/"
     assert instance.eventbrite_last_payload_hash != _compute_instance_hash(instance)
+
+
+@pytest.mark.parametrize(
+    "returned",
+    [
+        "https://s3.amazonaws.com/eventbrite-uploader-incoming-prod",
+        "https://eventbrite-uploader-incoming-prod.s3.amazonaws.com/",
+        "https://eventbrite-uploader-incoming-prod.s3.amazonaws.com",
+        "https://eventbrite-uploader-incoming-prod.s3.us-east-1.amazonaws.com/",
+        "https://s3.us-east-1.amazonaws.com/eventbrite-uploader-incoming-prod/",
+        "https://S3.AMAZONAWS.COM/eventbrite-uploader-incoming-prod/",
+    ],
+)
+def test_same_bucket_in_another_form_uploads_to_the_configured_url(
+    monkeypatch: Any, tmp_path: Any, returned: str
+) -> None:
+    _banner(tmp_path)
+    monkeypatch.setenv("EVENTBRITE_BANNERS_DIR", str(tmp_path / "banners"))
+    monkeypatch.setenv("EVENTBRITE_MEDIA_UPLOAD_URL", _UPLOAD_URL)
+    monkeypatch.setenv("EVENTBRITE_DEFAULT_TIMEZONE", "UTC")
+    instance = _workshop()
+    instance.slug = "sample-workshop"
+    calls = _install_sync_fakes(monkeypatch, instance)
+    _media_calls, uploads = _patch_media(monkeypatch, upload_url=returned)
+
+    result = sync_instance_to_eventbrite(session=_Session(), instance_id=instance.id)
+
+    assert result["status"] == "synced"
+    assert uploads[0]["url"] == _UPLOAD_URL
+    assert calls[2]["payload"]["event"]["logo_id"] == "logo-9"
+
+
+@pytest.mark.parametrize(
+    "returned",
+    [
+        "http://s3.amazonaws.com/eventbrite-uploader-incoming-prod/",
+        "https://s3.amazonaws.com/other-bucket/",
+        "https://eventbrite-uploader-incoming-prod.s3.amazonaws.com.evil.example/",
+        "https://other-bucket.s3.amazonaws.com/",
+        "https://s3.amazonaws.com/eventbrite-uploader-incoming-prod/extra/",
+        "https://user@s3.amazonaws.com/eventbrite-uploader-incoming-prod/",
+        "https://s3.amazonaws.com:8443/eventbrite-uploader-incoming-prod/",
+        "https://s3.amazonaws.com/eventbrite-uploader-incoming-prod/?x=1",
+    ],
+)
+def test_other_upload_urls_are_refused(
+    monkeypatch: Any, tmp_path: Any, returned: str
+) -> None:
+    _banner(tmp_path)
+    monkeypatch.setenv("EVENTBRITE_BANNERS_DIR", str(tmp_path / "banners"))
+    monkeypatch.setenv("EVENTBRITE_MEDIA_UPLOAD_URL", _UPLOAD_URL)
+    monkeypatch.setenv("EVENTBRITE_DEFAULT_TIMEZONE", "UTC")
+    instance = _workshop()
+    instance.slug = "sample-workshop"
+    calls = _install_sync_fakes(monkeypatch, instance)
+    warnings: list[dict[str, Any]] = []
+    monkeypatch.setattr(
+        eventbrite_logo.logger,
+        "warning",
+        lambda *_args, **kwargs: warnings.append(kwargs.get("extra") or {}),
+    )
+    _media_calls, uploads = _patch_media(monkeypatch, upload_url=returned)
+
+    result = sync_instance_to_eventbrite(session=_Session(), instance_id=instance.id)
+
+    assert result["status"] == "synced"
+    assert uploads == []
+    assert "logo_id" not in calls[2]["payload"]["event"]
+    assert "?" not in warnings[0]["upload_url"]
+    assert "@" not in warnings[0]["upload_url"]
 
 
 def test_failed_upload_does_not_fail_the_sync(monkeypatch: Any, tmp_path: Any) -> None:
