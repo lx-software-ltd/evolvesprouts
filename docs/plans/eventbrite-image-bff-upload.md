@@ -65,3 +65,11 @@ With the instruction checks relaxed, the 9:09 PM HKT sync ran the whole chain: P
 - A refusal logs the bucket name with the URL.
 
 Done when `pytest tests/test_eventbrite_logo.py` and `npm run test:infra` pass.
+
+## Follow-up: the stub diagnosis was wrong
+
+The image that reached the listing carries the upload time `20261105-130911`, the 9:09 PM HKT sync that posted to image-bff. So image-bff does store the file; it processes it asynchronously and answers a generic 200, which is why the junk probe also got 200. With the bucket URL configured, the 9:47 PM HKT sync refused the upload because the instructions carry no usable `bucket` value.
+
+- `EventbriteMediaUploadUrl` returns to `https://www.eventbrite.com/image-bff/api/upload` in the stack default and `production.json`.
+- The sync code is unchanged apart from the comment. The signed-bucket path stays for a configured S3 bucket.
+- The banner checksum includes the upload URL, so the next save re-uploads once and replaces the logo with the same image.

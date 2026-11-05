@@ -162,19 +162,19 @@ and DLQ support.
   those JSON files to `content/landing-pages`. A matching
   `eventbrite-banners/<slug>.png` is uploaded as the event logo. The
   banner is the hero photo with the Evolve Sprouts tree behind it, on
-  a 2:1 canvas. Eventbrite's upload instructions carry a signed S3 POST
-  policy whose `bucket` must be the bucket in
-  `EVENTBRITE_MEDIA_UPLOAD_URL`. The advertised `upload_url` is
-  accepted when it is that URL over HTTPS, ignoring a trailing slash, or
-  the same bucket in path form (`s3.amazonaws.com/<bucket>/`) or host
-  form (`<bucket>.s3.amazonaws.com/`), but it is otherwise ignored:
-  Eventbrite advertises `www.eventbrite.com/image-bff/api/upload`,
-  which answers "Upload completed" to any request and stores nothing.
-  The file is always POSTed to `EVENTBRITE_MEDIA_UPLOAD_URL`, the proxy
-  allowlist entry. The banner checksum in the payload hash includes
-  that URL, so a new upload target resends the image. A refused
-  instruction set is logged with the URL's scheme, host, and path and
-  the bucket name. Upload instructions may omit
+  a 2:1 canvas. Eventbrite's upload instructions advertise
+  `https://www.eventbrite.com/image-bff/api/upload`, which stores the
+  file asynchronously and answers a generic 200; the image appears on
+  the listing a little later. That URL is `EVENTBRITE_MEDIA_UPLOAD_URL`.
+  The advertised `upload_url` is accepted when it is that URL over
+  HTTPS, ignoring a trailing slash, or, when the configured URL is an
+  S3 bucket, the same bucket in path form (`s3.amazonaws.com/<bucket>/`)
+  or host form (`<bucket>.s3.amazonaws.com/`) or a signed policy naming
+  that bucket. The file is always POSTed to `EVENTBRITE_MEDIA_UPLOAD_URL`,
+  the proxy allowlist entry. The banner checksum in the payload hash
+  includes that URL, so a new upload target resends the image. A
+  refused instruction set is logged with the URL's scheme, host, and
+  path and the signed bucket name. Upload instructions may omit
   `upload_method`, `upload_data`, and `file_parameter_name`; the
   defaults are POST, no fields, and `file`. Field values may span lines
   and may be numbers. Unusable instructions log a constant `reason` and
