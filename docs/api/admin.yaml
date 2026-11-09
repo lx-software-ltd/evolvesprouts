@@ -137,6 +137,7 @@ servers:
 paths:
   /health:
     get:
+      operationId: getHealth
       summary: Health check
       description: Returns backend health status and dependency checks.
       security:
@@ -154,9 +155,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
+        "403":
+          description: API Gateway rejected the caller signature.
 
   /v1/admin/assets:
     get:
+      operationId: getV1AdminAssets
       summary: List admin assets
       description: Admin-only route for listing managed assets.
       security:
@@ -217,6 +221,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     post:
+      operationId: postV1AdminAssets
       summary: Create admin asset
       description: >
         Admin-only route for creating an asset. When `visibility` is `public`, the
@@ -250,7 +255,9 @@ paths:
     parameters:
       - $ref: "#/components/parameters/AssetId"
     get:
+      operationId: getV1AdminAssetsById
       summary: Get admin asset
+      description: "Get admin asset"
       security:
         - AdminBearerAuth: []
       responses:
@@ -267,7 +274,9 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     put:
+      operationId: putV1AdminAssetsById
       summary: Update admin asset
+      description: "Update admin asset"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -290,7 +299,9 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     patch:
+      operationId: patchV1AdminAssetsById
       summary: Partially update admin asset
+      description: "Partially update admin asset"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -313,6 +324,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: deleteV1AdminAssetsById
       summary: Delete admin asset
       description: >
         Permanently deletes the asset metadata and its S3 object. Not allowed when the asset has
@@ -333,6 +345,7 @@ paths:
     parameters:
       - $ref: "#/components/parameters/AssetId"
     post:
+      operationId: postV1AdminAssetsByIdContentInit
       summary: Begin admin asset file replacement
       description: >
         Step 1 of 2 for replacing the binary stored for an asset while keeping the same asset id.
@@ -366,6 +379,7 @@ paths:
     parameters:
       - $ref: "#/components/parameters/AssetId"
     post:
+      operationId: postV1AdminAssetsByIdContentComplete
       summary: Complete admin asset file replacement
       description: >
         Step 2 of 2: verifies the object exists at `pending_s3_key`, updates the asset to point at it,
@@ -407,7 +421,9 @@ paths:
     parameters:
       - $ref: "#/components/parameters/AssetId"
     get:
+      operationId: getV1AdminAssetsByIdGrants
       summary: List asset grants
+      description: "List asset grants"
       security:
         - AdminBearerAuth: []
       responses:
@@ -424,7 +440,9 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     post:
+      operationId: postV1AdminAssetsByIdGrants
       summary: Create asset grant
+      description: "Create asset grant"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -452,7 +470,9 @@ paths:
       - $ref: "#/components/parameters/AssetId"
       - $ref: "#/components/parameters/GrantId"
     delete:
+      operationId: deleteV1AdminAssetsByIdGrantsByGrantId
       summary: Delete asset grant
+      description: "Delete asset grant"
       security:
         - AdminBearerAuth: []
       responses:
@@ -469,7 +489,9 @@ paths:
     parameters:
       - $ref: "#/components/parameters/AssetId"
     get:
+      operationId: getV1AdminAssetsByIdShareLink
       summary: Get stable asset share link
+      description: "Get stable asset share link"
       security:
         - AdminBearerAuth: []
       responses:
@@ -486,7 +508,9 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     post:
+      operationId: postV1AdminAssetsByIdShareLink
       summary: Get or create stable asset share link
+      description: "Get or create stable asset share link"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -515,7 +539,9 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: deleteV1AdminAssetsByIdShareLink
       summary: Revoke stable asset share link
+      description: "Revoke stable asset share link"
       security:
         - AdminBearerAuth: []
       responses:
@@ -532,7 +558,9 @@ paths:
     parameters:
       - $ref: "#/components/parameters/AssetId"
     post:
+      operationId: postV1AdminAssetsByIdShareLinkRotate
       summary: Rotate stable asset share link
+      description: "Rotate stable asset share link"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -557,6 +585,7 @@ paths:
 
   /v1/admin/geographic-areas:
     get:
+      operationId: getV1AdminGeographicAreas
       summary: List geographic areas
       description: |
         Returns geographic areas used for address/location selection.
@@ -599,7 +628,9 @@ paths:
 
   /v1/admin/locations:
     get:
+      operationId: getV1AdminLocations
       summary: List locations
+      description: "List locations"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -654,7 +685,9 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     post:
+      operationId: postV1AdminLocations
       summary: Create location
+      description: "Create location"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -679,6 +712,7 @@ paths:
 
   /v1/admin/locations/geocode:
     post:
+      operationId: postV1AdminLocationsGeocode
       summary: Geocode a venue address
       description: |
         Resolves latitude and longitude using OpenStreetMap's public geocoder via
@@ -727,7 +761,9 @@ paths:
     parameters:
       - $ref: "#/components/parameters/LocationId"
     put:
+      operationId: putV1AdminLocationsById
       summary: Update location
+      description: "Update location"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -750,7 +786,9 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     patch:
+      operationId: patchV1AdminLocationsById
       summary: Partially update location
+      description: "Partially update location"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -773,7 +811,9 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: deleteV1AdminLocationsById
       summary: Delete location
+      description: "Delete location"
       security:
         - AdminBearerAuth: []
       responses:
@@ -794,6 +834,7 @@ paths:
 
   /v1/admin/cognito-users:
     get:
+      operationId: getV1AdminCognitoUsers
       summary: List Cognito users
       description: >
         Returns a page of users from the Cognito user pool. Optional `name` and
@@ -840,6 +881,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
+      operationId: postV1AdminCognitoUsers
       summary: Create a Cognito user
       description: >
         Creates a user in the Cognito user pool (username is the email).
@@ -880,6 +922,7 @@ paths:
         schema:
           type: string
     get:
+      operationId: getV1AdminCognitoUsersByUsername
       summary: Get a Cognito user
       description: Returns one user from the Cognito user pool by username.
       security:
@@ -898,6 +941,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     patch:
+      operationId: patchV1AdminCognitoUsersByUsername
       summary: Update a Cognito user
       description: >
         Updates email, name, staff group, and/or enabled state. Omitting a
@@ -931,6 +975,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
     delete:
+      operationId: deleteV1AdminCognitoUsersByUsername
       summary: Delete a Cognito user
       description: Permanently deletes the user from the Cognito user pool. Callers cannot delete themselves.
       security:
@@ -951,6 +996,7 @@ paths:
 
   /v1/admin/users:
     get:
+      operationId: getV1AdminUsers
       summary: List admin users
       description: Returns users in the admin Cognito group for assignee selection.
       security:
@@ -971,6 +1017,7 @@ paths:
 
   /v1/admin/instructors:
     get:
+      operationId: getV1AdminInstructors
       summary: List instructor users
       description: Returns users in the instructor Cognito group for service instance assignment.
       security:
@@ -991,6 +1038,7 @@ paths:
 
   /v1/admin/audit-logs:
     get:
+      operationId: getV1AdminAuditLogs
       summary: List audit log entries
       description: >
         Returns database audit history (trigger- and application-sourced rows in
@@ -1128,6 +1176,7 @@ paths:
 
   /v1/admin/api-keys:
     get:
+      operationId: getV1AdminApiKeys
       summary: List API tokens
       description: |
         Lists hashed API tokens used by the `x-api-token` authorizer.
@@ -1161,6 +1210,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
+      operationId: postV1AdminApiKeys
       summary: Create an API token
       description: |
         Creates a hashed API token. The plaintext `api_token` is returned
@@ -1194,6 +1244,7 @@ paths:
           type: string
           format: uuid
     delete:
+      operationId: deleteV1AdminApiKeysById
       summary: Revoke an API token
       description: Soft-revokes the token. Idempotent if already revoked.
       security:
@@ -1214,7 +1265,9 @@ paths:
 
   /v1/admin/leads:
     get:
+      operationId: getV1AdminLeads
       summary: List sales leads
+      description: "List sales leads"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -1303,6 +1356,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     post:
+      operationId: postV1AdminLeads
       summary: Create sales lead
       description: >
         Always inserts a new lead (`is_manual: true`) even when the contact
@@ -1332,6 +1386,7 @@ paths:
 
   /v1/admin/leads/merge:
     post:
+      operationId: postV1AdminLeadsMerge
       summary: Merge selected sales leads
       description: >
         Merges two or more leads into the chosen keeper lead. When selected leads
@@ -1378,7 +1433,9 @@ paths:
 
   /v1/admin/leads/analytics:
     get:
+      operationId: getV1AdminLeadsAnalytics
       summary: Lead analytics summary
+      description: "Lead analytics summary"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -1410,7 +1467,9 @@ paths:
 
   /v1/admin/leads/settings:
     get:
+      operationId: getV1AdminLeadsSettings
       summary: Get sales lead assignment and OpenRouter model settings
+      description: "Get sales lead assignment and OpenRouter model settings"
       security:
         - AdminBearerAuth: []
       responses:
@@ -1427,7 +1486,9 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     patch:
+      operationId: patchV1AdminLeadsSettings
       summary: Update sales lead assignment and OpenRouter model settings
+      description: "Update sales lead assignment and OpenRouter model settings"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -1452,6 +1513,7 @@ paths:
 
   /v1/admin/leads/daily-plan:
     get:
+      operationId: getV1AdminLeadsDailyPlan
       summary: Get latest org-wide sales plan of the day
       description: >
         Returns the newest stored org-wide AI sales daily plan, including
@@ -1494,6 +1556,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
+      operationId: postV1AdminLeadsDailyPlan
       summary: Queue org-wide sales plan of the day generation
       description: >
         Enqueues an asynchronous job that generates a sales-focused plan of the
@@ -1528,6 +1591,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     delete:
+      operationId: deleteV1AdminLeadsDailyPlan
       summary: Reset sale plan memory
       description: >
         Permanently deletes every stored sales daily plan, generation job,
@@ -1550,6 +1614,7 @@ paths:
           type: string
           format: uuid
     get:
+      operationId: getV1AdminLeadsDailyPlanJobsByJobId
       summary: Get sales daily plan job status
       description: >
         Returns job status and timing. When `status` is `succeeded`, includes the
@@ -1571,6 +1636,7 @@ paths:
 
   /v1/admin/leads/daily-plan/priority-completions:
     post:
+      operationId: postV1AdminLeadsDailyPlanPriorityCompletions
       summary: Mark or unmark an insight priority as done
       description: >
         Ticks or unticks one priority. Done state is org-wide and hides the
@@ -1601,6 +1667,7 @@ paths:
 
   /v1/admin/leads/daily-plan/item-annotations:
     post:
+      operationId: postV1AdminLeadsDailyPlanItemAnnotations
       summary: Upsert insight-board item annotation
       description: >
         Stores feedback (`up`, `down`, `not_relevant`), a snooze
@@ -1640,6 +1707,7 @@ paths:
 
   /v1/admin/leads/daily-plan/questions:
     post:
+      operationId: postV1AdminLeadsDailyPlanQuestions
       summary: Ask a follow-up question about the stored insight
       description: >
         Sends the stored plan JSON (not a fresh CRM snapshot) to OpenRouter
@@ -1690,6 +1758,7 @@ paths:
 
   /v1/admin/leads/daily-plan/instructions:
     get:
+      operationId: getV1AdminLeadsDailyPlanInstructions
       summary: List active insight instructions
       description: >
         Returns refinements that later generations must honour. `today`
@@ -1707,6 +1776,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
+      operationId: postV1AdminLeadsDailyPlanInstructions
       summary: Save an insight instruction without generating
       description: >
         Stores a refinement. `scope` defaults to `today` (until the next
@@ -1742,6 +1812,7 @@ paths:
           type: string
           format: uuid
     delete:
+      operationId: deleteV1AdminLeadsDailyPlanInstructionsByInstructionId
       summary: Remove an insight instruction
       description: >
         Archives one instruction so later generations no longer include it.
@@ -1762,7 +1833,9 @@ paths:
 
   /v1/admin/whatsapp/conversations:
     get:
+      operationId: getV1AdminWhatsappConversations
       summary: List captured WhatsApp conversations
+      description: "List captured WhatsApp conversations"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -1834,7 +1907,9 @@ paths:
           type: string
           format: uuid
     get:
+      operationId: getV1AdminWhatsappConversationsByIdMessages
       summary: List messages for a WhatsApp conversation
+      description: "List messages for a WhatsApp conversation"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -1862,7 +1937,9 @@ paths:
 
   /v1/admin/whatsapp/import-jobs:
     get:
+      operationId: getV1AdminWhatsappImportJobs
       summary: List WhatsApp export import jobs
+      description: "List WhatsApp export import jobs"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -1892,6 +1969,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
+      operationId: postV1AdminWhatsappImportJobs
       summary: Queue a WhatsApp chat export import
       description: >
         Upload a `.txt` or `.zip` WhatsApp Business App export as a restricted
@@ -1919,7 +1997,9 @@ paths:
 
   /v1/admin/meta/conversations:
     get:
+      operationId: getV1AdminMetaConversations
       summary: List captured Messenger and Instagram conversations
+      description: "List captured Messenger and Instagram conversations"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -1997,7 +2077,9 @@ paths:
           type: string
           format: uuid
     get:
+      operationId: getV1AdminMetaConversationsByIdMessages
       summary: List messages for a Messenger or Instagram conversation
+      description: "List messages for a Messenger or Instagram conversation"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -2025,7 +2107,9 @@ paths:
 
   /v1/admin/meta/import-jobs:
     get:
+      operationId: getV1AdminMetaImportJobs
       summary: List Messenger and Instagram Graph import jobs
+      description: "List Messenger and Instagram Graph import jobs"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -2055,6 +2139,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
+      operationId: postV1AdminMetaImportJobs
       summary: Queue a Messenger or Instagram recent-history import
       description: >
         Pulls Graph Conversations API threads for the configured Page.
@@ -2085,7 +2170,9 @@ paths:
     parameters:
       - $ref: "#/components/parameters/LeadId"
     get:
+      operationId: getV1AdminLeadsById
       summary: Get lead detail
+      description: "Get lead detail"
       security:
         - AdminBearerAuth: []
       responses:
@@ -2102,7 +2189,9 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     patch:
+      operationId: patchV1AdminLeadsById
       summary: Update lead stage or assignee
+      description: "Update lead stage or assignee"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -2129,7 +2218,9 @@ paths:
     parameters:
       - $ref: "#/components/parameters/LeadId"
     post:
+      operationId: postV1AdminLeadsByIdNotes
       summary: Add lead note
+      description: "Add lead note"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -2160,6 +2251,7 @@ paths:
     parameters:
       - $ref: "#/components/parameters/LeadId"
     get:
+      operationId: getV1AdminLeadsByIdAiSuggestion
       summary: Get latest AI close suggestion for a lead
       description: >
         Returns the newest stored AI closing suggestion for the lead, including
@@ -2181,6 +2273,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     post:
+      operationId: postV1AdminLeadsByIdAiSuggestion
       summary: Queue AI close suggestion generation for a lead
       description: >
         Enqueues an asynchronous job that generates a closing/follow-up suggestion
@@ -2215,6 +2308,7 @@ paths:
           type: string
           format: uuid
     get:
+      operationId: getV1AdminLeadsByIdAiSuggestionJobsByJobId
       summary: Get lead AI suggestion job status
       description: >
         Returns job status and timing. When `status` is `succeeded`, includes the
@@ -2236,7 +2330,9 @@ paths:
 
   /v1/admin/services:
     get:
+      operationId: getV1AdminServices
       summary: List services
+      description: "List services"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -2288,7 +2384,9 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     post:
+      operationId: postV1AdminServices
       summary: Create service
+      description: "Create service"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -2322,6 +2420,7 @@ paths:
 
   /v1/admin/services/instances:
     get:
+      operationId: getV1AdminServicesInstances
       summary: List service instances across services
       description: |
         Returns instances from all services, optionally filtered by `service_type`
@@ -2408,6 +2507,7 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ServiceId"
     get:
+      operationId: getV1AdminServicesByIdDiscountCodeUsageSummary
       summary: Discount code usage summary for a service
       description: >
         Returns aggregate `current_uses` across discount codes scoped to this service
@@ -2433,7 +2533,9 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ServiceId"
     get:
+      operationId: getV1AdminServicesById
       summary: Get service
+      description: "Get service"
       security:
         - AdminBearerAuth: []
       responses:
@@ -2450,7 +2552,9 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     put:
+      operationId: putV1AdminServicesById
       summary: Update service
+      description: "Update service"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -2482,7 +2586,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
     patch:
+      operationId: patchV1AdminServicesById
       summary: Partially update service
+      description: "Partially update service"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -2514,7 +2620,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
     delete:
+      operationId: deleteV1AdminServicesById
       summary: Delete service
+      description: "Delete service"
       security:
         - AdminBearerAuth: []
       responses:
@@ -2537,7 +2645,9 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ServiceId"
     post:
+      operationId: postV1AdminServicesByIdCoverImage
       summary: Create service cover-image upload URL
+      description: "Create service cover-image upload URL"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -2564,7 +2674,9 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ServiceId"
     get:
+      operationId: getV1AdminServicesByIdInstances
       summary: List service instances
+      description: "List service instances"
       security:
         - AdminBearerAuth: []
       responses:
@@ -2581,7 +2693,9 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     post:
+      operationId: postV1AdminServicesByIdInstances
       summary: Create service instance
+      description: "Create service instance"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -2609,7 +2723,9 @@ paths:
       - $ref: "#/components/parameters/ServiceId"
       - $ref: "#/components/parameters/InstanceId"
     get:
+      operationId: getV1AdminServicesByIdInstancesByInstanceId
       summary: Get service instance
+      description: "Get service instance"
       security:
         - AdminBearerAuth: []
       responses:
@@ -2626,6 +2742,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     put:
+      operationId: putV1AdminServicesByIdInstancesByInstanceId
       summary: Update service instance
       description: >
         When `status` is set to `completed`, every enrollment on the instance that is
@@ -2653,7 +2770,9 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: deleteV1AdminServicesByIdInstancesByInstanceId
       summary: Delete service instance
+      description: "Delete service instance"
       security:
         - AdminBearerAuth: []
       responses:
@@ -2671,7 +2790,9 @@ paths:
       - $ref: "#/components/parameters/ServiceId"
       - $ref: "#/components/parameters/InstanceId"
     get:
+      operationId: getV1AdminServicesByIdInstancesByInstanceIdEnrollments
       summary: List instance enrollments
+      description: "List instance enrollments"
       security:
         - AdminBearerAuth: []
       responses:
@@ -2688,7 +2809,9 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     post:
+      operationId: postV1AdminServicesByIdInstancesByInstanceIdEnrollments
       summary: Create instance enrollment
+      description: "Create instance enrollment"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -2717,7 +2840,9 @@ paths:
       - $ref: "#/components/parameters/InstanceId"
       - $ref: "#/components/parameters/EnrollmentId"
     patch:
+      operationId: patchV1AdminServicesByIdInstancesByInstanceIdEnrollmentsByEnrollmentId
       summary: Update enrollment
+      description: "Update enrollment"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -2740,7 +2865,9 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: deleteV1AdminServicesByIdInstancesByInstanceIdEnrollmentsByEnrollmentId
       summary: Delete enrollment
+      description: "Delete enrollment"
       security:
         - AdminBearerAuth: []
       responses:
@@ -2755,7 +2882,9 @@ paths:
 
   /v1/admin/discount-codes:
     get:
+      operationId: getV1AdminDiscountCodes
       summary: List discount codes
+      description: "List discount codes"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -2786,7 +2915,9 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     post:
+      operationId: postV1AdminDiscountCodes
       summary: Create discount code
+      description: "Create discount code"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -2819,7 +2950,9 @@ paths:
     parameters:
       - $ref: "#/components/parameters/DiscountCodeId"
     put:
+      operationId: putV1AdminDiscountCodesById
       summary: Update discount code
+      description: "Update discount code"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -2844,7 +2977,9 @@ paths:
 
   /v1/admin/completion-certificates:
     get:
+      operationId: getV1AdminCompletionCertificates
       summary: List completion certificates
+      description: "List completion certificates"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -2897,7 +3032,9 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
+      operationId: postV1AdminCompletionCertificates
       summary: Issue completion certificate
+      description: "Issue completion certificate"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -2922,6 +3059,7 @@ paths:
 
   /v1/admin/completion-certificates/preview:
     post:
+      operationId: postV1AdminCompletionCertificatesPreview
       summary: Preview completion certificate PDF
       description: |
         Renders a certificate PDF from the request payload without persisting a row.
@@ -2950,6 +3088,7 @@ paths:
     parameters:
       - $ref: "#/components/parameters/CompletionCertificateId"
     delete:
+      operationId: deleteV1AdminCompletionCertificatesById
       summary: Delete completion certificate
       description: Permanently removes the certificate row and best-effort deletes the stored PDF.
       security:
@@ -2974,7 +3113,9 @@ paths:
     parameters:
       - $ref: "#/components/parameters/CompletionCertificateId"
     get:
+      operationId: getV1AdminCompletionCertificatesByIdPdf
       summary: Download issued completion certificate PDF
+      description: "Download issued completion certificate PDF"
       security:
         - AdminBearerAuth: []
       responses:
@@ -2995,7 +3136,9 @@ paths:
     parameters:
       - $ref: "#/components/parameters/CompletionCertificateId"
     post:
+      operationId: postV1AdminCompletionCertificatesByIdVoid
       summary: Void completion certificate
+      description: "Void completion certificate"
       security:
         - AdminBearerAuth: []
       responses:
@@ -3014,6 +3157,7 @@ paths:
 
   /v1/admin/calendar/manual-blocks:
     get:
+      operationId: getV1AdminCalendarManualBlocks
       summary: List manual calendar blocks for a purpose
       description: |
         Returns **manual** rows from `calendar_manual_blocks` only (session-derived blockers
@@ -3052,7 +3196,9 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
+      operationId: postV1AdminCalendarManualBlocks
       summary: Create manual calendar block
+      description: "Create manual calendar block"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -3088,7 +3234,9 @@ paths:
           type: string
           format: uuid
     patch:
+      operationId: patchV1AdminCalendarManualBlocksById
       summary: Update manual calendar block
+      description: "Update manual calendar block"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -3117,7 +3265,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
     delete:
+      operationId: deleteV1AdminCalendarManualBlocksById
       summary: Delete manual calendar block
+      description: "Delete manual calendar block"
       security:
         - AdminBearerAuth: []
       responses:
@@ -3134,6 +3284,7 @@ paths:
 
   /v1/admin/tags:
     get:
+      operationId: getV1AdminTags
       summary: List CRM tags for administration
       description: |
         Returns tags sorted by name. Default: active tags only (`archived_at` is null).
@@ -3168,7 +3319,9 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
+      operationId: postV1AdminTags
       summary: Create CRM tag
+      description: "Create CRM tag"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -3204,6 +3357,7 @@ paths:
           type: string
           format: uuid
     patch:
+      operationId: patchV1AdminTagsById
       summary: Update CRM tag
       description: |
         Set `archived` to `false` to restore an archived tag (clear `archived_at`).
@@ -3237,6 +3391,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
     delete:
+      operationId: deleteV1AdminTagsById
       summary: Delete or archive CRM tag
       description: |
         Always returns **200** with `usage_count` and `deleted`. System-managed tags
@@ -3264,6 +3419,7 @@ paths:
 
   /v1/admin/contacts/tags:
     get:
+      operationId: getV1AdminContactsTags
       summary: List CRM tags for pickers
       description: Returns all tags sorted by name for contact/family/organization editors.
       security:
@@ -3280,6 +3436,7 @@ paths:
 
   /v1/admin/contacts/search:
     get:
+      operationId: getV1AdminContactsSearch
       summary: Search CRM contacts for pickers
       description: |
         Returns active contacts matching name, email, Instagram, and **phone** using
@@ -3324,6 +3481,7 @@ paths:
 
   /v1/admin/contacts/merge:
     post:
+      operationId: postV1AdminContactsMerge
       summary: Merge selected CRM contacts
       description: >
         Merges two or more contacts into the chosen keeper contact. Loser fields
@@ -3369,6 +3527,7 @@ paths:
 
   /v1/admin/contacts/mailchimp-sync-run:
     post:
+      operationId: postV1AdminContactsMailchimpSyncRun
       summary: Run one Mailchimp upsert batch (DB → audience)
       description: |
         Production-only. Paginated upsert for CRM contacts with the given ``only_statuses``
@@ -3406,6 +3565,7 @@ paths:
 
   /v1/admin/contacts/mailchimp-sync-orphans:
     post:
+      operationId: postV1AdminContactsMailchimpSyncOrphans
       summary: Reconcile Mailchimp audience orphans (one page)
       description: |
         Production-only. Scans one Mailchimp list page starting at ``mailchimp_offset``.
@@ -3446,6 +3606,7 @@ paths:
 
   /v1/admin/contacts/mailchimp-sync-status:
     get:
+      operationId: getV1AdminContactsMailchimpSyncStatus
       summary: Mailchimp sync counters for admin progress UI
       description: |
         Returns aggregate counts by ``mailchimp_status`` plus archived contacts that still
@@ -3465,6 +3626,7 @@ paths:
 
   /v1/admin/contacts/map-pins:
     get:
+      operationId: getV1AdminContactsMapPins
       summary: List confirmed CRM addresses for the Contacts Map tab
       description: |
         Returns one pin per active family, organisation, or contact that has a linked
@@ -3487,7 +3649,9 @@ paths:
 
   /v1/admin/contacts:
     get:
+      operationId: getV1AdminContacts
       summary: List CRM contacts
+      description: "List CRM contacts"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -3529,7 +3693,9 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
+      operationId: postV1AdminContacts
       summary: Create CRM contact
+      description: "Create CRM contact"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -3554,7 +3720,9 @@ paths:
     parameters:
       - $ref: "#/components/parameters/AdminContactId"
     get:
+      operationId: getV1AdminContactsById
       summary: Get CRM contact
+      description: "Get CRM contact"
       security:
         - AdminBearerAuth: []
       responses:
@@ -3571,6 +3739,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: deleteV1AdminContactsById
       summary: Delete CRM contact
       description: |
         Permanently removes the contact row. Dependent CRM notes on linked sales leads
@@ -3588,7 +3757,9 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     patch:
+      operationId: patchV1AdminContactsById
       summary: Update CRM contact
+      description: "Update CRM contact"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -3615,6 +3786,7 @@ paths:
     parameters:
       - $ref: "#/components/parameters/AdminContactId"
     get:
+      operationId: getV1AdminContactsByIdNotes
       summary: List standalone notes for a contact
       description: |
         Returns notes stored on the contact that are not tied to a sales lead
@@ -3635,7 +3807,9 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     post:
+      operationId: postV1AdminContactsByIdNotes
       summary: Add a standalone note to a contact
+      description: "Add a standalone note to a contact"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -3666,6 +3840,7 @@ paths:
     parameters:
       - $ref: "#/components/parameters/AdminContactId"
     get:
+      operationId: getV1AdminContactsByIdServices
       summary: List purchased services for a contact
       description: |
         Returns invoice-style labels for non-cancelled enrollments attributed to the
@@ -3692,7 +3867,9 @@ paths:
       - $ref: "#/components/parameters/AdminContactId"
       - $ref: "#/components/parameters/NoteId"
     patch:
+      operationId: patchV1AdminContactsByIdNotesByNoteId
       summary: Update a standalone note on a contact
+      description: "Update a standalone note on a contact"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -3719,7 +3896,9 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: deleteV1AdminContactsByIdNotesByNoteId
       summary: Delete a standalone note on a contact
+      description: "Delete a standalone note on a contact"
       security:
         - AdminBearerAuth: []
       responses:
@@ -3734,6 +3913,7 @@ paths:
 
   /v1/admin/families/picker:
     get:
+      operationId: getV1AdminFamiliesPicker
       summary: List active CRM families for pickers
       description: |
         Returns active families ordered by name for admin UI dropdowns.
@@ -3761,7 +3941,9 @@ paths:
 
   /v1/admin/families:
     get:
+      operationId: getV1AdminFamilies
       summary: List CRM families
+      description: "List CRM families"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -3799,7 +3981,9 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
+      operationId: postV1AdminFamilies
       summary: Create CRM family
+      description: "Create CRM family"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -3824,6 +4008,7 @@ paths:
     parameters:
       - $ref: "#/components/parameters/AdminFamilyId"
     patch:
+      operationId: patchV1AdminFamiliesById
       summary: Update CRM family
       description: |
         When `relationship_type` is present, the server applies the same value to every linked
@@ -3851,6 +4036,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: deleteV1AdminFamiliesById
       summary: Delete CRM family
       description: |
         Permanently removes the family row. Sales leads linked to the family (and their
@@ -3872,6 +4058,7 @@ paths:
     parameters:
       - $ref: "#/components/parameters/AdminFamilyId"
     get:
+      operationId: getV1AdminFamiliesByIdServices
       summary: List purchased services for a family
       description: |
         Returns invoice-style labels for non-cancelled enrollments attributed to the
@@ -3896,7 +4083,9 @@ paths:
     parameters:
       - $ref: "#/components/parameters/AdminFamilyId"
     post:
+      operationId: postV1AdminFamiliesByIdMembers
       summary: Add family member
+      description: "Add family member"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -3924,6 +4113,7 @@ paths:
       - $ref: "#/components/parameters/AdminFamilyId"
       - $ref: "#/components/parameters/AdminFamilyMemberId"
     patch:
+      operationId: patchV1AdminFamiliesByIdMembersByMemberId
       summary: Update family member
       description: |
         Currently supports toggling the family's primary contact. At most one member may be
@@ -3951,7 +4141,9 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: deleteV1AdminFamiliesByIdMembersByMemberId
       summary: Remove family member
+      description: "Remove family member"
       security:
         - AdminBearerAuth: []
       responses:
@@ -3970,6 +4162,7 @@ paths:
 
   /v1/admin/organizations/picker:
     get:
+      operationId: getV1AdminOrganizationsPicker
       summary: List active CRM organisations for pickers
       description: |
         Returns active organisations ordered by name for admin UI dropdowns.
@@ -4008,6 +4201,7 @@ paths:
 
   /v1/admin/organizations:
     get:
+      operationId: getV1AdminOrganizations
       summary: List CRM organizations
       description: |
         Lists organizations for CRM and Finance. When `relationship_type` is omitted,
@@ -4070,7 +4264,9 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
+      operationId: postV1AdminOrganizations
       summary: Create CRM organization
+      description: "Create CRM organization"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -4095,7 +4291,9 @@ paths:
     parameters:
       - $ref: "#/components/parameters/AdminOrganizationId"
     patch:
+      operationId: patchV1AdminOrganizationsById
       summary: Update CRM organization
+      description: "Update CRM organization"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -4118,6 +4316,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: deleteV1AdminOrganizationsById
       summary: Delete CRM organization
       description: |
         Permanently removes a non-vendor organisation row. Vendor organisations must be
@@ -4140,6 +4339,7 @@ paths:
     parameters:
       - $ref: "#/components/parameters/AdminOrganizationId"
     get:
+      operationId: getV1AdminOrganizationsByIdServices
       summary: List purchased services for an organization
       description: |
         Returns invoice-style labels for non-cancelled enrollments attributed to the
@@ -4164,7 +4364,9 @@ paths:
     parameters:
       - $ref: "#/components/parameters/AdminOrganizationId"
     post:
+      operationId: postV1AdminOrganizationsByIdMembers
       summary: Add organization member
+      description: "Add organization member"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -4192,6 +4394,7 @@ paths:
       - $ref: "#/components/parameters/AdminOrganizationId"
       - $ref: "#/components/parameters/AdminOrganizationMemberId"
     patch:
+      operationId: patchV1AdminOrganizationsByIdMembersByMemberId
       summary: Update organization member
       description: |
         Updates membership fields such as primary contact. Membership role is derived from the
@@ -4218,7 +4421,9 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: deleteV1AdminOrganizationsByIdMembersByMemberId
       summary: Remove organization member
+      description: "Remove organization member"
       security:
         - AdminBearerAuth: []
       responses:
@@ -4237,6 +4442,7 @@ paths:
 
   /v1/admin/billing/export:
     get:
+      operationId: getV1AdminBillingExport
       summary: Export billing CSV (default export v2)
       description: >
         Default `export_version` is **2** (`?export_version=2` or omit). v2 rows include
@@ -4296,6 +4502,7 @@ paths:
 
   /v1/admin/billing/payments:
     get:
+      operationId: getV1AdminBillingPayments
       summary: List customer payments
       description: >
         Cursor-paginated list ordered by `created_at` descending, then `id` descending.
@@ -4346,6 +4553,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
+      operationId: postV1AdminBillingPayments
       summary: Create customer payment row
       description: >
         Creates either an outbound refund (`direction: refund` + `originalPaymentId`) or a
@@ -4392,7 +4600,9 @@ paths:
 
   /v1/admin/billing/payments/{id}:
     get:
+      operationId: getV1AdminBillingPaymentsById
       summary: Get customer payment with unapplied balance
+      description: "Get customer payment with unapplied balance"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -4422,6 +4632,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     patch:
+      operationId: patchV1AdminBillingPaymentsById
       summary: Update manual inbound customer payment
       description: >
         Updates a manual inbound payment (no Stripe PaymentIntent on the row). Enrollment
@@ -4468,6 +4679,7 @@ paths:
                 type: object
                 additionalProperties: true
     delete:
+      operationId: deleteV1AdminBillingPaymentsById
       summary: Delete orphan inbound customer payment
       description: >
         Removes an inbound payment row only when it is safe cleanup. Pending payments
@@ -4497,7 +4709,9 @@ paths:
 
   /v1/admin/billing/payments/{id}/confirm:
     post:
+      operationId: postV1AdminBillingPaymentsByIdConfirm
       summary: Confirm pending inbound payment (offline rails)
+      description: "Confirm pending inbound payment (offline rails)"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -4535,6 +4749,7 @@ paths:
 
   /v1/admin/billing/enrollments/recent-for-invoicing:
     get:
+      operationId: getV1AdminBillingEnrollmentsRecentForInvoicing
       summary: List recent enrollments for draft invoice picker
       description: >
         Returns non-cancelled enrollments with `enrolled_at` within the last 730 days
@@ -4597,6 +4812,7 @@ paths:
 
   /v1/admin/billing/invoices:
     get:
+      operationId: getV1AdminBillingInvoices
       summary: List customer invoices
       description: >
         Cursor-paginated list ordered by `created_at` descending, then `id` descending.
@@ -4712,6 +4928,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
+      operationId: postV1AdminBillingInvoices
       summary: Create draft customer invoice
       description: >
         Set `draftKind` to `enrollment_merge` with `enrollmentIds` to merge enrollments into one draft, or
@@ -4753,7 +4970,9 @@ paths:
 
   /v1/admin/billing/invoices/{id}:
     get:
+      operationId: getV1AdminBillingInvoicesById
       summary: Get customer invoice with lines
+      description: "Get customer invoice with lines"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -4780,6 +4999,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: deleteV1AdminBillingInvoicesById
       summary: Delete draft customer invoice
       description: >
         Permanently deletes the invoice and its line rows. Allowed only when the invoice
@@ -4819,6 +5039,7 @@ paths:
 
   /v1/admin/billing/invoices/{id}/pdf:
     get:
+      operationId: getV1AdminBillingInvoicesByIdPdf
       summary: Get time-limited URL to open invoice PDF
       description: >
         Returns a CloudFront-signed GET URL for the invoice PDF. Issued invoices use the canonical
@@ -4857,6 +5078,7 @@ paths:
 
   /v1/admin/billing/invoices/{id}/issue:
     post:
+      operationId: postV1AdminBillingInvoicesByIdIssue
       summary: Issue invoice (assign number, PDF hash)
       description: >
         Issues a draft invoice (number, snapshot dates, PDF). For positive-total
@@ -4911,6 +5133,7 @@ paths:
 
   /v1/admin/billing/invoices/{id}/void:
     post:
+      operationId: postV1AdminBillingInvoicesByIdVoid
       summary: Void invoice (issued)
       description: >
         Voids an issued invoice. Returns 400 if the invoice is draft or already void.
@@ -4958,6 +5181,7 @@ paths:
 
   /v1/admin/billing/invoices/{id}/email:
     post:
+      operationId: postV1AdminBillingInvoicesByIdEmail
       summary: Email issued invoice PDF
       description: >
         Sends a branded transactional email (shared Evolve Sprouts HTML shell)
@@ -5007,6 +5231,7 @@ paths:
 
   /v1/admin/billing/dashboard/resolve-bill-to-primary-contacts:
     post:
+      operationId: postV1AdminBillingDashboardResolveBillToPrimaryContacts
       summary: Resolve primary CRM contacts for bill-to rollups
       description: >
         Returns a map from each requested family id and organisation id to the CRM contact id
@@ -5036,7 +5261,9 @@ paths:
 
   /v1/admin/billing/allocations:
     post:
+      operationId: postV1AdminBillingAllocations
       summary: Allocate payment amount to invoice
+      description: "Allocate payment amount to invoice"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -5065,6 +5292,7 @@ paths:
 
   /v1/admin/expenses:
     get:
+      operationId: getV1AdminExpenses
       summary: List expenses
       description: >-
         Returns expenses ordered by invoice issue date (`invoice_date`) descending;
@@ -5107,7 +5335,9 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
+      operationId: postV1AdminExpenses
       summary: Create expense
+      description: "Create expense"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -5130,6 +5360,7 @@ paths:
 
   /v1/admin/expenses/import-from-bulk-pdf:
     post:
+      operationId: postV1AdminExpensesImportFromBulkPdf
       summary: Queue import of multiple expenses from one combined PDF
       description: >
         Upload a PDF as an admin asset, then call this endpoint with its asset id.
@@ -5165,6 +5396,7 @@ paths:
 
   /v1/admin/expenses/bulk-import-jobs:
     get:
+      operationId: getV1AdminExpensesBulkImportJobs
       summary: List bulk PDF import jobs for the signed-in admin
       description: >
         Returns jobs created by the authenticated admin, newest first. Use this to
@@ -5204,6 +5436,7 @@ paths:
           format: uuid
         description: Identifier returned from `POST /v1/admin/expenses/import-from-bulk-pdf`.
     get:
+      operationId: getV1AdminExpensesBulkImportJobsByJobId
       summary: Get bulk PDF import job status
       description: >
         Poll this endpoint until `bulk_import_job.status` is `succeeded`,
@@ -5225,6 +5458,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: deleteV1AdminExpensesBulkImportJobsByJobId
       summary: Delete bulk PDF import job record
       description: >
         Permanently removes the `bulk_expense_import_jobs` row when it belongs to the
@@ -5246,7 +5480,9 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ExpenseId"
     patch:
+      operationId: patchV1AdminExpensesById
       summary: Update expense
+      description: "Update expense"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -5269,6 +5505,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: deleteV1AdminExpensesById
       summary: Delete draft expense
       description: >
         Hard-deletes the expense row when its status is `draft`. Returns **400** when the expense is
@@ -5285,11 +5522,14 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  # `{id}` is a UUID. It does not overlap the static `bulk-import-jobs` segment at runtime.
   /v1/admin/expenses/{id}/cancel:
     parameters:
       - $ref: "#/components/parameters/ExpenseId"
     post:
+      operationId: postV1AdminExpensesByIdCancel
       summary: Soft-void an expense
+      description: "Soft-void an expense"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -5312,10 +5552,12 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  # `{id}` is a UUID. It does not overlap the static `bulk-import-jobs` segment at runtime.
   /v1/admin/expenses/{id}/mark-paid:
     parameters:
       - $ref: "#/components/parameters/ExpenseId"
     post:
+      operationId: postV1AdminExpensesByIdMarkPaid
       summary: Mark an expense as paid
       description: >
         Requires a linked vendor, invoice date, currency code, and total amount.
@@ -5336,11 +5578,14 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  # `{id}` is a UUID. It does not overlap the static `bulk-import-jobs` segment at runtime.
   /v1/admin/expenses/{id}/reparse:
     parameters:
       - $ref: "#/components/parameters/ExpenseId"
     post:
+      operationId: postV1AdminExpensesByIdReparse
       summary: Queue expense parse request
+      description: "Queue expense parse request"
       security:
         - AdminBearerAuth: []
       responses:
@@ -5357,11 +5602,14 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  # `{id}` is a UUID. It does not overlap the static `bulk-import-jobs` segment at runtime.
   /v1/admin/expenses/{id}/amend:
     parameters:
       - $ref: "#/components/parameters/ExpenseId"
     post:
+      operationId: postV1AdminExpensesByIdAmend
       summary: Create amendment expense record
+      description: "Create amendment expense record"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -5386,6 +5634,7 @@ paths:
 
   /v1/admin/forms:
     get:
+      operationId: getV1AdminForms
       summary: List training form slugs with answer counts
       description: |
         Returns distinct form slugs discovered in the DynamoDB responses table,
@@ -5406,6 +5655,7 @@ paths:
     parameters:
       - $ref: "#/components/parameters/FormSlug"
     get:
+      operationId: getV1AdminFormsByFormSlugAnswers
       summary: List stored answers for a form
       description: >
         Returns answer rows newest first. Pass `next_cursor` from the prior response
@@ -5452,6 +5702,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     delete:
+      operationId: deleteV1AdminFormsByFormSlugAnswers
       summary: Clear all stored answers for a form
       description: Permanently deletes every answer row for the form slug in DynamoDB.
       security:
@@ -5472,7 +5723,9 @@ paths:
     parameters:
       - $ref: "#/components/parameters/FormSlug"
     get:
+      operationId: getV1AdminFormsByFormSlugAnswersExport
       summary: Export form answers as CSV
+      description: "Export form answers as CSV"
       security:
         - AdminBearerAuth: []
       responses:
@@ -5489,6 +5742,7 @@ paths:
 
   /v1/admin/polls:
     get:
+      operationId: getV1AdminPolls
       summary: List training poll slugs with answer counts
       description: |
         Returns distinct poll slugs discovered in the DynamoDB poll responses table,
@@ -5509,6 +5763,7 @@ paths:
     parameters:
       - $ref: "#/components/parameters/PollSlug"
     get:
+      operationId: getV1AdminPollsByPollSlugAnswers
       summary: List stored answers for a poll
       description: >
         Returns answer rows newest first. Pass `next_cursor` from the prior response
@@ -5543,6 +5798,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     delete:
+      operationId: deleteV1AdminPollsByPollSlugAnswers
       summary: Clear all stored answers for a poll
       description: Permanently deletes every answer row for the poll slug in DynamoDB.
       security:
@@ -5563,7 +5819,9 @@ paths:
     parameters:
       - $ref: "#/components/parameters/PollSlug"
     get:
+      operationId: getV1AdminPollsByPollSlugAnswersExport
       summary: Export poll answers as CSV
+      description: "Export poll answers as CSV"
       security:
         - AdminBearerAuth: []
       responses:
@@ -5580,6 +5838,7 @@ paths:
 
   /v1/user/assets:
     get:
+      operationId: getV1UserAssets
       summary: List user assets
       description: Route for any authenticated Cognito user.
       security:
@@ -5602,7 +5861,9 @@ paths:
     parameters:
       - $ref: "#/components/parameters/AssetId"
     get:
+      operationId: getV1UserAssetsByIdDownload
       summary: Generate user asset download
+      description: "Generate user asset download"
       security:
         - UserBearerAuth: []
       responses:

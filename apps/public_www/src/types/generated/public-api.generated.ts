@@ -15,29 +15,7 @@ export interface paths {
          * List public assets
          * @description Public asset listing route guarded by device attestation and API key.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Public asset list response payload. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicAssetListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1AssetsPublic"];
         put?: never;
         post?: never;
         delete?: never;
@@ -56,33 +34,11 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Generate public asset download */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Asset identifier. */
-                    id: components["parameters"]["AssetId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Public asset download response payload. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicAssetDownloadResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Generate public asset download
+         * @description Generate public asset download
+         */
+        get: operations["getV1AssetsPublicByIdDownload"];
         put?: never;
         post?: never;
         delete?: never;
@@ -112,40 +68,7 @@ export interface paths {
          *     If the linked asset is `restricted`, the request must also include a
          *     valid Cognito JWT in the `Authorization` header.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Stable bearer token for a shared asset. */
-                    token: components["parameters"]["ShareToken"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Redirect to signed download URL. */
-                302: {
-                    headers: {
-                        /** @description CloudFront-signed download URL. */
-                        Location?: string;
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Authentication required for restricted asset share links. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1AssetsShareByToken"];
         put?: never;
         post?: never;
         delete?: never;
@@ -172,39 +95,7 @@ export interface paths {
          *     If the linked asset is `restricted`, the request must include a valid
          *     Cognito JWT in the `Authorization` header.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Stable bearer token for a shared asset. */
-                    token: components["parameters"]["ShareToken"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Redirect to signed download URL. */
-                302: {
-                    headers: {
-                        /** @description CloudFront-signed download URL. */
-                        Location?: string;
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Authentication required for restricted asset share links. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1AssetsEmailDownloadByToken"];
         put?: never;
         post?: never;
         delete?: never;
@@ -226,26 +117,7 @@ export interface paths {
          *     validating the webhook URL during webhook creation.  Returns 200
          *     with no side-effects.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Verification acknowledged. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ReservationSubmissionAccepted"];
-                    };
-                };
-            };
-        };
+        get: operations["getV1MailchimpWebhook"];
         put?: never;
         /**
          * Receive Mailchimp audience webhook event
@@ -254,52 +126,7 @@ export interface paths {
          *     parameter, and payloads are submitted as
          *     `application/x-www-form-urlencoded`.
          */
-        post: {
-            parameters: {
-                query: {
-                    /** @description Shared secret token configured for Mailchimp webhook requests. */
-                    token: components["parameters"]["MailchimpWebhookToken"];
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/x-www-form-urlencoded": components["schemas"]["MailchimpWebhookRequest"];
-                };
-            };
-            responses: {
-                /** @description Webhook processed or ignored. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ReservationSubmissionAccepted"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid webhook token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Method not allowed. */
-                405: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        post: operations["postV1MailchimpWebhook"];
         delete?: never;
         options?: never;
         head?: never;
@@ -319,31 +146,7 @@ export interface paths {
          *     `hub.mode=subscribe` and `hub.verify_token` matches
          *     `WHATSAPP_WEBHOOK_VERIFY_TOKEN`.
          */
-        get: {
-            parameters: {
-                query: {
-                    "hub.mode": string;
-                    "hub.verify_token": string;
-                    "hub.challenge": string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Verification challenge echoed as plain text. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": string;
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1WhatsappWebhook"];
         put?: never;
         /**
          * Receive WhatsApp Cloud API webhook events
@@ -351,51 +154,7 @@ export interface paths {
          *     `smb_message_echoes`. Requests must include a valid
          *     `X-Hub-Signature-256` HMAC of the raw body using `META_APP_SECRET`.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            responses: {
-                /** @description Webhook processed. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["WhatsAppWebhookAccepted"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid webhook signature. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Method not allowed. */
-                405: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        post: operations["postV1WhatsappWebhook"];
         delete?: never;
         options?: never;
         head?: never;
@@ -416,31 +175,7 @@ export interface paths {
          *     `hub.verify_token` matches `WHATSAPP_WEBHOOK_VERIFY_TOKEN` (same
          *     Meta app verify token as WhatsApp).
          */
-        get: {
-            parameters: {
-                query: {
-                    "hub.mode": string;
-                    "hub.verify_token": string;
-                    "hub.challenge": string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Verification challenge echoed as plain text. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": string;
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1MetaWebhook"];
         put?: never;
         /**
          * Receive Messenger and Instagram webhook events
@@ -454,51 +189,7 @@ export interface paths {
          *     (`PUBLIC_WWW_INSTAGRAM_URL` / `NEXT_PUBLIC_INSTAGRAM_URL`) are
          *     skipped so the business account is not imported.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            responses: {
-                /** @description Webhook processed. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["MetaWebhookAccepted"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid webhook signature. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Method not allowed. */
-                405: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        post: operations["postV1MetaWebhook"];
         delete?: never;
         options?: never;
         head?: never;
@@ -519,42 +210,7 @@ export interface paths {
          *     WhatsApp numbers and `wa_id` are never returned. Search (`q`) matches
          *     profile names only, not phone numbers.
          */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                    cursor?: string;
-                    /** @description Case-insensitive search on profile name (not phone). */
-                    q?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Paginated conversation list without phone numbers. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicWhatsAppConversationListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1PublicWhatsappConversations"];
         put?: never;
         post?: never;
         delete?: never;
@@ -578,42 +234,7 @@ export interface paths {
          *     messages. Message payloads include direction, body, and sent time
          *     only — no WhatsApp ids or phone numbers.
          */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                };
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Conversation plus messages without phone numbers. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicWhatsAppMessageListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1PublicWhatsappConversationsByIdMessages"];
         put?: never;
         post?: never;
         delete?: never;
@@ -636,44 +257,7 @@ export interface paths {
          *     Page-scoped user ids and page ids are never returned. Search (`q`) matches
          *     profile names only, not scoped ids.
          */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                    cursor?: string;
-                    /** @description Case-insensitive search on profile name (not scoped id). */
-                    q?: string;
-                    /** @description Restrict results to `facebook` (Messenger) or `instagram`. */
-                    channel?: "facebook" | "instagram";
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Paginated conversation list without Page-scoped ids. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicMetaConversationListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1PublicMetaConversations"];
         put?: never;
         post?: never;
         delete?: never;
@@ -697,42 +281,7 @@ export interface paths {
          *     messages. Message payloads include direction, body, and sent time only —
          *     no Page-scoped user ids, page ids, or platform message ids.
          */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                };
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Conversation plus messages without scoped ids. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicMetaMessageListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1PublicMetaConversationsByIdMessages"];
         put?: never;
         post?: never;
         delete?: never;
@@ -755,89 +304,14 @@ export interface paths {
          *     and date of birth. Search (`query`) matches first name, last name,
          *     email, Instagram, and phone.
          */
-        get: {
-            parameters: {
-                query?: {
-                    /**
-                     * @description Search first name, last name, email, Instagram, and phone (stored as ISO region +
-                     *     national digits; server normalises ``+`` / digit queries before matching).
-                     */
-                    query?: string;
-                    active?: boolean;
-                    /** @description When set, only contacts with this contact type are returned. */
-                    contact_type?: components["schemas"]["PublicContactType"];
-                    cursor?: string;
-                    limit?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Contact list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicContactListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1PublicContacts"];
         put?: never;
         /**
          * Create CRM contact (token API)
          * @description Creates a CRM contact. Requires an `admin` scoped API token.
          *     `user` tokens receive `403`.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreatePublicContactRequest"];
-                };
-            };
-            responses: {
-                /** @description Contact created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicContactResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        post: operations["postV1PublicContacts"];
         delete?: never;
         options?: never;
         head?: never;
@@ -858,40 +332,7 @@ export interface paths {
          * @description Returns one CRM contact for a hashed API token (`x-api-token`).
          *     Payload matches the admin contact contract.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Contact response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicContactResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1PublicContactsById"];
         put?: never;
         post?: never;
         /**
@@ -902,38 +343,7 @@ export interface paths {
          *     use `ON DELETE SET NULL` clear their `contact_id`. Returns `400` if
          *     the database still blocks deletion.
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Contact deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        delete: operations["deleteV1PublicContactsById"];
         options?: never;
         head?: never;
         /**
@@ -941,44 +351,7 @@ export interface paths {
          * @description Updates a CRM contact. Requires an `admin` scoped API token.
          *     `user` tokens receive `403`.
          */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdatePublicContactRequest"];
-                };
-            };
-            responses: {
-                /** @description Contact response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicContactResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        patch: operations["patchV1PublicContactsById"];
         trace?: never;
     };
     "/v1/public/contacts/{id}/notes": {
@@ -995,83 +368,13 @@ export interface paths {
          * @description Returns notes stored on the contact that are not tied to a sales lead
          *     (`lead_id` is null), newest first. `user` and `admin` tokens may read.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Note list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicNoteListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1PublicContactsByIdNotes"];
         put?: never;
         /**
          * Add a standalone note to a contact (token API)
          * @description Requires an `admin` scoped API token. `user` tokens receive `403`.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreatePublicNoteRequest"];
-                };
-            };
-            responses: {
-                /** @description Note created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicNoteResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        post: operations["postV1PublicContactsByIdNotes"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1095,84 +398,14 @@ export interface paths {
          * Delete a standalone note on a contact (token API)
          * @description Requires an `admin` scoped API token.
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                    note_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Note deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        delete: operations["deleteV1PublicContactsByIdNotesByNoteId"];
         options?: never;
         head?: never;
         /**
          * Update a standalone note on a contact (token API)
          * @description Requires an `admin` scoped API token.
          */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                    note_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreatePublicNoteRequest"];
-                };
-            };
-            responses: {
-                /** @description Note updated. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicNoteResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        patch: operations["patchV1PublicContactsByIdNotesByNoteId"];
         trace?: never;
     };
     "/v1/public/families": {
@@ -1187,82 +420,13 @@ export interface paths {
          * @description Returns CRM families for a hashed API token (`x-api-token`).
          *     Payloads match the admin family contract.
          */
-        get: {
-            parameters: {
-                query?: {
-                    query?: string;
-                    active?: boolean;
-                    cursor?: string;
-                    limit?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Family list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicFamilyListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1PublicFamilies"];
         put?: never;
         /**
          * Create CRM family (token API)
          * @description Requires an `admin` scoped API token.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreatePublicFamilyRequest"];
-                };
-            };
-            responses: {
-                /** @description Family created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicFamilyResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        post: operations["postV1PublicFamilies"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1278,123 +442,25 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Get CRM family (token API) */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Family response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicFamilyResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Get CRM family (token API)
+         * @description Get CRM family (token API)
+         */
+        get: operations["getV1PublicFamiliesById"];
         put?: never;
         post?: never;
         /**
          * Delete CRM family (token API)
          * @description Requires an `admin` scoped API token.
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Family deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        delete: operations["deleteV1PublicFamiliesById"];
         options?: never;
         head?: never;
         /**
          * Update CRM family (token API)
          * @description Requires an `admin` scoped API token.
          */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdatePublicFamilyRequest"];
-                };
-            };
-            responses: {
-                /** @description Family response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicFamilyResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        patch: operations["patchV1PublicFamiliesById"];
         trace?: never;
     };
     "/v1/public/families/{id}/members": {
@@ -1412,44 +478,7 @@ export interface paths {
          * Add family member (token API)
          * @description Requires an `admin` scoped API token.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["AddPublicFamilyMemberRequest"];
-                };
-            };
-            responses: {
-                /** @description Family with updated members. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicFamilyResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        post: operations["postV1PublicFamiliesByIdMembers"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1473,86 +502,14 @@ export interface paths {
          * Remove family member (token API)
          * @description Requires an `admin` scoped API token.
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                    member_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Family with updated members. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicFamilyResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        delete: operations["deleteV1PublicFamiliesByIdMembersByMemberId"];
         options?: never;
         head?: never;
         /**
          * Update family member (token API)
          * @description Requires an `admin` scoped API token. Toggles primary contact.
          */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                    member_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdatePublicFamilyMemberRequest"];
-                };
-            };
-            responses: {
-                /** @description Family with updated members. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicFamilyResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        patch: operations["patchV1PublicFamiliesByIdMembersByMemberId"];
         trace?: never;
     };
     "/v1/public/organizations": {
@@ -1562,85 +519,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List CRM organisations (token API) */
-        get: {
-            parameters: {
-                query?: {
-                    query?: string;
-                    active?: boolean;
-                    relationship_type?: components["schemas"]["PublicRelationshipType"];
-                    sort?: "name";
-                    cursor?: string;
-                    limit?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Organisation list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicOrganizationListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        /**
+         * List CRM organisations (token API)
+         * @description List CRM organisations (token API)
+         */
+        get: operations["getV1PublicOrganizations"];
         put?: never;
         /**
          * Create CRM organisation (token API)
          * @description Requires an `admin` scoped API token.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreatePublicOrganizationRequest"];
-                };
-            };
-            responses: {
-                /** @description Organisation created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicOrganizationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        post: operations["postV1PublicOrganizations"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1656,123 +545,25 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Get CRM organisation (token API) */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Organisation response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicOrganizationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Get CRM organisation (token API)
+         * @description Get CRM organisation (token API)
+         */
+        get: operations["getV1PublicOrganizationsById"];
         put?: never;
         post?: never;
         /**
          * Delete CRM organisation (token API)
          * @description Requires an `admin` scoped API token.
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Organisation deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        delete: operations["deleteV1PublicOrganizationsById"];
         options?: never;
         head?: never;
         /**
          * Update CRM organisation (token API)
          * @description Requires an `admin` scoped API token.
          */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdatePublicOrganizationRequest"];
-                };
-            };
-            responses: {
-                /** @description Organisation response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicOrganizationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        patch: operations["patchV1PublicOrganizationsById"];
         trace?: never;
     };
     "/v1/public/organizations/{id}/members": {
@@ -1790,44 +581,7 @@ export interface paths {
          * Add organisation member (token API)
          * @description Requires an `admin` scoped API token.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["AddPublicOrganizationMemberRequest"];
-                };
-            };
-            responses: {
-                /** @description Organisation with updated members. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicOrganizationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        post: operations["postV1PublicOrganizationsByIdMembers"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1851,86 +605,14 @@ export interface paths {
          * Remove organisation member (token API)
          * @description Requires an `admin` scoped API token.
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                    member_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Organisation with updated members. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicOrganizationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        delete: operations["deleteV1PublicOrganizationsByIdMembersByMemberId"];
         options?: never;
         head?: never;
         /**
          * Update organisation member (token API)
          * @description Requires an `admin` scoped API token.
          */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                    member_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdatePublicOrganizationMemberRequest"];
-                };
-            };
-            responses: {
-                /** @description Organisation with updated members. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicOrganizationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        patch: operations["patchV1PublicOrganizationsByIdMembersByMemberId"];
         trace?: never;
     };
     "/v1/public/locations": {
@@ -1940,84 +622,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List locations (token API) */
-        get: {
-            parameters: {
-                query?: {
-                    area_id?: string;
-                    search?: string;
-                    exclude_addresses?: boolean;
-                    cursor?: string;
-                    limit?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Location list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicLocationListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        /**
+         * List locations (token API)
+         * @description List locations (token API)
+         */
+        get: operations["getV1PublicLocations"];
         put?: never;
         /**
          * Create location (token API)
          * @description Requires an `admin` scoped API token.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreatePublicLocationRequest"];
-                };
-            };
-            responses: {
-                /** @description Location created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicLocationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        post: operations["postV1PublicLocations"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2039,41 +654,7 @@ export interface paths {
          *     street-number, street/road, and neighbourhood portions of the submitted
          *     address and drops unit, floor, block, tower, and estate/building segments.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["GeocodePublicLocationRequest"];
-                };
-            };
-            responses: {
-                /** @description Geocoding result. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["GeocodePublicLocationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        post: operations["postV1PublicLocationsGeocode"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2089,41 +670,11 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Get location (token API) */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Location response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicLocationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Get location (token API)
+         * @description Get location (token API)
+         */
+        get: operations["getV1PublicLocationsById"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2133,44 +684,7 @@ export interface paths {
          * Update location (token API)
          * @description Requires an `admin` scoped API token.
          */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreatePublicLocationRequest"];
-                };
-            };
-            responses: {
-                /** @description Location response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicLocationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        patch: operations["patchV1PublicLocationsById"];
         trace?: never;
     };
     "/v1/public/geographic-areas": {
@@ -2184,41 +698,7 @@ export interface paths {
          * List geographic areas (token API)
          * @description GET only for both `user` and `admin` tokens. Payloads match admin.
          */
-        get: {
-            parameters: {
-                query?: {
-                    parent_id?: string;
-                    flat?: boolean;
-                    active_only?: boolean;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Geographic area list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicGeographicAreaListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1PublicGeographicAreas"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2240,83 +720,13 @@ export interface paths {
          *     Payloads match `GET /v1/admin/services`. Cover-image upload and
          *     discount-code usage summary are not exposed.
          */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                    cursor?: string;
-                    service_type?: components["schemas"]["PublicServiceType"];
-                    status?: components["schemas"]["PublicServiceStatus"];
-                    search?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Service list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicServiceListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1PublicServices"];
         put?: never;
         /**
          * Create service (token API)
          * @description Requires an `admin` scoped API token. `user` tokens receive `403`.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreatePublicServiceRequest"];
-                };
-            };
-            responses: {
-                /** @description Service created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicServiceResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        post: operations["postV1PublicServices"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2336,49 +746,7 @@ export interface paths {
          *     (`x-api-token`). Payloads match `GET /v1/admin/services/instances`.
          *     Nested enrollments are not exposed.
          */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                    cursor?: string;
-                    status?: components["schemas"]["PublicInstanceStatus"];
-                    /** @description When set, only instances for this service UUID. */
-                    service_id?: string;
-                    /** @description When set, only instances whose parent service has this type. */
-                    service_type?: components["schemas"]["PublicServiceType"];
-                    contact_id?: string;
-                    family_id?: string;
-                    organization_id?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Service instance list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicInstanceListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1PublicServicesInstances"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2396,191 +764,29 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Get service (token API) */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Service response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicServiceResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Get service (token API)
+         * @description Get service (token API)
+         */
+        get: operations["getV1PublicServicesById"];
         /**
          * Update service (token API)
          * @description Requires an `admin` scoped API token.
          */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdatePublicServiceRequest"];
-                };
-            };
-            responses: {
-                /** @description Service response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicServiceResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-                /** @description Service key and service tier conflict with another service. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        put: operations["putV1PublicServicesById"];
         post?: never;
         /**
          * Delete service (token API)
          * @description Requires an `admin` scoped API token. Returns 409 when instances exist.
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Service deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-                /** @description Service has instances and cannot be deleted. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        delete: operations["deleteV1PublicServicesById"];
         options?: never;
         head?: never;
         /**
          * Partially update service (token API)
          * @description Requires an `admin` scoped API token.
          */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["PartialUpdatePublicServiceRequest"];
-                };
-            };
-            responses: {
-                /** @description Service response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicServiceResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-                /** @description Service key and service tier conflict with another service. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        patch: operations["patchV1PublicServicesById"];
         trace?: never;
     };
     "/v1/public/services/{id}/instances": {
@@ -2592,94 +798,18 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** List instances for a service (token API) */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Service instance list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicInstanceListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * List instances for a service (token API)
+         * @description List instances for a service (token API)
+         */
+        get: operations["getV1PublicServicesByIdInstances"];
         put?: never;
         /**
          * Create service instance (token API)
          * @description Creates a service instance under the parent service. Requires an `admin`
          *     scoped API token. Duplicate instance slugs return 409 with `field: slug`.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreatePublicInstanceRequest"];
-                };
-            };
-            responses: {
-                /** @description Service instance created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicInstanceResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-                /** @description Another instance already uses this slug. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        post: operations["postV1PublicServicesByIdInstances"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2696,134 +826,24 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Get service instance (token API) */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                    instance_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Service instance response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicInstanceResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Get service instance (token API)
+         * @description Get service instance (token API)
+         */
+        get: operations["getV1PublicServicesByIdInstancesByInstanceId"];
         /**
          * Update service instance (token API)
          * @description Requires an `admin` scoped API token. When `status` is set to `completed`,
          *     every enrollment on the instance that is still `registered` or `confirmed`
          *     is updated to `completed` in the same request.
          */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                    instance_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdatePublicInstanceRequest"];
-                };
-            };
-            responses: {
-                /** @description Service instance response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicInstanceResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-                /** @description Another instance already uses this slug. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        put: operations["putV1PublicServicesByIdInstancesByInstanceId"];
         post?: never;
         /**
          * Delete service instance (token API)
          * @description Requires an `admin` scoped API token.
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                    instance_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Service instance deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Missing or invalid API token. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        delete: operations["deleteV1PublicServicesByIdInstancesByInstanceId"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2844,42 +864,7 @@ export interface paths {
          *     including rows with null `content_language`.
          *     Download files via `GET /v1/assets/public/{id}/download` (device attestation required).
          */
-        get: {
-            parameters: {
-                query?: {
-                    /**
-                     * @description Filter to assets whose `content_language` equals this tag (e.g. `en`, `zh-HK`).
-                     *     When omitted, all matching public client resources are returned.
-                     */
-                    language?: components["parameters"]["ClientResourceLanguage"];
-                    /** @description Page size (default 25). */
-                    limit?: components["parameters"]["ListLimit"];
-                    /** @description Pagination cursor from the previous response's `next_cursor`. */
-                    cursor?: components["parameters"]["ListCursor"];
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Client resource list response. */
-                200: {
-                    headers: {
-                        /** @description `public, max-age=60, s-maxage=300, stale-while-revalidate=600` for CloudFront edge caching on `/www/*` (TTL capped by cache policy). */
-                        "Cache-Control"?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicClientResourceListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["PublicWebsiteCacheableGetNotFound"];
-                405: components["responses"]["PublicWebsiteCacheableGetMethodNotAllowed"];
-            };
-        };
+        get: operations["getV1AssetsFree"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2899,42 +884,7 @@ export interface paths {
          * List public free website assets (website proxy path)
          * @description Same as `GET /v1/assets/free` for same-origin calls from `public_www`.
          */
-        get: {
-            parameters: {
-                query?: {
-                    /**
-                     * @description Filter to assets whose `content_language` equals this tag (e.g. `en`, `zh-HK`).
-                     *     When omitted, all matching public client resources are returned.
-                     */
-                    language?: components["parameters"]["ClientResourceLanguage"];
-                    /** @description Page size (default 25). */
-                    limit?: components["parameters"]["ListLimit"];
-                    /** @description Pagination cursor from the previous response's `next_cursor`. */
-                    cursor?: components["parameters"]["ListCursor"];
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Client resource list response. */
-                200: {
-                    headers: {
-                        /** @description `public, max-age=60, s-maxage=300, stale-while-revalidate=600` for CloudFront edge caching on `/www/*` (TTL capped by cache policy). */
-                        "Cache-Control"?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicClientResourceListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["PublicWebsiteCacheableGetNotFound"];
-                405: components["responses"]["PublicWebsiteCacheableGetMethodNotAllowed"];
-            };
-        };
+        get: operations["getWwwV1AssetsFree"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2977,39 +927,7 @@ export interface paths {
          *     parent service; together they identify the bookable instance for
          *     `POST /v1/discounts/validate` and `POST /v1/reservations`.
          */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Restrict feed to one service type. Omitted = both event and training_course are returned (finished-event lookback applies only to `event`). Consultation is never exposed. */
-                    service_type?: "event" | "training_course";
-                    /** @description Filter results to at most one instance whose `service_instances.slug` matches the provided slug case-insensitively. Invalid or empty values are silently ignored. */
-                    slug?: string;
-                    /** @description Restrict the feed to instances of a single service whose key matches `service_key` case-insensitively against `services.service_key` in Aurora (e.g. `my-best-auntie-training-course`). Combines with `service_type` and `slug` via logical AND; contradictory combinations return `events: []`. Unknown keys return `events: []`. Invalid values (wrong shape, too long) are silently ignored and the filter is not applied, consistent with `service_type` and `slug`. Same case-insensitive `services.service_key` mapping as the `service_key` field on `POST /v1/discounts/validate` (JSON body), not the same parameter surface. */
-                    service_key?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Event list response. */
-                200: {
-                    headers: {
-                        /** @description `public, max-age=60, s-maxage=300, stale-while-revalidate=600` for CloudFront edge caching on `/www/*` (TTL capped by cache policy). */
-                        "Cache-Control"?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicCalendarEventsResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["PublicWebsiteCacheableGetNotFound"];
-                405: components["responses"]["PublicWebsiteCacheableGetMethodNotAllowed"];
-            };
-        };
+        get: operations["getV1CalendarPublic"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3052,39 +970,7 @@ export interface paths {
          *     parent service; together they identify the bookable instance for
          *     `POST /v1/discounts/validate` and `POST /v1/reservations`.
          */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Restrict feed to one service type. Omitted = both event and training_course are returned (finished-event lookback applies only to `event`). Consultation is never exposed. */
-                    service_type?: "event" | "training_course";
-                    /** @description Filter results to at most one instance whose `service_instances.slug` matches the provided slug case-insensitively. Invalid or empty values are silently ignored. */
-                    slug?: string;
-                    /** @description Restrict the feed to instances of a single service whose key matches `service_key` case-insensitively against `services.service_key` in Aurora (e.g. `my-best-auntie-training-course`). Combines with `service_type` and `slug` via logical AND; contradictory combinations return `events: []`. Unknown keys return `events: []`. Invalid values (wrong shape, too long) are silently ignored and the filter is not applied, consistent with `service_type` and `slug`. Same case-insensitive `services.service_key` mapping as the `service_key` field on `POST /v1/discounts/validate` (JSON body), not the same parameter surface. */
-                    service_key?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Event list response. */
-                200: {
-                    headers: {
-                        /** @description `public, max-age=60, s-maxage=300, stale-while-revalidate=600` for CloudFront edge caching on `/www/*` (TTL capped by cache policy). */
-                        "Cache-Control"?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicCalendarEventsResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["PublicWebsiteCacheableGetNotFound"];
-                405: components["responses"]["PublicWebsiteCacheableGetMethodNotAllowed"];
-            };
-        };
+        get: operations["getWwwV1CalendarPublic"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3116,37 +1002,7 @@ export interface paths {
          *     **`from` / `to`:** Optional inclusive `YYYY-MM-DD` dates (strict validation). When omitted, `from`
          *     defaults to today in the purpose wall zone and `to` defaults to `from + default_horizon_days`.
          */
-        get: {
-            parameters: {
-                query: {
-                    purpose: components["schemas"]["PublicCalendarAvailabilityPurpose"];
-                    /** @description Inclusive range start (`YYYY-MM-DD`). */
-                    from?: string;
-                    /** @description Inclusive range end (`YYYY-MM-DD`). */
-                    to?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Availability envelope. */
-                200: {
-                    headers: {
-                        /** @description `no-store` for `purpose=consultation_booking`. For `intro_call_booking`, the same value as other public cacheable GETs: `public, max-age=60, s-maxage=300, stale-while-revalidate=600` (TTL capped by cache policy on `/www/*`). Errors use `no-store`. */
-                        "Cache-Control"?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicCalendarAvailabilityResponse"];
-                    };
-                };
-                400: components["responses"]["PublicWebsiteCacheableGetBadRequest"];
-                403: components["responses"]["Forbidden"];
-                405: components["responses"]["PublicWebsiteCacheableGetMethodNotAllowed"];
-            };
-        };
+        get: operations["getV1CalendarAvailability"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3166,34 +1022,7 @@ export interface paths {
          * Public calendar availability (website proxy path)
          * @description Same as `GET /v1/calendar/availability` for same-origin calls from `public_www`.
          */
-        get: {
-            parameters: {
-                query: {
-                    purpose: components["schemas"]["PublicCalendarAvailabilityPurpose"];
-                    from?: string;
-                    to?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Availability envelope. */
-                200: {
-                    headers: {
-                        "Cache-Control"?: string;
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PublicCalendarAvailabilityResponse"];
-                    };
-                };
-                400: components["responses"]["PublicWebsiteCacheableGetBadRequest"];
-                403: components["responses"]["Forbidden"];
-                405: components["responses"]["PublicWebsiteCacheableGetMethodNotAllowed"];
-            };
-        };
+        get: operations["getWwwV1CalendarAvailability"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3235,41 +1064,7 @@ export interface paths {
          *     resolved parent service. When scoped to an **instance**, `service_instance_slug` must be
          *     supplied and must match the resolved instance (instance-scoped codes reject service-key-only requests).
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["DiscountValidationRequest"];
-                };
-            };
-            responses: {
-                /** @description Discount validation response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["DiscountValidationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                /** @description Code not found, inactive, expired, fully used, or identity/scoping mismatch. When `rejection_reason` is present it may be `unknown_service_instance_slug`, `service_key_instance_mismatch`, or `unknown_service_key` (other rejections use the same generic body without this field). */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        post: operations["postV1DiscountsValidate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3291,41 +1086,7 @@ export interface paths {
          *     Validity window boundaries are inclusive on both `valid_from` and `valid_until` (UTC).
          *     Service and instance scoping rules match the `/v1/discounts/validate` description.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["DiscountValidationRequest"];
-                };
-            };
-            responses: {
-                /** @description Discount validation response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["DiscountValidationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                /** @description Code not found, inactive, expired, fully used, or identity/scoping mismatch. When `rejection_reason` is present it may be `unknown_service_instance_slug`, `service_key_instance_mismatch`, or `unknown_service_key` (other rejections use the same generic body without this field). */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        post: operations["postWwwV1DiscountsValidate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3345,53 +1106,7 @@ export interface paths {
          * Submit contact-us form (direct API path)
          * @description Accepts contact-us, community newsletter, and event-notification signups from `public_www`. Requires Turnstile. Persists to Aurora (contact; sales lead for `contact_inquiry`, `community_newsletter`, and `event_notification`, reusing or reopening the contact's existing lead when one exists), then runs best-effort SES confirmation (skipped for newsletter/event-notification intents), optional Mailchimp subscribe, sales recap, and `SUPPORT_EMAIL` notification for `contact_inquiry`. Returns **500** when persistence fails. If hooks fail after commit, the API still returns **202** (data is saved).
          */
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    /** @description Cloudflare Turnstile response token. */
-                    "X-Turnstile-Token": components["parameters"]["TurnstileTokenHeader"];
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["ContactUsSubmissionRequest"];
-                };
-            };
-            responses: {
-                /** @description Contact submission accepted. */
-                202: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ReservationSubmissionAccepted"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                /** @description Method not allowed. */
-                405: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Persistence failed. */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        post: operations["postV1ContactUs"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3411,53 +1126,7 @@ export interface paths {
          * Submit contact-us form (website proxy path)
          * @description Same as `POST /v1/contact-us` for same-origin calls from `public_www`.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    /** @description Cloudflare Turnstile response token. */
-                    "X-Turnstile-Token": components["parameters"]["TurnstileTokenHeader"];
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["ContactUsSubmissionRequest"];
-                };
-            };
-            responses: {
-                /** @description Contact submission accepted. */
-                202: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ReservationSubmissionAccepted"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                /** @description Method not allowed. */
-                405: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Persistence failed. */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        post: operations["postWwwV1ContactUs"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3478,62 +1147,7 @@ export interface paths {
          * @description Submit a public reservation from `public_www` (execute-api origin).
          *     Persists the attendee as a CRM contact. When a new enrollment is created, reuses or reopens the contact's sales lead (or creates one) as `program_enrollment` (lead event metadata may include `discount_code` and `discount_code_id` when a valid non-referral code was supplied), and when `serviceInstanceSlug` resolves to a `service_instances` row and the contact has no existing enrollment on the **target booking instance** (for consultation-booking and intro-call-booking this is a freshly created child instance; for other flows it is the resolved instance row), inserts an `enrollments` row (`created_by`: `public-reservation`) with optional `discount_code_id` and paid amount, currency, optional bill-to fields, then returns **202** on success. When enrollment is created, records a **`customer_payments`** row (Stripe succeeded, free, or pending for offline rails). Receipt PDF upload for succeeded inbound payments is finalized after staff confirm via admin billing (not at booking time). If the same Stripe PaymentIntent id was already stored, returns **200** with `duplicateStripePaymentIntent: true` and `customerPaymentId` (idempotent client retries). Referral-type discount codes are rejected like the public validate endpoint. Returns **409** when the instance is full and public bookings may not waitlist. Best-effort SES booking confirmation to the attendee, optional Mailchimp subscribe, and plain-text **sales recap** to `ADMIN_GROUP` verified emails run after commit (hook failures are logged; HTTP **202** is still returned for normal submissions, **200** when `duplicateStripePaymentIntent` applies). Returns **500** when Aurora persistence fails. When `bookingSystem` is `consultation-booking` or `intro-call-booking`, Stripe PaymentIntent idempotency is enforced **before** allocating the booking instance so retries cannot double-create tier children for the same PaymentIntent. Requires Turnstile, `agreedToTermsAndConditions: true`, and Stripe PaymentIntent verification when the payment method implies Stripe.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    /** @description Cloudflare Turnstile response token. */
-                    "X-Turnstile-Token": components["parameters"]["TurnstileTokenHeader"];
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["PublicReservationSubmissionRequest"];
-                };
-            };
-            responses: {
-                /** @description Idempotent retry: same Stripe PaymentIntent already linked (`duplicateStripePaymentIntent`). */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ReservationSubmissionAccepted"];
-                    };
-                };
-                /** @description Reservation submitted. For `consultation-booking` and `intro-call-booking`, the server creates a booking-specific `service_instances` row (child of the resolved catalog service), inserts scheduled session slots tagged with `purpose_service_id` for race protection, and attaches the enrollment to that booking instance. */
-                202: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ReservationSubmissionAccepted"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                /** @description Conflict (for example the resolved instance is at capacity with waitlist disabled for public bookings). May occur after payment confirmation; response body uses the standard error shape with `field` when applicable. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Persistence failed. */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        post: operations["postV1Reservations"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3553,62 +1167,7 @@ export interface paths {
          * Submit reservation (website proxy path)
          * @description Same as `POST /v1/reservations` for same-origin calls from `public_www`.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    /** @description Cloudflare Turnstile response token. */
-                    "X-Turnstile-Token": components["parameters"]["TurnstileTokenHeader"];
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["PublicReservationSubmissionRequest"];
-                };
-            };
-            responses: {
-                /** @description Same idempotent Stripe PaymentIntent response as `POST /v1/reservations`. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ReservationSubmissionAccepted"];
-                    };
-                };
-                /** @description Reservation submitted. For `consultation-booking` and `intro-call-booking`, the server creates a booking-specific `service_instances` row (child of the resolved catalog service), inserts scheduled session slots tagged with `purpose_service_id` for race protection, and attaches the enrollment to that booking instance. */
-                202: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ReservationSubmissionAccepted"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                /** @description Same conflict cases as `POST /v1/reservations`. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Persistence failed. */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        post: operations["postWwwV1Reservations"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3628,41 +1187,7 @@ export interface paths {
          * Create reservation payment intent
          * @description Create a Stripe PaymentIntent for inline booking modal payment.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["ReservationPaymentIntentRequest"];
-                };
-            };
-            responses: {
-                /** @description PaymentIntent created. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ReservationPaymentIntentResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                /** @description Upstream payment provider initialization failed. */
-                502: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        post: operations["postWwwV1ReservationsPaymentIntent"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3681,61 +1206,7 @@ export interface paths {
          * Persist one form question answer (direct API path)
          * @description Upserts a single question answer for a training-site form session. Used by `apps/training` when the respondent advances to the next question. Answers are stored in the shared DynamoDB table `evolvesprouts-poll-responses` (partition key `FORM#<form_slug>`, sort key `SESSION#<session_id>#Q#<question_id>`). Re-submitting the same session and question overwrites the prior row. Requires API key; Turnstile is not used on this route.
          */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Form identifier (for example `workshop-feedback`). */
-                    form_slug: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["FormAnswerPutRequest"];
-                };
-            };
-            responses: {
-                /** @description Answer persisted. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["FormAnswerPutResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Form path not found. */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Method not allowed. */
-                405: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Persistence failed. */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        put: operations["putV1FormsByFormSlugAnswers"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3754,50 +1225,7 @@ export interface paths {
          * Resolve display-only contact placeholders for a form
          * @description Returns first names and household labels used to fill tokens such as `{contactName}`, `{contactFirstName}`, `{children.firstName}`, and `{helpers.firstName}` on a personalised training form. Does not return email, phone, or other CRM fields. Requires API key. Success and error responses set `Cache-Control: no-store` so CloudFront must not cache.
          */
-        get: {
-            parameters: {
-                query: {
-                    /** @description CRM contact id from the personalised form link (`?contact=`). */
-                    contactId: string;
-                };
-                header?: never;
-                path: {
-                    form_slug: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Placeholder map for the contact. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["FormContactContextResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Contact not found. */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Method not allowed. */
-                405: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        get: operations["getV1FormsByFormSlugContactContext"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3817,136 +1245,12 @@ export interface paths {
          * List persisted answers for one poll session (direct API path)
          * @description Returns all question answers stored for the given `sessionId` on this poll. Used by `apps/training` on page load to resume the respondent wizard after refresh. Requires API key.
          */
-        get: {
-            parameters: {
-                query: {
-                    /** @description Client session id from browser session storage. */
-                    sessionId: string;
-                };
-                header?: never;
-                path: {
-                    poll_slug: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Session answers for the poll. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PollSessionAnswersResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Poll path not found. */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Method not allowed. */
-                405: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Load failed. */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        get: operations["getV1PollsByPollSlugAnswers"];
         /**
          * Persist one poll question answer (direct API path)
          * @description Upserts a single question answer for a training-site poll session. Used by `apps/training` when the respondent advances to the next question. Answers are stored in the shared DynamoDB table `evolvesprouts-poll-responses` (partition key `POLL#<poll_slug>`, sort key `SESSION#<session_id>#Q#<question_id>`). Re-submitting the same session and question overwrites the prior row. Identical re-submits (same answer payload) return `200` without a new DynamoDB write and do not consume the per-session write counter. Submissions are rejected with `409` when the facilitator has not enabled the question (`error`: `question_not_open`), when no questions are open (`poll_not_accepting_answers`), or when `selectedOption` / `selectedOptions` are not members of the facilitator-published option list for that question (`option_not_allowed`; skipped when control state has no `questionOptions`). Per-session write counters in DynamoDB use a fixed one-hour bucket (`RATELIMIT#SESSION#<session_id>#W#<epoch//3600>`) and return `429` (`poll_write_rate_limit_exceeded`) when exceeded; stale buckets are garbage-collected via TTL on `expiresAt` (lazy deletion). Requires API key; Turnstile is not used on this route.
          */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Poll identifier (for example `workshop-food-jun-26`). */
-                    poll_slug: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["PollAnswerPutRequest"];
-                };
-            };
-            responses: {
-                /** @description Answer persisted. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PollAnswerPutResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Poll path not found. */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Method not allowed. */
-                405: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Question not open for responses, option not allowed, or poll not accepting answers. Body `error` is `question_not_open`, `option_not_allowed`, or `poll_not_accepting_answers`. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Poll answer write rate limit exceeded. */
-                429: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Persistence failed. */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        put: operations["putV1PollsByPollSlugAnswers"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3965,113 +1269,12 @@ export interface paths {
          * Poll facilitator control state (direct API path)
          * @description Returns which poll questions are currently open for respondents. Stored at DynamoDB sort key `CONTROL` under partition `POLL#<poll_slug>`. When `enabledQuestionIds` is empty (default), respondents wait until the facilitator enables at least one question. Requires API key.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    poll_slug: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Current control state. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PollControlStateResponse"];
-                    };
-                };
-                /** @description Poll path not found. */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Method not allowed. */
-                405: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Load failed. */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        get: operations["getV1PollsByPollSlugControl"];
         /**
          * Update poll facilitator control state (direct API path)
          * @description Replaces the set of question ids that respondents may answer. Questions not listed remain visible on the facilitator control page but are skipped on the participant poll flow.
          */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    poll_slug: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["PollControlStatePutRequest"];
-                };
-            };
-            responses: {
-                /** @description Control state updated. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PollControlStateResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Poll path not found. */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Method not allowed. */
-                405: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Persistence failed. */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        put: operations["putV1PollsByPollSlugControl"];
         post?: never;
         delete?: never;
         options?: never;
@@ -4090,59 +1293,7 @@ export interface paths {
          * Live aggregate results for one poll question (direct API path)
          * @description Returns room-wide response counts for a single poll question. Used by `apps/training` when `showResults` is enabled on a question, and on the facilitator control page for every question. Counts all rows in DynamoDB `evolvesprouts-poll-responses` for the poll partition with matching `questionId` (one row per session per question; re-answers overwrite). Requires `questionType` of `select`, `multiselect`, `truefalse`, `text`, or `email`. For `text` and `email`, returns a `responses` array of answer strings. Requires API key.
          */
-        get: {
-            parameters: {
-                query: {
-                    questionType: "select" | "multiselect" | "truefalse" | "text" | "email";
-                };
-                header?: never;
-                path: {
-                    poll_slug: string;
-                    question_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Aggregated counts. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PollQuestionResultsResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Poll path not found. */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Method not allowed. */
-                405: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Aggregation failed. */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        get: operations["getV1PollsByPollSlugQuestionsByQuestionIdResults"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4162,113 +1313,12 @@ export interface paths {
          * Poll facilitator control state (training website proxy path)
          * @description Same as `GET /v1/polls/{poll_slug}/control` for same-origin calls from `apps/training`.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    poll_slug: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Current control state. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PollControlStateResponse"];
-                    };
-                };
-                /** @description Poll path not found. */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Method not allowed. */
-                405: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Load failed. */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        get: operations["getWwwV1PollsByPollSlugControl"];
         /**
          * Update poll facilitator control state (training website proxy path)
          * @description Same as `PUT /v1/polls/{poll_slug}/control` for same-origin calls from `apps/training`.
          */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    poll_slug: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["PollControlStatePutRequest"];
-                };
-            };
-            responses: {
-                /** @description Control state updated. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PollControlStateResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Poll path not found. */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Method not allowed. */
-                405: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Persistence failed. */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        put: operations["putWwwV1PollsByPollSlugControl"];
         post?: never;
         delete?: never;
         options?: never;
@@ -4287,59 +1337,7 @@ export interface paths {
          * Live aggregate results for one poll question (training website proxy path)
          * @description Same as `GET /v1/polls/{poll_slug}/questions/{question_id}/results` for same-origin calls from `apps/training`.
          */
-        get: {
-            parameters: {
-                query: {
-                    questionType: "select" | "multiselect" | "truefalse" | "text" | "email";
-                };
-                header?: never;
-                path: {
-                    poll_slug: string;
-                    question_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Aggregated counts. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PollQuestionResultsResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Poll path not found. */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Method not allowed. */
-                405: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Aggregation failed. */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        get: operations["getWwwV1PollsByPollSlugQuestionsByQuestionIdResults"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4360,60 +1358,7 @@ export interface paths {
          * Persist one form question answer (training website proxy path)
          * @description Same as `PUT /v1/forms/{form_slug}/answers` for same-origin calls from `apps/training`.
          */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    form_slug: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["FormAnswerPutRequest"];
-                };
-            };
-            responses: {
-                /** @description Answer persisted. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["FormAnswerPutResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Form path not found. */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Method not allowed. */
-                405: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Persistence failed. */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        put: operations["putWwwV1FormsByFormSlugAnswers"];
         post?: never;
         delete?: never;
         options?: never;
@@ -4432,49 +1377,7 @@ export interface paths {
          * Resolve display-only contact placeholders (training website proxy path)
          * @description Same as `GET /v1/forms/{form_slug}/contact-context` for same-origin calls from `apps/training`.
          */
-        get: {
-            parameters: {
-                query: {
-                    contactId: string;
-                };
-                header?: never;
-                path: {
-                    form_slug: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Placeholder map for the contact. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["FormContactContextResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Contact not found. */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Method not allowed. */
-                405: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        get: operations["getWwwV1FormsByFormSlugContactContext"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4494,116 +1397,12 @@ export interface paths {
          * List persisted answers for one poll session (training website proxy path)
          * @description Same as `GET /v1/polls/{poll_slug}/answers` for same-origin calls from `apps/training`.
          */
-        get: {
-            parameters: {
-                query: {
-                    sessionId: string;
-                };
-                header?: never;
-                path: {
-                    poll_slug: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Session answers for the poll. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PollSessionAnswersResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Poll path not found. */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Method not allowed. */
-                405: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Load failed. */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        get: operations["getWwwV1PollsByPollSlugAnswers"];
         /**
          * Persist one poll question answer (training website proxy path)
          * @description Same as `PUT /v1/polls/{poll_slug}/answers` for same-origin calls from `apps/training`.
          */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    poll_slug: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["PollAnswerPutRequest"];
-                };
-            };
-            responses: {
-                /** @description Answer persisted. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PollAnswerPutResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                /** @description Poll path not found. */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Method not allowed. */
-                405: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Persistence failed. */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        put: operations["putWwwV1PollsByPollSlugAnswers"];
         post?: never;
         delete?: never;
         options?: never;
@@ -4625,44 +1424,7 @@ export interface paths {
          * @description Submit a media lead form. Routed on the public website via CloudFront as `POST /www/v1/assets/free/request` (execute-api origin).
          *     The download link is delivered by SES (templated email). After async processing, a plain-text **sales recap** is emailed to every verified email on users in the Cognito group named by `ADMIN_GROUP`. Optional Mailchimp subscribe + journey triggers respect `MAILCHIMP_REQUIRE_MARKETING_CONSENT`.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    /** @description Cloudflare Turnstile response token. */
-                    "X-Turnstile-Token": components["parameters"]["TurnstileTokenHeader"];
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["MediaRequestSubmissionRequest"];
-                };
-            };
-            responses: {
-                /** @description Media request accepted. */
-                202: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ReservationSubmissionAccepted"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                /** @description Method not allowed. */
-                405: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        post: operations["postV1AssetsFreeRequest"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4682,44 +1444,7 @@ export interface paths {
          * Submit media request (website proxy path)
          * @description Same as `POST /v1/assets/free/request` for same-origin calls from `public_www`.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header: {
-                    /** @description Cloudflare Turnstile response token. */
-                    "X-Turnstile-Token": components["parameters"]["TurnstileTokenHeader"];
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["MediaRequestSubmissionRequest"];
-                };
-            };
-            responses: {
-                /** @description Media request accepted. */
-                202: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ReservationSubmissionAccepted"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                /** @description Method not allowed. */
-                405: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        post: operations["postWwwV1AssetsFreeRequest"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5979,7 +2704,3396 @@ export interface components {
     pathItems: never;
 }
 export type $defs = Record<string, never>;
+export interface operations {
+    getV1AssetsPublic: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public asset list response payload. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicAssetListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AssetsPublicByIdDownload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Asset identifier. */
+                id: components["parameters"]["AssetId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public asset download response payload. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicAssetDownloadResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AssetsShareByToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Stable bearer token for a shared asset. */
+                token: components["parameters"]["ShareToken"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redirect to signed download URL. */
+            302: {
+                headers: {
+                    /** @description CloudFront-signed download URL. */
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required for restricted asset share links. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AssetsEmailDownloadByToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Stable bearer token for a shared asset. */
+                token: components["parameters"]["ShareToken"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redirect to signed download URL. */
+            302: {
+                headers: {
+                    /** @description CloudFront-signed download URL. */
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required for restricted asset share links. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1MailchimpWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Verification acknowledged. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReservationSubmissionAccepted"];
+                };
+            };
+        };
+    };
+    postV1MailchimpWebhook: {
+        parameters: {
+            query: {
+                /** @description Shared secret token configured for Mailchimp webhook requests. */
+                token: components["parameters"]["MailchimpWebhookToken"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["MailchimpWebhookRequest"];
+            };
+        };
+        responses: {
+            /** @description Webhook processed or ignored. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReservationSubmissionAccepted"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid webhook token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Method not allowed. */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getV1WhatsappWebhook: {
+        parameters: {
+            query: {
+                "hub.mode": string;
+                "hub.verify_token": string;
+                "hub.challenge": string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Verification challenge echoed as plain text. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1WhatsappWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Webhook processed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppWebhookAccepted"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid webhook signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Method not allowed. */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getV1MetaWebhook: {
+        parameters: {
+            query: {
+                "hub.mode": string;
+                "hub.verify_token": string;
+                "hub.challenge": string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Verification challenge echoed as plain text. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1MetaWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Webhook processed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetaWebhookAccepted"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid webhook signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Method not allowed. */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getV1PublicWhatsappConversations: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string;
+                /** @description Case-insensitive search on profile name (not phone). */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated conversation list without phone numbers. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicWhatsAppConversationListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1PublicWhatsappConversationsByIdMessages: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conversation plus messages without phone numbers. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicWhatsAppMessageListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1PublicMetaConversations: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string;
+                /** @description Case-insensitive search on profile name (not scoped id). */
+                q?: string;
+                /** @description Restrict results to `facebook` (Messenger) or `instagram`. */
+                channel?: "facebook" | "instagram";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated conversation list without Page-scoped ids. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicMetaConversationListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1PublicMetaConversationsByIdMessages: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conversation plus messages without scoped ids. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicMetaMessageListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1PublicContacts: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Search first name, last name, email, Instagram, and phone (stored as ISO region +
+                 *     national digits; server normalises ``+`` / digit queries before matching).
+                 */
+                query?: string;
+                active?: boolean;
+                /** @description When set, only contacts with this contact type are returned. */
+                contact_type?: components["schemas"]["PublicContactType"];
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contact list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicContactListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1PublicContacts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePublicContactRequest"];
+            };
+        };
+        responses: {
+            /** @description Contact created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicContactResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1PublicContactsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contact response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicContactResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteV1PublicContactsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contact deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchV1PublicContactsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePublicContactRequest"];
+            };
+        };
+        responses: {
+            /** @description Contact response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicContactResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1PublicContactsByIdNotes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Note list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicNoteListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1PublicContactsByIdNotes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePublicNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Note created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicNoteResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteV1PublicContactsByIdNotesByNoteId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Note deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchV1PublicContactsByIdNotesByNoteId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePublicNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Note updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicNoteResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1PublicFamilies: {
+        parameters: {
+            query?: {
+                query?: string;
+                active?: boolean;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Family list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicFamilyListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1PublicFamilies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePublicFamilyRequest"];
+            };
+        };
+        responses: {
+            /** @description Family created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicFamilyResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1PublicFamiliesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Family response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicFamilyResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteV1PublicFamiliesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Family deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchV1PublicFamiliesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePublicFamilyRequest"];
+            };
+        };
+        responses: {
+            /** @description Family response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicFamilyResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1PublicFamiliesByIdMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddPublicFamilyMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description Family with updated members. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicFamilyResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteV1PublicFamiliesByIdMembersByMemberId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                member_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Family with updated members. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicFamilyResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchV1PublicFamiliesByIdMembersByMemberId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                member_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePublicFamilyMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description Family with updated members. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicFamilyResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1PublicOrganizations: {
+        parameters: {
+            query?: {
+                query?: string;
+                active?: boolean;
+                relationship_type?: components["schemas"]["PublicRelationshipType"];
+                sort?: "name";
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Organisation list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicOrganizationListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1PublicOrganizations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePublicOrganizationRequest"];
+            };
+        };
+        responses: {
+            /** @description Organisation created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicOrganizationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1PublicOrganizationsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Organisation response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicOrganizationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteV1PublicOrganizationsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Organisation deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchV1PublicOrganizationsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePublicOrganizationRequest"];
+            };
+        };
+        responses: {
+            /** @description Organisation response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicOrganizationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1PublicOrganizationsByIdMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddPublicOrganizationMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description Organisation with updated members. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicOrganizationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteV1PublicOrganizationsByIdMembersByMemberId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                member_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Organisation with updated members. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicOrganizationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchV1PublicOrganizationsByIdMembersByMemberId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                member_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePublicOrganizationMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description Organisation with updated members. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicOrganizationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1PublicLocations: {
+        parameters: {
+            query?: {
+                area_id?: string;
+                search?: string;
+                exclude_addresses?: boolean;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Location list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicLocationListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1PublicLocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePublicLocationRequest"];
+            };
+        };
+        responses: {
+            /** @description Location created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicLocationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1PublicLocationsGeocode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GeocodePublicLocationRequest"];
+            };
+        };
+        responses: {
+            /** @description Geocoding result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeocodePublicLocationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1PublicLocationsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Location response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicLocationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchV1PublicLocationsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePublicLocationRequest"];
+            };
+        };
+        responses: {
+            /** @description Location response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicLocationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1PublicGeographicAreas: {
+        parameters: {
+            query?: {
+                parent_id?: string;
+                flat?: boolean;
+                active_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Geographic area list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicGeographicAreaListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1PublicServices: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string;
+                service_type?: components["schemas"]["PublicServiceType"];
+                status?: components["schemas"]["PublicServiceStatus"];
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicServiceListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1PublicServices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePublicServiceRequest"];
+            };
+        };
+        responses: {
+            /** @description Service created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicServiceResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1PublicServicesInstances: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string;
+                status?: components["schemas"]["PublicInstanceStatus"];
+                /** @description When set, only instances for this service UUID. */
+                service_id?: string;
+                /** @description When set, only instances whose parent service has this type. */
+                service_type?: components["schemas"]["PublicServiceType"];
+                contact_id?: string;
+                family_id?: string;
+                organization_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service instance list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicInstanceListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1PublicServicesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicServiceResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    putV1PublicServicesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePublicServiceRequest"];
+            };
+        };
+        responses: {
+            /** @description Service response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicServiceResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Service key and service tier conflict with another service. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deleteV1PublicServicesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Service has instances and cannot be deleted. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    patchV1PublicServicesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartialUpdatePublicServiceRequest"];
+            };
+        };
+        responses: {
+            /** @description Service response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicServiceResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Service key and service tier conflict with another service. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getV1PublicServicesByIdInstances: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service instance list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicInstanceListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1PublicServicesByIdInstances: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePublicInstanceRequest"];
+            };
+        };
+        responses: {
+            /** @description Service instance created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicInstanceResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Another instance already uses this slug. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getV1PublicServicesByIdInstancesByInstanceId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                instance_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service instance response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicInstanceResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    putV1PublicServicesByIdInstancesByInstanceId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                instance_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePublicInstanceRequest"];
+            };
+        };
+        responses: {
+            /** @description Service instance response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicInstanceResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Another instance already uses this slug. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deleteV1PublicServicesByIdInstancesByInstanceId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                instance_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service instance deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AssetsFree: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Filter to assets whose `content_language` equals this tag (e.g. `en`, `zh-HK`).
+                 *     When omitted, all matching public client resources are returned.
+                 */
+                language?: components["parameters"]["ClientResourceLanguage"];
+                /** @description Page size (default 25). */
+                limit?: components["parameters"]["ListLimit"];
+                /** @description Pagination cursor from the previous response's `next_cursor`. */
+                cursor?: components["parameters"]["ListCursor"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Client resource list response. */
+            200: {
+                headers: {
+                    /** @description `public, max-age=60, s-maxage=300, stale-while-revalidate=600` for CloudFront edge caching on `/www/*` (TTL capped by cache policy). */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicClientResourceListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["PublicWebsiteCacheableGetNotFound"];
+            405: components["responses"]["PublicWebsiteCacheableGetMethodNotAllowed"];
+        };
+    };
+    getWwwV1AssetsFree: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Filter to assets whose `content_language` equals this tag (e.g. `en`, `zh-HK`).
+                 *     When omitted, all matching public client resources are returned.
+                 */
+                language?: components["parameters"]["ClientResourceLanguage"];
+                /** @description Page size (default 25). */
+                limit?: components["parameters"]["ListLimit"];
+                /** @description Pagination cursor from the previous response's `next_cursor`. */
+                cursor?: components["parameters"]["ListCursor"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Client resource list response. */
+            200: {
+                headers: {
+                    /** @description `public, max-age=60, s-maxage=300, stale-while-revalidate=600` for CloudFront edge caching on `/www/*` (TTL capped by cache policy). */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicClientResourceListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["PublicWebsiteCacheableGetNotFound"];
+            405: components["responses"]["PublicWebsiteCacheableGetMethodNotAllowed"];
+        };
+    };
+    getV1CalendarPublic: {
+        parameters: {
+            query?: {
+                /** @description Restrict feed to one service type. Omitted = both event and training_course are returned (finished-event lookback applies only to `event`). Consultation is never exposed. */
+                service_type?: "event" | "training_course";
+                /** @description Filter results to at most one instance whose `service_instances.slug` matches the provided slug case-insensitively. Invalid or empty values are silently ignored. */
+                slug?: string;
+                /** @description Restrict the feed to instances of a single service whose key matches `service_key` case-insensitively against `services.service_key` in Aurora (e.g. `my-best-auntie-training-course`). Combines with `service_type` and `slug` via logical AND; contradictory combinations return `events: []`. Unknown keys return `events: []`. Invalid values (wrong shape, too long) are silently ignored and the filter is not applied, consistent with `service_type` and `slug`. Same case-insensitive `services.service_key` mapping as the `service_key` field on `POST /v1/discounts/validate` (JSON body), not the same parameter surface. */
+                service_key?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Event list response. */
+            200: {
+                headers: {
+                    /** @description `public, max-age=60, s-maxage=300, stale-while-revalidate=600` for CloudFront edge caching on `/www/*` (TTL capped by cache policy). */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCalendarEventsResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["PublicWebsiteCacheableGetNotFound"];
+            405: components["responses"]["PublicWebsiteCacheableGetMethodNotAllowed"];
+        };
+    };
+    getWwwV1CalendarPublic: {
+        parameters: {
+            query?: {
+                /** @description Restrict feed to one service type. Omitted = both event and training_course are returned (finished-event lookback applies only to `event`). Consultation is never exposed. */
+                service_type?: "event" | "training_course";
+                /** @description Filter results to at most one instance whose `service_instances.slug` matches the provided slug case-insensitively. Invalid or empty values are silently ignored. */
+                slug?: string;
+                /** @description Restrict the feed to instances of a single service whose key matches `service_key` case-insensitively against `services.service_key` in Aurora (e.g. `my-best-auntie-training-course`). Combines with `service_type` and `slug` via logical AND; contradictory combinations return `events: []`. Unknown keys return `events: []`. Invalid values (wrong shape, too long) are silently ignored and the filter is not applied, consistent with `service_type` and `slug`. Same case-insensitive `services.service_key` mapping as the `service_key` field on `POST /v1/discounts/validate` (JSON body), not the same parameter surface. */
+                service_key?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Event list response. */
+            200: {
+                headers: {
+                    /** @description `public, max-age=60, s-maxage=300, stale-while-revalidate=600` for CloudFront edge caching on `/www/*` (TTL capped by cache policy). */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCalendarEventsResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["PublicWebsiteCacheableGetNotFound"];
+            405: components["responses"]["PublicWebsiteCacheableGetMethodNotAllowed"];
+        };
+    };
+    getV1CalendarAvailability: {
+        parameters: {
+            query: {
+                purpose: components["schemas"]["PublicCalendarAvailabilityPurpose"];
+                /** @description Inclusive range start (`YYYY-MM-DD`). */
+                from?: string;
+                /** @description Inclusive range end (`YYYY-MM-DD`). */
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Availability envelope. */
+            200: {
+                headers: {
+                    /** @description `no-store` for `purpose=consultation_booking`. For `intro_call_booking`, the same value as other public cacheable GETs: `public, max-age=60, s-maxage=300, stale-while-revalidate=600` (TTL capped by cache policy on `/www/*`). Errors use `no-store`. */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCalendarAvailabilityResponse"];
+                };
+            };
+            400: components["responses"]["PublicWebsiteCacheableGetBadRequest"];
+            403: components["responses"]["Forbidden"];
+            405: components["responses"]["PublicWebsiteCacheableGetMethodNotAllowed"];
+        };
+    };
+    getWwwV1CalendarAvailability: {
+        parameters: {
+            query: {
+                purpose: components["schemas"]["PublicCalendarAvailabilityPurpose"];
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Availability envelope. */
+            200: {
+                headers: {
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCalendarAvailabilityResponse"];
+                };
+            };
+            400: components["responses"]["PublicWebsiteCacheableGetBadRequest"];
+            403: components["responses"]["Forbidden"];
+            405: components["responses"]["PublicWebsiteCacheableGetMethodNotAllowed"];
+        };
+    };
+    postV1DiscountsValidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DiscountValidationRequest"];
+            };
+        };
+        responses: {
+            /** @description Discount validation response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscountValidationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            /** @description Code not found, inactive, expired, fully used, or identity/scoping mismatch. When `rejection_reason` is present it may be `unknown_service_instance_slug`, `service_key_instance_mismatch`, or `unknown_service_key` (other rejections use the same generic body without this field). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    postWwwV1DiscountsValidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DiscountValidationRequest"];
+            };
+        };
+        responses: {
+            /** @description Discount validation response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscountValidationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            /** @description Code not found, inactive, expired, fully used, or identity/scoping mismatch. When `rejection_reason` is present it may be `unknown_service_instance_slug`, `service_key_instance_mismatch`, or `unknown_service_key` (other rejections use the same generic body without this field). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    postV1ContactUs: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Cloudflare Turnstile response token. */
+                "X-Turnstile-Token": components["parameters"]["TurnstileTokenHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactUsSubmissionRequest"];
+            };
+        };
+        responses: {
+            /** @description Contact submission accepted. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReservationSubmissionAccepted"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            /** @description Method not allowed. */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Persistence failed. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    postWwwV1ContactUs: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Cloudflare Turnstile response token. */
+                "X-Turnstile-Token": components["parameters"]["TurnstileTokenHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactUsSubmissionRequest"];
+            };
+        };
+        responses: {
+            /** @description Contact submission accepted. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReservationSubmissionAccepted"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            /** @description Method not allowed. */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Persistence failed. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    postV1Reservations: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Cloudflare Turnstile response token. */
+                "X-Turnstile-Token": components["parameters"]["TurnstileTokenHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicReservationSubmissionRequest"];
+            };
+        };
+        responses: {
+            /** @description Idempotent retry: same Stripe PaymentIntent already linked (`duplicateStripePaymentIntent`). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReservationSubmissionAccepted"];
+                };
+            };
+            /** @description Reservation submitted. For `consultation-booking` and `intro-call-booking`, the server creates a booking-specific `service_instances` row (child of the resolved catalog service), inserts scheduled session slots tagged with `purpose_service_id` for race protection, and attaches the enrollment to that booking instance. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReservationSubmissionAccepted"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            /** @description Conflict (for example the resolved instance is at capacity with waitlist disabled for public bookings). May occur after payment confirmation; response body uses the standard error shape with `field` when applicable. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Persistence failed. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    postWwwV1Reservations: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Cloudflare Turnstile response token. */
+                "X-Turnstile-Token": components["parameters"]["TurnstileTokenHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicReservationSubmissionRequest"];
+            };
+        };
+        responses: {
+            /** @description Same idempotent Stripe PaymentIntent response as `POST /v1/reservations`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReservationSubmissionAccepted"];
+                };
+            };
+            /** @description Reservation submitted. For `consultation-booking` and `intro-call-booking`, the server creates a booking-specific `service_instances` row (child of the resolved catalog service), inserts scheduled session slots tagged with `purpose_service_id` for race protection, and attaches the enrollment to that booking instance. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReservationSubmissionAccepted"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            /** @description Same conflict cases as `POST /v1/reservations`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Persistence failed. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    postWwwV1ReservationsPaymentIntent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReservationPaymentIntentRequest"];
+            };
+        };
+        responses: {
+            /** @description PaymentIntent created. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReservationPaymentIntentResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            /** @description Upstream payment provider initialization failed. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    putV1FormsByFormSlugAnswers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Form identifier (for example `workshop-feedback`). */
+                form_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FormAnswerPutRequest"];
+            };
+        };
+        responses: {
+            /** @description Answer persisted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormAnswerPutResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Form path not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Method not allowed. */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Persistence failed. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getV1FormsByFormSlugContactContext: {
+        parameters: {
+            query: {
+                /** @description CRM contact id from the personalised form link (`?contact=`). */
+                contactId: string;
+            };
+            header?: never;
+            path: {
+                form_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Placeholder map for the contact. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormContactContextResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Contact not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Method not allowed. */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getV1PollsByPollSlugAnswers: {
+        parameters: {
+            query: {
+                /** @description Client session id from browser session storage. */
+                sessionId: string;
+            };
+            header?: never;
+            path: {
+                poll_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Session answers for the poll. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PollSessionAnswersResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Poll path not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Method not allowed. */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Load failed. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    putV1PollsByPollSlugAnswers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Poll identifier (for example `workshop-food-jun-26`). */
+                poll_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PollAnswerPutRequest"];
+            };
+        };
+        responses: {
+            /** @description Answer persisted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PollAnswerPutResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Poll path not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Method not allowed. */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Question not open for responses, option not allowed, or poll not accepting answers. Body `error` is `question_not_open`, `option_not_allowed`, or `poll_not_accepting_answers`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Poll answer write rate limit exceeded. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Persistence failed. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getV1PollsByPollSlugControl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                poll_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current control state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PollControlStateResponse"];
+                };
+            };
+            /** @description Poll path not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Method not allowed. */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Load failed. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    putV1PollsByPollSlugControl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                poll_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PollControlStatePutRequest"];
+            };
+        };
+        responses: {
+            /** @description Control state updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PollControlStateResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Poll path not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Method not allowed. */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Persistence failed. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getV1PollsByPollSlugQuestionsByQuestionIdResults: {
+        parameters: {
+            query: {
+                questionType: "select" | "multiselect" | "truefalse" | "text" | "email";
+            };
+            header?: never;
+            path: {
+                poll_slug: string;
+                question_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Aggregated counts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PollQuestionResultsResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Poll path not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Method not allowed. */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Aggregation failed. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getWwwV1PollsByPollSlugControl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                poll_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current control state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PollControlStateResponse"];
+                };
+            };
+            /** @description Poll path not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Method not allowed. */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Load failed. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    putWwwV1PollsByPollSlugControl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                poll_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PollControlStatePutRequest"];
+            };
+        };
+        responses: {
+            /** @description Control state updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PollControlStateResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Poll path not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Method not allowed. */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Persistence failed. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getWwwV1PollsByPollSlugQuestionsByQuestionIdResults: {
+        parameters: {
+            query: {
+                questionType: "select" | "multiselect" | "truefalse" | "text" | "email";
+            };
+            header?: never;
+            path: {
+                poll_slug: string;
+                question_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Aggregated counts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PollQuestionResultsResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Poll path not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Method not allowed. */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Aggregation failed. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    putWwwV1FormsByFormSlugAnswers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                form_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FormAnswerPutRequest"];
+            };
+        };
+        responses: {
+            /** @description Answer persisted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormAnswerPutResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Form path not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Method not allowed. */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Persistence failed. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getWwwV1FormsByFormSlugContactContext: {
+        parameters: {
+            query: {
+                contactId: string;
+            };
+            header?: never;
+            path: {
+                form_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Placeholder map for the contact. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormContactContextResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Contact not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Method not allowed. */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getWwwV1PollsByPollSlugAnswers: {
+        parameters: {
+            query: {
+                sessionId: string;
+            };
+            header?: never;
+            path: {
+                poll_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Session answers for the poll. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PollSessionAnswersResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Poll path not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Method not allowed. */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Load failed. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    putWwwV1PollsByPollSlugAnswers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                poll_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PollAnswerPutRequest"];
+            };
+        };
+        responses: {
+            /** @description Answer persisted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PollAnswerPutResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Poll path not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Method not allowed. */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Persistence failed. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    postV1AssetsFreeRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Cloudflare Turnstile response token. */
+                "X-Turnstile-Token": components["parameters"]["TurnstileTokenHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaRequestSubmissionRequest"];
+            };
+        };
+        responses: {
+            /** @description Media request accepted. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReservationSubmissionAccepted"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            /** @description Method not allowed. */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    postWwwV1AssetsFreeRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Cloudflare Turnstile response token. */
+                "X-Turnstile-Token": components["parameters"]["TurnstileTokenHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaRequestSubmissionRequest"];
+            };
+        };
+        responses: {
+            /** @description Media request accepted. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReservationSubmissionAccepted"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            /** @description Method not allowed. */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+}
 type WithRequired<T, K extends keyof T> = T & {
     [P in K]-?: T[P];
 };
-export type operations = Record<string, never>;
