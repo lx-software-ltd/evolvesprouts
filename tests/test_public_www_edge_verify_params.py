@@ -140,6 +140,14 @@ def test_leaving_the_staging_lock_on_does_not_warn(tmp_path: Path) -> None:
     assert "| `PublicWwwStagingEdgeVerifyEnabled` | true | true |" in summary
 
 
+def test_turning_the_production_lock_off_warns(tmp_path: Path) -> None:
+    completed, summary = _report(tmp_path, ["true", "true", "true", "false"])
+    assert completed.returncode == 0, completed.stderr
+    assert "::warning title=Production origin lock turned off::" in completed.stdout
+    assert "::warning title=Staging origin lock turned off::" not in completed.stdout
+    assert "the production origin lock turned off" in summary
+
+
 def test_turning_the_staging_lock_on_does_not_warn(tmp_path: Path) -> None:
     completed, summary = _report(tmp_path, ["absent", "true", "absent", "false"])
     assert completed.returncode == 0, completed.stderr

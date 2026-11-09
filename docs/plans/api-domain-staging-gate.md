@@ -68,20 +68,20 @@ the edge-verify check in `public-www-stack.ts`. It stays off while
    `STAGING_BYPASS_SECRET` on the Worker and in the `staging` GitHub
    environment. Smoke stays green until a response leaves the staging host.
 
-The origin lock compares `x-proxy-verify` on every staging viewer-request
-function (`functions/public-www-edge-verify.js`). Production functions do
-not compare the header yet. Staging enforcement turns on when
+The origin lock compares `x-proxy-verify` on every viewer-request function
+of both public website distributions
+(`functions/public-www-edge-verify.js`). Staging enforcement turns on when
 `CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY` matches the Worker binding
-`PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET`. Set the binding first. That secret
-must be a repository secret or a production-environment secret, because
-`deploy-backend.yml` runs in the production environment. The production
-parameter pair stays empty. Deploy passes an empty edge-verify parameter
+`PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET`. Set the binding first. Production
+enforcement turns on when `CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY` matches the
+Cloudflare rule in `scripts/cloudflare/public_www_edge_policy.json`. Apply
+the rule first. Both secrets must be repository secrets or
+production-environment secrets, because `deploy-backend.yml` runs in the
+production environment. Deploy passes an empty edge-verify parameter
 through, so clearing the secret, or deploying without being able to see it,
-disables the lock. The job summary warns when the staging output goes from
-`true` to anything else. Rotation order is in
-`docs/deployment/public-www.md`: deploy the old value as the previous secret
-and the new value as the current secret, change the Worker binding, then
-clear the previous secret and deploy again. `deploy-backend.yml` runs on
+disables that distribution's lock. The job summary warns when either output
+goes from `true` to anything else. Rotation order is in
+`docs/deployment/public-www.md`. `deploy-backend.yml` runs on
 `workflow_dispatch`, on `repository_dispatch` of type `deploy-backend`, and
 on a push to `main` that changes `backend/**`, `scripts/**`,
 `apps/public_www/src/content/landing-pages/**`,

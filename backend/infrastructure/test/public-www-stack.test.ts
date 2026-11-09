@@ -272,7 +272,7 @@ function functionCode(resource: { Properties?: { FunctionCode?: unknown } }): st
   return JSON.stringify(resource.Properties?.FunctionCode ?? "");
 }
 
-function assertEdgeVerifyOnStagingViewerRequests(template: Template): void {
+function assertEdgeVerifyOnEveryViewerRequest(template: Template): void {
   const functions = template.findResources("AWS::CloudFront::Function");
   const viewerRequestIds = Object.keys(functions).filter(
     (logicalId) => !logicalId.includes("WwwApiErrorResponse"),
@@ -286,11 +286,17 @@ function assertEdgeVerifyOnStagingViewerRequests(template: Template): void {
   for (const logicalId of viewerRequestIds) {
     const code = functionCode(functions[logicalId]);
     const staging = logicalId.includes("Staging");
-    if (staging && (!code.includes(call) || !code.includes("x-proxy-verify"))) {
-      throw new Error(`${logicalId} is missing the edge-verify call after the request binding`);
+    const ownSecret = staging
+      ? "PublicWwwStagingEdgeVerifySecret"
+      : "PublicWwwEdgeVerifySecret";
+    const otherSecret = staging
+      ? "PublicWwwEdgeVerifySecret\""
+      : "PublicWwwStagingEdgeVerifySecret";
+    if (!code.includes(call) || !code.includes("x-proxy-verify") || !code.includes(ownSecret)) {
+      throw new Error(`${logicalId} is missing its edge-verify call`);
     }
-    if (!staging && code.includes("edgeVerifyRejection")) {
-      throw new Error(`${logicalId} must stay free of the origin lock`);
+    if (code.includes(otherSecret)) {
+      throw new Error(`${logicalId} references the other environment's secret`);
     }
   }
   for (const logicalId of Object.keys(functions)) {
@@ -304,7 +310,6 @@ function assertEdgeVerifyOnStagingViewerRequests(template: Template): void {
 
   const distributions = template.findResources("AWS::CloudFront::Distribution");
   for (const [distributionId, resource] of Object.entries(distributions)) {
-    const stagingDistribution = distributionId.includes("Staging");
     const config = resource.Properties?.DistributionConfig as {
       DefaultCacheBehavior?: { FunctionAssociations?: Array<Record<string, unknown>> };
       CacheBehaviors?: Array<{
@@ -332,9 +337,9 @@ function assertEdgeVerifyOnStagingViewerRequests(template: Template): void {
       const locked = logicalId
         ? functionCode(functions[logicalId]).includes("edgeVerifyRejection")
         : false;
-      if (stagingDistribution !== locked) {
+      if (!locked) {
         throw new Error(
-          `${distributionId} ${behavior.PathPattern} edge-verify presence is ${locked}`,
+          `${distributionId} ${behavior.PathPattern} viewer-request function has no edge-verify check`,
         );
       }
     }
@@ -415,7 +420,7 @@ function main(): void {
   assertEachDistributionWwwBehaviors(template);
   assertCloudFrontFunctionUpdatesAreSerialized(template);
   assertEdgeVerifyParameters(template);
-  assertEdgeVerifyOnStagingViewerRequests(template);
+  assertEdgeVerifyOnEveryViewerRequest(template);
   assertEdgeVerifyFunctionBudget();
   assertPathRewriteMatchesTrainingCopy();
   assertEdgeVerifyCallRejectsAmbiguousBodies();

@@ -50,11 +50,10 @@ Provide these parameters in `backend/infrastructure/params/production.json`:
 - `WafWebAclArn`: optional CloudFront WAF ACL ARN (us-east-1). It is empty,
   and neither distribution attaches a WebACL.
 
-`PublicWwwStagingEdgeVerifySecret` is the staging origin-lock value compared
-with `x-proxy-verify`. `PublicWwwStagingEdgeVerifySecretPrevious` is accepted
-during rotation. Both empty leaves staging open. Production functions do not
-compare `PublicWwwEdgeVerifySecret` or its previous value yet; leave that
-pair empty.
+`PublicWwwEdgeVerifySecret` and `PublicWwwStagingEdgeVerifySecret` are the
+origin-lock values compared with `x-proxy-verify`. Each `Previous` parameter
+is accepted during rotation. Both values empty leaves that distribution
+open.
 
 `deploy-backend.yml` runs in the `production` GitHub environment on
 `workflow_dispatch`, on `repository_dispatch` of type `deploy-backend`, and
@@ -72,14 +71,25 @@ off. The same applies to `CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY` and
 `CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS`.
 
 Deploy passes these four parameters even when the secrets are unset, so
-clearing the staging pair and deploying turns the staging lock off. A deploy
+clearing a pair and deploying turns that distribution's lock off. A deploy
 that cannot see a previously set secret also turns it off. After a
 successful deploy of this stack, the job summary lists
-`PublicWwwStagingEdgeVerifyEnabled` before and after, and the log warns
-when it goes from `true` to anything else. Order for staging: set the
-Worker binding `PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET`, then set
+`PublicWwwEdgeVerifyEnabled` and `PublicWwwStagingEdgeVerifyEnabled` before
+and after, and the log warns when either goes from `true` to anything else.
+
+Order for staging: set the Worker binding
+`PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET`, then set
 `CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY` to the same value and deploy.
 Setting the parameter first refuses `www-staging.evolvesprouts.com`.
+
+Order for production: in the Cloudflare dashboard for the zone
+`evolvesprouts.com`, add a request-header transform rule that sets
+`x-proxy-verify` on `www.evolvesprouts.com` to the new secret. The contract
+is `scripts/cloudflare/public_www_edge_policy.json`. This repository does
+not apply that rule. Then set `CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY` to the same
+value and deploy. Setting the parameter first refuses
+`www.evolvesprouts.com`, including the direct production CloudFront
+hostname. Leave the production pair empty until that rule exists.
 
 To rotate that secret:
 
@@ -94,13 +104,16 @@ To rotate that secret:
 5. Deploy this stack again.
 
 The Worker sends one value. Doing step 3 before step 2, or step 4 before
-step 3, refuses `www-staging.evolvesprouts.com`.
+step 3, refuses `www-staging.evolvesprouts.com`. Production rotation is the
+same five steps, with the Cloudflare rule in place of the Worker binding
+and `CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY` in place of the staging secret.
 
 `lighthouse-public-www.yml` audits `http://localhost:9000` unless its
 page-path input is a full URL, so the lock does not affect the default run.
-A manual run pointed at the staging CloudFront hostname gets 403 once the
-lock is on. The staging smoke goes through `www-staging.evolvesprouts.com`
-and needs the Worker header once the lock is on.
+A manual run pointed at either CloudFront hostname gets 403 once that
+distribution's lock is on. The staging smoke goes through
+`www-staging.evolvesprouts.com` and needs the Worker header once the staging
+lock is on.
 
 Public WWW API configuration is provided at build time via:
 

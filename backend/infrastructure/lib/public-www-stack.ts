@@ -85,8 +85,7 @@ interface WebsiteEnvironmentConfig {
   readonly addNoIndexHeader: boolean;
   readonly hasWafWebAclArn: cdk.CfnCondition;
   readonly wafWebAclArn: cdk.CfnParameter;
-  readonly enforceEdgeVerify: boolean;
-  readonly edgeVerifySecrets?: EdgeVerifySecrets;
+  readonly edgeVerifySecrets: EdgeVerifySecrets;
 }
 
 interface WebsiteEnvironmentResources {
@@ -203,7 +202,7 @@ export class PublicWwwStack extends cdk.Stack {
         cdk.Fn.conditionEquals(wafWebAclArn.valueAsString, ""),
       ),
     });
-    this.createEdgeVerifyParameters("PublicWww");
+    const productionEdgeVerify = this.createEdgeVerifyParameters("PublicWww");
     const stagingEdgeVerify = this.createEdgeVerifyParameters("PublicWwwStaging");
 
     const productionResources = this.createWebsiteEnvironment({
@@ -220,7 +219,7 @@ export class PublicWwwStack extends cdk.Stack {
       addNoIndexHeader: false,
       hasWafWebAclArn,
       wafWebAclArn,
-      enforceEdgeVerify: false,
+      edgeVerifySecrets: productionEdgeVerify,
     });
     this.bucket = productionResources.bucket;
     this.distribution = productionResources.distribution;
@@ -240,7 +239,6 @@ export class PublicWwwStack extends cdk.Stack {
       addNoIndexHeader: true,
       hasWafWebAclArn,
       wafWebAclArn,
-      enforceEdgeVerify: true,
       edgeVerifySecrets: stagingEdgeVerify,
     });
     this.stagingBucket = stagingResources.bucket;
@@ -285,20 +283,16 @@ export class PublicWwwStack extends cdk.Stack {
   private createEdgeVerifyParameters(
     idPrefix: "PublicWww" | "PublicWwwStaging",
   ): EdgeVerifySecrets {
-    const enforces = idPrefix === "PublicWwwStaging";
-    const label = enforces ? "staging" : "production";
+    const label = idPrefix === "PublicWwwStaging" ? "staging" : "production";
     const current = new cdk.CfnParameter(this, `${idPrefix}EdgeVerifySecret`, {
       type: "String",
       noEcho: true,
       default: "",
       allowedPattern: EDGE_VERIFY_SECRET_PATTERN,
-      description: enforces
-        ? "Origin-lock secret for the staging public website. " +
-          "Viewer requests without a matching x-proxy-verify header are refused. " +
-          "Empty disables the check. When set: 32+ chars of [A-Za-z0-9+/=_-]."
-        : "Production origin-lock secret. Production functions do not compare " +
-          "this value yet. Leave it empty until those functions and the Cloudflare " +
-          "header both exist. When set: 32+ chars of [A-Za-z0-9+/=_-].",
+      description:
+        `Origin-lock secret for the ${label} public website. ` +
+        "Viewer requests without a matching x-proxy-verify header are refused. " +
+        "Empty disables the check. When set: 32+ chars of [A-Za-z0-9+/=_-].",
     });
     const previous = new cdk.CfnParameter(
       this,
@@ -323,15 +317,12 @@ export class PublicWwwStack extends cdk.Stack {
     });
     // The condition has to be referenced or CloudFormation validation warns
     // that it is unused. There is no WebACL to detach, so the output is the
-    // reference. Staging "true" means the functions enforce. Production
-    // "true" means a secret is stored; those functions do not compare it yet.
+    // reference. "true" means this distribution's functions are enforcing.
     new cdk.CfnOutput(this, `${idPrefix}EdgeVerifyEnabled`, {
       value: cdk.Token.asString(
         cdk.Fn.conditionIf(hasSecret.logicalId, "true", "false"),
       ),
-      description: enforces
-        ? "true when the staging public website origin lock is enforcing."
-        : "true when a production edge-verify parameter is set. Production functions do not compare the header yet.",
+      description: `true when the ${label} public website origin lock is enforcing.`,
     });
     return {
       current: current.valueAsString,
@@ -343,12 +334,6 @@ export class PublicWwwStack extends cdk.Stack {
     body: string,
     config: WebsiteEnvironmentConfig,
   ): string {
-    if (!config.enforceEdgeVerify) {
-      return body;
-    }
-    if (!config.edgeVerifySecrets) {
-      throw new Error(`${config.idPrefix} is missing edge-verify secrets`);
-    }
     return viewerRequestSource(body, config.edgeVerifySecrets);
   }
 
@@ -439,9 +424,8 @@ export class PublicWwwStack extends cdk.Stack {
       this,
       `${config.idPrefix}PathRewriteFunction`,
       {
-        comment: config.enforceEdgeVerify
-          ? "Edge-verify, then rewrite extensionless and trailing-slash paths to index.html."
-          : "Rewrite extensionless and trailing-slash paths to index.html for static export.",
+        comment:
+          "Edge-verify, then rewrite extensionless and trailing-slash paths to index.html.",
         runtime: cloudfront.FunctionRuntime.JS_2_0,
         code: cloudfront.FunctionCode.fromInline(
           this.viewerRequestCode(STATIC_EXPORT_PATH_REWRITE_FUNCTION, config),
@@ -452,9 +436,8 @@ export class PublicWwwStack extends cdk.Stack {
       this,
       `${config.idPrefix}WwwProxyAllowlistFunction`,
       {
-        comment: config.enforceEdgeVerify
-          ? "Edge-verify, then allow only approved public API method/path pairs on /www/*."
-          : "Allow only explicitly approved public API method/path pairs on /www/*.",
+        comment:
+          "Edge-verify, then allow only approved public API method/path pairs on /www/*.",
         runtime: cloudfront.FunctionRuntime.JS_2_0,
         code: cloudfront.FunctionCode.fromInline(
           this.viewerRequestCode(WWW_PROXY_ALLOWLIST_FUNCTION, config),
@@ -465,9 +448,8 @@ export class PublicWwwStack extends cdk.Stack {
       this,
       `${config.idPrefix}MediaRequestProxyFunction`,
       {
-        comment: config.enforceEdgeVerify
-          ? "Edge-verify, then allow /www/v1/assets/free/request and rewrite the path."
-          : "Allow /www/v1/assets/free/request and rewrite path for execute-api origin.",
+        comment:
+          "Edge-verify, then allow /www/v1/assets/free/request and rewrite the path.",
         runtime: cloudfront.FunctionRuntime.JS_2_0,
         code: cloudfront.FunctionCode.fromInline(
           this.viewerRequestCode(MEDIA_REQUEST_PROXY_FUNCTION, config),
