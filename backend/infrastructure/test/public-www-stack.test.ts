@@ -367,7 +367,7 @@ function assertPathRewriteMatchesTrainingCopy(): void {
     file.slice(fileAt) !== expected.slice(expectedAt)
   ) {
     throw new Error(
-      "public-www-path-rewrite.js must be a not-deployed fixture whose handler matches the staging wrap of STATIC_EXPORT_PATH_REWRITE_FUNCTION",
+      "public-www-path-rewrite.js must be a not-deployed fixture whose handler matches insertEdgeVerifyCall(STATIC_EXPORT_PATH_REWRITE_FUNCTION)",
     );
   }
 }

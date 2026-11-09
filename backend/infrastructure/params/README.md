@@ -49,7 +49,14 @@ a repository secret or a production-environment secret. A
 from the Worker binding `PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET`. Set that
 binding before the staging parameter. Production reads it from the
 Cloudflare rule in `scripts/cloudflare/public_www_edge_policy.json`. Apply
-that rule before `PublicWwwEdgeVerifySecret`. Rotate by deploying the old
+that rule before `PublicWwwEdgeVerifySecret`. Before that secret, confirm
+`www.evolvesprouts.com` has no Worker route that would drop the header, and
+use the zone Trace tool to see `x-proxy-verify` on the request that leaves
+Cloudflare. After the deploy that turns the lock on, check a URL Cloudflare
+has not cached. The steps are in `docs/deployment/public-www.md`. The deploy
+that adds the check publishes the three production viewer-request functions
+while both production secrets are empty; the check then returns the request
+unchanged. Rotate by deploying the old
 value as the previous secret and the new value as the current secret, then
 changing the Worker binding or the Cloudflare rule, then clearing the
 previous secret and deploying again. `WafWebAclArn` is empty, so enabling

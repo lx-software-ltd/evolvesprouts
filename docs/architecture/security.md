@@ -378,7 +378,11 @@ Production compares the header with `PublicWwwEdgeVerifySecret` and
 `PublicWwwEdgeVerifySecretPrevious`. Staging compares it with
 `PublicWwwStagingEdgeVerifySecret` and
 `PublicWwwStagingEdgeVerifySecretPrevious`. Both values empty makes that
-distribution's check return the request unchanged. A set value returns 403
+distribution's check return the request unchanged. The deploy that adds the
+check publishes the three production viewer-request functions while both
+production secrets are still empty, and responses stay the same until a
+production secret is set. CloudFormation updates the four functions on a
+distribution one after another. A set value returns 403
 when the header is missing or wrong. The viewer-response error function
 does not run the check. Maintenance mode replaces the `www/*`
 viewer-request function with a 503 response, so that path does not reach
@@ -394,10 +398,19 @@ binding `PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET`. Direct requests to the
 staging CloudFront hostname do not have the header. Production
 `www.evolvesprouts.com` gets the header from a Cloudflare late-transform
 rule. That rule is `scripts/cloudflare/public_www_edge_policy.json` and is
-applied in the Cloudflare dashboard, not by this repository's deploy. Apply
-the rule before setting `PublicWwwEdgeVerifySecret`. The other order refuses
-`www.evolvesprouts.com`. `WafWebAclArn` is empty, so the distributions do
-not detach a WebACL when the lock turns on.
+applied in the Cloudflare dashboard. Apply the rule, and confirm it with
+the zone Trace tool, before setting `PublicWwwEdgeVerifySecret`. The trace
+for `https://www.evolvesprouts.com/en/` has to show `x-proxy-verify` on the
+request that leaves Cloudflare. When a Worker route matches
+`www.evolvesprouts.com`, that trace also has to show the header still
+present on the fetch toward CloudFront, because the Worker can replace the
+request and drop it. The apex name redirects to `www` at Cloudflare and is
+not an alias on this distribution. Setting the secret first refuses
+`www.evolvesprouts.com`. After the deploy that turns the lock on, the check
+is a request Cloudflare has not cached. A cached Cloudflare response never
+reaches CloudFront. The sequence is in `docs/deployment/public-www.md`.
+`WafWebAclArn` is empty, so turning the lock on leaves the distributions
+without a WebACL.
 
 `deploy-backend.yml` runs in the `production` GitHub environment on
 `workflow_dispatch`, on `repository_dispatch` of type `deploy-backend`, and

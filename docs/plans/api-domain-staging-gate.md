@@ -75,7 +75,12 @@ of both public website distributions
 `PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET`. Set the binding first. Production
 enforcement turns on when `CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY` matches the
 Cloudflare rule in `scripts/cloudflare/public_www_edge_policy.json`. Apply
-the rule first. Both secrets must be repository secrets or
+the rule first, after Trace shows `x-proxy-verify` leaving Cloudflare and
+after confirming no Worker on `www.evolvesprouts.com` drops that header.
+Check the enforcing deploy with a URL Cloudflare has not cached. The steps
+are in `docs/deployment/public-www.md`. The deploy that adds the check
+publishes the three production viewer-request functions while both
+production secrets are empty. Both secrets must be repository secrets or
 production-environment secrets, because `deploy-backend.yml` runs in the
 production environment. Deploy passes an empty edge-verify parameter
 through, so clearing the secret, or deploying without being able to see it,

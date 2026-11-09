@@ -77,19 +77,49 @@ successful deploy of this stack, the job summary lists
 `PublicWwwEdgeVerifyEnabled` and `PublicWwwStagingEdgeVerifyEnabled` before
 and after, and the log warns when either goes from `true` to anything else.
 
+The deploy that publishes this check updates the three production
+viewer-request functions (path rewrite, `www/*`, and
+`www/v1/assets/free/request`) even while both production secrets are empty.
+The check returns the request unchanged in that case, so responses stay as
+they are. CloudFormation updates the four functions on a distribution one
+after another.
+
 Order for staging: set the Worker binding
 `PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET`, then set
 `CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY` to the same value and deploy.
 Setting the parameter first refuses `www-staging.evolvesprouts.com`.
 
-Order for production: in the Cloudflare dashboard for the zone
-`evolvesprouts.com`, add a request-header transform rule that sets
-`x-proxy-verify` on `www.evolvesprouts.com` to the new secret. The contract
-is `scripts/cloudflare/public_www_edge_policy.json`. This repository does
-not apply that rule. Then set `CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY` to the same
-value and deploy. Setting the parameter first refuses
-`www.evolvesprouts.com`, including the direct production CloudFront
-hostname. Leave the production pair empty until that rule exists.
+Order for production. Leave both production secrets empty until the Trace
+check below has passed. The Cloudflare dashboard is where the rule is
+applied.
+
+1. In the zone `evolvesprouts.com`, open Workers routes and confirm no
+   route matches `www.evolvesprouts.com`. A Worker on that hostname can replace
+   the request and drop `x-proxy-verify`. The apex name redirects to `www`
+   at Cloudflare and is not a CloudFront alias, so the rule matches
+   `www.evolvesprouts.com` only.
+2. Add the request-header transform rule from
+   `scripts/cloudflare/public_www_edge_policy.json`. It sets
+   `x-proxy-verify` on `www.evolvesprouts.com`.
+3. Use the zone Trace tool on `https://www.evolvesprouts.com/en/`. The rule
+   has to set `x-proxy-verify` on the request that leaves Cloudflare. When
+   a Worker route matches that hostname, the same trace has to show the
+   header still present on the fetch toward CloudFront.
+4. Set `CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY` to that same value, as a
+   repository secret or a production-environment secret, and deploy
+   `evolvesprouts-public-www`.
+5. Request `https://www.evolvesprouts.com/en/` with a query string that
+   Cloudflare has not cached, and expect 200. A page Cloudflare still has cached is
+   served there and never reaches CloudFront, so it stays 200 even when the
+   origin would return 403. Then request the hostname in stack output
+   `PublicWwwDistributionDomain` with no `x-proxy-verify` header and expect
+   403 with `x-cache: FunctionGeneratedResponse from cloudfront`. That
+   hostname never passes through the Cloudflare rule, so 403 there means
+   the lock is enforcing.
+
+Setting the secret before the rule refuses `www.evolvesprouts.com`. Turning
+the lock back off is another deploy of this stack with both production
+secrets empty. That deploy publishes the functions again.
 
 To rotate that secret:
 
