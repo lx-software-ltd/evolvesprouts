@@ -27,6 +27,11 @@ Usage:
 Without --apply nothing is written. With --apply the campaign, ad set and ad
 are created PAUSED. Add --activate to set all three ACTIVE in the same run
 (the ad still goes through Meta review before delivery starts).
+
+To swap the creative of a campaign this script already built, re-run with the
+new --video / --thumbnail, a new --utm-content and --replace-video: the new
+video becomes a fresh ad in the existing ad set (same budget and schedule) and
+the previous ads are archived.
 """
 
 import argparse
@@ -229,6 +234,11 @@ def main():
     parser.add_argument("--gender", choices=sorted(GENDERS), default="women")
     parser.add_argument("--video-id", help="Reuse an already-uploaded advideos id")
     parser.add_argument("--image-hash", help="Reuse an already-uploaded adimages hash")
+    parser.add_argument(
+        "--replace-video",
+        action="store_true",
+        help="Campaign exists: add the new video as a fresh ad in its ad set and archive the old ads",
+    )
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--activate", action="store_true")
     args = parser.parse_args()
@@ -244,10 +254,18 @@ def main():
     _print_plan(args, account_id, link)
 
     existing = _existing_campaign(account_id, args.name)
-    if existing and _campaign_has_adsets(existing["id"]):
+    populated = bool(existing) and _campaign_has_adsets(existing["id"])
+    if populated and args.replace_video:
+        print(
+            f"REPLACE: campaign '{args.name}' (id {existing['id']}) exists; the new "
+            f"video becomes a fresh ad '{args.utm_content}' in its ad set and the "
+            "current ads are archived."
+        )
+    elif populated:
         print(
             f"SKIP (exists): campaign '{args.name}' is {existing['status']} "
-            f"(id {existing['id']}) and already has an ad set. Nothing created."
+            f"(id {existing['id']}) and already has an ad set. Nothing created. "
+            "Pass --replace-video to swap the creative."
         )
         if args.apply and args.activate:
             _activate_tree(existing["id"])
@@ -262,21 +280,23 @@ def main():
     _pixel_id(account_id)
     status = "ACTIVE" if args.activate else "PAUSED"
     start, end = _schedule(args.days)
+    video_id, image_hash = _assets(args, account_id)
 
-    if args.video_id:
-        video_id = args.video_id
-        print(f"Reusing uploaded video_id={video_id}")
-    else:
-        print("Uploading video...", end=" ", flush=True)
-        video_id = _upload_video(account_id, args.video)
-        print(f"video_id={video_id}")
-    if args.image_hash:
-        image_hash = args.image_hash
-        print(f"Reusing uploaded image_hash={image_hash}")
-    else:
-        print("Uploading thumbnail...", end=" ", flush=True)
-        image_hash = _upload_thumbnail(account_id, args.thumbnail)
-        print(f"image_hash={image_hash}")
+    if populated:
+        adset = _get(f"{existing['id']}/adsets", {"fields": "id,name", "limit": 1})[
+            "data"
+        ][0]
+        old_ads = _get(f"{adset['id']}/ads", {"fields": "id,name"}).get("data", [])
+        ad = _create_ad(
+            args, account_id, page_id, ig_id, adset, video_id, image_hash, link, status
+        )
+        for old in old_ads:
+            _post(old["id"], {"status": "ARCHIVED"})
+            print(f"Archived previous ad {old['id']} ({old['name']})")
+        if args.activate:
+            _activate_tree(existing["id"])
+        _report(existing, adset, ad, args.activate)
+        return
 
     if existing:
         campaign = existing
@@ -316,6 +336,33 @@ def main():
     )
     print(f"id={adset['id']}")
 
+    ad = _create_ad(
+        args, account_id, page_id, ig_id, adset, video_id, image_hash, link, status
+    )
+    _report(campaign, adset, ad, args.activate)
+
+
+def _assets(args, account_id):
+    if args.video_id:
+        video_id = args.video_id
+        print(f"Reusing uploaded video_id={video_id}")
+    else:
+        print("Uploading video...", end=" ", flush=True)
+        video_id = _upload_video(account_id, args.video)
+        print(f"video_id={video_id}")
+    if args.image_hash:
+        image_hash = args.image_hash
+        print(f"Reusing uploaded image_hash={image_hash}")
+    else:
+        print("Uploading thumbnail...", end=" ", flush=True)
+        image_hash = _upload_thumbnail(account_id, args.thumbnail)
+        print(f"image_hash={image_hash}")
+    return video_id, image_hash
+
+
+def _create_ad(
+    args, account_id, page_id, ig_id, adset, video_id, image_hash, link, status
+):
     print("Creating creative...", end=" ", flush=True)
     creative = _post(
         f"{account_id}/adcreatives",
@@ -353,11 +400,14 @@ def main():
         },
     )
     print(f"id={ad['id']}")
+    return ad
 
+
+def _report(campaign, adset, ad, activated):
     review = _get(ad["id"], {"fields": "effective_status,status"})
     print(f"\nDone. Ad effective_status: {review.get('effective_status')}")
     print(f"Campaign id {campaign['id']} | ad set {adset['id']} | ad {ad['id']}")
-    if not args.activate:
+    if not activated:
         print(
             "Everything is PAUSED. Re-run the same command with --apply --activate "
             "to switch it on, or activate in Ads Manager."

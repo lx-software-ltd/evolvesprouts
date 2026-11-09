@@ -24,7 +24,7 @@ Source of truth for the "why" behind each change:
 |---|---|---|
 | `meta-archive-ended-campaigns.py` | Meta | Archives campaigns whose status is ACTIVE/PAUSED and `stop_time` is in the past. |
 | `meta-create-custom-audiences.py` | Meta | Creates 6 Custom Audiences (website, course page, Easter Reel viewers, IC-not-Purchase, IG engagers, FB engagers). **Requires one-time Custom Audience ToS acceptance** at `facebook.com/customaudiences/app/tos/?act=<acct_id>` before first run. |
-| `meta-launch-video-traffic-campaign.py` | Meta | Uploads a vertical video + thumbnail and creates one `OUTCOME_TRAFFIC` campaign → one `LANDING_PAGE_VIEWS` ad set (lifetime budget, fixed end date, HK targeting, Advantage audience off) → one video ad with a UTM-tagged `BOOK_NOW` link. Created PAUSED; `--apply --activate` on an existing campaign switches the whole tree on. `--video-id` / `--image-hash` reuse assets from an earlier run. |
+| `meta-launch-video-traffic-campaign.py` | Meta | Uploads a vertical video + thumbnail and creates one `OUTCOME_TRAFFIC` campaign → one `LANDING_PAGE_VIEWS` ad set (lifetime budget, fixed end date, HK targeting, Advantage audience off) → one video ad with a UTM-tagged `BOOK_NOW` link. Created PAUSED; `--apply --activate` on an existing campaign switches the whole tree on. `--replace-video` adds a new video as a fresh ad in the existing ad set and archives the old ads. `--video-id` / `--image-hash` reuse assets from an earlier run. |
 | `google-ads-apply-tuesday-changes.py` | Google Ads | Adds campaign-level negative keywords, phrase-match variants of winners, and UTM-tags enabled ads' final URLs. |
 | `google-ads-enable-secondary-conversions.py` | Google Ads | Promotes HIDDEN GA4-synced conversion actions to ENABLED + "Secondary" so they feed bidding without polluting ROAS. |
 | `ga4-mark-key-events.py` | GA4 | Creates KeyEvent resources for taxonomy events we want Google Ads to auto-sync as conversion actions. |
@@ -43,7 +43,8 @@ Source of truth for the "why" behind each change:
 
 | Script | Result |
 |---|---|
-| `meta-launch-video-traffic-campaign.py --apply` | Created `Mealtimes Workshop — Traffic — HK` (campaign `120252906972330439`, ad set `120252906983060439`, ad `120252906985180439`, video `1867110284305793`) **PAUSED**, HK$350 lifetime, women 28–45 in HK, landing page `/en/nov-2026-mealtimes-workshop` with `utm_content=reel-mealtimes-v3`. Left paused because the export's opening title (0–1.6s) shows the end-card line instead of the hook; swap the video and activate once fixed. |
+| `meta-launch-video-traffic-campaign.py --apply` | Created `Mealtimes Workshop — Traffic — HK` (campaign `120252906972330439`, ad set `120252906983060439`, ad `120252906985180439`, video `1867110284305793`) **PAUSED**, HK$350 lifetime, women 28–45 in HK, landing page `/en/nov-2026-mealtimes-workshop` with `utm_content=reel-mealtimes-v3`. Left paused because the export's opening title (0–1.6s) showed the end-card line instead of the hook. |
+| `meta-launch-video-traffic-campaign.py --replace-video --apply --activate` | Re-exported video (`1833537467959198`, 59.3s, hook and end card fixed) uploaded as ad `120252907392670439` (`utm_content=reel-mealtimes-v4`) in the same ad set; v3 ad `120252906985180439` archived; campaign, ad set and ad set **ACTIVE** at 23:03 HKT. Ad in Meta review (`IN_PROCESS`). Lifetime budget and 16 Nov end date unchanged. |
 
 Two Marketing API changes bit on this run and are now baked into the
 script: campaigns with ad-set budgets must send
