@@ -1,8 +1,42 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
 import * as cdk from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 
 import { ApiStack } from "../lib/api-stack";
 import { assertApiStackInvariants } from "./stack-invariants.test";
+
+const API_CUSTOM_DOMAIN = "api.evolvesprouts.com";
+const API_REGIONAL_CERTIFICATE_ID = "b0f35f52-c35f-4b22-a658-a8bf2896d6f1";
+
+function assertProductionApiCustomDomain(): void {
+  const paramsPath = path.join(__dirname, "../params/production.json");
+  const params = JSON.parse(readFileSync(paramsPath, "utf8")) as Record<
+    string,
+    string
+  >;
+  if (params.ApiCustomDomainName !== API_CUSTOM_DOMAIN) {
+    throw new Error(
+      `ApiCustomDomainName must be ${API_CUSTOM_DOMAIN}. Found ${params.ApiCustomDomainName}`,
+    );
+  }
+  const arn = params.ApiCustomDomainCertificateArn ?? "";
+  const region = "ap-southeast-1";
+  if (
+    !arn.startsWith(`arn:aws:acm:${region}:`) ||
+    !arn.endsWith(API_REGIONAL_CERTIFICATE_ID)
+  ) {
+    throw new Error(
+      `ApiCustomDomainCertificateArn must be the ${region} *.evolvesprouts.com certificate ${API_REGIONAL_CERTIFICATE_ID}. Found ${arn}`,
+    );
+  }
+  if (params.ApiDisableExecuteApiEndpoint !== "false") {
+    throw new Error(
+      "ApiDisableExecuteApiEndpoint must stay false until DNS points at the custom domain.",
+    );
+  }
+}
 
 function synthApiTemplate(): Template {
   const app = new cdk.App();
@@ -957,6 +991,7 @@ function assertApiCustomDomainKeepsProdPath(template: Template): void {
 }
 
 function main(): void {
+  assertProductionApiCustomDomain();
   const app = new cdk.App();
   const stack = new ApiStack(app, "TestApi", {
     env: { account: "111111111111", region: "ap-southeast-1" },

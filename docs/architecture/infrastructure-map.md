@@ -78,8 +78,11 @@ ARN is supplied through the CDK parameters `CognitoCustomDomainCertificateArn`,
 `PublicWwwStagingCertificateArn`, `TrainingCertificateArn`, and
 `AssetDownloadCustomDomainCertificateArn` in
 `backend/infrastructure/params/production.json`. The API custom domain uses a
-separate regional certificate in `ap-southeast-1`
-(`ApiCustomDomainCertificateArn`).
+separate `*.evolvesprouts.com` certificate in `ap-southeast-1`
+(`ApiCustomDomainCertificateArn`). That wildcard covers
+`api.evolvesprouts.com`. The `*.lx-software.com` certificate in the same
+region does not, and the `us-east-1` wildcard cannot be attached to this
+regional API domain.
 
 The certificate uses DNS validation: ACM issues one `_<token>` CNAME on the
 apex, which must stay in Cloudflare (unproxied) for automatic renewal. Do not

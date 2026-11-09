@@ -56,10 +56,13 @@ custom media subdomain.
 
 ## API custom domain
 
-`ApiCustomDomainName` and `ApiCustomDomainCertificateArn` stay empty until a
-regional certificate covers the API hostname. The domain mapping uses the
-stage name as its base path (`/prod`). `ApiCustomDomainUrl` includes that
-path, the same way `ApiUrl` ends in `/prod`.
+`ApiCustomDomainName` is `api.evolvesprouts.com`.
+`ApiCustomDomainCertificateArn` is the issued `*.evolvesprouts.com`
+certificate in `ap-southeast-1`. The `*.lx-software.com` certificate in that
+region does not match this hostname, and the `us-east-1` wildcard is only for
+CloudFront and Cognito. The domain mapping uses the stage name as its base
+path (`/prod`). `ApiCustomDomainUrl` includes that path, the same way `ApiUrl`
+ends in `/prod`.
 
 `ApiDisableExecuteApiEndpoint` defaults to `false`. Leave it false when the
 custom domain is first created. The asset-share CloudFront origin stays on

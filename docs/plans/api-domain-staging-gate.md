@@ -35,12 +35,15 @@ later step.
 
 ## Still operator work
 
-1. Issue a regional certificate for the API hostname if the current
-   certificate cannot serve it. Then set `ApiCustomDomainName` and
-   `ApiCustomDomainCertificateArn` and deploy. Leave
+1. Deploy the backend stack. `ApiCustomDomainName` is
+   `api.evolvesprouts.com` and `ApiCustomDomainCertificateArn` is the issued
+   `*.evolvesprouts.com` certificate in `ap-southeast-1`. Leave
    `ApiDisableExecuteApiEndpoint` false. Share links stay on execute-api.
 2. Point the API DNS record at `ApiCustomDomainTarget`, proxy off. Confirm
-   `https://<api-domain>/prod/health` before the next step.
+   `https://api.evolvesprouts.com/prod/health` before the next step. The
+   current Cloudflare record targets an execute-api hostname that does not
+   resolve, and it is proxied. Do not retarget it before this deploy creates
+   the domain.
 3. Set `PUBLIC_WWW_API_BASE_URL` and
    `PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL` to the current execute-api URL
    so the public-site origins do not follow the client cutover.
