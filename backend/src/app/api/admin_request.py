@@ -65,6 +65,44 @@ def query_param(event: Mapping[str, Any], name: str) -> str | None:
     return first_param(params, name)
 
 
+def admin_request_log(
+    event: Mapping[str, Any],
+    *,
+    gateway_path: str,
+    method: str,
+    cold: bool,
+) -> tuple[str, dict[str, Any]]:
+    """Return the admin access-log message and its structured fields.
+
+    ``path`` is the routed resource path. ``gateway_path`` is the path API
+    Gateway sent. The message includes ``gateway_path`` when routing removed
+    the custom-domain base path, so the two hosts stay distinguishable.
+    """
+    raw_path = event.get("path")
+    routed_path = raw_path if isinstance(raw_path, str) else ""
+    domain_name = _request_domain_name(event)
+    message = f"Admin request: {method} {routed_path}"
+    if gateway_path and gateway_path != routed_path:
+        message = f"{message} gateway_path={gateway_path}"
+    return message, {
+        "path": routed_path,
+        "gateway_path": gateway_path,
+        "domain_name": domain_name,
+        "method": method,
+        "cold_start": cold,
+    }
+
+
+def _request_domain_name(event: Mapping[str, Any]) -> str:
+    request_context = event.get("requestContext")
+    if not isinstance(request_context, Mapping):
+        return ""
+    domain_name = request_context.get("domainName")
+    if not isinstance(domain_name, str):
+        return ""
+    return domain_name.strip()
+
+
 def event_for_routing(event: Mapping[str, Any]) -> dict[str, Any]:
     """Copy the event with the custom-domain base path removed from ``path``.
 

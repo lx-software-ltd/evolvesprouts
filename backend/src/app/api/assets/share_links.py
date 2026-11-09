@@ -150,8 +150,24 @@ def _derive_request_base_url(event: Mapping[str, Any]) -> str:
         and request_context_path.endswith(event_path)
     ):
         base_path = request_context_path[: -len(event_path)]
+    if not base_path:
+        # Custom-domain events can report requestContext.path without the
+        # base path. The stage is that prefix on both hosts.
+        base_path = _stage_prefix(request_context)
 
     return f"{scheme}://{host}{base_path}"
+
+
+def _stage_prefix(request_context: Any) -> str:
+    if not isinstance(request_context, Mapping):
+        return ""
+    stage = request_context.get("stage")
+    if not isinstance(stage, str):
+        return ""
+    stage = stage.strip()
+    if not stage or "/" in stage or stage in {".", ".."} or stage.startswith("$"):
+        return ""
+    return f"/{stage}"
 
 
 def _normalize_domain(value: Any) -> str:

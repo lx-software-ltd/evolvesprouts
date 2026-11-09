@@ -22,7 +22,10 @@ custom domain currently returns 404.
 
 - `backend/src/app/api/admin_request.py` — strip one leading `/{stage}`
   segment from `path` before routing.
-- `backend/src/app/api/admin.py` — route on that copy of the event.
+- `backend/src/app/api/admin.py` — route on that copy of the event and log
+  the original gateway path.
+- `backend/src/app/api/assets/share_links.py` — when the context path has no
+  stage prefix, use `requestContext.stage`.
 - `tests/test_admin_request.py`, `tests/test_admin_router.py`
 - `docs/architecture/lambdas.md`
 - `docs/plans/api-domain-staging-gate.md`
@@ -31,8 +34,11 @@ custom domain currently returns 404.
 
 - Execute-api paths stay unchanged. A path is stripped only when it starts
   with the stage from `requestContext.stage` as its own first segment.
-- `requestContext.path` is left as API Gateway sent it, so share-link URLs
-  can still recover the `/prod` prefix.
+- `requestContext.path` is left as API Gateway sent it. Share-link URLs use
+  that prefix when it is longer than the routed path, and otherwise use
+  `requestContext.stage`.
+- Admin logs keep the original API Gateway path and the domain name, so a
+  custom-domain call is distinguishable from execute-api after routing.
 - The caller's event dict is not mutated.
 
 ## Done when

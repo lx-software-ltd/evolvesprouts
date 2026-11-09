@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 
 import app.api.admin as admin_module
 from app.api.admin import (
@@ -24,6 +25,34 @@ def test_lambda_handler_routes_custom_domain_base_path() -> None:
     assert response["statusCode"] == 200
     assert json.loads(response["body"]) == {"message": "ok"}
     assert event["path"] == "/prod/v1/mailchimp/webhook"
+
+
+def test_lambda_handler_logs_gateway_path_and_domain(
+    caplog: logging.LogCaptureFixture,
+) -> None:
+    event = {
+        "httpMethod": "GET",
+        "path": "/prod/v1/mailchimp/webhook",
+        "headers": {},
+        "requestContext": {
+            "stage": "prod",
+            "domainName": "api.example.com",
+            "requestId": "req-log",
+        },
+    }
+
+    with caplog.at_level(logging.INFO, logger="app.api.admin"):
+        response = lambda_handler(event, None)
+
+    assert response["statusCode"] == 200
+    record = next(r for r in caplog.records if r.message.startswith("Admin request:"))
+    assert record.message == (
+        "Admin request: GET /v1/mailchimp/webhook"
+        " gateway_path=/prod/v1/mailchimp/webhook"
+    )
+    assert record.path == "/v1/mailchimp/webhook"
+    assert record.gateway_path == "/prod/v1/mailchimp/webhook"
+    assert record.domain_name == "api.example.com"
 
 
 def test_lambda_handler_reports_server_timing_and_cold_start_once(monkeypatch) -> None:
