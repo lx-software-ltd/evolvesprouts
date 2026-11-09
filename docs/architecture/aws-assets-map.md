@@ -60,17 +60,17 @@ The stack outputs:
 - `PublicWwwStagingDistributionId`
 - `PublicWwwStagingDistributionDomain`
 - `PublicWwwStagingLoggingBucketName`
-- `PublicWwwEdgeVerifyEnabled` (`true` when either production edge-verify secret is set)
-- `PublicWwwStagingEdgeVerifyEnabled` (`true` when either staging edge-verify secret is set)
+- `PublicWwwEdgeVerifyEnabled` (`true` when a production edge-verify parameter is set; production functions do not compare the header yet)
+- `PublicWwwStagingEdgeVerifyEnabled` (`true` when the staging origin lock is enforcing)
 
 Public WWW CloudFront includes:
 
 - Default behavior: static site content from S3 with extensionless path rewrite.
-  The viewer-request function also checks `x-proxy-verify` when the
-  environment's edge-verify parameter is set (`PublicWwwEdgeVerifySecret` or
-  `PublicWwwStagingEdgeVerifySecret`, plus the `Previous` value used during
-  rotation). Both empty leaves the distribution open. The same check is on
-  the `www/*` and `www/v1/assets/free/request` viewer-request functions.
+  On staging, this viewer-request function also checks `x-proxy-verify`
+  against `PublicWwwStagingEdgeVerifySecret` and
+  `PublicWwwStagingEdgeVerifySecretPrevious`. Both empty leaves staging open.
+  The same staging check is on `www/*` and `www/v1/assets/free/request`.
+  Production functions do not run the check.
 - Additional behavior: `www/*` forwards to the host extracted from
   `PublicWwwApiBaseUrl` (GitHub variable `PUBLIC_WWW_API_BASE_URL`, falling
   back to `NEXT_PUBLIC_API_BASE_URL`; for example

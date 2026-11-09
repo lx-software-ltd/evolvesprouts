@@ -399,6 +399,10 @@ jobs:
           NEXT_PUBLIC_FPS_MOBILE_NUMBER: ${{ vars.NEXT_PUBLIC_FPS_MOBILE_NUMBER }}
           CDK_PARAM_INVOICE_DISPLAY_TIMEZONE: ${{ vars.CDK_PARAM_INVOICE_DISPLAY_TIMEZONE }}
           CDK_PARAM_INVOICE_PAYMENT_TERMS_DAYS: ${{ vars.CDK_PARAM_INVOICE_PAYMENT_TERMS_DAYS }}
+          # This job uses the production environment. These secrets must be
+          # repository secrets or production-environment secrets. A secret
+          # that exists only in the staging environment is invisible here,
+          # the parameter stays empty, and the origin lock stays off.
           CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY }}
           CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS }}
           CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY }}

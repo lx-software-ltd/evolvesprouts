@@ -68,15 +68,17 @@ the edge-verify check in `public-www-stack.ts`. It stays off while
    `STAGING_BYPASS_SECRET` on the Worker and in the `staging` GitHub
    environment. Smoke stays green until a response leaves the staging host.
 
-The origin lock compares `x-proxy-verify` on every viewer-request function
-of both public-website distributions
-(`functions/public-www-edge-verify.js`). Staging enforcement turns on when
+The origin lock compares `x-proxy-verify` on every staging viewer-request
+function (`functions/public-www-edge-verify.js`). Production functions do
+not compare the header yet. Staging enforcement turns on when
 `CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY` matches the Worker binding
-`PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET`. Set the binding first. The
-production pair stays empty until Cloudflare adds the header on
-`www.evolvesprouts.com`. Deploy passes an empty edge-verify parameter
-through, so clearing the secret disables the lock. `WafWebAclArn` is empty,
-so there is no WebACL to detach.
+`PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET`. Set the binding first. That secret
+must be a repository secret or a production-environment secret, because
+`deploy-backend.yml` runs in the production environment. The production
+parameter pair stays empty. Deploy passes an empty edge-verify parameter
+through, so clearing the secret, or deploying without being able to see it,
+disables the lock. A push to `main` that changes `backend/**` or `scripts/**`
+runs that deploy. `WafWebAclArn` is empty, so there is no WebACL to detach.
 
 ## Rollback
 

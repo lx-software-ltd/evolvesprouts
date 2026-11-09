@@ -10,6 +10,7 @@ import {
   WWW_PROXY_ALLOWLIST_FUNCTION,
 } from "../lib/cloudfront-www-proxy-functions";
 import {
+  insertEdgeVerifyCall,
   PublicWwwStack,
   viewerRequestSource,
   withEdgeVerify,
@@ -271,7 +272,7 @@ function functionCode(resource: { Properties?: { FunctionCode?: unknown } }): st
   return JSON.stringify(resource.Properties?.FunctionCode ?? "");
 }
 
-function assertEdgeVerifyOnEveryViewerRequest(template: Template): void {
+function assertEdgeVerifyOnStagingViewerRequests(template: Template): void {
   const functions = template.findResources("AWS::CloudFront::Function");
   const viewerRequestIds = Object.keys(functions).filter(
     (logicalId) => !logicalId.includes("WwwApiErrorResponse"),
@@ -281,10 +282,15 @@ function assertEdgeVerifyOnEveryViewerRequest(template: Template): void {
       `Expected 6 viewer-request functions, found ${viewerRequestIds.length}`,
     );
   }
+  const call = "var request = event.request;\\n  var rejection = edgeVerifyRejection(request);";
   for (const logicalId of viewerRequestIds) {
     const code = functionCode(functions[logicalId]);
-    if (!code.includes("edgeVerifyRejection") || !code.includes("x-proxy-verify")) {
-      throw new Error(`${logicalId} is missing the edge-verify check`);
+    const staging = logicalId.includes("Staging");
+    if (staging && (!code.includes(call) || !code.includes("x-proxy-verify"))) {
+      throw new Error(`${logicalId} is missing the edge-verify call after the request binding`);
+    }
+    if (!staging && code.includes("edgeVerifyRejection")) {
+      throw new Error(`${logicalId} must stay free of the origin lock`);
     }
   }
   for (const logicalId of Object.keys(functions)) {
@@ -298,6 +304,7 @@ function assertEdgeVerifyOnEveryViewerRequest(template: Template): void {
 
   const distributions = template.findResources("AWS::CloudFront::Distribution");
   for (const [distributionId, resource] of Object.entries(distributions)) {
+    const stagingDistribution = distributionId.includes("Staging");
     const config = resource.Properties?.DistributionConfig as {
       DefaultCacheBehavior?: { FunctionAssociations?: Array<Record<string, unknown>> };
       CacheBehaviors?: Array<{
@@ -322,9 +329,12 @@ function assertEdgeVerifyOnEveryViewerRequest(template: Template): void {
         | { "Fn::GetAtt"?: string[] }
         | undefined;
       const logicalId = functionArn?.["Fn::GetAtt"]?.[0];
-      if (!logicalId || !functionCode(functions[logicalId]).includes("edgeVerifyRejection")) {
+      const locked = logicalId
+        ? functionCode(functions[logicalId]).includes("edgeVerifyRejection")
+        : false;
+      if (stagingDistribution !== locked) {
         throw new Error(
-          `${distributionId} ${behavior.PathPattern} viewer-request function has no edge-verify check`,
+          `${distributionId} ${behavior.PathPattern} edge-verify presence is ${locked}`,
         );
       }
     }
@@ -340,18 +350,34 @@ function assertPathRewriteMatchesTrainingCopy(): void {
     path.join(__dirname, "../lib/functions/public-www-path-rewrite.js"),
     "utf8",
   );
-  const rewriteLines = [
-    "if (uri.startsWith('/_next/'))",
-    "request.uri = uri + 'index.html';",
-    "if (uri.indexOf('.') === -1)",
-    "request.uri = uri + '/index.html';",
-  ];
-  for (const line of rewriteLines) {
-    if (!file.includes(line) || !STATIC_EXPORT_PATH_REWRITE_FUNCTION.includes(line)) {
-      throw new Error(`Path rewrite drifted from the training copy: ${line}`);
+  const expected = insertEdgeVerifyCall(STATIC_EXPORT_PATH_REWRITE_FUNCTION);
+  if (file.trim() !== expected.trim()) {
+    throw new Error(
+      "public-www-path-rewrite.js must equal the staging wrap of STATIC_EXPORT_PATH_REWRITE_FUNCTION",
+    );
+  }
+}
+
+function assertEdgeVerifyCallRejectsAmbiguousBodies(): void {
+  for (const body of ["function handler(event) {\n}", `${REQUEST_TWICE}`]) {
+    let threw = false;
+    try {
+      insertEdgeVerifyCall(body);
+    } catch {
+      threw = true;
+    }
+    if (!threw) {
+      throw new Error("insertEdgeVerifyCall accepted a body without exactly one request binding");
     }
   }
 }
+
+const REQUEST_TWICE = `
+function handler(event) {
+  var request = event.request;
+  var request = event.request;
+}
+`;
 
 function assertEdgeVerifyFunctionBudget(): void {
   const secrets = { current: "x".repeat(64), previous: "y".repeat(64) };
@@ -380,9 +406,10 @@ function main(): void {
   assertEachDistributionWwwBehaviors(template);
   assertCloudFrontFunctionUpdatesAreSerialized(template);
   assertEdgeVerifyParameters(template);
-  assertEdgeVerifyOnEveryViewerRequest(template);
+  assertEdgeVerifyOnStagingViewerRequests(template);
   assertEdgeVerifyFunctionBudget();
   assertPathRewriteMatchesTrainingCopy();
+  assertEdgeVerifyCallRejectsAmbiguousBodies();
 
   console.log(
     "public-www-stack CloudFront cache policy and function-chain assertions passed.",

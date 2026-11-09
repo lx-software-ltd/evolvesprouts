@@ -50,16 +50,31 @@ Provide these parameters in `backend/infrastructure/params/production.json`:
 - `WafWebAclArn`: optional CloudFront WAF ACL ARN (us-east-1). It is empty,
   and neither distribution attaches a WebACL.
 
-`PublicWwwEdgeVerifySecret` and `PublicWwwStagingEdgeVerifySecret` are the
-origin-lock values compared with the `x-proxy-verify` header. The matching
-`Previous` parameters are accepted during rotation. Both values empty for an
-environment leaves that distribution open. Backend deploy passes these four
-parameters even when the secrets are unset, so clearing a secret and
-deploying turns that environment's lock off. Order for staging: set the
-Worker binding `PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET`, then set
-`CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY` to the same value and deploy this
-stack. Leave the production pair empty until Cloudflare sets
-`x-proxy-verify` on `www.evolvesprouts.com`.
+`PublicWwwStagingEdgeVerifySecret` is the staging origin-lock value compared
+with `x-proxy-verify`. `PublicWwwStagingEdgeVerifySecretPrevious` is accepted
+during rotation. Both empty leaves staging open. Production functions do not
+compare `PublicWwwEdgeVerifySecret` or its previous value yet; leave that
+pair empty.
+
+`deploy-backend.yml` deploys this stack on a push to `main` that changes
+`backend/**` or `scripts/**` when `CDK_STACKS` includes the public website
+(the default is all stacks). The job uses the `production` GitHub environment.
+Create `CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY` and
+`CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS` as repository secrets or
+production-environment secrets. A secret that exists only in the `staging`
+environment is not visible, the parameter stays empty, and the lock stays
+off. The same applies to `CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY` and
+`CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS`.
+
+Deploy passes these four parameters even when the secrets are unset, so
+clearing the staging pair and deploying turns the staging lock off. A deploy
+that cannot see a previously set secret also turns it off. Order for staging:
+set the Worker binding `PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET`, then set
+`CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY` to the same value and deploy.
+Setting the parameter first refuses `www-staging.evolvesprouts.com`.
+`lighthouse-public-www.yml` audits a local build, so the lock does not affect
+that run. The staging smoke goes through `www-staging.evolvesprouts.com` and
+needs the Worker header once the lock is on.
 
 Public WWW API configuration is provided at build time via:
 

@@ -6,9 +6,10 @@
 
 /**
  * Rewrite extensionless paths to index.html for Next.js static export.
- * The public website reads `functions/public-www-path-rewrite.js` instead,
- * which is this rewrite plus the edge-verify call. Keep the two in step.
- * Training uses this constant and does not run the origin lock.
+ * Training and the production public website use this constant as-is.
+ * Staging wraps it with the edge-verify call. `functions/public-www-path-rewrite.js`
+ * must stay identical to that wrapped body so the size test measures the
+ * function staging deploys.
  */
 export const STATIC_EXPORT_PATH_REWRITE_FUNCTION = `
 function handler(event) {

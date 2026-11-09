@@ -1,6 +1,4 @@
-// edgeVerifyRejection comes from public-www-edge-verify.js, which the stack
-// prepends to this file. Training keeps its own copy of the rewrite in
-// cloudfront-www-proxy-functions.ts and does not run this check.
+
 function handler(event) {
   var request = event.request;
   var rejection = edgeVerifyRejection(request);

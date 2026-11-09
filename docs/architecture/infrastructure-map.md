@@ -169,11 +169,19 @@ AWS CDK (TypeScript).
 ### Architecture
 
 ```
-Cloudflare (www.evolvesprouts.com) and the staging Worker
-        │  x-proxy-verify when that environment's edge-verify secret is set
-        ▼
-CloudFront distribution
+Production (www.evolvesprouts.com, proxied by Cloudflare)
         │
+        ▼
+Production CloudFront distribution
+        │  viewer-request functions do not check x-proxy-verify
+
+Staging Worker (www-staging.evolvesprouts.com)
+        │  x-proxy-verify when the staging edge-verify secret is set
+        ▼
+Staging CloudFront distribution
+        │  viewer-request functions refuse a missing or wrong header
+
+Both distributions
         ├─▶ Default: S3 bucket (static Next.js export)
         │
         ├─▶ /www/v1/*: API Gateway (CRM API routes)

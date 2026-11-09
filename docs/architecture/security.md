@@ -357,46 +357,55 @@ uses the same default-deny `/www/*` allowlist and media-request rewrite as the
 public WWW stack via shared sources in
 `backend/infrastructure/lib/cloudfront-www-proxy-functions.ts`. When adding or
 changing a public API path, update that module so production public WWW and
-training origins stay aligned. The public website's path rewrite lives in
-`backend/infrastructure/lib/functions/public-www-path-rewrite.js` and must
-stay aligned with `STATIC_EXPORT_PATH_REWRITE_FUNCTION`.
+training origins stay aligned. Staging wraps
+`STATIC_EXPORT_PATH_REWRITE_FUNCTION` with the edge-verify call.
+`backend/infrastructure/lib/functions/public-www-path-rewrite.js` must stay
+identical to that wrapped body.
 
 ### Public website origin lock
 
-Every viewer-request function on the production and staging public website
-distributions starts with `backend/infrastructure/lib/functions/public-www-edge-verify.js`.
-The header name is `x-proxy-verify`. CloudFront strips `X-Edge-*` and the
-other names listed in that file before a function runs, so those names
-cannot be used.
+The staging distribution's viewer-request functions start with
+`backend/infrastructure/lib/functions/public-www-edge-verify.js`.
+Production uses the same function sources without that prefix. The header
+name is `x-proxy-verify`. CloudFront strips `X-Edge-*` and the other names
+listed in that file before a function runs, so those names cannot be used.
+CloudFront Functions have no secret store, so a set secret is part of the
+function source.
 
-The check compares the header with `PublicWwwEdgeVerifySecret` and
-`PublicWwwEdgeVerifySecretPrevious` on production, and with
-`PublicWwwStagingEdgeVerifySecret` and
-`PublicWwwStagingEdgeVerifySecretPrevious` on staging. Both values empty
-makes the check return the request unchanged. A set value returns 403
-when the header is missing or wrong. The viewer-response error function
-does not run the check. Behaviors covered on each distribution:
+The staging check compares the header with `PublicWwwStagingEdgeVerifySecret`
+and `PublicWwwStagingEdgeVerifySecretPrevious`. Both empty makes the check
+return the request unchanged. A set value returns 403 when the header is
+missing or wrong. The viewer-response error function does not run the check.
+Maintenance mode replaces the `www/*` viewer-request function with a 503
+response, so that path does not reach the origin either. Staging behaviors:
 
 - default (static path rewrite)
 - `www/*` (API allowlist)
 - `www/v1/assets/free/request` (media-request proxy)
 
+`PublicWwwEdgeVerifySecret` and `PublicWwwEdgeVerifySecretPrevious` exist and
+stay empty. Production functions do not compare them yet.
+
 Staging traffic that is allowed through the Worker
 `evolvesprouts-www-staging-redirect-allowlist` sends the header from the
 binding `PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET`. Direct requests to the
 staging CloudFront hostname do not have the header. Production
-`www.evolvesprouts.com` is proxied by Cloudflare and needs a late-transform
-rule that sets the same header before `PublicWwwEdgeVerifySecret` is set.
-That rule is `scripts/cloudflare/public_www_edge_policy.json` and is not
-applied by this repository's deploy. `WafWebAclArn` is empty, so the
-distributions do not detach a WebACL when the lock turns on.
+`www.evolvesprouts.com` needs a Cloudflare late-transform rule before those
+production parameters are enforced. That rule is
+`scripts/cloudflare/public_www_edge_policy.json` and is not applied by this
+repository's deploy. `WafWebAclArn` is empty, so the distributions do not
+detach a WebACL when the lock turns on.
 
-Deploy passes the four parameters even when the GitHub secrets are empty.
-Clearing `CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY` and its previous value,
-then deploying `evolvesprouts-public-www`, turns the staging lock off.
-Set the Worker binding before the staging parameter, and the Cloudflare
-rule before the production parameter. The other way around refuses the
-proxied hostname.
+`deploy-backend.yml` runs on a push to `main` that changes `backend/**` or
+`scripts/**`, in the `production` GitHub environment. The four edge-verify
+secrets must be repository secrets or production-environment secrets. A
+secret that exists only in the `staging` environment is invisible, the
+parameter stays empty, and the lock stays off. Deploy passes the four
+parameters even when those secrets are empty. Clearing
+`CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY` and its previous value, then
+deploying `evolvesprouts-public-www`, turns the staging lock off. Set the
+Worker binding before the staging parameter. Setting the parameter first
+refuses the proxied staging hostname.
 
 Process to add a new public API path:
 
