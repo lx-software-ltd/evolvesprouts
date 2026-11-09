@@ -65,6 +65,84 @@ def query_param(event: Mapping[str, Any], name: str) -> str | None:
     return first_param(params, name)
 
 
+def admin_request_log(
+    event: Mapping[str, Any],
+    *,
+    gateway_path: str,
+    method: str,
+    cold: bool,
+) -> tuple[str, dict[str, Any]]:
+    """Return the admin access-log message and its structured fields.
+
+    ``path`` is the routed resource path. ``gateway_path`` is the path API
+    Gateway sent. The message includes ``gateway_path`` when routing removed
+    the custom-domain base path, so the two hosts stay distinguishable.
+    """
+    raw_path = event.get("path")
+    routed_path = raw_path if isinstance(raw_path, str) else ""
+    domain_name = _request_domain_name(event)
+    message = f"Admin request: {method} {routed_path}"
+    if gateway_path and gateway_path != routed_path:
+        message = f"{message} gateway_path={gateway_path}"
+    return message, {
+        "path": routed_path,
+        "gateway_path": gateway_path,
+        "domain_name": domain_name,
+        "method": method,
+        "cold_start": cold,
+    }
+
+
+def _request_domain_name(event: Mapping[str, Any]) -> str:
+    request_context = event.get("requestContext")
+    if not isinstance(request_context, Mapping):
+        return ""
+    domain_name = request_context.get("domainName")
+    if not isinstance(domain_name, str):
+        return ""
+    return domain_name.strip()
+
+
+def event_for_routing(event: Mapping[str, Any]) -> dict[str, Any]:
+    """Copy the event with the custom-domain base path removed from ``path``.
+
+    Execute-api sets ``path`` to the resource path (``/v1/...``). A custom
+    domain whose base path is the stage name sets ``path`` to
+    ``/{stage}/v1/...``. Handlers match the execute-api shape.
+    ``requestContext.path`` stays intact so share links can still recover
+    the stage prefix. The caller's event is not mutated.
+    """
+    routed = dict(event)
+    raw_path = event.get("path")
+    if isinstance(raw_path, str):
+        routed["path"] = _strip_stage_base_path(raw_path, _request_stage(event))
+    return routed
+
+
+def _request_stage(event: Mapping[str, Any]) -> str:
+    request_context = event.get("requestContext")
+    if not isinstance(request_context, Mapping):
+        return ""
+    stage = request_context.get("stage")
+    if not isinstance(stage, str):
+        return ""
+    stage = stage.strip()
+    if not stage or "/" in stage or stage in {".", ".."}:
+        return ""
+    return stage
+
+
+def _strip_stage_base_path(path: str, stage: str) -> str:
+    if not stage:
+        return path
+    prefix = f"/{stage}"
+    if path == prefix:
+        return "/"
+    if path.startswith(prefix + "/"):
+        return path[len(prefix) :]
+    return path
+
+
 def normalize_path(path: str) -> str:
     """Normalize route path for deterministic matching."""
     if not path:

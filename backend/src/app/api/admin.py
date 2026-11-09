@@ -64,6 +64,7 @@ from app.api.public_forms import handle_public_forms_request
 from app.api.public_polls import handle_public_polls_request
 from app.api.public_reservation_payments import handle_public_reservation_payment_intent
 from app.api.public_reservations import _handle_public_reservation
+from app.api.admin_request import admin_request_log, event_for_routing
 from app.exceptions import AppError, ValidationError
 from app.utils import json_response, not_found
 from app.utils.logging import (
@@ -390,6 +391,9 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
     request_id = event.get("requestContext", {}).get("requestId", "")
     set_request_context(req_id=request_id)
     try:
+        raw_path = event.get("path")
+        gateway_path = raw_path if isinstance(raw_path, str) else ""
+        event = event_for_routing(event)
         method = api_gateway_http_method(event)
         path = event.get("path", "")
 
@@ -404,14 +408,13 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
                 cold=cold,
             )
 
-        logger.info(
-            f"Admin request: {method} {path}",
-            extra={
-                "path": path,
-                "method": method,
-                "cold_start": cold,
-            },
+        message, log_fields = admin_request_log(
+            event,
+            gateway_path=gateway_path,
+            method=method,
+            cold=cold,
         )
+        logger.info(message, extra=log_fields)
 
         handler = _match_handler(event=event, method=method, path=path)
         if handler is not None:

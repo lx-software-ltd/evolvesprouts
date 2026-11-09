@@ -36,6 +36,11 @@ their primary responsibilities.
 ### Admin API
 - Function: EvolvesproutsAdminFunction
 - Handler: backend/lambda/admin/handler.py
+- Custom domain: the `/prod` base path is included in API Gateway `path`.
+  Routing strips one leading segment when it equals `requestContext.stage`,
+  so handlers still match `/v1/...`. The access log keeps that original path
+  as `gateway_path` and records `domainName`. Share links use the stage when
+  `requestContext.path` does not already include it.
 - Trigger: API Gateway — currently wired for
   `/v1/assets/free/request`, `/v1/reservations`,
   `/v1/reservations/payment-intent`,

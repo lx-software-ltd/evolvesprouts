@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.api.admin_request import event_for_routing
 from app.auth.authorizer_utils import extract_bearer_token
 from app.api.assets import share_assets
 from app.api.assets.assets_storage import signed_link_no_cache_headers
@@ -69,6 +70,52 @@ def test_build_configured_email_download_url_returns_none_without_base(
 ) -> None:
     monkeypatch.delenv("ASSET_SHARE_LINK_BASE_URL", raising=False)
     assert build_configured_email_download_url(share_token="Y" * 24) is None
+
+
+def test_build_share_link_url_keeps_stage_after_custom_domain_routing(
+    monkeypatch: Any,
+) -> None:
+    monkeypatch.delenv("ASSET_SHARE_LINK_BASE_URL", raising=False)
+    event = event_for_routing(
+        {
+            "headers": {
+                "Host": "api.example.com",
+                "X-Forwarded-Proto": "https",
+            },
+            "path": "/prod/v1/admin/assets/9f0b/share-link",
+            "requestContext": {
+                "stage": "prod",
+                "path": "/prod/v1/admin/assets/9f0b/share-link",
+            },
+        }
+    )
+
+    url = build_share_link_url(event=event, token="B" * 24)
+
+    assert url == "https://api.example.com/prod/v1/assets/share/" + ("B" * 24)
+
+
+def test_build_share_link_url_uses_stage_when_context_path_has_no_prefix(
+    monkeypatch: Any,
+) -> None:
+    monkeypatch.delenv("ASSET_SHARE_LINK_BASE_URL", raising=False)
+    event = event_for_routing(
+        {
+            "headers": {
+                "Host": "api.example.com",
+                "X-Forwarded-Proto": "https",
+            },
+            "path": "/prod/v1/admin/assets/9f0b/share-link",
+            "requestContext": {
+                "stage": "prod",
+                "path": "/v1/admin/assets/9f0b/share-link",
+            },
+        }
+    )
+
+    url = build_share_link_url(event=event, token="B" * 24)
+
+    assert url == "https://api.example.com/prod/v1/assets/share/" + ("B" * 24)
 
 
 def test_build_share_link_url_derives_stage_prefix(monkeypatch: Any) -> None:
