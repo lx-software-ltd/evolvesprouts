@@ -24,9 +24,13 @@ vi.mock('@/components/sections/my-best-auntie/use-my-best-auntie-cohorts', () =>
 vi.mock('next/image', () => ({
   default: ({
     alt,
+    fill: _fill,
+    priority: _priority,
     ...props
   }: {
     alt?: string;
+    fill?: boolean;
+    priority?: boolean;
   } & Record<string, unknown>) => <img alt={alt ?? ''} {...props} />,
 }));
 

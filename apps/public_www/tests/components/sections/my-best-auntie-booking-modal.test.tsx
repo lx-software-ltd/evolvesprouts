@@ -56,9 +56,11 @@ import { formatPartDateTimeLabel } from '@/lib/site-datetime';
 vi.mock('next/image', () => ({
   default: ({
     alt,
+    unoptimized: _unoptimized,
     ...props
   }: {
     alt?: string;
+    unoptimized?: boolean;
   } & Record<string, unknown>) => <img alt={alt ?? ''} {...props} />,
 }));
 
@@ -66,10 +68,14 @@ vi.mock('next/link', () => ({
   default: ({
     href,
     children,
+    prefetch: _prefetch,
+    scroll: _scroll,
     ...props
   }: {
     href: string;
     children: ReactNode;
+    prefetch?: boolean;
+    scroll?: boolean;
   } & AnchorHTMLAttributes<HTMLAnchorElement>) => (
     <a href={href} {...props}>
       {children}
