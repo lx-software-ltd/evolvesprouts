@@ -507,9 +507,10 @@ Website form submit
     (`ApiCustomDomainName` or the execute-api `ApiUrl`), update the audience
     webhook in Mailchimp to
     `{api-origin}/v1/mailchimp/webhook?token={MAILCHIMP_WEBHOOK_SECRET}`.
-    Use CloudFormation output `ApiCustomDomainUrl` when a custom domain is set,
-    otherwise `ApiUrl`. Steps and checklist:
-    `docs/deployment/backend.md`.
+    `{api-origin}` is CloudFormation output `ApiCustomDomainUrl` when a
+    custom domain is set, otherwise `ApiUrl`. Both outputs include `/prod`,
+    so the path after the output is `/v1/mailchimp/webhook` with no extra
+    stage segment. Steps and checklist: `docs/deployment/backend.md`.
   - CloudWatch metric `{resourcePrefix}/Mailchimp` / `WebhookReceived` counts
     authenticated POSTs (`Received Mailchimp webhook` on the Admin Lambda log
     group). Alarm `{resourcePrefix}-mailchimp-webhook-inactivity-alarm` fires

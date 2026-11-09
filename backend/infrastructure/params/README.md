@@ -54,6 +54,32 @@ Do not set Instagram/LinkedIn to your own website URL; those are ignored.
 Use these to ensure CloudFront-signed asset links are generated with your
 custom media subdomain.
 
+## API custom domain
+
+`ApiCustomDomainName` and `ApiCustomDomainCertificateArn` stay empty until a
+regional certificate covers the API hostname. The domain mapping uses the
+stage name as its base path (`/prod`). `ApiCustomDomainUrl` includes that
+path, the same way `ApiUrl` ends in `/prod`.
+
+`ApiDisableExecuteApiEndpoint` defaults to `false`. Leave it false when the
+custom domain is first created. The asset-share CloudFront origin stays on
+the execute-api host until this flag is `true`, so share links keep working
+while DNS is pointed at `ApiCustomDomainTarget`. Set the flag to `true` only
+after that DNS change and after clients call the custom domain. The
+execute-api hostname then rejects calls. The stage variable
+`executeApiEndpoint` is present only while the flag is on, and the stage
+update waits for the REST API change. Deploy `false` again before sending
+clients back to execute-api.
+
+`PublicWwwApiBaseUrl` and `PublicWwwMediaRequestApiBaseUrl` resolve
+`PUBLIC_WWW_API_BASE_URL` and `PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL`.
+Backend deploy falls back to `NEXT_PUBLIC_API_BASE_URL` when those variables
+are unset. Set them to the current execute-api URL before pointing
+`NEXT_PUBLIC_API_BASE_URL` at `ApiCustomDomainUrl`, and point them at the
+custom domain before setting `ApiDisableExecuteApiEndpoint` to `true`.
+`TrainingApiBaseUrl` and `TrainingMediaRequestApiBaseUrl` still follow
+`NEXT_PUBLIC_API_BASE_URL`.
+
 ## Media lead pipeline parameters
 
 The backend stack also requires Mailchimp/media lead parameters:

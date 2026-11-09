@@ -344,7 +344,7 @@ Security model:
 - Only explicitly approved method+path pairs are forwarded.
   - Most `/www/*` routes use the API origin host resolved from
     `PublicWwwApiBaseUrl`.
-  - `POST /www/v1/assets/free/request` uses the execute-api origin resolved from
+  - `POST /www/v1/assets/free/request` uses the origin resolved from
     `PublicWwwMediaRequestApiBaseUrl`, with a viewer-request URI rewrite to
     `/v1/assets/free/request`.
 - Requests that are not allowlisted are blocked at CloudFront with a `403`

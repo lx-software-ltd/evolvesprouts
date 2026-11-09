@@ -64,7 +64,8 @@ their primary responsibilities.
   sort key `CONTROL`; default is all off; same contract as `/www/v1/polls/{poll_slug}/control`),
   `/v1/admin/geographic-areas`,
   `/v1/mailchimp/webhook` (GET/POST; Mailchimp audience callback URL must track
-  `ApiCustomDomainUrl` or `ApiUrl` — see `docs/deployment/backend.md`;
+  `ApiCustomDomainUrl` or `ApiUrl`, both of which include `/prod`, so the
+  callback is `{output}/v1/mailchimp/webhook` — see `docs/deployment/backend.md`;
   inactivity alarm `{resourcePrefix}-mailchimp-webhook-inactivity-alarm`),
   `/v1/whatsapp/webhook` (GET handshake + POST inbound/echo/`history` messages;
   HMAC `X-Hub-Signature-256` via `META_APP_SECRET`; verify token

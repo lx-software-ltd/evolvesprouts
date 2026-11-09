@@ -1,5 +1,8 @@
+import { pathToFileURL } from 'node:url';
+
 const SMOKE_BASE_URL_ENV = 'SMOKE_BASE_URL';
 const SMOKE_API_KEY_ENV = 'SMOKE_API_KEY';
+const SMOKE_CRM_API_BASE_URL_ENV = 'SMOKE_CRM_API_BASE_URL';
 const SMOKE_API_BASE_URL_ENV = 'SMOKE_API_BASE_URL';
 const SMOKE_MEDIA_API_BASE_URL_ENV = 'SMOKE_MEDIA_API_BASE_URL';
 const FALLBACK_API_KEY_ENV = 'NEXT_PUBLIC_WWW_CRM_API_KEY';
@@ -8,6 +11,10 @@ const FALLBACK_MEDIA_API_BASE_URL_ENV = 'NEXT_PUBLIC_API_BASE_URL';
 const SMOKE_TIMEOUT_MS_ENV = 'SMOKE_TIMEOUT_MS';
 const SMOKE_TURNSTILE_TOKEN_ENV = 'SMOKE_TURNSTILE_TOKEN';
 const SMOKE_MAX_PAGES_ENV = 'SMOKE_MAX_PAGES';
+const STAGING_BYPASS_SECRET_ENV = 'STAGING_BYPASS_SECRET';
+const STAGING_BYPASS_HEADER = 'x-staging-bypass';
+const MAX_SAME_HOST_REDIRECTS = 5;
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 const USER_AGENT = 'evolvesprouts-public-www-smoke-runner/1.0';
@@ -45,8 +52,12 @@ Optional:
   ${SMOKE_TIMEOUT_MS_ENV}          Per-request timeout in milliseconds (default: ${DEFAULT_TIMEOUT_MS})
   ${SMOKE_TURNSTILE_TOKEN_ENV}     Optional Turnstile token for protected endpoints
   ${SMOKE_MAX_PAGES_ENV}           Optional max number of discovered pages to check
-  ${SMOKE_API_BASE_URL_ENV}  Optional API base URL fallback for /v1 endpoints
-                                   Falls back to ${FALLBACK_API_BASE_URL_ENV} if unset.
+  ${STAGING_BYPASS_SECRET_ENV}     Sent as ${STAGING_BYPASS_HEADER} so the staging
+                                   IP allow-list lets this runner through.
+                                   A response that leaves the requested host fails.
+  ${SMOKE_CRM_API_BASE_URL_ENV} Optional API base URL fallback for /v1 endpoints.
+                                   ${SMOKE_API_BASE_URL_ENV} is a legacy alias.
+                                   Falls back to ${FALLBACK_API_BASE_URL_ENV} if both are unset.
   ${SMOKE_MEDIA_API_BASE_URL_ENV}  Optional media API base URL fallback for /v1/assets/free/request
                                    Falls back to ${FALLBACK_MEDIA_API_BASE_URL_ENV} if unset.
 `);
@@ -133,10 +144,14 @@ function resolveMaxPages() {
 
 function resolveOptionalApiBaseUrl({
   primaryEnvName,
+  aliasEnvName,
   fallbackEnvName,
   baseUrl,
 }) {
-  const rawValue = (process.env[primaryEnvName] ?? process.env[fallbackEnvName] ?? '').trim();
+  const rawValue = [primaryEnvName, aliasEnvName, fallbackEnvName]
+    .filter(Boolean)
+    .map((name) => (process.env[name] ?? '').trim())
+    .find(Boolean) ?? '';
   if (!rawValue) {
     return null;
   }
@@ -186,7 +201,87 @@ function applyQueryString(urlString, queryString) {
   return requestUrl.toString();
 }
 
-async function fetchWithTimeout(url, init, timeoutMs) {
+function stagingBypassSecret() {
+  return (process.env[STAGING_BYPASS_SECRET_ENV] ?? '').trim();
+}
+
+function resolveBypassHeaders(requestUrl) {
+  const secret = stagingBypassSecret();
+  if (!secret) {
+    return {};
+  }
+
+  let requestHost = '';
+  try {
+    requestHost = new URL(requestUrl).host;
+  } catch {
+    return {};
+  }
+
+  const configuredBase = (process.env[SMOKE_BASE_URL_ENV] ?? '').trim();
+  if (!configuredBase) {
+    return {};
+  }
+
+  let stagingHost = '';
+  try {
+    stagingHost = new URL(configuredBase).host;
+  } catch {
+    return {};
+  }
+
+  if (requestHost !== stagingHost) {
+    return {};
+  }
+
+  return { [STAGING_BYPASS_HEADER]: secret };
+}
+
+function redirectFailure(requestedUrl, location) {
+  const requestedHost = new URL(requestedUrl).host;
+  const destination = location || 'an empty Location';
+  const hint = stagingBypassSecret()
+    ? `${STAGING_BYPASS_SECRET_ENV} is set, but the staging gate still redirected. Use the same secret on the Worker.`
+    : `${STAGING_BYPASS_SECRET_ENV} is unset. Add it to the staging GitHub environment and the staging Worker, then rerun.`;
+  return new Error(`redirected off ${requestedHost} to ${destination}; ${hint}`);
+}
+
+function nextSameHostUrl(requestedUrl, status, locationHeader) {
+  if (!REDIRECT_STATUSES.has(status)) {
+    return null;
+  }
+
+  if (!locationHeader) {
+    throw redirectFailure(requestedUrl, '');
+  }
+
+  const nextUrl = new URL(locationHeader, requestedUrl);
+  if (nextUrl.host !== new URL(requestedUrl).host) {
+    throw redirectFailure(requestedUrl, nextUrl.href);
+  }
+
+  return nextUrl.toString();
+}
+
+function followRedirectInit(init, status) {
+  const method = (init?.method ?? 'GET').toUpperCase();
+  const switchesToGet = status === 303 || ((status === 301 || status === 302) && method !== 'GET' && method !== 'HEAD');
+  if (!switchesToGet) {
+    return init;
+  }
+
+  const headers = { ...(init?.headers ?? {}) };
+  delete headers['content-type'];
+  delete headers['Content-Type'];
+  return {
+    ...init,
+    method: 'GET',
+    body: undefined,
+    headers,
+  };
+}
+
+async function fetchWithTimeout(url, init, timeoutMs, redirectHops = 0) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
     controller.abort();
@@ -195,13 +290,27 @@ async function fetchWithTimeout(url, init, timeoutMs) {
   try {
     const response = await fetch(url, {
       ...init,
+      redirect: 'manual',
       signal: controller.signal,
       headers: {
         'user-agent': USER_AGENT,
+        ...resolveBypassHeaders(url),
         ...(init?.headers ?? {}),
       },
     });
-    return response;
+    const nextUrl = nextSameHostUrl(url, response.status, response.headers.get('location'));
+    if (!nextUrl) {
+      return response;
+    }
+    if (redirectHops >= MAX_SAME_HOST_REDIRECTS) {
+      throw new Error(`too many redirects for ${url}`);
+    }
+    return fetchWithTimeout(
+      nextUrl,
+      followRedirectInit(init, response.status),
+      timeoutMs,
+      redirectHops + 1,
+    );
   } finally {
     clearTimeout(timeoutId);
   }
@@ -692,7 +801,8 @@ async function main() {
   const timeoutMs = resolveTimeoutMs();
   const maxPages = resolveMaxPages();
   const apiBaseUrl = resolveOptionalApiBaseUrl({
-    primaryEnvName: SMOKE_API_BASE_URL_ENV,
+    primaryEnvName: SMOKE_CRM_API_BASE_URL_ENV,
+    aliasEnvName: SMOKE_API_BASE_URL_ENV,
     fallbackEnvName: FALLBACK_API_BASE_URL_ENV,
     baseUrl,
   });
@@ -704,6 +814,13 @@ async function main() {
 
   logSection('Smoke runner configuration');
   console.log(`Base URL: ${baseUrl.toString()}`);
+  if (stagingBypassSecret()) {
+    console.log(`Staging bypass: ${STAGING_BYPASS_HEADER} is sent only to ${baseUrl.host}`);
+  } else {
+    console.log(
+      `Staging bypass: ${STAGING_BYPASS_SECRET_ENV} is unset. A redirect off ${baseUrl.host} fails this run.`,
+    );
+  }
   console.log(`Timeout: ${timeoutMs}ms`);
   if (maxPages !== null) {
     console.log(`Max pages: ${maxPages}`);
@@ -732,8 +849,24 @@ async function main() {
   console.log('\nSmoke run passed.');
 }
 
-main().catch((error) => {
-  console.error('Smoke run crashed.');
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
-});
+function invokedAsScript() {
+  const entry = process.argv[1];
+  if (!entry) {
+    return false;
+  }
+  return import.meta.url === pathToFileURL(entry).href;
+}
+
+export {
+  STAGING_BYPASS_HEADER,
+  nextSameHostUrl,
+  resolveBypassHeaders,
+};
+
+if (invokedAsScript()) {
+  main().catch((error) => {
+    console.error('Smoke run crashed.');
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  });
+}

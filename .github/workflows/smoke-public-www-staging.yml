@@ -60,6 +60,7 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: '1'
           SMOKE_BASE_URL: ${{ steps.resolve_staging_site_origin.outputs.staging_site_origin }}
+          STAGING_BYPASS_SECRET: ${{ secrets.STAGING_BYPASS_SECRET }}
           SMOKE_API_KEY: ${{ secrets.NEXT_PUBLIC_WWW_CRM_API_KEY }}
           SMOKE_CRM_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
           SMOKE_MEDIA_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}

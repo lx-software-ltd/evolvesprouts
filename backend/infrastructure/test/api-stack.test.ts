@@ -825,6 +825,137 @@ function assertRetainedSecurityGroupsAndProxyTags(template: Template): void {
   }
 }
 
+function assertFnIf(
+  value: unknown,
+  condition: string,
+  whenTrue: unknown,
+  whenFalse: unknown,
+  label: string,
+): void {
+  const choice = (value as { "Fn::If"?: unknown })?.["Fn::If"];
+  if (!Array.isArray(choice) || choice.length !== 3) {
+    throw new Error(`${label} must be Fn::If. Found ${JSON.stringify(value)}`);
+  }
+  if (choice[0] !== condition) {
+    throw new Error(
+      `${label} must use condition ${condition}. Found ${JSON.stringify(choice[0])}`,
+    );
+  }
+  if (JSON.stringify(choice[1]) !== JSON.stringify(whenTrue)) {
+    throw new Error(
+      `${label} true branch must be ${JSON.stringify(whenTrue)}. Found ${JSON.stringify(choice[1])}`,
+    );
+  }
+  if (JSON.stringify(choice[2]) !== JSON.stringify(whenFalse)) {
+    throw new Error(
+      `${label} false branch must be ${JSON.stringify(whenFalse)}. Found ${JSON.stringify(choice[2])}`,
+    );
+  }
+}
+
+function assertApiCustomDomainKeepsProdPath(template: Template): void {
+  const mappings = template.findResources("AWS::ApiGateway::BasePathMapping");
+  const entries = Object.entries(mappings);
+  if (entries.length !== 1) {
+    throw new Error(
+      `Expected one API base path mapping; found ${entries.length}`,
+    );
+  }
+  const [logicalId, mapping] = entries[0];
+  const stages = template.findResources("AWS::ApiGateway::Stage");
+  const stageEntries = Object.entries(stages);
+  if (stageEntries.length !== 1) {
+    throw new Error(`Expected one API stage; found ${stageEntries.length}`);
+  }
+  const [stageLogicalId, stage] = stageEntries[0];
+  const stageName = stage.Properties?.StageName;
+  if (typeof stageName !== "string" || stageName.length === 0) {
+    throw new Error(`API stage ${stageLogicalId} is missing StageName`);
+  }
+  if (mapping.Properties?.BasePath !== stageName) {
+    throw new Error(
+      `${logicalId} base path must match stage ${stageName}. Found ${JSON.stringify(mapping.Properties?.BasePath)}`,
+    );
+  }
+  if (mapping.Condition !== "UseApiCustomDomain") {
+    throw new Error(
+      `${logicalId} must be created only when UseApiCustomDomain is true`,
+    );
+  }
+
+  const apis = template.findResources("AWS::ApiGateway::RestApi");
+  const apiEntries = Object.entries(apis);
+  if (apiEntries.length !== 1) {
+    throw new Error(`Expected one REST API; found ${apiEntries.length}`);
+  }
+  const [apiLogicalId, api] = apiEntries[0];
+  const omitted = { Ref: "AWS::NoValue" };
+  assertFnIf(
+    api.Properties?.DisableExecuteApiEndpoint,
+    "DisableExecuteApiEndpoint",
+    true,
+    omitted,
+    "REST API DisableExecuteApiEndpoint",
+  );
+
+  assertFnIf(
+    stage.Properties?.Variables?.executeApiEndpoint,
+    "DisableExecuteApiEndpoint",
+    "disabled",
+    omitted,
+    "API stage variable executeApiEndpoint",
+  );
+  const dependsOn = (stage as { DependsOn?: string | string[] }).DependsOn;
+  const dependencies = Array.isArray(dependsOn)
+    ? dependsOn
+    : dependsOn
+      ? [dependsOn]
+      : [];
+  if (!dependencies.includes(apiLogicalId)) {
+    throw new Error(
+      `Stage ${stageLogicalId} must depend on ${apiLogicalId} so the stage update follows DisableExecuteApiEndpoint. DependsOn=${JSON.stringify(dependsOn)}`,
+    );
+  }
+
+  const distributions = template.findResources("AWS::CloudFront::Distribution");
+  const assetShareOrigin = Object.values(distributions)
+    .flatMap(
+      (distribution) =>
+        distribution.Properties?.DistributionConfig?.Origins ?? [],
+    )
+    .find((origin: { DomainName?: unknown; OriginPath?: unknown }) => {
+      const domain = origin.DomainName as { "Fn::If"?: unknown[] } | undefined;
+      return domain?.["Fn::If"]?.[0] === "DisableExecuteApiEndpoint";
+    }) as { DomainName?: unknown; OriginPath?: unknown } | undefined;
+  if (!assetShareOrigin) {
+    throw new Error(
+      "Asset-share CloudFront origin must follow DisableExecuteApiEndpoint",
+    );
+  }
+  const domainChoice = (
+    assetShareOrigin.DomainName as { "Fn::If": unknown[] }
+  )["Fn::If"];
+  const staysOnExecuteApi = JSON.stringify(domainChoice[2] ?? "").includes(
+    "execute-api",
+  );
+  if (!staysOnExecuteApi) {
+    throw new Error(
+      `Asset-share origin must stay on execute-api until the disable flag. Found ${JSON.stringify(domainChoice[2])}`,
+    );
+  }
+  const customDomainBranch = JSON.stringify(domainChoice[1] ?? "");
+  if (!customDomainBranch.includes("ApiCustomDomainName")) {
+    throw new Error(
+      `Asset-share origin must use ApiCustomDomainName when execute-api is disabled. Found ${customDomainBranch}`,
+    );
+  }
+  if (assetShareOrigin.OriginPath !== `/${stageName}`) {
+    throw new Error(
+      `Asset-share origin path must be /${stageName}. Found ${JSON.stringify(assetShareOrigin.OriginPath)}`,
+    );
+  }
+}
+
 function main(): void {
   const app = new cdk.App();
   const stack = new ApiStack(app, "TestApi", {
@@ -848,6 +979,7 @@ function main(): void {
   assertFinanceReadonlyDataApi(template);
   assertLogGroupActionsUseLogGroupArn(template);
   assertRetainedSecurityGroupsAndProxyTags(template);
+  assertApiCustomDomainKeepsProdPath(template);
   assertApiStackInvariants(stack, template);
 
   console.log("api-stack API Gateway stage cache assertions passed.");

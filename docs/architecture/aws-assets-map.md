@@ -65,14 +65,18 @@ Public WWW CloudFront includes:
 
 - Default behavior: static site content from S3 with extensionless path rewrite.
 - Additional behavior: `www/*` forwards to the host extracted from
-  `PublicWwwApiBaseUrl` (for example `https://api.evolvesprouts.com/www`)
+  `PublicWwwApiBaseUrl` (GitHub variable `PUBLIC_WWW_API_BASE_URL`, falling
+  back to `NEXT_PUBLIC_API_BASE_URL`; for example
+  `https://api.evolvesprouts.com/prod`)
   using HTTPS-only origin policy, disabled caching, and
   `OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER` so API key headers and
   query parameters pass through while preserving the API origin host header.
   - Viewer-request allowlist gates allowed public API method/path pairs
     (e.g. `/www/v1/reservations`).
-- Additional behavior: `www/v1/assets/free/request` forwards to the execute-api
-  host/path extracted from `PublicWwwMediaRequestApiBaseUrl` and rewrites
+- Additional behavior: `www/v1/assets/free/request` forwards to the
+  host/path extracted from `PublicWwwMediaRequestApiBaseUrl` (GitHub variable
+  `PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL`, falling back to
+  `NEXT_PUBLIC_API_BASE_URL`) and rewrites
   `/www/v1/assets/free/request` to `/v1/assets/free/request` before origin fetch.
 - Response headers policy for browser hardening:
   `Strict-Transport-Security`, `X-Content-Type-Options`,
@@ -698,8 +702,9 @@ configured by stack custom resources (including retention and KMS association).
 | `MailchimpWelcomeJourneyId` | String | No | No | Shared welcome journey ID for opted-in public form contacts (empty disables) |
 | `MailchimpWelcomeJourneyStepId` | String | No | No | Welcome journey entry step ID paired with `MailchimpWelcomeJourneyId` (empty disables) |
 | `MailchimpRequireMarketingConsent` | String | No | No | When `true`, media processor gates legacy Mailchimp subscribe + free-resource journey on `marketing_opt_in` (default: `false`) |
-| `ApiCustomDomainName` | String | No | No | Custom domain for the API (default: empty) |
+| `ApiCustomDomainName` | String | No | No | Custom domain for the API (default: empty). When set with a certificate, the domain maps to the prod stage at `/prod`. |
 | `ApiCustomDomainCertificateArn` | String | No | No | ACM certificate ARN for API custom domain |
+| `ApiDisableExecuteApiEndpoint` | String | No | No | `true` or `false` (default `false`). When `true` and the custom domain is configured, the execute-api hostname stops accepting calls and the asset-share CloudFront origin moves to the custom domain. The stage variable `executeApiEndpoint` is set only while this is `true`, and that stage update depends on the REST API so it runs after the flag changes. |
 | `NominatimUserAgent` | String | No | No | User-Agent for Nominatim geocoding requests |
 | `NominatimReferer` | String | No | No | Referer header for Nominatim requests |
 | `AdminBootstrapEmail` | String | No | No | Admin email for bootstrap (default: empty) |
@@ -779,7 +784,7 @@ These raster files ship with `EvolvesproutsAdminFunction` under `backend/src/app
 | `InboundInvoiceSharedReceiptRuleSetName` | SES receipt rule set name | Shared set that the `lxsoftware` stack activates; this stack no longer activates its own set |
 | `CognitoCustomDomainCloudFront` | CloudFront distribution | Custom auth domain target (conditional) |
 | `ApiCustomDomainTarget` | CNAME target | API custom domain DNS target (conditional) |
-| `ApiCustomDomainUrl` | Custom domain URL | API custom domain URL (conditional) |
+| `ApiCustomDomainUrl` | Custom domain URL | API custom domain URL including `/prod` (conditional). Use this as `NEXT_PUBLIC_API_BASE_URL` for direct clients. Webhook paths append `/v1/...` to this output. |
 
 ---
 
