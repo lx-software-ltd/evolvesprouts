@@ -1,3 +1,6 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
+
 import * as cdk from "aws-cdk-lib";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
@@ -7,10 +10,66 @@ import { Construct } from "constructs";
 
 import {
   MEDIA_REQUEST_PROXY_FUNCTION,
-  STATIC_EXPORT_PATH_REWRITE_FUNCTION,
   WWW_API_ERROR_RESPONSE_FUNCTION,
   WWW_PROXY_ALLOWLIST_FUNCTION,
 } from "./cloudfront-www-proxy-functions";
+
+// Secrets are spliced into CloudFront Function source as JS string literals,
+// so the allowed alphabet excludes quotes and backslashes. Minimum 32 chars.
+const EDGE_VERIFY_SECRET_PATTERN = "^$|^[A-Za-z0-9+/=_-]{32,}$";
+const EDGE_VERIFY_SNIPPET = fs.readFileSync(
+  path.join(__dirname, "functions/public-www-edge-verify.js"),
+  "utf8",
+);
+const PATH_REWRITE_SOURCE = fs.readFileSync(
+  path.join(__dirname, "functions/public-www-path-rewrite.js"),
+  "utf8",
+);
+
+interface EdgeVerifySecrets {
+  readonly current: string;
+  readonly previous: string;
+}
+
+/**
+ * Prepend the edge-verify check to a viewer-request function body. The
+ * placeholders resolve to CloudFormation parameter references at deploy.
+ * Both values empty makes edgeVerifyRejection return null for every request.
+ */
+export function withEdgeVerify(body: string, secrets: EdgeVerifySecrets): string {
+  const snippet = EDGE_VERIFY_SNIPPET.replace(
+    "__EDGE_VERIFY_SECRET__",
+    secrets.current,
+  ).replace("__EDGE_VERIFY_SECRET_PREVIOUS__", secrets.previous);
+  return `${snippet}\n${body}`;
+}
+
+const EDGE_VERIFY_CALL = [
+  "  var rejection = edgeVerifyRejection(request);",
+  "  if (rejection) {",
+  "    return rejection;",
+  "  }",
+].join("\n");
+
+/** Insert the rejection call after the viewer request is bound, then prepend the snippet. */
+export function viewerRequestSource(
+  body: string,
+  secrets: EdgeVerifySecrets,
+): string {
+  const marker = "var request = event.request;";
+  const first = body.indexOf(marker);
+  if (first < 0) {
+    throw new Error(
+      "viewer-request function is missing `var request = event.request`",
+    );
+  }
+  const injected =
+    body.slice(0, first + marker.length) +
+    "\n" +
+    EDGE_VERIFY_CALL +
+    body.slice(first + marker.length);
+  return withEdgeVerify(injected, secrets);
+}
 
 interface WebsiteEnvironmentConfig {
   readonly idPrefix: "PublicWww" | "PublicWwwStaging";
@@ -26,6 +85,7 @@ interface WebsiteEnvironmentConfig {
   readonly addNoIndexHeader: boolean;
   readonly hasWafWebAclArn: cdk.CfnCondition;
   readonly wafWebAclArn: cdk.CfnParameter;
+  readonly edgeVerifySecrets: EdgeVerifySecrets;
 }
 
 interface WebsiteEnvironmentResources {
@@ -142,6 +202,8 @@ export class PublicWwwStack extends cdk.Stack {
         cdk.Fn.conditionEquals(wafWebAclArn.valueAsString, ""),
       ),
     });
+    const productionEdgeVerify = this.createEdgeVerifyParameters("PublicWww");
+    const stagingEdgeVerify = this.createEdgeVerifyParameters("PublicWwwStaging");
 
     const productionResources = this.createWebsiteEnvironment({
       idPrefix: "PublicWww",
@@ -157,6 +219,7 @@ export class PublicWwwStack extends cdk.Stack {
       addNoIndexHeader: false,
       hasWafWebAclArn,
       wafWebAclArn,
+      edgeVerifySecrets: productionEdgeVerify,
     });
     this.bucket = productionResources.bucket;
     this.distribution = productionResources.distribution;
@@ -176,6 +239,7 @@ export class PublicWwwStack extends cdk.Stack {
       addNoIndexHeader: true,
       hasWafWebAclArn,
       wafWebAclArn,
+      edgeVerifySecrets: stagingEdgeVerify,
     });
     this.stagingBucket = stagingResources.bucket;
     this.stagingDistribution = stagingResources.distribution;
@@ -214,6 +278,56 @@ export class PublicWwwStack extends cdk.Stack {
       value: this.stagingLoggingBucket.bucketName,
       description: "S3 bucket for staging CloudFront and S3 access logs",
     });
+  }
+
+  private createEdgeVerifyParameters(
+    idPrefix: "PublicWww" | "PublicWwwStaging",
+  ): EdgeVerifySecrets {
+    const label = idPrefix === "PublicWww" ? "production" : "staging";
+    const current = new cdk.CfnParameter(this, `${idPrefix}EdgeVerifySecret`, {
+      type: "String",
+      noEcho: true,
+      default: "",
+      allowedPattern: EDGE_VERIFY_SECRET_PATTERN,
+      description:
+        `Origin-lock secret for the ${label} public website. ` +
+        "Viewer requests without a matching x-proxy-verify header are refused. " +
+        "Empty disables the check. When set: 32+ chars of [A-Za-z0-9+/=_-].",
+    });
+    const previous = new cdk.CfnParameter(
+      this,
+      `${idPrefix}EdgeVerifySecretPrevious`,
+      {
+        type: "String",
+        noEcho: true,
+        default: "",
+        allowedPattern: EDGE_VERIFY_SECRET_PATTERN,
+        description:
+          `Previous ${label} edge-verify secret, accepted during rotation. ` +
+          "Clear it once the proxy sends only the new value.",
+      },
+    );
+    const hasSecret = new cdk.CfnCondition(this, `Has${idPrefix}EdgeVerifySecret`, {
+      expression: cdk.Fn.conditionNot(
+        cdk.Fn.conditionAnd(
+          cdk.Fn.conditionEquals(current.valueAsString, ""),
+          cdk.Fn.conditionEquals(previous.valueAsString, ""),
+        ),
+      ),
+    });
+    // The condition has to be referenced or CloudFormation validation warns
+    // that it is unused. There is no WebACL to detach, so the output is the
+    // reference: "true" while either secret is set.
+    new cdk.CfnOutput(this, `${idPrefix}EdgeVerifyEnabled`, {
+      value: cdk.Token.asString(
+        cdk.Fn.conditionIf(hasSecret.logicalId, "true", "false"),
+      ),
+      description: `true when the ${label} public website origin lock is enforcing.`,
+    });
+    return {
+      current: current.valueAsString,
+      previous: previous.valueAsString,
+    };
   }
 
   private createWebsiteEnvironment(
@@ -304,10 +418,10 @@ export class PublicWwwStack extends cdk.Stack {
       `${config.idPrefix}PathRewriteFunction`,
       {
         comment:
-          "Rewrite extensionless and trailing-slash paths to index.html for static export.",
+          "Edge-verify, then rewrite extensionless and trailing-slash paths to index.html.",
         runtime: cloudfront.FunctionRuntime.JS_2_0,
         code: cloudfront.FunctionCode.fromInline(
-          STATIC_EXPORT_PATH_REWRITE_FUNCTION,
+          withEdgeVerify(PATH_REWRITE_SOURCE, config.edgeVerifySecrets),
         ),
       },
     );
@@ -316,9 +430,14 @@ export class PublicWwwStack extends cdk.Stack {
       `${config.idPrefix}WwwProxyAllowlistFunction`,
       {
         comment:
-          "Allow only explicitly approved public API method/path pairs on /www/*.",
+          "Edge-verify, then allow only approved public API method/path pairs on /www/*.",
         runtime: cloudfront.FunctionRuntime.JS_2_0,
-        code: cloudfront.FunctionCode.fromInline(WWW_PROXY_ALLOWLIST_FUNCTION),
+        code: cloudfront.FunctionCode.fromInline(
+          viewerRequestSource(
+            WWW_PROXY_ALLOWLIST_FUNCTION,
+            config.edgeVerifySecrets,
+          ),
+        ),
       },
     );
     const mediaRequestProxyFunction = new cloudfront.Function(
@@ -326,9 +445,14 @@ export class PublicWwwStack extends cdk.Stack {
       `${config.idPrefix}MediaRequestProxyFunction`,
       {
         comment:
-          "Allow /www/v1/assets/free/request and rewrite path for execute-api origin.",
+          "Edge-verify, then allow /www/v1/assets/free/request and rewrite the path.",
         runtime: cloudfront.FunctionRuntime.JS_2_0,
-        code: cloudfront.FunctionCode.fromInline(MEDIA_REQUEST_PROXY_FUNCTION),
+        code: cloudfront.FunctionCode.fromInline(
+          viewerRequestSource(
+            MEDIA_REQUEST_PROXY_FUNCTION,
+            config.edgeVerifySecrets,
+          ),
+        ),
       },
     );
     const wwwApiErrorResponseFunction = new cloudfront.Function(
@@ -513,6 +637,10 @@ export class PublicWwwStack extends cdk.Stack {
       },
     );
     const cfnDistribution = distribution.node.defaultChild as cloudfront.CfnDistribution;
+    // WafWebAclArn is empty and neither distribution attaches a WebACL, so
+    // there is no WAF to detach when the origin lock turns on. A later WebACL
+    // must use HasWafWebAclArn AND NOT Has<Prefix>EdgeVerifySecret, or the
+    // shared rate rule will count every viewer as a Cloudflare egress IP.
     cfnDistribution.addPropertyOverride(
       "DistributionConfig.WebACLId",
       cdk.Fn.conditionIf(

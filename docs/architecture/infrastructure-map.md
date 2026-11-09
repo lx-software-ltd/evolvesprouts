@@ -169,8 +169,8 @@ AWS CDK (TypeScript).
 ### Architecture
 
 ```
-Cloudflare (www.evolvesprouts.com)
-        │
+Cloudflare (www.evolvesprouts.com) and the staging Worker
+        │  x-proxy-verify when that environment's edge-verify secret is set
         ▼
 CloudFront distribution
         │

@@ -4,7 +4,12 @@
  * training-stack; keep in sync with docs/architecture/security.md.
  */
 
-/** Rewrite extensionless paths to index.html for Next.js static export. */
+/**
+ * Rewrite extensionless paths to index.html for Next.js static export.
+ * The public website reads `functions/public-www-path-rewrite.js` instead,
+ * which is this rewrite plus the edge-verify call. Keep the two in step.
+ * Training uses this constant and does not run the origin lock.
+ */
 export const STATIC_EXPORT_PATH_REWRITE_FUNCTION = `
 function handler(event) {
   var request = event.request;

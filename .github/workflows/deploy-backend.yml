@@ -155,7 +155,22 @@ jobs:
               "PublicWwwStagingCertificateArn",
               "PublicWwwApiBaseUrl",
               "PublicWwwMediaRequestApiBaseUrl",
+              "PublicWwwEdgeVerifySecret",
+              "PublicWwwEdgeVerifySecretPrevious",
+              "PublicWwwStagingEdgeVerifySecret",
+              "PublicWwwStagingEdgeVerifySecretPrevious",
               "WafWebAclArn",
+          }
+          # Omitted parameters keep their previous stack value. Edge-verify
+          # keys are passed even when empty so clearing the GitHub secret
+          # disables the origin lock. Siutindei omits them, and an empty
+          # deploy there cannot turn the lock off.
+          pass_empty_params = {
+              "WafWebAclArn",
+              "PublicWwwEdgeVerifySecret",
+              "PublicWwwEdgeVerifySecretPrevious",
+              "PublicWwwStagingEdgeVerifySecret",
+              "PublicWwwStagingEdgeVerifySecretPrevious",
           }
           training_params = {
               "TrainingDomainName",
@@ -186,7 +201,7 @@ jobs:
               value_str = ""
               if value is not None:
                   value_str = resolve_value(str(value))
-              if key != "WafWebAclArn" and not value_str:
+              if key not in pass_empty_params and not value_str:
                   continue
 
               targets = []
@@ -384,3 +399,7 @@ jobs:
           NEXT_PUBLIC_FPS_MOBILE_NUMBER: ${{ vars.NEXT_PUBLIC_FPS_MOBILE_NUMBER }}
           CDK_PARAM_INVOICE_DISPLAY_TIMEZONE: ${{ vars.CDK_PARAM_INVOICE_DISPLAY_TIMEZONE }}
           CDK_PARAM_INVOICE_PAYMENT_TERMS_DAYS: ${{ vars.CDK_PARAM_INVOICE_PAYMENT_TERMS_DAYS }}
+          CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY }}
+          CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS }}
+          CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY }}
+          CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS }}

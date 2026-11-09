@@ -3,8 +3,10 @@
 The siutindei domain move left this repository a tested patch,
 `evolvesprouts-api-domain-staging-gate.patch`, from
 [that agent](https://cursor.com/agents/bc-01a1be9e-4c71-7379-99fd-87fa856acb08).
-This plan is that patch, plus the review fixes. The staging origin lock is a
-later step.
+This plan is that patch, plus the review fixes. The staging origin lock is
+the edge-verify check in `public-www-stack.ts`. It stays off while
+`PublicWwwStagingEdgeVerifySecret` and
+`PublicWwwStagingEdgeVerifySecretPrevious` are empty.
 
 ## What landed
 
@@ -66,9 +68,15 @@ later step.
    `STAGING_BYPASS_SECRET` on the Worker and in the `staging` GitHub
    environment. Smoke stays green until a response leaves the staging host.
 
-The origin lock (`x-proxy-verify` on the staging CloudFront distribution)
-is not part of this change. The Worker already forwards that header when
-`PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET` is set.
+The origin lock compares `x-proxy-verify` on every viewer-request function
+of both public-website distributions
+(`functions/public-www-edge-verify.js`). Staging enforcement turns on when
+`CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY` matches the Worker binding
+`PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET`. Set the binding first. The
+production pair stays empty until Cloudflare adds the header on
+`www.evolvesprouts.com`. Deploy passes an empty edge-verify parameter
+through, so clearing the secret disables the lock. `WafWebAclArn` is empty,
+so there is no WebACL to detach.
 
 ## Rollback
 

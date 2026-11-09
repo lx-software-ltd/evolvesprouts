@@ -43,7 +43,23 @@ Provide these parameters in `backend/infrastructure/params/production.json`:
 - `PublicWwwStagingCertificateArn`: ACM certificate ARN for staging
 - `PublicWwwApiBaseUrl`: `<FROM_GITHUB_VAR: PUBLIC_WWW_API_BASE_URL>`
 - `PublicWwwMediaRequestApiBaseUrl`: `<FROM_GITHUB_VAR: PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL>`
-- `WafWebAclArn`: optional CloudFront WAF ACL ARN (us-east-1)
+- `PublicWwwEdgeVerifySecret`: `<FROM_GITHUB_SECRET: CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY>`
+- `PublicWwwEdgeVerifySecretPrevious`: `<FROM_GITHUB_SECRET: CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS>`
+- `PublicWwwStagingEdgeVerifySecret`: `<FROM_GITHUB_SECRET: CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY>`
+- `PublicWwwStagingEdgeVerifySecretPrevious`: `<FROM_GITHUB_SECRET: CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS>`
+- `WafWebAclArn`: optional CloudFront WAF ACL ARN (us-east-1). It is empty,
+  and neither distribution attaches a WebACL.
+
+`PublicWwwEdgeVerifySecret` and `PublicWwwStagingEdgeVerifySecret` are the
+origin-lock values compared with the `x-proxy-verify` header. The matching
+`Previous` parameters are accepted during rotation. Both values empty for an
+environment leaves that distribution open. Backend deploy passes these four
+parameters even when the secrets are unset, so clearing a secret and
+deploying turns that environment's lock off. Order for staging: set the
+Worker binding `PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET`, then set
+`CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY` to the same value and deploy this
+stack. Leave the production pair empty until Cloudflare sets
+`x-proxy-verify` on `www.evolvesprouts.com`.
 
 Public WWW API configuration is provided at build time via:
 

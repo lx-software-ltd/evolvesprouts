@@ -31,7 +31,21 @@ public website stacks:
 - `PublicWwwCertificateArn`
 - `PublicWwwStagingDomainName`
 - `PublicWwwStagingCertificateArn`
+- `PublicWwwEdgeVerifySecret` (`CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY`)
+- `PublicWwwEdgeVerifySecretPrevious` (`CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS`)
+- `PublicWwwStagingEdgeVerifySecret` (`CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY`)
+- `PublicWwwStagingEdgeVerifySecretPrevious` (`CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS`)
 - `WafWebAclArn`
+
+The edge-verify values are the `x-proxy-verify` origin lock. Both members of
+a pair empty disables the check on that distribution. Deploy forwards an
+empty value, unlike other omitted parameters, so clearing the GitHub secret
+turns the lock off on the next public-website stack deploy. Staging reads
+the header from the Worker binding `PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET`.
+Set that binding before the staging parameter. Production stays empty until
+a Cloudflare late-transform rule on `www.evolvesprouts.com` sends the same
+header. `WafWebAclArn` is empty, so enabling the lock does not detach a
+WebACL.
 
 Optional **transactional email footer** URLs on the API stack. `production.json`
 resolves these from the same `NEXT_PUBLIC_*` GitHub vars that `deploy-public-www`
