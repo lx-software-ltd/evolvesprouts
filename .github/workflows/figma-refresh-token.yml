@@ -30,7 +30,7 @@ permissions:
 
 jobs:
   exchange-code:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Validate secrets
         run: |

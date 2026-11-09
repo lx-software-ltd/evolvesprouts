@@ -15,35 +15,7 @@ export interface paths {
          * Health check
          * @description Returns backend health status and dependency checks.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Service is healthy. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["HealthResponse"];
-                    };
-                };
-                /** @description Service is unhealthy. */
-                503: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["HealthResponse"];
-                    };
-                };
-            };
-        };
+        get: operations["getHealth"];
         put?: never;
         post?: never;
         delete?: never;
@@ -63,70 +35,13 @@ export interface paths {
          * List admin assets
          * @description Admin-only route for listing managed assets.
          */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Case-insensitive match on title, file name, or resource key. For assets linked to a customer invoice, also matches `bill_to_display_name` and `invoice_number`. */
-                    query?: string;
-                    visibility?: "public" | "restricted";
-                    asset_type?: "guide" | "video" | "pdf" | "document";
-                    /** @description When set, return only assets that have this tag (case-insensitive name match). The tag must be linked to at least one asset that matches the optional asset_type filter. */
-                    tag_name?: string;
-                    cursor?: string;
-                    limit?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Asset list response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AssetListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1AdminAssets"];
         put?: never;
         /**
          * Create admin asset
          * @description Admin-only route for creating an asset. When `visibility` is `public`, the handler also creates a share-link row seeded from `ASSET_SHARE_LINK_DEFAULT_ALLOWED_DOMAINS` (public website hostnames from stack parameters). Restricted assets do not receive a share link until an operator creates one.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateAssetRequest"];
-                };
-            };
-            responses: {
-                /** @description Asset create response. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CreateAssetResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        post: operations["postV1AdminAssets"];
         delete?: never;
         options?: never;
         head?: never;
@@ -143,126 +58,29 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Get admin asset */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Asset identifier. */
-                    id: components["parameters"]["AssetId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Asset response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AssetResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
-        /** Update admin asset */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Asset identifier. */
-                    id: components["parameters"]["AssetId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateAssetRequest"];
-                };
-            };
-            responses: {
-                /** @description Asset update response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AssetResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Get admin asset
+         * @description Get admin asset
+         */
+        get: operations["getV1AdminAssetsById"];
+        /**
+         * Update admin asset
+         * @description Update admin asset
+         */
+        put: operations["putV1AdminAssetsById"];
         post?: never;
         /**
          * Delete admin asset
          * @description Permanently deletes the asset metadata and its S3 object. Not allowed when the asset has the `expense_attachment` or `customer_invoice` tag (400).
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Asset identifier. */
-                    id: components["parameters"]["AssetId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Asset deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        delete: operations["deleteV1AdminAssetsById"];
         options?: never;
         head?: never;
-        /** Partially update admin asset */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Asset identifier. */
-                    id: components["parameters"]["AssetId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["PartialUpdateAssetRequest"];
-                };
-            };
-            responses: {
-                /** @description Asset update response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AssetResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Partially update admin asset
+         * @description Partially update admin asset
+         */
+        patch: operations["patchV1AdminAssetsById"];
         trace?: never;
     };
     "/v1/admin/assets/{id}/content/init": {
@@ -281,36 +99,7 @@ export interface paths {
          * Begin admin asset file replacement
          * @description Step 1 of 2 for replacing the binary stored for an asset while keeping the same asset id. Returns a presigned upload URL for a new S3 key under `assets/{id}/...`. Call `POST /v1/admin/assets/{id}/content/complete` after the client uploads to that URL. Not allowed when the asset has the `expense_attachment` or `customer_invoice` tag (400). The presigned PUT binds `Content-Type: application/pdf` regardless of optional `content_type` in the body.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Asset identifier. */
-                    id: components["parameters"]["AssetId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["InitAssetContentReplaceRequest"];
-                };
-            };
-            responses: {
-                /** @description Presigned upload details and pending object key. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["InitAssetContentReplaceResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        post: operations["postV1AdminAssetsByIdContentInit"];
         delete?: never;
         options?: never;
         head?: never;
@@ -333,36 +122,7 @@ export interface paths {
          * Complete admin asset file replacement
          * @description Step 2 of 2: verifies the object exists at `pending_s3_key`, updates the asset to point at it, deletes the previous S3 object, and returns the updated asset. The `pending_s3_key` must be the value returned by `POST .../content/init` for this asset id. Not allowed when the asset has the `expense_attachment` or `customer_invoice` tag (400). `file_name` must match the filename embedded in `pending_s3_key` after server-side sanitization (same rules as init). The object name segment must begin with a standard UUID prefix (`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx-`) from init. Stored `content_type` is always `application/pdf`; the uploaded object's S3 Content-Type and size are validated on complete (max 50 MiB). This call is not idempotent across different `pending_s3_key` values: repeating complete with a stale key after a successful replace returns 400. Concurrent replaces for the same asset are last-writer-wins; earlier pending keys may become orphans if never completed. BadRequest responses may include `field` values such as `pending_s3_key`, `file_name`, `content_type`, or `asset` depending on the failure.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Asset identifier. */
-                    id: components["parameters"]["AssetId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CompleteAssetContentReplaceRequest"];
-                };
-            };
-            responses: {
-                /** @description Updated asset after successful replacement. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AssetResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        post: operations["postV1AdminAssetsByIdContentComplete"];
         delete?: never;
         options?: never;
         head?: never;
@@ -379,65 +139,17 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** List asset grants */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Asset identifier. */
-                    id: components["parameters"]["AssetId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Grant list response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AssetGrantListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * List asset grants
+         * @description List asset grants
+         */
+        get: operations["getV1AdminAssetsByIdGrants"];
         put?: never;
-        /** Create asset grant */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Asset identifier. */
-                    id: components["parameters"]["AssetId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateAssetGrantRequest"];
-                };
-            };
-            responses: {
-                /** @description Grant create response. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AssetGrantResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Create asset grant
+         * @description Create asset grant
+         */
+        post: operations["postV1AdminAssetsByIdGrants"];
         delete?: never;
         options?: never;
         head?: never;
@@ -459,33 +171,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete asset grant */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Asset identifier. */
-                    id: components["parameters"]["AssetId"];
-                    /** @description Asset grant identifier. */
-                    grantId: components["parameters"]["GrantId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Grant deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Delete asset grant
+         * @description Delete asset grant
+         */
+        delete: operations["deleteV1AdminAssetsByIdGrantsByGrantId"];
         options?: never;
         head?: never;
         patch?: never;
@@ -501,99 +191,22 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Get stable asset share link */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Asset identifier. */
-                    id: components["parameters"]["AssetId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Existing share link returned. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AssetShareLinkResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Get stable asset share link
+         * @description Get stable asset share link
+         */
+        get: operations["getV1AdminAssetsByIdShareLink"];
         put?: never;
-        /** Get or create stable asset share link */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Asset identifier. */
-                    id: components["parameters"]["AssetId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["AssetShareLinkPolicyRequest"];
-                };
-            };
-            responses: {
-                /** @description Existing share link returned. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AssetShareLinkResponse"];
-                    };
-                };
-                /** @description Share link created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AssetShareLinkResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
-        /** Revoke stable asset share link */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Asset identifier. */
-                    id: components["parameters"]["AssetId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Share link revoked. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Get or create stable asset share link
+         * @description Get or create stable asset share link
+         */
+        post: operations["postV1AdminAssetsByIdShareLink"];
+        /**
+         * Revoke stable asset share link
+         * @description Revoke stable asset share link
+         */
+        delete: operations["deleteV1AdminAssetsByIdShareLink"];
         options?: never;
         head?: never;
         patch?: never;
@@ -611,37 +224,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Rotate stable asset share link */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Asset identifier. */
-                    id: components["parameters"]["AssetId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["AssetShareLinkPolicyRequest"];
-                };
-            };
-            responses: {
-                /** @description Share link rotated. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AssetShareLinkResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Rotate stable asset share link
+         * @description Rotate stable asset share link
+         */
+        post: operations["postV1AdminAssetsByIdShareLinkRotate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -661,33 +248,7 @@ export interface paths {
          *     Use `parent_id` to fetch direct children, or `flat=true` to return a
          *     flattened tree.
          */
-        get: {
-            parameters: {
-                query?: {
-                    parent_id?: string;
-                    flat?: boolean;
-                    active_only?: boolean;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Geographic area list response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["GeographicAreaListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1AdminGeographicAreas"];
         put?: never;
         post?: never;
         delete?: never;
@@ -703,72 +264,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List locations */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                    cursor?: string;
-                    area_id?: string;
-                    /** @description Case-insensitive substring match on location name or address. */
-                    search?: string;
-                    /**
-                     * @description When `true`, omit locations linked as the saved venue for a non-archived
-                     *     family or organisation (so Services → Venues lists only service-oriented
-                     *     venues). Partner organisations are still included when they use the same
-                     *     location row; those rows remain visible with partner lock metadata.
-                     */
-                    exclude_addresses?: boolean;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Location list response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["LocationListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * List locations
+         * @description List locations
+         */
+        get: operations["getV1AdminLocations"];
         put?: never;
-        /** Create location */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateLocationRequest"];
-                };
-            };
-            responses: {
-                /** @description Location create response. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["LocationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Create location
+         * @description Create location
+         */
+        post: operations["postV1AdminLocations"];
         delete?: never;
         options?: never;
         head?: never;
@@ -795,51 +301,7 @@ export interface paths {
          *     built from the root area ISO code plus the sovereign country row's code
          *     when ``sovereign_country_id`` is set (see ``GET /v1/admin/geographic-areas``).
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["GeocodeLocationRequest"];
-                };
-            };
-            responses: {
-                /** @description Geocoding result. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["GeocodeLocationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-                /** @description Geocoding provider or proxy error. */
-                502: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Geocoding is not configured (for example missing proxy or headers). */
-                503: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        post: operations["postV1AdminLocationsGeocode"];
         delete?: never;
         options?: never;
         head?: never;
@@ -857,105 +319,24 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Update location */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Location identifier. */
-                    id: components["parameters"]["LocationId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateLocationRequest"];
-                };
-            };
-            responses: {
-                /** @description Location update response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["LocationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Update location
+         * @description Update location
+         */
+        put: operations["putV1AdminLocationsById"];
         post?: never;
-        /** Delete location */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Location identifier. */
-                    id: components["parameters"]["LocationId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Location deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-                /** @description Location is linked to an active partner organisation. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Delete location
+         * @description Delete location
+         */
+        delete: operations["deleteV1AdminLocationsById"];
         options?: never;
         head?: never;
-        /** Partially update location */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Location identifier. */
-                    id: components["parameters"]["LocationId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["PartialUpdateLocationRequest"];
-                };
-            };
-            responses: {
-                /** @description Location update response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["LocationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Partially update location
+         * @description Partially update location
+         */
+        patch: operations["patchV1AdminLocationsById"];
         trace?: never;
     };
     "/v1/admin/cognito-users": {
@@ -969,74 +350,13 @@ export interface paths {
          * List Cognito users
          * @description Returns a page of users from the Cognito user pool. Optional `name` and `email` filters use Cognito `ListUsers` prefix/exact match (`email` with `@` is exact). When both are set, `email` is applied in Cognito and `name` is a case-insensitive substring on that page. Staff groups (`admin`, `manager`, `instructor`) are attached from `ListUsersInGroup`.
          */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                    /** @description Opaque continuation token from `next_cursor`. */
-                    cursor?: string;
-                    name?: string;
-                    email?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Paginated Cognito user list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CognitoUserListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1AdminCognitoUsers"];
         put?: never;
         /**
          * Create a Cognito user
          * @description Creates a user in the Cognito user pool (username is the email). Passwordless sign-in is unchanged: Cognito's temporary-password email is suppressed. Optional `group` must be a staff group (`admin`, `manager`, or `instructor`).
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateCognitoUserRequest"];
-                };
-            };
-            responses: {
-                /** @description Created Cognito user. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CognitoUser"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                /** @description A user with this email already exists. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        post: operations["postV1AdminCognitoUsers"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1056,106 +376,21 @@ export interface paths {
          * Get a Cognito user
          * @description Returns one user from the Cognito user pool by username.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    username: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Cognito user. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CognitoUser"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1AdminCognitoUsersByUsername"];
         put?: never;
         post?: never;
         /**
          * Delete a Cognito user
          * @description Permanently deletes the user from the Cognito user pool. Callers cannot delete themselves.
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    username: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Delete confirmation. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["DeleteCognitoUserResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        delete: operations["deleteV1AdminCognitoUsersByUsername"];
         options?: never;
         head?: never;
         /**
          * Update a Cognito user
          * @description Updates email, name, staff group, and/or enabled state. Omitting a field leaves it unchanged. `group` of `null` removes staff groups. Callers cannot disable themselves or remove their own staff group.
          */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    username: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateCognitoUserRequest"];
-                };
-            };
-            responses: {
-                /** @description Updated Cognito user. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CognitoUser"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-                /** @description A user with this email already exists. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        patch: operations["patchV1AdminCognitoUsersByUsername"];
         trace?: never;
     };
     "/v1/admin/users": {
@@ -1169,29 +404,7 @@ export interface paths {
          * List admin users
          * @description Returns users in the admin Cognito group for assignee selection.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Admin user list response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminUserListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1AdminUsers"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1211,29 +424,7 @@ export interface paths {
          * List instructor users
          * @description Returns users in the instructor Cognito group for service instance assignment.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Instructor user list response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminUserListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1AdminInstructors"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1253,41 +444,7 @@ export interface paths {
          * List audit log entries
          * @description Returns database audit history (trigger- and application-sourced rows in `audit_log`). Optional filters combine as in the admin Lambda handler: when `record_id` is set, `table` is required; `user_id` is a Cognito subject (sub), `api-key:<id>`, or a system actor (`system`, `webhook:whatsapp`, `webhook:meta`, `alembic`, `system:sales-daily-plan`). Use `email` to filter by Cognito email, API key name, or system-actor label (server resolves to sub, `api-key:<id>`, or the system `user_id`); do not pass `user_id` together with `email`.
          */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                    /** @description Opaque continuation token from `next_cursor` for the default recent listing. */
-                    cursor?: string;
-                    table?: "api_keys" | "asset_access_grants" | "asset_share_links" | "asset_tags" | "assets" | "bulk_expense_import_jobs" | "calendar_manual_blocks" | "completion_certificates" | "consultation_details" | "contact_tags" | "contacts" | "customer_invoice_lines" | "customer_invoices" | "customer_payments" | "customer_receipts" | "discount_codes" | "document_counters" | "enrollments" | "event_details" | "event_ticket_tiers" | "expense_attachments" | "expenses" | "families" | "family_members" | "family_tags" | "geographic_areas" | "inbound_emails" | "instance_session_slots" | "legacy_import_refs" | "locations" | "meta_conversations" | "meta_messages" | "notes" | "organization_members" | "organization_tags" | "organizations" | "payment_allocations" | "sales_lead_events" | "sales_leads" | "service_assets" | "service_instance_organizations" | "service_instance_tags" | "service_instances" | "service_tags" | "services" | "tags" | "training_course_details" | "training_instance_details" | "whatsapp_conversations" | "whatsapp_messages";
-                    record_id?: string;
-                    user_id?: string;
-                    /** @description Filter by Cognito email, API key name, or system-actor label. Values containing `@` resolve to a Cognito `sub` via `list_users`. Other values first match known system actors (`System`, `WhatsApp webhook`, `Meta webhook`, `Alembic`, `Sales daily plan schedule`, or stored ids `system`, `webhook:whatsapp`, `webhook:meta`, `alembic`, `system:sales-daily-plan`), then `api_keys.name` (case-insensitive) which becomes `api-key:<id>`. Mutually exclusive with `user_id`. When no actor matches, the response is an empty list. */
-                    email?: string;
-                    action?: "INSERT" | "UPDATE" | "DELETE";
-                    /** @description ISO 8601 timestamp; only entries at or after this time are returned where applicable. */
-                    since?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Paginated audit log list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AuditLogListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1AdminAuditLogs"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1308,64 +465,14 @@ export interface paths {
          * @description Lists hashed API tokens used by the `x-api-token` authorizer.
          *     The plaintext token is never stored and is not returned here.
          */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                    /** @description Opaque continuation token from `next_cursor`. */
-                    cursor?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Paginated API token list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiKeyListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1AdminApiKeys"];
         put?: never;
         /**
          * Create an API token
          * @description Creates a hashed API token. The plaintext `api_token` is returned
          *     once in this response and cannot be retrieved again.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateApiKeyRequest"];
-                };
-            };
-            responses: {
-                /** @description Token created; plaintext included once. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiKeyCreatedResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        post: operations["postV1AdminApiKeys"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1388,31 +495,7 @@ export interface paths {
          * Revoke an API token
          * @description Soft-revokes the token. Idempotent if already revoked.
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Revoked token metadata. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ApiKeySummary"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        delete: operations["deleteV1AdminApiKeysById"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1425,76 +508,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List sales leads */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                    /** @description Opaque continuation token from `next_cursor`; only valid when `sort` is `created_at`. */
-                    cursor?: string;
-                    stage?: string;
-                    source?: string;
-                    lead_type?: string;
-                    assigned_to?: string;
-                    unassigned?: boolean;
-                    date_from?: string;
-                    date_to?: string;
-                    search?: string;
-                    sort?: "created_at" | "updated_at" | "funnel_stage" | "contact_name";
-                    sort_dir?: "asc" | "desc";
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Lead list response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["LeadListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * List sales leads
+         * @description List sales leads
+         */
+        get: operations["getV1AdminLeads"];
         put?: never;
         /**
          * Create sales lead
          * @description Always inserts a new lead (`is_manual: true`) even when the contact already has an open automated lead. Automated public and inbox paths reuse or reopen the contact's existing lead instead.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateLeadRequest"];
-                };
-            };
-            responses: {
-                /** @description Lead create response. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["LeadDetailResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        post: operations["postV1AdminLeads"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1514,42 +538,7 @@ export interface paths {
          * Merge selected sales leads
          * @description Merges two or more leads into the chosen keeper lead. When selected leads belong to different contacts, loser identity and related records are folded onto the keeper contact through the shared record-merge helpers (notes, enrollments, invoices, payments, conversations, certificates, tags, and remaining leads). Orphaned loser contacts are deleted. Non-selected leads on loser contacts remain on the keeper contact as separate lead rows except uniqueness conflicts. Selected lead rows are collapsed onto the keeper lead first. A leftover open automated lead on a loser contact is folded onto the keeper contact's open lead before the move is saved. The surviving lead keeps the higher lead-type rank and the further-along funnel stage. A remaining one-open-lead conflict returns 409.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["MergeLeadsRequest"];
-                };
-            };
-            responses: {
-                /** @description Surviving lead detail after merge. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["LeadDetailResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-                /** @description The selected leads belong to contacts that each already have an open automated sales lead, and the merge could not fold them. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        post: operations["postV1AdminLeadsMerge"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1563,33 +552,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lead analytics summary */
-        get: {
-            parameters: {
-                query?: {
-                    date_from?: string;
-                    date_to?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Lead analytics response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["LeadAnalyticsResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Lead analytics summary
+         * @description Lead analytics summary
+         */
+        get: operations["getV1AdminLeadsAnalytics"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1605,63 +572,21 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get sales lead assignment and OpenRouter model settings */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Sales settings response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["SalesSettingsResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Get sales lead assignment and OpenRouter model settings
+         * @description Get sales lead assignment and OpenRouter model settings
+         */
+        get: operations["getV1AdminLeadsSettings"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** Update sales lead assignment and OpenRouter model settings */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateSalesSettingsRequest"];
-                };
-            };
-            responses: {
-                /** @description Updated sales settings. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["SalesSettingsResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Update sales lead assignment and OpenRouter model settings
+         * @description Update sales lead assignment and OpenRouter model settings
+         */
+        patch: operations["patchV1AdminLeadsSettings"];
         trace?: never;
     };
     "/v1/admin/leads/daily-plan": {
@@ -1675,84 +600,18 @@ export interface paths {
          * Get latest org-wide sales plan of the day
          * @description Returns the newest stored org-wide AI sales daily plan, including staleness metadata, plus `memory` (up to the five newest stored plans, including the latest) and active `instructions`. `plan` is null when none has been generated yet. `suppressed_items` lists priorities the generator hid because they were done today, dismissed, or snoozed. A scheduled job also generates a new plan every day at 06:00 HKT. A plan is stale when it is older than 24 hours, when a newer WhatsApp/Meta message exists after the stored conversation watermark, when a lead was created or a funnel-stage event occurred after the stored pipeline watermark, or when a contact was created or updated after that watermark. `stale_counts` reports how many conversation, pipeline, and contact changes landed after those watermarks. `job` is the newest generation job (including a failed 06:00 HKT run). The serialized plan includes item keys, annotations, and follow-up `questions`. Pass `compare=true` to include `dropped_priorities` and per-priority `compare_status` versus the previous plan. `stale_counts` are populated only when activity (not age alone) made the plan stale. All stored plans are retained until `DELETE /v1/admin/leads/daily-plan`.
          */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description When `true`, `1`, or `yes`, compute new/carried/dropped priority comparison against the previous stored plan. */
-                    compare?: "true" | "false" | "1" | "0" | "yes" | "no";
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Latest daily plan payload (or null) plus memory. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["SalesDailyPlanResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1AdminLeadsDailyPlan"];
         put?: never;
         /**
          * Queue org-wide sales plan of the day generation
          * @description Enqueues an asynchronous job that generates a sales-focused plan of the day via the shared OpenRouter pipeline (same Secrets Manager key, allow-listed chat-completions URL, and AWS HTTP proxy as lead AI suggestions). Context includes open pipeline, unanswered threads, unpaid issued invoices, and the published catalogue. Optional `operator_input` is stored on the job and the resulting plan and is saved as an instruction. `operator_input_scope` `today` (default) lasts until the next 06:00 HKT; `standing` is included until removed. Done, dismissed, and snoozed items are omitted in code after the model responds. Poll `GET /v1/admin/leads/daily-plan/jobs/{job_id}` for status, timing (`queue_wait_ms`, `duration_ms`), and the resulting plan. Does not send messages or payment reminders.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["SalesDailyPlanGenerateRequest"];
-                };
-            };
-            responses: {
-                /** @description Generation job accepted. */
-                202: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["SalesDailyPlanJobResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        post: operations["postV1AdminLeadsDailyPlan"];
         /**
          * Reset sale plan memory
          * @description Permanently deletes every stored sales daily plan, generation job, org-wide done/dismiss/snooze state, and instruction. Live contacts, leads, and messages are not affected. This cannot be undone.
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Memory deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        delete: operations["deleteV1AdminLeadsDailyPlan"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1771,30 +630,7 @@ export interface paths {
          * Get sales daily plan job status
          * @description Returns job status and timing. When `status` is `succeeded`, includes the serialized plan. Use `queue_wait_ms` (created→started) and `duration_ms` (started→finished) to time OpenRouter runs.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    job_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Job status payload. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["SalesDailyPlanJobResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1AdminLeadsDailyPlanJobsByJobId"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1816,33 +652,7 @@ export interface paths {
          * Mark or unmark an insight priority as done
          * @description Ticks or unticks one priority. Done state is org-wide and hides the same invoice, conversation, lead-and-kind, or instruction until the next 06:00 HKT, including after the insight is regenerated. `done: false` clears that suppression. `plan_id` is ignored.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["SalesDailyPlanPriorityCompletionRequest"];
-                };
-            };
-            responses: {
-                /** @description Updated plan plus the completion row (null when undone). */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["SalesDailyPlanPriorityCompletionResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        post: operations["postV1AdminLeadsDailyPlanPriorityCompletions"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1862,42 +672,7 @@ export interface paths {
          * Upsert insight-board item annotation
          * @description Stores feedback (`up`, `down`, `not_relevant`), a snooze (`tomorrow`, `next_week`, or `clear`), and/or an edited outreach draft. Feedback and snooze are org-wide: `down` and `not_relevant` hide the item for 30 days, and snooze hides it until the chosen time. An edited `draft_reply` stays on the current plan; send `plan_id` and a mismatch with the latest plan returns 409. `item_key` is capped at 1024 characters. Omitted fields are left unchanged.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["SalesDailyPlanItemAnnotationRequest"];
-                };
-            };
-            responses: {
-                /** @description Updated plan plus the annotation row. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["SalesDailyPlanItemAnnotationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-                /** @description The stored insight was refreshed after this page loaded. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        post: operations["postV1AdminLeadsDailyPlanItemAnnotations"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1917,60 +692,7 @@ export interface paths {
          * Ask a follow-up question about the stored insight
          * @description Sends the stored plan JSON (not a fresh CRM snapshot) to OpenRouter using the Sales Config model, with a short timeout. The model call does not hold a database session. Send `plan_id` of the plan on screen; a mismatch with the latest plan at request start returns 409. GET responses return at most the 20 newest questions in chronological order.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["SalesDailyPlanQuestionRequest"];
-                };
-            };
-            responses: {
-                /** @description Updated plan plus the new question row. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["SalesDailyPlanQuestionResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-                /** @description The stored insight was refreshed after this page loaded. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description The model returned an empty or invalid answer. */
-                502: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description The model timed out. */
-                504: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        post: operations["postV1AdminLeadsDailyPlanQuestions"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1988,58 +710,13 @@ export interface paths {
          * List active insight instructions
          * @description Returns refinements that later generations must honour. `today` instructions drop out after the next 06:00 HKT. `standing` instructions stay until deleted.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Active instructions. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["SalesDailyPlanInstructionListResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1AdminLeadsDailyPlanInstructions"];
         put?: never;
         /**
          * Save an insight instruction without generating
          * @description Stores a refinement. `scope` defaults to `today` (until the next 06:00 HKT). `standing` is included in every later generation until removed. An active instruction with the same scope and wording is reused.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["SalesDailyPlanInstructionRequest"];
-                };
-            };
-            responses: {
-                /** @description Saved instruction. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["SalesDailyPlanInstructionResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        post: operations["postV1AdminLeadsDailyPlanInstructions"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2062,30 +739,7 @@ export interface paths {
          * Remove an insight instruction
          * @description Archives one instruction so later generations no longer include it. Stored plans are kept.
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    instruction_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Archived instruction and the latest plan when one exists. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["SalesDailyPlanInstructionArchiveResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        delete: operations["deleteV1AdminLeadsDailyPlanInstructionsByInstructionId"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2098,41 +752,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List captured WhatsApp conversations */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                    /** @description Opaque continuation token from `next_cursor`. */
-                    cursor?: string;
-                    /** @description Case-insensitive search on profile name or WhatsApp id. */
-                    q?: string;
-                    /** @description Restrict results to conversations linked to this CRM contact. Mutually exclusive with `family_id` and `organization_id`. */
-                    contact_id?: string;
-                    /** @description Restrict results to conversations linked to any member contact of this family. Mutually exclusive with `contact_id` and `organization_id`. */
-                    family_id?: string;
-                    /** @description Restrict results to conversations linked to any member contact of this organisation. Mutually exclusive with `contact_id` and `family_id`. */
-                    organization_id?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Paginated WhatsApp conversation list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["WhatsAppConversationListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        /**
+         * List captured WhatsApp conversations
+         * @description List captured WhatsApp conversations
+         */
+        get: operations["getV1AdminWhatsappConversations"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2150,34 +774,11 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** List messages for a WhatsApp conversation */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                };
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Conversation header plus newest-first messages. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["WhatsAppMessageListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * List messages for a WhatsApp conversation
+         * @description List messages for a WhatsApp conversation
+         */
+        get: operations["getV1AdminWhatsappConversationsByIdMessages"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2193,63 +794,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List WhatsApp export import jobs */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                    cursor?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Paginated WhatsApp export import jobs. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["InboxImportJobListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        /**
+         * List WhatsApp export import jobs
+         * @description List WhatsApp export import jobs
+         */
+        get: operations["getV1AdminWhatsappImportJobs"];
         put?: never;
         /**
          * Queue a WhatsApp chat export import
          * @description Upload a `.txt` or `.zip` WhatsApp Business App export as a restricted document asset first, then pass its id. Does not create new sales leads. Graph Cloud API cannot pull WhatsApp history; this parses a phone export.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateWhatsAppExportImportJobRequest"];
-                };
-            };
-            responses: {
-                /** @description Import job queued. */
-                202: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["InboxImportJobResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        post: operations["postV1AdminWhatsappImportJobs"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2263,43 +818,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List captured Messenger and Instagram conversations */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                    /** @description Opaque continuation token from `next_cursor`. */
-                    cursor?: string;
-                    /** @description Case-insensitive search on profile name or Page-scoped user id. */
-                    q?: string;
-                    /** @description Restrict results to `facebook` (Messenger) or `instagram`. */
-                    channel?: components["schemas"]["MetaChannel"];
-                    /** @description Restrict results to conversations linked to this CRM contact. Mutually exclusive with `family_id` and `organization_id`. */
-                    contact_id?: string;
-                    /** @description Restrict results to conversations linked to any member contact of this family. Mutually exclusive with `contact_id` and `organization_id`. */
-                    family_id?: string;
-                    /** @description Restrict results to conversations linked to any member contact of this organisation. Mutually exclusive with `contact_id` and `family_id`. */
-                    organization_id?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Paginated Meta conversation list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["MetaConversationListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        /**
+         * List captured Messenger and Instagram conversations
+         * @description List captured Messenger and Instagram conversations
+         */
+        get: operations["getV1AdminMetaConversations"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2317,34 +840,11 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** List messages for a Messenger or Instagram conversation */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                };
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Conversation header plus newest-first messages. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["MetaMessageListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * List messages for a Messenger or Instagram conversation
+         * @description List messages for a Messenger or Instagram conversation
+         */
+        get: operations["getV1AdminMetaConversationsByIdMessages"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2360,63 +860,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Messenger and Instagram Graph import jobs */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                    cursor?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Paginated Meta Graph import jobs. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["InboxImportJobListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        /**
+         * List Messenger and Instagram Graph import jobs
+         * @description List Messenger and Instagram Graph import jobs
+         */
+        get: operations["getV1AdminMetaImportJobs"];
         put?: never;
         /**
          * Queue a Messenger or Instagram recent-history import
          * @description Pulls Graph Conversations API threads for the configured Page. Meta only returns message bodies for the last 20 messages per thread. Does not create new sales leads. Creates placeholder contacts when a thread has no contact yet.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateMetaImportJobRequest"];
-                };
-            };
-            responses: {
-                /** @description Import job queued. */
-                202: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["InboxImportJobResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        post: operations["postV1AdminMetaImportJobs"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2433,69 +887,21 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Get lead detail */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Sales lead identifier. */
-                    id: components["parameters"]["LeadId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Lead detail response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["LeadDetailResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Get lead detail
+         * @description Get lead detail
+         */
+        get: operations["getV1AdminLeadsById"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** Update lead stage or assignee */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Sales lead identifier. */
-                    id: components["parameters"]["LeadId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateLeadRequest"];
-                };
-            };
-            responses: {
-                /** @description Lead update response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["LeadDetailResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Update lead stage or assignee
+         * @description Update lead stage or assignee
+         */
+        patch: operations["patchV1AdminLeadsById"];
         trace?: never;
     };
     "/v1/admin/leads/{id}/notes": {
@@ -2510,39 +916,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Add lead note */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Sales lead identifier. */
-                    id: components["parameters"]["LeadId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateNoteRequest"];
-                };
-            };
-            responses: {
-                /** @description Lead note created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            note: components["schemas"]["Note"];
-                        };
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Add lead note
+         * @description Add lead note
+         */
+        post: operations["postV1AdminLeadsByIdNotes"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2563,62 +941,13 @@ export interface paths {
          * Get latest AI close suggestion for a lead
          * @description Returns the newest stored AI closing suggestion for the lead, including staleness metadata. `suggestion` is null when none has been generated yet. A suggestion is stale when it is older than 24 hours or when a newer WhatsApp/Meta message exists for the lead contact after the stored conversation watermark.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Sales lead identifier. */
-                    id: components["parameters"]["LeadId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Latest suggestion payload (or null). */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["LeadAiSuggestionResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1AdminLeadsByIdAiSuggestion"];
         put?: never;
         /**
          * Queue AI close suggestion generation for a lead
          * @description Enqueues an asynchronous job that generates a closing/follow-up suggestion via the shared OpenRouter pipeline (same Secrets Manager key, allow-listed chat-completions URL, and AWS HTTP proxy as expense invoice parsing). Poll `GET /v1/admin/leads/{id}/ai-suggestion/jobs/{job_id}` for status, timing (`queue_wait_ms`, `duration_ms`), and the resulting suggestion. Does not send messages.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Sales lead identifier. */
-                    id: components["parameters"]["LeadId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Generation job accepted. */
-                202: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["LeadAiSuggestionJobResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        post: operations["postV1AdminLeadsByIdAiSuggestion"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2640,32 +969,7 @@ export interface paths {
          * Get lead AI suggestion job status
          * @description Returns job status and timing. When `status` is `succeeded`, includes the serialized suggestion. Use `queue_wait_ms` (created→started) and `duration_ms` (started→finished) to time OpenRouter runs.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Sales lead identifier. */
-                    id: components["parameters"]["LeadId"];
-                    job_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Job status payload. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["LeadAiSuggestionJobResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1AdminLeadsByIdAiSuggestionJobsByJobId"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2681,79 +985,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List services */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                    /**
-                     * @description Opaque continuation token from `next_cursor` on the previous page.
-                     *     Service list results are ordered by title ascending, then id ascending;
-                     *     the cursor encodes the last row's title and id for that ordering.
-                     */
-                    cursor?: string;
-                    service_type?: components["schemas"]["ServiceType"];
-                    status?: components["schemas"]["ServiceStatus"];
-                    search?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Service list response. Each `ServiceSummary` item includes `service_tier` (nullable) for admin list display and filtering context. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ServiceListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * List services
+         * @description List services
+         */
+        get: operations["getV1AdminServices"];
         put?: never;
-        /** Create service */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateServiceRequest"];
-                };
-            };
-            responses: {
-                /** @description Service created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ServiceResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-                /** @description Service key and service tier conflict with another service (unique index on case-insensitive service_key and tier, NULL tiers treated as one bucket). Error body uses `field` value `service_key_tier` (see `ErrorResponse.field`). */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Create service
+         * @description Create service
+         */
+        post: operations["postV1AdminServices"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2772,55 +1014,7 @@ export interface paths {
          * @description Returns instances from all services, optionally filtered by `service_type`
          *     and/or `service_id`. Omit both filters to include every instance type.
          */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                    cursor?: string;
-                    status?: components["schemas"]["InstanceStatus"];
-                    /** @description When set, only instances for this service UUID. */
-                    service_id?: string;
-                    /** @description When set, only instances whose parent service has this type. */
-                    service_type?: components["schemas"]["ServiceType"];
-                    /**
-                     * @description When set, only instances with a non-cancelled enrollment attributed to this
-                     *     contact or to a family or organisation they belong to. Mutually exclusive
-                     *     with `family_id` and `organization_id`.
-                     */
-                    contact_id?: string;
-                    /**
-                     * @description When set, only instances with a non-cancelled enrollment attributed to this
-                     *     family or to one of its member contacts. Mutually exclusive with
-                     *     `contact_id` and `organization_id`.
-                     */
-                    family_id?: string;
-                    /**
-                     * @description When set, only instances with a non-cancelled enrollment attributed to this
-                     *     organisation or to one of its member contacts. Mutually exclusive with
-                     *     `contact_id` and `family_id`.
-                     */
-                    organization_id?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Service instance list response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["InstanceListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1AdminServicesInstances"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2843,32 +1037,7 @@ export interface paths {
          * Discount code usage summary for a service
          * @description Returns aggregate `current_uses` across discount codes scoped to this service (`service_id` set) and how many such codes exist. Used by the admin UI before changing a service `service_key`.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Service identifier. */
-                    id: components["parameters"]["ServiceId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Usage summary. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["DiscountCodeUsageSummaryResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1AdminServicesByIdDiscountCodeUsageSummary"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2887,150 +1056,29 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Get service */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Service identifier. */
-                    id: components["parameters"]["ServiceId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Service response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ServiceResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
-        /** Update service */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Service identifier. */
-                    id: components["parameters"]["ServiceId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateServiceRequest"];
-                };
-            };
-            responses: {
-                /** @description Service response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ServiceResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-                /** @description Service key and service tier conflict with another service (unique index on case-insensitive service_key and tier, NULL tiers treated as one bucket). Error body uses `field` value `service_key_tier` (see `ErrorResponse.field`). */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Get service
+         * @description Get service
+         */
+        get: operations["getV1AdminServicesById"];
+        /**
+         * Update service
+         * @description Update service
+         */
+        put: operations["putV1AdminServicesById"];
         post?: never;
-        /** Delete service */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Service identifier. */
-                    id: components["parameters"]["ServiceId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Service deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-                /** @description Service has instances and cannot be deleted. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Delete service
+         * @description Delete service
+         */
+        delete: operations["deleteV1AdminServicesById"];
         options?: never;
         head?: never;
-        /** Partially update service */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Service identifier. */
-                    id: components["parameters"]["ServiceId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["PartialUpdateServiceRequest"];
-                };
-            };
-            responses: {
-                /** @description Service response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ServiceResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-                /** @description Service key and service tier conflict with another service (unique index on case-insensitive service_key and tier, NULL tiers treated as one bucket). Error body uses `field` value `service_key_tier` (see `ErrorResponse.field`). */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Partially update service
+         * @description Partially update service
+         */
+        patch: operations["patchV1AdminServicesById"];
         trace?: never;
     };
     "/v1/admin/services/{id}/cover-image": {
@@ -3045,37 +1093,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create service cover-image upload URL */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Service identifier. */
-                    id: components["parameters"]["ServiceId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateServiceCoverImageUploadRequest"];
-                };
-            };
-            responses: {
-                /** @description Cover image upload URL response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ServiceCoverImageUploadResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Create service cover-image upload URL
+         * @description Create service cover-image upload URL
+         */
+        post: operations["postV1AdminServicesByIdCoverImage"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3092,65 +1114,17 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** List service instances */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Service identifier. */
-                    id: components["parameters"]["ServiceId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Service instance list response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["InstanceListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * List service instances
+         * @description List service instances
+         */
+        get: operations["getV1AdminServicesByIdInstances"];
         put?: never;
-        /** Create service instance */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Service identifier. */
-                    id: components["parameters"]["ServiceId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateInstanceRequest"];
-                };
-            };
-            responses: {
-                /** @description Service instance created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["InstanceResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Create service instance
+         * @description Create service instance
+         */
+        post: operations["postV1AdminServicesByIdInstances"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3169,99 +1143,22 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Get service instance */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Service identifier. */
-                    id: components["parameters"]["ServiceId"];
-                    /** @description Service instance identifier. */
-                    instance_id: components["parameters"]["InstanceId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Service instance response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["InstanceResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Get service instance
+         * @description Get service instance
+         */
+        get: operations["getV1AdminServicesByIdInstancesByInstanceId"];
         /**
          * Update service instance
          * @description When `status` is set to `completed`, every enrollment on the instance that is still `registered` or `confirmed` is updated to `completed` in the same request (cancelled, waitlisted, and already-completed rows are left unchanged).
          */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Service identifier. */
-                    id: components["parameters"]["ServiceId"];
-                    /** @description Service instance identifier. */
-                    instance_id: components["parameters"]["InstanceId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateInstanceRequest"];
-                };
-            };
-            responses: {
-                /** @description Service instance response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["InstanceResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        put: operations["putV1AdminServicesByIdInstancesByInstanceId"];
         post?: never;
-        /** Delete service instance */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Service identifier. */
-                    id: components["parameters"]["ServiceId"];
-                    /** @description Service instance identifier. */
-                    instance_id: components["parameters"]["InstanceId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Service instance deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Delete service instance
+         * @description Delete service instance
+         */
+        delete: operations["deleteV1AdminServicesByIdInstancesByInstanceId"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3279,69 +1176,17 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** List instance enrollments */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Service identifier. */
-                    id: components["parameters"]["ServiceId"];
-                    /** @description Service instance identifier. */
-                    instance_id: components["parameters"]["InstanceId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Enrollment list response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["EnrollmentListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * List instance enrollments
+         * @description List instance enrollments
+         */
+        get: operations["getV1AdminServicesByIdInstancesByInstanceIdEnrollments"];
         put?: never;
-        /** Create instance enrollment */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Service identifier. */
-                    id: components["parameters"]["ServiceId"];
-                    /** @description Service instance identifier. */
-                    instance_id: components["parameters"]["InstanceId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateEnrollmentRequest"];
-                };
-            };
-            responses: {
-                /** @description Enrollment created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["EnrollmentResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Create instance enrollment
+         * @description Create instance enrollment
+         */
+        post: operations["postV1AdminServicesByIdInstancesByInstanceIdEnrollments"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3365,72 +1210,18 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete enrollment */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Service identifier. */
-                    id: components["parameters"]["ServiceId"];
-                    /** @description Service instance identifier. */
-                    instance_id: components["parameters"]["InstanceId"];
-                    /** @description Enrollment identifier. */
-                    enrollment_id: components["parameters"]["EnrollmentId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Enrollment deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Delete enrollment
+         * @description Delete enrollment
+         */
+        delete: operations["deleteV1AdminServicesByIdInstancesByInstanceIdEnrollmentsByEnrollmentId"];
         options?: never;
         head?: never;
-        /** Update enrollment */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Service identifier. */
-                    id: components["parameters"]["ServiceId"];
-                    /** @description Service instance identifier. */
-                    instance_id: components["parameters"]["InstanceId"];
-                    /** @description Enrollment identifier. */
-                    enrollment_id: components["parameters"]["EnrollmentId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateEnrollmentRequest"];
-                };
-            };
-            responses: {
-                /** @description Enrollment response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["EnrollmentResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Update enrollment
+         * @description Update enrollment
+         */
+        patch: operations["patchV1AdminServicesByIdInstancesByInstanceIdEnrollmentsByEnrollmentId"];
         trace?: never;
     };
     "/v1/admin/discount-codes": {
@@ -3440,71 +1231,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List discount codes */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Optional scope facet: `unscoped` (no service/instance), `service` (service only), `instance` (instance-scoped). Omit or `all` for no scope facet filter. */
-                    scope?: "all" | "unscoped" | "service" | "instance";
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Discount code list response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["DiscountCodeListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * List discount codes
+         * @description List discount codes
+         */
+        get: operations["getV1AdminDiscountCodes"];
         put?: never;
-        /** Create discount code */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateDiscountCodeRequest"];
-                };
-            };
-            responses: {
-                /** @description Discount code created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["DiscountCodeResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-                /** @description Discount code value conflict (duplicate code, case-insensitive). */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Create discount code
+         * @description Create discount code
+         */
+        post: operations["postV1AdminDiscountCodes"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3522,37 +1259,11 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Update discount code */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Discount code identifier. */
-                    id: components["parameters"]["DiscountCodeId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateDiscountCodeRequest"];
-                };
-            };
-            responses: {
-                /** @description Discount code response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["DiscountCodeResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Update discount code
+         * @description Update discount code
+         */
+        put: operations["putV1AdminDiscountCodesById"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3567,65 +1278,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List completion certificates */
-        get: {
-            parameters: {
-                query?: {
-                    contact_id?: string;
-                    service_id?: string;
-                    instance_id?: string;
-                    status?: "issued" | "voided";
-                    limit?: number;
-                    cursor?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Certificate list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CompletionCertificateListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        /**
+         * List completion certificates
+         * @description List completion certificates
+         */
+        get: operations["getV1AdminCompletionCertificates"];
         put?: never;
-        /** Issue completion certificate */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["IssueCompletionCertificateRequest"];
-                };
-            };
-            responses: {
-                /** @description Certificate issued. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CompletionCertificateResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Issue completion certificate
+         * @description Issue completion certificate
+         */
+        post: operations["postV1AdminCompletionCertificates"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3646,32 +1309,7 @@ export interface paths {
          * @description Renders a certificate PDF from the request payload without persisting a row.
          *     Returns a short-lived CloudFront-signed download URL.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["PreviewCompletionCertificateRequest"];
-                };
-            };
-            responses: {
-                /** @description Signed preview URL. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PdfDownloadResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        post: operations["postV1AdminCompletionCertificatesPreview"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3695,33 +1333,7 @@ export interface paths {
          * Delete completion certificate
          * @description Permanently removes the certificate row and best-effort deletes the stored PDF.
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Completion certificate identifier. */
-                    id: components["parameters"]["CompletionCertificateId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Deleted. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            deleted: boolean;
-                        };
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        delete: operations["deleteV1AdminCompletionCertificatesById"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3737,33 +1349,11 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Download issued completion certificate PDF */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Completion certificate identifier. */
-                    id: components["parameters"]["CompletionCertificateId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Signed download URL for an issued certificate. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["PdfDownloadResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Download issued completion certificate PDF
+         * @description Download issued completion certificate PDF
+         */
+        get: operations["getV1AdminCompletionCertificatesByIdPdf"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3784,33 +1374,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Void completion certificate */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Completion certificate identifier. */
-                    id: components["parameters"]["CompletionCertificateId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Voided certificate. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CompletionCertificateResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Void completion certificate
+         * @description Void completion certificate
+         */
+        post: operations["postV1AdminCompletionCertificatesByIdVoid"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3829,69 +1397,13 @@ export interface paths {
          * @description Returns **manual** rows from `calendar_manual_blocks` only (session-derived blockers
          *     are exposed on `GET /v1/calendar/blockers`). Current release supports `purpose=consultation_booking` only.
          */
-        get: {
-            parameters: {
-                query: {
-                    purpose: string;
-                    from: string;
-                    to: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Manual block list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminCalendarManualBlockListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1AdminCalendarManualBlocks"];
         put?: never;
-        /** Create manual calendar block */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateAdminCalendarManualBlockRequest"];
-                };
-            };
-            responses: {
-                /** @description Block created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminCalendarManualBlockResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                /** @description Duplicate purpose/date/period. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Create manual calendar block
+         * @description Create manual calendar block
+         */
+        post: operations["postV1AdminCalendarManualBlocks"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3910,72 +1422,18 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete manual calendar block */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Deleted. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminCalendarManualBlockDeleteResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Delete manual calendar block
+         * @description Delete manual calendar block
+         */
+        delete: operations["deleteV1AdminCalendarManualBlocksById"];
         options?: never;
         head?: never;
-        /** Update manual calendar block */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateAdminCalendarManualBlockRequest"];
-                };
-            };
-            responses: {
-                /** @description Updated block. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminCalendarManualBlockResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-                /** @description Duplicate purpose/date/period. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Update manual calendar block
+         * @description Update manual calendar block
+         */
+        patch: operations["patchV1AdminCalendarManualBlocksById"];
         trace?: never;
     };
     "/v1/admin/tags": {
@@ -3991,70 +1449,13 @@ export interface paths {
          *     Use `include_archived=true` for active and archived together, or `archived_only=true`
          *     for archived rows only. Do not pass both `include_archived` and `archived_only`.
          */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description When true, include tags with a non-null `archived_at`. */
-                    include_archived?: boolean;
-                    /** @description When true, return only archived tags (mutually exclusive with `include_archived`). */
-                    archived_only?: boolean;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Tag list with usage counts. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminTagListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1AdminTags"];
         put?: never;
-        /** Create CRM tag */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateAdminTagRequest"];
-                };
-            };
-            responses: {
-                /** @description Tag created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminTagResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                /** @description Duplicate tag name (case-insensitive uniqueness). */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        /**
+         * Create CRM tag
+         * @description Create CRM tag
+         */
+        post: operations["postV1AdminTags"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4083,31 +1484,7 @@ export interface paths {
          *     for in-use tags. If the client predicted delete vs archive from a stale list, compare
          *     `usage_count` to the prior value to detect a race.
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Delete outcome (hard delete or archive). */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminTagDeleteResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        delete: operations["deleteV1AdminTagsById"];
         options?: never;
         head?: never;
         /**
@@ -4116,44 +1493,7 @@ export interface paths {
          *     System-managed tags (`expense_attachment`, `client_document`, `customer_invoice`) cannot be renamed or archived;
          *     they may be edited for color/description only.
          */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateAdminTagRequest"];
-                };
-            };
-            responses: {
-                /** @description Updated tag. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminTagResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-                /** @description Duplicate tag name (case-insensitive uniqueness). */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        patch: operations["patchV1AdminTagsById"];
         trace?: never;
     };
     "/v1/admin/contacts/tags": {
@@ -4167,27 +1507,7 @@ export interface paths {
          * List CRM tags for pickers
          * @description Returns all tags sorted by name for contact/family/organization editors.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Tag list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["EntityTagListResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1AdminContactsTags"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4211,33 +1531,7 @@ export interface paths {
          *     region match when the query resolves to a valid number).
          *     Requires at least two characters in `query`. Intended for referral and other admin pickers.
          */
-        get: {
-            parameters: {
-                query: {
-                    query: string;
-                    /** @description Omit this contact from results (e.g. the subject contact when choosing a referrer). */
-                    exclude_contact_id?: string;
-                    limit?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Matching contacts as id/label rows. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["EntityPickerListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1AdminContactsSearch"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4259,42 +1553,7 @@ export interface paths {
          * Merge selected CRM contacts
          * @description Merges two or more contacts into the chosen keeper contact. Loser fields fill empty keeper identity fields. Related records (notes, enrollments, invoices, payments, conversations, certificates, tags, and sales leads) move onto the keeper. Sales leads stay as separate rows except uniqueness conflicts (same-guide dedupe and one open automated lead per contact). An incoming open automated lead is folded onto the keeper's open lead before the move is saved. The surviving lead keeps the higher lead-type rank and the further-along funnel stage. Orphaned loser contacts are deleted. Conflicting emails, Instagram handles, families, or organisations return 400. A remaining one-open-lead conflict returns 409.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["MergeContactsRequest"];
-                };
-            };
-            responses: {
-                /** @description Surviving contact after merge. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminContactResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-                /** @description Both contacts already have an open automated sales lead and the merge could not fold them. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        post: operations["postV1AdminContactsMerge"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4320,41 +1579,7 @@ export interface paths {
          *     ``dry_run`` is true, ``would_process`` mirrors that count and ``processed``/``skipped``
          *     remain populated for backward compatibility.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["MailchimpSyncRunRequest"];
-                };
-            };
-            responses: {
-                /** @description Batch outcome and optional next cursor. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["MailchimpSyncRunResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                /** @description Not production or Mailchimp list env not configured. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        post: operations["postV1AdminContactsMailchimpSyncRun"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4383,41 +1608,7 @@ export interface paths {
          *     members are removed the response repeats ``next_offset`` equal to ``mailchimp_offset``
          *     until a page removes zero rows, then advances by ``scanned`` when the page is full.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["MailchimpOrphanCleanupRequest"];
-                };
-            };
-            responses: {
-                /** @description Page scan outcome and optional next offset. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["MailchimpOrphanCleanupResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                /** @description Not production or Mailchimp list env not configured. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        post: operations["postV1AdminContactsMailchimpSyncOrphans"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4437,27 +1628,7 @@ export interface paths {
          *     carry a ``mailchimp_subscriber_id``. ``last_run_summary`` is reserved for a future release
          *     and is always null in v1.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Status snapshot. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["MailchimpSyncStatusResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1AdminContactsMailchimpSyncStatus"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4482,27 +1653,7 @@ export interface paths {
          *     own confirmed address. Family pins include `primary_contact_label` when a
          *     member is flagged as the main contact and has a first or last name.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Map pin list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminContactMapPinListResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1AdminContactsMapPins"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4518,68 +1669,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List CRM contacts */
-        get: {
-            parameters: {
-                query?: {
-                    /**
-                     * @description Search first name, last name, email, Instagram, and phone (stored as ISO region +
-                     *     national digits; server normalises ``+`` / digit queries before matching).
-                     */
-                    query?: string;
-                    active?: boolean;
-                    /** @description When set, only contacts with this contact type are returned. */
-                    contact_type?: components["schemas"]["EntityContactType"];
-                    cursor?: string;
-                    limit?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Contact list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminContactListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        /**
+         * List CRM contacts
+         * @description List CRM contacts
+         */
+        get: operations["getV1AdminContacts"];
         put?: never;
-        /** Create CRM contact */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateAdminContactRequest"];
-                };
-            };
-            responses: {
-                /** @description Contact created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminContactResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        /**
+         * Create CRM contact
+         * @description Create CRM contact
+         */
+        post: operations["postV1AdminContacts"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4596,33 +1696,11 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Get CRM contact */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description CRM contact identifier. */
-                    id: components["parameters"]["AdminContactId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Contact response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminContactResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Get CRM contact
+         * @description Get CRM contact
+         */
+        get: operations["getV1AdminContactsById"];
         put?: never;
         post?: never;
         /**
@@ -4631,63 +1709,14 @@ export interface paths {
          *     are removed first; enrollments and other references that use `ON DELETE SET NULL`
          *     clear their `contact_id`. Returns `400` if the database still blocks deletion.
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description CRM contact identifier. */
-                    id: components["parameters"]["AdminContactId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Contact deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        delete: operations["deleteV1AdminContactsById"];
         options?: never;
         head?: never;
-        /** Update CRM contact */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description CRM contact identifier. */
-                    id: components["parameters"]["AdminContactId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateAdminContactRequest"];
-                };
-            };
-            responses: {
-                /** @description Contact response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminContactResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Update CRM contact
+         * @description Update CRM contact
+         */
+        patch: operations["patchV1AdminContactsById"];
         trace?: never;
     };
     "/v1/admin/contacts/{id}/notes": {
@@ -4705,66 +1734,13 @@ export interface paths {
          * @description Returns notes stored on the contact that are not tied to a sales lead
          *     (`lead_id` is null), newest first. Notes created on a lead remain on the lead detail only.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description CRM contact identifier. */
-                    id: components["parameters"]["AdminContactId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Note list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminNoteListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1AdminContactsByIdNotes"];
         put?: never;
-        /** Add a standalone note to a contact */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description CRM contact identifier. */
-                    id: components["parameters"]["AdminContactId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateNoteRequest"];
-                };
-            };
-            responses: {
-                /** @description Note created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            note: components["schemas"]["Note"];
-                        };
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Add a standalone note to a contact
+         * @description Add a standalone note to a contact
+         */
+        post: operations["postV1AdminContactsByIdNotes"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4787,32 +1763,7 @@ export interface paths {
          *     contact or to any family or organisation the contact belongs to. Labels are
          *     deduplicated and sorted alphabetically.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description CRM contact identifier. */
-                    id: components["parameters"]["AdminContactId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Service label list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["EntityServicesResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1AdminContactsByIdServices"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4836,70 +1787,18 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete a standalone note on a contact */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description CRM contact identifier. */
-                    id: components["parameters"]["AdminContactId"];
-                    /** @description CRM note identifier. */
-                    note_id: components["parameters"]["NoteId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Note deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Delete a standalone note on a contact
+         * @description Delete a standalone note on a contact
+         */
+        delete: operations["deleteV1AdminContactsByIdNotesByNoteId"];
         options?: never;
         head?: never;
-        /** Update a standalone note on a contact */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description CRM contact identifier. */
-                    id: components["parameters"]["AdminContactId"];
-                    /** @description CRM note identifier. */
-                    note_id: components["parameters"]["NoteId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateNoteRequest"];
-                };
-            };
-            responses: {
-                /** @description Note updated. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            note: components["schemas"]["Note"];
-                        };
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Update a standalone note on a contact
+         * @description Update a standalone note on a contact
+         */
+        patch: operations["patchV1AdminContactsByIdNotesByNoteId"];
         trace?: never;
     };
     "/v1/admin/families/picker": {
@@ -4914,30 +1813,7 @@ export interface paths {
          * @description Returns active families ordered by name for admin UI dropdowns.
          *     At most 100 rows unless `limit` is set lower.
          */
-        get: {
-            parameters: {
-                query?: {
-                    limit?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Picker list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["EntityPickerListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1AdminFamiliesPicker"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4953,63 +1829,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List CRM families */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Case-insensitive substring match on family name or on any linked member contact's first name, last name, email, or trimmed "first last" display label. */
-                    query?: string;
-                    active?: boolean;
-                    cursor?: string;
-                    limit?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Family list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminFamilyListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        /**
+         * List CRM families
+         * @description List CRM families
+         */
+        get: operations["getV1AdminFamilies"];
         put?: never;
-        /** Create CRM family */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateAdminFamilyRequest"];
-                };
-            };
-            responses: {
-                /** @description Family created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminFamilyResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        /**
+         * Create CRM family
+         * @description Create CRM family
+         */
+        post: operations["postV1AdminFamilies"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5035,30 +1865,7 @@ export interface paths {
          *     lead notes) are deleted first; standalone notes and enrollments that reference the
          *     family are cleared. Returns `400` if the database still blocks deletion.
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description CRM family identifier. */
-                    id: components["parameters"]["AdminFamilyId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Family deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        delete: operations["deleteV1AdminFamiliesById"];
         options?: never;
         head?: never;
         /**
@@ -5067,36 +1874,7 @@ export interface paths {
          *     member contact's CRM `relationship_type` (contacts belong to at most one family), so
          *     family and member records stay aligned.
          */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description CRM family identifier. */
-                    id: components["parameters"]["AdminFamilyId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateAdminFamilyRequest"];
-                };
-            };
-            responses: {
-                /** @description Family response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminFamilyResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        patch: operations["patchV1AdminFamiliesById"];
         trace?: never;
     };
     "/v1/admin/families/{id}/services": {
@@ -5114,32 +1892,7 @@ export interface paths {
          * @description Returns invoice-style labels for non-cancelled enrollments attributed to the
          *     family or to any member contact. Labels are deduplicated and sorted alphabetically.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description CRM family identifier. */
-                    id: components["parameters"]["AdminFamilyId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Service label list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["EntityServicesResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1AdminFamiliesByIdServices"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5160,37 +1913,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Add family member */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description CRM family identifier. */
-                    id: components["parameters"]["AdminFamilyId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["AddFamilyMemberRequest"];
-                };
-            };
-            responses: {
-                /** @description Family with updated members. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminFamilyResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Add family member
+         * @description Add family member
+         */
+        post: operations["postV1AdminFamiliesByIdMembers"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5212,35 +1939,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Remove family member */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description CRM family identifier. */
-                    id: components["parameters"]["AdminFamilyId"];
-                    /** @description Family membership row identifier. */
-                    member_id: components["parameters"]["AdminFamilyMemberId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Family with updated members. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminFamilyResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Remove family member
+         * @description Remove family member
+         */
+        delete: operations["deleteV1AdminFamiliesByIdMembersByMemberId"];
         options?: never;
         head?: never;
         /**
@@ -5249,38 +1952,7 @@ export interface paths {
          *     primary; setting `is_primary_contact` to true clears the flag on other members in the
          *     same family.
          */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description CRM family identifier. */
-                    id: components["parameters"]["AdminFamilyId"];
-                    /** @description Family membership row identifier. */
-                    member_id: components["parameters"]["AdminFamilyMemberId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateFamilyMemberRequest"];
-                };
-            };
-            responses: {
-                /** @description Family with updated members. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminFamilyResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        patch: operations["patchV1AdminFamiliesByIdMembersByMemberId"];
         trace?: never;
     };
     "/v1/admin/organizations/picker": {
@@ -5299,32 +1971,7 @@ export interface paths {
          *     only organisations with that relationship type are returned. At most 100 rows
          *     unless `limit` is set lower.
          */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description When set, only organizations with this CRM relationship type are returned. When omitted, vendor and partner rows are both excluded (Contacts default). */
-                    relationship_type?: components["schemas"]["EntityRelationshipType"];
-                    limit?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Picker list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["EntityPickerListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1AdminOrganizationsPicker"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5351,65 +1998,13 @@ export interface paths {
          *     members, and location summary. Use `GET /v1/admin/organizations/{id}` for full
          *     detail when needed.
          */
-        get: {
-            parameters: {
-                query?: {
-                    query?: string;
-                    active?: boolean;
-                    /** @description When set, only organizations with this CRM relationship type are returned (e.g. `vendor` for Finance). When omitted, vendor and partner rows are both excluded from the list (Contacts default). */
-                    relationship_type?: components["schemas"]["EntityRelationshipType"];
-                    /** @description Optional sort order. When `name`, results are ordered case-insensitively by trimmed `name` ascending, then by `id` ascending (stable pagination with the same `cursor` token as the default list). When omitted, rows are ordered by `created_at` descending (newest first), then `id` descending. */
-                    sort?: "name";
-                    cursor?: string;
-                    limit?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Organization list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminOrganizationListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1AdminOrganizations"];
         put?: never;
-        /** Create CRM organization */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateAdminOrganizationRequest"];
-                };
-            };
-            responses: {
-                /** @description Organization created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminOrganizationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        /**
+         * Create CRM organization
+         * @description Create CRM organization
+         */
+        post: operations["postV1AdminOrganizations"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5436,63 +2031,14 @@ export interface paths {
          *     are deleted first; standalone notes and enrollments that reference the organisation
          *     are cleared. Returns `400` if the database still blocks deletion.
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description CRM organization identifier. */
-                    id: components["parameters"]["AdminOrganizationId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Organization deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        delete: operations["deleteV1AdminOrganizationsById"];
         options?: never;
         head?: never;
-        /** Update CRM organization */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description CRM organization identifier. */
-                    id: components["parameters"]["AdminOrganizationId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateAdminOrganizationRequest"];
-                };
-            };
-            responses: {
-                /** @description Organization response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminOrganizationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Update CRM organization
+         * @description Update CRM organization
+         */
+        patch: operations["patchV1AdminOrganizationsById"];
         trace?: never;
     };
     "/v1/admin/organizations/{id}/services": {
@@ -5510,32 +2056,7 @@ export interface paths {
          * @description Returns invoice-style labels for non-cancelled enrollments attributed to the
          *     organization or to any member contact. Labels are deduplicated and sorted alphabetically.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description CRM organization identifier. */
-                    id: components["parameters"]["AdminOrganizationId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Service label list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["EntityServicesResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1AdminOrganizationsByIdServices"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5556,37 +2077,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Add organization member */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description CRM organization identifier. */
-                    id: components["parameters"]["AdminOrganizationId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["AddOrganizationMemberRequest"];
-                };
-            };
-            responses: {
-                /** @description Organization with updated members. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminOrganizationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Add organization member
+         * @description Add organization member
+         */
+        post: operations["postV1AdminOrganizationsByIdMembers"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5608,35 +2103,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Remove organization member */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description CRM organization identifier. */
-                    id: components["parameters"]["AdminOrganizationId"];
-                    /** @description Organization membership row identifier. */
-                    member_id: components["parameters"]["AdminOrganizationMemberId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Organization with updated members. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminOrganizationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Remove organization member
+         * @description Remove organization member
+         */
+        delete: operations["deleteV1AdminOrganizationsByIdMembersByMemberId"];
         options?: never;
         head?: never;
         /**
@@ -5644,38 +2115,7 @@ export interface paths {
          * @description Updates membership fields such as primary contact. Membership role is derived from the
          *     linked contact's `contact_type` (see `POST /v1/admin/organizations/{id}/members`).
          */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description CRM organization identifier. */
-                    id: components["parameters"]["AdminOrganizationId"];
-                    /** @description Organization membership row identifier. */
-                    member_id: components["parameters"]["AdminOrganizationMemberId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateOrganizationMemberRequest"];
-                };
-            };
-            responses: {
-                /** @description Organization with updated members. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminOrganizationResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        patch: operations["patchV1AdminOrganizationsByIdMembersByMemberId"];
         trace?: never;
     };
     "/v1/admin/billing/export": {
@@ -5689,38 +2129,7 @@ export interface paths {
          * Export billing CSV (default export v2)
          * @description Default `export_version` is **2** (`?export_version=2` or omit). v2 rows include `document_type` in `payment`, `refund`, `invoice`, `invoice_line`, `receipt`, and `allocation` with columns for `payment_method`, `bank_reference` (payment `external_reference`), `counterparty_name_snapshot` (invoice line description or invoice snapshot display name), `tax_amount`, `created_by` (payment `confirmed_by`), bill-to fields on invoice rows, and Stripe / linkage ids. Pass `export_version=1` for the legacy payments+allocations-only shape. Payment rows are paginated via `limit` and `cursor`; allocations, invoices, invoice lines, and receipts are included only on the first page (`cursor` omitted) up to fixed per-entity caps (10,000 allocations; 5,000 invoices and receipts).
          */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description `1` (legacy) or `2` (default). */
-                    export_version?: "1" | "2";
-                    /** @description Maximum payment rows per page (default 1000, max 5000). */
-                    limit?: number;
-                    /** @description Opaque pagination cursor from a prior export response `next_cursor`. */
-                    cursor?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Accounting-oriented CSV payload. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            csv: string;
-                            /** @description Present when more payment rows are available. */
-                            next_cursor?: string | null;
-                        };
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1AdminBillingExport"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5740,81 +2149,13 @@ export interface paths {
          * List customer payments
          * @description Cursor-paginated list ordered by `created_at` descending, then `id` descending. Pass `next_cursor` from the previous response as `cursor` for the next page.
          */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description When set, return only payments that have at least one allocation to this invoice. */
-                    invoice_id?: string;
-                    /** @description Opaque cursor from a prior `next_cursor` value. */
-                    cursor?: string;
-                    limit?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Payment rows. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            items: components["schemas"]["CustomerPaymentSummary"][];
-                            next_cursor?: string | null;
-                        };
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1AdminBillingPayments"];
         put?: never;
         /**
          * Create customer payment row
          * @description Creates either an outbound refund (`direction: refund` + `originalPaymentId`) or a manual inbound payment linked to an enrollment (`direction: inbound` + `enrollmentId`). Succeeded inbound payments follow the same receipt generation path as payment confirm.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateCustomerRefundRequest"] | components["schemas"]["CreateManualInboundCustomerPaymentRequest"];
-                };
-            };
-            responses: {
-                /** @description Refund or inbound payment created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            payment?: components["schemas"]["CustomerPaymentSummary"];
-                        };
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                /** @description Duplicate manual inbound payment for the same enrollment and external reference (partial unique index on non-null `external_reference`). */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            [key: string]: unknown;
-                        };
-                    };
-                };
-            };
-        };
+        post: operations["postV1AdminBillingPayments"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5828,111 +2169,25 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get customer payment with unapplied balance */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Payment detail. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["CustomerPaymentSummary"] & {
-                            /** @description Distinct invoices this payment is allocated to (newest invoice first). */
-                            allocationInvoices?: components["schemas"]["CustomerPaymentAllocationInvoice"][];
-                        };
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Get customer payment with unapplied balance
+         * @description Get customer payment with unapplied balance
+         */
+        get: operations["getV1AdminBillingPaymentsById"];
         put?: never;
         post?: never;
         /**
          * Delete orphan inbound customer payment
          * @description Removes an inbound payment row only when it is safe cleanup. Pending payments may be deleted even when linked to an enrollment that is not cancelled. Free ($0 method) or zero-amount payments may be deleted only when the enrollment id is null, the enrollment is cancelled, or the enrollment row is missing. The payment must have no invoice allocations, no customer receipt row, and no refund rows pointing at it.
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Payment deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        delete: operations["deleteV1AdminBillingPaymentsById"];
         options?: never;
         head?: never;
         /**
          * Update manual inbound customer payment
          * @description Updates a manual inbound payment (no Stripe PaymentIntent on the row). Enrollment cannot be changed. Pending rows may change amount, currency, method, status, and external reference (subject to allocation totals and enrollment billing currency). Succeeded rows allow `method` and `externalReference` only. Duplicate non-null `externalReference` per enrollment returns **409** (same partial unique index as create).
          */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateManualInboundCustomerPaymentRequest"];
-                };
-            };
-            responses: {
-                /** @description Updated payment. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            payment?: components["schemas"]["CustomerPaymentSummary"];
-                        };
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-                /** @description Duplicate manual inbound payment for the same enrollment and external reference. */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            [key: string]: unknown;
-                        };
-                    };
-                };
-            };
-        };
+        patch: operations["patchV1AdminBillingPaymentsById"];
         trace?: never;
     };
     "/v1/admin/billing/payments/{id}/confirm": {
@@ -5944,40 +2199,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Confirm pending inbound payment (offline rails) */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        externalReference?: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Payment confirmed and receipt generated when applicable. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            payment?: components["schemas"]["CustomerPaymentSummary"];
-                        };
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Confirm pending inbound payment (offline rails)
+         * @description Confirm pending inbound payment (offline rails)
+         */
+        post: operations["postV1AdminBillingPaymentsByIdConfirm"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5995,40 +2221,7 @@ export interface paths {
          * List recent enrollments for draft invoice picker
          * @description Returns non-cancelled enrollments with `enrolled_at` within the last 730 days (two 365-day rolling windows by enrolled date), ordered by `enrolled_at` descending (cursor pagination). At most `limit` rows per response (default and maximum 500). Pass `next_cursor` from the prior response as `cursor`. Optional `q` filters server-side by enrollment UUID substring, instance title, cohort, contact email/name, bill-to contact, family name, organization name, or ticket tier name. Includes `invoiceLinked` when the enrollment already appears on a draft or issued customer invoice line (void invoices do not block).
          */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Opaque cursor from a prior `next_cursor` value. */
-                    cursor?: string;
-                    limit?: number;
-                    /** @description Case-insensitive partial match across enrollment id, instance title/cohort, contacts, family/org names, and tier name. */
-                    q?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Enrollment rows for invoicing UI. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            items: components["schemas"]["BillingEnrollmentPickerRow"][];
-                            /** @description True when another page may exist (results reached `limit`). */
-                            truncated: boolean;
-                            /** @description Cursor for the next page when `truncated` is true. */
-                            next_cursor?: string | null;
-                        };
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1AdminBillingEnrollmentsRecentForInvoicing"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6048,84 +2241,13 @@ export interface paths {
          * List customer invoices
          * @description Cursor-paginated list ordered by `created_at` descending, then `id` descending. Pass `next_cursor` from the previous response as `cursor` for the next page. Returns all invoices for the tenant; **admin authorization is required** (API Gateway admin group). Filter by optional `currency` (three-letter ISO code), `status`, optional `settlement` (issued invoices only: `open`, `partially_paid`, `paid`, `no_charge` for zero-total issued invoices, or `not_completed` for draft invoices and issued positive-total rows that are neither paid nor no-charge; combined with `status` using AND), and free-text `q` (case-insensitive substring match on `invoice_number`, bill-to display name, email, location snapshot text, and ISO `invoice_date` formatted as `YYYY-MM-DD`). Optional `contact_id` restricts results to invoices billed to that contact or to a family or organisation they belong to. Optional `family_id` or `organization_id` restricts results to invoices billed to that party or to one of its member contacts. Only one of `contact_id`, `family_id`, or `organization_id` may be set.
          */
-        get: {
-            parameters: {
-                query?: {
-                    status?: "draft" | "issued" | "void";
-                    /** @description Issued-invoice settlement slice for admin filtering: `open` (issued with balance_due > 0), `partially_paid` (issued with amount_allocated > 0 and balance_due > 0), `paid` (issued, balance_due zero, amount_allocated > 0, total > 0), `no_charge` (issued with total = 0), or `not_completed` (draft invoices, or issued with total > 0 that are not in the `paid` or `no_charge` slices). Combined with `status` using AND. */
-                    settlement?: "open" | "partially_paid" | "paid" | "no_charge" | "not_completed";
-                    /** @description Three-letter ISO currency code (for example HKD). */
-                    currency?: string;
-                    /** @description Case-insensitive substring filter on invoice number, bill-to name/email/location text, and invoice issue date (ISO `YYYY-MM-DD` only). */
-                    q?: string;
-                    /** @description Restrict to invoices billed to this contact or to a family or organisation they belong to. Mutually exclusive with `family_id` and `organization_id`. */
-                    contact_id?: string;
-                    /** @description Restrict to invoices billed to this family or to one of its member contacts. Mutually exclusive with `contact_id` and `organization_id`. */
-                    family_id?: string;
-                    /** @description Restrict to invoices billed to this organisation or to one of its member contacts. Mutually exclusive with `contact_id` and `family_id`. */
-                    organization_id?: string;
-                    /** @description Opaque cursor from a prior `next_cursor` value. */
-                    cursor?: string;
-                    limit?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Invoice summaries. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            items: components["schemas"]["CustomerInvoiceSummary"][];
-                            next_cursor?: string | null;
-                        };
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1AdminBillingInvoices"];
         put?: never;
         /**
          * Create draft customer invoice
          * @description Set `draftKind` to `enrollment_merge` with `enrollmentIds` to merge enrollments into one draft, or `customized_manual` with `billTo`, `currency`, and `lines` for manual line items without enrollment links. Do not send fields from the other mode (for example `billTo` with `enrollment_merge`).
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateDraftInvoiceRequest"] | components["schemas"]["CreateCustomizedDraftInvoiceRequest"];
-                };
-            };
-            responses: {
-                /** @description Draft invoice created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** Format: uuid */
-                            invoiceId?: string;
-                            /** @enum {string} */
-                            status?: "draft";
-                        };
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        post: operations["postV1AdminBillingInvoices"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6139,68 +2261,18 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get customer invoice with lines */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Invoice detail including line items. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            invoice: components["schemas"]["CustomerInvoiceDetail"];
-                        };
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Get customer invoice with lines
+         * @description Get customer invoice with lines
+         */
+        get: operations["getV1AdminBillingInvoicesById"];
         put?: never;
         post?: never;
         /**
          * Delete draft customer invoice
          * @description Permanently deletes the invoice and its line rows. Allowed only when the invoice status is `draft`. Returns 400 if the invoice is issued or void, or when any `payment_allocations` row references the invoice.
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Invoice deleted. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** Format: uuid */
-                            invoiceId: string;
-                            deleted: boolean;
-                        };
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        delete: operations["deleteV1AdminBillingInvoicesById"];
         options?: never;
         head?: never;
         patch?: never;
@@ -6217,35 +2289,7 @@ export interface paths {
          * Get time-limited URL to open invoice PDF
          * @description Returns a CloudFront-signed GET URL for the invoice PDF. Issued invoices use the canonical stored object; draft and void invoices render current lines to a preview key without mutating issued PDF metadata.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Signed download URL and expiry. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** Format: uri */
-                            downloadUrl: string;
-                            /** Format: date-time */
-                            expiresAt: string;
-                        };
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1AdminBillingInvoicesByIdPdf"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6267,41 +2311,7 @@ export interface paths {
          * Issue invoice (assign number, PDF hash)
          * @description Issues a draft invoice (number, snapshot dates, PDF). For positive-total invoices, also creates one pending inbound `customer_payments` row with amount and currency copied from the invoice and method `fps`, unless a succeeded inbound Stripe payment already exists for an enrollment on the invoice (`method` `stripe_card` or a Stripe payment intent id). `enrollment_id` is set only when the invoice has exactly one enrollment line; customized and multi-enrollment invoices leave it unset. Zero-total invoices and invoices that already have that Stripe payment skip payment creation (`paymentId` is null). The payment is not allocated at issue time.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Invoice issued. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** Format: uuid */
-                            invoiceId?: string;
-                            invoiceNumber?: string;
-                            issuedPdfSha256?: string | null;
-                            /**
-                             * Format: uuid
-                             * @description Pending inbound customer payment created at issue. Null for zero-total invoices and when a succeeded Stripe payment already exists for an enrollment on the invoice.
-                             */
-                            paymentId?: string | null;
-                        };
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        post: operations["postV1AdminBillingInvoicesByIdIssue"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6321,42 +2331,7 @@ export interface paths {
          * Void invoice (issued)
          * @description Voids an issued invoice. Returns 400 if the invoice is draft or already void. Draft invoices must be deleted instead. Application audit rows use `VOID_FROM_ISSUED`.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        reason: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Invoice voided. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** Format: uuid */
-                            invoiceId?: string;
-                            /** @enum {string} */
-                            status?: "void";
-                        };
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        post: operations["postV1AdminBillingInvoicesByIdVoid"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6376,43 +2351,7 @@ export interface paths {
          * Email issued invoice PDF
          * @description Sends a branded transactional email (shared Evolve Sprouts HTML shell) with the issued invoice PDF attached. Recipients are operator-supplied. Draft invoices without an issued PDF are a no-op (response still reports `sent: true`). Locale for the current send path is `en`.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        /**
-                         * @description Recipient email address(es). Multiple addresses may be given as a comma-separated list (optional semicolons are treated like commas).
-                         * @example billing@example.com, accounts@example.com
-                         */
-                        toEmail: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Email sent (best-effort). */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            sent?: boolean;
-                        };
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        post: operations["postV1AdminBillingInvoicesByIdEmail"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6432,32 +2371,7 @@ export interface paths {
          * Resolve primary CRM contacts for bill-to rollups
          * @description Returns a map from each requested family id and organisation id to the CRM contact id chosen as the billing primary (same ordering as invoice bill-to resolution: primary flag first, then earliest membership). Omitted keys mean the entity has no members. Used by the admin dashboard to attribute family- and organisation-billed issued invoice totals to a single main contact for spend rankings.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["ResolveBillToPrimaryContactsRequest"];
-                };
-            };
-            responses: {
-                /** @description Primary contact id maps keyed by family or organisation id. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ResolveBillToPrimaryContactsResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        post: operations["postV1AdminBillingDashboardResolveBillToPrimaryContacts"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6473,37 +2387,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Allocate payment amount to invoice */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreatePaymentAllocationRequest"];
-                };
-            };
-            responses: {
-                /** @description Allocation created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** Format: uuid */
-                            allocationId?: string;
-                        };
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Allocate payment amount to invoice
+         * @description Allocate payment amount to invoice
+         */
+        post: operations["postV1AdminBillingAllocations"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6521,62 +2409,13 @@ export interface paths {
          * List expenses
          * @description Returns expenses ordered by invoice issue date (`invoice_date`) descending; rows without an invoice date appear after dated rows. Pagination uses stable key order (`invoice_date`, `id`).
          */
-        get: {
-            parameters: {
-                query?: {
-                    query?: string;
-                    status?: components["schemas"]["ExpenseStatus"];
-                    parse_status?: components["schemas"]["ExpenseParseStatus"];
-                    cursor?: string;
-                    limit?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Expense list response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ExpenseListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1AdminExpenses"];
         put?: never;
-        /** Create expense */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateExpenseRequest"];
-                };
-            };
-            responses: {
-                /** @description Expense created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ExpenseResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        /**
+         * Create expense
+         * @description Create expense
+         */
+        post: operations["postV1AdminExpenses"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6596,33 +2435,7 @@ export interface paths {
          * Queue import of multiple expenses from one combined PDF
          * @description Upload a PDF as an admin asset, then call this endpoint with its asset id. The API enqueues an asynchronous OpenRouter bulk parse (SQS + dedicated Lambda) and returns **202** with a `bulk_import_job` id. Poll `GET /v1/admin/expenses/bulk-import-jobs/{job_id}` until `status` is `succeeded`, `succeeded_with_errors` (partial row failures; see `error_message`), or `failed` (`error_message` is set). You can also list recent jobs via `GET /v1/admin/expenses/bulk-import-jobs`. Parsed vendor names are matched to active vendors when possible; otherwise `default_vendor_id` is used.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["BulkImportExpensesFromPdfRequest"];
-                };
-            };
-            responses: {
-                /** @description Bulk import job accepted for asynchronous processing. */
-                202: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["BulkImportJobResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        post: operations["postV1AdminExpensesImportFromBulkPdf"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6640,31 +2453,7 @@ export interface paths {
          * List bulk PDF import jobs for the signed-in admin
          * @description Returns jobs created by the authenticated admin, newest first. Use this to recover visibility after refresh or when polling times out.
          */
-        get: {
-            parameters: {
-                query?: {
-                    cursor?: string;
-                    limit?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Paginated bulk import jobs for the current admin. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["BulkImportJobListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1AdminExpensesBulkImportJobs"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6687,62 +2476,14 @@ export interface paths {
          * Get bulk PDF import job status
          * @description Poll this endpoint until `bulk_import_job.status` is `succeeded`, `succeeded_with_errors`, or `failed`. Only the admin user who created the job may read it.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Identifier returned from `POST /v1/admin/expenses/import-from-bulk-pdf`. */
-                    job_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Current job state (and expenses when the job finished with successes). */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["BulkImportJobResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1AdminExpensesBulkImportJobsByJobId"];
         put?: never;
         post?: never;
         /**
          * Delete bulk PDF import job record
          * @description Permanently removes the `bulk_expense_import_jobs` row when it belongs to the authenticated admin. This does **not** delete expenses that were already created from the job. Pending SQS work for the removed id is acknowledged as a no-op when the worker runs.
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Identifier returned from `POST /v1/admin/expenses/import-from-bulk-pdf`. */
-                    job_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Job record deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        delete: operations["deleteV1AdminExpensesBulkImportJobsByJobId"];
         options?: never;
         head?: never;
         patch?: never;
@@ -6765,63 +2506,14 @@ export interface paths {
          * Delete draft expense
          * @description Hard-deletes the expense row when its status is `draft`. Returns **400** when the expense is not a draft or when other expense rows reference this record as their amendment parent.
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Expense identifier. */
-                    id: components["parameters"]["ExpenseId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Expense deleted. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        delete: operations["deleteV1AdminExpensesById"];
         options?: never;
         head?: never;
-        /** Update expense */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Expense identifier. */
-                    id: components["parameters"]["ExpenseId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateExpenseRequest"];
-                };
-            };
-            responses: {
-                /** @description Expense response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ExpenseResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Update expense
+         * @description Update expense
+         */
+        patch: operations["patchV1AdminExpensesById"];
         trace?: never;
     };
     "/v1/admin/expenses/{id}/cancel": {
@@ -6836,37 +2528,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Soft-void an expense */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Expense identifier. */
-                    id: components["parameters"]["ExpenseId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CancelExpenseRequest"];
-                };
-            };
-            responses: {
-                /** @description Expense response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ExpenseResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Soft-void an expense
+         * @description Soft-void an expense
+         */
+        post: operations["postV1AdminExpensesByIdCancel"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6889,32 +2555,7 @@ export interface paths {
          * Mark an expense as paid
          * @description Requires a linked vendor, invoice date, currency code, and total amount. Returns 400 if any of these are missing.
          */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Expense identifier. */
-                    id: components["parameters"]["ExpenseId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Expense response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ExpenseResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        post: operations["postV1AdminExpensesByIdMarkPaid"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6933,33 +2574,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Queue expense parse request */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Expense identifier. */
-                    id: components["parameters"]["ExpenseId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Parse request queued. */
-                202: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ActionMessageResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Queue expense parse request
+         * @description Queue expense parse request
+         */
+        post: operations["postV1AdminExpensesByIdReparse"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6978,37 +2597,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create amendment expense record */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Expense identifier. */
-                    id: components["parameters"]["ExpenseId"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateExpenseRequest"];
-                };
-            };
-            responses: {
-                /** @description Amendment expense created. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ExpenseResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Create amendment expense record
+         * @description Create amendment expense record
+         */
+        post: operations["postV1AdminExpensesByIdAmend"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7027,27 +2620,7 @@ export interface paths {
          * @description Returns distinct form slugs discovered in the DynamoDB responses table,
          *     each with the number of stored answer rows.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Form summary list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminFormListResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1AdminForms"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7070,68 +2643,14 @@ export interface paths {
          * List stored answers for a form
          * @description Returns answer rows newest first. Pass `next_cursor` from the prior response as `cursor`. Default and maximum page size follow the standard admin list limit (25 / 100). Optional `contact_id` filters to rows stored for that CRM contact before pagination. `respondentContactIds` lists distinct contact ids from all stored rows for the form (not just the current page), independent of the `contact_id` filter.
          */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Opaque continuation token from `next_cursor`. */
-                    cursor?: string;
-                    limit?: number;
-                    /** @description When set, return only answer rows whose stored `contactId` matches this CRM contact UUID. */
-                    contact_id?: string;
-                };
-                header?: never;
-                path: {
-                    /** @description Training form slug (kebab-case). */
-                    form_slug: components["parameters"]["FormSlug"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Form answer rows for the selected form. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminFormAnswerListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1AdminFormsByFormSlugAnswers"];
         put?: never;
         post?: never;
         /**
          * Clear all stored answers for a form
          * @description Permanently deletes every answer row for the form slug in DynamoDB.
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Training form slug (kebab-case). */
-                    form_slug: components["parameters"]["FormSlug"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Form answers cleared. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminFormClearAnswersResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        delete: operations["deleteV1AdminFormsByFormSlugAnswers"];
         options?: never;
         head?: never;
         patch?: never;
@@ -7147,32 +2666,11 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Export form answers as CSV */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Training form slug (kebab-case). */
-                    form_slug: components["parameters"]["FormSlug"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description CSV export generated. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/csv": string;
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        /**
+         * Export form answers as CSV
+         * @description Export form answers as CSV
+         */
+        get: operations["getV1AdminFormsByFormSlugAnswersExport"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7193,27 +2691,7 @@ export interface paths {
          * @description Returns distinct poll slugs discovered in the DynamoDB poll responses table,
          *     each with the number of stored answer rows.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Poll summary list. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminPollListResponse"];
-                    };
-                };
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1AdminPolls"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7236,66 +2714,14 @@ export interface paths {
          * List stored answers for a poll
          * @description Returns answer rows newest first. Pass `next_cursor` from the prior response as `cursor`. Default and maximum page size follow the standard admin list limit (25 / 100).
          */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Opaque continuation token from `next_cursor`. */
-                    cursor?: string;
-                    limit?: number;
-                };
-                header?: never;
-                path: {
-                    /** @description Training poll slug (kebab-case). */
-                    poll_slug: components["parameters"]["PollSlug"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Poll answer rows for the selected poll. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminPollAnswerListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        get: operations["getV1AdminPollsByPollSlugAnswers"];
         put?: never;
         post?: never;
         /**
          * Clear all stored answers for a poll
          * @description Permanently deletes every answer row for the poll slug in DynamoDB.
          */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Training poll slug (kebab-case). */
-                    poll_slug: components["parameters"]["PollSlug"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Poll answers cleared. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AdminPollClearAnswersResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        delete: operations["deleteV1AdminPollsByPollSlugAnswers"];
         options?: never;
         head?: never;
         patch?: never;
@@ -7311,32 +2737,11 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Export poll answers as CSV */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Training poll slug (kebab-case). */
-                    poll_slug: components["parameters"]["PollSlug"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description CSV export generated. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/csv": string;
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-            };
-        };
+        /**
+         * Export poll answers as CSV
+         * @description Export poll answers as CSV
+         */
+        get: operations["getV1AdminPollsByPollSlugAnswersExport"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7356,29 +2761,7 @@ export interface paths {
          * List user assets
          * @description Route for any authenticated Cognito user.
          */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description User asset list response. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AssetListResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        get: operations["getV1UserAssets"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7397,33 +2780,11 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Generate user asset download */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Asset identifier. */
-                    id: components["parameters"]["AssetId"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Download response payload. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["AssetDownloadResponse"];
-                    };
-                };
-                400: components["responses"]["BadRequest"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-            };
-        };
+        /**
+         * Generate user asset download
+         * @description Generate user asset download
+         */
+        get: operations["getV1UserAssetsByIdDownload"];
         put?: never;
         post?: never;
         delete?: never;
@@ -10335,7 +5696,5071 @@ export interface components {
     pathItems: never;
 }
 export type $defs = Record<string, never>;
+export interface operations {
+    getHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service is healthy. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+            /** @description API Gateway rejected the caller signature. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service is unhealthy. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    getV1AdminAssets: {
+        parameters: {
+            query?: {
+                /** @description Case-insensitive match on title, file name, or resource key. For assets linked to a customer invoice, also matches `bill_to_display_name` and `invoice_number`. */
+                query?: string;
+                visibility?: "public" | "restricted";
+                asset_type?: "guide" | "video" | "pdf" | "document";
+                /** @description When set, return only assets that have this tag (case-insensitive name match). The tag must be linked to at least one asset that matches the optional asset_type filter. */
+                tag_name?: string;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Asset list response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminAssets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAssetRequest"];
+            };
+        };
+        responses: {
+            /** @description Asset create response. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateAssetResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminAssetsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Asset identifier. */
+                id: components["parameters"]["AssetId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Asset response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    putV1AdminAssetsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Asset identifier. */
+                id: components["parameters"]["AssetId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAssetRequest"];
+            };
+        };
+        responses: {
+            /** @description Asset update response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteV1AdminAssetsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Asset identifier. */
+                id: components["parameters"]["AssetId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Asset deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchV1AdminAssetsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Asset identifier. */
+                id: components["parameters"]["AssetId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartialUpdateAssetRequest"];
+            };
+        };
+        responses: {
+            /** @description Asset update response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminAssetsByIdContentInit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Asset identifier. */
+                id: components["parameters"]["AssetId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InitAssetContentReplaceRequest"];
+            };
+        };
+        responses: {
+            /** @description Presigned upload details and pending object key. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InitAssetContentReplaceResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminAssetsByIdContentComplete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Asset identifier. */
+                id: components["parameters"]["AssetId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteAssetContentReplaceRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated asset after successful replacement. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminAssetsByIdGrants: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Asset identifier. */
+                id: components["parameters"]["AssetId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Grant list response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetGrantListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminAssetsByIdGrants: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Asset identifier. */
+                id: components["parameters"]["AssetId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAssetGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description Grant create response. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetGrantResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteV1AdminAssetsByIdGrantsByGrantId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Asset identifier. */
+                id: components["parameters"]["AssetId"];
+                /** @description Asset grant identifier. */
+                grantId: components["parameters"]["GrantId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Grant deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminAssetsByIdShareLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Asset identifier. */
+                id: components["parameters"]["AssetId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Existing share link returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetShareLinkResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminAssetsByIdShareLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Asset identifier. */
+                id: components["parameters"]["AssetId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AssetShareLinkPolicyRequest"];
+            };
+        };
+        responses: {
+            /** @description Existing share link returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetShareLinkResponse"];
+                };
+            };
+            /** @description Share link created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetShareLinkResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteV1AdminAssetsByIdShareLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Asset identifier. */
+                id: components["parameters"]["AssetId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Share link revoked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminAssetsByIdShareLinkRotate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Asset identifier. */
+                id: components["parameters"]["AssetId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AssetShareLinkPolicyRequest"];
+            };
+        };
+        responses: {
+            /** @description Share link rotated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetShareLinkResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminGeographicAreas: {
+        parameters: {
+            query?: {
+                parent_id?: string;
+                flat?: boolean;
+                active_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Geographic area list response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeographicAreaListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminLocations: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string;
+                area_id?: string;
+                /** @description Case-insensitive substring match on location name or address. */
+                search?: string;
+                /**
+                 * @description When `true`, omit locations linked as the saved venue for a non-archived
+                 *     family or organisation (so Services → Venues lists only service-oriented
+                 *     venues). Partner organisations are still included when they use the same
+                 *     location row; those rows remain visible with partner lock metadata.
+                 */
+                exclude_addresses?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Location list response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminLocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateLocationRequest"];
+            };
+        };
+        responses: {
+            /** @description Location create response. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminLocationsGeocode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GeocodeLocationRequest"];
+            };
+        };
+        responses: {
+            /** @description Geocoding result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GeocodeLocationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Geocoding provider or proxy error. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Geocoding is not configured (for example missing proxy or headers). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    putV1AdminLocationsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Location identifier. */
+                id: components["parameters"]["LocationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateLocationRequest"];
+            };
+        };
+        responses: {
+            /** @description Location update response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteV1AdminLocationsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Location identifier. */
+                id: components["parameters"]["LocationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Location deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Location is linked to an active partner organisation. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    patchV1AdminLocationsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Location identifier. */
+                id: components["parameters"]["LocationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartialUpdateLocationRequest"];
+            };
+        };
+        responses: {
+            /** @description Location update response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminCognitoUsers: {
+        parameters: {
+            query?: {
+                limit?: number;
+                /** @description Opaque continuation token from `next_cursor`. */
+                cursor?: string;
+                name?: string;
+                email?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated Cognito user list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CognitoUserListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1AdminCognitoUsers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCognitoUserRequest"];
+            };
+        };
+        responses: {
+            /** @description Created Cognito user. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CognitoUser"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            /** @description A user with this email already exists. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getV1AdminCognitoUsersByUsername: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cognito user. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CognitoUser"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteV1AdminCognitoUsersByUsername: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Delete confirmation. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteCognitoUserResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchV1AdminCognitoUsersByUsername: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCognitoUserRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated Cognito user. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CognitoUser"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description A user with this email already exists. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getV1AdminUsers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Admin user list response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminInstructors: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Instructor user list response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminAuditLogs: {
+        parameters: {
+            query?: {
+                limit?: number;
+                /** @description Opaque continuation token from `next_cursor` for the default recent listing. */
+                cursor?: string;
+                table?: "api_keys" | "asset_access_grants" | "asset_share_links" | "asset_tags" | "assets" | "bulk_expense_import_jobs" | "calendar_manual_blocks" | "completion_certificates" | "consultation_details" | "contact_tags" | "contacts" | "customer_invoice_lines" | "customer_invoices" | "customer_payments" | "customer_receipts" | "discount_codes" | "document_counters" | "enrollments" | "event_details" | "event_ticket_tiers" | "expense_attachments" | "expenses" | "families" | "family_members" | "family_tags" | "geographic_areas" | "inbound_emails" | "instance_session_slots" | "legacy_import_refs" | "locations" | "meta_conversations" | "meta_messages" | "notes" | "organization_members" | "organization_tags" | "organizations" | "payment_allocations" | "sales_lead_events" | "sales_leads" | "service_assets" | "service_instance_organizations" | "service_instance_tags" | "service_instances" | "service_tags" | "services" | "tags" | "training_course_details" | "training_instance_details" | "whatsapp_conversations" | "whatsapp_messages";
+                record_id?: string;
+                user_id?: string;
+                /** @description Filter by Cognito email, API key name, or system-actor label. Values containing `@` resolve to a Cognito `sub` via `list_users`. Other values first match known system actors (`System`, `WhatsApp webhook`, `Meta webhook`, `Alembic`, `Sales daily plan schedule`, or stored ids `system`, `webhook:whatsapp`, `webhook:meta`, `alembic`, `system:sales-daily-plan`), then `api_keys.name` (case-insensitive) which becomes `api-key:<id>`. Mutually exclusive with `user_id`. When no actor matches, the response is an empty list. */
+                email?: string;
+                action?: "INSERT" | "UPDATE" | "DELETE";
+                /** @description ISO 8601 timestamp; only entries at or after this time are returned where applicable. */
+                since?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated audit log list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditLogListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminApiKeys: {
+        parameters: {
+            query?: {
+                limit?: number;
+                /** @description Opaque continuation token from `next_cursor`. */
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated API token list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiKeyListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1AdminApiKeys: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateApiKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description Token created; plaintext included once. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiKeyCreatedResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    deleteV1AdminApiKeysById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked token metadata. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiKeySummary"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminLeads: {
+        parameters: {
+            query?: {
+                limit?: number;
+                /** @description Opaque continuation token from `next_cursor`; only valid when `sort` is `created_at`. */
+                cursor?: string;
+                stage?: string;
+                source?: string;
+                lead_type?: string;
+                assigned_to?: string;
+                unassigned?: boolean;
+                date_from?: string;
+                date_to?: string;
+                search?: string;
+                sort?: "created_at" | "updated_at" | "funnel_stage" | "contact_name";
+                sort_dir?: "asc" | "desc";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lead list response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminLeads: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateLeadRequest"];
+            };
+        };
+        responses: {
+            /** @description Lead create response. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadDetailResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminLeadsMerge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeLeadsRequest"];
+            };
+        };
+        responses: {
+            /** @description Surviving lead detail after merge. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadDetailResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The selected leads belong to contacts that each already have an open automated sales lead, and the merge could not fold them. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getV1AdminLeadsAnalytics: {
+        parameters: {
+            query?: {
+                date_from?: string;
+                date_to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lead analytics response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadAnalyticsResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminLeadsSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sales settings response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesSettingsResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchV1AdminLeadsSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSalesSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated sales settings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesSettingsResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminLeadsDailyPlan: {
+        parameters: {
+            query?: {
+                /** @description When `true`, `1`, or `yes`, compute new/carried/dropped priority comparison against the previous stored plan. */
+                compare?: "true" | "false" | "1" | "0" | "yes" | "no";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Latest daily plan payload (or null) plus memory. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesDailyPlanResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1AdminLeadsDailyPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SalesDailyPlanGenerateRequest"];
+            };
+        };
+        responses: {
+            /** @description Generation job accepted. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesDailyPlanJobResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    deleteV1AdminLeadsDailyPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Memory deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1AdminLeadsDailyPlanJobsByJobId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job status payload. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesDailyPlanJobResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminLeadsDailyPlanPriorityCompletions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesDailyPlanPriorityCompletionRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated plan plus the completion row (null when undone). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesDailyPlanPriorityCompletionResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminLeadsDailyPlanItemAnnotations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesDailyPlanItemAnnotationRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated plan plus the annotation row. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesDailyPlanItemAnnotationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The stored insight was refreshed after this page loaded. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    postV1AdminLeadsDailyPlanQuestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesDailyPlanQuestionRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated plan plus the new question row. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesDailyPlanQuestionResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The stored insight was refreshed after this page loaded. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The model returned an empty or invalid answer. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The model timed out. */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getV1AdminLeadsDailyPlanInstructions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Active instructions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesDailyPlanInstructionListResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1AdminLeadsDailyPlanInstructions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesDailyPlanInstructionRequest"];
+            };
+        };
+        responses: {
+            /** @description Saved instruction. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesDailyPlanInstructionResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    deleteV1AdminLeadsDailyPlanInstructionsByInstructionId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                instruction_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Archived instruction and the latest plan when one exists. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesDailyPlanInstructionArchiveResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminWhatsappConversations: {
+        parameters: {
+            query?: {
+                limit?: number;
+                /** @description Opaque continuation token from `next_cursor`. */
+                cursor?: string;
+                /** @description Case-insensitive search on profile name or WhatsApp id. */
+                q?: string;
+                /** @description Restrict results to conversations linked to this CRM contact. Mutually exclusive with `family_id` and `organization_id`. */
+                contact_id?: string;
+                /** @description Restrict results to conversations linked to any member contact of this family. Mutually exclusive with `contact_id` and `organization_id`. */
+                family_id?: string;
+                /** @description Restrict results to conversations linked to any member contact of this organisation. Mutually exclusive with `contact_id` and `family_id`. */
+                organization_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated WhatsApp conversation list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppConversationListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1AdminWhatsappConversationsByIdMessages: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conversation header plus newest-first messages. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppMessageListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminWhatsappImportJobs: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated WhatsApp export import jobs. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxImportJobListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1AdminWhatsappImportJobs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWhatsAppExportImportJobRequest"];
+            };
+        };
+        responses: {
+            /** @description Import job queued. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxImportJobResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1AdminMetaConversations: {
+        parameters: {
+            query?: {
+                limit?: number;
+                /** @description Opaque continuation token from `next_cursor`. */
+                cursor?: string;
+                /** @description Case-insensitive search on profile name or Page-scoped user id. */
+                q?: string;
+                /** @description Restrict results to `facebook` (Messenger) or `instagram`. */
+                channel?: components["schemas"]["MetaChannel"];
+                /** @description Restrict results to conversations linked to this CRM contact. Mutually exclusive with `family_id` and `organization_id`. */
+                contact_id?: string;
+                /** @description Restrict results to conversations linked to any member contact of this family. Mutually exclusive with `contact_id` and `organization_id`. */
+                family_id?: string;
+                /** @description Restrict results to conversations linked to any member contact of this organisation. Mutually exclusive with `contact_id` and `family_id`. */
+                organization_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated Meta conversation list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetaConversationListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1AdminMetaConversationsByIdMessages: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conversation header plus newest-first messages. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetaMessageListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminMetaImportJobs: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated Meta Graph import jobs. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxImportJobListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1AdminMetaImportJobs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateMetaImportJobRequest"];
+            };
+        };
+        responses: {
+            /** @description Import job queued. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxImportJobResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1AdminLeadsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Sales lead identifier. */
+                id: components["parameters"]["LeadId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lead detail response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadDetailResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchV1AdminLeadsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Sales lead identifier. */
+                id: components["parameters"]["LeadId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateLeadRequest"];
+            };
+        };
+        responses: {
+            /** @description Lead update response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadDetailResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminLeadsByIdNotes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Sales lead identifier. */
+                id: components["parameters"]["LeadId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Lead note created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        note: components["schemas"]["Note"];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminLeadsByIdAiSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Sales lead identifier. */
+                id: components["parameters"]["LeadId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Latest suggestion payload (or null). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadAiSuggestionResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminLeadsByIdAiSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Sales lead identifier. */
+                id: components["parameters"]["LeadId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Generation job accepted. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadAiSuggestionJobResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminLeadsByIdAiSuggestionJobsByJobId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Sales lead identifier. */
+                id: components["parameters"]["LeadId"];
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job status payload. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadAiSuggestionJobResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminServices: {
+        parameters: {
+            query?: {
+                limit?: number;
+                /**
+                 * @description Opaque continuation token from `next_cursor` on the previous page.
+                 *     Service list results are ordered by title ascending, then id ascending;
+                 *     the cursor encodes the last row's title and id for that ordering.
+                 */
+                cursor?: string;
+                service_type?: components["schemas"]["ServiceType"];
+                status?: components["schemas"]["ServiceStatus"];
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service list response. Each `ServiceSummary` item includes `service_tier` (nullable) for admin list display and filtering context. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminServices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateServiceRequest"];
+            };
+        };
+        responses: {
+            /** @description Service created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Service key and service tier conflict with another service (unique index on case-insensitive service_key and tier, NULL tiers treated as one bucket). Error body uses `field` value `service_key_tier` (see `ErrorResponse.field`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getV1AdminServicesInstances: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string;
+                status?: components["schemas"]["InstanceStatus"];
+                /** @description When set, only instances for this service UUID. */
+                service_id?: string;
+                /** @description When set, only instances whose parent service has this type. */
+                service_type?: components["schemas"]["ServiceType"];
+                /**
+                 * @description When set, only instances with a non-cancelled enrollment attributed to this
+                 *     contact or to a family or organisation they belong to. Mutually exclusive
+                 *     with `family_id` and `organization_id`.
+                 */
+                contact_id?: string;
+                /**
+                 * @description When set, only instances with a non-cancelled enrollment attributed to this
+                 *     family or to one of its member contacts. Mutually exclusive with
+                 *     `contact_id` and `organization_id`.
+                 */
+                family_id?: string;
+                /**
+                 * @description When set, only instances with a non-cancelled enrollment attributed to this
+                 *     organisation or to one of its member contacts. Mutually exclusive with
+                 *     `contact_id` and `family_id`.
+                 */
+                organization_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service instance list response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstanceListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminServicesByIdDiscountCodeUsageSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service identifier. */
+                id: components["parameters"]["ServiceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Usage summary. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscountCodeUsageSummaryResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminServicesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service identifier. */
+                id: components["parameters"]["ServiceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    putV1AdminServicesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service identifier. */
+                id: components["parameters"]["ServiceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateServiceRequest"];
+            };
+        };
+        responses: {
+            /** @description Service response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Service key and service tier conflict with another service (unique index on case-insensitive service_key and tier, NULL tiers treated as one bucket). Error body uses `field` value `service_key_tier` (see `ErrorResponse.field`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deleteV1AdminServicesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service identifier. */
+                id: components["parameters"]["ServiceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Service has instances and cannot be deleted. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    patchV1AdminServicesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service identifier. */
+                id: components["parameters"]["ServiceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartialUpdateServiceRequest"];
+            };
+        };
+        responses: {
+            /** @description Service response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Service key and service tier conflict with another service (unique index on case-insensitive service_key and tier, NULL tiers treated as one bucket). Error body uses `field` value `service_key_tier` (see `ErrorResponse.field`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    postV1AdminServicesByIdCoverImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service identifier. */
+                id: components["parameters"]["ServiceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateServiceCoverImageUploadRequest"];
+            };
+        };
+        responses: {
+            /** @description Cover image upload URL response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceCoverImageUploadResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminServicesByIdInstances: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service identifier. */
+                id: components["parameters"]["ServiceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service instance list response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstanceListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminServicesByIdInstances: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service identifier. */
+                id: components["parameters"]["ServiceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateInstanceRequest"];
+            };
+        };
+        responses: {
+            /** @description Service instance created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstanceResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminServicesByIdInstancesByInstanceId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service identifier. */
+                id: components["parameters"]["ServiceId"];
+                /** @description Service instance identifier. */
+                instance_id: components["parameters"]["InstanceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service instance response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstanceResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    putV1AdminServicesByIdInstancesByInstanceId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service identifier. */
+                id: components["parameters"]["ServiceId"];
+                /** @description Service instance identifier. */
+                instance_id: components["parameters"]["InstanceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateInstanceRequest"];
+            };
+        };
+        responses: {
+            /** @description Service instance response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstanceResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteV1AdminServicesByIdInstancesByInstanceId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service identifier. */
+                id: components["parameters"]["ServiceId"];
+                /** @description Service instance identifier. */
+                instance_id: components["parameters"]["InstanceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service instance deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminServicesByIdInstancesByInstanceIdEnrollments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service identifier. */
+                id: components["parameters"]["ServiceId"];
+                /** @description Service instance identifier. */
+                instance_id: components["parameters"]["InstanceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Enrollment list response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnrollmentListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminServicesByIdInstancesByInstanceIdEnrollments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service identifier. */
+                id: components["parameters"]["ServiceId"];
+                /** @description Service instance identifier. */
+                instance_id: components["parameters"]["InstanceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateEnrollmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Enrollment created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnrollmentResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteV1AdminServicesByIdInstancesByInstanceIdEnrollmentsByEnrollmentId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service identifier. */
+                id: components["parameters"]["ServiceId"];
+                /** @description Service instance identifier. */
+                instance_id: components["parameters"]["InstanceId"];
+                /** @description Enrollment identifier. */
+                enrollment_id: components["parameters"]["EnrollmentId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Enrollment deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchV1AdminServicesByIdInstancesByInstanceIdEnrollmentsByEnrollmentId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Service identifier. */
+                id: components["parameters"]["ServiceId"];
+                /** @description Service instance identifier. */
+                instance_id: components["parameters"]["InstanceId"];
+                /** @description Enrollment identifier. */
+                enrollment_id: components["parameters"]["EnrollmentId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateEnrollmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Enrollment response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnrollmentResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminDiscountCodes: {
+        parameters: {
+            query?: {
+                /** @description Optional scope facet: `unscoped` (no service/instance), `service` (service only), `instance` (instance-scoped). Omit or `all` for no scope facet filter. */
+                scope?: "all" | "unscoped" | "service" | "instance";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Discount code list response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscountCodeListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminDiscountCodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDiscountCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Discount code created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscountCodeResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Discount code value conflict (duplicate code, case-insensitive). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    putV1AdminDiscountCodesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Discount code identifier. */
+                id: components["parameters"]["DiscountCodeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDiscountCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Discount code response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscountCodeResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminCompletionCertificates: {
+        parameters: {
+            query?: {
+                contact_id?: string;
+                service_id?: string;
+                instance_id?: string;
+                status?: "issued" | "voided";
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Certificate list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompletionCertificateListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1AdminCompletionCertificates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueCompletionCertificateRequest"];
+            };
+        };
+        responses: {
+            /** @description Certificate issued. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompletionCertificateResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminCompletionCertificatesPreview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewCompletionCertificateRequest"];
+            };
+        };
+        responses: {
+            /** @description Signed preview URL. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PdfDownloadResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    deleteV1AdminCompletionCertificatesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Completion certificate identifier. */
+                id: components["parameters"]["CompletionCertificateId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        deleted: boolean;
+                    };
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminCompletionCertificatesByIdPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Completion certificate identifier. */
+                id: components["parameters"]["CompletionCertificateId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signed download URL for an issued certificate. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PdfDownloadResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminCompletionCertificatesByIdVoid: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Completion certificate identifier. */
+                id: components["parameters"]["CompletionCertificateId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Voided certificate. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompletionCertificateResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminCalendarManualBlocks: {
+        parameters: {
+            query: {
+                purpose: string;
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Manual block list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCalendarManualBlockListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1AdminCalendarManualBlocks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAdminCalendarManualBlockRequest"];
+            };
+        };
+        responses: {
+            /** @description Block created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCalendarManualBlockResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            /** @description Duplicate purpose/date/period. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deleteV1AdminCalendarManualBlocksById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCalendarManualBlockDeleteResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchV1AdminCalendarManualBlocksById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAdminCalendarManualBlockRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated block. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCalendarManualBlockResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Duplicate purpose/date/period. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getV1AdminTags: {
+        parameters: {
+            query?: {
+                /** @description When true, include tags with a non-null `archived_at`. */
+                include_archived?: boolean;
+                /** @description When true, return only archived tags (mutually exclusive with `include_archived`). */
+                archived_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tag list with usage counts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminTagListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1AdminTags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAdminTagRequest"];
+            };
+        };
+        responses: {
+            /** @description Tag created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminTagResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            /** @description Duplicate tag name (case-insensitive uniqueness). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deleteV1AdminTagsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Delete outcome (hard delete or archive). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminTagDeleteResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchV1AdminTagsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAdminTagRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated tag. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminTagResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Duplicate tag name (case-insensitive uniqueness). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getV1AdminContactsTags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tag list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntityTagListResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1AdminContactsSearch: {
+        parameters: {
+            query: {
+                query: string;
+                /** @description Omit this contact from results (e.g. the subject contact when choosing a referrer). */
+                exclude_contact_id?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Matching contacts as id/label rows. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntityPickerListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1AdminContactsMerge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeContactsRequest"];
+            };
+        };
+        responses: {
+            /** @description Surviving contact after merge. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminContactResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Both contacts already have an open automated sales lead and the merge could not fold them. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    postV1AdminContactsMailchimpSyncRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailchimpSyncRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Batch outcome and optional next cursor. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailchimpSyncRunResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            /** @description Not production or Mailchimp list env not configured. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    postV1AdminContactsMailchimpSyncOrphans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailchimpOrphanCleanupRequest"];
+            };
+        };
+        responses: {
+            /** @description Page scan outcome and optional next offset. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailchimpOrphanCleanupResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            /** @description Not production or Mailchimp list env not configured. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    getV1AdminContactsMailchimpSyncStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Status snapshot. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailchimpSyncStatusResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1AdminContactsMapPins: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Map pin list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminContactMapPinListResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1AdminContacts: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Search first name, last name, email, Instagram, and phone (stored as ISO region +
+                 *     national digits; server normalises ``+`` / digit queries before matching).
+                 */
+                query?: string;
+                active?: boolean;
+                /** @description When set, only contacts with this contact type are returned. */
+                contact_type?: components["schemas"]["EntityContactType"];
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contact list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminContactListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1AdminContacts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAdminContactRequest"];
+            };
+        };
+        responses: {
+            /** @description Contact created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminContactResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1AdminContactsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description CRM contact identifier. */
+                id: components["parameters"]["AdminContactId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contact response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminContactResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteV1AdminContactsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description CRM contact identifier. */
+                id: components["parameters"]["AdminContactId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Contact deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchV1AdminContactsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description CRM contact identifier. */
+                id: components["parameters"]["AdminContactId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAdminContactRequest"];
+            };
+        };
+        responses: {
+            /** @description Contact response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminContactResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminContactsByIdNotes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description CRM contact identifier. */
+                id: components["parameters"]["AdminContactId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Note list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminNoteListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminContactsByIdNotes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description CRM contact identifier. */
+                id: components["parameters"]["AdminContactId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Note created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        note: components["schemas"]["Note"];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminContactsByIdServices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description CRM contact identifier. */
+                id: components["parameters"]["AdminContactId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service label list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntityServicesResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteV1AdminContactsByIdNotesByNoteId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description CRM contact identifier. */
+                id: components["parameters"]["AdminContactId"];
+                /** @description CRM note identifier. */
+                note_id: components["parameters"]["NoteId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Note deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchV1AdminContactsByIdNotesByNoteId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description CRM contact identifier. */
+                id: components["parameters"]["AdminContactId"];
+                /** @description CRM note identifier. */
+                note_id: components["parameters"]["NoteId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Note updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        note: components["schemas"]["Note"];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminFamiliesPicker: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Picker list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntityPickerListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1AdminFamilies: {
+        parameters: {
+            query?: {
+                /** @description Case-insensitive substring match on family name or on any linked member contact's first name, last name, email, or trimmed "first last" display label. */
+                query?: string;
+                active?: boolean;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Family list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminFamilyListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1AdminFamilies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAdminFamilyRequest"];
+            };
+        };
+        responses: {
+            /** @description Family created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminFamilyResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    deleteV1AdminFamiliesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description CRM family identifier. */
+                id: components["parameters"]["AdminFamilyId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Family deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchV1AdminFamiliesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description CRM family identifier. */
+                id: components["parameters"]["AdminFamilyId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAdminFamilyRequest"];
+            };
+        };
+        responses: {
+            /** @description Family response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminFamilyResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminFamiliesByIdServices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description CRM family identifier. */
+                id: components["parameters"]["AdminFamilyId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service label list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntityServicesResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminFamiliesByIdMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description CRM family identifier. */
+                id: components["parameters"]["AdminFamilyId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddFamilyMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description Family with updated members. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminFamilyResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteV1AdminFamiliesByIdMembersByMemberId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description CRM family identifier. */
+                id: components["parameters"]["AdminFamilyId"];
+                /** @description Family membership row identifier. */
+                member_id: components["parameters"]["AdminFamilyMemberId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Family with updated members. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminFamilyResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchV1AdminFamiliesByIdMembersByMemberId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description CRM family identifier. */
+                id: components["parameters"]["AdminFamilyId"];
+                /** @description Family membership row identifier. */
+                member_id: components["parameters"]["AdminFamilyMemberId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateFamilyMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description Family with updated members. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminFamilyResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminOrganizationsPicker: {
+        parameters: {
+            query?: {
+                /** @description When set, only organizations with this CRM relationship type are returned. When omitted, vendor and partner rows are both excluded (Contacts default). */
+                relationship_type?: components["schemas"]["EntityRelationshipType"];
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Picker list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntityPickerListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1AdminOrganizations: {
+        parameters: {
+            query?: {
+                query?: string;
+                active?: boolean;
+                /** @description When set, only organizations with this CRM relationship type are returned (e.g. `vendor` for Finance). When omitted, vendor and partner rows are both excluded from the list (Contacts default). */
+                relationship_type?: components["schemas"]["EntityRelationshipType"];
+                /** @description Optional sort order. When `name`, results are ordered case-insensitively by trimmed `name` ascending, then by `id` ascending (stable pagination with the same `cursor` token as the default list). When omitted, rows are ordered by `created_at` descending (newest first), then `id` descending. */
+                sort?: "name";
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Organization list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminOrganizationListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1AdminOrganizations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAdminOrganizationRequest"];
+            };
+        };
+        responses: {
+            /** @description Organization created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminOrganizationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    deleteV1AdminOrganizationsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description CRM organization identifier. */
+                id: components["parameters"]["AdminOrganizationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Organization deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchV1AdminOrganizationsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description CRM organization identifier. */
+                id: components["parameters"]["AdminOrganizationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAdminOrganizationRequest"];
+            };
+        };
+        responses: {
+            /** @description Organization response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminOrganizationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminOrganizationsByIdServices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description CRM organization identifier. */
+                id: components["parameters"]["AdminOrganizationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service label list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntityServicesResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminOrganizationsByIdMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description CRM organization identifier. */
+                id: components["parameters"]["AdminOrganizationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddOrganizationMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description Organization with updated members. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminOrganizationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteV1AdminOrganizationsByIdMembersByMemberId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description CRM organization identifier. */
+                id: components["parameters"]["AdminOrganizationId"];
+                /** @description Organization membership row identifier. */
+                member_id: components["parameters"]["AdminOrganizationMemberId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Organization with updated members. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminOrganizationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchV1AdminOrganizationsByIdMembersByMemberId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description CRM organization identifier. */
+                id: components["parameters"]["AdminOrganizationId"];
+                /** @description Organization membership row identifier. */
+                member_id: components["parameters"]["AdminOrganizationMemberId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateOrganizationMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description Organization with updated members. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminOrganizationResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminBillingExport: {
+        parameters: {
+            query?: {
+                /** @description `1` (legacy) or `2` (default). */
+                export_version?: "1" | "2";
+                /** @description Maximum payment rows per page (default 1000, max 5000). */
+                limit?: number;
+                /** @description Opaque pagination cursor from a prior export response `next_cursor`. */
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accounting-oriented CSV payload. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        csv: string;
+                        /** @description Present when more payment rows are available. */
+                        next_cursor?: string | null;
+                    };
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1AdminBillingPayments: {
+        parameters: {
+            query?: {
+                /** @description When set, return only payments that have at least one allocation to this invoice. */
+                invoice_id?: string;
+                /** @description Opaque cursor from a prior `next_cursor` value. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Payment rows. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["CustomerPaymentSummary"][];
+                        next_cursor?: string | null;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1AdminBillingPayments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCustomerRefundRequest"] | components["schemas"]["CreateManualInboundCustomerPaymentRequest"];
+            };
+        };
+        responses: {
+            /** @description Refund or inbound payment created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        payment?: components["schemas"]["CustomerPaymentSummary"];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            /** @description Duplicate manual inbound payment for the same enrollment and external reference (partial unique index on non-null `external_reference`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    getV1AdminBillingPaymentsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Payment detail. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerPaymentSummary"] & {
+                        /** @description Distinct invoices this payment is allocated to (newest invoice first). */
+                        allocationInvoices?: components["schemas"]["CustomerPaymentAllocationInvoice"][];
+                    };
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteV1AdminBillingPaymentsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Payment deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchV1AdminBillingPaymentsById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateManualInboundCustomerPaymentRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated payment. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        payment?: components["schemas"]["CustomerPaymentSummary"];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Duplicate manual inbound payment for the same enrollment and external reference. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    postV1AdminBillingPaymentsByIdConfirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    externalReference?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Payment confirmed and receipt generated when applicable. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        payment?: components["schemas"]["CustomerPaymentSummary"];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminBillingEnrollmentsRecentForInvoicing: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor from a prior `next_cursor` value. */
+                cursor?: string;
+                limit?: number;
+                /** @description Case-insensitive partial match across enrollment id, instance title/cohort, contacts, family/org names, and tier name. */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Enrollment rows for invoicing UI. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["BillingEnrollmentPickerRow"][];
+                        /** @description True when another page may exist (results reached `limit`). */
+                        truncated: boolean;
+                        /** @description Cursor for the next page when `truncated` is true. */
+                        next_cursor?: string | null;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1AdminBillingInvoices: {
+        parameters: {
+            query?: {
+                status?: "draft" | "issued" | "void";
+                /** @description Issued-invoice settlement slice for admin filtering: `open` (issued with balance_due > 0), `partially_paid` (issued with amount_allocated > 0 and balance_due > 0), `paid` (issued, balance_due zero, amount_allocated > 0, total > 0), `no_charge` (issued with total = 0), or `not_completed` (draft invoices, or issued with total > 0 that are not in the `paid` or `no_charge` slices). Combined with `status` using AND. */
+                settlement?: "open" | "partially_paid" | "paid" | "no_charge" | "not_completed";
+                /** @description Three-letter ISO currency code (for example HKD). */
+                currency?: string;
+                /** @description Case-insensitive substring filter on invoice number, bill-to name/email/location text, and invoice issue date (ISO `YYYY-MM-DD` only). */
+                q?: string;
+                /** @description Restrict to invoices billed to this contact or to a family or organisation they belong to. Mutually exclusive with `family_id` and `organization_id`. */
+                contact_id?: string;
+                /** @description Restrict to invoices billed to this family or to one of its member contacts. Mutually exclusive with `contact_id` and `organization_id`. */
+                family_id?: string;
+                /** @description Restrict to invoices billed to this organisation or to one of its member contacts. Mutually exclusive with `contact_id` and `family_id`. */
+                organization_id?: string;
+                /** @description Opaque cursor from a prior `next_cursor` value. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invoice summaries. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["CustomerInvoiceSummary"][];
+                        next_cursor?: string | null;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1AdminBillingInvoices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDraftInvoiceRequest"] | components["schemas"]["CreateCustomizedDraftInvoiceRequest"];
+            };
+        };
+        responses: {
+            /** @description Draft invoice created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        invoiceId?: string;
+                        /** @enum {string} */
+                        status?: "draft";
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1AdminBillingInvoicesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invoice detail including line items. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        invoice: components["schemas"]["CustomerInvoiceDetail"];
+                    };
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteV1AdminBillingInvoicesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invoice deleted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        invoiceId: string;
+                        deleted: boolean;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminBillingInvoicesByIdPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signed download URL and expiry. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uri */
+                        downloadUrl: string;
+                        /** Format: date-time */
+                        expiresAt: string;
+                    };
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminBillingInvoicesByIdIssue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invoice issued. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        invoiceId?: string;
+                        invoiceNumber?: string;
+                        issuedPdfSha256?: string | null;
+                        /**
+                         * Format: uuid
+                         * @description Pending inbound customer payment created at issue. Null for zero-total invoices and when a succeeded Stripe payment already exists for an enrollment on the invoice.
+                         */
+                        paymentId?: string | null;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminBillingInvoicesByIdVoid: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Invoice voided. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        invoiceId?: string;
+                        /** @enum {string} */
+                        status?: "void";
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminBillingInvoicesByIdEmail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * @description Recipient email address(es). Multiple addresses may be given as a comma-separated list (optional semicolons are treated like commas).
+                     * @example billing@example.com, accounts@example.com
+                     */
+                    toEmail: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Email sent (best-effort). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        sent?: boolean;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminBillingDashboardResolveBillToPrimaryContacts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveBillToPrimaryContactsRequest"];
+            };
+        };
+        responses: {
+            /** @description Primary contact id maps keyed by family or organisation id. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResolveBillToPrimaryContactsResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1AdminBillingAllocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePaymentAllocationRequest"];
+            };
+        };
+        responses: {
+            /** @description Allocation created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        allocationId?: string;
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminExpenses: {
+        parameters: {
+            query?: {
+                query?: string;
+                status?: components["schemas"]["ExpenseStatus"];
+                parse_status?: components["schemas"]["ExpenseParseStatus"];
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Expense list response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1AdminExpenses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateExpenseRequest"];
+            };
+        };
+        responses: {
+            /** @description Expense created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1AdminExpensesImportFromBulkPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkImportExpensesFromPdfRequest"];
+            };
+        };
+        responses: {
+            /** @description Bulk import job accepted for asynchronous processing. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkImportJobResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminExpensesBulkImportJobs: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated bulk import jobs for the current admin. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkImportJobListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1AdminExpensesBulkImportJobsByJobId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifier returned from `POST /v1/admin/expenses/import-from-bulk-pdf`. */
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current job state (and expenses when the job finished with successes). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkImportJobResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteV1AdminExpensesBulkImportJobsByJobId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identifier returned from `POST /v1/admin/expenses/import-from-bulk-pdf`. */
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job record deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteV1AdminExpensesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Expense identifier. */
+                id: components["parameters"]["ExpenseId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Expense deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    patchV1AdminExpensesById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Expense identifier. */
+                id: components["parameters"]["ExpenseId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateExpenseRequest"];
+            };
+        };
+        responses: {
+            /** @description Expense response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminExpensesByIdCancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Expense identifier. */
+                id: components["parameters"]["ExpenseId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelExpenseRequest"];
+            };
+        };
+        responses: {
+            /** @description Expense response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminExpensesByIdMarkPaid: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Expense identifier. */
+                id: components["parameters"]["ExpenseId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Expense response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminExpensesByIdReparse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Expense identifier. */
+                id: components["parameters"]["ExpenseId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Parse request queued. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionMessageResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    postV1AdminExpensesByIdAmend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Expense identifier. */
+                id: components["parameters"]["ExpenseId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateExpenseRequest"];
+            };
+        };
+        responses: {
+            /** @description Amendment expense created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1AdminForms: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Form summary list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminFormListResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1AdminFormsByFormSlugAnswers: {
+        parameters: {
+            query?: {
+                /** @description Opaque continuation token from `next_cursor`. */
+                cursor?: string;
+                limit?: number;
+                /** @description When set, return only answer rows whose stored `contactId` matches this CRM contact UUID. */
+                contact_id?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Training form slug (kebab-case). */
+                form_slug: components["parameters"]["FormSlug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Form answer rows for the selected form. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminFormAnswerListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    deleteV1AdminFormsByFormSlugAnswers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Training form slug (kebab-case). */
+                form_slug: components["parameters"]["FormSlug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Form answers cleared. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminFormClearAnswersResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1AdminFormsByFormSlugAnswersExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Training form slug (kebab-case). */
+                form_slug: components["parameters"]["FormSlug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CSV export generated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1AdminPolls: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Poll summary list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPollListResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1AdminPollsByPollSlugAnswers: {
+        parameters: {
+            query?: {
+                /** @description Opaque continuation token from `next_cursor`. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Training poll slug (kebab-case). */
+                poll_slug: components["parameters"]["PollSlug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Poll answer rows for the selected poll. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPollAnswerListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    deleteV1AdminPollsByPollSlugAnswers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Training poll slug (kebab-case). */
+                poll_slug: components["parameters"]["PollSlug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Poll answers cleared. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPollClearAnswersResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1AdminPollsByPollSlugAnswersExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Training poll slug (kebab-case). */
+                poll_slug: components["parameters"]["PollSlug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CSV export generated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getV1UserAssets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description User asset list response. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getV1UserAssetsByIdDownload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Asset identifier. */
+                id: components["parameters"]["AssetId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Download response payload. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetDownloadResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+}
 type WithRequired<T, K extends keyof T> = T & {
     [P in K]-?: T[P];
 };
-export type operations = Record<string, never>;

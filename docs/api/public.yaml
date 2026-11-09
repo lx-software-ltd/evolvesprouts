@@ -80,6 +80,7 @@ servers:
 paths:
   /v1/assets/public:
     get:
+      operationId: getV1AssetsPublic
       summary: List public assets
       description: Public asset listing route guarded by device attestation and API key.
       security:
@@ -103,7 +104,9 @@ paths:
     parameters:
       - $ref: "#/components/parameters/AssetId"
     get:
+      operationId: getV1AssetsPublicByIdDownload
       summary: Generate public asset download
+      description: "Generate public asset download"
       security:
         - ApiKeyAuth: []
           DeviceAttestation: []
@@ -124,7 +127,9 @@ paths:
   /v1/assets/share/{token}:
     parameters:
       - $ref: "#/components/parameters/ShareToken"
+    # Success is the 302 redirect. A 2xx body is not part of this operation.
     get:
+      operationId: getV1AssetsShareByToken
       summary: Resolve stable asset share link
       description: |
         Public bearer endpoint that resolves a stable share token and redirects
@@ -160,7 +165,9 @@ paths:
   /v1/assets/email-download/{token}:
     parameters:
       - $ref: "#/components/parameters/ShareToken"
+    # Success is the 302 redirect. A 2xx body is not part of this operation.
     get:
+      operationId: getV1AssetsEmailDownloadByToken
       summary: Resolve stable asset share link for email
       description: |
         Same token resolution as `/v1/assets/share/{token}` but intended for
@@ -189,7 +196,9 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   /v1/mailchimp/webhook:
+    # Mailchimp's URL check always receives 200. This operation does not reject callers.
     get:
+      operationId: getV1MailchimpWebhook
       summary: Mailchimp webhook URL verification
       description: |
         Lightweight endpoint that Mailchimp calls with a GET request when
@@ -203,6 +212,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ReservationSubmissionAccepted"
     post:
+      operationId: postV1MailchimpWebhook
       summary: Receive Mailchimp audience webhook event
       description: |
         Public webhook endpoint for Mailchimp audience events.
@@ -241,6 +251,7 @@ paths:
 
   /v1/whatsapp/webhook:
     get:
+      operationId: getV1WhatsappWebhook
       summary: WhatsApp Cloud API webhook verification
       description: |
         Meta subscription handshake. Returns the raw `hub.challenge` when
@@ -272,6 +283,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
+      operationId: postV1WhatsappWebhook
       summary: Receive WhatsApp Cloud API webhook events
       description: |
         Public webhook for inbound WhatsApp messages and coexistence
@@ -308,6 +320,7 @@ paths:
 
   /v1/meta/webhook:
     get:
+      operationId: getV1MetaWebhook
       summary: Messenger and Instagram webhook verification
       description: |
         Meta subscription handshake for Page and Instagram messaging.
@@ -340,6 +353,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
+      operationId: postV1MetaWebhook
       summary: Receive Messenger and Instagram webhook events
       description: |
         Public webhook for inbound Messenger and Instagram Direct messages
@@ -382,6 +396,7 @@ paths:
 
   /v1/public/whatsapp/conversations:
     get:
+      operationId: getV1PublicWhatsappConversations
       summary: List WhatsApp conversations (token API)
       description: |
         Returns captured WhatsApp threads for a hashed API token
@@ -437,6 +452,7 @@ paths:
           type: string
           format: uuid
     get:
+      operationId: getV1PublicWhatsappConversationsByIdMessages
       summary: List WhatsApp messages for a conversation (token API)
       description: |
         Returns the conversation header (name and dates) plus newest-first
@@ -475,6 +491,7 @@ paths:
 
   /v1/public/meta/conversations:
     get:
+      operationId: getV1PublicMetaConversations
       summary: List Messenger and Instagram conversations (token API)
       description: |
         Returns captured Messenger and Instagram threads for a hashed API token
@@ -537,6 +554,7 @@ paths:
           type: string
           format: uuid
     get:
+      operationId: getV1PublicMetaConversationsByIdMessages
       summary: List Messenger or Instagram messages for a conversation (token API)
       description: |
         Returns the conversation header (channel, name, and dates) plus newest-first
@@ -575,6 +593,7 @@ paths:
 
   /v1/public/contacts:
     get:
+      operationId: getV1PublicContacts
       summary: List CRM contacts (token API)
       description: |
         Returns CRM contacts for a hashed API token (`x-api-token`).
@@ -628,6 +647,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
+      operationId: postV1PublicContacts
       summary: Create CRM contact (token API)
       description: |
         Creates a CRM contact. Requires an `admin` scoped API token.
@@ -667,6 +687,7 @@ paths:
           type: string
           format: uuid
     get:
+      operationId: getV1PublicContactsById
       summary: Get CRM contact (token API)
       description: |
         Returns one CRM contact for a hashed API token (`x-api-token`).
@@ -693,6 +714,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     patch:
+      operationId: patchV1PublicContactsById
       summary: Update CRM contact (token API)
       description: |
         Updates a CRM contact. Requires an `admin` scoped API token.
@@ -725,6 +747,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: deleteV1PublicContactsById
       summary: Delete CRM contact (token API)
       description: |
         Permanently removes the contact row. Requires an `admin` scoped API
@@ -759,6 +782,7 @@ paths:
           type: string
           format: uuid
     get:
+      operationId: getV1PublicContactsByIdNotes
       summary: List standalone notes for a contact (token API)
       description: |
         Returns notes stored on the contact that are not tied to a sales lead
@@ -785,6 +809,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     post:
+      operationId: postV1PublicContactsByIdNotes
       summary: Add a standalone note to a contact (token API)
       description: Requires an `admin` scoped API token. `user` tokens receive `403`.
       security:
@@ -830,6 +855,7 @@ paths:
           type: string
           format: uuid
     patch:
+      operationId: patchV1PublicContactsByIdNotesByNoteId
       summary: Update a standalone note on a contact (token API)
       description: Requires an `admin` scoped API token.
       security:
@@ -860,6 +886,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: deleteV1PublicContactsByIdNotesByNoteId
       summary: Delete a standalone note on a contact (token API)
       description: Requires an `admin` scoped API token.
       security:
@@ -882,6 +909,7 @@ paths:
 
   /v1/public/families:
     get:
+      operationId: getV1PublicFamilies
       summary: List CRM families (token API)
       description: |
         Returns CRM families for a hashed API token (`x-api-token`).
@@ -925,6 +953,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
+      operationId: postV1PublicFamilies
       summary: Create CRM family (token API)
       description: Requires an `admin` scoped API token.
       security:
@@ -962,7 +991,9 @@ paths:
           type: string
           format: uuid
     get:
+      operationId: getV1PublicFamiliesById
       summary: Get CRM family (token API)
+      description: "Get CRM family (token API)"
       security:
         - ApiTokenAuth: []
       responses:
@@ -985,6 +1016,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     patch:
+      operationId: patchV1PublicFamiliesById
       summary: Update CRM family (token API)
       description: Requires an `admin` scoped API token.
       security:
@@ -1015,6 +1047,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: deleteV1PublicFamiliesById
       summary: Delete CRM family (token API)
       description: Requires an `admin` scoped API token.
       security:
@@ -1044,6 +1077,7 @@ paths:
           type: string
           format: uuid
     post:
+      operationId: postV1PublicFamiliesByIdMembers
       summary: Add family member (token API)
       description: Requires an `admin` scoped API token.
       security:
@@ -1089,6 +1123,7 @@ paths:
           type: string
           format: uuid
     patch:
+      operationId: patchV1PublicFamiliesByIdMembersByMemberId
       summary: Update family member (token API)
       description: Requires an `admin` scoped API token. Toggles primary contact.
       security:
@@ -1119,6 +1154,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: deleteV1PublicFamiliesByIdMembersByMemberId
       summary: Remove family member (token API)
       description: Requires an `admin` scoped API token.
       security:
@@ -1145,7 +1181,9 @@ paths:
 
   /v1/public/organizations:
     get:
+      operationId: getV1PublicOrganizations
       summary: List CRM organisations (token API)
+      description: "List CRM organisations (token API)"
       security:
         - ApiTokenAuth: []
       parameters:
@@ -1194,6 +1232,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
+      operationId: postV1PublicOrganizations
       summary: Create CRM organisation (token API)
       description: Requires an `admin` scoped API token.
       security:
@@ -1231,7 +1270,9 @@ paths:
           type: string
           format: uuid
     get:
+      operationId: getV1PublicOrganizationsById
       summary: Get CRM organisation (token API)
+      description: "Get CRM organisation (token API)"
       security:
         - ApiTokenAuth: []
       responses:
@@ -1254,6 +1295,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     patch:
+      operationId: patchV1PublicOrganizationsById
       summary: Update CRM organisation (token API)
       description: Requires an `admin` scoped API token.
       security:
@@ -1284,6 +1326,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: deleteV1PublicOrganizationsById
       summary: Delete CRM organisation (token API)
       description: Requires an `admin` scoped API token.
       security:
@@ -1313,6 +1356,7 @@ paths:
           type: string
           format: uuid
     post:
+      operationId: postV1PublicOrganizationsByIdMembers
       summary: Add organisation member (token API)
       description: Requires an `admin` scoped API token.
       security:
@@ -1358,6 +1402,7 @@ paths:
           type: string
           format: uuid
     patch:
+      operationId: patchV1PublicOrganizationsByIdMembersByMemberId
       summary: Update organisation member (token API)
       description: Requires an `admin` scoped API token.
       security:
@@ -1388,6 +1433,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: deleteV1PublicOrganizationsByIdMembersByMemberId
       summary: Remove organisation member (token API)
       description: Requires an `admin` scoped API token.
       security:
@@ -1414,7 +1460,9 @@ paths:
 
   /v1/public/locations:
     get:
+      operationId: getV1PublicLocations
       summary: List locations (token API)
+      description: "List locations (token API)"
       security:
         - ApiTokenAuth: []
       parameters:
@@ -1459,6 +1507,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
+      operationId: postV1PublicLocations
       summary: Create location (token API)
       description: Requires an `admin` scoped API token.
       security:
@@ -1489,6 +1538,7 @@ paths:
 
   /v1/public/locations/geocode:
     post:
+      operationId: postV1PublicLocationsGeocode
       summary: Geocode a location address (token API)
       description: |
         Requires an `admin` scoped API token. The free-text query keeps the
@@ -1529,7 +1579,9 @@ paths:
           type: string
           format: uuid
     get:
+      operationId: getV1PublicLocationsById
       summary: Get location (token API)
+      description: "Get location (token API)"
       security:
         - ApiTokenAuth: []
       responses:
@@ -1552,6 +1604,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     patch:
+      operationId: patchV1PublicLocationsById
       summary: Update location (token API)
       description: Requires an `admin` scoped API token.
       security:
@@ -1584,6 +1637,7 @@ paths:
 
   /v1/public/geographic-areas:
     get:
+      operationId: getV1PublicGeographicAreas
       summary: List geographic areas (token API)
       description: GET only for both `user` and `admin` tokens. Payloads match admin.
       security:
@@ -1624,6 +1678,7 @@ paths:
 
   /v1/public/services:
     get:
+      operationId: getV1PublicServices
       summary: List services (token API)
       description: |
         Returns service templates for a hashed API token (`x-api-token`).
@@ -1678,6 +1733,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
+      operationId: postV1PublicServices
       summary: Create service (token API)
       description: Requires an `admin` scoped API token. `user` tokens receive `403`.
       security:
@@ -1708,6 +1764,7 @@ paths:
 
   /v1/public/services/instances:
     get:
+      operationId: getV1PublicServicesInstances
       summary: List service instances across services (token API)
       description: |
         Returns service instances across all services for a hashed API token
@@ -1794,7 +1851,9 @@ paths:
           type: string
           format: uuid
     get:
+      operationId: getV1PublicServicesById
       summary: Get service (token API)
+      description: "Get service (token API)"
       security:
         - ApiTokenAuth: []
       responses:
@@ -1817,6 +1876,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     put:
+      operationId: putV1PublicServicesById
       summary: Update service (token API)
       description: Requires an `admin` scoped API token.
       security:
@@ -1853,6 +1913,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
     patch:
+      operationId: patchV1PublicServicesById
       summary: Partially update service (token API)
       description: Requires an `admin` scoped API token.
       security:
@@ -1889,6 +1950,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
     delete:
+      operationId: deleteV1PublicServicesById
       summary: Delete service (token API)
       description: Requires an `admin` scoped API token. Returns 409 when instances exist.
       security:
@@ -1924,7 +1986,9 @@ paths:
           type: string
           format: uuid
     get:
+      operationId: getV1PublicServicesByIdInstances
       summary: List instances for a service (token API)
+      description: "List instances for a service (token API)"
       security:
         - ApiTokenAuth: []
       responses:
@@ -1947,6 +2011,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     post:
+      operationId: postV1PublicServicesByIdInstances
       summary: Create service instance (token API)
       description: |
         Creates a service instance under the parent service. Requires an `admin`
@@ -2000,7 +2065,9 @@ paths:
           type: string
           format: uuid
     get:
+      operationId: getV1PublicServicesByIdInstancesByInstanceId
       summary: Get service instance (token API)
+      description: "Get service instance (token API)"
       security:
         - ApiTokenAuth: []
       responses:
@@ -2023,6 +2090,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     put:
+      operationId: putV1PublicServicesByIdInstancesByInstanceId
       summary: Update service instance (token API)
       description: |
         Requires an `admin` scoped API token. When `status` is set to `completed`,
@@ -2062,6 +2130,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
     delete:
+      operationId: deleteV1PublicServicesByIdInstancesByInstanceId
       summary: Delete service instance (token API)
       description: Requires an `admin` scoped API token.
       security:
@@ -2084,6 +2153,7 @@ paths:
 
   /v1/assets/free:
     get:
+      operationId: getV1AssetsFree
       summary: List public free website assets
       description: |
         Lists **public** assets tagged `client_document` for the public website.
@@ -2122,6 +2192,7 @@ paths:
 
   /www/v1/assets/free:
     get:
+      operationId: getWwwV1AssetsFree
       summary: List public free website assets (website proxy path)
       description: Same as `GET /v1/assets/free` for same-origin calls from `public_www`.
       security:
@@ -2155,6 +2226,7 @@ paths:
 
   /v1/calendar/public:
     get:
+      operationId: getV1CalendarPublic
       summary: List public calendar events
       description: |
         Calendar feed for public consumers (direct API).
@@ -2247,6 +2319,7 @@ paths:
 
   /www/v1/calendar/public:
     get:
+      operationId: getWwwV1CalendarPublic
       summary: List public website events
       description: |
         Same as `GET /v1/calendar/public` for same-origin calls from `public_www`.
@@ -2339,6 +2412,7 @@ paths:
 
   /v1/calendar/availability:
     get:
+      operationId: getV1CalendarAvailability
       summary: Public calendar availability (slot intervals + meta)
       description: |
         Returns discrete bookable UTC intervals (`slots`) plus `meta` for the requested `purpose`.
@@ -2400,6 +2474,7 @@ paths:
 
   /www/v1/calendar/availability:
     get:
+      operationId: getWwwV1CalendarAvailability
       summary: Public calendar availability (website proxy path)
       description: Same as `GET /v1/calendar/availability` for same-origin calls from `public_www`.
       security:
@@ -2442,6 +2517,7 @@ paths:
 
   /v1/discounts/validate:
     post:
+      operationId: postV1DiscountsValidate
       summary: Validate discount code (native)
       description: |
         Validates an admin-managed discount code against Aurora (`discount_codes`).
@@ -2497,6 +2573,7 @@ paths:
 
   /www/v1/discounts/validate:
     post:
+      operationId: postWwwV1DiscountsValidate
       summary: Validate discount code (native, website proxy path)
       description: |
         Same as `POST /v1/discounts/validate` for same-origin calls from `public_www`.
@@ -2534,6 +2611,7 @@ paths:
 
   /v1/contact-us:
     post:
+      operationId: postV1ContactUs
       summary: Submit contact-us form (direct API path)
       description: >
         Accepts contact-us, community newsletter, and event-notification signups from
@@ -2582,6 +2660,7 @@ paths:
 
   /www/v1/contact-us:
     post:
+      operationId: postWwwV1ContactUs
       summary: Submit contact-us form (website proxy path)
       description: Same as `POST /v1/contact-us` for same-origin calls from `public_www`.
       security:
@@ -2621,6 +2700,7 @@ paths:
 
   /v1/reservations:
     post:
+      operationId: postV1Reservations
       summary: Submit reservation (direct API path)
       description: >
         Submit a public reservation from `public_www` (execute-api origin).
@@ -2704,6 +2784,7 @@ paths:
 
   /www/v1/reservations:
     post:
+      operationId: postWwwV1Reservations
       summary: Submit reservation (website proxy path)
       description: Same as `POST /v1/reservations` for same-origin calls from `public_www`.
       security:
@@ -2754,6 +2835,7 @@ paths:
 
   /www/v1/reservations/payment-intent:
     post:
+      operationId: postWwwV1ReservationsPaymentIntent
       summary: Create reservation payment intent
       description: Create a Stripe PaymentIntent for inline booking modal payment.
       security:
@@ -2784,6 +2866,7 @@ paths:
 
   /v1/forms/{form_slug}/answers:
     put:
+      operationId: putV1FormsByFormSlugAnswers
       summary: Persist one form question answer (direct API path)
       description: >
         Upserts a single question answer for a training-site form session.
@@ -2838,6 +2921,7 @@ paths:
 
   /v1/forms/{form_slug}/contact-context:
     get:
+      operationId: getV1FormsByFormSlugContactContext
       summary: Resolve display-only contact placeholders for a form
       description: >
         Returns first names and household labels used to fill tokens such as
@@ -2885,6 +2969,7 @@ paths:
 
   /v1/polls/{poll_slug}/answers:
     get:
+      operationId: getV1PollsByPollSlugAnswers
       summary: List persisted answers for one poll session (direct API path)
       description: >
         Returns all question answers stored for the given `sessionId` on this
@@ -2934,6 +3019,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
     put:
+      operationId: putV1PollsByPollSlugAnswers
       summary: Persist one poll question answer (direct API path)
       description: >
         Upserts a single question answer for a training-site poll session.
@@ -3014,6 +3100,7 @@ paths:
 
   /v1/polls/{poll_slug}/control:
     get:
+      operationId: getV1PollsByPollSlugControl
       summary: Poll facilitator control state (direct API path)
       description: >
         Returns which poll questions are currently open for respondents.
@@ -3055,6 +3142,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
     put:
+      operationId: putV1PollsByPollSlugControl
       summary: Update poll facilitator control state (direct API path)
       description: >
         Replaces the set of question ids that respondents may answer. Questions
@@ -3105,6 +3193,7 @@ paths:
 
   /v1/polls/{poll_slug}/questions/{question_id}/results:
     get:
+      operationId: getV1PollsByPollSlugQuestionsByQuestionIdResults
       summary: Live aggregate results for one poll question (direct API path)
       description: >
         Returns room-wide response counts for a single poll question. Used by
@@ -3166,6 +3255,7 @@ paths:
 
   /www/v1/polls/{poll_slug}/control:
     get:
+      operationId: getWwwV1PollsByPollSlugControl
       summary: Poll facilitator control state (training website proxy path)
       description: Same as `GET /v1/polls/{poll_slug}/control` for same-origin calls from `apps/training`.
       security:
@@ -3203,6 +3293,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
     put:
+      operationId: putWwwV1PollsByPollSlugControl
       summary: Update poll facilitator control state (training website proxy path)
       description: Same as `PUT /v1/polls/{poll_slug}/control` for same-origin calls from `apps/training`.
       security:
@@ -3250,6 +3341,7 @@ paths:
 
   /www/v1/polls/{poll_slug}/questions/{question_id}/results:
     get:
+      operationId: getWwwV1PollsByPollSlugQuestionsByQuestionIdResults
       summary: Live aggregate results for one poll question (training website proxy path)
       description: Same as `GET /v1/polls/{poll_slug}/questions/{question_id}/results` for same-origin calls from `apps/training`.
       security:
@@ -3303,6 +3395,7 @@ paths:
 
   /www/v1/forms/{form_slug}/answers:
     put:
+      operationId: putWwwV1FormsByFormSlugAnswers
       summary: Persist one form question answer (training website proxy path)
       description: Same as `PUT /v1/forms/{form_slug}/answers` for same-origin calls from `apps/training`.
       security:
@@ -3350,6 +3443,7 @@ paths:
 
   /www/v1/forms/{form_slug}/contact-context:
     get:
+      operationId: getWwwV1FormsByFormSlugContactContext
       summary: Resolve display-only contact placeholders (training website proxy path)
       description: Same as `GET /v1/forms/{form_slug}/contact-context` for same-origin calls from `apps/training`.
       security:
@@ -3391,6 +3485,7 @@ paths:
 
   /www/v1/polls/{poll_slug}/answers:
     get:
+      operationId: getWwwV1PollsByPollSlugAnswers
       summary: List persisted answers for one poll session (training website proxy path)
       description: Same as `GET /v1/polls/{poll_slug}/answers` for same-origin calls from `apps/training`.
       security:
@@ -3436,6 +3531,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
     put:
+      operationId: putWwwV1PollsByPollSlugAnswers
       summary: Persist one poll question answer (training website proxy path)
       description: Same as `PUT /v1/polls/{poll_slug}/answers` for same-origin calls from `apps/training`.
       security:
@@ -3483,6 +3579,7 @@ paths:
 
   /v1/assets/free/request:
     post:
+      operationId: postV1AssetsFreeRequest
       summary: Submit media request (direct API path)
       description: >
         Submit a media lead form. Routed on the public website via CloudFront as
@@ -3523,6 +3620,7 @@ paths:
 
   /www/v1/assets/free/request:
     post:
+      operationId: postWwwV1AssetsFreeRequest
       summary: Submit media request (website proxy path)
       description: Same as `POST /v1/assets/free/request` for same-origin calls from `public_www`.
       security:

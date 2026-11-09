@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from sqlalchemy.orm import attributes
+from sqlalchemy.orm.exc import UnmappedInstanceError
+
 from app.api.admin_entities_helpers import serialize_tag_ref
 from app.db.models import (
     Contact,
@@ -209,6 +212,21 @@ def serialize_family_summary(
     }
 
 
+def _loaded_relationship(instance: object, name: str) -> Any:
+    """Return a relationship value without triggering a loader.
+
+    Vendor lists mark tags, members, and location ``raiseload`` so the summary
+    can omit them. Reading an unloaded raiseload attribute raises.
+    """
+    try:
+        state = attributes.instance_state(instance)
+    except (UnmappedInstanceError, AttributeError):
+        return getattr(instance, name)
+    if name in state.unloaded:
+        return None
+    return getattr(instance, name)
+
+
 def serialize_organization_summary(
     org: Organization,
     *,
@@ -217,12 +235,15 @@ def serialize_organization_summary(
     has_service_instance: bool = False,
     has_invoice: bool = False,
 ) -> dict[str, Any]:
+    raw_tags = _loaded_relationship(org, "organization_tags") or []
+    raw_members = _loaded_relationship(org, "organization_members") or []
+    location = _loaded_relationship(org, "location")
     tags = sorted(
-        (serialize_tag_ref(ot.tag) for ot in org.organization_tags if ot.tag),
+        (serialize_tag_ref(ot.tag) for ot in raw_tags if ot.tag),
         key=lambda t: t["name"].lower(),
     )
     members = sorted(
-        (serialize_member_row(m) for m in org.organization_members),
+        (serialize_member_row(m) for m in raw_members),
         key=lambda m: m["contact_label"].lower(),
     )
     return {
@@ -234,8 +255,8 @@ def serialize_organization_summary(
         "legal_name": org.legal_name,
         "website": org.website,
         "location_id": str(org.location_id) if org.location_id else None,
-        "location_summary": serialize_location_venue(org.location)
-        if org.location_id is not None and org.location is not None
+        "location_summary": serialize_location_venue(location)
+        if org.location_id is not None and location is not None
         else None,
         "active": org.archived_at is None,
         "archived_at": org.archived_at,

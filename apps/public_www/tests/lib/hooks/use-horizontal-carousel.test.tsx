@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -200,7 +200,9 @@ describe('useHorizontalCarousel', () => {
         initialScrollLeft: 0,
       });
 
-      vi.advanceTimersByTime(20);
+      act(() => {
+        vi.advanceTimersByTime(20);
+      });
 
       setScrollLeft(200);
       fireEvent.scroll(track);
@@ -209,7 +211,9 @@ describe('useHorizontalCarousel', () => {
       setScrollLeft(600);
       fireEvent.scroll(track);
 
-      vi.advanceTimersByTime(500);
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
       expect(track.scrollLeft).toBe(0);
     } finally {
       vi.useRealTimers();
@@ -228,7 +232,9 @@ describe('useHorizontalCarousel', () => {
         initialScrollLeft: 0,
       });
 
-      vi.advanceTimersByTime(2000);
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
 
       expect(track.scrollLeft).toBe(0);
     } finally {

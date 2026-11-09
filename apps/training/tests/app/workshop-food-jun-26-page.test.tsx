@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -51,6 +51,9 @@ describe('WorkshopFoodJun26PollPage', () => {
     });
     render(page);
     expect(screen.getByRole('heading', { level: 1, name: poll?.title })).toBeInTheDocument();
+    await act(async () => {
+      await Promise.resolve();
+    });
   });
 
   it('advances after selecting an option and persists', async () => {

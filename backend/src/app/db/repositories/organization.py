@@ -8,7 +8,7 @@ from typing import Literal
 from uuid import UUID
 
 from sqlalchemy import and_, func, literal, or_, select
-from sqlalchemy.orm import Session, noload, selectinload
+from sqlalchemy.orm import Session, raiseload, selectinload
 
 from app.db.models import Location, Organization, RelationshipType
 from app.db.models.organization import OrganizationMember
@@ -144,9 +144,9 @@ class OrganizationRepository(BaseRepository[Organization]):
             )
         else:
             statement = statement.options(
-                noload(Organization.organization_tags),
-                noload(Organization.organization_members),
-                noload(Organization.location),
+                raiseload(Organization.organization_tags),
+                raiseload(Organization.organization_members),
+                raiseload(Organization.location),
             )
         name_sort_key = func.lower(func.trim(Organization.name))
         if cursor is not None:

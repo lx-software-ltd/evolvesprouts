@@ -24,8 +24,10 @@ _SUPPORTED_EVENT_TYPES = frozenset(
 )
 # Keep this message in sync with the Admin Lambda metric filter in api-stack.ts.
 _RECEIVED_WEBHOOK_LOG_MESSAGE = "Received Mailchimp webhook"
-_WEBHOOK_TOKEN_QUERY_KEY = "token"  # nosec B105 - static query parameter name
-_WEBHOOK_SECRET_ENV_NAME = (  # nosec B105 - env var key, not a secret value
+# Static query parameter name, not a credential.
+_WEBHOOK_TOKEN_QUERY_KEY = "token"  # nosec B105
+# Environment variable name, not a secret value.
+_WEBHOOK_SECRET_ENV_NAME = (  # nosec B105
     "MAILCHIMP_WEBHOOK_SECRET"
 )
 _TOKEN_HEADER_CANDIDATES = ("x-mailchimp-webhook-token", "x-webhook-token")

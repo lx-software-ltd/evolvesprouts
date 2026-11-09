@@ -4,11 +4,24 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from sqlalchemy.dialects import postgresql
-
 import app.db.repositories.organization as organization_module
 from app.db.models import RelationshipType
 from app.db.repositories.organization import OrganizationRepository
+from sqlalchemy.dialects import postgresql
+
+
+def _relationship_loader_strategies(stmt: object) -> set[tuple[str, str]]:
+    """Return lazy-loader pairs applied to a list statement."""
+    strategies: set[tuple[str, str]] = set()
+    for option in getattr(stmt, "_with_options", ()):
+        for element in getattr(option, "context", ()):
+            strategy = getattr(element, "strategy", None)
+            if not strategy:
+                continue
+            for pair in strategy:
+                if isinstance(pair, tuple) and len(pair) == 2:
+                    strategies.add((str(pair[0]), str(pair[1])))
+    return strategies
 
 
 def test_crm_default_relationship_tuple_excludes_vendor_and_partner() -> None:
@@ -38,6 +51,7 @@ def test_list_organizations_default_where_excludes_vendor_and_partner() -> None:
     assert "'vendor'" not in sql
     assert "'partner'" not in sql
     assert "'prospect'" in sql
+    assert _relationship_loader_strategies(stmt) == {("lazy", "raise")}
 
 
 def test_count_organizations_default_matches_list_filter() -> None:

@@ -56,9 +56,11 @@ import { formatPartDateTimeLabel } from '@/lib/site-datetime';
 vi.mock('next/image', () => ({
   default: ({
     alt,
+    unoptimized: _unoptimized,
     ...props
   }: {
     alt?: string;
+    unoptimized?: boolean;
   } & Record<string, unknown>) => <img alt={alt ?? ''} {...props} />,
 }));
 
@@ -66,10 +68,14 @@ vi.mock('next/link', () => ({
   default: ({
     href,
     children,
+    prefetch: _prefetch,
+    scroll: _scroll,
     ...props
   }: {
     href: string;
     children: ReactNode;
+    prefetch?: boolean;
+    scroll?: boolean;
   } & AnchorHTMLAttributes<HTMLAnchorElement>) => (
     <a href={href} {...props}>
       {children}
@@ -138,9 +144,7 @@ vi.mock('@/lib/crm-api-client', async () => {
 });
 
 vi.mock('@/lib/fps-qr-code', () => ({
-  generateFpsQrImageDataUrl: vi.fn(() =>
-    Promise.resolve('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='),
-  ),
+  generateFpsQrImageDataUrl: vi.fn(() => new Promise<string>(() => {})),
   hasFpsQrConfiguration: vi.fn(() => true),
 }));
 
@@ -339,10 +343,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  vi.mocked(generateFpsQrImageDataUrl).mockImplementation(() =>
-    Promise.resolve(
-      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-    ),
+  vi.mocked(generateFpsQrImageDataUrl).mockImplementation(
+    () => new Promise<string>(() => {}),
   );
   mockedCreateCrmApiClient.mockReturnValue(null);
   mockedCreatePublicApiClient.mockReturnValue(null);
@@ -1245,6 +1247,11 @@ describe('my-best-auntie booking modals footer content', () => {
       request: vi.fn(),
     });
 
+    vi.mocked(generateFpsQrImageDataUrl).mockImplementation(() =>
+      Promise.resolve(
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      ),
+    );
     renderBookingModal({
       selectedServiceTierLabel: '18-24 months',
       onSubmitReservation,

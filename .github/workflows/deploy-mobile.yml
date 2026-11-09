@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: production
     env:
       KEYSTORE_PATH: app/keystore.p12
@@ -34,7 +34,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # ubuntu-latest ships Java 25. Gradle 8.14 cannot run on it, and this
+      # The Ubuntu 24.04 runner image ships Java 25. Gradle 8.14 cannot run on it, and this
       # app compiles for Java 17.
       - name: Set up Java
         uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
