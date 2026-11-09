@@ -41,13 +41,19 @@ Provide these parameters in `backend/infrastructure/params/production.json`:
 - `PublicWwwCertificateArn`: ACM certificate ARN for production
 - `PublicWwwStagingDomainName`: `www-staging.evolvesprouts.com`
 - `PublicWwwStagingCertificateArn`: ACM certificate ARN for staging
-- `PublicWwwApiBaseUrl`: `<FROM_GITHUB_VAR: NEXT_PUBLIC_API_BASE_URL>`
-- `PublicWwwMediaRequestApiBaseUrl`: `<FROM_GITHUB_VAR: NEXT_PUBLIC_API_BASE_URL>`
+- `PublicWwwApiBaseUrl`: `<FROM_GITHUB_VAR: PUBLIC_WWW_API_BASE_URL>`
+- `PublicWwwMediaRequestApiBaseUrl`: `<FROM_GITHUB_VAR: PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL>`
 - `WafWebAclArn`: optional CloudFront WAF ACL ARN (us-east-1)
 
 Public WWW API configuration is provided at build time via:
 
-- GitHub variable `NEXT_PUBLIC_API_BASE_URL`
+- GitHub variable `NEXT_PUBLIC_WWW_API_BASE_URL` (public-site build API base;
+  falls back to `NEXT_PUBLIC_API_BASE_URL`. Use `/www` for same-origin calls)
+- GitHub variable `NEXT_PUBLIC_API_BASE_URL` (admin and other direct clients;
+  set this to `ApiCustomDomainUrl` at API cutover)
+- GitHub variables `PUBLIC_WWW_API_BASE_URL` and
+  `PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL` (CloudFront origins; backend deploy
+  falls back to `NEXT_PUBLIC_API_BASE_URL` when unset)
 - GitHub variable `NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS`
 - GitHub secret `NEXT_PUBLIC_WWW_CRM_API_KEY`
 - GitHub variable `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
@@ -82,14 +88,17 @@ When `NEXT_PUBLIC_GTM_ALLOWED_HOSTS` is unset, GTM runtime gating defaults to
 the hostname resolved from `NEXT_PUBLIC_SITE_ORIGIN`.
 
 `evolvesprouts-public-www` CloudFront proxies `https://{www-domain}/www/*`
-to the host resolved from `PublicWwwApiBaseUrl` (derived from
-`NEXT_PUBLIC_API_BASE_URL`) with caching disabled for those requests.
+to the host resolved from `PublicWwwApiBaseUrl` (GitHub variable
+`PUBLIC_WWW_API_BASE_URL`) with caching disabled for those requests.
 `POST /www/v1/assets/free/request` is routed by a path-specific CloudFront behavior
-to the execute-api origin resolved from `PublicWwwMediaRequestApiBaseUrl`, with
+to the origin resolved from `PublicWwwMediaRequestApiBaseUrl`, with
 URI rewrite to `/v1/assets/free/request`.
-Set `NEXT_PUBLIC_API_BASE_URL` to `/www` in runtime client config to
-keep browser API calls same-origin and avoid cross-origin CORS preflight
-failures.
+Keep both origin variables on the current execute-api URL until that host
+is ready to be turned off. Point them at `ApiCustomDomainUrl` and deploy
+this stack before setting `ApiDisableExecuteApiEndpoint` to `true`.
+Set `NEXT_PUBLIC_WWW_API_BASE_URL` (or `NEXT_PUBLIC_API_BASE_URL`) to `/www`
+in the public-site build to keep browser API calls same-origin and avoid
+cross-origin CORS preflight failures.
 
 ## CI/CD workflows
 
@@ -124,6 +133,11 @@ Workflow: `.github/workflows/smoke-public-www-staging.yml`
     `backend/infrastructure/params/production.json`
 - Required secret:
   - `NEXT_PUBLIC_WWW_CRM_API_KEY`
+- Optional secret:
+  - `STAGING_BYPASS_SECRET` (same value as the staging Worker). Smoke sends
+    it only to the staging host. The run stays green while the secret is
+    unset and responses stay on that host. A redirect to another host fails
+    the run and names this secret.
 - Optional variables for API endpoint fallbacks:
   - `NEXT_PUBLIC_API_BASE_URL` (used by smoke as
     `SMOKE_CRM_API_BASE_URL` and `SMOKE_MEDIA_API_BASE_URL`)

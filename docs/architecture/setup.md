@@ -74,9 +74,17 @@ For the OIDC provider itself, add the same tags:
     - `PublicWwwCertificateArn`
     - `PublicWwwStagingDomainName`
     - `PublicWwwStagingCertificateArn`
-    - `PublicWwwApiBaseUrl` (typically `<FROM_GITHUB_VAR: NEXT_PUBLIC_API_BASE_URL>`)
-    - `PublicWwwMediaRequestApiBaseUrl` (typically `<FROM_GITHUB_VAR: NEXT_PUBLIC_API_BASE_URL>`)
-- `NEXT_PUBLIC_API_BASE_URL` (execute-api base URL for Public WWW and Admin Web API routing)
+    - `PublicWwwApiBaseUrl` (`<FROM_GITHUB_VAR: PUBLIC_WWW_API_BASE_URL>`)
+    - `PublicWwwMediaRequestApiBaseUrl` (`<FROM_GITHUB_VAR: PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL>`)
+- `PUBLIC_WWW_API_BASE_URL` and `PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL`
+  (CloudFront API origins. Backend deploy falls back to `NEXT_PUBLIC_API_BASE_URL`
+  when unset. Set them to the current execute-api URL before changing the
+  shared client variable, and to `ApiCustomDomainUrl` before disabling execute-api.)
+- `NEXT_PUBLIC_WWW_API_BASE_URL` (public website build API base, often `/www`;
+  public-site workflows fall back to `NEXT_PUBLIC_API_BASE_URL`)
+- `NEXT_PUBLIC_API_BASE_URL` (direct API base for Admin Web and other clients.
+  `TrainingApiBaseUrl` and `TrainingMediaRequestApiBaseUrl` still use this
+  variable.)
 - `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` (optional; browser Maps JavaScript API key, HTTP-referrer
   restricted to the admin origin. Required for Contacts → Map. When unset, the tab shows a
   configuration message. Wire the same GitHub variable into `deploy-admin-web.yml`.)

@@ -251,7 +251,7 @@ API Gateway (evolvesprouts-api)
 | Tracing | X-Ray enabled |
 | Access logging | JSON format to CloudWatch |
 | Caching | Disabled at stage; edge-cached at CloudFront for `/www/*` GETs |
-| Custom domain | `api.evolvesprouts.com` (param: `ApiCustomDomainName`) |
+| Custom domain | `api.evolvesprouts.com` at `/prod` (`ApiCustomDomainName`). Execute-api and the asset-share origin stay in place until `ApiDisableExecuteApiEndpoint` is `true`. |
 
 ### CORS
 
@@ -545,7 +545,7 @@ promote-public-www.yml (manual trigger)
 |---|---|---|
 | `www.evolvesprouts.com` | Public website (production) | `PublicWwwDomainName` |
 | `www-staging.evolvesprouts.com` | Public website (staging) | `PublicWwwStagingDomainName` |
-| `api.evolvesprouts.com` | API Gateway | `ApiCustomDomainName` |
+| `api.evolvesprouts.com` | API Gateway (`/prod`) | `ApiCustomDomainName` |
 | `admin.evolvesprouts.com` | Admin console | `AdminWebDomainName` |
 | `media.evolvesprouts.com` | Asset downloads | `AssetDownloadCustomDomainName` |
 | `auth.evolvesprouts.com` | Cognito hosted UI | `CognitoCustomDomainName` |

@@ -18,9 +18,9 @@ the `token` query parameter.
 
 Resolve `{api-origin}` from CloudFormation outputs on the backend stack:
 
-- Use `ApiCustomDomainUrl` when `ApiCustomDomainName` is set. That output includes the `/prod` base path, so it replaces an execute-api URL by swapping the host only.
-- Otherwise use `ApiUrl` (API Gateway execute-api URL).
-- Set `ApiDisableExecuteApiEndpoint` to `true` only after every client, including Mailchimp and WhatsApp, calls `ApiCustomDomainUrl`. The execute-api hostname then returns 403. Set the parameter back to `false` and deploy before pointing clients at execute-api again.
+- Use `ApiCustomDomainUrl` when `ApiCustomDomainName` is set. That output includes the `/prod` base path, so it replaces an execute-api URL by swapping the host only. Append `/v1/...` to the output. Do not add another `/prod`.
+- Otherwise use `ApiUrl` (API Gateway execute-api URL). It also ends in `/prod`.
+- Set `ApiDisableExecuteApiEndpoint` to `true` only after DNS points at `ApiCustomDomainTarget` and every client, including Mailchimp and WhatsApp, calls `ApiCustomDomainUrl`. That deploy also moves the asset-share CloudFront origin onto the custom domain. The execute-api hostname then returns 403. The stage setting that applies the flag is updated after the REST API change. Set the parameter back to `false` and deploy before pointing clients at execute-api again.
 
 Do not leave a previous host in the Mailchimp dashboard after
 `ApiCustomDomainName` or the execute-api stage URL changes. Mailchimp will keep

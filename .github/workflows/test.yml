@@ -310,4 +310,4 @@ jobs:
           fi
 
       - name: Run staging worker tests
-        run: node --test scripts/cloudflare/workers/*.test.mjs
+        run: node --test scripts/cloudflare/workers/*.test.mjs apps/public_www/scripts/smoke-staging.test.mjs

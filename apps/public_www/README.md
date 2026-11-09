@@ -196,7 +196,10 @@ Optional environment variables:
 - `SMOKE_TURNSTILE_TOKEN` (optional token for Turnstile-protected endpoints)
 - `SMOKE_MAX_PAGES` (limit number of page checks)
 - `SMOKE_CRM_API_BASE_URL` (optional API base fallback for `/v1/*` routes;
-  falls back to `NEXT_PUBLIC_API_BASE_URL`)
+  `SMOKE_API_BASE_URL` is a legacy alias; both fall back to
+  `NEXT_PUBLIC_API_BASE_URL`)
+- `STAGING_BYPASS_SECRET` (sent as `x-staging-bypass` only to the
+  `SMOKE_BASE_URL` host. Unset is allowed until a response leaves that host.)
 - `SMOKE_MEDIA_API_BASE_URL` (optional media API base fallback for
   `/v1/assets/free/request`; falls back to `NEXT_PUBLIC_API_BASE_URL`)
 
