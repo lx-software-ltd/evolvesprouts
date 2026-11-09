@@ -37,21 +37,30 @@ public website stacks:
 - `PublicWwwStagingEdgeVerifySecretPrevious` (`CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS`)
 - `WafWebAclArn`
 
-`PublicWwwStagingEdgeVerifySecret` is the staging `x-proxy-verify` origin
-lock. Both staging values empty disables the check. Deploy forwards an empty
-value, so clearing the GitHub secret turns the lock off, and so does a deploy
-that cannot see the secret. The job summary warns when
+`PublicWwwEdgeVerifySecret` and `PublicWwwStagingEdgeVerifySecret` are the
+`x-proxy-verify` origin locks. Both values of a pair empty disables that
+distribution's check. Deploy forwards an empty value, so clearing the GitHub
+secret turns the lock off, and so does a deploy that cannot see the secret.
+The job summary warns when either `PublicWwwEdgeVerifyEnabled` or
 `PublicWwwStagingEdgeVerifyEnabled` goes from `true` to anything else. The
-deploy job uses the `production` GitHub environment, so the secret must be a
-repository secret or a production-environment secret. A
+deploy job uses the `production` GitHub environment, so each secret must be
+a repository secret or a production-environment secret. A
 `staging`-environment secret does not reach it. Staging reads the header
 from the Worker binding `PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET`. Set that
-binding before the staging parameter. Rotate by deploying the old value as
-`PublicWwwStagingEdgeVerifySecretPrevious` and the new value as the current
-secret, then changing the Worker binding, then clearing the previous secret
-and deploying again. Production functions do not compare
-`PublicWwwEdgeVerifySecret` yet; leave it empty. `WafWebAclArn` is empty, so
-enabling the lock does not detach a WebACL. `deploy-backend.yml` runs on
+binding before the staging parameter. Production reads it from the
+Cloudflare rule in `scripts/cloudflare/public_www_edge_policy.json`. Apply
+that rule before `PublicWwwEdgeVerifySecret`. Before that secret, confirm
+`www.evolvesprouts.com` has no Worker route that would drop the header, and
+use the zone Trace tool to see `x-proxy-verify` on the request that leaves
+Cloudflare. After the deploy that turns the lock on, check a URL Cloudflare
+has not cached. The steps are in `docs/deployment/public-www.md`. The deploy
+that adds the check publishes the three production viewer-request functions
+while both production secrets are empty; the check then returns the request
+unchanged. Rotate by deploying the old
+value as the previous secret and the new value as the current secret, then
+changing the Worker binding or the Cloudflare rule, then clearing the
+previous secret and deploying again. `WafWebAclArn` is empty, so enabling
+the lock does not detach a WebACL. `deploy-backend.yml` runs on
 `workflow_dispatch`, on `repository_dispatch` of type `deploy-backend`, and
 on a push to `main` that changes `backend/**`, `scripts/**`,
 `apps/public_www/src/content/landing-pages/**`,

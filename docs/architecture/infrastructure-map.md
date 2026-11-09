@@ -170,10 +170,10 @@ AWS CDK (TypeScript).
 
 ```
 Production (www.evolvesprouts.com, proxied by Cloudflare)
-        │
+        │  x-proxy-verify when the production edge-verify secret is set
         ▼
 Production CloudFront distribution
-        │  viewer-request functions do not check x-proxy-verify
+        │  viewer-request functions refuse a missing or wrong header
 
 Staging Worker (www-staging.evolvesprouts.com)
         │  x-proxy-verify when the staging edge-verify secret is set

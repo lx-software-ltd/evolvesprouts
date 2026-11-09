@@ -6,8 +6,8 @@
 
 /**
  * Rewrite extensionless paths to index.html for Next.js static export.
- * Training and the production public website use this constant as-is.
- * Staging wraps it with the edge-verify call. `functions/public-www-path-rewrite.js`
+ * Training uses this constant as-is. Both public website distributions wrap
+ * it with the edge-verify call. `functions/public-www-path-rewrite.js`
  * is the fixture the copied size test reads and is not deployed. From
  * `function handler` onward it must match that wrap. See `functions/README.md`.
  */
