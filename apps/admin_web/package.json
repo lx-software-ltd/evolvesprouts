@@ -15,7 +15,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.105.0",
+    "@tanstack/react-query": "^5.105.1",
     "amazon-cognito-identity-js": "^6.3.22",
     "clsx": "^2.1.1",
     "libphonenumber-js": "^1.13.15",
