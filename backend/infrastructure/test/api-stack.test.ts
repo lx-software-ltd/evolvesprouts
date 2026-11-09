@@ -1,8 +1,39 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
 import * as cdk from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 
 import { ApiStack } from "../lib/api-stack";
 import { assertApiStackInvariants } from "./stack-invariants.test";
+
+// The REST API is regional, so its custom-domain certificate must live in the
+// stack region. A us-east-1 ARN is only valid for CloudFront and Cognito.
+const API_STACK_REGION = "ap-southeast-1";
+
+function assertProductionApiCustomDomain(): void {
+  const paramsPath = path.join(__dirname, "../params/production.json");
+  const params = JSON.parse(readFileSync(paramsPath, "utf8")) as Record<
+    string,
+    string
+  >;
+  const domainName = params.ApiCustomDomainName ?? "";
+  if (!domainName) {
+    return;
+  }
+  const publicApex = (params.PublicWwwDomainName ?? "").replace(/^www\./, "");
+  if (!publicApex || !domainName.endsWith(`.${publicApex}`)) {
+    throw new Error(
+      `ApiCustomDomainName must be a host under ${publicApex}. Found ${domainName}`,
+    );
+  }
+  const arn = params.ApiCustomDomainCertificateArn ?? "";
+  if (!arn.startsWith(`arn:aws:acm:${API_STACK_REGION}:`)) {
+    throw new Error(
+      `ApiCustomDomainCertificateArn must be an ACM certificate in ${API_STACK_REGION}. Found ${arn}`,
+    );
+  }
+}
 
 function synthApiTemplate(): Template {
   const app = new cdk.App();
@@ -957,6 +988,7 @@ function assertApiCustomDomainKeepsProdPath(template: Template): void {
 }
 
 function main(): void {
+  assertProductionApiCustomDomain();
   const app = new cdk.App();
   const stack = new ApiStack(app, "TestApi", {
     env: { account: "111111111111", region: "ap-southeast-1" },
