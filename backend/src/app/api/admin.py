@@ -64,6 +64,7 @@ from app.api.public_forms import handle_public_forms_request
 from app.api.public_polls import handle_public_polls_request
 from app.api.public_reservation_payments import handle_public_reservation_payment_intent
 from app.api.public_reservations import _handle_public_reservation
+from app.api.admin_request import event_for_routing
 from app.exceptions import AppError, ValidationError
 from app.utils import json_response, not_found
 from app.utils.logging import (
@@ -390,6 +391,7 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
     request_id = event.get("requestContext", {}).get("requestId", "")
     set_request_context(req_id=request_id)
     try:
+        event = event_for_routing(event)
         method = api_gateway_http_method(event)
         path = event.get("path", "")
 

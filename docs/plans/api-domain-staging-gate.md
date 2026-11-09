@@ -40,10 +40,11 @@ later step.
    `*.evolvesprouts.com` certificate in `ap-southeast-1`. Leave
    `ApiDisableExecuteApiEndpoint` false. Share links stay on execute-api.
 2. Point the API DNS record at `ApiCustomDomainTarget`, proxy off. Confirm
-   `https://api.evolvesprouts.com/prod/health` before the next step. The
-   current Cloudflare record targets an execute-api hostname that does not
-   resolve, and it is proxied. Do not retarget it before this deploy creates
-   the domain.
+   `GET https://api.evolvesprouts.com/prod/v1/mailchimp/webhook` returns
+   `{"message":"ok"}` before the next step. `/prod/health` requires IAM, so
+   an unauthenticated call returns 403 even when routing works. The admin
+   Lambda strips the `/prod` base path from `path` before matching routes.
+   Do not retarget DNS before the deploy creates the domain.
 3. Set `PUBLIC_WWW_API_BASE_URL` and
    `PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL` to the current execute-api URL
    so the public-site origins do not follow the client cutover.

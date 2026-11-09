@@ -11,6 +11,21 @@ from app.api.admin import (
 )
 
 
+def test_lambda_handler_routes_custom_domain_base_path() -> None:
+    event = {
+        "httpMethod": "GET",
+        "path": "/prod/v1/mailchimp/webhook",
+        "headers": {},
+        "requestContext": {"stage": "prod", "requestId": "req-custom-domain"},
+    }
+
+    response = lambda_handler(event, None)
+
+    assert response["statusCode"] == 200
+    assert json.loads(response["body"]) == {"message": "ok"}
+    assert event["path"] == "/prod/v1/mailchimp/webhook"
+
+
 def test_lambda_handler_reports_server_timing_and_cold_start_once(monkeypatch) -> None:
     monkeypatch.setattr(admin_module, "_first_invocation_pending", True)
     event = {"httpMethod": "GET", "path": "/v1/does-not-exist", "headers": {}}

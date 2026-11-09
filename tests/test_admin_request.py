@@ -6,6 +6,7 @@ import pytest
 
 from app.api.admin_request import (
     encode_tuple_cursor,
+    event_for_routing,
     paginate_after_key,
     parse_body,
     parse_limit,
@@ -14,6 +15,46 @@ from app.api.admin_request import (
     split_route_parts,
 )
 from app.exceptions import AuthorizationError, ValidationError
+
+
+def test_event_for_routing_strips_custom_domain_base_path() -> None:
+    event = {
+        "path": "/prod/v1/mailchimp/webhook",
+        "requestContext": {
+            "stage": "prod",
+            "path": "/prod/v1/mailchimp/webhook",
+        },
+    }
+
+    routed = event_for_routing(event)
+
+    assert routed["path"] == "/v1/mailchimp/webhook"
+    assert routed["requestContext"]["path"] == "/prod/v1/mailchimp/webhook"
+    assert event["path"] == "/prod/v1/mailchimp/webhook"
+
+
+def test_event_for_routing_keeps_execute_api_path() -> None:
+    event = {
+        "path": "/v1/mailchimp/webhook",
+        "requestContext": {
+            "stage": "prod",
+            "path": "/prod/v1/mailchimp/webhook",
+        },
+    }
+
+    assert event_for_routing(event)["path"] == "/v1/mailchimp/webhook"
+
+
+def test_event_for_routing_does_not_strip_a_partial_segment() -> None:
+    event = {"path": "/product/v1", "requestContext": {"stage": "prod"}}
+
+    assert event_for_routing(event)["path"] == "/product/v1"
+
+
+def test_event_for_routing_keeps_path_when_stage_is_absent() -> None:
+    event = {"path": "/prod/v1/mailchimp/webhook"}
+
+    assert event_for_routing(event)["path"] == "/prod/v1/mailchimp/webhook"
 
 
 def test_split_route_parts_drops_version_prefix_and_trailing_slash() -> None:
