@@ -9,9 +9,7 @@ Remove warnings from the 9 November 2026 (Hong Kong) CI logs that sit in yellow 
 
 ## Non-goals
 
-- CDK and CloudFormation template warnings (`addDependency`, deletion policies, proxy target-group tags). Those files are red-zone infrastructure.
-- OpenAPI Spectral warnings (missing operation ids, ambiguous expense paths). Path changes would alter the API contract.
-- Transitive npm deprecation notices, npm `allowScripts` notices, `ubuntu-latest` runner notices, and React `act(...)` test noise.
+- Follow-up warnings are handled in `docs/plans/ci-warning-leftovers.md`.
 - npm audit low/moderate findings that npm says need `audit fix --force`.
 
 ## Files
