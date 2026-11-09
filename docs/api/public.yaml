@@ -106,7 +106,6 @@ paths:
     get:
       operationId: getV1AssetsPublicByIdDownload
       summary: Generate public asset download
-      description: "Generate public asset download"
       security:
         - ApiKeyAuth: []
           DeviceAttestation: []
@@ -993,7 +992,6 @@ paths:
     get:
       operationId: getV1PublicFamiliesById
       summary: Get CRM family (token API)
-      description: "Get CRM family (token API)"
       security:
         - ApiTokenAuth: []
       responses:
@@ -1183,7 +1181,6 @@ paths:
     get:
       operationId: getV1PublicOrganizations
       summary: List CRM organisations (token API)
-      description: "List CRM organisations (token API)"
       security:
         - ApiTokenAuth: []
       parameters:
@@ -1272,7 +1269,6 @@ paths:
     get:
       operationId: getV1PublicOrganizationsById
       summary: Get CRM organisation (token API)
-      description: "Get CRM organisation (token API)"
       security:
         - ApiTokenAuth: []
       responses:
@@ -1462,7 +1458,6 @@ paths:
     get:
       operationId: getV1PublicLocations
       summary: List locations (token API)
-      description: "List locations (token API)"
       security:
         - ApiTokenAuth: []
       parameters:
@@ -1581,7 +1576,6 @@ paths:
     get:
       operationId: getV1PublicLocationsById
       summary: Get location (token API)
-      description: "Get location (token API)"
       security:
         - ApiTokenAuth: []
       responses:
@@ -1853,7 +1847,6 @@ paths:
     get:
       operationId: getV1PublicServicesById
       summary: Get service (token API)
-      description: "Get service (token API)"
       security:
         - ApiTokenAuth: []
       responses:
@@ -1988,7 +1981,6 @@ paths:
     get:
       operationId: getV1PublicServicesByIdInstances
       summary: List instances for a service (token API)
-      description: "List instances for a service (token API)"
       security:
         - ApiTokenAuth: []
       responses:
@@ -2067,7 +2059,6 @@ paths:
     get:
       operationId: getV1PublicServicesByIdInstancesByInstanceId
       summary: Get service instance (token API)
-      description: "Get service instance (token API)"
       security:
         - ApiTokenAuth: []
       responses:

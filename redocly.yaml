@@ -8,7 +8,9 @@ rules:
   security-defined: off
   operation-operationId: warn
   operation-summary: warn
-  operation-description: warn
+  # Summaries name the operation. Descriptions are kept only when they add
+  # detail; copying the summary into description is not documentation.
+  operation-description: off
   no-server-example.com: off
   no-invalid-media-type-examples: off
   path-parameters-defined: warn
