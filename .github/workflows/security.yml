@@ -22,7 +22,7 @@ jobs:
   # Python dependency vulnerability scanning
   dependency-audit:
     name: Python Dependency Audit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -62,7 +62,7 @@ jobs:
   # Python security linting with Bandit
   bandit:
     name: Bandit Security Linter
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -99,7 +99,7 @@ jobs:
   # Infrastructure as Code scanning with Checkov
   checkov:
     name: Checkov IaC Security
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -207,7 +207,7 @@ jobs:
   # CodeQL analysis (per-language matrix for Security tab categorization)
   codeql:
     name: CodeQL Analysis
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -231,7 +231,7 @@ jobs:
   # Secret scanning (in addition to GitHub's built-in scanning)
   secrets-scan:
     name: Secret Scanning
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -259,7 +259,7 @@ jobs:
   # SAST with Semgrep
   semgrep:
     name: Semgrep SAST
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       image: semgrep/semgrep
     steps:
@@ -322,7 +322,7 @@ jobs:
   # Summary job
   security-summary:
     name: Security Summary
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [dependency-audit, bandit, checkov, codeql, secrets-scan, semgrep]
     if: always()
     steps:

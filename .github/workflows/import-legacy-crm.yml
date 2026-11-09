@@ -81,7 +81,7 @@ permissions:
 jobs:
   import:
     name: Upload dump and run import Lambda
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: ${{ github.event.inputs.environment }}
 
     steps:
