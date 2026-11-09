@@ -334,8 +334,8 @@ export class ApiStack extends cdk.Stack {
   public constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // AWS::RDS::DBProxyTargetGroup rejects a Tags property. Stack tags still
-    // apply to the proxy, cluster, and instances.
+    // AWS::RDS::DBProxyTargetGroup has no Tags property in the CloudFormation
+    // resource schema. Stack tags still apply to the proxy, cluster, and instances.
     const stackTagProps: cdk.TagProps = {
       excludeResourceTypes: ["AWS::RDS::DBProxyTargetGroup"],
     };
@@ -528,6 +528,9 @@ export class ApiStack extends cdk.Stack {
 
     const lambdaSecurityGroupResource =
       lambdaSecurityGroup.node.defaultChild as ec2.CfnSecurityGroup | undefined;
+    // W3011 requires DeletionPolicy whenever UpdateReplacePolicy is set.
+    // Retain on stack delete leaves the group in the VPC until its ENIs
+    // release. Remove the retained group by hand after the stack is gone.
     if (lambdaSecurityGroupResource) {
       lambdaSecurityGroupResource.cfnOptions.deletionPolicy =
         cdk.CfnDeletionPolicy.RETAIN;

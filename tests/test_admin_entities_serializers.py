@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import Any
 from uuid import uuid4
 
 from app.api.admin_entities_serializers import (
@@ -16,7 +17,8 @@ from app.db.models.enums import (
     OrganizationType,
     RelationshipType,
 )
-from sqlalchemy.orm import attributes
+from sqlalchemy.orm import attributes, raiseload
+from sqlalchemy.orm.attributes import ATTR_WAS_SET
 
 
 def _contact(**overrides: object) -> Contact:
@@ -57,18 +59,73 @@ def _organization() -> Organization:
     )
 
 
-def test_organization_summary_omits_unloaded_relationships() -> None:
+def test_organization_summary_of_a_new_organization_has_empty_relationships() -> None:
     org = _organization()
 
     payload = serialize_organization_summary(org)
 
-    unloaded = attributes.instance_state(org).unloaded
     assert payload["tags"] == []
     assert payload["members"] == []
     assert payload["location_summary"] is None
-    assert "organization_tags" in unloaded
-    assert "organization_members" in unloaded
-    assert "location" in unloaded
+
+
+def test_organization_summary_reads_a_non_raiseload_loader() -> None:
+    org = _organization()
+    tag_id = uuid4()
+    tag = SimpleNamespace(tag=SimpleNamespace(id=tag_id, name="Finance", color=None))
+
+    def loader(state: Any, _passive: object = None) -> object:
+        attributes.set_committed_value(state.obj(), "organization_tags", [tag])
+        return ATTR_WAS_SET
+
+    attributes.instance_state(org).callables = {"organization_tags": loader}
+
+    payload = serialize_organization_summary(org)
+
+    assert payload["tags"] == [{"id": str(tag_id), "name": "Finance", "color": None}]
+
+
+def test_organization_summary_skips_raiseload_without_calling_it() -> None:
+    org = _organization()
+
+    class _RaiseLoader:
+        strategy_key = (("lazy", "raise"),)
+
+        def __call__(self, _state: object, _passive: object = None) -> object:
+            raise AssertionError("raiseload loader ran")
+
+    state = attributes.instance_state(org)
+    state.callables = {
+        "organization_tags": _RaiseLoader(),
+        "organization_members": _RaiseLoader(),
+        "location": _RaiseLoader(),
+    }
+
+    payload = serialize_organization_summary(org)
+
+    assert payload["tags"] == []
+    assert payload["members"] == []
+    assert payload["location_summary"] is None
+    assert "organization_tags" in state.unloaded
+
+
+def test_organization_summary_skips_raiseload_query_options() -> None:
+    org = _organization()
+    tag_id = uuid4()
+    tag = SimpleNamespace(tag=SimpleNamespace(id=tag_id, name="Finance", color=None))
+
+    def loader(state: Any, _passive: object = None) -> object:
+        attributes.set_committed_value(state.obj(), "organization_tags", [tag])
+        return ATTR_WAS_SET
+
+    state = attributes.instance_state(org)
+    state.callables = {"organization_tags": loader}
+    state.load_options = (raiseload(Organization.organization_tags),)
+
+    payload = serialize_organization_summary(org)
+
+    assert payload["tags"] == []
+    assert "organization_tags" in state.unloaded
 
 
 def test_organization_summary_includes_loaded_tags() -> None:

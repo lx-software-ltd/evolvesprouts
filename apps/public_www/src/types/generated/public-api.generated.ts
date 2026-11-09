@@ -34,10 +34,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * Generate public asset download
-         * @description Generate public asset download
-         */
+        /** Generate public asset download */
         get: operations["getV1AssetsPublicByIdDownload"];
         put?: never;
         post?: never;
@@ -442,10 +439,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * Get CRM family (token API)
-         * @description Get CRM family (token API)
-         */
+        /** Get CRM family (token API) */
         get: operations["getV1PublicFamiliesById"];
         put?: never;
         post?: never;
@@ -519,10 +513,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * List CRM organisations (token API)
-         * @description List CRM organisations (token API)
-         */
+        /** List CRM organisations (token API) */
         get: operations["getV1PublicOrganizations"];
         put?: never;
         /**
@@ -545,10 +536,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * Get CRM organisation (token API)
-         * @description Get CRM organisation (token API)
-         */
+        /** Get CRM organisation (token API) */
         get: operations["getV1PublicOrganizationsById"];
         put?: never;
         post?: never;
@@ -622,10 +610,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * List locations (token API)
-         * @description List locations (token API)
-         */
+        /** List locations (token API) */
         get: operations["getV1PublicLocations"];
         put?: never;
         /**
@@ -670,10 +655,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * Get location (token API)
-         * @description Get location (token API)
-         */
+        /** Get location (token API) */
         get: operations["getV1PublicLocationsById"];
         put?: never;
         post?: never;
@@ -764,10 +746,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * Get service (token API)
-         * @description Get service (token API)
-         */
+        /** Get service (token API) */
         get: operations["getV1PublicServicesById"];
         /**
          * Update service (token API)
@@ -798,10 +777,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * List instances for a service (token API)
-         * @description List instances for a service (token API)
-         */
+        /** List instances for a service (token API) */
         get: operations["getV1PublicServicesByIdInstances"];
         put?: never;
         /**
@@ -826,10 +802,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * Get service instance (token API)
-         * @description Get service instance (token API)
-         */
+        /** Get service instance (token API) */
         get: operations["getV1PublicServicesByIdInstancesByInstanceId"];
         /**
          * Update service instance (token API)

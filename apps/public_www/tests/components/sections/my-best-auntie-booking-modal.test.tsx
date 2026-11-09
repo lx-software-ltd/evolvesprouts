@@ -144,7 +144,11 @@ vi.mock('@/lib/crm-api-client', async () => {
 });
 
 vi.mock('@/lib/fps-qr-code', () => ({
-  generateFpsQrImageDataUrl: vi.fn(() => new Promise<string>(() => {})),
+  generateFpsQrImageDataUrl: vi.fn(() =>
+    Promise.resolve(
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    ),
+  ),
   hasFpsQrConfiguration: vi.fn(() => true),
 }));
 
@@ -317,10 +321,10 @@ function renderWithPortalContainer(ui: ReactNode) {
   };
 }
 
-function renderBookingModal(
+async function renderBookingModal(
   props: Partial<ComponentProps<typeof MyBestAuntieBookingModal>> = {},
 ) {
-  return renderWithPortalContainer(
+  const view = renderWithPortalContainer(
     <MyBestAuntieBookingModal
       modalContent={myBestAuntieModalContent}
       paymentModalContent={bookingModalContent}
@@ -331,6 +335,14 @@ function renderBookingModal(
       {...props}
     />,
   );
+  const qrCode = document.querySelector('[aria-label="FPS payment QR code"]');
+  if (qrCode) {
+    await waitFor(() => {
+      const image = qrCode.querySelector('img');
+      expect(image?.getAttribute('src') ?? '').toMatch(/^data:image\/png;base64,/);
+    });
+  }
+  return view;
 }
 
 beforeEach(() => {
@@ -343,8 +355,10 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  vi.mocked(generateFpsQrImageDataUrl).mockImplementation(
-    () => new Promise<string>(() => {}),
+  vi.mocked(generateFpsQrImageDataUrl).mockImplementation(() =>
+    Promise.resolve(
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    ),
   );
   mockedCreateCrmApiClient.mockReturnValue(null);
   mockedCreatePublicApiClient.mockReturnValue(null);
@@ -400,8 +414,8 @@ afterEach(() => {
 });
 
 describe('my-best-auntie booking modals footer content', () => {
-  it('shows To be confirmed and hides directions when the cohort venue is tbc', () => {
-    renderBookingModal({
+  it('shows To be confirmed and hides directions when the cohort venue is tbc', async () => {
+    await renderBookingModal({
       selectedCohort: {
         ...selectedCohort,
         location_name: '',
@@ -424,8 +438,8 @@ describe('my-best-auntie booking modals footer content', () => {
     ).toBeEnabled();
   });
 
-  it('exposes labelled dialog semantics for booking and thank-you modals', () => {
-    const bookingModalView = renderBookingModal();
+  it('exposes labelled dialog semantics for booking and thank-you modals', async () => {
+    const bookingModalView = await renderBookingModal();
 
     const bookingDialog = screen.getByRole('dialog', {
       name: myBestAuntieModalContent.title,
@@ -463,8 +477,8 @@ describe('my-best-auntie booking modals footer content', () => {
     );
   });
 
-  it('hides child age group and renders icon-based payment option radios in booking modal', () => {
-    const { container } = renderBookingModal({
+  it('hides child age group and renders icon-based payment option radios in booking modal', async () => {
+    const { container } = await renderBookingModal({
       selectedServiceTierLabel: '18-24 months',
     });
 
@@ -502,8 +516,8 @@ describe('my-best-auntie booking modals footer content', () => {
     ).not.toBeNull();
   });
 
-  it('does not render course schedule heading and uses shared calendar icon in booking modal', () => {
-    const { container } = renderBookingModal();
+  it('does not render course schedule heading and uses shared calendar icon in booking modal', async () => {
+    const { container } = await renderBookingModal();
 
     expect(screen.queryByText('Course Schedule')).not.toBeInTheDocument();
     const partCalendarIcons = container.querySelectorAll(
@@ -512,8 +526,8 @@ describe('my-best-auntie booking modals footer content', () => {
     expect(partCalendarIcons).toHaveLength(3);
   });
 
-  it('keeps the base left column title when no age group is selected', () => {
-    renderBookingModal({
+  it('keeps the base left column title when no age group is selected', async () => {
+    await renderBookingModal({
       selectedServiceTierLabel: '   ',
     });
 
@@ -523,8 +537,8 @@ describe('my-best-auntie booking modals footer content', () => {
     })).toBeInTheDocument();
   });
 
-  it('renders week range headlines and schedule blocks without year in the details column', () => {
-    const { container } = renderBookingModal();
+  it('renders week range headlines and schedule blocks without year in the details column', async () => {
+    const { container } = await renderBookingModal();
     expect(screen.getByText('19 Apr - 09 May')).toBeInTheDocument();
     expect(screen.getByText('10 May - 30 May')).toBeInTheDocument();
     expect(screen.getByText('31 May - 20 Jun')).toBeInTheDocument();
@@ -536,8 +550,8 @@ describe('my-best-auntie booking modals footer content', () => {
     );
   });
 
-  it('validates reservation email only after blur', () => {
-    renderBookingModal();
+  it('validates reservation email only after blur', async () => {
+    await renderBookingModal();
 
     const emailField = screen.getByLabelText(
       new RegExp(bookingModalContent.emailLabel),
@@ -552,14 +566,14 @@ describe('my-best-auntie booking modals footer content', () => {
     expect(emailField).toHaveAttribute('aria-invalid', 'true');
   });
 
-  it('does not render removed month/package selector controls in booking modal', () => {
-    const { container } = renderBookingModal();
+  it('does not render removed month/package selector controls in booking modal', async () => {
+    const { container } = await renderBookingModal();
     expect(container.querySelectorAll('button[aria-pressed="true"]')).toHaveLength(0);
     expect(container.querySelectorAll('button[aria-pressed="false"]')).toHaveLength(0);
   });
 
-  it('renders topics textarea and required acknowledgement checkboxes', () => {
-    const { container } = renderBookingModal();
+  it('renders topics textarea and required acknowledgement checkboxes', async () => {
+    const { container } = await renderBookingModal();
 
     const topicsField = screen.getByLabelText(bookingModalContent.topicsInterestLabel);
     expect(topicsField.tagName).toBe('TEXTAREA');
@@ -762,7 +776,7 @@ describe('my-best-auntie booking modals footer content', () => {
       value: 10,
     });
 
-    const { container } = renderBookingModal();
+    const { container } = await renderBookingModal();
 
     const detailsColumn = container.querySelector(
       '.es-my-best-auntie-booking-modal-details-column',
@@ -852,7 +866,7 @@ describe('my-best-auntie booking modals footer content', () => {
     });
 
     const freeCohort = { ...selectedCohort, price: 0 };
-    const { container } = renderBookingModal({
+    const { container } = await renderBookingModal({
       selectedCohort: freeCohort,
       selectedServiceTierLabel: '18-24 months',
     });
@@ -918,7 +932,7 @@ describe('my-best-auntie booking modals footer content', () => {
       value: 100,
     });
 
-    const { container } = renderBookingModal({
+    const { container } = await renderBookingModal({
       selectedServiceTierLabel: '18-24 months',
     });
 
@@ -1004,7 +1018,7 @@ describe('my-best-auntie booking modals footer content', () => {
         }),
     );
 
-    renderBookingModal();
+    await renderBookingModal();
 
     const discountInput = screen.getByPlaceholderText(
       bookingModalContent.discountCodePlaceholder,
@@ -1041,7 +1055,7 @@ describe('my-best-auntie booking modals footer content', () => {
     expect(screen.queryByTestId('booking-discount-apply-loading-gear')).toBeNull();
   });
 
-  it('uses noValidate on the reservation form', () => {
+  it('uses noValidate on the reservation form', async () => {
     mockedCreateCrmApiClient.mockReturnValue({
       request: vi.fn(),
     });
@@ -1049,7 +1063,7 @@ describe('my-best-auntie booking modals footer content', () => {
       request: vi.fn(),
     });
 
-    renderBookingModal({
+    await renderBookingModal({
       selectedServiceTierLabel: '18-24 months',
     });
 
@@ -1072,7 +1086,7 @@ describe('my-best-auntie booking modals footer content', () => {
       request: vi.fn(),
     });
 
-    renderBookingModal({
+    await renderBookingModal({
       selectedServiceTierLabel: '18-24 months',
     });
 
@@ -1127,7 +1141,7 @@ describe('my-best-auntie booking modals footer content', () => {
       request: vi.fn(),
     });
 
-    renderBookingModal({
+    await renderBookingModal({
       selectedServiceTierLabel: '18-24 months',
     });
 
@@ -1183,7 +1197,7 @@ describe('my-best-auntie booking modals footer content', () => {
       request: vi.fn(),
     });
 
-    renderBookingModal({
+    await renderBookingModal({
       selectedServiceTierLabel: '18-24 months',
     });
 
@@ -1252,7 +1266,7 @@ describe('my-best-auntie booking modals footer content', () => {
         'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
       ),
     );
-    renderBookingModal({
+    await renderBookingModal({
       selectedServiceTierLabel: '18-24 months',
       onSubmitReservation,
     });
@@ -1349,7 +1363,7 @@ describe('my-best-auntie booking modals footer content', () => {
       request: vi.fn(),
     });
 
-    const { container } = renderBookingModal({
+    const { container } = await renderBookingModal({
       selectedServiceTierLabel: '18-24 months',
       onSubmitReservation,
     });
@@ -1477,7 +1491,7 @@ describe('my-best-auntie booking modals footer content', () => {
       client_secret: 'pi_test_booking_modal_secret_abc',
     });
 
-    renderBookingModal({
+    await renderBookingModal({
       selectedServiceTierLabel: '18-24 months',
       onSubmitReservation,
       paymentModalContent: bookingModalStripeEnabledContent,
@@ -1575,7 +1589,7 @@ describe('my-best-auntie booking modals footer content', () => {
     });
   });
 
-  it('shows Stripe loading copy before captcha is solved', () => {
+  it('shows Stripe loading copy before captcha is solved', async () => {
     mockedCreateCrmApiClient.mockReturnValue({
       request: vi.fn(),
     });
@@ -1583,7 +1597,7 @@ describe('my-best-auntie booking modals footer content', () => {
       request: vi.fn(),
     });
 
-    renderBookingModal({
+    await renderBookingModal({
       paymentModalContent: bookingModalStripeEnabledContent,
     });
 
@@ -1613,7 +1627,7 @@ describe('my-best-auntie booking modals footer content', () => {
       client_secret: 'pi_test_booking_modal_secret_abc',
     });
 
-    renderBookingModal({
+    await renderBookingModal({
       paymentModalContent: bookingModalStripeEnabledContent,
     });
 
@@ -1708,8 +1722,8 @@ describe('my-best-auntie booking modals footer content', () => {
     });
   });
 
-  it('uses calendar mask icons inside each course part chip', () => {
-    const { container } = renderBookingModal();
+  it('uses calendar mask icons inside each course part chip', async () => {
+    const { container } = await renderBookingModal();
 
     const partIcons = Array.from(
       container.querySelectorAll('span[data-course-part-icon="true"]'),
@@ -1720,8 +1734,8 @@ describe('my-best-auntie booking modals footer content', () => {
     }
   });
 
-  it('renders one schedule block per course part and no support detail rows', () => {
-    const { container } = renderBookingModal();
+  it('renders one schedule block per course part and no support detail rows', async () => {
+    const { container } = await renderBookingModal();
 
     expect(
       container.querySelectorAll('img[data-course-part-support-icon="true"]'),
@@ -1748,8 +1762,8 @@ describe('my-best-auntie booking modals footer content', () => {
     expect(scheduleBlocks[0]?.textContent).toContain('Parent call:');
   });
 
-  it('renders timeline segments, 50px part spacing, and numeric part chips', () => {
-    const { container } = renderBookingModal();
+  it('renders timeline segments, 50px part spacing, and numeric part chips', async () => {
+    const { container } = await renderBookingModal();
     const timelineList = container.querySelector('ul.space-y-\\[50px\\]');
     expect(timelineList).not.toBeNull();
 
@@ -1837,16 +1851,16 @@ describe('my-best-auntie booking modals footer content', () => {
     expect(firstConnector).not.toBeNull();
   });
 
-  it('does not render booking modal copyright footer section', () => {
-    const { container } = renderBookingModal();
+  it('does not render booking modal copyright footer section', async () => {
+    const { container } = await renderBookingModal();
 
     expect(screen.queryByText('2026 Evolve Sprouts')).not.toBeInTheDocument();
     expect(screen.queryByText(/©/u)).not.toBeInTheDocument();
     expect(container.innerHTML).not.toContain('border-b border-black/10');
   });
 
-  it('renders modal column logos as section backgrounds instead of image elements', () => {
-    const { container } = renderBookingModal();
+  it('renders modal column logos as section backgrounds instead of image elements', async () => {
+    const { container } = await renderBookingModal();
 
     expect(container.querySelector('img[src="/images/evolvesprouts-logo.svg"]')).toBeNull();
     expect(
@@ -1857,8 +1871,8 @@ describe('my-best-auntie booking modals footer content', () => {
     ).not.toBeNull();
   });
 
-  it('renders shared external link icon and updated booking icons', () => {
-    const { container } = renderBookingModal();
+  it('renders shared external link icon and updated booking icons', async () => {
+    const { container } = await renderBookingModal();
 
     const directionLink = screen.getByRole('link', {
       name: bookingModalContent.directionLabel,
@@ -2038,7 +2052,7 @@ describe('my-best-auntie booking modals footer content', () => {
       value: 10,
     });
 
-    renderBookingModal();
+    await renderBookingModal();
 
     const discountInput = screen.getByPlaceholderText(
       bookingModalContent.discountCodePlaceholder,
@@ -2078,7 +2092,7 @@ describe('my-best-auntie booking modals footer content', () => {
       value: 5,
     });
 
-    renderBookingModal({
+    await renderBookingModal({
       prefilledDiscountCode: 'refsave',
       referralAppliedNote: enContent.bookingModal.paymentModal.referralAppliedNote,
       referralAppliedAnnouncement: enContent.common.accessibility.referralAppliedAnnouncement,
@@ -2127,7 +2141,7 @@ describe('my-best-auntie booking modals footer content', () => {
       slug: 'mba-test-cohort-slug',
     };
 
-    renderBookingModal({
+    await renderBookingModal({
       selectedCohort: cohortWithSlug,
       prefilledDiscountCode: 'refsave',
     });
@@ -2154,7 +2168,7 @@ describe('my-best-auntie booking modals footer content', () => {
     });
     mockedValidateDiscountCode.mockResolvedValue(null);
 
-    renderBookingModal({
+    await renderBookingModal({
       prefilledDiscountCode: 'BAD',
     });
 
@@ -2169,8 +2183,8 @@ describe('my-best-auntie booking modals footer content', () => {
     ).toHaveLength(1);
   });
 
-  it('does not show a copy link control', () => {
-    renderBookingModal();
+  it('does not show a copy link control', async () => {
+    await renderBookingModal();
 
     expect(screen.queryByRole('button', { name: 'Copy link' })).toBeNull();
   });

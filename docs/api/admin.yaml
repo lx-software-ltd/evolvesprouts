@@ -257,7 +257,6 @@ paths:
     get:
       operationId: getV1AdminAssetsById
       summary: Get admin asset
-      description: "Get admin asset"
       security:
         - AdminBearerAuth: []
       responses:
@@ -276,7 +275,6 @@ paths:
     put:
       operationId: putV1AdminAssetsById
       summary: Update admin asset
-      description: "Update admin asset"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -301,7 +299,6 @@ paths:
     patch:
       operationId: patchV1AdminAssetsById
       summary: Partially update admin asset
-      description: "Partially update admin asset"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -423,7 +420,6 @@ paths:
     get:
       operationId: getV1AdminAssetsByIdGrants
       summary: List asset grants
-      description: "List asset grants"
       security:
         - AdminBearerAuth: []
       responses:
@@ -442,7 +438,6 @@ paths:
     post:
       operationId: postV1AdminAssetsByIdGrants
       summary: Create asset grant
-      description: "Create asset grant"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -472,7 +467,6 @@ paths:
     delete:
       operationId: deleteV1AdminAssetsByIdGrantsByGrantId
       summary: Delete asset grant
-      description: "Delete asset grant"
       security:
         - AdminBearerAuth: []
       responses:
@@ -491,7 +485,6 @@ paths:
     get:
       operationId: getV1AdminAssetsByIdShareLink
       summary: Get stable asset share link
-      description: "Get stable asset share link"
       security:
         - AdminBearerAuth: []
       responses:
@@ -510,7 +503,6 @@ paths:
     post:
       operationId: postV1AdminAssetsByIdShareLink
       summary: Get or create stable asset share link
-      description: "Get or create stable asset share link"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -541,7 +533,6 @@ paths:
     delete:
       operationId: deleteV1AdminAssetsByIdShareLink
       summary: Revoke stable asset share link
-      description: "Revoke stable asset share link"
       security:
         - AdminBearerAuth: []
       responses:
@@ -560,7 +551,6 @@ paths:
     post:
       operationId: postV1AdminAssetsByIdShareLinkRotate
       summary: Rotate stable asset share link
-      description: "Rotate stable asset share link"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -630,7 +620,6 @@ paths:
     get:
       operationId: getV1AdminLocations
       summary: List locations
-      description: "List locations"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -687,7 +676,6 @@ paths:
     post:
       operationId: postV1AdminLocations
       summary: Create location
-      description: "Create location"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -763,7 +751,6 @@ paths:
     put:
       operationId: putV1AdminLocationsById
       summary: Update location
-      description: "Update location"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -788,7 +775,6 @@ paths:
     patch:
       operationId: patchV1AdminLocationsById
       summary: Partially update location
-      description: "Partially update location"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -813,7 +799,6 @@ paths:
     delete:
       operationId: deleteV1AdminLocationsById
       summary: Delete location
-      description: "Delete location"
       security:
         - AdminBearerAuth: []
       responses:
@@ -1267,7 +1252,6 @@ paths:
     get:
       operationId: getV1AdminLeads
       summary: List sales leads
-      description: "List sales leads"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -1435,7 +1419,6 @@ paths:
     get:
       operationId: getV1AdminLeadsAnalytics
       summary: Lead analytics summary
-      description: "Lead analytics summary"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -1469,7 +1452,6 @@ paths:
     get:
       operationId: getV1AdminLeadsSettings
       summary: Get sales lead assignment and OpenRouter model settings
-      description: "Get sales lead assignment and OpenRouter model settings"
       security:
         - AdminBearerAuth: []
       responses:
@@ -1488,7 +1470,6 @@ paths:
     patch:
       operationId: patchV1AdminLeadsSettings
       summary: Update sales lead assignment and OpenRouter model settings
-      description: "Update sales lead assignment and OpenRouter model settings"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -1835,7 +1816,6 @@ paths:
     get:
       operationId: getV1AdminWhatsappConversations
       summary: List captured WhatsApp conversations
-      description: "List captured WhatsApp conversations"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -1909,7 +1889,6 @@ paths:
     get:
       operationId: getV1AdminWhatsappConversationsByIdMessages
       summary: List messages for a WhatsApp conversation
-      description: "List messages for a WhatsApp conversation"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -1939,7 +1918,6 @@ paths:
     get:
       operationId: getV1AdminWhatsappImportJobs
       summary: List WhatsApp export import jobs
-      description: "List WhatsApp export import jobs"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -1999,7 +1977,6 @@ paths:
     get:
       operationId: getV1AdminMetaConversations
       summary: List captured Messenger and Instagram conversations
-      description: "List captured Messenger and Instagram conversations"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -2079,7 +2056,6 @@ paths:
     get:
       operationId: getV1AdminMetaConversationsByIdMessages
       summary: List messages for a Messenger or Instagram conversation
-      description: "List messages for a Messenger or Instagram conversation"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -2109,7 +2085,6 @@ paths:
     get:
       operationId: getV1AdminMetaImportJobs
       summary: List Messenger and Instagram Graph import jobs
-      description: "List Messenger and Instagram Graph import jobs"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -2172,7 +2147,6 @@ paths:
     get:
       operationId: getV1AdminLeadsById
       summary: Get lead detail
-      description: "Get lead detail"
       security:
         - AdminBearerAuth: []
       responses:
@@ -2191,7 +2165,6 @@ paths:
     patch:
       operationId: patchV1AdminLeadsById
       summary: Update lead stage or assignee
-      description: "Update lead stage or assignee"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -2220,7 +2193,6 @@ paths:
     post:
       operationId: postV1AdminLeadsByIdNotes
       summary: Add lead note
-      description: "Add lead note"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -2332,7 +2304,6 @@ paths:
     get:
       operationId: getV1AdminServices
       summary: List services
-      description: "List services"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -2386,7 +2357,6 @@ paths:
     post:
       operationId: postV1AdminServices
       summary: Create service
-      description: "Create service"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -2535,7 +2505,6 @@ paths:
     get:
       operationId: getV1AdminServicesById
       summary: Get service
-      description: "Get service"
       security:
         - AdminBearerAuth: []
       responses:
@@ -2554,7 +2523,6 @@ paths:
     put:
       operationId: putV1AdminServicesById
       summary: Update service
-      description: "Update service"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -2588,7 +2556,6 @@ paths:
     patch:
       operationId: patchV1AdminServicesById
       summary: Partially update service
-      description: "Partially update service"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -2622,7 +2589,6 @@ paths:
     delete:
       operationId: deleteV1AdminServicesById
       summary: Delete service
-      description: "Delete service"
       security:
         - AdminBearerAuth: []
       responses:
@@ -2647,7 +2613,6 @@ paths:
     post:
       operationId: postV1AdminServicesByIdCoverImage
       summary: Create service cover-image upload URL
-      description: "Create service cover-image upload URL"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -2676,7 +2641,6 @@ paths:
     get:
       operationId: getV1AdminServicesByIdInstances
       summary: List service instances
-      description: "List service instances"
       security:
         - AdminBearerAuth: []
       responses:
@@ -2695,7 +2659,6 @@ paths:
     post:
       operationId: postV1AdminServicesByIdInstances
       summary: Create service instance
-      description: "Create service instance"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -2725,7 +2688,6 @@ paths:
     get:
       operationId: getV1AdminServicesByIdInstancesByInstanceId
       summary: Get service instance
-      description: "Get service instance"
       security:
         - AdminBearerAuth: []
       responses:
@@ -2772,7 +2734,6 @@ paths:
     delete:
       operationId: deleteV1AdminServicesByIdInstancesByInstanceId
       summary: Delete service instance
-      description: "Delete service instance"
       security:
         - AdminBearerAuth: []
       responses:
@@ -2792,7 +2753,6 @@ paths:
     get:
       operationId: getV1AdminServicesByIdInstancesByInstanceIdEnrollments
       summary: List instance enrollments
-      description: "List instance enrollments"
       security:
         - AdminBearerAuth: []
       responses:
@@ -2811,7 +2771,6 @@ paths:
     post:
       operationId: postV1AdminServicesByIdInstancesByInstanceIdEnrollments
       summary: Create instance enrollment
-      description: "Create instance enrollment"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -2842,7 +2801,6 @@ paths:
     patch:
       operationId: patchV1AdminServicesByIdInstancesByInstanceIdEnrollmentsByEnrollmentId
       summary: Update enrollment
-      description: "Update enrollment"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -2867,7 +2825,6 @@ paths:
     delete:
       operationId: deleteV1AdminServicesByIdInstancesByInstanceIdEnrollmentsByEnrollmentId
       summary: Delete enrollment
-      description: "Delete enrollment"
       security:
         - AdminBearerAuth: []
       responses:
@@ -2884,7 +2841,6 @@ paths:
     get:
       operationId: getV1AdminDiscountCodes
       summary: List discount codes
-      description: "List discount codes"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -2917,7 +2873,6 @@ paths:
     post:
       operationId: postV1AdminDiscountCodes
       summary: Create discount code
-      description: "Create discount code"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -2952,7 +2907,6 @@ paths:
     put:
       operationId: putV1AdminDiscountCodesById
       summary: Update discount code
-      description: "Update discount code"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -2979,7 +2933,6 @@ paths:
     get:
       operationId: getV1AdminCompletionCertificates
       summary: List completion certificates
-      description: "List completion certificates"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -3034,7 +2987,6 @@ paths:
     post:
       operationId: postV1AdminCompletionCertificates
       summary: Issue completion certificate
-      description: "Issue completion certificate"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -3115,7 +3067,6 @@ paths:
     get:
       operationId: getV1AdminCompletionCertificatesByIdPdf
       summary: Download issued completion certificate PDF
-      description: "Download issued completion certificate PDF"
       security:
         - AdminBearerAuth: []
       responses:
@@ -3138,7 +3089,6 @@ paths:
     post:
       operationId: postV1AdminCompletionCertificatesByIdVoid
       summary: Void completion certificate
-      description: "Void completion certificate"
       security:
         - AdminBearerAuth: []
       responses:
@@ -3198,7 +3148,6 @@ paths:
     post:
       operationId: postV1AdminCalendarManualBlocks
       summary: Create manual calendar block
-      description: "Create manual calendar block"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -3236,7 +3185,6 @@ paths:
     patch:
       operationId: patchV1AdminCalendarManualBlocksById
       summary: Update manual calendar block
-      description: "Update manual calendar block"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -3267,7 +3215,6 @@ paths:
     delete:
       operationId: deleteV1AdminCalendarManualBlocksById
       summary: Delete manual calendar block
-      description: "Delete manual calendar block"
       security:
         - AdminBearerAuth: []
       responses:
@@ -3321,7 +3268,6 @@ paths:
     post:
       operationId: postV1AdminTags
       summary: Create CRM tag
-      description: "Create CRM tag"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -3651,7 +3597,6 @@ paths:
     get:
       operationId: getV1AdminContacts
       summary: List CRM contacts
-      description: "List CRM contacts"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -3695,7 +3640,6 @@ paths:
     post:
       operationId: postV1AdminContacts
       summary: Create CRM contact
-      description: "Create CRM contact"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -3722,7 +3666,6 @@ paths:
     get:
       operationId: getV1AdminContactsById
       summary: Get CRM contact
-      description: "Get CRM contact"
       security:
         - AdminBearerAuth: []
       responses:
@@ -3759,7 +3702,6 @@ paths:
     patch:
       operationId: patchV1AdminContactsById
       summary: Update CRM contact
-      description: "Update CRM contact"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -3809,7 +3751,6 @@ paths:
     post:
       operationId: postV1AdminContactsByIdNotes
       summary: Add a standalone note to a contact
-      description: "Add a standalone note to a contact"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -3869,7 +3810,6 @@ paths:
     patch:
       operationId: patchV1AdminContactsByIdNotesByNoteId
       summary: Update a standalone note on a contact
-      description: "Update a standalone note on a contact"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -3898,7 +3838,6 @@ paths:
     delete:
       operationId: deleteV1AdminContactsByIdNotesByNoteId
       summary: Delete a standalone note on a contact
-      description: "Delete a standalone note on a contact"
       security:
         - AdminBearerAuth: []
       responses:
@@ -3943,7 +3882,6 @@ paths:
     get:
       operationId: getV1AdminFamilies
       summary: List CRM families
-      description: "List CRM families"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -3983,7 +3921,6 @@ paths:
     post:
       operationId: postV1AdminFamilies
       summary: Create CRM family
-      description: "Create CRM family"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -4085,7 +4022,6 @@ paths:
     post:
       operationId: postV1AdminFamiliesByIdMembers
       summary: Add family member
-      description: "Add family member"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -4143,7 +4079,6 @@ paths:
     delete:
       operationId: deleteV1AdminFamiliesByIdMembersByMemberId
       summary: Remove family member
-      description: "Remove family member"
       security:
         - AdminBearerAuth: []
       responses:
@@ -4266,7 +4201,6 @@ paths:
     post:
       operationId: postV1AdminOrganizations
       summary: Create CRM organization
-      description: "Create CRM organization"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -4293,7 +4227,6 @@ paths:
     patch:
       operationId: patchV1AdminOrganizationsById
       summary: Update CRM organization
-      description: "Update CRM organization"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -4366,7 +4299,6 @@ paths:
     post:
       operationId: postV1AdminOrganizationsByIdMembers
       summary: Add organization member
-      description: "Add organization member"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -4423,7 +4355,6 @@ paths:
     delete:
       operationId: deleteV1AdminOrganizationsByIdMembersByMemberId
       summary: Remove organization member
-      description: "Remove organization member"
       security:
         - AdminBearerAuth: []
       responses:
@@ -4602,7 +4533,6 @@ paths:
     get:
       operationId: getV1AdminBillingPaymentsById
       summary: Get customer payment with unapplied balance
-      description: "Get customer payment with unapplied balance"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -4711,7 +4641,6 @@ paths:
     post:
       operationId: postV1AdminBillingPaymentsByIdConfirm
       summary: Confirm pending inbound payment (offline rails)
-      description: "Confirm pending inbound payment (offline rails)"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -4972,7 +4901,6 @@ paths:
     get:
       operationId: getV1AdminBillingInvoicesById
       summary: Get customer invoice with lines
-      description: "Get customer invoice with lines"
       security:
         - AdminBearerAuth: []
       parameters:
@@ -5263,7 +5191,6 @@ paths:
     post:
       operationId: postV1AdminBillingAllocations
       summary: Allocate payment amount to invoice
-      description: "Allocate payment amount to invoice"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -5337,7 +5264,6 @@ paths:
     post:
       operationId: postV1AdminExpenses
       summary: Create expense
-      description: "Create expense"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -5482,7 +5408,6 @@ paths:
     patch:
       operationId: patchV1AdminExpensesById
       summary: Update expense
-      description: "Update expense"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -5529,7 +5454,6 @@ paths:
     post:
       operationId: postV1AdminExpensesByIdCancel
       summary: Soft-void an expense
-      description: "Soft-void an expense"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -5585,7 +5509,6 @@ paths:
     post:
       operationId: postV1AdminExpensesByIdReparse
       summary: Queue expense parse request
-      description: "Queue expense parse request"
       security:
         - AdminBearerAuth: []
       responses:
@@ -5609,7 +5532,6 @@ paths:
     post:
       operationId: postV1AdminExpensesByIdAmend
       summary: Create amendment expense record
-      description: "Create amendment expense record"
       security:
         - AdminBearerAuth: []
       requestBody:
@@ -5725,7 +5647,6 @@ paths:
     get:
       operationId: getV1AdminFormsByFormSlugAnswersExport
       summary: Export form answers as CSV
-      description: "Export form answers as CSV"
       security:
         - AdminBearerAuth: []
       responses:
@@ -5821,7 +5742,6 @@ paths:
     get:
       operationId: getV1AdminPollsByPollSlugAnswersExport
       summary: Export poll answers as CSV
-      description: "Export poll answers as CSV"
       security:
         - AdminBearerAuth: []
       responses:
@@ -5863,7 +5783,6 @@ paths:
     get:
       operationId: getV1UserAssetsByIdDownload
       summary: Generate user asset download
-      description: "Generate user asset download"
       security:
         - UserBearerAuth: []
       responses:

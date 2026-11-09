@@ -1,14 +1,19 @@
-# This file instructs Redocly's linter to ignore the rules contained for specific parts of your API.
-# See https://redocly.com/docs/cli/ for more information.
+# Redocly ignore file. These findings stay because changing them would invent
+# responses or rename live routes. See docs/plans/ci-warning-review-fixes.md.
 docs/api/admin.yaml:
+  # `{id}` is a UUID. The static `bulk-import-jobs` segment is a different
+  # resource, so the paths are not actually ambiguous.
   no-ambiguous-paths:
     - '#/paths/~1v1~1admin~1expenses~1{id}~1cancel'
     - '#/paths/~1v1~1admin~1expenses~1{id}~1mark-paid'
     - '#/paths/~1v1~1admin~1expenses~1{id}~1reparse'
     - '#/paths/~1v1~1admin~1expenses~1{id}~1amend'
 docs/api/public.yaml:
+  # These GETs respond with 302. A 2xx response would describe a body they
+  # do not return.
   operation-2xx-response:
     - '#/paths/~1v1~1assets~1share~1{token}/get/responses'
     - '#/paths/~1v1~1assets~1email-download~1{token}/get/responses'
+  # The Mailchimp URL check always returns 200.
   operation-4xx-response:
     - '#/paths/~1v1~1mailchimp~1webhook/get/responses'

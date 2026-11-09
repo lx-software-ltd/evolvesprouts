@@ -58,15 +58,9 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * Get admin asset
-         * @description Get admin asset
-         */
+        /** Get admin asset */
         get: operations["getV1AdminAssetsById"];
-        /**
-         * Update admin asset
-         * @description Update admin asset
-         */
+        /** Update admin asset */
         put: operations["putV1AdminAssetsById"];
         post?: never;
         /**
@@ -76,10 +70,7 @@ export interface paths {
         delete: operations["deleteV1AdminAssetsById"];
         options?: never;
         head?: never;
-        /**
-         * Partially update admin asset
-         * @description Partially update admin asset
-         */
+        /** Partially update admin asset */
         patch: operations["patchV1AdminAssetsById"];
         trace?: never;
     };
@@ -139,16 +130,10 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * List asset grants
-         * @description List asset grants
-         */
+        /** List asset grants */
         get: operations["getV1AdminAssetsByIdGrants"];
         put?: never;
-        /**
-         * Create asset grant
-         * @description Create asset grant
-         */
+        /** Create asset grant */
         post: operations["postV1AdminAssetsByIdGrants"];
         delete?: never;
         options?: never;
@@ -171,10 +156,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /**
-         * Delete asset grant
-         * @description Delete asset grant
-         */
+        /** Delete asset grant */
         delete: operations["deleteV1AdminAssetsByIdGrantsByGrantId"];
         options?: never;
         head?: never;
@@ -191,21 +173,12 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * Get stable asset share link
-         * @description Get stable asset share link
-         */
+        /** Get stable asset share link */
         get: operations["getV1AdminAssetsByIdShareLink"];
         put?: never;
-        /**
-         * Get or create stable asset share link
-         * @description Get or create stable asset share link
-         */
+        /** Get or create stable asset share link */
         post: operations["postV1AdminAssetsByIdShareLink"];
-        /**
-         * Revoke stable asset share link
-         * @description Revoke stable asset share link
-         */
+        /** Revoke stable asset share link */
         delete: operations["deleteV1AdminAssetsByIdShareLink"];
         options?: never;
         head?: never;
@@ -224,10 +197,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Rotate stable asset share link
-         * @description Rotate stable asset share link
-         */
+        /** Rotate stable asset share link */
         post: operations["postV1AdminAssetsByIdShareLinkRotate"];
         delete?: never;
         options?: never;
@@ -264,16 +234,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * List locations
-         * @description List locations
-         */
+        /** List locations */
         get: operations["getV1AdminLocations"];
         put?: never;
-        /**
-         * Create location
-         * @description Create location
-         */
+        /** Create location */
         post: operations["postV1AdminLocations"];
         delete?: never;
         options?: never;
@@ -319,23 +283,14 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /**
-         * Update location
-         * @description Update location
-         */
+        /** Update location */
         put: operations["putV1AdminLocationsById"];
         post?: never;
-        /**
-         * Delete location
-         * @description Delete location
-         */
+        /** Delete location */
         delete: operations["deleteV1AdminLocationsById"];
         options?: never;
         head?: never;
-        /**
-         * Partially update location
-         * @description Partially update location
-         */
+        /** Partially update location */
         patch: operations["patchV1AdminLocationsById"];
         trace?: never;
     };
@@ -508,10 +463,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * List sales leads
-         * @description List sales leads
-         */
+        /** List sales leads */
         get: operations["getV1AdminLeads"];
         put?: never;
         /**
@@ -552,10 +504,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Lead analytics summary
-         * @description Lead analytics summary
-         */
+        /** Lead analytics summary */
         get: operations["getV1AdminLeadsAnalytics"];
         put?: never;
         post?: never;
@@ -572,20 +521,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get sales lead assignment and OpenRouter model settings
-         * @description Get sales lead assignment and OpenRouter model settings
-         */
+        /** Get sales lead assignment and OpenRouter model settings */
         get: operations["getV1AdminLeadsSettings"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /**
-         * Update sales lead assignment and OpenRouter model settings
-         * @description Update sales lead assignment and OpenRouter model settings
-         */
+        /** Update sales lead assignment and OpenRouter model settings */
         patch: operations["patchV1AdminLeadsSettings"];
         trace?: never;
     };
@@ -752,10 +695,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * List captured WhatsApp conversations
-         * @description List captured WhatsApp conversations
-         */
+        /** List captured WhatsApp conversations */
         get: operations["getV1AdminWhatsappConversations"];
         put?: never;
         post?: never;
@@ -774,10 +714,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * List messages for a WhatsApp conversation
-         * @description List messages for a WhatsApp conversation
-         */
+        /** List messages for a WhatsApp conversation */
         get: operations["getV1AdminWhatsappConversationsByIdMessages"];
         put?: never;
         post?: never;
@@ -794,10 +731,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * List WhatsApp export import jobs
-         * @description List WhatsApp export import jobs
-         */
+        /** List WhatsApp export import jobs */
         get: operations["getV1AdminWhatsappImportJobs"];
         put?: never;
         /**
@@ -818,10 +752,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * List captured Messenger and Instagram conversations
-         * @description List captured Messenger and Instagram conversations
-         */
+        /** List captured Messenger and Instagram conversations */
         get: operations["getV1AdminMetaConversations"];
         put?: never;
         post?: never;
@@ -840,10 +771,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * List messages for a Messenger or Instagram conversation
-         * @description List messages for a Messenger or Instagram conversation
-         */
+        /** List messages for a Messenger or Instagram conversation */
         get: operations["getV1AdminMetaConversationsByIdMessages"];
         put?: never;
         post?: never;
@@ -860,10 +788,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * List Messenger and Instagram Graph import jobs
-         * @description List Messenger and Instagram Graph import jobs
-         */
+        /** List Messenger and Instagram Graph import jobs */
         get: operations["getV1AdminMetaImportJobs"];
         put?: never;
         /**
@@ -887,20 +812,14 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * Get lead detail
-         * @description Get lead detail
-         */
+        /** Get lead detail */
         get: operations["getV1AdminLeadsById"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /**
-         * Update lead stage or assignee
-         * @description Update lead stage or assignee
-         */
+        /** Update lead stage or assignee */
         patch: operations["patchV1AdminLeadsById"];
         trace?: never;
     };
@@ -916,10 +835,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Add lead note
-         * @description Add lead note
-         */
+        /** Add lead note */
         post: operations["postV1AdminLeadsByIdNotes"];
         delete?: never;
         options?: never;
@@ -985,16 +901,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * List services
-         * @description List services
-         */
+        /** List services */
         get: operations["getV1AdminServices"];
         put?: never;
-        /**
-         * Create service
-         * @description Create service
-         */
+        /** Create service */
         post: operations["postV1AdminServices"];
         delete?: never;
         options?: never;
@@ -1056,28 +966,16 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * Get service
-         * @description Get service
-         */
+        /** Get service */
         get: operations["getV1AdminServicesById"];
-        /**
-         * Update service
-         * @description Update service
-         */
+        /** Update service */
         put: operations["putV1AdminServicesById"];
         post?: never;
-        /**
-         * Delete service
-         * @description Delete service
-         */
+        /** Delete service */
         delete: operations["deleteV1AdminServicesById"];
         options?: never;
         head?: never;
-        /**
-         * Partially update service
-         * @description Partially update service
-         */
+        /** Partially update service */
         patch: operations["patchV1AdminServicesById"];
         trace?: never;
     };
@@ -1093,10 +991,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Create service cover-image upload URL
-         * @description Create service cover-image upload URL
-         */
+        /** Create service cover-image upload URL */
         post: operations["postV1AdminServicesByIdCoverImage"];
         delete?: never;
         options?: never;
@@ -1114,16 +1009,10 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * List service instances
-         * @description List service instances
-         */
+        /** List service instances */
         get: operations["getV1AdminServicesByIdInstances"];
         put?: never;
-        /**
-         * Create service instance
-         * @description Create service instance
-         */
+        /** Create service instance */
         post: operations["postV1AdminServicesByIdInstances"];
         delete?: never;
         options?: never;
@@ -1143,10 +1032,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * Get service instance
-         * @description Get service instance
-         */
+        /** Get service instance */
         get: operations["getV1AdminServicesByIdInstancesByInstanceId"];
         /**
          * Update service instance
@@ -1154,10 +1040,7 @@ export interface paths {
          */
         put: operations["putV1AdminServicesByIdInstancesByInstanceId"];
         post?: never;
-        /**
-         * Delete service instance
-         * @description Delete service instance
-         */
+        /** Delete service instance */
         delete: operations["deleteV1AdminServicesByIdInstancesByInstanceId"];
         options?: never;
         head?: never;
@@ -1176,16 +1059,10 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * List instance enrollments
-         * @description List instance enrollments
-         */
+        /** List instance enrollments */
         get: operations["getV1AdminServicesByIdInstancesByInstanceIdEnrollments"];
         put?: never;
-        /**
-         * Create instance enrollment
-         * @description Create instance enrollment
-         */
+        /** Create instance enrollment */
         post: operations["postV1AdminServicesByIdInstancesByInstanceIdEnrollments"];
         delete?: never;
         options?: never;
@@ -1210,17 +1087,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /**
-         * Delete enrollment
-         * @description Delete enrollment
-         */
+        /** Delete enrollment */
         delete: operations["deleteV1AdminServicesByIdInstancesByInstanceIdEnrollmentsByEnrollmentId"];
         options?: never;
         head?: never;
-        /**
-         * Update enrollment
-         * @description Update enrollment
-         */
+        /** Update enrollment */
         patch: operations["patchV1AdminServicesByIdInstancesByInstanceIdEnrollmentsByEnrollmentId"];
         trace?: never;
     };
@@ -1231,16 +1102,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * List discount codes
-         * @description List discount codes
-         */
+        /** List discount codes */
         get: operations["getV1AdminDiscountCodes"];
         put?: never;
-        /**
-         * Create discount code
-         * @description Create discount code
-         */
+        /** Create discount code */
         post: operations["postV1AdminDiscountCodes"];
         delete?: never;
         options?: never;
@@ -1259,10 +1124,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /**
-         * Update discount code
-         * @description Update discount code
-         */
+        /** Update discount code */
         put: operations["putV1AdminDiscountCodesById"];
         post?: never;
         delete?: never;
@@ -1278,16 +1140,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * List completion certificates
-         * @description List completion certificates
-         */
+        /** List completion certificates */
         get: operations["getV1AdminCompletionCertificates"];
         put?: never;
-        /**
-         * Issue completion certificate
-         * @description Issue completion certificate
-         */
+        /** Issue completion certificate */
         post: operations["postV1AdminCompletionCertificates"];
         delete?: never;
         options?: never;
@@ -1349,10 +1205,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * Download issued completion certificate PDF
-         * @description Download issued completion certificate PDF
-         */
+        /** Download issued completion certificate PDF */
         get: operations["getV1AdminCompletionCertificatesByIdPdf"];
         put?: never;
         post?: never;
@@ -1374,10 +1227,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Void completion certificate
-         * @description Void completion certificate
-         */
+        /** Void completion certificate */
         post: operations["postV1AdminCompletionCertificatesByIdVoid"];
         delete?: never;
         options?: never;
@@ -1399,10 +1249,7 @@ export interface paths {
          */
         get: operations["getV1AdminCalendarManualBlocks"];
         put?: never;
-        /**
-         * Create manual calendar block
-         * @description Create manual calendar block
-         */
+        /** Create manual calendar block */
         post: operations["postV1AdminCalendarManualBlocks"];
         delete?: never;
         options?: never;
@@ -1422,17 +1269,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /**
-         * Delete manual calendar block
-         * @description Delete manual calendar block
-         */
+        /** Delete manual calendar block */
         delete: operations["deleteV1AdminCalendarManualBlocksById"];
         options?: never;
         head?: never;
-        /**
-         * Update manual calendar block
-         * @description Update manual calendar block
-         */
+        /** Update manual calendar block */
         patch: operations["patchV1AdminCalendarManualBlocksById"];
         trace?: never;
     };
@@ -1451,10 +1292,7 @@ export interface paths {
          */
         get: operations["getV1AdminTags"];
         put?: never;
-        /**
-         * Create CRM tag
-         * @description Create CRM tag
-         */
+        /** Create CRM tag */
         post: operations["postV1AdminTags"];
         delete?: never;
         options?: never;
@@ -1669,16 +1507,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * List CRM contacts
-         * @description List CRM contacts
-         */
+        /** List CRM contacts */
         get: operations["getV1AdminContacts"];
         put?: never;
-        /**
-         * Create CRM contact
-         * @description Create CRM contact
-         */
+        /** Create CRM contact */
         post: operations["postV1AdminContacts"];
         delete?: never;
         options?: never;
@@ -1696,10 +1528,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * Get CRM contact
-         * @description Get CRM contact
-         */
+        /** Get CRM contact */
         get: operations["getV1AdminContactsById"];
         put?: never;
         post?: never;
@@ -1712,10 +1541,7 @@ export interface paths {
         delete: operations["deleteV1AdminContactsById"];
         options?: never;
         head?: never;
-        /**
-         * Update CRM contact
-         * @description Update CRM contact
-         */
+        /** Update CRM contact */
         patch: operations["patchV1AdminContactsById"];
         trace?: never;
     };
@@ -1736,10 +1562,7 @@ export interface paths {
          */
         get: operations["getV1AdminContactsByIdNotes"];
         put?: never;
-        /**
-         * Add a standalone note to a contact
-         * @description Add a standalone note to a contact
-         */
+        /** Add a standalone note to a contact */
         post: operations["postV1AdminContactsByIdNotes"];
         delete?: never;
         options?: never;
@@ -1787,17 +1610,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /**
-         * Delete a standalone note on a contact
-         * @description Delete a standalone note on a contact
-         */
+        /** Delete a standalone note on a contact */
         delete: operations["deleteV1AdminContactsByIdNotesByNoteId"];
         options?: never;
         head?: never;
-        /**
-         * Update a standalone note on a contact
-         * @description Update a standalone note on a contact
-         */
+        /** Update a standalone note on a contact */
         patch: operations["patchV1AdminContactsByIdNotesByNoteId"];
         trace?: never;
     };
@@ -1829,16 +1646,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * List CRM families
-         * @description List CRM families
-         */
+        /** List CRM families */
         get: operations["getV1AdminFamilies"];
         put?: never;
-        /**
-         * Create CRM family
-         * @description Create CRM family
-         */
+        /** Create CRM family */
         post: operations["postV1AdminFamilies"];
         delete?: never;
         options?: never;
@@ -1913,10 +1724,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Add family member
-         * @description Add family member
-         */
+        /** Add family member */
         post: operations["postV1AdminFamiliesByIdMembers"];
         delete?: never;
         options?: never;
@@ -1939,10 +1747,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /**
-         * Remove family member
-         * @description Remove family member
-         */
+        /** Remove family member */
         delete: operations["deleteV1AdminFamiliesByIdMembersByMemberId"];
         options?: never;
         head?: never;
@@ -2000,10 +1805,7 @@ export interface paths {
          */
         get: operations["getV1AdminOrganizations"];
         put?: never;
-        /**
-         * Create CRM organization
-         * @description Create CRM organization
-         */
+        /** Create CRM organization */
         post: operations["postV1AdminOrganizations"];
         delete?: never;
         options?: never;
@@ -2034,10 +1836,7 @@ export interface paths {
         delete: operations["deleteV1AdminOrganizationsById"];
         options?: never;
         head?: never;
-        /**
-         * Update CRM organization
-         * @description Update CRM organization
-         */
+        /** Update CRM organization */
         patch: operations["patchV1AdminOrganizationsById"];
         trace?: never;
     };
@@ -2077,10 +1876,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Add organization member
-         * @description Add organization member
-         */
+        /** Add organization member */
         post: operations["postV1AdminOrganizationsByIdMembers"];
         delete?: never;
         options?: never;
@@ -2103,10 +1899,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /**
-         * Remove organization member
-         * @description Remove organization member
-         */
+        /** Remove organization member */
         delete: operations["deleteV1AdminOrganizationsByIdMembersByMemberId"];
         options?: never;
         head?: never;
@@ -2169,10 +1962,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get customer payment with unapplied balance
-         * @description Get customer payment with unapplied balance
-         */
+        /** Get customer payment with unapplied balance */
         get: operations["getV1AdminBillingPaymentsById"];
         put?: never;
         post?: never;
@@ -2199,10 +1989,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Confirm pending inbound payment (offline rails)
-         * @description Confirm pending inbound payment (offline rails)
-         */
+        /** Confirm pending inbound payment (offline rails) */
         post: operations["postV1AdminBillingPaymentsByIdConfirm"];
         delete?: never;
         options?: never;
@@ -2261,10 +2048,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get customer invoice with lines
-         * @description Get customer invoice with lines
-         */
+        /** Get customer invoice with lines */
         get: operations["getV1AdminBillingInvoicesById"];
         put?: never;
         post?: never;
@@ -2387,10 +2171,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Allocate payment amount to invoice
-         * @description Allocate payment amount to invoice
-         */
+        /** Allocate payment amount to invoice */
         post: operations["postV1AdminBillingAllocations"];
         delete?: never;
         options?: never;
@@ -2411,10 +2192,7 @@ export interface paths {
          */
         get: operations["getV1AdminExpenses"];
         put?: never;
-        /**
-         * Create expense
-         * @description Create expense
-         */
+        /** Create expense */
         post: operations["postV1AdminExpenses"];
         delete?: never;
         options?: never;
@@ -2509,10 +2287,7 @@ export interface paths {
         delete: operations["deleteV1AdminExpensesById"];
         options?: never;
         head?: never;
-        /**
-         * Update expense
-         * @description Update expense
-         */
+        /** Update expense */
         patch: operations["patchV1AdminExpensesById"];
         trace?: never;
     };
@@ -2528,10 +2303,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Soft-void an expense
-         * @description Soft-void an expense
-         */
+        /** Soft-void an expense */
         post: operations["postV1AdminExpensesByIdCancel"];
         delete?: never;
         options?: never;
@@ -2574,10 +2346,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Queue expense parse request
-         * @description Queue expense parse request
-         */
+        /** Queue expense parse request */
         post: operations["postV1AdminExpensesByIdReparse"];
         delete?: never;
         options?: never;
@@ -2597,10 +2366,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Create amendment expense record
-         * @description Create amendment expense record
-         */
+        /** Create amendment expense record */
         post: operations["postV1AdminExpensesByIdAmend"];
         delete?: never;
         options?: never;
@@ -2666,10 +2432,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * Export form answers as CSV
-         * @description Export form answers as CSV
-         */
+        /** Export form answers as CSV */
         get: operations["getV1AdminFormsByFormSlugAnswersExport"];
         put?: never;
         post?: never;
@@ -2737,10 +2500,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * Export poll answers as CSV
-         * @description Export poll answers as CSV
-         */
+        /** Export poll answers as CSV */
         get: operations["getV1AdminPollsByPollSlugAnswersExport"];
         put?: never;
         post?: never;
@@ -2780,10 +2540,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /**
-         * Generate user asset download
-         * @description Generate user asset download
-         */
+        /** Generate user asset download */
         get: operations["getV1UserAssetsByIdDownload"];
         put?: never;
         post?: never;

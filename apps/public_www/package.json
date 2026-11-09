@@ -88,6 +88,6 @@
     "minimatch@10": "11.0.4"
   },
   "allowScripts": {
-    "unrs-resolver": false
+    "unrs-resolver": true
   }
 }
