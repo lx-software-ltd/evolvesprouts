@@ -24,6 +24,7 @@ Source of truth for the "why" behind each change:
 |---|---|---|
 | `meta-archive-ended-campaigns.py` | Meta | Archives campaigns whose status is ACTIVE/PAUSED and `stop_time` is in the past. |
 | `meta-create-custom-audiences.py` | Meta | Creates 6 Custom Audiences (website, course page, Easter Reel viewers, IC-not-Purchase, IG engagers, FB engagers). **Requires one-time Custom Audience ToS acceptance** at `facebook.com/customaudiences/app/tos/?act=<acct_id>` before first run. |
+| `meta-launch-video-traffic-campaign.py` | Meta | Uploads a vertical video + thumbnail and creates one `OUTCOME_TRAFFIC` campaign → one `LANDING_PAGE_VIEWS` ad set (lifetime budget, fixed end date, HK targeting, Advantage audience off) → one video ad with a UTM-tagged `BOOK_NOW` link. Created PAUSED; `--apply --activate` on an existing campaign switches the whole tree on. `--video-id` / `--image-hash` reuse assets from an earlier run. |
 | `google-ads-apply-tuesday-changes.py` | Google Ads | Adds campaign-level negative keywords, phrase-match variants of winners, and UTM-tags enabled ads' final URLs. |
 | `google-ads-enable-secondary-conversions.py` | Google Ads | Promotes HIDDEN GA4-synced conversion actions to ENABLED + "Secondary" so they feed bidding without polluting ROAS. |
 | `ga4-mark-key-events.py` | GA4 | Creates KeyEvent resources for taxonomy events we want Google Ads to auto-sync as conversion actions. |
@@ -37,6 +38,17 @@ Source of truth for the "why" behind each change:
 | `google-ads-apply-tuesday-changes.py --apply --all` | Added 29 campaign-level negative keywords, 3 phrase-match variants on Helper Training Course, UTM-tagged 3 enabled ads. |
 | `ga4-mark-key-events.py --apply` | Created Key Events for `booking_confirm_pay_click` and `whatsapp_click`. |
 | `google-ads-enable-secondary-conversions.py --apply` | Promoted 4 HIDDEN conversion actions to ENABLED (Secondary): media_form, community_signup, booking_confirm_pay_click, whatsapp_click. |
+
+## Applied on 2026-11-09
+
+| Script | Result |
+|---|---|
+| `meta-launch-video-traffic-campaign.py --apply` | Created `Mealtimes Workshop — Traffic — HK` (campaign `120252906972330439`, ad set `120252906983060439`, ad `120252906985180439`, video `1867110284305793`) **PAUSED**, HK$350 lifetime, women 28–45 in HK, landing page `/en/nov-2026-mealtimes-workshop` with `utm_content=reel-mealtimes-v3`. Left paused because the export's opening title (0–1.6s) shows the end-card line instead of the hook; swap the video and activate once fixed. |
+
+Two Marketing API changes bit on this run and are now baked into the
+script: campaigns with ad-set budgets must send
+`is_adset_budget_sharing_enabled`, and `LANDING_PAGE_VIEWS` ad sets on this
+account take `promoted_object={"page_id": ...}`, not the pixel.
 
 ## What is deliberately NOT in an apply script
 
