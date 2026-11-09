@@ -212,17 +212,47 @@ def serialize_family_summary(
     }
 
 
+_RAISE_LAZY = frozenset({("lazy", "raise"), ("lazy", "raise_on_sql")})
+
+
+def _strategy_is_raiseload(strategy: object) -> bool:
+    return isinstance(strategy, tuple) and any(item in _RAISE_LAZY for item in strategy)
+
+
+def _load_option_is_raiseload(option: object, name: str) -> bool:
+    for item in getattr(option, "context", ()) or ():
+        if not _strategy_is_raiseload(getattr(item, "strategy", ())):
+            continue
+        path = getattr(item, "path", None)
+        natural = getattr(path, "natural_path", ()) if path is not None else ()
+        if any(getattr(part, "key", None) == name for part in natural):
+            return True
+    return False
+
+
+def _relationship_is_raiseload(state: object, name: str) -> bool:
+    callables = getattr(state, "callables", None) or {}
+    loader = callables.get(name) if hasattr(callables, "get") else None
+    if _strategy_is_raiseload(getattr(loader, "strategy_key", ())):
+        return True
+    return any(
+        _load_option_is_raiseload(option, name)
+        for option in getattr(state, "load_options", ()) or ()
+    )
+
+
 def _loaded_relationship(instance: object, name: str) -> Any:
-    """Return a relationship value without triggering a loader.
+    """Return a relationship value without firing a raiseload.
 
     Vendor lists mark tags, members, and location ``raiseload`` so the summary
-    can omit them. Reading an unloaded raiseload attribute raises.
+    can omit them. Other unloaded relationships, including attributes expired
+    by a commit, still load through their normal strategy.
     """
     try:
         state = attributes.instance_state(instance)
     except (UnmappedInstanceError, AttributeError):
         return getattr(instance, name)
-    if name in state.unloaded:
+    if name in state.unloaded and _relationship_is_raiseload(state, name):
         return None
     return getattr(instance, name)
 
