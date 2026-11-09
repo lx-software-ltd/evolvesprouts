@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BookFreeCallLandingPage } from '@/components/pages/landing-pages/book-a-free-call';
@@ -48,6 +48,12 @@ if (!pageContent) {
   throw new Error('missing book-a-free-call content');
 }
 
+async function settleAsyncUpdates() {
+  await act(async () => {
+    await Promise.resolve();
+  });
+}
+
 describe('BookFreeCallLandingPage', () => {
   beforeEach(() => {
     vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
@@ -61,7 +67,7 @@ describe('BookFreeCallLandingPage', () => {
     vi.stubEnv('NEXT_PUBLIC_TURNSTILE_SITE_KEY', 'test-turnstile-site-key');
   });
 
-  it('does not trigger calendar payload fetch for this slug', () => {
+  it('does not trigger calendar payload fetch for this slug', async () => {
     const spy = vi.spyOn(eventsData, 'fetchEventsPayload');
 
     render(
@@ -75,9 +81,10 @@ describe('BookFreeCallLandingPage', () => {
 
     expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();
+    await settleAsyncUpdates();
   });
 
-  it('lays out sections: hero → before you book → pick a time → faq, with no description/testimonials/coach', () => {
+  it('lays out sections: hero → before you book → pick a time → faq, with no description/testimonials/coach', async () => {
     render(
       <BookFreeCallLandingPage
         locale='en'
@@ -122,9 +129,10 @@ describe('BookFreeCallLandingPage', () => {
     expect(document.querySelector('[data-figma-node="about-us-founder-coach"]')).toBeNull();
 
     expect(document.getElementById('landing-page-cta')).toBeNull();
+    await settleAsyncUpdates();
   });
 
-  it('renders hero anchor and inline section CTAs to the booking hash', () => {
+  it('renders hero anchor and inline section CTAs to the booking hash', async () => {
     const siteContent = getContent('en');
     render(
       <BookFreeCallLandingPage
@@ -142,9 +150,10 @@ describe('BookFreeCallLandingPage', () => {
     expect(
       pickTimeLinks.filter((link) => link.getAttribute('href') === localizedBookingHref),
     ).toHaveLength(2);
+    await settleAsyncUpdates();
   });
 
-  it('renders hero anchor CTA to the booking section and no booking modal shell', () => {
+  it('renders hero anchor CTA to the booking section and no booking modal shell', async () => {
     render(
       <BookFreeCallLandingPage
         locale='en'
@@ -167,5 +176,6 @@ describe('BookFreeCallLandingPage', () => {
     expect(bookingRegion).toHaveAttribute('id', 'intro-call-booking');
 
     expect(screen.queryByTestId('landing-page-modal')).toBeNull();
+    await settleAsyncUpdates();
   });
 });

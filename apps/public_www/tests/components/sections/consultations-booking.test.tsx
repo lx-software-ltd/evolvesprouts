@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ConsultationsBooking } from '@/components/sections/consultations/consultations-booking';
@@ -31,6 +31,12 @@ vi.mock('@/lib/analytics', () => ({
 vi.mock('@/lib/meta-pixel', () => ({
   trackMetaPixelEvent: vi.fn(),
 }));
+
+async function settleAsyncUpdates() {
+  await act(async () => {
+    await Promise.resolve();
+  });
+}
 
 const { mockFetchConsultationCalendarBlockersSlots } = vi.hoisted(() => ({
   mockFetchConsultationCalendarBlockersSlots: vi.fn(),
@@ -88,7 +94,7 @@ afterEach(() => {
 });
 
 describe('ConsultationsBooking', () => {
-  it('renders focus area cards with SVG icons from content', () => {
+  it('renders focus area cards with SVG icons from content', async () => {
     mockViewportMdUp(true);
     const booking = enContent.consultations.booking;
 
@@ -183,9 +189,10 @@ describe('ConsultationsBooking', () => {
 
     expect(screen.queryByTestId('consultations-booking-focus-carousel')).toBeNull();
     expect(screen.queryByTestId('consultations-booking-level-carousel')).toBeNull();
+    await settleAsyncUpdates();
   });
 
-  it('uses mobile carousel tracks with smaller slides and keyboard scrolling below md', () => {
+  it('uses mobile carousel tracks with smaller slides and keyboard scrolling below md', async () => {
     mockViewportMdUp(false);
     const booking = enContent.consultations.booking;
 
@@ -260,10 +267,10 @@ describe('ConsultationsBooking', () => {
     for (const feature of deepDive!.features) {
       expect(within(levelDescription).getByText(feature)).toBeInTheDocument();
     }
-
+    await settleAsyncUpdates();
   });
 
-  it('fires booking_modal_open, begin_checkout, and InitiateCheckout when CTA is clicked', () => {
+  it('fires booking_modal_open, begin_checkout, and InitiateCheckout when CTA is clicked', async () => {
     mockViewportMdUp(true);
     const booking = enContent.consultations.booking;
     const essentialsTier = booking.reservation.essentials;
@@ -303,9 +310,10 @@ describe('ConsultationsBooking', () => {
     expect(mockedTrackMetaPixelEvent).toHaveBeenCalledWith('InitiateCheckout', {
       content_name: 'consultation_booking',
     });
+    await settleAsyncUpdates();
   });
 
-  it('fires begin_checkout with deep-dive tier when deep-dive level is selected', () => {
+  it('fires begin_checkout with deep-dive tier when deep-dive level is selected', async () => {
     mockViewportMdUp(true);
     const booking = enContent.consultations.booking;
     const deepDiveTier = booking.reservation.deepDive;
@@ -350,6 +358,7 @@ describe('ConsultationsBooking', () => {
     expect(mockedTrackMetaPixelEvent).toHaveBeenCalledWith('InitiateCheckout', {
       content_name: 'consultation_booking',
     });
+    await settleAsyncUpdates();
   });
 
   it('sets calendar blockers status loading then ready when booking CTA opens', async () => {

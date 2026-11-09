@@ -144,9 +144,7 @@ vi.mock('@/lib/crm-api-client', async () => {
 });
 
 vi.mock('@/lib/fps-qr-code', () => ({
-  generateFpsQrImageDataUrl: vi.fn(() =>
-    Promise.resolve('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='),
-  ),
+  generateFpsQrImageDataUrl: vi.fn(() => new Promise<string>(() => {})),
   hasFpsQrConfiguration: vi.fn(() => true),
 }));
 
@@ -345,10 +343,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  vi.mocked(generateFpsQrImageDataUrl).mockImplementation(() =>
-    Promise.resolve(
-      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-    ),
+  vi.mocked(generateFpsQrImageDataUrl).mockImplementation(
+    () => new Promise<string>(() => {}),
   );
   mockedCreateCrmApiClient.mockReturnValue(null);
   mockedCreatePublicApiClient.mockReturnValue(null);
@@ -1251,6 +1247,11 @@ describe('my-best-auntie booking modals footer content', () => {
       request: vi.fn(),
     });
 
+    vi.mocked(generateFpsQrImageDataUrl).mockImplementation(() =>
+      Promise.resolve(
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      ),
+    );
     renderBookingModal({
       selectedServiceTierLabel: '18-24 months',
       onSubmitReservation,

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { PollWizard } from '@/components/polls/poll-wizard';
@@ -72,20 +72,20 @@ describe('PollWizard resume and completion', () => {
     });
     vi.spyOn(pollsApi, 'persistPollAnswer').mockResolvedValue();
 
+    vi.useFakeTimers();
     render(<PollWizard poll={poll} common={POLLS_COMMON} />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Thank you')).toBeInTheDocument();
+    await act(async () => {
+      await Promise.resolve();
     });
+    expect(screen.getByText('Thank you')).toBeInTheDocument();
 
-    await waitFor(
-      () => {
-        expect(
-          screen.getByText('What is the biggest mealtime challenge in your home?'),
-        ).toBeInTheDocument();
-      },
-      { timeout: 4000 },
-    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2500);
+    });
+    expect(
+      screen.getByText('What is the biggest mealtime challenge in your home?'),
+    ).toBeInTheDocument();
     expect(screen.queryByText('Thank you')).toBeNull();
   });
 
@@ -122,7 +122,7 @@ describe('PollWizard resume and completion', () => {
     expect(screen.getByText('Question 2 of 3')).toBeInTheDocument();
   });
 
-  it('scopes session ids per poll slug in session storage', () => {
+  it('scopes session ids per poll slug in session storage', async () => {
     const poll = getPollContent('workshop-food-jun-26');
     if (!poll) {
       throw new Error('expected poll fixture');
@@ -144,5 +144,8 @@ describe('PollWizard resume and completion', () => {
       window.sessionStorage.getItem('evolvesprouts-poll-session-id:workshop-food-jun-26'),
     ).toBeTruthy();
     expect(window.sessionStorage.getItem('evolvesprouts-poll-session-id')).toBeNull();
+    await act(async () => {
+      await Promise.resolve();
+    });
   });
 });
