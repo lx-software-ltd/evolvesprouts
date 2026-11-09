@@ -1,0 +1,26 @@
+{
+  "$comment": "Header contract the public-www edge-verify test reads. Staging sends x-proxy-verify from the Worker binding PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET. Applying this late-transform rule on www.evolvesprouts.com is the production origin lock and is not applied from this repository. ${HOSTNAME} is the proxied hostname; ${PUBLIC_WWW_EDGE_VERIFY_SECRET} is supplied at apply time and is never stored here.",
+  "zone_name": "evolvesprouts.com",
+  "hostname": "www.evolvesprouts.com",
+  "rulesets": {
+    "http_request_late_transform": {
+      "name": "Public website request headers",
+      "rules": [
+        {
+          "description": "edge-verify-header",
+          "expression": "(http.host eq \"${HOSTNAME}\")",
+          "action": "rewrite",
+          "action_parameters": {
+            "headers": {
+              "x-proxy-verify": {
+                "operation": "set",
+                "value": "${PUBLIC_WWW_EDGE_VERIFY_SECRET}"
+              }
+            }
+          },
+          "enabled": true
+        }
+      ]
+    }
+  }
+}

@@ -1,7 +1,20 @@
-import * as cdk from "aws-cdk-lib";
-import { Template, Match } from "aws-cdk-lib/assertions";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
-import { PublicWwwStack } from "../lib/public-www-stack";
+import * as cdk from "aws-cdk-lib";
+import { Template } from "aws-cdk-lib/assertions";
+
+import {
+  MEDIA_REQUEST_PROXY_FUNCTION,
+  STATIC_EXPORT_PATH_REWRITE_FUNCTION,
+  WWW_PROXY_ALLOWLIST_FUNCTION,
+} from "../lib/cloudfront-www-proxy-functions";
+import {
+  insertEdgeVerifyCall,
+  PublicWwwStack,
+  viewerRequestSource,
+  withEdgeVerify,
+} from "../lib/public-www-stack";
 
 const CACHING_DISABLED_MANAGED_ID = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad";
 /** ALL_VIEWER_EXCEPT_HOST_HEADER */
@@ -206,11 +219,206 @@ function assertCloudFrontFunctionUpdatesAreSerialized(template: Template): void 
   }
 }
 
+function assertEdgeVerifyParameters(template: Template): void {
+  const document = template.toJSON() as {
+    Parameters: Record<string, Record<string, unknown>>;
+    Conditions: Record<string, unknown>;
+  };
+  const names = [
+    "PublicWwwEdgeVerifySecret",
+    "PublicWwwEdgeVerifySecretPrevious",
+    "PublicWwwStagingEdgeVerifySecret",
+    "PublicWwwStagingEdgeVerifySecretPrevious",
+  ];
+  for (const name of names) {
+    const parameter = document.Parameters[name];
+    if (!parameter) {
+      throw new Error(`Missing parameter ${name}`);
+    }
+    if (parameter.NoEcho !== true || parameter.Default !== "") {
+      throw new Error(`${name} must be NoEcho with default ""`);
+    }
+    if (parameter.AllowedPattern !== "^$|^[A-Za-z0-9+/=_-]{32,}$") {
+      throw new Error(`${name} has unexpected AllowedPattern`);
+    }
+  }
+  for (const name of [
+    "HasPublicWwwEdgeVerifySecret",
+    "HasPublicWwwStagingEdgeVerifySecret",
+  ]) {
+    const rendered = JSON.stringify(document.Conditions[name]);
+    if (!rendered.includes("Fn::Not") || !rendered.includes("Fn::And")) {
+      throw new Error(`${name} must be NOT (current empty AND previous empty)`);
+    }
+  }
+  if (JSON.stringify(document.Conditions).includes("AttachWaf")) {
+    throw new Error(
+      "No CloudFront WebACL is attached; do not add the WAF-detach condition",
+    );
+  }
+  const outputs = (
+    template.toJSON() as { Outputs?: Record<string, unknown> }
+  ).Outputs ?? {};
+  for (const name of ["PublicWwwEdgeVerifyEnabled", "PublicWwwStagingEdgeVerifyEnabled"]) {
+    const output = outputs[name];
+    const conditionName = `Has${name.replace("Enabled", "Secret")}`;
+    if (!output || !JSON.stringify(output).includes(conditionName)) {
+      throw new Error(`${name} must publish ${conditionName}`);
+    }
+  }
+}
+
+function functionCode(resource: { Properties?: { FunctionCode?: unknown } }): string {
+  return JSON.stringify(resource.Properties?.FunctionCode ?? "");
+}
+
+function assertEdgeVerifyOnStagingViewerRequests(template: Template): void {
+  const functions = template.findResources("AWS::CloudFront::Function");
+  const viewerRequestIds = Object.keys(functions).filter(
+    (logicalId) => !logicalId.includes("WwwApiErrorResponse"),
+  );
+  if (viewerRequestIds.length !== 6) {
+    throw new Error(
+      `Expected 6 viewer-request functions, found ${viewerRequestIds.length}`,
+    );
+  }
+  const call = "var request = event.request;\\n  var rejection = edgeVerifyRejection(request);";
+  for (const logicalId of viewerRequestIds) {
+    const code = functionCode(functions[logicalId]);
+    const staging = logicalId.includes("Staging");
+    if (staging && (!code.includes(call) || !code.includes("x-proxy-verify"))) {
+      throw new Error(`${logicalId} is missing the edge-verify call after the request binding`);
+    }
+    if (!staging && code.includes("edgeVerifyRejection")) {
+      throw new Error(`${logicalId} must stay free of the origin lock`);
+    }
+  }
+  for (const logicalId of Object.keys(functions)) {
+    if (
+      logicalId.includes("WwwApiErrorResponse") &&
+      functionCode(functions[logicalId]).includes("edgeVerifyRejection")
+    ) {
+      throw new Error(`${logicalId} must stay a viewer-response function`);
+    }
+  }
+
+  const distributions = template.findResources("AWS::CloudFront::Distribution");
+  for (const [distributionId, resource] of Object.entries(distributions)) {
+    const stagingDistribution = distributionId.includes("Staging");
+    const config = resource.Properties?.DistributionConfig as {
+      DefaultCacheBehavior?: { FunctionAssociations?: Array<Record<string, unknown>> };
+      CacheBehaviors?: Array<{
+        PathPattern?: string;
+        FunctionAssociations?: Array<Record<string, unknown>>;
+      }>;
+    };
+    const behaviors = [
+      { PathPattern: "(default)", ...(config.DefaultCacheBehavior ?? {}) },
+      ...(config.CacheBehaviors ?? []),
+    ];
+    for (const behavior of behaviors) {
+      const viewerRequest = (behavior.FunctionAssociations ?? []).filter(
+        (association) => association.EventType === "viewer-request",
+      );
+      if (viewerRequest.length !== 1) {
+        throw new Error(
+          `${distributionId} ${behavior.PathPattern} must have one viewer-request function`,
+        );
+      }
+      const functionArn = viewerRequest[0].FunctionARN as
+        | { "Fn::GetAtt"?: string[] }
+        | undefined;
+      const logicalId = functionArn?.["Fn::GetAtt"]?.[0];
+      const locked = logicalId
+        ? functionCode(functions[logicalId]).includes("edgeVerifyRejection")
+        : false;
+      if (stagingDistribution !== locked) {
+        throw new Error(
+          `${distributionId} ${behavior.PathPattern} edge-verify presence is ${locked}`,
+        );
+      }
+    }
+    const webAcl = JSON.stringify(config);
+    if (!webAcl.includes("HasWafWebAclArn")) {
+      throw new Error(`${distributionId} WebACL override no longer keys off HasWafWebAclArn`);
+    }
+  }
+}
+
+function assertPathRewriteMatchesTrainingCopy(): void {
+  const file = fs.readFileSync(
+    path.join(__dirname, "../lib/functions/public-www-path-rewrite.js"),
+    "utf8",
+  );
+  const marker = "\nfunction handler(event)";
+  const expected = insertEdgeVerifyCall(STATIC_EXPORT_PATH_REWRITE_FUNCTION);
+  const fileAt = file.indexOf(marker);
+  const expectedAt = expected.indexOf(marker);
+  if (
+    !file.startsWith("// Fixture") ||
+    !file.includes("Not deployed") ||
+    fileAt < 0 ||
+    expectedAt < 0 ||
+    file.slice(fileAt) !== expected.slice(expectedAt)
+  ) {
+    throw new Error(
+      "public-www-path-rewrite.js must be a not-deployed fixture whose handler matches the staging wrap of STATIC_EXPORT_PATH_REWRITE_FUNCTION",
+    );
+  }
+}
+
+function assertEdgeVerifyCallRejectsAmbiguousBodies(): void {
+  for (const body of ["function handler(event) {\n}", `${REQUEST_TWICE}`]) {
+    let threw = false;
+    try {
+      insertEdgeVerifyCall(body);
+    } catch {
+      threw = true;
+    }
+    if (!threw) {
+      throw new Error("insertEdgeVerifyCall accepted a body without exactly one request binding");
+    }
+  }
+}
+
+const REQUEST_TWICE = `
+function handler(event) {
+  var request = event.request;
+  var request = event.request;
+}
+`;
+
+function assertEdgeVerifyFunctionBudget(): void {
+  const secrets = { current: "x".repeat(64), previous: "y".repeat(64) };
+  const pathRewrite = fs.readFileSync(
+    path.join(__dirname, "../lib/functions/public-www-path-rewrite.js"),
+    "utf8",
+  );
+  const bodies = [
+    withEdgeVerify(pathRewrite, secrets),
+    viewerRequestSource(WWW_PROXY_ALLOWLIST_FUNCTION, secrets),
+    viewerRequestSource(MEDIA_REQUEST_PROXY_FUNCTION, secrets),
+  ];
+  for (const body of bodies) {
+    const size = Buffer.byteLength(body, "utf8");
+    if (size >= 10 * 1024) {
+      throw new Error(
+        `Viewer-request function is ${size} bytes; CloudFront limit is 10240`,
+      );
+    }
+  }
+}
+
 function main(): void {
   const template = synthPublicWwwTemplate();
   assertApiProxyCachePolicies(template);
   assertEachDistributionWwwBehaviors(template);
   assertCloudFrontFunctionUpdatesAreSerialized(template);
+  assertEdgeVerifyParameters(template);
+  assertEdgeVerifyOnStagingViewerRequests(template);
+  assertEdgeVerifyFunctionBudget();
+  assertPathRewriteMatchesTrainingCopy();
+  assertEdgeVerifyCallRejectsAmbiguousBodies();
 
   console.log(
     "public-www-stack CloudFront cache policy and function-chain assertions passed.",

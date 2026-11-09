@@ -357,7 +357,75 @@ uses the same default-deny `/www/*` allowlist and media-request rewrite as the
 public WWW stack via shared sources in
 `backend/infrastructure/lib/cloudfront-www-proxy-functions.ts`. When adding or
 changing a public API path, update that module so production public WWW and
-training origins stay aligned.
+training origins stay aligned. Staging wraps
+`STATIC_EXPORT_PATH_REWRITE_FUNCTION` with the edge-verify call.
+`backend/infrastructure/lib/functions/public-www-path-rewrite.js` is a fixture
+for the copied size test and is not deployed. From `function handler` onward
+it must match that wrap. `backend/infrastructure/lib/functions/README.md`
+records where the copied files still describe siutindei.
+
+### Public website origin lock
+
+The staging distribution's viewer-request functions start with
+`backend/infrastructure/lib/functions/public-www-edge-verify.js`.
+Production uses the same function sources without that prefix. The header
+name is `x-proxy-verify`. CloudFront strips `X-Edge-*` and the other names
+listed in that file before a function runs, so those names cannot be used.
+CloudFront Functions have no secret store, so a set secret is part of the
+function source.
+
+The staging check compares the header with `PublicWwwStagingEdgeVerifySecret`
+and `PublicWwwStagingEdgeVerifySecretPrevious`. Both empty makes the check
+return the request unchanged. A set value returns 403 when the header is
+missing or wrong. The viewer-response error function does not run the check.
+Maintenance mode replaces the `www/*` viewer-request function with a 503
+response, so that path does not reach the origin either. Staging behaviors:
+
+- default (static path rewrite)
+- `www/*` (API allowlist)
+- `www/v1/assets/free/request` (media-request proxy)
+
+`PublicWwwEdgeVerifySecret` and `PublicWwwEdgeVerifySecretPrevious` exist and
+stay empty. Production functions do not compare them yet.
+
+Staging traffic that is allowed through the Worker
+`evolvesprouts-www-staging-redirect-allowlist` sends the header from the
+binding `PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET`. Direct requests to the
+staging CloudFront hostname do not have the header. Production
+`www.evolvesprouts.com` needs a Cloudflare late-transform rule before those
+production parameters are enforced. That rule is
+`scripts/cloudflare/public_www_edge_policy.json` and is not applied by this
+repository's deploy. `WafWebAclArn` is empty, so the distributions do not
+detach a WebACL when the lock turns on.
+
+`deploy-backend.yml` runs in the `production` GitHub environment on
+`workflow_dispatch`, on `repository_dispatch` of type `deploy-backend`, and
+on a push to `main` that changes `backend/**`, `scripts/**`,
+`apps/public_www/src/content/landing-pages/**`,
+`apps/public_www/src/content/eventbrite-banners/**`, or
+`.github/workflows/deploy-backend.yml`. The stack list is the workflow
+input, otherwise the `CDK_STACKS` repository variable, otherwise
+`all stacks`, which includes `evolvesprouts-public-www`. The four
+edge-verify secrets must be repository secrets or production-environment
+secrets. A secret that exists only in the `staging` environment is
+invisible, the parameter stays empty, and the lock stays off. Deploy passes
+the four parameters even when those secrets are empty. Clearing
+`CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY` and its previous value, then
+deploying `evolvesprouts-public-www`, turns the staging lock off. A
+successful public-website deploy writes
+`PublicWwwStagingEdgeVerifyEnabled` before and after to the job summary and
+warns when that value goes from `true` to anything else. Set the Worker
+binding before the staging parameter. Setting the parameter first refuses
+the proxied staging hostname.
+
+To rotate the staging secret, set
+`CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS` to the value the Worker
+sends now and `CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY` to the new value,
+then deploy. Update the Worker binding
+`PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET` to the new value, clear the previous
+secret, and deploy again. The Worker sends one value. Changing it before
+the previous secret is accepted, or clearing the previous secret before the
+Worker changes, refuses `www-staging.evolvesprouts.com`.
 
 Process to add a new public API path:
 

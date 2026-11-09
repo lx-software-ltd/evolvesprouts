@@ -155,7 +155,22 @@ jobs:
               "PublicWwwStagingCertificateArn",
               "PublicWwwApiBaseUrl",
               "PublicWwwMediaRequestApiBaseUrl",
+              "PublicWwwEdgeVerifySecret",
+              "PublicWwwEdgeVerifySecretPrevious",
+              "PublicWwwStagingEdgeVerifySecret",
+              "PublicWwwStagingEdgeVerifySecretPrevious",
               "WafWebAclArn",
+          }
+          # Omitted parameters keep their previous stack value. Edge-verify
+          # keys are passed even when empty so clearing the GitHub secret
+          # disables the origin lock. Siutindei omits them, and an empty
+          # deploy there cannot turn the lock off.
+          pass_empty_params = {
+              "WafWebAclArn",
+              "PublicWwwEdgeVerifySecret",
+              "PublicWwwEdgeVerifySecretPrevious",
+              "PublicWwwStagingEdgeVerifySecret",
+              "PublicWwwStagingEdgeVerifySecretPrevious",
           }
           training_params = {
               "TrainingDomainName",
@@ -186,7 +201,7 @@ jobs:
               value_str = ""
               if value is not None:
                   value_str = resolve_value(str(value))
-              if key != "WafWebAclArn" and not value_str:
+              if key not in pass_empty_params and not value_str:
                   continue
 
               targets = []
@@ -238,6 +253,28 @@ jobs:
           fi
 
           IFS=$', \n\t' read -r -a STACK_LIST <<< "$CDK_STACKS"
+
+          read_public_www_output() {
+            local key="$1"
+            local value
+            value="$(aws cloudformation describe-stacks \
+              --stack-name evolvesprouts-public-www \
+              --region "$AWS_REGION" \
+              --query "Stacks[0].Outputs[?OutputKey=='${key}'].OutputValue | [0]" \
+              --output text 2>/dev/null || true)"
+            if [ -z "$value" ] || [ "$value" = "None" ]; then
+              echo "absent"
+            else
+              printf '%s\n' "$value"
+            fi
+          }
+
+          EDGE_VERIFY_BEFORE_STAGING="skipped"
+          EDGE_VERIFY_BEFORE_PRODUCTION="skipped"
+          if [[ " $CDK_STACKS " == *" evolvesprouts-public-www "* ]]; then
+            EDGE_VERIFY_BEFORE_STAGING="$(read_public_www_output PublicWwwStagingEdgeVerifyEnabled)"
+            EDGE_VERIFY_BEFORE_PRODUCTION="$(read_public_www_output PublicWwwEdgeVerifyEnabled)"
+          fi
 
           # Lambda occasionally returns 500 during UpdateFunctionCode (SDK retries
           # exhaust inside CloudFormation). Brief backoff + redeploy usually succeeds.
@@ -294,6 +331,13 @@ jobs:
             deploy_exit=${PIPESTATUS[0]}
             if [ "$deploy_exit" -eq 0 ]; then
               rm -f "$ATTEMPT_LOG"
+              if [[ " $CDK_STACKS " == *" evolvesprouts-public-www "* ]]; then
+                bash "${GITHUB_WORKSPACE}/scripts/deploy/report_public_www_edge_verify.sh" \
+                  "$EDGE_VERIFY_BEFORE_STAGING" \
+                  "$(read_public_www_output PublicWwwStagingEdgeVerifyEnabled)" \
+                  "$EDGE_VERIFY_BEFORE_PRODUCTION" \
+                  "$(read_public_www_output PublicWwwEdgeVerifyEnabled)"
+              fi
               exit 0
             fi
 
@@ -384,3 +428,11 @@ jobs:
           NEXT_PUBLIC_FPS_MOBILE_NUMBER: ${{ vars.NEXT_PUBLIC_FPS_MOBILE_NUMBER }}
           CDK_PARAM_INVOICE_DISPLAY_TIMEZONE: ${{ vars.CDK_PARAM_INVOICE_DISPLAY_TIMEZONE }}
           CDK_PARAM_INVOICE_PAYMENT_TERMS_DAYS: ${{ vars.CDK_PARAM_INVOICE_PAYMENT_TERMS_DAYS }}
+          # This job uses the production environment. These secrets must be
+          # repository secrets or production-environment secrets. A secret
+          # that exists only in the staging environment is invisible here,
+          # the parameter stays empty, and the origin lock stays off.
+          CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY }}
+          CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS }}
+          CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY }}
+          CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS }}

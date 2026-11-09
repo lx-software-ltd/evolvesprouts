@@ -4,7 +4,13 @@
  * training-stack; keep in sync with docs/architecture/security.md.
  */
 
-/** Rewrite extensionless paths to index.html for Next.js static export. */
+/**
+ * Rewrite extensionless paths to index.html for Next.js static export.
+ * Training and the production public website use this constant as-is.
+ * Staging wraps it with the edge-verify call. `functions/public-www-path-rewrite.js`
+ * is the fixture the copied size test reads and is not deployed. From
+ * `function handler` onward it must match that wrap. See `functions/README.md`.
+ */
 export const STATIC_EXPORT_PATH_REWRITE_FUNCTION = `
 function handler(event) {
   var request = event.request;
