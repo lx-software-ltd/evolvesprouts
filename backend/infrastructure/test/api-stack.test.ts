@@ -756,6 +756,75 @@ function assertLogGroupActionsUseLogGroupArn(template: Template): void {
   }
 }
 
+function assertRetainedSecurityGroupsAndProxyTags(template: Template): void {
+  const groups = template.findResources("AWS::EC2::SecurityGroup");
+  for (const groupName of ["evolvesprouts-lambda-sg", "evolvesprouts-migration-sg"]) {
+    const match = Object.entries(groups).find(
+      ([, resource]) => resource.Properties?.GroupName === groupName,
+    );
+    if (!match) {
+      throw new Error(`Expected security group ${groupName}`);
+    }
+    const [logicalId, resource] = match;
+    const policy = resource as {
+      DeletionPolicy?: string;
+      UpdateReplacePolicy?: string;
+    };
+    if (policy.DeletionPolicy !== "Retain" || policy.UpdateReplacePolicy !== "Retain") {
+      throw new Error(
+        `${logicalId} (${groupName}) must retain on delete and on replace; ` +
+          `DeletionPolicy=${policy.DeletionPolicy} ` +
+          `UpdateReplacePolicy=${policy.UpdateReplacePolicy}`,
+      );
+    }
+  }
+
+  const targetGroups = template.findResources("AWS::RDS::DBProxyTargetGroup");
+  const targetGroupEntries = Object.entries(targetGroups);
+  if (targetGroupEntries.length === 0) {
+    throw new Error("Expected an AWS::RDS::DBProxyTargetGroup");
+  }
+  for (const [logicalId, resource] of targetGroupEntries) {
+    if (resource.Properties && "Tags" in resource.Properties) {
+      throw new Error(
+        `${logicalId} must not set Tags; that resource type has no Tags property`,
+      );
+    }
+  }
+
+  const proxies = template.findResources("AWS::RDS::DBProxy");
+  const proxyIsTagged = Object.values(proxies).some((resource) => {
+    const tags = (resource.Properties?.Tags ?? []) as { Key?: string }[];
+    const keys = new Set(tags.map((tag) => tag.Key));
+    return keys.has("Organization") && keys.has("Project");
+  });
+  if (!proxyIsTagged) {
+    throw new Error(
+      "RDS proxy must still receive the stack Organization and Project tags",
+    );
+  }
+
+  const clients = template.findResources("AWS::Cognito::UserPoolClient");
+  const client = Object.entries(clients).find(([logicalId]) =>
+    logicalId.includes("EvolvesproutsUserPoolClient"),
+  );
+  if (!client) {
+    throw new Error("Expected EvolvesproutsUserPoolClient");
+  }
+  const dependsOn = (client[1] as { DependsOn?: string | string[] }).DependsOn;
+  const dependencies = Array.isArray(dependsOn)
+    ? dependsOn
+    : dependsOn
+      ? [dependsOn]
+      : [];
+  if (!dependencies.some((dependency) => dependency.includes("GoogleIdentityProvider"))) {
+    throw new Error(
+      `User pool client must depend on the Google identity provider; ` +
+        `DependsOn=${JSON.stringify(dependsOn)}`,
+    );
+  }
+}
+
 function main(): void {
   const app = new cdk.App();
   const stack = new ApiStack(app, "TestApi", {
@@ -778,6 +847,7 @@ function main(): void {
   assertInboundInvoiceSharesReceiptRuleSet(template);
   assertFinanceReadonlyDataApi(template);
   assertLogGroupActionsUseLogGroupArn(template);
+  assertRetainedSecurityGroupsAndProxyTags(template);
   assertApiStackInvariants(stack, template);
 
   console.log("api-stack API Gateway stage cache assertions passed.");
