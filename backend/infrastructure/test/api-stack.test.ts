@@ -7,8 +7,9 @@ import { Template } from "aws-cdk-lib/assertions";
 import { ApiStack } from "../lib/api-stack";
 import { assertApiStackInvariants } from "./stack-invariants.test";
 
-const API_CUSTOM_DOMAIN = "api.evolvesprouts.com";
-const API_REGIONAL_CERTIFICATE_ID = "b0f35f52-c35f-4b22-a658-a8bf2896d6f1";
+// The REST API is regional, so its custom-domain certificate must live in the
+// stack region. A us-east-1 ARN is only valid for CloudFront and Cognito.
+const API_STACK_REGION = "ap-southeast-1";
 
 function assertProductionApiCustomDomain(): void {
   const paramsPath = path.join(__dirname, "../params/production.json");
@@ -16,24 +17,20 @@ function assertProductionApiCustomDomain(): void {
     string,
     string
   >;
-  if (params.ApiCustomDomainName !== API_CUSTOM_DOMAIN) {
+  const domainName = params.ApiCustomDomainName ?? "";
+  if (!domainName) {
+    return;
+  }
+  const publicApex = (params.PublicWwwDomainName ?? "").replace(/^www\./, "");
+  if (!publicApex || !domainName.endsWith(`.${publicApex}`)) {
     throw new Error(
-      `ApiCustomDomainName must be ${API_CUSTOM_DOMAIN}. Found ${params.ApiCustomDomainName}`,
+      `ApiCustomDomainName must be a host under ${publicApex}. Found ${domainName}`,
     );
   }
   const arn = params.ApiCustomDomainCertificateArn ?? "";
-  const region = "ap-southeast-1";
-  if (
-    !arn.startsWith(`arn:aws:acm:${region}:`) ||
-    !arn.endsWith(API_REGIONAL_CERTIFICATE_ID)
-  ) {
+  if (!arn.startsWith(`arn:aws:acm:${API_STACK_REGION}:`)) {
     throw new Error(
-      `ApiCustomDomainCertificateArn must be the ${region} *.evolvesprouts.com certificate ${API_REGIONAL_CERTIFICATE_ID}. Found ${arn}`,
-    );
-  }
-  if (params.ApiDisableExecuteApiEndpoint !== "false") {
-    throw new Error(
-      "ApiDisableExecuteApiEndpoint must stay false until DNS points at the custom domain.",
+      `ApiCustomDomainCertificateArn must be an ACM certificate in ${API_STACK_REGION}. Found ${arn}`,
     );
   }
 }

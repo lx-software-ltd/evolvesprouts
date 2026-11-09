@@ -74,3 +74,8 @@ is not part of this change. The Worker already forwards that header when
 Set `ApiDisableExecuteApiEndpoint` back to `false` and deploy before
 pointing clients at the execute-api URL. That returns the asset-share
 origin to execute-api. The custom domain can stay.
+
+Blanking `ApiCustomDomainName` in `params/production.json` does not remove
+the domain. The deploy workflow drops empty values and CDK reuses the
+previous stack parameter, so the domain and its base path mapping stay.
+Removing them needs the workflow to pass empty values explicitly.
