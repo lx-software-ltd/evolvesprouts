@@ -825,6 +825,70 @@ function assertRetainedSecurityGroupsAndProxyTags(template: Template): void {
   }
 }
 
+function assertApiCustomDomainKeepsProdPath(template: Template): void {
+  const mappings = template.findResources("AWS::ApiGateway::BasePathMapping");
+  const entries = Object.entries(mappings);
+  if (entries.length !== 1) {
+    throw new Error(
+      `Expected one API base path mapping; found ${entries.length}`,
+    );
+  }
+  const [logicalId, mapping] = entries[0];
+  if (mapping.Properties?.BasePath !== "prod") {
+    throw new Error(
+      `${logicalId} must map the custom domain at /prod. Found ${JSON.stringify(mapping.Properties?.BasePath)}`,
+    );
+  }
+  if (mapping.Condition !== "UseApiCustomDomain") {
+    throw new Error(
+      `${logicalId} must be created only when UseApiCustomDomain is true`,
+    );
+  }
+
+  const apis = template.findResources("AWS::ApiGateway::RestApi");
+  const apiEntries = Object.entries(apis);
+  if (apiEntries.length !== 1) {
+    throw new Error(`Expected one REST API; found ${apiEntries.length}`);
+  }
+  const disable = apiEntries[0][1].Properties?.DisableExecuteApiEndpoint;
+  const disableIf = JSON.stringify(disable);
+  if (
+    !disableIf.includes("DisableExecuteApiEndpoint") ||
+    !disableIf.includes("true") ||
+    !disableIf.includes("false")
+  ) {
+    throw new Error(
+      `REST API DisableExecuteApiEndpoint must be conditional. Found ${disableIf}`,
+    );
+  }
+
+  const stages = template.findResources("AWS::ApiGateway::Stage");
+  const stageVariable = Object.values(stages).some((stage) => {
+    const variables = stage.Properties?.Variables ?? {};
+    return JSON.stringify(variables.executeApiEndpoint ?? "").includes(
+      "DisableExecuteApiEndpoint",
+    );
+  });
+  if (!stageVariable) {
+    throw new Error(
+      "API stage must set executeApiEndpoint from DisableExecuteApiEndpoint so the stage updates when the flag changes",
+    );
+  }
+
+  const distributions = template.findResources("AWS::CloudFront::Distribution");
+  const originUsesCustomDomain = Object.values(distributions).some((distribution) => {
+    const origins = distribution.Properties?.DistributionConfig?.Origins ?? [];
+    return origins.some((origin: { DomainName?: unknown }) =>
+      JSON.stringify(origin.DomainName ?? "").includes("UseApiCustomDomain"),
+    );
+  });
+  if (!originUsesCustomDomain) {
+    throw new Error(
+      "Asset-share CloudFront origin must follow UseApiCustomDomain",
+    );
+  }
+}
+
 function main(): void {
   const app = new cdk.App();
   const stack = new ApiStack(app, "TestApi", {
@@ -848,6 +912,7 @@ function main(): void {
   assertFinanceReadonlyDataApi(template);
   assertLogGroupActionsUseLogGroupArn(template);
   assertRetainedSecurityGroupsAndProxyTags(template);
+  assertApiCustomDomainKeepsProdPath(template);
   assertApiStackInvariants(stack, template);
 
   console.log("api-stack API Gateway stage cache assertions passed.");

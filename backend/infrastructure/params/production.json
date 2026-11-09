@@ -58,6 +58,7 @@
   "WafWebAclArn": "",
   "ApiCustomDomainName": "",
   "ApiCustomDomainCertificateArn": "arn:aws:acm:ap-southeast-1:588024549699:certificate/af726e1f-444b-47e6-906e-ce9e0925bde4",
+  "ApiDisableExecuteApiEndpoint": "false",
   "MailchimpApiSecretArn": "<FROM_GITHUB_SECRET: CDK_PARAM_MAILCHIMP_API_SECRET_ARN>",
   "MailchimpListId": "<FROM_GITHUB_VAR: CDK_PARAM_MAILCHIMP_LIST_ID>",
   "MailchimpServerPrefix": "<FROM_GITHUB_VAR: CDK_PARAM_MAILCHIMP_SERVER_PREFIX>",

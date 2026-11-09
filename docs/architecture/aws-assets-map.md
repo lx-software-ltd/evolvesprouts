@@ -698,8 +698,9 @@ configured by stack custom resources (including retention and KMS association).
 | `MailchimpWelcomeJourneyId` | String | No | No | Shared welcome journey ID for opted-in public form contacts (empty disables) |
 | `MailchimpWelcomeJourneyStepId` | String | No | No | Welcome journey entry step ID paired with `MailchimpWelcomeJourneyId` (empty disables) |
 | `MailchimpRequireMarketingConsent` | String | No | No | When `true`, media processor gates legacy Mailchimp subscribe + free-resource journey on `marketing_opt_in` (default: `false`) |
-| `ApiCustomDomainName` | String | No | No | Custom domain for the API (default: empty) |
+| `ApiCustomDomainName` | String | No | No | Custom domain for the API (default: empty). When set with a certificate, the domain maps to the prod stage at `/prod`. |
 | `ApiCustomDomainCertificateArn` | String | No | No | ACM certificate ARN for API custom domain |
+| `ApiDisableExecuteApiEndpoint` | String | No | No | `true` or `false` (default `false`). When `true` and the custom domain is configured, the execute-api hostname stops accepting calls. Takes effect on the stage update driven by the `executeApiEndpoint` stage variable. |
 | `NominatimUserAgent` | String | No | No | User-Agent for Nominatim geocoding requests |
 | `NominatimReferer` | String | No | No | Referer header for Nominatim requests |
 | `AdminBootstrapEmail` | String | No | No | Admin email for bootstrap (default: empty) |
@@ -779,7 +780,7 @@ These raster files ship with `EvolvesproutsAdminFunction` under `backend/src/app
 | `InboundInvoiceSharedReceiptRuleSetName` | SES receipt rule set name | Shared set that the `lxsoftware` stack activates; this stack no longer activates its own set |
 | `CognitoCustomDomainCloudFront` | CloudFront distribution | Custom auth domain target (conditional) |
 | `ApiCustomDomainTarget` | CNAME target | API custom domain DNS target (conditional) |
-| `ApiCustomDomainUrl` | Custom domain URL | API custom domain URL (conditional) |
+| `ApiCustomDomainUrl` | Custom domain URL | API custom domain URL including `/prod` (conditional). Use this as `NEXT_PUBLIC_API_BASE_URL`. |
 
 ---
 

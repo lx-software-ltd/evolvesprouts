@@ -54,6 +54,17 @@ Do not set Instagram/LinkedIn to your own website URL; those are ignored.
 Use these to ensure CloudFront-signed asset links are generated with your
 custom media subdomain.
 
+## API custom domain
+
+`ApiCustomDomainName` and `ApiCustomDomainCertificateArn` stay empty until a
+regional certificate covers the API hostname. The domain mapping uses the
+stage name as its base path (`/prod`). `ApiCustomDomainUrl` includes that
+path.
+
+`ApiDisableExecuteApiEndpoint` defaults to `false`. Set it to `true` only
+after clients call the custom domain. The execute-api hostname then rejects
+calls. Deploy `false` again before sending clients back to execute-api.
+
 ## Media lead pipeline parameters
 
 The backend stack also requires Mailchimp/media lead parameters:

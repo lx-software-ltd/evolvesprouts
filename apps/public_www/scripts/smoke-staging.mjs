@@ -8,6 +8,8 @@ const FALLBACK_MEDIA_API_BASE_URL_ENV = 'NEXT_PUBLIC_API_BASE_URL';
 const SMOKE_TIMEOUT_MS_ENV = 'SMOKE_TIMEOUT_MS';
 const SMOKE_TURNSTILE_TOKEN_ENV = 'SMOKE_TURNSTILE_TOKEN';
 const SMOKE_MAX_PAGES_ENV = 'SMOKE_MAX_PAGES';
+const STAGING_BYPASS_SECRET_ENV = 'STAGING_BYPASS_SECRET';
+const STAGING_BYPASS_HEADER = 'x-staging-bypass';
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 const USER_AGENT = 'evolvesprouts-public-www-smoke-runner/1.0';
@@ -45,6 +47,9 @@ Optional:
   ${SMOKE_TIMEOUT_MS_ENV}          Per-request timeout in milliseconds (default: ${DEFAULT_TIMEOUT_MS})
   ${SMOKE_TURNSTILE_TOKEN_ENV}     Optional Turnstile token for protected endpoints
   ${SMOKE_MAX_PAGES_ENV}           Optional max number of discovered pages to check
+  ${STAGING_BYPASS_SECRET_ENV}     Sent as ${STAGING_BYPASS_HEADER} so the staging
+                                   IP allow-list lets this runner through.
+                                   A response that leaves the requested host fails.
   ${SMOKE_API_BASE_URL_ENV}  Optional API base URL fallback for /v1 endpoints
                                    Falls back to ${FALLBACK_API_BASE_URL_ENV} if unset.
   ${SMOKE_MEDIA_API_BASE_URL_ENV}  Optional media API base URL fallback for /v1/assets/free/request
@@ -186,6 +191,11 @@ function applyQueryString(urlString, queryString) {
   return requestUrl.toString();
 }
 
+function resolveBypassHeaders() {
+  const secret = (process.env[STAGING_BYPASS_SECRET_ENV] ?? '').trim();
+  return secret ? { [STAGING_BYPASS_HEADER]: secret } : {};
+}
+
 async function fetchWithTimeout(url, init, timeoutMs) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
@@ -198,9 +208,17 @@ async function fetchWithTimeout(url, init, timeoutMs) {
       signal: controller.signal,
       headers: {
         'user-agent': USER_AGENT,
+        ...resolveBypassHeaders(),
         ...(init?.headers ?? {}),
       },
     });
+    const requestedHost = new URL(url).host;
+    const finalHost = response.url ? new URL(response.url).host : requestedHost;
+    if (finalHost !== requestedHost) {
+      throw new Error(
+        `redirected off ${requestedHost} to ${response.url}; is ${STAGING_BYPASS_SECRET_ENV} set and current?`,
+      );
+    }
     return response;
   } finally {
     clearTimeout(timeoutId);
