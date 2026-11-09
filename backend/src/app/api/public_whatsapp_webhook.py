@@ -21,10 +21,11 @@ from app.utils.responses import get_security_headers
 
 logger = get_logger(__name__)
 
-_VERIFY_TOKEN_ENV_NAME = (  # nosec B105 - env var key, not a secret value
+# Environment variable name, not a secret value.
+_VERIFY_TOKEN_ENV_NAME = (  # nosec B105
     "WHATSAPP_WEBHOOK_VERIFY_TOKEN"
 )
-_APP_SECRET_ENV_NAME = "META_APP_SECRET"  # nosec B105 - env var key
+_APP_SECRET_ENV_NAME = "META_APP_SECRET"  # nosec B105
 _SIGNATURE_HEADER = "x-hub-signature-256"
 _SIGNATURE_PREFIX = "sha256="
 

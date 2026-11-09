@@ -114,7 +114,7 @@ def test_family_bill_to_pdf_shows_primary_segment_only(
 
 
 def _pdf_layout(pdf: bytes):
-    import fitz
+    import pymupdf as fitz
 
     doc = fitz.open(stream=pdf, filetype="pdf")
     page = doc[0]
@@ -138,7 +138,7 @@ def _v6_standard_invoice(
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_NAME", "Evolve Sprouts")
     monkeypatch.setenv(
         "PUBLIC_WWW_BUSINESS_ADDRESS",
-        "1, 5/F, Example Tower\n1 Sample Street\n" "Hong Kong",
+        "1, 5/F, Example Tower\n1 Sample Street\nHong Kong",
     )
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_LEGAL_NAME", "Evolve Sprouts Ltd")
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_REGISTRATION", "00000000-000-00-00-0")
@@ -222,7 +222,7 @@ def test_v6_dates_panel_full_height_via_image_render(
 ) -> None:
     inv, line = _v6_standard_invoice(monkeypatch)
     pdf = render_invoice_pdf(invoice=inv, lines=[line], preview=False)
-    import fitz
+    import pymupdf as fitz
 
     page = fitz.open(stream=pdf, filetype="pdf")[0]
     pix, s = _pixmap_pt_coords(page)
@@ -235,7 +235,7 @@ def test_v6_dates_panel_full_height_via_image_render(
 def test_v6_items_header_navy_fill(monkeypatch: pytest.MonkeyPatch) -> None:
     inv, line = _v6_standard_invoice(monkeypatch)
     pdf = render_invoice_pdf(invoice=inv, lines=[line], preview=False)
-    import fitz
+    import pymupdf as fitz
 
     page = fitz.open(stream=pdf, filetype="pdf")[0]
     pix, s = _pixmap_pt_coords(page)
@@ -249,7 +249,7 @@ def test_v6_totals_card_width(monkeypatch: pytest.MonkeyPatch) -> None:
 
     inv, line = _v6_standard_invoice(monkeypatch)
     pdf = render_invoice_pdf(invoice=inv, lines=[line], preview=False)
-    import fitz
+    import pymupdf as fitz
 
     page = fitz.open(stream=pdf, filetype="pdf")[0]
     pix, s = _pixmap_pt_coords(page)
@@ -293,7 +293,7 @@ def test_v7_fps_qr_on_payment_options_page(monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_NAME", "Evolve Sprouts")
     monkeypatch.setenv(
         "PUBLIC_WWW_BUSINESS_ADDRESS",
-        "1, 5/F, Example Tower\n1 Sample Street\n" "Hong Kong",
+        "1, 5/F, Example Tower\n1 Sample Street\nHong Kong",
     )
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_LEGAL_NAME", "Evolve Sprouts Ltd")
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_REGISTRATION", "00000000-000-00-00-0")
@@ -338,7 +338,7 @@ def test_v7_fps_qr_on_payment_options_page(monkeypatch: pytest.MonkeyPatch) -> N
     assert "Payment Options:" in text
     assert "1/2" in text and "2/2" in text
 
-    import fitz
+    import pymupdf as fitz
 
     doc = fitz.open(stream=pdf, filetype="pdf")
     assert len(doc) >= 2
@@ -356,7 +356,7 @@ def test_v7_fps_qr_on_payment_options_page(monkeypatch: pytest.MonkeyPatch) -> N
 def test_v6_no_rule_below_last_item_row(monkeypatch: pytest.MonkeyPatch) -> None:
     inv, line = _v6_standard_invoice(monkeypatch)
     pdf = render_invoice_pdf(invoice=inv, lines=[line], preview=False)
-    import fitz
+    import pymupdf as fitz
 
     page = fitz.open(stream=pdf, filetype="pdf")[0]
     thin_grey_between = 0
@@ -423,7 +423,7 @@ def test_v6_multiline_last_chunk_skips_rule(monkeypatch: pytest.MonkeyPatch) -> 
         for i in range(3)
     ]
     pdf = render_invoice_pdf(invoice=inv, lines=lines, preview=False)
-    import fitz
+    import pymupdf as fitz
 
     page = fitz.open(stream=pdf, filetype="pdf")[0]
     thin = 0
@@ -456,7 +456,7 @@ def test_v6_tax_total_line_above_rule(monkeypatch: pytest.MonkeyPatch) -> None:
         status=BillingInvoiceStatus.ISSUED,
     )
     pdf = render_invoice_pdf(invoice=inv, lines=[_inv_line()], preview=False)
-    import fitz
+    import pymupdf as fitz
 
     page = fitz.open(stream=pdf, filetype="pdf")[0]
     mid_rules = [
@@ -608,7 +608,7 @@ def test_paid_watermark_present_on_payment_options_page(
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_NAME", "Evolve Sprouts")
     monkeypatch.setenv(
         "PUBLIC_WWW_BUSINESS_ADDRESS",
-        "1, 5/F, Example Tower\n1 Sample Street\n" "Hong Kong",
+        "1, 5/F, Example Tower\n1 Sample Street\nHong Kong",
     )
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_LEGAL_NAME", "Evolve Sprouts Ltd")
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_REGISTRATION", "00000000-000-00-00-0")
@@ -651,7 +651,7 @@ def test_description_not_split_midword(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_NAME", "Evolve Sprouts")
     monkeypatch.setenv(
         "PUBLIC_WWW_BUSINESS_ADDRESS",
-        "1, 5/F, Example Tower\n1 Sample Street\n" "Hong Kong",
+        "1, 5/F, Example Tower\n1 Sample Street\nHong Kong",
     )
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_LEGAL_NAME", "Evolve Sprouts Ltd")
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_REGISTRATION", "00000000-000-00-00-0")
@@ -689,7 +689,7 @@ def test_invoice_template_v6_layout_smoke(monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_NAME", "Evolve Sprouts")
     monkeypatch.setenv(
         "PUBLIC_WWW_BUSINESS_ADDRESS",
-        "1, 5/F, Example Tower\n1 Sample Street\n" "Hong Kong",
+        "1, 5/F, Example Tower\n1 Sample Street\nHong Kong",
     )
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_LEGAL_NAME", "Evolve Sprouts Ltd")
     monkeypatch.setenv("PUBLIC_WWW_BUSINESS_REGISTRATION", "00000000-000-00-00-0")
@@ -1077,14 +1077,14 @@ def test_compute_snapshot_dates(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _pdf_page_image_blocks(pdf: bytes, page_index: int = 0) -> list:
-    import fitz
+    import pymupdf as fitz
 
     page = fitz.open(stream=pdf, filetype="pdf")[page_index]
     return [b for b in page.get_text("dict")["blocks"] if b["type"] == 1]
 
 
 def _pdf_all_image_blocks(pdf: bytes) -> list:
-    import fitz
+    import pymupdf as fitz
 
     doc = fitz.open(stream=pdf, filetype="pdf")
     blocks: list = []

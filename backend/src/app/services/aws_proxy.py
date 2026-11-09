@@ -215,7 +215,7 @@ def _handle_http(event: Mapping[str, Any]) -> dict[str, Any]:
         resp_body = ""
         try:
             resp_body = exc.read().decode("utf-8", errors="replace")
-        except Exception:  # nosec B110 - best-effort body read; empty string is fine
+        except Exception:
             resp_body = ""
         return {
             "result": {
