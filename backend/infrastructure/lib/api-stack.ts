@@ -334,8 +334,13 @@ export class ApiStack extends cdk.Stack {
   public constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    cdk.Tags.of(this).add("Organization", "Evolve Sprouts");
-    cdk.Tags.of(this).add("Project", "Backend");
+    // AWS::RDS::DBProxyTargetGroup rejects a Tags property. Stack tags still
+    // apply to the proxy, cluster, and instances.
+    const stackTagProps: cdk.TagProps = {
+      excludeResourceTypes: ["AWS::RDS::DBProxyTargetGroup"],
+    };
+    cdk.Tags.of(this).add("Organization", "Evolve Sprouts", stackTagProps);
+    cdk.Tags.of(this).add("Project", "Backend", stackTagProps);
 
     // Required for `cdk.Fn.toJsonString(...)` used by PublicWwwConfigSecret.
     // Without this transform, CFN would substitute parameter values verbatim
@@ -524,6 +529,8 @@ export class ApiStack extends cdk.Stack {
     const lambdaSecurityGroupResource =
       lambdaSecurityGroup.node.defaultChild as ec2.CfnSecurityGroup | undefined;
     if (lambdaSecurityGroupResource) {
+      lambdaSecurityGroupResource.cfnOptions.deletionPolicy =
+        cdk.CfnDeletionPolicy.RETAIN;
       lambdaSecurityGroupResource.cfnOptions.updateReplacePolicy =
         cdk.CfnDeletionPolicy.RETAIN;
     }
@@ -531,6 +538,8 @@ export class ApiStack extends cdk.Stack {
       migrationSecurityGroup.node
         .defaultChild as ec2.CfnSecurityGroup | undefined;
     if (migrationSecurityGroupResource) {
+      migrationSecurityGroupResource.cfnOptions.deletionPolicy =
+        cdk.CfnDeletionPolicy.RETAIN;
       migrationSecurityGroupResource.cfnOptions.updateReplacePolicy =
         cdk.CfnDeletionPolicy.RETAIN;
     }
@@ -1457,7 +1466,7 @@ export class ApiStack extends cdk.Stack {
       }
     );
 
-    userPoolClient.addDependency(googleProvider);
+    userPoolClient.addResourceDependency(googleProvider);
 
     const groupPolicy = customresources.AwsCustomResourcePolicy.fromStatements([
       new iam.PolicyStatement({
