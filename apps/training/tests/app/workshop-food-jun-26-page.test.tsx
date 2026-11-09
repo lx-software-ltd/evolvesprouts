@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -26,6 +26,11 @@ vi.mock('@/lib/polls-api', async (importOriginal) => {
         'onething',
       ],
     }),
+    fetchPollSessionAnswers: vi.fn().mockResolvedValue({
+      pollSlug: 'workshop-food-jun-26',
+      sessionId: '550e8400-e29b-41d4-a716-446655440000',
+      answers: [],
+    }),
     resolvePollApiConfig: vi.fn().mockReturnValue({ baseUrl: '/www', apiKey: 'test-key' }),
   };
 });
@@ -46,14 +51,16 @@ describe('WorkshopFoodJun26PollPage', () => {
   });
 
   it('static route resolves workshop slug', async () => {
+    if (!poll) {
+      throw new Error('Expected workshop-food-jun-26 poll content');
+    }
     const page = await PollRoutePage({
       params: Promise.resolve({ slug: 'workshop-food-jun-26' }),
     });
     render(page);
-    expect(screen.getByRole('heading', { level: 1, name: poll?.title })).toBeInTheDocument();
-    await act(async () => {
-      await Promise.resolve();
-    });
+    expect(screen.getByRole('heading', { level: 1, name: poll.title })).toBeInTheDocument();
+    const first = poll.questions[0];
+    await screen.findByText(first?.screen ?? '');
   });
 
   it('advances after selecting an option and persists', async () => {

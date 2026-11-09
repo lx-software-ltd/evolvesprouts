@@ -23,7 +23,11 @@ vi.mock('@/lib/crm-api-client', async () => {
 });
 
 vi.mock('@/lib/fps-qr-code', () => ({
-  generateFpsQrImageDataUrl: vi.fn(() => new Promise<string>(() => {})),
+  generateFpsQrImageDataUrl: vi.fn(() =>
+    Promise.resolve(
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    ),
+  ),
   hasFpsQrConfiguration: vi.fn(() => true),
 }));
 
@@ -165,6 +169,13 @@ const eventPayload: EventCalendarBookingModalPayload = {
   selectedDateStartTime: '2026-06-15T10:00:00.000Z',
 };
 
+async function expectFpsQrLoaded(): Promise<void> {
+  await waitFor(() => {
+    const image = document.querySelector('[aria-label="FPS payment QR code"] img');
+    expect(image?.getAttribute('src') ?? '').toMatch(/^data:image\/png;base64,/);
+  });
+}
+
 describe('BookingReservationForm', () => {
   beforeEach(() => {
     process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY = 'test-turnstile-site-key';
@@ -214,9 +225,10 @@ describe('BookingReservationForm', () => {
     await waitFor(() => {
       expect(screen.getByTestId('mock-turnstile-captcha')).toBeInTheDocument();
     });
+    await expectFpsQrLoaded();
   });
 
-  it('renders Turnstile on initial mount when initiallyInteracted is true', () => {
+  it('renders Turnstile on initial mount when initiallyInteracted is true', async () => {
     render(
       <BookingReservationForm
         initiallyInteracted
@@ -247,5 +259,6 @@ describe('BookingReservationForm', () => {
     );
 
     expect(screen.getByTestId('mock-turnstile-captcha')).toBeInTheDocument();
+    await expectFpsQrLoaded();
   });
 });

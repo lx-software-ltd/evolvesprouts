@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BookFreeCallLandingPage } from '@/components/pages/landing-pages/book-a-free-call';
@@ -48,9 +48,9 @@ if (!pageContent) {
   throw new Error('missing book-a-free-call content');
 }
 
-async function settleAsyncUpdates() {
-  await act(async () => {
-    await Promise.resolve();
+async function settleIntroCallSlots(): Promise<void> {
+  await screen.findByText(bookAFreeCall.en.introCall.emptySlotsMessagePrefix, {
+    exact: false,
   });
 }
 
@@ -81,7 +81,7 @@ describe('BookFreeCallLandingPage', () => {
 
     expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();
-    await settleAsyncUpdates();
+    await settleIntroCallSlots();
   });
 
   it('lays out sections: hero → before you book → pick a time → faq, with no description/testimonials/coach', async () => {
@@ -129,7 +129,7 @@ describe('BookFreeCallLandingPage', () => {
     expect(document.querySelector('[data-figma-node="about-us-founder-coach"]')).toBeNull();
 
     expect(document.getElementById('landing-page-cta')).toBeNull();
-    await settleAsyncUpdates();
+    await settleIntroCallSlots();
   });
 
   it('renders hero anchor and inline section CTAs to the booking hash', async () => {
@@ -150,7 +150,7 @@ describe('BookFreeCallLandingPage', () => {
     expect(
       pickTimeLinks.filter((link) => link.getAttribute('href') === localizedBookingHref),
     ).toHaveLength(2);
-    await settleAsyncUpdates();
+    await settleIntroCallSlots();
   });
 
   it('renders hero anchor CTA to the booking section and no booking modal shell', async () => {
@@ -176,6 +176,6 @@ describe('BookFreeCallLandingPage', () => {
     expect(bookingRegion).toHaveAttribute('id', 'intro-call-booking');
 
     expect(screen.queryByTestId('landing-page-modal')).toBeNull();
-    await settleAsyncUpdates();
+    await settleIntroCallSlots();
   });
 });
