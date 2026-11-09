@@ -44,7 +44,8 @@ Source of truth for the "why" behind each change:
 | Script | Result |
 |---|---|
 | `meta-launch-video-traffic-campaign.py --apply` | Created `Mealtimes Workshop — Traffic — HK` (campaign `120252906972330439`, ad set `120252906983060439`, ad `120252906985180439`, video `1867110284305793`) **PAUSED**, HK$350 lifetime, women 28–45 in HK, landing page `/en/nov-2026-mealtimes-workshop` with `utm_content=reel-mealtimes-v3`. Left paused because the export's opening title (0–1.6s) showed the end-card line instead of the hook. |
-| `meta-launch-video-traffic-campaign.py --replace-video --apply --activate` | Re-exported video (`1833537467959198`, 59.3s, hook and end card fixed) uploaded as ad `120252907392670439` (`utm_content=reel-mealtimes-v4`) in the same ad set; v3 ad `120252906985180439` archived; campaign, ad set and ad set **ACTIVE** at 23:03 HKT. Ad in Meta review (`IN_PROCESS`). Lifetime budget and 16 Nov end date unchanged. |
+| `meta-launch-video-traffic-campaign.py --replace-video --apply --activate` | Re-exported video (`1833537467959198`, 59.3s, hook and end card fixed) uploaded as ad `120252907392670439` (`utm_content=reel-mealtimes-v4`) in the same ad set; v3 ad `120252906985180439` archived; campaign, ad set and ad **ACTIVE** at 23:03 HKT. Ad in Meta review (`IN_PROCESS`). Lifetime budget and 16 Nov end date unchanged. |
+| Manual pause, 23:26 HKT (`POST /120250911167180439` `status=PAUSED`) | Paused `My Best Auntie — Free Intro Call — Click-to-WhatsApp` so it stops bidding against Mealtimes for the same HK women. Its two ad sets (Cold HK$56/day, Warm HK$14/day) keep their settings; setting the campaign back to ACTIVE resumes both. **Resume on 16 Nov 2026**, after the Mealtimes ad set ends. Free Guide Downloads stays paused. |
 
 Two Marketing API changes bit on this run and are now baked into the
 script: campaigns with ad-set budgets must send
