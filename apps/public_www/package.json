@@ -79,11 +79,15 @@
     "flatted": "^3.4.0",
     "typescript-eslint": "8.58.0",
     "@lhci/cli": {
-      "uuid": "^14.0.0"
+      "uuid": "^14.0.0",
+      "chrome-launcher": "0.15.2"
     },
     "openapi-typescript": {
       "typescript": "$typescript"
     },
     "minimatch@10": "11.0.4"
+  },
+  "allowScripts": {
+    "unrs-resolver": false
   }
 }

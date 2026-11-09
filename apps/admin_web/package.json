@@ -69,5 +69,8 @@
     "sharp": "^0.35.5",
     "source-map-js": "^1.2.2",
     "minimatch@10": "11.0.4"
+  },
+  "allowScripts": {
+    "unrs-resolver": false
   }
 }
