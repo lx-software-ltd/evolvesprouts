@@ -359,8 +359,10 @@ public WWW stack via shared sources in
 changing a public API path, update that module so production public WWW and
 training origins stay aligned. Staging wraps
 `STATIC_EXPORT_PATH_REWRITE_FUNCTION` with the edge-verify call.
-`backend/infrastructure/lib/functions/public-www-path-rewrite.js` must stay
-identical to that wrapped body.
+`backend/infrastructure/lib/functions/public-www-path-rewrite.js` is a fixture
+for the copied size test and is not deployed. From `function handler` onward
+it must match that wrap. `backend/infrastructure/lib/functions/README.md`
+records where the copied files still describe siutindei.
 
 ### Public website origin lock
 
@@ -396,16 +398,34 @@ production parameters are enforced. That rule is
 repository's deploy. `WafWebAclArn` is empty, so the distributions do not
 detach a WebACL when the lock turns on.
 
-`deploy-backend.yml` runs on a push to `main` that changes `backend/**` or
-`scripts/**`, in the `production` GitHub environment. The four edge-verify
-secrets must be repository secrets or production-environment secrets. A
-secret that exists only in the `staging` environment is invisible, the
-parameter stays empty, and the lock stays off. Deploy passes the four
-parameters even when those secrets are empty. Clearing
+`deploy-backend.yml` runs in the `production` GitHub environment on
+`workflow_dispatch`, on `repository_dispatch` of type `deploy-backend`, and
+on a push to `main` that changes `backend/**`, `scripts/**`,
+`apps/public_www/src/content/landing-pages/**`,
+`apps/public_www/src/content/eventbrite-banners/**`, or
+`.github/workflows/deploy-backend.yml`. The stack list is the workflow
+input, otherwise the `CDK_STACKS` repository variable, otherwise
+`all stacks`, which includes `evolvesprouts-public-www`. The four
+edge-verify secrets must be repository secrets or production-environment
+secrets. A secret that exists only in the `staging` environment is
+invisible, the parameter stays empty, and the lock stays off. Deploy passes
+the four parameters even when those secrets are empty. Clearing
 `CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY` and its previous value, then
-deploying `evolvesprouts-public-www`, turns the staging lock off. Set the
-Worker binding before the staging parameter. Setting the parameter first
-refuses the proxied staging hostname.
+deploying `evolvesprouts-public-www`, turns the staging lock off. A
+successful public-website deploy writes
+`PublicWwwStagingEdgeVerifyEnabled` before and after to the job summary and
+warns when that value goes from `true` to anything else. Set the Worker
+binding before the staging parameter. Setting the parameter first refuses
+the proxied staging hostname.
+
+To rotate the staging secret, set
+`CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS` to the value the Worker
+sends now and `CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY` to the new value,
+then deploy. Update the Worker binding
+`PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET` to the new value, clear the previous
+secret, and deploy again. The Worker sends one value. Changing it before
+the previous secret is accepted, or clearing the previous secret before the
+Worker changes, refuses `www-staging.evolvesprouts.com`.
 
 Process to add a new public API path:
 

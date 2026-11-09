@@ -40,15 +40,24 @@ public website stacks:
 `PublicWwwStagingEdgeVerifySecret` is the staging `x-proxy-verify` origin
 lock. Both staging values empty disables the check. Deploy forwards an empty
 value, so clearing the GitHub secret turns the lock off, and so does a deploy
-that cannot see the secret. The deploy job uses the `production` GitHub
-environment, so the secret must be a repository secret or a
-production-environment secret. A `staging`-environment secret does not reach
-it. Staging reads the header from the Worker binding
-`PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET`. Set that binding before the staging
-parameter. Production functions do not compare
+that cannot see the secret. The job summary warns when
+`PublicWwwStagingEdgeVerifyEnabled` goes from `true` to anything else. The
+deploy job uses the `production` GitHub environment, so the secret must be a
+repository secret or a production-environment secret. A
+`staging`-environment secret does not reach it. Staging reads the header
+from the Worker binding `PUBLIC_WWW_STAGING_EDGE_VERIFY_SECRET`. Set that
+binding before the staging parameter. Rotate by deploying the old value as
+`PublicWwwStagingEdgeVerifySecretPrevious` and the new value as the current
+secret, then changing the Worker binding, then clearing the previous secret
+and deploying again. Production functions do not compare
 `PublicWwwEdgeVerifySecret` yet; leave it empty. `WafWebAclArn` is empty, so
-enabling the lock does not detach a WebACL. A push to `main` under
-`backend/**` or `scripts/**` runs this deploy.
+enabling the lock does not detach a WebACL. `deploy-backend.yml` runs on
+`workflow_dispatch`, on `repository_dispatch` of type `deploy-backend`, and
+on a push to `main` that changes `backend/**`, `scripts/**`,
+`apps/public_www/src/content/landing-pages/**`,
+`apps/public_www/src/content/eventbrite-banners/**`, or
+`.github/workflows/deploy-backend.yml`. The stack list is the workflow
+input, otherwise the `CDK_STACKS` variable, otherwise `all stacks`.
 
 Optional **transactional email footer** URLs on the API stack. `production.json`
 resolves these from the same `NEXT_PUBLIC_*` GitHub vars that `deploy-public-www`

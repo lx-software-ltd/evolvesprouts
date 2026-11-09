@@ -1,3 +1,6 @@
+// Fixture read by public-www-edge-verify.test.mjs. Not deployed.
+// Staging deploys insertEdgeVerifyCall(STATIC_EXPORT_PATH_REWRITE_FUNCTION).
+// From "function handler" onward this file must match that result.
 
 function handler(event) {
   var request = event.request;

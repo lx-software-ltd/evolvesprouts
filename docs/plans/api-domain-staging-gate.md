@@ -77,8 +77,18 @@ must be a repository secret or a production-environment secret, because
 `deploy-backend.yml` runs in the production environment. The production
 parameter pair stays empty. Deploy passes an empty edge-verify parameter
 through, so clearing the secret, or deploying without being able to see it,
-disables the lock. A push to `main` that changes `backend/**` or `scripts/**`
-runs that deploy. `WafWebAclArn` is empty, so there is no WebACL to detach.
+disables the lock. The job summary warns when the staging output goes from
+`true` to anything else. Rotation order is in
+`docs/deployment/public-www.md`: deploy the old value as the previous secret
+and the new value as the current secret, change the Worker binding, then
+clear the previous secret and deploy again. `deploy-backend.yml` runs on
+`workflow_dispatch`, on `repository_dispatch` of type `deploy-backend`, and
+on a push to `main` that changes `backend/**`, `scripts/**`,
+`apps/public_www/src/content/landing-pages/**`,
+`apps/public_www/src/content/eventbrite-banners/**`, or
+`.github/workflows/deploy-backend.yml`. The stack list is the workflow
+input, otherwise `CDK_STACKS`, otherwise `all stacks`. `WafWebAclArn` is
+empty, so there is no WebACL to detach.
 
 ## Rollback
 

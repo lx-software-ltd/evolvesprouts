@@ -350,10 +350,19 @@ function assertPathRewriteMatchesTrainingCopy(): void {
     path.join(__dirname, "../lib/functions/public-www-path-rewrite.js"),
     "utf8",
   );
+  const marker = "\nfunction handler(event)";
   const expected = insertEdgeVerifyCall(STATIC_EXPORT_PATH_REWRITE_FUNCTION);
-  if (file.trim() !== expected.trim()) {
+  const fileAt = file.indexOf(marker);
+  const expectedAt = expected.indexOf(marker);
+  if (
+    !file.startsWith("// Fixture") ||
+    !file.includes("Not deployed") ||
+    fileAt < 0 ||
+    expectedAt < 0 ||
+    file.slice(fileAt) !== expected.slice(expectedAt)
+  ) {
     throw new Error(
-      "public-www-path-rewrite.js must equal the staging wrap of STATIC_EXPORT_PATH_REWRITE_FUNCTION",
+      "public-www-path-rewrite.js must be a not-deployed fixture whose handler matches the staging wrap of STATIC_EXPORT_PATH_REWRITE_FUNCTION",
     );
   }
 }
