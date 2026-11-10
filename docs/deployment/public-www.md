@@ -218,6 +218,9 @@ Workflow: `.github/workflows/deploy-public-www.yml`
   - re-apply `/www/*` CloudFront proxy allowlist behavior
   - invalidate staging CloudFront (including `/_next/static/*` to clear
     stale asset error responses)
+  - probe landing page calendars at `NEXT_PUBLIC_API_BASE_URL`. That
+    variable stays an absolute URL. The site build reads
+    `NEXT_PUBLIC_WWW_API_BASE_URL`, which may be the relative `/www` path.
 
 ### Smoke test staging website
 

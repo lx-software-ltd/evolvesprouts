@@ -108,11 +108,13 @@ jobs:
           NEXT_PUBLIC_BUSINESS_PHONE_NUMBER: ${{ vars.NEXT_PUBLIC_BUSINESS_PHONE_NUMBER }}
           NEXT_PUBLIC_FOUNDER_NAME: ${{ vars.NEXT_PUBLIC_FOUNDER_NAME }}
 
+      # The site build may set NEXT_PUBLIC_WWW_API_BASE_URL to the relative
+      # /www path. This probe runs in Node and calls the API directly.
       - name: Validate landing page calendar API reachability
         run: node ./scripts/validate-landing-pages-calendar.mjs
         working-directory: apps/public_www
         env:
-          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_WWW_API_BASE_URL || vars.NEXT_PUBLIC_API_BASE_URL }}
+          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
           NEXT_PUBLIC_WWW_CRM_API_KEY: ${{ secrets.NEXT_PUBLIC_WWW_CRM_API_KEY }}
 
       - name: Configure AWS credentials

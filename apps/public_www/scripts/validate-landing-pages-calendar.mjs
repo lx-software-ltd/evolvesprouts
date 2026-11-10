@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const manifestPath = join(__dirname, '../out/landing-pages-manifest.json');
@@ -10,8 +10,24 @@ const API_KEY_ENV = 'NEXT_PUBLIC_WWW_CRM_API_KEY';
 const BUILD_TIMEOUT_MS = 15_000;
 const MAX_ATTEMPTS = 2;
 
-function buildCalendarUrl(baseUrl, slug) {
-  const trimmed = baseUrl.replace(/\/+$/, '');
+export function resolveCalendarProbeBaseUrl(baseUrl) {
+  const trimmed = String(baseUrl ?? '').trim().replace(/\/+$/, '');
+  let parsed;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    parsed = null;
+  }
+  if (!parsed || (parsed.protocol !== 'https:' && parsed.protocol !== 'http:')) {
+    throw new Error(
+      `${API_BASE_URL_ENV} must be an absolute http(s) URL so the calendar probe can fetch it.`,
+    );
+  }
+  return trimmed;
+}
+
+export function buildCalendarUrl(baseUrl, slug) {
+  const trimmed = resolveCalendarProbeBaseUrl(baseUrl);
   const search = new URLSearchParams({ slug });
   return `${trimmed}/v1/calendar/public?${search.toString()}`;
 }
@@ -89,12 +105,17 @@ async function probeSlug(baseUrl, apiKey, slug) {
 }
 
 function main() {
-  const baseUrl = process.env[API_BASE_URL_ENV]?.trim() ?? '';
   const apiKey = process.env[API_KEY_ENV]?.trim() ?? '';
-  if (!baseUrl || !apiKey) {
-    console.error(
-      `${API_BASE_URL_ENV} and ${API_KEY_ENV} must be set for landing page calendar validation.`,
-    );
+  if (!apiKey) {
+    console.error(`${API_KEY_ENV} must be set for landing page calendar validation.`);
+    process.exit(1);
+  }
+
+  let baseUrl;
+  try {
+    baseUrl = resolveCalendarProbeBaseUrl(process.env[API_BASE_URL_ENV]);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 
@@ -123,4 +144,7 @@ function main() {
   );
 }
 
-await main();
+const entryPath = process.argv[1];
+if (entryPath && pathToFileURL(resolve(entryPath)).href === import.meta.url) {
+  await main();
+}
