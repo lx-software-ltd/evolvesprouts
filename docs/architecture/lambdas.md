@@ -872,7 +872,8 @@ their primary responsibilities.
   - `EXPENSE_PARSE_TOPIC_ARN`
   - `INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS` (optional comma-separated
     substrings; empty disables filtering; see `InboundInvoiceAllowedSenderPatterns`
-    CDK parameter / GitHub secret `CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS`)
+    CDK parameter / GitHub secret `CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS`;
+    plaintext on the function; `NoEcho` hides only the CloudFormation parameter)
 
 ### Inbox import processor
 - Function: InboxImportFunction

@@ -204,10 +204,35 @@ jobs:
               "SalesRecapDisplayTimezone",
           }
 
+          def is_eventbrite_timezone(zone_id: str) -> bool:
+              """Match _is_eventbrite_timezone in eventbrite_sync.py."""
+              if zone_id != "UTC" and (
+                  zone_id.startswith("Etc/") or "/" not in zone_id
+              ):
+                  return False
+              try:
+                  ZoneInfo(zone_id)
+              except (ZoneInfoNotFoundError, ValueError):
+                  return False
+              return True
+
           def require_iana_timezone(key: str, value: str) -> None:
-              """Fail the deploy when a set timezone is not an IANA id."""
+              """Fail a backend deploy when a set timezone is not usable.
+
+              Public website, admin web, and training deploys skip this.
+              Those stacks do not receive the timezone parameters, and a
+              stale GitHub value must not block them.
+              """
+              if backend_stack not in stack_set:
+                  return
               if key not in iana_timezone_params or not value:
                   return
+              if key == "EventbriteDefaultTimezone":
+                  if is_eventbrite_timezone(value):
+                      return
+                  raise SystemExit(
+                      f"{key} value {value!r} must be UTC or a Region/City IANA id"
+                  )
               try:
                   ZoneInfo(value)
               except (ZoneInfoNotFoundError, ValueError) as exc:

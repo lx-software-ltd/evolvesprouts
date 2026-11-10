@@ -1908,6 +1908,7 @@ export class ApiStack extends cdk.Stack {
         description:
           "IANA area/location timezone for Eventbrite event listings " +
           "(EVENTBRITE_DEFAULT_TIMEZONE). GitHub CDK_PARAM_EVENTBRITE_DEFAULT_TIMEZONE. " +
+          "UTC or Region/City. Backend deploy rejects Etc/ and names without a slash. " +
           "Empty uses UTC.",
       }
     );

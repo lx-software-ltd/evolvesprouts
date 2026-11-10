@@ -564,6 +564,9 @@ Requirements:
   `INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS`), messages whose SES envelope
   `source` and RFC822 `From` address both fail substring matching are marked
   failed in `inbound_emails` and are not ingested as expenses.
+  `NoEcho` hides the CloudFormation parameter. It does not hide
+  `INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS` on the Lambda; anyone who can
+  read that function's configuration can read the allowlist.
 - Keep SES receipt processing least-privilege: only the configured receipt role
   can write raw email objects and publish the notification topic.
 - SES SourceArn conditions on the assets bucket, receipt role, and SNS KMS
