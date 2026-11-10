@@ -1073,6 +1073,7 @@ export class ApiStack extends cdk.Stack {
       "ApiCustomDomainName",
       {
         type: "String",
+        minLength: 1,
         description:
           "Custom domain for the API. The domain maps to the prod stage at " +
           "/prod, and it is the only hostname that accepts API calls.",
@@ -1083,6 +1084,7 @@ export class ApiStack extends cdk.Stack {
       "ApiCustomDomainCertificateArn",
       {
         type: "String",
+        minLength: 1,
         description:
           "ACM certificate ARN for the API custom domain. " +
           "For regional endpoints, must be in the same region as the API. " +
@@ -3205,10 +3207,12 @@ export class ApiStack extends cdk.Stack {
     const cfnRestApi = api.node.defaultChild as apigateway.CfnRestApi;
     // AWS applies DisableExecuteApiEndpoint when a stage setting changes
     // after the REST API update, not when the property is saved. The stage
-    // variable forces that update, and the stage depends on the REST API
-    // so the update runs after the property change.
+    // variable forces that update. The stage waits for the REST API and for
+    // the asset-share distribution, so the hostname stays up until CloudFront
+    // has finished moving share links onto the custom domain.
     cfnRestApi.addPropertyOverride("DisableExecuteApiEndpoint", true);
     cfnApiStage.addResourceDependency(cfnRestApi);
+    cfnApiStage.addResourceDependency(assetDownloadDistributionCfn);
     cfnApiStage.addPropertyOverride("Variables.executeApiEndpoint", "disabled");
 
     // -------------------------------------------------------------------------
@@ -3748,7 +3752,6 @@ export class ApiStack extends cdk.Stack {
       apiKeyRequired: true,
     });
 
-    // Share links call the custom domain. The execute-api hostname is disabled.
     const assetShareApiOrigin = new origins.HttpOrigin(
       apiCustomDomainName.valueAsString,
       {

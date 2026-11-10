@@ -99,10 +99,12 @@ CloudFront and Cognito. The domain mapping uses the stage name as its base
 path (`/prod`). `ApiCustomDomainUrl` includes that path, the same way `ApiUrl`
 ends in `/prod`.
 
-The execute-api hostname does not accept calls. Clients and the asset-share
-CloudFront origin use `ApiCustomDomainName`. The stage variable
-`executeApiEndpoint` is `disabled`, and the stage update waits for the REST
-API change so API Gateway applies that hostname setting.
+`ApiCustomDomainName` and `ApiCustomDomainCertificateArn` reject an empty
+value. The execute-api hostname does not accept calls. Clients and the
+asset-share CloudFront origin use `ApiCustomDomainName`. The stage variable
+`executeApiEndpoint` is `disabled`. The stage update waits for the REST API
+change and for the asset-share distribution, so API Gateway applies the
+hostname setting after CloudFront has moved share links.
 
 `PublicWwwApiBaseUrl` and `PublicWwwMediaRequestApiBaseUrl` resolve
 `PUBLIC_WWW_API_BASE_URL` and `PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL`.

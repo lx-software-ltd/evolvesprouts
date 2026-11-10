@@ -14,9 +14,12 @@ the edge-verify check in `public-www-stack.ts`. It stays off while
   `ApiCustomDomainUrl` includes that path, as `ApiUrl` does.
 - The execute-api hostname does not accept calls. `DisableExecuteApiEndpoint`
   is set on the REST API. The stage variable `executeApiEndpoint` is
-  `disabled`, and the stage update depends on the REST API so API Gateway
-  applies the hostname setting. There is no parameter to turn the hostname
-  back on.
+  `disabled`. The stage update depends on the REST API and on the
+  asset-share distribution, so CloudFront finishes moving share links
+  before API Gateway applies the hostname setting. There is no parameter
+  to turn the hostname back on.
+- `ApiCustomDomainName` and `ApiCustomDomainCertificateArn` reject an empty
+  value.
 - The asset-share CloudFront origin uses `ApiCustomDomainName`. The origin
   path stays `/prod`.
 - `PublicWwwApiBaseUrl` and `PublicWwwMediaRequestApiBaseUrl` resolve
@@ -35,25 +38,35 @@ the edge-verify check in `public-www-stack.ts`. It stays off while
 
 ## Still operator work
 
-1. Deploy the backend stack. `ApiCustomDomainName` is
-   `api.evolvesprouts.com` and `ApiCustomDomainCertificateArn` is the issued
-   `*.evolvesprouts.com` certificate in `ap-southeast-1`. The deploy disables
-   the execute-api hostname and moves share links to the custom domain.
-2. Point the API DNS record at `ApiCustomDomainTarget`, proxy off. Confirm
-   `GET https://api.evolvesprouts.com/prod/v1/mailchimp/webhook` returns
-   `{"message":"ok"}` before the next step. `/prod/health` requires IAM, so
-   an unauthenticated call returns 403 even when routing works. The admin
+Production already answers on `api.evolvesprouts.com`. Confirm that, then
+deploy. The deploy is what disables the execute-api hostname.
+
+1. Confirm `GET https://api.evolvesprouts.com/prod/v1/mailchimp/webhook`
+   returns `{"message":"ok"}`. `/prod/health` requires IAM, so an
+   unauthenticated call returns 403 even when routing works. The admin
    Lambda strips the `/prod` base path from `path` before matching routes.
-   Do not retarget DNS before the deploy creates the domain.
-3. Keep `NEXT_PUBLIC_API_BASE_URL`, `PUBLIC_WWW_API_BASE_URL`,
+   `ApiCustomDomainName` is `api.evolvesprouts.com` and
+   `ApiCustomDomainCertificateArn` is the issued `*.evolvesprouts.com`
+   certificate in `ap-southeast-1`. DNS for that name points at
+   `ApiCustomDomainTarget` with the proxy off.
+2. Keep `NEXT_PUBLIC_API_BASE_URL`, `PUBLIC_WWW_API_BASE_URL`,
    `PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL`, and the training API parameters
    on `ApiCustomDomainUrl`. The public site build uses
    `NEXT_PUBLIC_WWW_API_BASE_URL=/www`. Mailchimp and Meta callbacks use
    `ApiCustomDomainUrl` plus `/v1/...`.
+3. Deploy the backend stack. The stage update waits until the asset-share
+   distribution is using the custom domain, then the execute-api hostname
+   stops accepting calls.
 4. Upload the staging Worker with `PRODUCTION_ORIGIN` set to the public
    site, the allow-list in `STAGING_ALLOWED_IPS`, and
    `STAGING_BYPASS_SECRET` on the Worker and in the `staging` GitHub
    environment. Smoke stays green until a response leaves the staging host.
+
+A first deploy of a new stack creates the custom domain and disables the
+execute-api hostname in the same update. `ApiCustomDomainTarget` is available
+after that deploy. Point DNS at it then, with the proxy off, and confirm the
+webhook URL before sending clients there. Until that record answers, the new
+stack has no working API hostname.
 
 The origin lock compares `x-proxy-verify` on every viewer-request function
 of both public website distributions
@@ -90,5 +103,5 @@ Re-enabling the execute-api hostname takes a code change. The REST API sets
 
 Blanking `ApiCustomDomainName` in `params/production.json` does not remove
 the domain. The deploy workflow drops empty values and CDK reuses the
-previous stack parameter, so the domain and its base path mapping stay.
-Removing them needs the workflow to pass empty values explicitly.
+previous stack parameter. The parameter also rejects an empty string, so a
+deploy cannot clear the hostname. The domain and its base path mapping stay.

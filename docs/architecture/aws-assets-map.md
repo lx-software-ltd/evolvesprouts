@@ -711,8 +711,8 @@ group is not given a separate delivery resource policy.
 | `MailchimpWelcomeJourneyId` | String | No | No | Shared welcome journey ID for opted-in public form contacts (empty disables) |
 | `MailchimpWelcomeJourneyStepId` | String | No | No | Welcome journey entry step ID paired with `MailchimpWelcomeJourneyId` (empty disables) |
 | `MailchimpRequireMarketingConsent` | String | No | No | When `true`, media processor gates legacy Mailchimp subscribe + free-resource journey on `marketing_opt_in` (default: `false`) |
-| `ApiCustomDomainName` | String | Yes | No | Custom domain for the API. Required. Maps to the prod stage at `/prod`. The execute-api hostname does not accept calls, and asset-share links use this domain. |
-| `ApiCustomDomainCertificateArn` | String | Yes | No | ACM certificate ARN for API custom domain. Required. |
+| `ApiCustomDomainName` | String | Yes | No | Custom domain for the API. Required, minimum length 1. Maps to the prod stage at `/prod`. The execute-api hostname does not accept calls, and asset-share links use this domain. |
+| `ApiCustomDomainCertificateArn` | String | Yes | No | ACM certificate ARN for API custom domain. Required, minimum length 1. |
 | `NominatimUserAgent` | String | No | No | User-Agent for Nominatim geocoding requests |
 | `NominatimReferer` | String | No | No | Referer header for Nominatim requests |
 | `AdminBootstrapEmail` | String | No | No | Admin email for bootstrap (default: empty) |

@@ -986,9 +986,19 @@ function assertApiCustomDomainKeepsProdPath(template: Template): void {
       `API stage variable executeApiEndpoint must be "disabled". Found ${JSON.stringify(stage.Properties?.Variables?.executeApiEndpoint)}`,
     );
   }
-  const parameters = template.toJSON().Parameters as Record<string, unknown>;
+  const parameters = template.toJSON().Parameters as Record<
+    string,
+    { MinLength?: number }
+  >;
   if ("ApiDisableExecuteApiEndpoint" in parameters) {
     throw new Error("ApiDisableExecuteApiEndpoint must not be a stack parameter");
+  }
+  for (const name of ["ApiCustomDomainName", "ApiCustomDomainCertificateArn"]) {
+    if (parameters[name]?.MinLength !== 1) {
+      throw new Error(
+        `${name} must reject an empty value. Found ${JSON.stringify(parameters[name])}`,
+      );
+    }
   }
   const dependsOn = (stage as { DependsOn?: string | string[] }).DependsOn;
   const dependencies = Array.isArray(dependsOn)
@@ -1003,6 +1013,22 @@ function assertApiCustomDomainKeepsProdPath(template: Template): void {
   }
 
   const distributions = template.findResources("AWS::CloudFront::Distribution");
+  const assetShareDistribution = Object.entries(distributions).find(([, distribution]) =>
+    (distribution.Properties?.DistributionConfig?.Origins ?? []).some(
+      (origin: { OriginPath?: unknown }) => origin.OriginPath === `/${stageName}`,
+    ),
+  );
+  if (!assetShareDistribution) {
+    throw new Error(
+      `Asset-share CloudFront distribution must include an origin path /${stageName}`,
+    );
+  }
+  const [distributionLogicalId] = assetShareDistribution;
+  if (!dependencies.includes(distributionLogicalId)) {
+    throw new Error(
+      `Stage ${stageLogicalId} must depend on ${distributionLogicalId} so execute-api stays up until share links move. DependsOn=${JSON.stringify(dependsOn)}`,
+    );
+  }
   const assetShareOrigin = Object.values(distributions)
     .flatMap(
       (distribution) =>
