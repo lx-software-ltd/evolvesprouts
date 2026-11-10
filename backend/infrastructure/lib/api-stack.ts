@@ -784,10 +784,11 @@ export class ApiStack extends cdk.Stack {
       {
         type: "String",
         default: "",
+        noEcho: true,
         description:
           "Comma-separated substrings (case-insensitive). Inbound invoice mail " +
           "must match at least one pattern on SES envelope source or RFC822 From. " +
-          "Empty disables allowlisting.",
+          "Empty disables allowlisting. GitHub secret CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS.",
       }
     );
     const sharedInboundReceiptRuleSetName = new cdk.CfnParameter(

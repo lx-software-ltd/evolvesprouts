@@ -138,6 +138,7 @@ jobs:
           import json
           import os
           import sys
+          from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
           with open(os.environ["PARAM_FILE"], "r", encoding="utf-8") as handle:
               params = json.load(handle)
@@ -197,10 +198,28 @@ jobs:
                   return os.environ.get(env_name, "")
               return raw
 
+          iana_timezone_params = {
+              "InvoiceDisplayTimezone",
+              "EventbriteDefaultTimezone",
+              "SalesRecapDisplayTimezone",
+          }
+
+          def require_iana_timezone(key: str, value: str) -> None:
+              """Fail the deploy when a set timezone is not an IANA id."""
+              if key not in iana_timezone_params or not value:
+                  return
+              try:
+                  ZoneInfo(value)
+              except (ZoneInfoNotFoundError, ValueError) as exc:
+                  raise SystemExit(
+                      f"{key} value {value!r} is not a valid IANA timezone"
+                  ) from exc
+
           for key, value in params.items():
               value_str = ""
               if value is not None:
                   value_str = resolve_value(str(value))
+              require_iana_timezone(key, value_str)
               if key not in pass_empty_params and not value_str:
                   continue
 
@@ -375,7 +394,6 @@ jobs:
           CDK_PARAM_FILE: ${{ vars.CDK_PARAM_FILE }}
           CDK_BOOTSTRAP_QUALIFIER: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           CDK_PARAM_GOOGLE_CLIENT_SECRET: ${{ secrets.CDK_PARAM_GOOGLE_CLIENT_SECRET }}
-          CDK_PARAM_APPLE_PRIVATE_KEY: ${{ secrets.CDK_PARAM_APPLE_PRIVATE_KEY }}
           CDK_PARAM_PUBLIC_API_KEY_VALUE: ${{ secrets.CDK_PARAM_PUBLIC_API_KEY_VALUE }}
           CDK_PARAM_TURNSTILE_SECRET_KEY: ${{ secrets.CDK_PARAM_TURNSTILE_SECRET_KEY }}
           CDK_PARAM_STRIPE_SECRET_KEY: ${{ secrets.CDK_PARAM_STRIPE_SECRET_KEY }}
@@ -403,12 +421,15 @@ jobs:
           CDK_PARAM_OPENROUTER_API_KEY: ${{ secrets.CDK_PARAM_OPENROUTER_API_KEY }}
           CDK_PARAM_OPENROUTER_CHAT_COMPLETIONS_URL: ${{ vars.CDK_PARAM_OPENROUTER_CHAT_COMPLETIONS_URL }}
           CDK_PARAM_OPENROUTER_MODEL: ${{ vars.CDK_PARAM_OPENROUTER_MODEL }}
-          CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS: ${{ vars.CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS }}
+          # Production-environment job. A secret that exists only in the
+          # staging environment is invisible here. An empty value omits the
+          # parameter and CloudFormation keeps the previous allowlist.
+          CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS: ${{ secrets.CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS }}
           STRIPE_PAYMENT_METHOD_CONFIGURATION_ID: ${{ vars.STRIPE_PAYMENT_METHOD_CONFIGURATION_ID }}
           CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD: ${{ secrets.CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD }}
           CDK_PARAM_ASSET_DOWNLOAD_CLOUDFRONT_PUBLIC_KEY_PEM: ${{ secrets.CDK_PARAM_ASSET_DOWNLOAD_CLOUDFRONT_PUBLIC_KEY_PEM }}
           CDK_PARAM_ASSET_DOWNLOAD_CLOUDFRONT_PRIVATE_KEY_SECRET_ARN: ${{ secrets.CDK_PARAM_ASSET_DOWNLOAD_CLOUDFRONT_PRIVATE_KEY_SECRET_ARN }}
-          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+          CDK_PARAM_CERTIFICATE_ES_FOUNDER_NAME: ${{ vars.CDK_PARAM_CERTIFICATE_ES_FOUNDER_NAME }}
           NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
           PUBLIC_WWW_API_BASE_URL: ${{ vars.PUBLIC_WWW_API_BASE_URL || vars.NEXT_PUBLIC_API_BASE_URL }}
           PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL: ${{ vars.PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL || vars.NEXT_PUBLIC_API_BASE_URL }}

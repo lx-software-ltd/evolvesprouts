@@ -614,6 +614,15 @@ function sourceArnValuesAllowLegacyAndShared(sourceArn: unknown): boolean {
 }
 
 function assertInboundInvoiceSharesReceiptRuleSet(template: Template): void {
+  const senderPatterns = template.findParameters(
+    "InboundInvoiceAllowedSenderPatterns",
+  ).InboundInvoiceAllowedSenderPatterns;
+  if (!senderPatterns || senderPatterns.NoEcho !== true) {
+    throw new Error(
+      "Expected CfnParameter InboundInvoiceAllowedSenderPatterns with NoEcho",
+    );
+  }
+
   const serialized = JSON.stringify(template.toJSON());
   if (serialized.includes("setActiveReceiptRuleSet")) {
     throw new Error(

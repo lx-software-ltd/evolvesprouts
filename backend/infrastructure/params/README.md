@@ -18,9 +18,11 @@ Use `production.json` as a template for CDK parameters.
 
 `production.json` includes `PublicWwwCertificateEsFounderName`, resolved in CI from
 the GitHub Actions repository variable **`CDK_PARAM_CERTIFICATE_ES_FOUNDER_NAME`**
-(the certificate ES founder display name). Create that variable before production
-deploy; if it is missing or empty, certificate preview and issue fail validation
-even though the CDK param entry exists in the JSON file.
+(the certificate ES founder display name). `deploy-backend.yml` passes that
+variable into the deploy step. Create it before the next production deploy.
+An empty value omits the parameter, and CloudFormation keeps the previous
+value. Certificate preview and issue fail validation when that stored value
+is empty.
 
 ## Public website parameters
 

@@ -559,7 +559,7 @@ Requirements:
 - Do not log raw email bodies, headers, or attachment bytes.
 - Mask sender addresses in application logs with `mask_email()`.
 - Optional sender allowlist: when `InboundInvoiceAllowedSenderPatterns` is
-  non-empty (deployed from GitHub Actions variable
+  non-empty (deployed from GitHub Actions secret
   `CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS` into Lambda env
   `INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS`), messages whose SES envelope
   `source` and RFC822 `From` address both fail substring matching are marked

@@ -166,8 +166,9 @@ Public WWW API configuration is provided at build time via:
 - GitHub variable `NEXT_PUBLIC_FPS_MERCHANT_NAME` (or secret fallback)
 - GitHub variable `NEXT_PUBLIC_FPS_MOBILE_NUMBER` (or secret fallback)
 - GitHub variable `NEXT_PUBLIC_GTM_ID`
-- GitHub variable `NEXT_PUBLIC_GTM_ALLOWED_HOSTS` (optional comma-separated
-  hostname allowlist for runtime GTM gating)
+- GitHub variable `NEXT_PUBLIC_GTM_ALLOWED_HOSTS` (optional; normally unset.
+  Falls back to the `NEXT_PUBLIC_SITE_ORIGIN` hostname, which CI sets to the
+  production host for both staging and production builds)
 - GitHub variable `NEXT_PUBLIC_EMAIL`
 - GitHub variable `NEXT_PUBLIC_FOUNDER_NAME` (founder display name on `llms.txt`)
 - GitHub variable `NEXT_PUBLIC_WHATSAPP_URL`
