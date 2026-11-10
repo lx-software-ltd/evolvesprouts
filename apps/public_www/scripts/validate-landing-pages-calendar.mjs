@@ -1,6 +1,6 @@
-import { readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { readFileSync, realpathSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const manifestPath = join(__dirname, '../out/landing-pages-manifest.json');
@@ -144,7 +144,18 @@ function main() {
   );
 }
 
-const entryPath = process.argv[1];
-if (entryPath && pathToFileURL(resolve(entryPath)).href === import.meta.url) {
+function isDirectExecution() {
+  const entryPath = process.argv[1];
+  if (!entryPath) {
+    return false;
+  }
+  try {
+    return realpathSync(entryPath) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
+
+if (isDirectExecution()) {
   await main();
 }
