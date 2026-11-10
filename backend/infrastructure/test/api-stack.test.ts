@@ -940,34 +940,6 @@ function assertRetainedSecurityGroupsAndProxyTags(template: Template): void {
   }
 }
 
-function assertFnIf(
-  value: unknown,
-  condition: string,
-  whenTrue: unknown,
-  whenFalse: unknown,
-  label: string,
-): void {
-  const choice = (value as { "Fn::If"?: unknown })?.["Fn::If"];
-  if (!Array.isArray(choice) || choice.length !== 3) {
-    throw new Error(`${label} must be Fn::If. Found ${JSON.stringify(value)}`);
-  }
-  if (choice[0] !== condition) {
-    throw new Error(
-      `${label} must use condition ${condition}. Found ${JSON.stringify(choice[0])}`,
-    );
-  }
-  if (JSON.stringify(choice[1]) !== JSON.stringify(whenTrue)) {
-    throw new Error(
-      `${label} true branch must be ${JSON.stringify(whenTrue)}. Found ${JSON.stringify(choice[1])}`,
-    );
-  }
-  if (JSON.stringify(choice[2]) !== JSON.stringify(whenFalse)) {
-    throw new Error(
-      `${label} false branch must be ${JSON.stringify(whenFalse)}. Found ${JSON.stringify(choice[2])}`,
-    );
-  }
-}
-
 function assertApiCustomDomainKeepsProdPath(template: Template): void {
   const mappings = template.findResources("AWS::ApiGateway::BasePathMapping");
   const entries = Object.entries(mappings);
@@ -1004,22 +976,30 @@ function assertApiCustomDomainKeepsProdPath(template: Template): void {
     throw new Error(`Expected one REST API; found ${apiEntries.length}`);
   }
   const [apiLogicalId, api] = apiEntries[0];
-  const omitted = { Ref: "AWS::NoValue" };
-  assertFnIf(
-    api.Properties?.DisableExecuteApiEndpoint,
-    "DisableExecuteApiEndpoint",
-    true,
-    omitted,
-    "REST API DisableExecuteApiEndpoint",
-  );
-
-  assertFnIf(
-    stage.Properties?.Variables?.executeApiEndpoint,
-    "DisableExecuteApiEndpoint",
-    "disabled",
-    omitted,
-    "API stage variable executeApiEndpoint",
-  );
+  if (api.Properties?.DisableExecuteApiEndpoint !== true) {
+    throw new Error(
+      `REST API must disable the execute-api hostname. Found ${JSON.stringify(api.Properties?.DisableExecuteApiEndpoint)}`,
+    );
+  }
+  if (stage.Properties?.Variables?.executeApiEndpoint !== "disabled") {
+    throw new Error(
+      `API stage variable executeApiEndpoint must be "disabled". Found ${JSON.stringify(stage.Properties?.Variables?.executeApiEndpoint)}`,
+    );
+  }
+  const parameters = template.toJSON().Parameters as Record<
+    string,
+    { MinLength?: number }
+  >;
+  if ("ApiDisableExecuteApiEndpoint" in parameters) {
+    throw new Error("ApiDisableExecuteApiEndpoint must not be a stack parameter");
+  }
+  for (const name of ["ApiCustomDomainName", "ApiCustomDomainCertificateArn"]) {
+    if (parameters[name]?.MinLength !== 1) {
+      throw new Error(
+        `${name} must reject an empty value. Found ${JSON.stringify(parameters[name])}`,
+      );
+    }
+  }
   const dependsOn = (stage as { DependsOn?: string | string[] }).DependsOn;
   const dependencies = Array.isArray(dependsOn)
     ? dependsOn
@@ -1033,40 +1013,44 @@ function assertApiCustomDomainKeepsProdPath(template: Template): void {
   }
 
   const distributions = template.findResources("AWS::CloudFront::Distribution");
+  const assetShareDistribution = Object.entries(distributions).find(([, distribution]) =>
+    (distribution.Properties?.DistributionConfig?.Origins ?? []).some(
+      (origin: { OriginPath?: unknown }) => origin.OriginPath === `/${stageName}`,
+    ),
+  );
+  if (!assetShareDistribution) {
+    throw new Error(
+      `Asset-share CloudFront distribution must include an origin path /${stageName}`,
+    );
+  }
+  const [distributionLogicalId] = assetShareDistribution;
+  if (!dependencies.includes(distributionLogicalId)) {
+    throw new Error(
+      `Stage ${stageLogicalId} must depend on ${distributionLogicalId} so execute-api stays up until share links move. DependsOn=${JSON.stringify(dependsOn)}`,
+    );
+  }
   const assetShareOrigin = Object.values(distributions)
     .flatMap(
       (distribution) =>
         distribution.Properties?.DistributionConfig?.Origins ?? [],
     )
-    .find((origin: { DomainName?: unknown; OriginPath?: unknown }) => {
-      const domain = origin.DomainName as { "Fn::If"?: unknown[] } | undefined;
-      return domain?.["Fn::If"]?.[0] === "DisableExecuteApiEndpoint";
-    }) as { DomainName?: unknown; OriginPath?: unknown } | undefined;
+    .find((origin: { OriginPath?: unknown }) => origin.OriginPath === `/${stageName}`) as
+    | { DomainName?: unknown; OriginPath?: unknown }
+    | undefined;
   if (!assetShareOrigin) {
     throw new Error(
-      "Asset-share CloudFront origin must follow DisableExecuteApiEndpoint",
+      `Asset-share CloudFront origin must use origin path /${stageName}`,
     );
   }
-  const domainChoice = (
-    assetShareOrigin.DomainName as { "Fn::If": unknown[] }
-  )["Fn::If"];
-  const staysOnExecuteApi = JSON.stringify(domainChoice[2] ?? "").includes(
-    "execute-api",
-  );
-  if (!staysOnExecuteApi) {
+  const domainName = JSON.stringify(assetShareOrigin.DomainName ?? "");
+  if (!domainName.includes("ApiCustomDomainName")) {
     throw new Error(
-      `Asset-share origin must stay on execute-api until the disable flag. Found ${JSON.stringify(domainChoice[2])}`,
+      `Asset-share origin must use ApiCustomDomainName. Found ${domainName}`,
     );
   }
-  const customDomainBranch = JSON.stringify(domainChoice[1] ?? "");
-  if (!customDomainBranch.includes("ApiCustomDomainName")) {
+  if (domainName.includes("execute-api")) {
     throw new Error(
-      `Asset-share origin must use ApiCustomDomainName when execute-api is disabled. Found ${customDomainBranch}`,
-    );
-  }
-  if (assetShareOrigin.OriginPath !== `/${stageName}`) {
-    throw new Error(
-      `Asset-share origin path must be /${stageName}. Found ${JSON.stringify(assetShareOrigin.OriginPath)}`,
+      `Asset-share origin must not use the execute-api hostname. Found ${domainName}`,
     );
   }
 }

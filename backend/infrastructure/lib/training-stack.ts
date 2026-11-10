@@ -61,7 +61,7 @@ export class TrainingStack extends cdk.Stack {
       {
         type: "String",
         description:
-          "Absolute HTTPS execute-api base URL for media requests (for example https://abc123.execute-api.ap-southeast-1.amazonaws.com/prod).",
+          "Absolute HTTPS API base URL for media requests (for example https://api.example.com/prod).",
         allowedPattern: "^https://[^/]+/[^/]+/?$",
         constraintDescription:
           "Must be an absolute HTTPS URL ending in a single stage path segment (for example /prod).",
@@ -208,7 +208,7 @@ export class TrainingStack extends cdk.Stack {
       "TrainingMediaRequestProxyFunction",
       {
         comment:
-          "Allow /www/v1/assets/free/request and rewrite path for execute-api origin.",
+          "Allow /www/v1/assets/free/request and rewrite the path for the API origin.",
         runtime: cloudfront.FunctionRuntime.JS_2_0,
         code: cloudfront.FunctionCode.fromInline(MEDIA_REQUEST_PROXY_FUNCTION),
       },

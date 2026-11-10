@@ -711,9 +711,8 @@ group is not given a separate delivery resource policy.
 | `MailchimpWelcomeJourneyId` | String | No | No | Shared welcome journey ID for opted-in public form contacts (empty disables) |
 | `MailchimpWelcomeJourneyStepId` | String | No | No | Welcome journey entry step ID paired with `MailchimpWelcomeJourneyId` (empty disables) |
 | `MailchimpRequireMarketingConsent` | String | No | No | When `true`, media processor gates legacy Mailchimp subscribe + free-resource journey on `marketing_opt_in` (default: `false`) |
-| `ApiCustomDomainName` | String | No | No | Custom domain for the API (default: empty). When set with a certificate, the domain maps to the prod stage at `/prod`. |
-| `ApiCustomDomainCertificateArn` | String | No | No | ACM certificate ARN for API custom domain |
-| `ApiDisableExecuteApiEndpoint` | String | No | No | `true` or `false` (default `false`). When `true` and the custom domain is configured, the execute-api hostname stops accepting calls and the asset-share CloudFront origin moves to the custom domain. The stage variable `executeApiEndpoint` is set only while this is `true`, and that stage update depends on the REST API so it runs after the flag changes. |
+| `ApiCustomDomainName` | String | Yes | No | Custom domain for the API. Required, minimum length 1. Maps to the prod stage at `/prod`. The execute-api hostname does not accept calls, and asset-share links use this domain. |
+| `ApiCustomDomainCertificateArn` | String | Yes | No | ACM certificate ARN for API custom domain. Required, minimum length 1. |
 | `NominatimUserAgent` | String | No | No | User-Agent for Nominatim geocoding requests |
 | `NominatimReferer` | String | No | No | Referer header for Nominatim requests |
 | `AdminBootstrapEmail` | String | No | No | Admin email for bootstrap (default: empty) |
@@ -755,7 +754,7 @@ These raster files ship with `EvolvesproutsAdminFunction` under `backend/src/app
 
 | Output Name | Value | Description |
 |-------------|-------|-------------|
-| `ApiUrl` | API Gateway REST API URL | Base URL for API endpoints |
+| `ApiUrl` | API Gateway REST API URL | Execute-api stage URL. That hostname does not accept calls. Clients use `ApiCustomDomainUrl`. |
 | `DatabaseSecretArn` | Secrets Manager secret ARN | ARN of database credentials secret |
 | `FinanceReadonlyDatabaseSecretArn` | Secrets Manager secret ARN | ARN of `evolvesprouts-db-finance-readonly-credentials` (`evolvesprouts_finance_ro`) |
 | `DatabaseProxyEndpoint` | RDS Proxy endpoint | Endpoint for database connections via proxy |

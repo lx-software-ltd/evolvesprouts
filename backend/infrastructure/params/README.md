@@ -99,23 +99,18 @@ CloudFront and Cognito. The domain mapping uses the stage name as its base
 path (`/prod`). `ApiCustomDomainUrl` includes that path, the same way `ApiUrl`
 ends in `/prod`.
 
-`ApiDisableExecuteApiEndpoint` defaults to `false`. Leave it false when the
-custom domain is first created. The asset-share CloudFront origin stays on
-the execute-api host until this flag is `true`, so share links keep working
-while DNS is pointed at `ApiCustomDomainTarget`. Set the flag to `true` only
-after that DNS change and after clients call the custom domain. The
-execute-api hostname then rejects calls. The stage variable
-`executeApiEndpoint` is present only while the flag is on, and the stage
-update waits for the REST API change. Deploy `false` again before sending
-clients back to execute-api.
+`ApiCustomDomainName` and `ApiCustomDomainCertificateArn` reject an empty
+value. The execute-api hostname does not accept calls. Clients and the
+asset-share CloudFront origin use `ApiCustomDomainName`. The stage variable
+`executeApiEndpoint` is `disabled`. The stage update waits for the REST API
+change and for the asset-share distribution, so API Gateway applies the
+hostname setting after CloudFront has moved share links.
 
 `PublicWwwApiBaseUrl` and `PublicWwwMediaRequestApiBaseUrl` resolve
 `PUBLIC_WWW_API_BASE_URL` and `PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL`.
 Backend deploy falls back to `NEXT_PUBLIC_API_BASE_URL` when those variables
-are unset. Set them to the current execute-api URL before pointing
-`NEXT_PUBLIC_API_BASE_URL` at `ApiCustomDomainUrl`, and point them at the
-custom domain before setting `ApiDisableExecuteApiEndpoint` to `true`.
-`TrainingApiBaseUrl` and `TrainingMediaRequestApiBaseUrl` still follow
+are unset. Point them at `ApiCustomDomainUrl`.
+`TrainingApiBaseUrl` and `TrainingMediaRequestApiBaseUrl` follow
 `NEXT_PUBLIC_API_BASE_URL`.
 
 ## Media lead pipeline parameters
@@ -126,8 +121,8 @@ The backend stack also requires Mailchimp/media lead parameters:
 - `MailchimpListId`
 - `MailchimpServerPrefix`
 - `MailchimpWebhookSecret` (query `token` on `/v1/mailchimp/webhook`; after
-  `ApiCustomDomainName` or execute-api URL changes, update the Mailchimp
-  audience webhook to `{api-origin}/v1/mailchimp/webhook?token=...` — see
+  `ApiCustomDomainName` changes, update the Mailchimp audience webhook to
+  `{api-origin}/v1/mailchimp/webhook?token=...` — see
   `docs/deployment/backend.md`)
 - `MetaAppSecret`
 - `WhatsappWebhookVerifyToken`

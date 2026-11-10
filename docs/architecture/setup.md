@@ -78,8 +78,7 @@ For the OIDC provider itself, add the same tags:
     - `PublicWwwMediaRequestApiBaseUrl` (`<FROM_GITHUB_VAR: PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL>`)
 - `PUBLIC_WWW_API_BASE_URL` and `PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL`
   (CloudFront API origins. Backend deploy falls back to `NEXT_PUBLIC_API_BASE_URL`
-  when unset. Set them to the current execute-api URL before changing the
-  shared client variable, and to `ApiCustomDomainUrl` before disabling execute-api.)
+  when unset. Set them to `ApiCustomDomainUrl`.)
 - `NEXT_PUBLIC_WWW_API_BASE_URL` (public website build API base, often `/www`;
   public-site workflows fall back to `NEXT_PUBLIC_API_BASE_URL`)
 - `NEXT_PUBLIC_API_BASE_URL` (direct API base for Admin Web and other clients.
@@ -141,7 +140,7 @@ For the OIDC provider itself, add the same tags:
 - `CDK_PARAM_TURNSTILE_SECRET_KEY`
 - `CDK_PARAM_MAILCHIMP_API_SECRET_ARN`
 - `CDK_PARAM_MAILCHIMP_WEBHOOK_SECRET`
-  (Mailchimp audience webhook `token`; after `ApiCustomDomainName` / `ApiUrl`
+  (Mailchimp audience webhook `token`; after `ApiCustomDomainName`
   changes, update the Mailchimp webhook URL — see `docs/deployment/backend.md`)
 - `CDK_PARAM_META_APP_SECRET` (Meta app secret; HMAC for `POST /v1/whatsapp/webhook` and `POST /v1/meta/webhook`)
 - `CDK_PARAM_WHATSAPP_WEBHOOK_VERIFY_TOKEN` (Meta webhook handshake string for WhatsApp and Messenger/Instagram `hub.verify_token`; not a Graph access token)

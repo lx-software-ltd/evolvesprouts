@@ -503,14 +503,12 @@ Website form submit
 - **Webhook handler**: `backend/src/app/api/public_mailchimp_webhook.py`
   - Receives Mailchimp webhook callbacks at `/v1/mailchimp/webhook`
   - Reconciles contact sync status in the database
-  - Mailchimp stores a **fixed callback URL**. After any API host change
-    (`ApiCustomDomainName` or the execute-api `ApiUrl`), update the audience
-    webhook in Mailchimp to
+  - Mailchimp stores a **fixed callback URL**. After `ApiCustomDomainName`
+    changes, update the audience webhook in Mailchimp to
     `{api-origin}/v1/mailchimp/webhook?token={MAILCHIMP_WEBHOOK_SECRET}`.
-    `{api-origin}` is CloudFormation output `ApiCustomDomainUrl` when a
-    custom domain is set, otherwise `ApiUrl`. Both outputs include `/prod`,
-    so the path after the output is `/v1/mailchimp/webhook` with no extra
-    stage segment. Steps and checklist: `docs/deployment/backend.md`.
+    `{api-origin}` is CloudFormation output `ApiCustomDomainUrl`. It includes
+    `/prod`, so the path after the output is `/v1/mailchimp/webhook` with no
+    extra stage segment. Steps and checklist: `docs/deployment/backend.md`.
   - CloudWatch metric `{resourcePrefix}/Mailchimp` / `WebhookReceived` counts
     authenticated POSTs (`Received Mailchimp webhook` on the Admin Lambda log
     group). Alarm `{resourcePrefix}-mailchimp-webhook-inactivity-alarm` fires

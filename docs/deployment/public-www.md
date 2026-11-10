@@ -193,9 +193,8 @@ to the host resolved from `PublicWwwApiBaseUrl` (GitHub variable
 `POST /www/v1/assets/free/request` is routed by a path-specific CloudFront behavior
 to the origin resolved from `PublicWwwMediaRequestApiBaseUrl`, with
 URI rewrite to `/v1/assets/free/request`.
-Keep both origin variables on the current execute-api URL until that host
-is ready to be turned off. Point them at `ApiCustomDomainUrl` and deploy
-this stack before setting `ApiDisableExecuteApiEndpoint` to `true`.
+Point both origin variables at `ApiCustomDomainUrl`. The execute-api
+hostname does not accept calls.
 Set `NEXT_PUBLIC_WWW_API_BASE_URL` (or `NEXT_PUBLIC_API_BASE_URL`) to `/www`
 in the public-site build to keep browser API calls same-origin and avoid
 cross-origin CORS preflight failures.
