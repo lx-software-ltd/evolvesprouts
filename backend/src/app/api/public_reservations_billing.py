@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy import select
@@ -12,11 +12,17 @@ from sqlalchemy.orm import Session
 from app.api.public_discount_validate import (
     _is_usable_now as discount_code_is_usable_now,
 )
+from app.api.public_reservations_persistence import (
+    _PUBLIC_RESERVATION_ENROLLMENT_ACTOR,
+)
 from app.db.models import Enrollment, Service, ServiceInstance
-from app.db.models.enums import BillingBillToKind, DiscountType
+from app.db.models.enums import BillingBillToKind, DiscountType, LeadEventType, LeadType
 from app.db.models.family import FamilyMember
 from app.db.models.organization import OrganizationMember
 from app.exceptions import ValidationError
+from app.services.customer_billing import record_reservation_customer_payment
+from app.services.enrollment_billing import attach_public_invoice
+from app.services.lead_funnel_automation import ensure_contact_lead
 
 
 def _apply_enrollment_bill_to(
@@ -144,20 +150,12 @@ def record_public_enrollment_billing(
     lead_metadata: Mapping[str, Any],
 ) -> tuple[Any, bool, UUID | None, Any]:
     """Create the lead, the payment, then the invoice. Lead comes first so a paid booking converts it."""
-    from app.api.public_reservations_persistence import (
-        _PUBLIC_RESERVATION_ENROLLMENT_ACTOR,
-    )
-    from app.db.models.enums import LeadEventType, LeadType
-    from app.services.customer_billing import record_reservation_customer_payment
-    from app.services.enrollment_billing import attach_public_invoice
-    from app.services.lead_funnel_automation import ensure_contact_lead
-
     ensure_contact_lead(
         session,
         contact_id=contact.id,
         contact=contact,
         lead_type=LeadType.PROGRAM_ENROLLMENT,
-        metadata=lead_metadata,
+        metadata=cast("dict[str, object]", dict(lead_metadata)),
         attach_event_type=LeadEventType.ACTION_RECORDED,
     )
     pay, _, duplicate = record_reservation_customer_payment(
@@ -192,11 +190,6 @@ def heal_duplicate_public_invoice(
     attendee_email: str,
 ) -> Any:
     """A retried Stripe charge invoices the existing enrollment when it still has none."""
-    from app.api.public_reservations_persistence import (
-        _PUBLIC_RESERVATION_ENROLLMENT_ACTOR,
-    )
-    from app.services.enrollment_billing import attach_public_invoice
-
     enrollment_id = getattr(payment, "enrollment_id", None)
     if enrollment_id is None:
         return None

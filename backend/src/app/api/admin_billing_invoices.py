@@ -120,12 +120,14 @@ def issue_draft_invoice(
     request_id: str | None,
     create_pending_payment: bool = True,
     display_name_override: str | None = None,
+    refresh_pdf: bool = True,
 ) -> CustomerPayment | None:
     """Issue a draft invoice inside the caller's transaction.
 
     ``create_pending_payment`` is false when the caller already recorded the
-    inbound payment. ``display_name_override`` replaces the CRM name on the
-    snapshot, used for a website booking that only stored a first name.
+    inbound payment. ``display_name_override`` replaces the CRM name only for
+    a contact bill-to, used when a website booking stored a first name.
+    ``refresh_pdf`` is false when the caller renders the PDF after allocating.
     """
     if inv.status != BillingInvoiceStatus.DRAFT:
         raise ValidationError("Invoice is not draft", field="invoiceId")
@@ -133,7 +135,7 @@ def issue_draft_invoice(
     _validate_bill_to_fk_for_issue(inv)
     _resolve_bill_to_party_from_invoice_fks(session, inv=inv)
     override = (display_name_override or "").strip()
-    if override:
+    if override and inv.bill_to_kind == BillingBillToKind.CONTACT:
         inv.bill_to_display_name = override
     inv.bill_to_snapshot = _build_bill_to_snapshot(session, inv)
 
@@ -147,7 +149,8 @@ def issue_draft_invoice(
     else:
         inv.due_date = add_payment_terms(inv.invoice_date)
     session.flush()
-    refresh_invoice_pdf(session, inv)
+    if refresh_pdf:
+        refresh_invoice_pdf(session, inv)
     maybe_confirm_enrollments_on_zero_total_invoice_issue(session, inv)
     recompute_invoice_settlement(session, inv)
     if not create_pending_payment:

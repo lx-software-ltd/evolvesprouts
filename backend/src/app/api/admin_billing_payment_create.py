@@ -8,7 +8,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -43,19 +43,18 @@ ISSUE_PENDING_PAYMENT_METHOD = "fps"
 logger = get_logger(__name__)
 
 
-def _invoice_has_positive_open_payment(
+def _positive_open_payment_cover(
     session: Session, enrollment_ids: list[UUID]
-) -> bool:
-    """True when an enrollment already has a positive pending or succeeded payment.
+) -> Decimal:
+    """Sum of positive pending or succeeded payments on these enrollments.
 
-    The issue-time stub is one inbound row for the invoice total. A zero-amount
-    free payment does not cover that total, so it does not suppress the stub.
+    A zero-amount free payment does not count. One enrollment's payment must
+    not hide the rest of a merged invoice, so the stub is the uncovered part.
     """
     if not enrollment_ids:
-        return False
-    found = session.execute(
-        select(CustomerPayment.id)
-        .where(
+        return Decimal(0)
+    covered = session.execute(
+        select(func.coalesce(func.sum(CustomerPayment.amount), 0)).where(
             CustomerPayment.enrollment_id.in_(enrollment_ids),
             CustomerPayment.direction == BillingPaymentDirection.INBOUND,
             CustomerPayment.status.in_(
@@ -63,9 +62,8 @@ def _invoice_has_positive_open_payment(
             ),
             CustomerPayment.amount > 0,
         )
-        .limit(1)
-    ).scalar_one_or_none()
-    return found is not None
+    ).scalar_one()
+    return Decimal(str(covered))
 
 
 def create_pending_payment_for_issued_invoice(
@@ -77,16 +75,18 @@ def create_pending_payment_for_issued_invoice(
 ) -> CustomerPayment | None:
     """Create a pending inbound payment stub after invoice issue.
 
-    Skips zero-total invoices and invoices whose enrollments already have a
-    positive pending or succeeded inbound payment. Does not allocate. Sets
-    ``enrollment_id`` only when the invoice has exactly one enrollment line;
-    customized and multi-enrollment invoices leave it unset.
+    Skips zero-total invoices and invoices already covered by positive pending
+    or succeeded payments. A partial cover creates a stub for the remainder.
+    Does not allocate. Sets ``enrollment_id`` only when the invoice has exactly
+    one enrollment line; customized and multi-enrollment invoices leave it unset.
     """
-    if Decimal(str(inv.total)) <= Decimal(0):
+    total = Decimal(str(inv.total))
+    if total <= Decimal(0):
         return None
 
     enrollment_ids = distinct_enrollment_ids_on_invoice(session, inv.id)
-    if _invoice_has_positive_open_payment(session, enrollment_ids):
+    remainder = total - _positive_open_payment_cover(session, enrollment_ids)
+    if remainder <= Decimal(0):
         return None
     enrollment_id = enrollment_ids[0] if len(enrollment_ids) == 1 else None
 
@@ -102,7 +102,7 @@ def create_pending_payment_for_issued_invoice(
         direction=BillingPaymentDirection.INBOUND,
         status=BillingPaymentStatus.PENDING,
         method=ISSUE_PENDING_PAYMENT_METHOD,
-        amount=Decimal(str(inv.total)),
+        amount=remainder,
         currency=currency,
         enrollment_id=enrollment_id,
         contact_id=contact_id,
@@ -126,6 +126,13 @@ def create_pending_payment_for_issued_invoice(
         },
     )
     return pay
+
+
+def _settle_succeeded_payment(session: Session, payment: CustomerPayment) -> None:
+    """Allocate when auto-invoice is on. Imported lazily to avoid a cycle."""
+    from app.services.enrollment_billing import settle_confirmed_payment
+
+    settle_confirmed_payment(session, payment)
 
 
 def normalize_manual_payment_method(raw: str) -> str:
@@ -351,6 +358,7 @@ def create_manual_inbound_payment(
                     session, payment=pay
                 )
                 receipt_id_for_upload = rcpt.id
+            _settle_succeeded_payment(session, pay)
         deletable = batch_orphan_payment_deletable(session, [pay]).get(pay.id, False)
         payload = serialize_payment_for_response(
             session, pay, orphan_payment_deletable=deletable

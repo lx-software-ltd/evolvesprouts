@@ -47,11 +47,14 @@ from app.services.billing_enrollment_confirmation import (
     promote_prospect_party_for_enrollment,
 )
 from app.services.enrollment_billing import (
-    BillingFollowup,
     apply_admin_enrollment_billing,
     assert_enrollment_amount_unlocked,
     bill_promoted_enrollment,
+    billing_for_enrollment_response,
+    enrollment_charge_is_changing,
     finalize_enrollment_billing,
+)
+from app.services.enrollment_billing_release import (
     release_billing_for_cancelled_enrollment,
 )
 from app.services.enrollment_invoice_links import billing_summaries_for_enrollments
@@ -59,6 +62,25 @@ from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def _billing_fields(
+    session: Session,
+    enrollment: Enrollment,
+    followup: Any,
+    warning: str | None,
+    *,
+    include_summary: bool,
+) -> dict[str, str | None] | None:
+    """Billing for the response. A row without an id has nothing to look up."""
+    raw_id = getattr(enrollment, "id", None)
+    return billing_for_enrollment_response(
+        session,
+        raw_id if isinstance(raw_id, UUID) else None,
+        followup,
+        warning,
+        include_summary=include_summary,
+    )
 
 
 def _enrollment_visible_under_instance_anchor(
@@ -231,7 +253,13 @@ def _create_enrollment(
         body = serialize_enrollment(
             created,
             party_display_name=party_labels[0],
-            billing=_billing_view(followup),
+            billing=_billing_fields(
+                session,
+                created,
+                followup,
+                None,
+                include_summary=followup is not None,
+            ),
         )
         session.commit()
         if followup is not None:
@@ -268,7 +296,7 @@ def _update_enrollment(
         previous_status = enrollment.status
         followup = None
         billing_warning: str | None = None
-        if "amount_paid" in payload or "currency" in payload:
+        if enrollment_charge_is_changing(enrollment, payload):
             assert_enrollment_amount_unlocked(session, enrollment)
 
         if "promote_to_family_id" in payload or "promote_to_organization_id" in payload:
@@ -358,7 +386,10 @@ def _update_enrollment(
         if "status" in payload and payload["status"] != previous_status:
             if payload["status"] == EnrollmentStatus.CANCELLED:
                 billing_warning = release_billing_for_cancelled_enrollment(
-                    session, enrollment, actor=actor_sub
+                    session,
+                    enrollment,
+                    actor=actor_sub,
+                    request_id=request_id(event),
                 )
             elif previous_status == EnrollmentStatus.WAITLISTED and payload[
                 "status"
@@ -380,7 +411,13 @@ def _update_enrollment(
         body = serialize_enrollment(
             updated,
             party_display_name=party_labels[0],
-            billing=_billing_view(followup, billing_warning),
+            billing=_billing_fields(
+                session,
+                updated,
+                followup,
+                billing_warning,
+                include_summary=True,
+            ),
         )
         session.commit()
         if followup is not None:
@@ -437,19 +474,3 @@ def _delete_enrollment(
                 bulk_reconcile_instance_capacity_status(session, [instance_row])
         session.commit()
         return json_response(204, {}, event=event)
-
-
-def _billing_view(
-    followup: BillingFollowup | None, warning: str | None = None
-) -> dict[str, str | None] | None:
-    """Invoice fields for the enrollment JSON. None keeps legacy responses unchanged."""
-    if followup is None and warning is None:
-        return None
-    return {
-        "invoice_number": followup.invoice_number if followup is not None else None,
-        "invoice_status": followup.invoice_status if followup is not None else None,
-        "payment_status": None,
-        "billing_warning": warning
-        if warning is not None
-        else (followup.warning if followup is not None else None),
-    }

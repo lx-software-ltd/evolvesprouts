@@ -425,11 +425,11 @@ def _handle_public_reservation(
 
     try:
         _run_reservation_post_success_hooks(reservation_payload)
-        if public_billing_followup is not None:
-            finalize_enrollment_billing(public_billing_followup)
     except Exception:
         # Best-effort: post-commit hooks must not change the accepted reservation response.
         logger.exception("Reservation post-success hooks failed after commit")
+    if public_billing_followup is not None:
+        finalize_enrollment_billing(public_billing_followup)
 
     logger.info(
         "Public reservation accepted",

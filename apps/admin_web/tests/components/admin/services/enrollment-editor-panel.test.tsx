@@ -104,4 +104,51 @@ describe('EnrollmentEditorPanel billing fields', () => {
     expect(screen.getByLabelText('Payment')).toHaveValue('Pending');
     expect(screen.queryByLabelText('Payment method')).not.toBeInTheDocument();
   });
+
+  it('shows a draft invoice and omits an unchanged amount', async () => {
+    const user = userEvent.setup();
+    const onUpdate = vi.fn();
+    const enrollment = {
+      id: 'enr-1',
+      instanceId: 'inst-1',
+      contactId: 'contact-1',
+      familyId: null,
+      organizationId: null,
+      ticketTierId: null,
+      discountCodeId: null,
+      status: 'registered',
+      amountPaid: '480.00',
+      currency: 'HKD',
+      enrolledAt: '2026-05-01T02:30:00.000Z',
+      cancelledAt: null,
+      notes: 'Keep',
+      createdBy: 'staff',
+      createdAt: null,
+      updatedAt: null,
+      invoiceNumber: null,
+      invoiceStatus: 'draft',
+      paymentStatus: 'pending',
+    } as Enrollment;
+
+    render(
+      <EnrollmentEditorPanel
+        mode='edit'
+        enrollment={enrollment}
+        pickers={pickers}
+        discountOptions={[]}
+        discountOptionsLoading={false}
+        discountOptionsError=''
+        isSaving={false}
+        onCreate={vi.fn()}
+        onUpdate={onUpdate}
+      />
+    );
+
+    expect(screen.getByLabelText('Invoice')).toHaveValue('Draft');
+    await user.click(screen.getByRole('button', { name: 'Update enrollment' }));
+    expect(onUpdate).toHaveBeenCalledWith(
+      'enr-1',
+      expect.not.objectContaining({ amount_paid: expect.anything(), currency: expect.anything() })
+    );
+  });
 });

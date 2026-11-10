@@ -21,20 +21,13 @@ _OPEN_INVOICE_STATUSES = (
 )
 
 
-def _as_list(rows: object) -> list[object]:
-    """Real queries return a list. An unconfigured test double does not."""
-    if isinstance(rows, list):
-        return rows
-    return []
-
-
 def open_invoice_enrollment_ids(
     session: Session, enrollment_ids: list[UUID]
 ) -> set[UUID]:
     """Enrollment ids that already sit on a draft or issued invoice."""
     if not enrollment_ids:
         return set()
-    rows = _as_list(
+    rows = (
         session.execute(
             select(CustomerInvoiceLine.enrollment_id)
             .join(
@@ -65,42 +58,38 @@ def billing_summaries_for_enrollments(
     }
     if not enrollment_ids:
         return summaries
-    invoice_rows = _as_list(
-        session.execute(
-            select(
-                CustomerInvoiceLine.enrollment_id,
-                CustomerInvoice.invoice_number,
-                CustomerInvoice.status,
-            )
-            .join(
-                CustomerInvoice,
-                CustomerInvoice.id == CustomerInvoiceLine.invoice_id,
-            )
-            .where(CustomerInvoiceLine.enrollment_id.in_(enrollment_ids))
-            .where(CustomerInvoice.status != BillingInvoiceStatus.VOID)
-            .order_by(CustomerInvoice.created_at.asc())
-        ).all()
-    )
+    invoice_rows = session.execute(
+        select(
+            CustomerInvoiceLine.enrollment_id,
+            CustomerInvoice.invoice_number,
+            CustomerInvoice.status,
+        )
+        .join(
+            CustomerInvoice,
+            CustomerInvoice.id == CustomerInvoiceLine.invoice_id,
+        )
+        .where(CustomerInvoiceLine.enrollment_id.in_(enrollment_ids))
+        .where(CustomerInvoice.status != BillingInvoiceStatus.VOID)
+        .order_by(CustomerInvoice.created_at.asc())
+    ).all()
     for enrollment_id, number, status in invoice_rows:
         if not isinstance(enrollment_id, UUID):
             continue
         summaries[enrollment_id]["invoice_number"] = str(number) if number else None
-        summaries[enrollment_id]["invoice_status"] = getattr(status, "value", status)
-    payment_rows = _as_list(
-        session.execute(
-            select(
-                CustomerPayment.enrollment_id,
-                CustomerPayment.status,
-            )
-            .where(CustomerPayment.enrollment_id.in_(enrollment_ids))
-            .where(CustomerPayment.direction == BillingPaymentDirection.INBOUND)
-            .order_by(CustomerPayment.created_at.asc())
-        ).all()
-    )
+        summaries[enrollment_id]["invoice_status"] = status.value
+    payment_rows = session.execute(
+        select(
+            CustomerPayment.enrollment_id,
+            CustomerPayment.status,
+        )
+        .where(CustomerPayment.enrollment_id.in_(enrollment_ids))
+        .where(CustomerPayment.direction == BillingPaymentDirection.INBOUND)
+        .order_by(CustomerPayment.created_at.asc())
+    ).all()
     for enrollment_id, status in payment_rows:
         if not isinstance(enrollment_id, UUID):
             continue
         if status == BillingPaymentStatus.FAILED:
             continue
-        summaries[enrollment_id]["payment_status"] = getattr(status, "value", status)
+        summaries[enrollment_id]["payment_status"] = status.value
     return summaries

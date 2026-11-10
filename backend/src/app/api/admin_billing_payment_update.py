@@ -263,6 +263,11 @@ def update_manual_inbound_customer_payment(
                         session, payment=p
                     )
                     receipt_id_for_upload = rcpt.id
+                from app.services.enrollment_billing import (
+                    settle_confirmed_payment,
+                )
+
+                settle_confirmed_payment(session, p)
         else:
             raise ValidationError(
                 "Only pending or succeeded manual inbound payments can be updated",

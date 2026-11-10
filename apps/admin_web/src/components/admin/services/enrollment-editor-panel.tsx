@@ -26,6 +26,24 @@ type ApiSchemas = components['schemas'];
 const ENROLLMENT_EDITOR_FORM_ID = 'enrollment-editor-form';
 const EMPTY_PARENT_VALUE = '';
 
+function sameMoney(next: string, previous: string | null | undefined): boolean {
+  const left = next.trim();
+  const right = (previous ?? '').trim();
+  if (left === right) {
+    return true;
+  }
+  const leftNumber = left === '' ? 0 : Number.parseFloat(left);
+  const rightNumber = right === '' ? 0 : Number.parseFloat(right);
+  if (!Number.isFinite(leftNumber) || !Number.isFinite(rightNumber)) {
+    return false;
+  }
+  return Math.abs(leftNumber - rightNumber) < 0.000001;
+}
+
+function sameCurrency(next: string, previous: string | null | undefined): boolean {
+  return next.trim().toUpperCase() === (previous ?? '').trim().toUpperCase();
+}
+
 function ensureOption(
   options: EnrollmentParentPickerOption[],
   id: string | null | undefined,
@@ -143,11 +161,15 @@ export function EnrollmentEditorPanel({
   const buildUpdatePayload = (enrolledIso: string): ApiSchemas['UpdateEnrollmentRequest'] => {
     const base: ApiSchemas['UpdateEnrollmentRequest'] = {
       status,
-      amount_paid: amountPaid.trim() || null,
-      currency: currency.trim() || null,
       notes: notes.trim() || null,
       enrolled_at: enrolledIso,
     };
+    if (!sameMoney(amountPaid, enrollment?.amountPaid)) {
+      base.amount_paid = amountPaid.trim() || null;
+    }
+    if (!sameCurrency(currency, enrollment?.currency)) {
+      base.currency = currency.trim() || null;
+    }
     const nextDiscount = discountCodeId.trim() || null;
     const previousDiscount = enrollment?.discountCodeId?.trim() || null;
     if (nextDiscount !== previousDiscount) {
@@ -348,7 +370,14 @@ export function EnrollmentEditorPanel({
         {isEditMode && enrollment ? (
           <AdminFieldGrid columns={2}>
             <AdminField label='Invoice' htmlFor='enrollment-invoice'>
-              <Input id='enrollment-invoice' value={enrollment.invoiceNumber ?? '—'} readOnly />
+              <Input
+                id='enrollment-invoice'
+                value={
+                  enrollment.invoiceNumber ??
+                  (enrollment.invoiceStatus ? formatEnumLabel(enrollment.invoiceStatus) : '—')
+                }
+                readOnly
+              />
             </AdminField>
             <AdminField label='Payment' htmlFor='enrollment-payment'>
               <Input

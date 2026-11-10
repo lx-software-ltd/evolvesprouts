@@ -57,7 +57,7 @@ export function InstanceEnrollmentsSection({
       } else if (detail.enrollment) {
         list.upsertEnrollmentInList(detail.enrollment);
       }
-      if (detail.operation === 'create') {
+      if (detail.operation === 'create' || detail.operation === 'update') {
         setBillingWarning(detail.enrollment?.billingWarning ?? '');
       }
       await list.refetch();

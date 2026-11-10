@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.admin_billing_payment_create import (
@@ -30,25 +30,25 @@ from app.db.models.enums import (
     BillingPaymentStatus,
     EnrollmentStatus,
 )
-from app.db.models.payment_allocation import PaymentAllocation
 from app.exceptions import ConflictError, ValidationError
 from app.services.customer_billing import (
     finalize_receipt_pdf_upload,
-    recompute_invoice_settlement,
     send_invoice_email,
 )
 from app.services.enrollment_invoice_build import (
     BillingFollowup,
-    _as_list,
-    _followup_from,
-    _invoice_for_payment,
-    _money,
     allocate_succeeded_payment,
+    enrollment_auto_invoice_enabled,
+    invoice_for_payment,
+    money_amount,
 )
+from app.services.enrollment_invoice_links import (
+    billing_summaries_for_enrollments,
+    open_invoice_enrollment_ids,
+)
+from app.utils.logging import get_logger
 
 __all__ = ["BillingFollowup"]
-from app.services.enrollment_invoice_links import open_invoice_enrollment_ids
-from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -61,7 +61,7 @@ def _record_admin_payment(
     received: bool,
     actor: str,
 ) -> CustomerPayment:
-    amount = _money(enrollment.amount_paid)
+    amount = money_amount(enrollment.amount_paid)
     currency = (enrollment.currency or get_default_currency_code()).upper()[:3]
     enrollment.currency = currency
     if amount <= 0:
@@ -119,8 +119,8 @@ def apply_admin_enrollment_billing(
 ) -> BillingFollowup:
     """Record the admin payment, then invoice unless the enrollment is bill-later or free."""
     if (
-        enrollment.status == EnrollmentStatus.WAITLISTED
-        or billing.get("bill_later") is True
+        billing.get("bill_later") is True
+        or enrollment.status == EnrollmentStatus.CANCELLED
     ):
         return BillingFollowup()
     payment = _record_admin_payment(
@@ -130,9 +130,7 @@ def apply_admin_enrollment_billing(
         received=billing.get("payment_received") is True,
         actor=actor,
     )
-    if _money(payment.amount) <= 0:
-        return _followup_from(payment, None)
-    followup = _invoice_for_payment(
+    followup = invoice_for_payment(
         session,
         enrollment,
         payment,
@@ -141,6 +139,7 @@ def apply_admin_enrollment_billing(
         send_email=billing.get("send_invoice_email") is True,
         display_name=None,
         require_catalogue_match=False,
+        receipt_when_uninvoiced=True,
     )
     if (
         billing.get("send_invoice_email") is True
@@ -153,6 +152,7 @@ def apply_admin_enrollment_billing(
             invoice_id=followup.invoice_id,
             invoice_number=followup.invoice_number,
             invoice_status=followup.invoice_status,
+            payment_status=followup.payment_status,
             receipt_id=followup.receipt_id,
             warning="Invoice issued with no bill-to email, so it was not sent.",
         )
@@ -184,7 +184,7 @@ def bill_promoted_enrollment(
         .limit(1)
     ).scalar_one_or_none()
     if isinstance(existing, CustomerPayment):
-        return _invoice_for_payment(
+        return invoice_for_payment(
             session,
             enrollment,
             existing,
@@ -193,21 +193,9 @@ def bill_promoted_enrollment(
             send_email=False,
             display_name=None,
             require_catalogue_match=False,
+            receipt_when_uninvoiced=True,
         )
-    if enrollment.amount_paid is None:
-        return BillingFollowup()
-    return apply_admin_enrollment_billing(
-        session,
-        enrollment,
-        {
-            "bill_later": False,
-            "payment_method": "fps",
-            "payment_received": False,
-            "send_invoice_email": False,
-        },
-        actor=actor,
-        request_id=request_id,
-    )
+    return BillingFollowup()
 
 
 def attach_public_invoice(
@@ -221,7 +209,7 @@ def attach_public_invoice(
     duplicate: bool = False,
 ) -> BillingFollowup:
     """Invoice a website booking. Email the attendee when the invoice is issued."""
-    followup = _invoice_for_payment(
+    followup = invoice_for_payment(
         session,
         enrollment,
         payment,
@@ -230,6 +218,7 @@ def attach_public_invoice(
         send_email=True,
         display_name=(attendee_name or "").strip() or None,
         require_catalogue_match=True,
+        receipt_when_uninvoiced=False,
     )
     email = (attendee_email or "").strip() or followup.email_to
     if followup.invoice_status != BillingInvoiceStatus.ISSUED.value:
@@ -240,6 +229,7 @@ def attach_public_invoice(
             invoice_id=followup.invoice_id,
             invoice_number=followup.invoice_number,
             invoice_status=followup.invoice_status,
+            payment_status=followup.payment_status,
             receipt_id=followup.receipt_id,
             warning="Invoice issued with no attendee email, so it was not sent.",
             duplicate=duplicate,
@@ -249,6 +239,7 @@ def attach_public_invoice(
         invoice_id=followup.invoice_id,
         invoice_number=followup.invoice_number,
         invoice_status=followup.invoice_status,
+        payment_status=followup.payment_status,
         receipt_id=followup.receipt_id,
         email_to=email,
         warning=followup.warning,
@@ -282,12 +273,18 @@ def finalize_enrollment_billing(followup: BillingFollowup) -> None:
 
 
 def settle_confirmed_payment(session: Session, payment: CustomerPayment) -> None:
-    """Allocate a newly succeeded payment to that enrollment's open issued invoices."""
-    if payment.enrollment_id is None or _money(payment.amount) <= 0:
+    """Allocate a newly succeeded payment to that enrollment's open issued invoices.
+
+    Stays off with ``ENROLLMENT_AUTO_INVOICE`` so confirming a payment keeps
+    the previous manual-allocation behaviour.
+    """
+    if not enrollment_auto_invoice_enabled():
+        return
+    if payment.enrollment_id is None or money_amount(payment.amount) <= 0:
         return
     if payment.status != BillingPaymentStatus.SUCCEEDED:
         return
-    invoices = _as_list(
+    invoices = (
         session.execute(
             select(CustomerInvoice)
             .join(
@@ -315,128 +312,55 @@ def assert_enrollment_amount_unlocked(session: Session, enrollment: Enrollment) 
         )
 
 
-def _append_note(enrollment: Enrollment, line: str) -> None:
-    notes = (enrollment.notes or "").strip()
-    if line in notes:
-        return
-    enrollment.notes = f"{notes}\n{line}".strip() if notes else line
+def enrollment_charge_is_changing(
+    enrollment: Enrollment, payload: Mapping[str, object]
+) -> bool:
+    """True when the update would change the amount or currency already stored."""
+    if "amount_paid" in payload and money_amount(
+        payload["amount_paid"]
+    ) != money_amount(enrollment.amount_paid):
+        return True
+    if "currency" not in payload:
+        return False
+    incoming = str(payload["currency"] or "").strip().upper()
+    current = str(enrollment.currency or "").strip().upper()
+    return incoming != current
 
 
-def release_billing_for_cancelled_enrollment(
-    session: Session, enrollment: Enrollment, *, actor: str
-) -> str | None:
-    """Void an unpaid invoice. A paid invoice stays and is flagged for refund."""
-    rows = _as_list(
-        session.execute(
-            select(CustomerInvoiceLine, CustomerInvoice)
-            .join(
-                CustomerInvoice,
-                CustomerInvoice.id == CustomerInvoiceLine.invoice_id,
-            )
-            .where(CustomerInvoiceLine.enrollment_id == enrollment.id)
-            .where(
-                CustomerInvoice.status.in_(
-                    (BillingInvoiceStatus.DRAFT, BillingInvoiceStatus.ISSUED)
-                )
-            )
-        ).all()
-    )
-    warning: str | None = None
-    for row in rows:
-        if not isinstance(row, tuple) or len(row) != 2:
-            continue
-        line, invoice = row
-        if not isinstance(invoice, CustomerInvoice):
-            continue
-        if invoice.status == BillingInvoiceStatus.DRAFT:
-            _remove_draft_line(session, invoice, line, actor=actor)
-            continue
-        other = session.scalar(
-            select(func.count())
-            .select_from(CustomerInvoiceLine)
-            .where(CustomerInvoiceLine.invoice_id == invoice.id)
-            .where(CustomerInvoiceLine.enrollment_id != enrollment.id)
-        )
-        if not isinstance(other, int):
-            other = 0
-        number = invoice.invoice_number or str(invoice.id)
-        if other > 0 or _money(invoice.amount_allocated) > 0:
-            warning = (
-                f"Refund required: invoice {number} was paid or shared "
-                "before this enrollment was cancelled."
-            )
-            _append_note(enrollment, warning)
-            continue
-        invoice.status = BillingInvoiceStatus.VOID
-        invoice.voided_at = datetime.now(UTC)
-        invoice.void_reason = "Enrollment cancelled"
-        recompute_invoice_settlement(session, invoice)
-        AuditService(session, user_id=actor, request_id=None).log_custom(
-            table_name="customer_invoices",
-            record_id=invoice.id,
-            action="VOID_FROM_ISSUED",
-            new_values={"reason": invoice.void_reason, "source": "enrollment_cancel"},
-        )
-        _delete_pending_enrollment_payments(session, enrollment.id, actor=actor)
-    return warning
-
-
-def _remove_draft_line(
+def billing_for_enrollment_response(
     session: Session,
-    invoice: CustomerInvoice,
-    line: CustomerInvoiceLine,
+    enrollment_id: UUID | None,
+    followup: BillingFollowup | None,
+    warning: str | None,
     *,
-    actor: str,
-) -> None:
-    session.delete(line)
-    session.flush()
-    remaining = _as_list(
-        session.scalars(
-            select(CustomerInvoiceLine).where(
-                CustomerInvoiceLine.invoice_id == invoice.id
-            )
-        ).all()
+    include_summary: bool,
+) -> dict[str, str | None] | None:
+    """Invoice and payment fields for an enrollment response."""
+    text = (
+        warning
+        if warning is not None
+        else (followup.warning if followup is not None else None)
     )
-    if not remaining:
-        AuditService(session, user_id=actor, request_id=None).log_custom(
-            table_name="customer_invoices",
-            record_id=invoice.id,
-            action="DELETE_DRAFT",
-            old_values={"reason": "enrollment_cancelled"},
+    summary: dict[str, str | None] | None = None
+    if include_summary and isinstance(enrollment_id, UUID):
+        summary = billing_summaries_for_enrollments(session, [enrollment_id]).get(
+            enrollment_id
         )
-        session.delete(invoice)
-        return
-    total = sum((_money(item.line_total) for item in remaining), Decimal(0))
-    invoice.subtotal = total
-    invoice.total = total + _money(invoice.tax_total)
-    invoice.balance_due = invoice.total
-
-
-def _delete_pending_enrollment_payments(
-    session: Session, enrollment_id: UUID, *, actor: str
-) -> None:
-    payments = _as_list(
-        session.scalars(
-            select(CustomerPayment)
-            .where(CustomerPayment.enrollment_id == enrollment_id)
-            .where(CustomerPayment.direction == BillingPaymentDirection.INBOUND)
-            .where(CustomerPayment.status == BillingPaymentStatus.PENDING)
-        ).all()
-    )
-    for payment in payments:
-        if not isinstance(payment, CustomerPayment):
-            continue
-        allocated = session.scalar(
-            select(func.count())
-            .select_from(PaymentAllocation)
-            .where(PaymentAllocation.payment_id == payment.id)
-        )
-        if isinstance(allocated, int) and allocated > 0:
-            continue
-        AuditService(session, user_id=actor, request_id=None).log_custom(
-            table_name="customer_payments",
-            record_id=payment.id,
-            action="ORPHAN_INBOUND_PAYMENT_DELETED",
-            old_values=payment.to_audit_dict(),
-        )
-        session.delete(payment)
+    if summary is None:
+        if followup is None and text is None:
+            return None
+        summary = {
+            "invoice_number": None,
+            "invoice_status": None,
+            "payment_status": None,
+            "billing_warning": None,
+        }
+    if text:
+        summary["billing_warning"] = text
+    if (
+        followup is not None
+        and followup.payment_status
+        and summary.get("payment_status") is None
+    ):
+        summary["payment_status"] = followup.payment_status
+    return summary
