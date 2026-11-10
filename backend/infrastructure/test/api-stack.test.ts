@@ -43,6 +43,25 @@ function synthApiTemplate(): Template {
   return Template.fromStack(stack);
 }
 
+const DELIVERY_LOGS_PRINCIPAL = "delivery.logs.amazonaws.com";
+
+function containsExactString(value: unknown, expected: string): boolean {
+  if (typeof value === "string") {
+    // Quoted JSON fragments from Fn::Join are split on the quote so a
+    // principal must match a whole token, not a substring of a host.
+    return value.split('"').some((part) => part === expected);
+  }
+  if (Array.isArray(value)) {
+    return value.some((item) => containsExactString(item, expected));
+  }
+  if (value && typeof value === "object") {
+    return Object.values(value).some((item) =>
+      containsExactString(item, expected),
+    );
+  }
+  return false;
+}
+
 function assertApiGatewayCloudWatchLogging(template: Template): void {
   const accounts = template.findResources("AWS::ApiGateway::Account");
   const accountEntries = Object.entries(accounts);
@@ -71,32 +90,26 @@ function assertApiGatewayCloudWatchLogging(template: Template): void {
   }
 
   const policies = template.findResources("AWS::Logs::ResourcePolicy");
-  const delivery = Object.values(policies).find((resource) =>
-    JSON.stringify(resource.Properties ?? {}).includes(
-      "delivery.logs.amazonaws.com",
-    ),
+  const delivery = Object.values(policies).find((policy) =>
+    containsExactString(policy.Properties ?? {}, DELIVERY_LOGS_PRINCIPAL),
   );
   if (!delivery) {
     throw new Error(
-      "Expected a CloudWatch Logs resource policy for delivery.logs.amazonaws.com",
+      "Expected a CloudWatch Logs resource policy for the delivery logs service",
     );
   }
 
   const keys = template.findResources("AWS::KMS::Key");
-  const logKey = Object.values(keys).find((resource) =>
-    JSON.stringify(resource.Properties ?? {}).includes(
-      "API Gateway CloudWatch log encryption",
-    ),
+  const logKey = Object.values(keys).find(
+    (key) =>
+      key.Properties?.Description ===
+      "KMS key for API Gateway CloudWatch log encryption",
   );
-  if (
-    !logKey ||
-    !JSON.stringify(logKey.Properties ?? {}).includes(
-      "delivery.logs.amazonaws.com",
-    )
-  ) {
-    throw new Error(
-      "ApiLogEncryptionKey must allow delivery.logs.amazonaws.com",
-    );
+  const keyAllowsDelivery =
+    logKey !== undefined &&
+    containsExactString(logKey.Properties ?? {}, DELIVERY_LOGS_PRINCIPAL);
+  if (!keyAllowsDelivery) {
+    throw new Error("ApiLogEncryptionKey must allow the delivery logs service");
   }
 }
 
