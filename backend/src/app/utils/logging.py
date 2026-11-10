@@ -15,13 +15,13 @@ import hashlib
 import json
 import logging
 import os
+import re
 import sys
 import traceback
-from contextvars import ContextVar
-from datetime import datetime
-from datetime import timezone
-from typing import Any
 from collections.abc import MutableMapping
+from contextvars import ContextVar
+from datetime import UTC, datetime
+from typing import Any
 
 
 def mask_email(email: str) -> str:
@@ -111,6 +111,12 @@ def _logrecord_builtin_keys() -> frozenset[str]:
 
 
 _LOGRECORD_BUILTIN_KEYS = _logrecord_builtin_keys()
+_SQL_LOG_MARKERS = (
+    "[SQL:",
+    "[parameters:",
+    "(Background on this error at:",
+)
+_CONSTRAINT_NAME = re.compile(r"""constraint ["']([A-Za-z0-9_]+)["']""")
 
 
 class StructuredLogFormatter(logging.Formatter):
@@ -123,7 +129,7 @@ class StructuredLogFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         """Format a log record as JSON."""
         log_data: dict[str, Any] = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -146,13 +152,10 @@ class StructuredLogFormatter(logging.Formatter):
                 "function": record.funcName,
             }
 
-        # Add exception info if present
-        if record.exc_info:
-            log_data["exception"] = {
-                "type": record.exc_info[0].__name__ if record.exc_info[0] else None,
-                "message": str(record.exc_info[1]) if record.exc_info[1] else None,
-                "traceback": traceback.format_exception(*record.exc_info),
-            }
+        # Add exception info if present. Database errors include bound
+        # parameters, so those messages are reduced to the constraint name.
+        if record.exc_info and record.exc_info[0] is not None:
+            log_data["exception"] = _exception_fields(record.exc_info)
 
         # Merge ``logger.info(..., extra={...})`` fields (they become LogRecord attributes)
         for key, value in record.__dict__.items():
@@ -168,6 +171,84 @@ class StructuredLogFormatter(logging.Formatter):
                     log_data[key] = value
 
         return json.dumps(log_data, default=str)
+
+
+def _exception_fields(
+    exc_info: tuple[type[BaseException], BaseException, Any],
+) -> dict[str, Any]:
+    """Return type, a safe message, and a traceback without SQL parameters."""
+    _exc_type, exc, _tb = exc_info
+    return {
+        "type": type(exc).__name__,
+        "message": _safe_exception_message(exc),
+        "traceback": _safe_traceback(exc),
+    }
+
+
+def _safe_traceback(exc: BaseException) -> list[str]:
+    """Format the cause chain, redacting each exception on its own."""
+    lines: list[str] = []
+    chain = list(reversed(_exception_chain(exc)))
+    for index, (item, _reached_by_cause) in enumerate(chain):
+        if index:
+            caused_directly = chain[index - 1][1]
+            if caused_directly:
+                lines.append(
+                    "The above exception was the direct cause "
+                    "of the following exception:\n"
+                )
+            else:
+                lines.append(
+                    "During handling of the above exception, "
+                    "another exception occurred:\n"
+                )
+        lines.append("Traceback (most recent call last):\n")
+        if item.__traceback__ is not None:
+            lines.extend(traceback.format_tb(item.__traceback__))
+        lines.append(f"{type(item).__name__}: {_safe_exception_message(item)}\n")
+    return lines
+
+
+def _exception_chain(exc: BaseException) -> list[tuple[BaseException, bool]]:
+    """Return the exception and its causes, outermost first.
+
+    The boolean is true when this exception is the explicit ``__cause__``
+    of the exception before it.
+    """
+    chain: list[tuple[BaseException, bool]] = [(exc, False)]
+    seen = {id(exc)}
+    current = exc
+    while True:
+        if current.__cause__ is not None:
+            nxt: BaseException | None = current.__cause__
+            explicit = True
+        elif current.__suppress_context__ or current.__context__ is None:
+            break
+        else:
+            nxt = current.__context__
+            explicit = False
+        if nxt is None or id(nxt) in seen:
+            break
+        seen.add(id(nxt))
+        chain.append((nxt, explicit))
+        current = nxt
+    return chain
+
+
+def _safe_exception_message(exc: BaseException) -> str:
+    raw = str(exc)
+    if not _is_database_exception_text(raw):
+        return raw
+    match = _CONSTRAINT_NAME.search(raw)
+    if match is not None:
+        return f"database constraint {match.group(1)}"
+    return "database error"
+
+
+def _is_database_exception_text(raw: str) -> bool:
+    if any(marker in raw for marker in _SQL_LOG_MARKERS):
+        return True
+    return "DETAIL:" in raw and ("Key (" in raw or "constraint" in raw)
 
 
 class ContextLogger(logging.LoggerAdapter):

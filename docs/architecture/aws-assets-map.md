@@ -622,16 +622,19 @@ not per-request `Origin` echoing.
 
 | Resource Type | Logical ID | Purpose | Notes |
 |--------------|------------|---------|-------|
-| IAM Role | `ApiGatewayLogRole` | CloudWatch Logs | Allows API Gateway to write access logs |
+| IAM Role | `EvolvesproutsApiCloudWatchRole00972F46` | CloudWatch Logs | Role created by `RestApi` when `cloudWatchRole` is true. `AmazonAPIGatewayPushToCloudWatchLogs`. The earlier unused `ApiGatewayLogRole` is removed so the region has one account role |
 
 ### API Gateway Account Settings
 
 | Resource Type | Logical ID | Notes |
 |--------------|------------|-------|
-| Account | `ApiGatewayAccount` | Configures CloudWatch role for API Gateway |
+| Account | `EvolvesproutsApiAccountE7DF9A66` | The one `AWS::ApiGateway::Account` in the stack. Its role is `EvolvesproutsApiCloudWatchRole00972F46`. An unchanged account resource does not correct a role set outside the stack |
+| Custom resource | `ApiGatewayCloudWatchAccount` | Calls `UpdateAccount` on create and when the role ARN changes. Sets `/cloudwatchRoleArn` to that RestApi role. The setting is regional and applies to every API in the region |
 
 **Note:** The access log group `evolvesprouts-api-access-logs` is created and
 configured by stack custom resources (including retention and KMS association).
+Execution and access logs both use the account CloudWatch role. The access log
+group is not given a separate delivery resource policy.
 
 ---
 

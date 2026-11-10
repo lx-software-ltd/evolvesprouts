@@ -43,6 +43,90 @@ function synthApiTemplate(): Template {
   return Template.fromStack(stack);
 }
 
+const DELIVERY_LOGS_PRINCIPAL = "delivery.logs.amazonaws.com";
+
+function containsExactString(value: unknown, expected: string): boolean {
+  if (typeof value === "string") {
+    // Quoted JSON fragments from Fn::Join are split on the quote so a
+    // principal must match a whole token, not a substring of a host.
+    return value.split('"').some((part) => part === expected);
+  }
+  if (Array.isArray(value)) {
+    return value.some((item) => containsExactString(item, expected));
+  }
+  if (value && typeof value === "object") {
+    return Object.values(value).some((item) =>
+      containsExactString(item, expected),
+    );
+  }
+  return false;
+}
+
+function assertApiGatewayCloudWatchLogging(template: Template): void {
+  const accounts = template.findResources("AWS::ApiGateway::Account");
+  const accountEntries = Object.entries(accounts);
+  if (accountEntries.length !== 1) {
+    throw new Error(
+      `Expected one AWS::ApiGateway::Account, found ${accountEntries.length}`,
+    );
+  }
+  const [logicalId, resource] = accountEntries[0];
+  if (logicalId !== "EvolvesproutsApiAccountE7DF9A66") {
+    throw new Error(
+      `Expected the RestApi account logical id EvolvesproutsApiAccountE7DF9A66, found ${logicalId}`,
+    );
+  }
+  const roleArn = resource.Properties?.CloudWatchRoleArn as
+    | { "Fn::GetAtt"?: [string, string] }
+    | undefined;
+  const roleRef = roleArn?.["Fn::GetAtt"];
+  if (
+    roleRef?.[0] !== "EvolvesproutsApiCloudWatchRole00972F46" ||
+    roleRef?.[1] !== "Arn"
+  ) {
+    throw new Error(
+      `${logicalId} CloudWatch role logical id is ${roleRef?.[0] ?? "missing"}`,
+    );
+  }
+
+  const policies = template.findResources("AWS::Logs::ResourcePolicy");
+  if (Object.keys(policies).length !== 0) {
+    throw new Error(
+      "REST API logs use the account role, so the stack must not add a log resource policy",
+    );
+  }
+
+  const keys = template.findResources("AWS::KMS::Key");
+  const logKey = Object.values(keys).find(
+    (key) =>
+      key.Properties?.Description ===
+      "KMS key for API Gateway CloudWatch log encryption",
+  );
+  if (
+    logKey !== undefined &&
+    containsExactString(logKey.Properties ?? {}, DELIVERY_LOGS_PRINCIPAL)
+  ) {
+    throw new Error(
+      "ApiLogEncryptionKey must not grant the delivery logs service",
+    );
+  }
+
+  const customResources = template.findResources("Custom::AWS");
+  const accountUpdate = Object.entries(customResources).find(([, item]) => {
+    const rendered = JSON.stringify(item.Properties ?? {});
+    return (
+      rendered.includes("updateAccount") &&
+      rendered.includes("/cloudwatchRoleArn") &&
+      rendered.includes("EvolvesproutsApiCloudWatchRole00972F46")
+    );
+  });
+  if (!accountUpdate) {
+    throw new Error(
+      "Expected ApiGatewayCloudWatchAccount to call updateAccount for the RestApi CloudWatch role",
+    );
+  }
+}
+
 function assertStageHasNoApiGatewayCacheCluster(template: Template): void {
   const stages = template.findResources("AWS::ApiGateway::Stage");
   const entries = Object.entries(stages);
@@ -994,6 +1078,7 @@ function main(): void {
     env: { account: "111111111111", region: "ap-southeast-1" },
   });
   const template = Template.fromStack(stack);
+  assertApiGatewayCloudWatchLogging(template);
   assertStageHasNoApiGatewayCacheCluster(template);
   assertGatewayResponsesHaveNoBodyTemplates(template);
   assertStageHasCheckovCkv120Suppression(template);

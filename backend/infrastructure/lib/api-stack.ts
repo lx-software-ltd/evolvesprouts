@@ -2944,15 +2944,6 @@ export class ApiStack extends cdk.Stack {
     // ---------------------------------------------------------------------
     // API Gateway
     // ---------------------------------------------------------------------
-    const apiGatewayLogRole = new iam.Role(this, "ApiGatewayLogRole", {
-      assumedBy: new iam.ServicePrincipal("apigateway.amazonaws.com"),
-      managedPolicies: [
-        iam.ManagedPolicy.fromAwsManagedPolicyName(
-          "service-role/AmazonAPIGatewayPushToCloudWatchLogs"
-        ),
-      ],
-    });
-
     // -------------------------------------------------------------------------
     // API Gateway access logs
     // SECURITY: Encrypted with KMS key (Checkov requirement)
@@ -3117,6 +3108,8 @@ export class ApiStack extends cdk.Stack {
     // Never use Cors.ALL_ORIGINS in production - it allows any website to make requests
     const api = new apigateway.RestApi(this, "EvolvesproutsApi", {
       restApiName: name("api"),
+      // Keep the single account role RestApi creates for this region.
+      cloudWatchRole: true,
       defaultCorsPreflightOptions: {
         allowOrigins: corsAllowedOrigins,
         allowMethods: ["GET", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"],
@@ -3153,6 +3146,70 @@ export class ApiStack extends cdk.Stack {
     });
     api.deploymentStage.node.addDependency(apiAccessLogGroupRetention);
     api.deploymentStage.node.addDependency(apiAccessLogGroupKey);
+    const apiCloudWatchRole = api.node.findChild("CloudWatchRole");
+    if (!iam.Role.isRole(apiCloudWatchRole)) {
+      throw new Error("ApiStack: RestApi CloudWatchRole is missing");
+    }
+    // An unchanged AWS::ApiGateway::Account does not correct a role set
+    // outside the stack. Reapply it when this resource is created or its
+    // role changes. The setting is regional and covers every API here.
+    const apiGatewayCloudWatchAccount = new customresources.AwsCustomResource(
+      this,
+      "ApiGatewayCloudWatchAccount",
+      {
+        onCreate: {
+          service: "APIGateway",
+          action: "updateAccount",
+          parameters: {
+            patchOperations: [
+              {
+                op: "replace",
+                path: "/cloudwatchRoleArn",
+                value: apiCloudWatchRole.roleArn,
+              },
+            ],
+          },
+          physicalResourceId: customresources.PhysicalResourceId.of(
+            "ApiGatewayCloudWatchAccount"
+          ),
+        },
+        onUpdate: {
+          service: "APIGateway",
+          action: "updateAccount",
+          parameters: {
+            patchOperations: [
+              {
+                op: "replace",
+                path: "/cloudwatchRoleArn",
+                value: apiCloudWatchRole.roleArn,
+              },
+            ],
+          },
+          physicalResourceId: customresources.PhysicalResourceId.of(
+            "ApiGatewayCloudWatchAccount"
+          ),
+        },
+        policy: customresources.AwsCustomResourcePolicy.fromStatements([
+          new iam.PolicyStatement({
+            actions: ["apigateway:PATCH"],
+            resources: [
+              `arn:${cdk.Aws.PARTITION}:apigateway:${cdk.Stack.of(this).region}::/account`,
+            ],
+          }),
+          new iam.PolicyStatement({
+            actions: ["iam:PassRole"],
+            resources: [apiCloudWatchRole.roleArn],
+            conditions: {
+              StringEquals: {
+                "iam:PassedToService": "apigateway.amazonaws.com",
+              },
+            },
+          }),
+        ]),
+        installLatestAwsSdk: false,
+      }
+    );
+    api.deploymentStage.node.addDependency(apiGatewayCloudWatchAccount);
 
     const cfnApiStage = api.deploymentStage.node
       .defaultChild as apigateway.CfnStage | undefined;
