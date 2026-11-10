@@ -19,6 +19,8 @@ from app.api.public_reservations_billing import (
     _apply_enrollment_bill_to,
     _validate_discount_code_redemption_scope,
     _validate_public_bill_to_membership,
+    heal_duplicate_public_invoice,
+    record_public_enrollment_billing,
 )
 from app.api.public_reservations_intro_call import (
     _enforce_intro_call_invariants,
@@ -46,15 +48,12 @@ from app.db.models.enums import (
     ContactSource,
     ContactType,
     EnrollmentStatus,
-    LeadEventType,
-    LeadType,
 )
 from app.db.repositories import DiscountCodeRepository, EnrollmentRepository
 from app.db.repositories.contact import ContactRepository
 from app.db.repositories.service_instance import ServiceInstanceRepository
 from app.exceptions import ConflictError, ValidationError
-from app.services.customer_billing import record_reservation_customer_payment
-from app.services.lead_funnel_automation import ensure_contact_lead
+from app.services.enrollment_billing import finalize_enrollment_billing
 from app.services.turnstile import (
     extract_client_ip,
     extract_turnstile_token,
@@ -113,135 +112,214 @@ def _handle_public_reservation(
     try:
         request_id_str = str(event.get("requestContext", {}).get("requestId") or "")
         created_enrollment_id: UUID | None = None
-        created_new_enrollment = False
         stripe_pi_idempotent_hit: bool = False
         stripe_pi_existing_payment_id: UUID | None = None
-        with Session(get_engine()) as session:
-            with session.begin():
-                set_audit_context(
-                    session,
-                    user_id=None,
-                    request_id=request_id_str or None,
+        public_billing_followup = None
+        with Session(get_engine()) as session, session.begin():
+            set_audit_context(
+                session,
+                user_id=None,
+                request_id=request_id_str or None,
+            )
+            booking_system = reservation_payload.get("booking_system")
+            per_booking = booking_system in _PER_BOOKING_BOOKING_SYSTEMS
+            scheduled_instance: ServiceInstance | None = None
+            if per_booking:
+                raw_slug_ignored = reservation_payload.get("service_instance_slug")
+                if raw_slug_ignored not in (None, ""):
+                    logger.debug(
+                        "Ignoring serviceInstanceSlug for per-booking reservation",
+                        extra={
+                            "booking_system": booking_system,
+                            "service_instance_slug": str(raw_slug_ignored).strip(),
+                        },
+                    )
+                catalog_service = _resolve_consultation_or_intro_service(
+                    session, reservation_payload
                 )
-                booking_system = reservation_payload.get("booking_system")
-                per_booking = booking_system in _PER_BOOKING_BOOKING_SYSTEMS
-                scheduled_instance: ServiceInstance | None = None
-                if per_booking:
-                    raw_slug_ignored = reservation_payload.get("service_instance_slug")
-                    if raw_slug_ignored not in (None, ""):
-                        logger.debug(
-                            "Ignoring serviceInstanceSlug for per-booking reservation",
-                            extra={
-                                "booking_system": booking_system,
-                                "service_instance_slug": str(raw_slug_ignored).strip(),
-                            },
-                        )
-                    catalog_service = _resolve_consultation_or_intro_service(
-                        session, reservation_payload
+            else:
+                scheduled_instance = _resolve_booking_identity(
+                    session, reservation_payload
+                )
+                catalog_service = scheduled_instance.service
+                if not event_instance_is_bookable(scheduled_instance):
+                    raise ValidationError(
+                        "This event is not open for booking",
+                        field="serviceInstanceSlug",
                     )
-                else:
-                    scheduled_instance = _resolve_booking_identity(
-                        session, reservation_payload
-                    )
-                    catalog_service = scheduled_instance.service
-                    if not event_instance_is_bookable(scheduled_instance):
-                        raise ValidationError(
-                            "This event is not open for booking",
-                            field="serviceInstanceSlug",
-                        )
 
-                reservation_payload = {
-                    **reservation_payload,
-                    "service_type": catalog_service.service_type.value,
-                }
-                now_utc = datetime.now(tz=UTC)
-                intro_slot_bounds: tuple[datetime, datetime] | None = None
-                consultation_slot_rows: list[tuple[datetime, datetime, int]] | None = (
-                    None
-                )
-                if booking_system == "intro-call-booking":
-                    intro_slot_bounds = _enforce_intro_call_invariants(
-                        session,
-                        reservation_payload,
-                        catalog_service,
-                        now=now_utc,
-                    )
-                elif booking_system == "consultation-booking":
-                    consultation_slot_rows = _prepare_consultation_booking_slots(
-                        session, reservation_payload
-                    )
-                _validate_discount_code_redemption_scope(
+            reservation_payload = {
+                **reservation_payload,
+                "service_type": catalog_service.service_type.value,
+            }
+            now_utc = datetime.now(tz=UTC)
+            intro_slot_bounds: tuple[datetime, datetime] | None = None
+            consultation_slot_rows: list[tuple[datetime, datetime, int]] | None = None
+            if booking_system == "intro-call-booking":
+                intro_slot_bounds = _enforce_intro_call_invariants(
                     session,
                     reservation_payload,
-                    resolved_service=catalog_service,
-                    resolved_instance=scheduled_instance,
+                    catalog_service,
+                    now=now_utc,
                 )
-
-                stripe_pi = str(
-                    reservation_payload.get("stripe_payment_intent_id") or ""
-                ).strip()
-                skip_persistence = False
-                if per_booking and stripe_pi:
-                    existing_pi_payment = session.execute(
-                        select(CustomerPayment).where(
-                            CustomerPayment.stripe_payment_intent_id == stripe_pi
-                        )
-                    ).scalar_one_or_none()
-                    if existing_pi_payment is not None:
-                        stripe_pi_idempotent_hit = True
-                        stripe_pi_existing_payment_id = existing_pi_payment.id
-                        skip_persistence = True
-
-                instance_id_for_audit: UUID = (
-                    scheduled_instance.id
-                    if scheduled_instance is not None
-                    else catalog_service.id
+            elif booking_system == "consultation-booking":
+                consultation_slot_rows = _prepare_consultation_booking_slots(
+                    session, reservation_payload
                 )
-                booking_instance_slug_for_lead: str | None = None
-                dc_row = None
-                dc_text = reservation_payload.get("discount_code")
+            _validate_discount_code_redemption_scope(
+                session,
+                reservation_payload,
+                resolved_service=catalog_service,
+                resolved_instance=scheduled_instance,
+            )
 
-                if not skip_persistence:
-                    contact_repo = ContactRepository(session)
-                    src_detail = "public-www-booking"
-                    ma_obj = reservation_payload.get("marketing_attribution")
-                    if booking_system == "intro-call-booking":
-                        if isinstance(ma_obj, dict) and ma_obj:
-                            src_detail = json.dumps(
-                                {"source": "public-www-booking", **ma_obj},
-                                separators=(",", ":"),
-                            )
-                        else:
-                            src_detail = json.dumps(
-                                {"source": "public-www-booking"}, separators=(",", ":")
-                            )
-                    contact, _created = contact_repo.upsert_by_email(
-                        reservation_payload["attendee_email"],
-                        first_name=first_name_from_full_name(
-                            reservation_payload["attendee_name"]
-                        ),
-                        source=ContactSource.RESERVATION,
-                        source_detail=src_detail,
-                        contact_type=ContactType.PARENT,
+            stripe_pi = str(
+                reservation_payload.get("stripe_payment_intent_id") or ""
+            ).strip()
+            skip_persistence = False
+            existing_pi_payment = None
+            if per_booking and stripe_pi:
+                existing_pi_payment = session.execute(
+                    select(CustomerPayment).where(
+                        CustomerPayment.stripe_payment_intent_id == stripe_pi
                     )
-                    new_region = reservation_payload["phone_region"]
-                    new_national = reservation_payload["phone_national_number"]
-                    if (
-                        new_region is not None
-                        and new_national is not None
-                        and (
-                            contact.phone_region is None
-                            or contact.phone_national_number is None
-                        )
-                    ):
-                        contact.phone_region = new_region
-                        contact.phone_national_number = new_national
-                    contact_repo.update(contact)
-
-                    _validate_public_bill_to_membership(
+                ).scalar_one_or_none()
+                if existing_pi_payment is not None:
+                    stripe_pi_idempotent_hit = True
+                    stripe_pi_existing_payment_id = existing_pi_payment.id
+                    skip_persistence = True
+                    public_billing_followup = heal_duplicate_public_invoice(
                         session,
-                        {
+                        existing_pi_payment,
+                        attendee_name=str(
+                            reservation_payload.get("attendee_name") or ""
+                        ),
+                        attendee_email=str(
+                            reservation_payload.get("attendee_email") or ""
+                        ),
+                    )
+
+            instance_id_for_audit: UUID = (
+                scheduled_instance.id
+                if scheduled_instance is not None
+                else catalog_service.id
+            )
+            booking_instance_slug_for_lead: str | None = None
+            dc_row = None
+            dc_text = reservation_payload.get("discount_code")
+
+            if not skip_persistence:
+                contact_repo = ContactRepository(session)
+                src_detail = "public-www-booking"
+                ma_obj = reservation_payload.get("marketing_attribution")
+                if booking_system == "intro-call-booking":
+                    if isinstance(ma_obj, dict) and ma_obj:
+                        src_detail = json.dumps(
+                            {"source": "public-www-booking", **ma_obj},
+                            separators=(",", ":"),
+                        )
+                    else:
+                        src_detail = json.dumps(
+                            {"source": "public-www-booking"}, separators=(",", ":")
+                        )
+                contact, _created = contact_repo.upsert_by_email(
+                    reservation_payload["attendee_email"],
+                    first_name=first_name_from_full_name(
+                        reservation_payload["attendee_name"]
+                    ),
+                    source=ContactSource.RESERVATION,
+                    source_detail=src_detail,
+                    contact_type=ContactType.PARENT,
+                )
+                new_region = reservation_payload["phone_region"]
+                new_national = reservation_payload["phone_national_number"]
+                if (
+                    new_region is not None
+                    and new_national is not None
+                    and (
+                        contact.phone_region is None
+                        or contact.phone_national_number is None
+                    )
+                ):
+                    contact.phone_region = new_region
+                    contact.phone_national_number = new_national
+                contact_repo.update(contact)
+
+                _validate_public_bill_to_membership(
+                    session,
+                    {
+                        "bill_to_kind": reservation_payload["bill_to_kind"],
+                        "bill_to_family_id": reservation_payload["bill_to_family_id"],
+                        "bill_to_organization_id": reservation_payload[
+                            "bill_to_organization_id"
+                        ],
+                    },
+                    contact_id=contact.id,
+                )
+
+                if dc_text:
+                    dc_lookup = DiscountCodeRepository(session)
+                    dc_row = dc_lookup.get_by_code(str(dc_text))
+
+                instance_repo = ServiceInstanceRepository(session)
+                enrollment_repo = EnrollmentRepository(session)
+                discount_repo = DiscountCodeRepository(session)
+
+                if per_booking:
+                    booking_row = _create_booking_instance_for_service(
+                        session,
+                        instance_repo,
+                        catalog_service,
+                        reservation_payload,
+                        now_utc=now_utc,
+                    )
+                    target_instance_id = booking_row.id
+                    instance_id_for_audit = booking_row.id
+                    booking_instance_slug_for_lead = booking_row.slug
+                else:
+                    if scheduled_instance is None:
+                        raise ValidationError(
+                            "service instance could not be resolved",
+                            field="serviceInstanceSlug",
+                        )
+                    target_instance_id = scheduled_instance.id
+
+                has_enrollment = enrollment_repo.contact_has_enrollment_for_instance(
+                    instance_id=target_instance_id,
+                    contact_id=contact.id,
+                )
+                is_intro_booking = booking_system == "intro-call-booking"
+
+                if not has_enrollment:
+                    instance_service_id = catalog_service.id
+                    if dc_row is not None:
+                        ensure_discount_code_eligible_for_instance(
+                            session,
+                            discount_code_id=dc_row.id,
+                            service_id=instance_service_id,
+                            instance_id=target_instance_id,
+                        )
+                    enrollment_row = Enrollment(
+                        instance_id=target_instance_id,
+                        contact_id=contact.id,
+                        family_id=None,
+                        organization_id=None,
+                        ticket_tier_id=None,
+                        discount_code_id=None,
+                        status=EnrollmentStatus.REGISTERED,
+                        amount_paid=reservation_payload["total_amount"],
+                        currency=reservation_payload["currency"],
+                        notes=None,
+                        created_by=_PUBLIC_RESERVATION_ENROLLMENT_ACTOR,
+                    )
+                    _apply_enrollment_bill_to(
+                        enrollment_row,
+                        contact_id=contact.id,
+                        bill={
                             "bill_to_kind": reservation_payload["bill_to_kind"],
+                            "bill_to_contact_id": reservation_payload[
+                                "bill_to_contact_id"
+                            ],
                             "bill_to_family_id": reservation_payload[
                                 "bill_to_family_id"
                             ],
@@ -249,179 +327,89 @@ def _handle_public_reservation(
                                 "bill_to_organization_id"
                             ],
                         },
-                        contact_id=contact.id,
                     )
-
-                    if dc_text:
-                        dc_lookup = DiscountCodeRepository(session)
-                        dc_row = dc_lookup.get_by_code(str(dc_text))
-
-                    instance_repo = ServiceInstanceRepository(session)
-                    enrollment_repo = EnrollmentRepository(session)
-                    discount_repo = DiscountCodeRepository(session)
-
-                    if per_booking:
-                        booking_row = _create_booking_instance_for_service(
-                            session,
-                            instance_repo,
-                            catalog_service,
-                            reservation_payload,
-                            now_utc=now_utc,
-                        )
-                        target_instance_id = booking_row.id
-                        instance_id_for_audit = booking_row.id
-                        booking_instance_slug_for_lead = booking_row.slug
-                    else:
-                        if scheduled_instance is None:
-                            raise ValidationError(
-                                "service instance could not be resolved",
-                                field="serviceInstanceSlug",
-                            )
-                        target_instance_id = scheduled_instance.id
-
-                    has_enrollment = (
-                        enrollment_repo.contact_has_enrollment_for_instance(
-                            instance_id=target_instance_id,
-                            contact_id=contact.id,
+                    created_enrollment, create_err = (
+                        enrollment_repo.try_create_enrollment_with_capacity_guard(
+                            enrollment_row
                         )
                     )
-                    is_intro_booking = booking_system == "intro-call-booking"
-
-                    if not has_enrollment:
-                        instance_service_id = catalog_service.id
+                    if create_err == "capacity_full":
+                        raise ValidationError(
+                            "This cohort is full and is not accepting a waitlist for "
+                            "public bookings. Your payment was processed; contact support "
+                            "if you need a refund.",
+                            field="serviceInstanceSlug",
+                            status_code=409,
+                        )
+                    if create_err != "duplicate" and created_enrollment is not None:
+                        created_enrollment_id = created_enrollment.id
                         if dc_row is not None:
-                            ensure_discount_code_eligible_for_instance(
-                                session,
-                                discount_code_id=dc_row.id,
-                                service_id=instance_service_id,
-                                instance_id=target_instance_id,
-                            )
-                        enrollment_row = Enrollment(
-                            instance_id=target_instance_id,
-                            contact_id=contact.id,
-                            family_id=None,
-                            organization_id=None,
-                            ticket_tier_id=None,
-                            discount_code_id=None,
-                            status=EnrollmentStatus.REGISTERED,
-                            amount_paid=reservation_payload["total_amount"],
-                            currency=reservation_payload["currency"],
-                            notes=None,
-                            created_by=_PUBLIC_RESERVATION_ENROLLMENT_ACTOR,
-                        )
-                        _apply_enrollment_bill_to(
-                            enrollment_row,
-                            contact_id=contact.id,
-                            bill={
-                                "bill_to_kind": reservation_payload["bill_to_kind"],
-                                "bill_to_contact_id": reservation_payload[
-                                    "bill_to_contact_id"
-                                ],
-                                "bill_to_family_id": reservation_payload[
-                                    "bill_to_family_id"
-                                ],
-                                "bill_to_organization_id": reservation_payload[
-                                    "bill_to_organization_id"
-                                ],
-                            },
-                        )
-                        created_enrollment, create_err = (
-                            enrollment_repo.try_create_enrollment_with_capacity_guard(
-                                enrollment_row
-                            )
-                        )
-                        if create_err == "capacity_full":
-                            raise ValidationError(
-                                "This cohort is full and is not accepting a waitlist for "
-                                "public bookings. Your payment was processed; contact support "
-                                "if you need a refund.",
-                                field="serviceInstanceSlug",
-                                status_code=409,
-                            )
-                        if create_err != "duplicate" and created_enrollment is not None:
-                            created_new_enrollment = True
-                            created_enrollment_id = created_enrollment.id
-                            if dc_row is not None:
-                                if not discount_repo.validate_and_increment(dc_row.id):
-                                    session.delete(created_enrollment)
-                                    session.flush()
-                                    raise ValidationError(
-                                        "Discount code is invalid, inactive, expired, or exhausted",
-                                        field="discountCode",
-                                    )
-                                created_enrollment.discount_code_id = dc_row.id
+                            if not discount_repo.validate_and_increment(dc_row.id):
+                                session.delete(created_enrollment)
                                 session.flush()
-                            if is_intro_booking and intro_slot_bounds is not None:
-                                s0, s1 = intro_slot_bounds
-                                _persist_session_slots_for_booking_instance(
-                                    session,
-                                    booking_instance_id=target_instance_id,
-                                    purpose_service_id=catalog_service.id,
-                                    slots=[(s0, s1, 0)],
-                                    reservation_payload=reservation_payload,
-                                    now_utc=now_utc,
-                                    is_intro_booking=True,
+                                raise ValidationError(
+                                    "Discount code is invalid, inactive, expired, or exhausted",
+                                    field="discountCode",
                                 )
-                            elif (
-                                booking_system == "consultation-booking"
-                                and consultation_slot_rows is not None
-                            ):
-                                _persist_session_slots_for_booking_instance(
-                                    session,
-                                    booking_instance_id=target_instance_id,
-                                    purpose_service_id=catalog_service.id,
-                                    slots=consultation_slot_rows,
-                                    reservation_payload=reservation_payload,
-                                    now_utc=now_utc,
-                                    is_intro_booking=False,
-                                )
-                            _pay, _, _dup_pi = record_reservation_customer_payment(
+                            created_enrollment.discount_code_id = dc_row.id
+                            session.flush()
+                        if is_intro_booking and intro_slot_bounds is not None:
+                            s0, s1 = intro_slot_bounds
+                            _persist_session_slots_for_booking_instance(
                                 session,
-                                enrollment_id=created_enrollment.id,
-                                contact_id=contact.id,
-                                currency=reservation_payload["currency"],
-                                total_amount=reservation_payload["total_amount"],
-                                payment_method=reservation_payload["payment_method"],
-                                stripe_payment_intent_id=reservation_payload.get(
-                                    "stripe_payment_intent_id"
-                                ),
-                                stripe_currency=reservation_payload.get(
-                                    "stripe_currency"
+                                booking_instance_id=target_instance_id,
+                                purpose_service_id=catalog_service.id,
+                                slots=[(s0, s1, 0)],
+                                reservation_payload=reservation_payload,
+                                now_utc=now_utc,
+                                is_intro_booking=True,
+                            )
+                        elif (
+                            booking_system == "consultation-booking"
+                            and consultation_slot_rows is not None
+                        ):
+                            _persist_session_slots_for_booking_instance(
+                                session,
+                                booking_instance_id=target_instance_id,
+                                purpose_service_id=catalog_service.id,
+                                slots=consultation_slot_rows,
+                                reservation_payload=reservation_payload,
+                                now_utc=now_utc,
+                                is_intro_booking=False,
+                            )
+                        _pay, _dup_pi, _pay_id, public_billing_followup = (
+                            record_public_enrollment_billing(
+                                session,
+                                enrollment=created_enrollment,
+                                contact=contact,
+                                reservation_payload=reservation_payload,
+                                lead_metadata=_build_reservation_lead_metadata(
+                                    reservation_payload,
+                                    booking_instance_slug_for_lead=booking_instance_slug_for_lead,
+                                    dc_text=dc_text,
+                                    dc_row=dc_row,
                                 ),
                             )
-                            if _dup_pi and _pay is not None:
-                                stripe_pi_idempotent_hit = True
-                                stripe_pi_existing_payment_id = _pay.id
+                        )
+                        if _dup_pi and _pay_id is not None:
+                            stripe_pi_idempotent_hit = True
+                            stripe_pi_existing_payment_id = _pay_id
 
-                    if created_new_enrollment:
-                        ensure_contact_lead(
-                            session,
-                            contact_id=contact.id,
-                            contact=contact,
-                            lead_type=LeadType.PROGRAM_ENROLLMENT,
-                            metadata=_build_reservation_lead_metadata(
-                                reservation_payload,
-                                booking_instance_slug_for_lead=booking_instance_slug_for_lead,
-                                dc_text=dc_text,
-                                dc_row=dc_row,
-                            ),
-                            attach_event_type=LeadEventType.ACTION_RECORDED,
-                        )
-                    if created_enrollment_id is not None:
-                        audit = AuditService(
-                            session,
-                            user_id=None,
-                            request_id=request_id_str or None,
-                        )
-                        audit.log_custom(
-                            table_name="enrollments",
-                            record_id=created_enrollment_id,
-                            action="PUBLIC_RESERVATION_PERSISTED",
-                            new_values={
-                                "instance_id": str(instance_id_for_audit),
-                                "contact_id": str(contact.id),
-                            },
-                        )
+                if created_enrollment_id is not None:
+                    audit = AuditService(
+                        session,
+                        user_id=None,
+                        request_id=request_id_str or None,
+                    )
+                    audit.log_custom(
+                        table_name="enrollments",
+                        record_id=created_enrollment_id,
+                        action="PUBLIC_RESERVATION_PERSISTED",
+                        new_values={
+                            "instance_id": str(instance_id_for_audit),
+                            "contact_id": str(contact.id),
+                        },
+                    )
     except ConflictError as exc:
         return json_response(exc.status_code, exc.to_dict(), event=event)
     except ValidationError as exc:
@@ -437,6 +425,8 @@ def _handle_public_reservation(
 
     try:
         _run_reservation_post_success_hooks(reservation_payload)
+        if public_billing_followup is not None:
+            finalize_enrollment_billing(public_billing_followup)
     except Exception:
         # Best-effort: post-commit hooks must not change the accepted reservation response.
         logger.exception("Reservation post-success hooks failed after commit")

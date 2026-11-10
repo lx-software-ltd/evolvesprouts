@@ -13,6 +13,7 @@ from app.api.admin_request import parse_body
 from app.db.audit import session_with_audit
 from app.db.models.customer_invoice import CustomerInvoice
 from app.db.models.customer_payment import CustomerPayment
+from app.db.models.enums import BillingPaymentStatus
 from app.db.models.payment_allocation import PaymentAllocation
 from app.exceptions import NotFoundError, ValidationError
 from app.services.billing_enrollment_confirmation import (
@@ -70,6 +71,11 @@ def _create_allocation(
             raise NotFoundError(
                 "PaymentAllocationTarget",
                 f"{payment_id}/{invoice_id}",
+            )
+        if pay.status != BillingPaymentStatus.SUCCEEDED:
+            raise ValidationError(
+                "Only a succeeded payment can be allocated to an invoice",
+                field="paymentId",
             )
         if pay.currency != currency or inv.currency != currency:
             raise ValidationError("Currency mismatch", field="currency")

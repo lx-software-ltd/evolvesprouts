@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from app.api.admin_validators import MAX_DESCRIPTION_LENGTH
+from app.api.admin_billing_payment_create import normalize_manual_payment_method
 from app.api.admin_services_payload_utils import (
     has_field,
     parse_optional_currency,
@@ -16,8 +16,27 @@ from app.api.admin_services_payload_utils import (
     parse_optional_uuid,
     parse_required_enum,
 )
+from app.api.admin_validators import MAX_DESCRIPTION_LENGTH
 from app.db.models import EnrollmentStatus
 from app.exceptions import ValidationError
+
+
+def _parse_create_billing(body: Mapping[str, Any]) -> dict[str, Any] | None:
+    """None keeps the legacy client, which records the payment in a second request."""
+    keys = ("bill_later", "payment_method", "payment_received", "send_invoice_email")
+    if not any(key in body for key in keys):
+        return None
+    bill_later = body.get("bill_later") is True
+    method = "fps"
+    raw_method = body.get("payment_method")
+    if raw_method is not None and str(raw_method).strip():
+        method = normalize_manual_payment_method(str(raw_method))
+    return {
+        "bill_later": bill_later,
+        "payment_method": method,
+        "payment_received": body.get("payment_received") is True,
+        "send_invoice_email": body.get("send_invoice_email") is True,
+    }
 
 
 def parse_create_enrollment_payload(body: Mapping[str, Any]) -> dict[str, Any]:
@@ -41,6 +60,7 @@ def parse_create_enrollment_payload(body: Mapping[str, Any]) -> dict[str, Any]:
         "notes": parse_optional_text(
             body.get("notes"), max_length=MAX_DESCRIPTION_LENGTH
         ),
+        "billing": _parse_create_billing(body),
     }
     if not any(
         (payload["contact_id"], payload["family_id"], payload["organization_id"])

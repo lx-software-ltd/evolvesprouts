@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
-from typing import Any, Callable, Mapping
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
@@ -148,7 +149,7 @@ def _apply_pending_manual_patch(
 
     ext_ref = str(body.get("externalReference") or "").strip() or None
 
-    is_free_zero = amount == Decimal("0") or method == "free"
+    is_free_zero = amount == Decimal(0) or method == "free"
     if is_free_zero:
         method = "free"
         effective_status = "succeeded"
@@ -251,7 +252,7 @@ def update_manual_inbound_customer_payment(
                 user_sub=user_sub,
                 allocated_sum=allocated_sum,
             )
-            if p.status == BillingPaymentStatus.SUCCEEDED:
+            if p.status == BillingPaymentStatus.SUCCEEDED and p.amount > 0:
                 existing_receipt = session.execute(
                     select(CustomerReceipt).where(
                         CustomerReceipt.customer_payment_id == p.id

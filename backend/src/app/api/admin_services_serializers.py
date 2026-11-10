@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -395,6 +396,7 @@ def serialize_enrollment(
     enrollment: Enrollment,
     *,
     party_display_name: str,
+    billing: Mapping[str, str | None] | None = None,
 ) -> dict[str, Any]:
     """Serialize enrollment payload."""
     payload: dict[str, Any] = {
@@ -430,6 +432,11 @@ def serialize_enrollment(
         else None,
         "party_display_name": party_display_name,
     }
+    if billing is not None:
+        payload["invoice_number"] = billing.get("invoice_number")
+        payload["invoice_status"] = billing.get("invoice_status")
+        payload["payment_status"] = billing.get("payment_status")
+        payload["billing_warning"] = billing.get("billing_warning")
     return payload
 
 

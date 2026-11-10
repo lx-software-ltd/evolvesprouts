@@ -20,6 +20,7 @@ from app.api.admin_request import parse_body
 from app.db.audit import AuditService, session_with_audit
 from app.db.models import Contact, Family, Organization
 from app.db.models.customer_invoice import CustomerInvoice
+from app.db.models.customer_payment import CustomerPayment
 from app.db.models.enums import BillingBillToKind, BillingInvoiceStatus
 from app.db.models.payment_allocation import PaymentAllocation
 from app.exceptions import NotFoundError, ValidationError
@@ -111,6 +112,51 @@ def _build_bill_to_snapshot(session: Session, inv: CustomerInvoice) -> dict[str,
     return snap
 
 
+def issue_draft_invoice(
+    session: Session,
+    inv: CustomerInvoice,
+    *,
+    user_sub: str,
+    request_id: str | None,
+    create_pending_payment: bool = True,
+    display_name_override: str | None = None,
+) -> CustomerPayment | None:
+    """Issue a draft invoice inside the caller's transaction.
+
+    ``create_pending_payment`` is false when the caller already recorded the
+    inbound payment. ``display_name_override`` replaces the CRM name on the
+    snapshot, used for a website booking that only stored a first name.
+    """
+    if inv.status != BillingInvoiceStatus.DRAFT:
+        raise ValidationError("Invoice is not draft", field="invoiceId")
+
+    _validate_bill_to_fk_for_issue(inv)
+    _resolve_bill_to_party_from_invoice_fks(session, inv=inv)
+    override = (display_name_override or "").strip()
+    if override:
+        inv.bill_to_display_name = override
+    inv.bill_to_snapshot = _build_bill_to_snapshot(session, inv)
+
+    num, seq = next_invoice_number(session)
+    inv.invoice_number = num
+    inv.invoice_sequence = seq
+    inv.status = BillingInvoiceStatus.ISSUED
+    inv.issued_at = datetime.now(UTC)
+    if inv.invoice_date is None:
+        inv.invoice_date, inv.due_date = compute_invoice_snapshot_dates(inv.issued_at)
+    else:
+        inv.due_date = add_payment_terms(inv.invoice_date)
+    session.flush()
+    refresh_invoice_pdf(session, inv)
+    maybe_confirm_enrollments_on_zero_total_invoice_issue(session, inv)
+    recompute_invoice_settlement(session, inv)
+    if not create_pending_payment:
+        return None
+    return create_pending_payment_for_issued_invoice(
+        session, inv, user_sub=user_sub, request_id=request_id
+    )
+
+
 def _issue_invoice(
     event: Mapping[str, Any],
     invoice_id: UUID,
@@ -122,32 +168,9 @@ def _issue_invoice(
         inv = session.get(CustomerInvoice, invoice_id)
         if inv is None:
             raise NotFoundError("CustomerInvoice", str(invoice_id))
-        if inv.status != BillingInvoiceStatus.DRAFT:
-            raise ValidationError("Invoice is not draft", field="invoiceId")
-
-        _validate_bill_to_fk_for_issue(inv)
-        _resolve_bill_to_party_from_invoice_fks(session, inv=inv)
-        inv.bill_to_snapshot = _build_bill_to_snapshot(session, inv)
-
-        num, seq = next_invoice_number(session)
-        inv.invoice_number = num
-        inv.invoice_sequence = seq
-        inv.status = BillingInvoiceStatus.ISSUED
-        inv.issued_at = datetime.now(UTC)
-        if inv.invoice_date is None:
-            inv.invoice_date, inv.due_date = compute_invoice_snapshot_dates(
-                inv.issued_at
-            )
-        else:
-            inv.due_date = add_payment_terms(inv.invoice_date)
-        session.flush()
-        refresh_invoice_pdf(session, inv)
-        maybe_confirm_enrollments_on_zero_total_invoice_issue(session, inv)
-        recompute_invoice_settlement(session, inv)
-        pending_pay = create_pending_payment_for_issued_invoice(
+        pending_pay = issue_draft_invoice(
             session, inv, user_sub=user_sub, request_id=request_id
         )
-
         return json_response(
             200,
             {

@@ -7,8 +7,10 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.api.admin_billing_common import batch_enrollment_party_display_names
 from app.api.admin_request import (
     parse_body,
     parse_uuid,
@@ -16,11 +18,6 @@ from app.api.admin_request import (
     route_has_prefix,
     split_route_parts,
 )
-from app.api.discount_enrollment_scope import (
-    ensure_discount_code_eligible_for_instance,
-    service_id_for_instance,
-)
-from app.api.admin_billing_common import batch_enrollment_party_display_names
 from app.api.admin_services_common import (
     encode_enrollment_cursor,
     parse_create_enrollment_payload,
@@ -28,6 +25,10 @@ from app.api.admin_services_common import (
     parse_update_enrollment_payload,
     request_id,
     serialize_enrollment,
+)
+from app.api.discount_enrollment_scope import (
+    ensure_discount_code_eligible_for_instance,
+    service_id_for_instance,
 )
 from app.api.instance_capacity_status import bulk_reconcile_instance_capacity_status
 from app.db.audit import set_audit_context
@@ -41,10 +42,19 @@ from app.db.repositories import (
     EnrollmentRepository,
     ServiceInstanceRepository,
 )
-from app.exceptions import NotFoundError, ValidationError
+from app.exceptions import ConflictError, NotFoundError, ValidationError
 from app.services.billing_enrollment_confirmation import (
     promote_prospect_party_for_enrollment,
 )
+from app.services.enrollment_billing import (
+    BillingFollowup,
+    apply_admin_enrollment_billing,
+    assert_enrollment_amount_unlocked,
+    bill_promoted_enrollment,
+    finalize_enrollment_billing,
+    release_billing_for_cancelled_enrollment,
+)
+from app.services.enrollment_invoice_links import billing_summaries_for_enrollments
 from app.utils import json_response, method_not_allowed, not_found
 from app.utils.logging import get_logger
 
@@ -133,8 +143,15 @@ def _list_enrollments(event: Mapping[str, Any], *, instance_id: UUID) -> dict[st
             instance_id=instance_id, status=filters["status"]
         )
         party_labels = batch_enrollment_party_display_names(session, page_rows)
+        summaries = billing_summaries_for_enrollments(
+            session, [row.id for row in page_rows]
+        )
         items = [
-            serialize_enrollment(row, party_display_name=party_labels[idx])
+            serialize_enrollment(
+                row,
+                party_display_name=party_labels[idx],
+                billing=summaries.get(row.id),
+            )
             for idx, row in enumerate(page_rows)
         ]
         return json_response(
@@ -200,17 +217,26 @@ def _create_enrollment(
             instance_row = instance_repository.get_by_id(created.instance_id)
             if instance_row is not None:
                 bulk_reconcile_instance_capacity_status(session, [instance_row])
+        followup = None
+        billing = payload.get("billing")
+        if billing is not None:
+            followup = apply_admin_enrollment_billing(
+                session,
+                created,
+                billing,
+                actor=actor_sub,
+                request_id=request_id(event),
+            )
         party_labels = batch_enrollment_party_display_names(session, [created])
-        session.commit()
-        return json_response(
-            201,
-            {
-                "enrollment": serialize_enrollment(
-                    created, party_display_name=party_labels[0]
-                )
-            },
-            event=event,
+        body = serialize_enrollment(
+            created,
+            party_display_name=party_labels[0],
+            billing=_billing_view(followup),
         )
+        session.commit()
+        if followup is not None:
+            finalize_enrollment_billing(followup)
+        return json_response(201, {"enrollment": body}, event=event)
 
 
 def _update_enrollment(
@@ -238,6 +264,12 @@ def _update_enrollment(
             session, enrollment, instance_id
         ):
             raise NotFoundError("Enrollment", str(enrollment_id))
+
+        previous_status = enrollment.status
+        followup = None
+        billing_warning: str | None = None
+        if "amount_paid" in payload or "currency" in payload:
+            assert_enrollment_amount_unlocked(session, enrollment)
 
         if "promote_to_family_id" in payload or "promote_to_organization_id" in payload:
             if (
@@ -302,12 +334,11 @@ def _update_enrollment(
             if new_id != old_id:
                 discount_repo = DiscountCodeRepository(session)
                 parent_service_id = service_id_for_instance(session, instance_id)
-                if old_id is not None:
-                    if not discount_repo.decrement_uses(old_id):
-                        raise ValidationError(
-                            "Unable to release prior discount code usage",
-                            field="discount_code_id",
-                        )
+                if old_id is not None and not discount_repo.decrement_uses(old_id):
+                    raise ValidationError(
+                        "Unable to release prior discount code usage",
+                        field="discount_code_id",
+                    )
                 if new_id is not None:
                     ensure_discount_code_eligible_for_instance(
                         session,
@@ -324,6 +355,21 @@ def _update_enrollment(
                         )
                 enrollment.discount_code_id = new_id
 
+        if "status" in payload and payload["status"] != previous_status:
+            if payload["status"] == EnrollmentStatus.CANCELLED:
+                billing_warning = release_billing_for_cancelled_enrollment(
+                    session, enrollment, actor=actor_sub
+                )
+            elif previous_status == EnrollmentStatus.WAITLISTED and payload[
+                "status"
+            ] in (EnrollmentStatus.REGISTERED, EnrollmentStatus.CONFIRMED):
+                followup = bill_promoted_enrollment(
+                    session,
+                    enrollment,
+                    actor=actor_sub,
+                    request_id=request_id(event),
+                )
+
         updated = repository.update(enrollment)
         if hasattr(session, "get"):
             instance_repository = ServiceInstanceRepository(session)
@@ -331,16 +377,15 @@ def _update_enrollment(
             if instance_row is not None:
                 bulk_reconcile_instance_capacity_status(session, [instance_row])
         party_labels = batch_enrollment_party_display_names(session, [updated])
-        session.commit()
-        return json_response(
-            200,
-            {
-                "enrollment": serialize_enrollment(
-                    updated, party_display_name=party_labels[0]
-                )
-            },
-            event=event,
+        body = serialize_enrollment(
+            updated,
+            party_display_name=party_labels[0],
+            billing=_billing_view(followup, billing_warning),
         )
+        session.commit()
+        if followup is not None:
+            finalize_enrollment_billing(followup)
+        return json_response(200, {"enrollment": body}, event=event)
 
 
 def _delete_enrollment(
@@ -367,13 +412,24 @@ def _delete_enrollment(
         ):
             raise NotFoundError("Enrollment", str(enrollment_id))
         discount_repo = DiscountCodeRepository(session)
-        if enrollment.discount_code_id is not None:
-            if not discount_repo.decrement_uses(enrollment.discount_code_id):
-                raise ValidationError(
-                    "Unable to release discount code usage for this enrollment",
-                    field="discount_code_id",
-                )
-        repository.delete(enrollment)
+        if enrollment.discount_code_id is not None and not discount_repo.decrement_uses(
+            enrollment.discount_code_id
+        ):
+            raise ValidationError(
+                "Unable to release discount code usage for this enrollment",
+                field="discount_code_id",
+            )
+        try:
+            repository.delete(enrollment)
+        except IntegrityError as exc:
+            session.rollback()
+            detail = str(getattr(exc, "orig", None) or exc)
+            if "customer_invoice_lines" in detail:
+                raise ConflictError(
+                    "enrollment_has_invoice",
+                    enrollmentId=str(enrollment_id),
+                ) from exc
+            raise
         if hasattr(session, "get"):
             instance_repository = ServiceInstanceRepository(session)
             instance_row = instance_repository.get_by_id(enrollment.instance_id)
@@ -381,3 +437,19 @@ def _delete_enrollment(
                 bulk_reconcile_instance_capacity_status(session, [instance_row])
         session.commit()
         return json_response(204, {}, event=event)
+
+
+def _billing_view(
+    followup: BillingFollowup | None, warning: str | None = None
+) -> dict[str, str | None] | None:
+    """Invoice fields for the enrollment JSON. None keeps legacy responses unchanged."""
+    if followup is None and warning is None:
+        return None
+    return {
+        "invoice_number": followup.invoice_number if followup is not None else None,
+        "invoice_status": followup.invoice_status if followup is not None else None,
+        "payment_status": None,
+        "billing_warning": warning
+        if warning is not None
+        else (followup.warning if followup is not None else None),
+    }

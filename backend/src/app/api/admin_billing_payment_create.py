@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
-from typing import Any, Callable, Mapping
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -42,14 +43,13 @@ ISSUE_PENDING_PAYMENT_METHOD = "fps"
 logger = get_logger(__name__)
 
 
-def _invoice_has_succeeded_stripe_payment(
+def _invoice_has_positive_open_payment(
     session: Session, enrollment_ids: list[UUID]
 ) -> bool:
-    """True when an enrollment on the invoice already has a succeeded Stripe charge.
+    """True when an enrollment already has a positive pending or succeeded payment.
 
-    The issue-time stub is one inbound row for the whole invoice total. Creating
-    it would duplicate a Stripe payment already recorded for that enrollment
-    (public booking or a manual ``stripe_card`` row).
+    The issue-time stub is one inbound row for the invoice total. A zero-amount
+    free payment does not cover that total, so it does not suppress the stub.
     """
     if not enrollment_ids:
         return False
@@ -58,11 +58,10 @@ def _invoice_has_succeeded_stripe_payment(
         .where(
             CustomerPayment.enrollment_id.in_(enrollment_ids),
             CustomerPayment.direction == BillingPaymentDirection.INBOUND,
-            CustomerPayment.status == BillingPaymentStatus.SUCCEEDED,
-            or_(
-                CustomerPayment.stripe_payment_intent_id.is_not(None),
-                CustomerPayment.method == "stripe_card",
+            CustomerPayment.status.in_(
+                (BillingPaymentStatus.PENDING, BillingPaymentStatus.SUCCEEDED)
             ),
+            CustomerPayment.amount > 0,
         )
         .limit(1)
     ).scalar_one_or_none()
@@ -79,15 +78,15 @@ def create_pending_payment_for_issued_invoice(
     """Create a pending inbound payment stub after invoice issue.
 
     Skips zero-total invoices and invoices whose enrollments already have a
-    succeeded Stripe payment. Does not allocate to the invoice. Sets
+    positive pending or succeeded inbound payment. Does not allocate. Sets
     ``enrollment_id`` only when the invoice has exactly one enrollment line;
     customized and multi-enrollment invoices leave it unset.
     """
-    if Decimal(str(inv.total)) <= Decimal("0"):
+    if Decimal(str(inv.total)) <= Decimal(0):
         return None
 
     enrollment_ids = distinct_enrollment_ids_on_invoice(session, inv.id)
-    if _invoice_has_succeeded_stripe_payment(session, enrollment_ids):
+    if _invoice_has_positive_open_payment(session, enrollment_ids):
         return None
     enrollment_id = enrollment_ids[0] if len(enrollment_ids) == 1 else None
 
@@ -240,7 +239,7 @@ def create_manual_inbound_payment(
 
     ext_ref = str(body.get("externalReference") or "").strip() or None
 
-    is_free_zero = amount == Decimal("0") or method == "free"
+    is_free_zero = amount == Decimal(0) or method == "free"
     if is_free_zero:
         method = "free"
         effective_status = "succeeded"
@@ -341,7 +340,7 @@ def create_manual_inbound_payment(
             action="MANUAL_INBOUND_PAYMENT_CREATED",
             new_values=audit_new,
         )
-        if pay_status == BillingPaymentStatus.SUCCEEDED:
+        if pay_status == BillingPaymentStatus.SUCCEEDED and amount > 0:
             existing_receipt = session.execute(
                 select(CustomerReceipt).where(
                     CustomerReceipt.customer_payment_id == pay.id

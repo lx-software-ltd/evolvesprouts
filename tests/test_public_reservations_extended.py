@@ -10,7 +10,6 @@ from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
-
 from app.api.public_reservations import (
     _handle_public_reservation,
     _validate_discount_code_redemption_scope,
@@ -129,7 +128,7 @@ def _patch_public_reservation_db_helpers(monkeypatch: pytest.MonkeyPatch) -> Non
             return True
 
     monkeypatch.setattr(
-        "app.api.public_reservations.ensure_contact_lead",
+        "app.services.lead_funnel_automation.ensure_contact_lead",
         lambda *a, **k: (SimpleNamespace(id=uuid4()), True),
     )
 
@@ -170,7 +169,7 @@ def _patch_public_reservation_db_helpers(monkeypatch: pytest.MonkeyPatch) -> Non
         _FakeEnrollmentRepo,
     )
     monkeypatch.setattr(
-        "app.api.public_reservations.record_reservation_customer_payment",
+        "app.services.customer_billing.record_reservation_customer_payment",
         lambda *a, **k: (None, None, False),
     )
     monkeypatch.setattr(
@@ -233,7 +232,7 @@ def test_handle_public_reservation_returns_409_when_instance_capacity_full(
         _FakeEnrollmentRepo,
     )
     monkeypatch.setattr(
-        "app.api.public_reservations.record_reservation_customer_payment",
+        "app.services.customer_billing.record_reservation_customer_payment",
         lambda *a, **k: (None, None, False),
     )
     monkeypatch.setattr(
@@ -381,7 +380,9 @@ def test_handle_public_reservation_skips_lead_when_enrollment_exists(
         MagicMock(),
     )
     ensure = MagicMock()
-    monkeypatch.setattr("app.api.public_reservations.ensure_contact_lead", ensure)
+    monkeypatch.setattr(
+        "app.services.lead_funnel_automation.ensure_contact_lead", ensure
+    )
 
     class _FakeContactRepo:
         def __init__(self, _session: object) -> None:
@@ -1209,7 +1210,7 @@ def test_handle_public_reservation_writes_discount_metadata_and_creates_enrollme
         _FakeEnrollmentRepo,
     )
     monkeypatch.setattr(
-        "app.api.public_reservations.record_reservation_customer_payment",
+        "app.services.customer_billing.record_reservation_customer_payment",
         lambda *a, **k: (None, None, False),
     )
     monkeypatch.setattr(
@@ -1238,7 +1239,7 @@ def test_handle_public_reservation_writes_discount_metadata_and_creates_enrollme
         return SimpleNamespace(id=uuid4()), True
 
     monkeypatch.setattr(
-        "app.api.public_reservations.ensure_contact_lead",
+        "app.services.lead_funnel_automation.ensure_contact_lead",
         _fake_ensure,
     )
 
@@ -1398,7 +1399,7 @@ def test_intro_call_new_enrollment_persists_slot_before_free_payment_record(
         _FakeEnrollmentRepo,
     )
     monkeypatch.setattr(
-        "app.api.public_reservations.record_reservation_customer_payment",
+        "app.services.customer_billing.record_reservation_customer_payment",
         _record_payment,
     )
 
@@ -1417,7 +1418,7 @@ def test_intro_call_new_enrollment_persists_slot_before_free_payment_record(
             return None
 
     monkeypatch.setattr(
-        "app.api.public_reservations.ensure_contact_lead",
+        "app.services.lead_funnel_automation.ensure_contact_lead",
         lambda *_a, **_k: (SimpleNamespace(id=uuid4()), True),
     )
 
@@ -1591,7 +1592,7 @@ def test_handle_public_reservation_consultation_booking_accepts_extra_slot_start
         _FakeEnrollmentRepo,
     )
     monkeypatch.setattr(
-        "app.api.public_reservations.record_reservation_customer_payment",
+        "app.services.customer_billing.record_reservation_customer_payment",
         lambda *a, **k: (None, None, False),
     )
 
@@ -1612,7 +1613,7 @@ def test_handle_public_reservation_consultation_booking_accepts_extra_slot_start
             return None
 
     monkeypatch.setattr(
-        "app.api.public_reservations.ensure_contact_lead",
+        "app.services.lead_funnel_automation.ensure_contact_lead",
         lambda *_a, **_k: (SimpleNamespace(id=uuid4()), True),
     )
 
