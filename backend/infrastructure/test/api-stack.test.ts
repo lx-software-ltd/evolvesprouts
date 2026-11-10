@@ -43,6 +43,63 @@ function synthApiTemplate(): Template {
   return Template.fromStack(stack);
 }
 
+function assertApiGatewayCloudWatchLogging(template: Template): void {
+  const accounts = template.findResources("AWS::ApiGateway::Account");
+  const accountEntries = Object.entries(accounts);
+  if (accountEntries.length !== 1) {
+    throw new Error(
+      `Expected one AWS::ApiGateway::Account, found ${accountEntries.length}`,
+    );
+  }
+  const [logicalId, resource] = accountEntries[0];
+  if (logicalId !== "EvolvesproutsApiAccountE7DF9A66") {
+    throw new Error(
+      `Expected the RestApi account logical id EvolvesproutsApiAccountE7DF9A66, found ${logicalId}`,
+    );
+  }
+  const roleArn = resource.Properties?.CloudWatchRoleArn as
+    | { "Fn::GetAtt"?: [string, string] }
+    | undefined;
+  const roleRef = roleArn?.["Fn::GetAtt"];
+  if (
+    roleRef?.[0] !== "EvolvesproutsApiCloudWatchRole00972F46" ||
+    roleRef?.[1] !== "Arn"
+  ) {
+    throw new Error(
+      `${logicalId} CloudWatch role logical id is ${roleRef?.[0] ?? "missing"}`,
+    );
+  }
+
+  const policies = template.findResources("AWS::Logs::ResourcePolicy");
+  const delivery = Object.values(policies).find((resource) =>
+    JSON.stringify(resource.Properties ?? {}).includes(
+      "delivery.logs.amazonaws.com",
+    ),
+  );
+  if (!delivery) {
+    throw new Error(
+      "Expected a CloudWatch Logs resource policy for delivery.logs.amazonaws.com",
+    );
+  }
+
+  const keys = template.findResources("AWS::KMS::Key");
+  const logKey = Object.values(keys).find((resource) =>
+    JSON.stringify(resource.Properties ?? {}).includes(
+      "API Gateway CloudWatch log encryption",
+    ),
+  );
+  if (
+    !logKey ||
+    !JSON.stringify(logKey.Properties ?? {}).includes(
+      "delivery.logs.amazonaws.com",
+    )
+  ) {
+    throw new Error(
+      "ApiLogEncryptionKey must allow delivery.logs.amazonaws.com",
+    );
+  }
+}
+
 function assertStageHasNoApiGatewayCacheCluster(template: Template): void {
   const stages = template.findResources("AWS::ApiGateway::Stage");
   const entries = Object.entries(stages);
@@ -994,6 +1051,7 @@ function main(): void {
     env: { account: "111111111111", region: "ap-southeast-1" },
   });
   const template = Template.fromStack(stack);
+  assertApiGatewayCloudWatchLogging(template);
   assertStageHasNoApiGatewayCacheCluster(template);
   assertGatewayResponsesHaveNoBodyTemplates(template);
   assertStageHasCheckovCkv120Suppression(template);

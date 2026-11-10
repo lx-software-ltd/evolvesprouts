@@ -2944,15 +2944,6 @@ export class ApiStack extends cdk.Stack {
     // ---------------------------------------------------------------------
     // API Gateway
     // ---------------------------------------------------------------------
-    const apiGatewayLogRole = new iam.Role(this, "ApiGatewayLogRole", {
-      assumedBy: new iam.ServicePrincipal("apigateway.amazonaws.com"),
-      managedPolicies: [
-        iam.ManagedPolicy.fromAwsManagedPolicyName(
-          "service-role/AmazonAPIGatewayPushToCloudWatchLogs"
-        ),
-      ],
-    });
-
     // -------------------------------------------------------------------------
     // API Gateway access logs
     // SECURITY: Encrypted with KMS key (Checkov requirement)
@@ -2978,6 +2969,7 @@ export class ApiStack extends cdk.Stack {
           new iam.ServicePrincipal(
             `logs.${cdk.Stack.of(this).region}.amazonaws.com`
           ),
+          new iam.ServicePrincipal("delivery.logs.amazonaws.com"),
         ],
         resources: ["*"],
         conditions: {
@@ -3112,11 +3104,31 @@ export class ApiStack extends cdk.Stack {
       "ApiAccessLogs",
       apiAccessLogGroupName
     );
+    // Access-log delivery calls CloudWatch Logs as delivery.logs.amazonaws.com.
+    // An imported log group does not receive that resource policy from CDK.
+    new logs.ResourcePolicy(this, "ApiAccessLogDeliveryPolicy", {
+      resourcePolicyName: name("api-access-log-delivery"),
+      policyStatements: [
+        new iam.PolicyStatement({
+          principals: [new iam.ServicePrincipal("delivery.logs.amazonaws.com")],
+          actions: ["logs:CreateLogStream", "logs:PutLogEvents"],
+          resources: [apiAccessLogGroupArn, apiAccessLogGroupArnWildcard],
+          conditions: {
+            StringEquals: {
+              "aws:SourceAccount": cdk.Stack.of(this).account,
+            },
+          },
+        }),
+      ],
+    });
 
     // SECURITY: Restrict CORS to specific allowed origins
     // Never use Cors.ALL_ORIGINS in production - it allows any website to make requests
     const api = new apigateway.RestApi(this, "EvolvesproutsApi", {
       restApiName: name("api"),
+      // Method logging uses this account role. Keep the single
+      // AWS::ApiGateway::Account that RestApi creates for the region.
+      cloudWatchRole: true,
       defaultCorsPreflightOptions: {
         allowOrigins: corsAllowedOrigins,
         allowMethods: ["GET", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"],
