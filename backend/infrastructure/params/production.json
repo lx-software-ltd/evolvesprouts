@@ -62,7 +62,6 @@
   "WafWebAclArn": "",
   "ApiCustomDomainName": "api.evolvesprouts.com",
   "ApiCustomDomainCertificateArn": "arn:aws:acm:ap-southeast-1:588024549699:certificate/b0f35f52-c35f-4b22-a658-a8bf2896d6f1",
-  "ApiDisableExecuteApiEndpoint": "false",
   "MailchimpApiSecretArn": "<FROM_GITHUB_SECRET: CDK_PARAM_MAILCHIMP_API_SECRET_ARN>",
   "MailchimpListId": "<FROM_GITHUB_VAR: CDK_PARAM_MAILCHIMP_LIST_ID>",
   "MailchimpServerPrefix": "<FROM_GITHUB_VAR: CDK_PARAM_MAILCHIMP_SERVER_PREFIX>",

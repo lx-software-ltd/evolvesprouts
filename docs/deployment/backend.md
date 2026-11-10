@@ -16,19 +16,17 @@ the `token` query parameter.
 {api-origin}/v1/mailchimp/webhook?token={MAILCHIMP_WEBHOOK_SECRET}
 ```
 
-Resolve `{api-origin}` from CloudFormation outputs on the backend stack:
-
-- Use `ApiCustomDomainUrl` when `ApiCustomDomainName` is set. That output includes the `/prod` base path, so it replaces an execute-api URL by swapping the host only. Append `/v1/...` to the output. Do not add another `/prod`.
-- Otherwise use `ApiUrl` (API Gateway execute-api URL). It also ends in `/prod`.
-- Set `ApiDisableExecuteApiEndpoint` to `true` only after DNS points at `ApiCustomDomainTarget` and every client, including Mailchimp and WhatsApp, calls `ApiCustomDomainUrl`. That deploy also moves the asset-share CloudFront origin onto the custom domain. The execute-api hostname then returns 403. The stage setting that applies the flag is updated after the REST API change. Set the parameter back to `false` and deploy before pointing clients at execute-api again.
+Resolve `{api-origin}` from the `ApiCustomDomainUrl` output on the backend
+stack. That output includes the `/prod` base path. Append `/v1/...` to it.
+Do not add another `/prod`. The execute-api hostname does not accept calls.
 
 Do not leave a previous host in the Mailchimp dashboard after
-`ApiCustomDomainName` or the execute-api stage URL changes. Mailchimp will keep
-calling the old URL and CRM `mailchimp_status` will drift.
+`ApiCustomDomainName` changes. Mailchimp will keep calling the old URL and
+CRM `mailchimp_status` will drift.
 
 ### After any API host change
 
-1. Confirm the current origin from `ApiCustomDomainUrl` or `ApiUrl`.
+1. Confirm the current origin from `ApiCustomDomainUrl`.
 2. In Mailchimp: Audience → Settings → Webhooks. Set the callback URL to the
    formula above (same `token` as `CDK_PARAM_MAILCHIMP_WEBHOOK_SECRET`).
 3. Verify `GET {url}` returns HTTP 200 `{"message":"ok"}`.
@@ -40,8 +38,8 @@ calling the old URL and CRM `mailchimp_status` will drift.
 
 ### Deploy checklist
 
-- [ ] `ApiCustomDomainName` / `ApiUrl` reviewed; Mailchimp webhook URL matches
-      the current API origin
+- [ ] `ApiCustomDomainName` reviewed; Mailchimp webhook URL matches
+      `ApiCustomDomainUrl`
 - [ ] `MAILCHIMP_WEBHOOK_SECRET` unchanged unless intentionally rotated (rotate
       in Mailchimp in the same change)
 - [ ] GET verification and one subscribe/unsubscribe smoke test completed

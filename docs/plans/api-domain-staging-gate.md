@@ -12,15 +12,13 @@ the edge-verify check in `public-www-stack.ts`. It stays off while
 
 - The API custom domain maps to the prod stage at `/prod`.
   `ApiCustomDomainUrl` includes that path, as `ApiUrl` does.
-- `ApiDisableExecuteApiEndpoint` is `false` in `params/production.json`.
-  It takes effect only when the custom domain is configured. While it is
-  false, `DisableExecuteApiEndpoint` and the stage variable
-  `executeApiEndpoint` are omitted. Turning it on sets the variable to
-  `disabled` and the stage update depends on the REST API, so the stage
-  setting changes after the flag. AWS applies the flag on that stage update.
-- The asset-share CloudFront origin uses the custom domain only when
-  execute-api is disabled, and the execute-api host otherwise. The origin
-  path stays `/prod`. Creating the domain does not move share links.
+- The execute-api hostname does not accept calls. `DisableExecuteApiEndpoint`
+  is set on the REST API. The stage variable `executeApiEndpoint` is
+  `disabled`, and the stage update depends on the REST API so API Gateway
+  applies the hostname setting. There is no parameter to turn the hostname
+  back on.
+- The asset-share CloudFront origin uses `ApiCustomDomainName`. The origin
+  path stays `/prod`.
 - `PublicWwwApiBaseUrl` and `PublicWwwMediaRequestApiBaseUrl` resolve
   `PUBLIC_WWW_API_BASE_URL` and `PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL`.
   Backend deploy falls back to `NEXT_PUBLIC_API_BASE_URL` when those are
@@ -39,31 +37,20 @@ the edge-verify check in `public-www-stack.ts`. It stays off while
 
 1. Deploy the backend stack. `ApiCustomDomainName` is
    `api.evolvesprouts.com` and `ApiCustomDomainCertificateArn` is the issued
-   `*.evolvesprouts.com` certificate in `ap-southeast-1`. Leave
-   `ApiDisableExecuteApiEndpoint` false. Share links stay on execute-api.
+   `*.evolvesprouts.com` certificate in `ap-southeast-1`. The deploy disables
+   the execute-api hostname and moves share links to the custom domain.
 2. Point the API DNS record at `ApiCustomDomainTarget`, proxy off. Confirm
    `GET https://api.evolvesprouts.com/prod/v1/mailchimp/webhook` returns
    `{"message":"ok"}` before the next step. `/prod/health` requires IAM, so
    an unauthenticated call returns 403 even when routing works. The admin
    Lambda strips the `/prod` base path from `path` before matching routes.
    Do not retarget DNS before the deploy creates the domain.
-3. Set `PUBLIC_WWW_API_BASE_URL` and
-   `PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL` to the current execute-api URL
-   so the public-site origins do not follow the client cutover.
-   `TrainingApiBaseUrl` still reads `NEXT_PUBLIC_API_BASE_URL`; move the
-   training parameters in the same change if training should stay on
-   execute-api.
-4. Set `NEXT_PUBLIC_API_BASE_URL` to `ApiCustomDomainUrl` for direct
-   clients and redeploy them. Set `NEXT_PUBLIC_WWW_API_BASE_URL` to `/www`
-   for the public site. Move the Mailchimp and WhatsApp callbacks. See
-   `docs/deployment/backend.md`. Append `/v1/...` to `ApiCustomDomainUrl`.
-5. Point `PUBLIC_WWW_API_BASE_URL` and
-   `PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL` at `ApiCustomDomainUrl` and
-   deploy the public website stack. Check `/www` and media requests.
-6. Set `ApiDisableExecuteApiEndpoint` to `true` and deploy. Execute-api
-   starts returning 403, and the asset-share origin moves to the custom
-   domain.
-7. Upload the staging Worker with `PRODUCTION_ORIGIN` set to the public
+3. Keep `NEXT_PUBLIC_API_BASE_URL`, `PUBLIC_WWW_API_BASE_URL`,
+   `PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL`, and the training API parameters
+   on `ApiCustomDomainUrl`. The public site build uses
+   `NEXT_PUBLIC_WWW_API_BASE_URL=/www`. Mailchimp and Meta callbacks use
+   `ApiCustomDomainUrl` plus `/v1/...`.
+4. Upload the staging Worker with `PRODUCTION_ORIGIN` set to the public
    site, the allow-list in `STAGING_ALLOWED_IPS`, and
    `STAGING_BYPASS_SECRET` on the Worker and in the `staging` GitHub
    environment. Smoke stays green until a response leaves the staging host.
@@ -97,9 +84,9 @@ empty, so there is no WebACL to detach.
 
 ## Rollback
 
-Set `ApiDisableExecuteApiEndpoint` back to `false` and deploy before
-pointing clients at the execute-api URL. That returns the asset-share
-origin to execute-api. The custom domain can stay.
+Re-enabling the execute-api hostname takes a code change. The REST API sets
+`DisableExecuteApiEndpoint`, and the asset-share origin uses
+`ApiCustomDomainName`. The custom domain stays either way.
 
 Blanking `ApiCustomDomainName` in `params/production.json` does not remove
 the domain. The deploy workflow drops empty values and CDK reuses the

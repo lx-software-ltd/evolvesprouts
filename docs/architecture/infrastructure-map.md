@@ -262,7 +262,7 @@ API Gateway (evolvesprouts-api)
 | Tracing | X-Ray enabled |
 | Access logging | JSON format to CloudWatch |
 | Caching | Disabled at stage; edge-cached at CloudFront for `/www/*` GETs |
-| Custom domain | `api.evolvesprouts.com` at `/prod` (`ApiCustomDomainName`). Execute-api and the asset-share origin stay in place until `ApiDisableExecuteApiEndpoint` is `true`. |
+| Custom domain | `api.evolvesprouts.com` at `/prod` (`ApiCustomDomainName`). The execute-api hostname does not accept calls. Asset-share links use this domain. |
 
 ### CORS
 

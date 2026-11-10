@@ -175,7 +175,7 @@ export class PublicWwwStack extends cdk.Stack {
       {
         type: "String",
         description:
-          "Absolute HTTPS execute-api base URL for media requests (for example https://abc123.execute-api.ap-southeast-1.amazonaws.com/prod).",
+          "Absolute HTTPS API base URL for media requests (for example https://api.example.com/prod).",
         allowedPattern: "^https://[^/]+/[^/]+/?$",
         constraintDescription:
           "Must be an absolute HTTPS URL ending in a single stage path segment (for example /prod).",

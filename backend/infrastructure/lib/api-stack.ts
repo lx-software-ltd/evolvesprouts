@@ -1066,18 +1066,16 @@ export class ApiStack extends cdk.Stack {
     );
 
     // ---------------------------------------------------------------------
-    // API Custom Domain Parameters (Optional)
+    // API custom domain. The execute-api hostname does not accept calls.
     // ---------------------------------------------------------------------
     const apiCustomDomainName = new cdk.CfnParameter(
       this,
       "ApiCustomDomainName",
       {
         type: "String",
-        default: "",
         description:
-          "Optional custom domain for the API (e.g., evolvesprouts-api.lx-software.com). " +
-          "Leave empty to use the default API Gateway URL. When set, the domain " +
-          "maps to the prod stage at /prod so clients keep the same path.",
+          "Custom domain for the API. The domain maps to the prod stage at " +
+          "/prod, and it is the only hostname that accepts API calls.",
       }
     );
     const apiCustomDomainCertificateArn = new cdk.CfnParameter(
@@ -1085,27 +1083,10 @@ export class ApiStack extends cdk.Stack {
       "ApiCustomDomainCertificateArn",
       {
         type: "String",
-        default: "",
         description:
           "ACM certificate ARN for the API custom domain. " +
           "For regional endpoints, must be in the same region as the API. " +
           "For edge-optimized endpoints, must be in us-east-1.",
-      }
-    );
-    const apiDisableExecuteApiEndpoint = new cdk.CfnParameter(
-      this,
-      "ApiDisableExecuteApiEndpoint",
-      {
-        type: "String",
-        default: "false",
-        allowedValues: ["true", "false"],
-        description:
-          "When true and the API custom domain is configured, clients cannot " +
-          "call the default execute-api hostname, and the asset-share " +
-          "CloudFront origin moves to the custom domain. Leave false until " +
-          "DNS points at the custom domain and every client uses it. The " +
-          "stage variable executeApiEndpoint is set only while this is on, " +
-          "and that stage update waits for the REST API change.",
       }
     );
     const useApiCustomDomain = new cdk.CfnCondition(this, "UseApiCustomDomain", {
@@ -1118,16 +1099,6 @@ export class ApiStack extends cdk.Stack {
         )
       ),
     });
-    const disableExecuteApiEndpoint = new cdk.CfnCondition(
-      this,
-      "DisableExecuteApiEndpoint",
-      {
-        expression: cdk.Fn.conditionAnd(
-          useApiCustomDomain,
-          cdk.Fn.conditionEquals(apiDisableExecuteApiEndpoint.valueAsString, "true")
-        ),
-      }
-    );
 
     const nominatimUserAgent = new cdk.CfnParameter(
       this,
@@ -3232,26 +3203,13 @@ export class ApiStack extends cdk.Stack {
       ],
     });
     const cfnRestApi = api.node.defaultChild as apigateway.CfnRestApi;
-    // Omit the property while the flag is off so a steady deploy does not
-    // rewrite the REST API. AWS applies the change when a stage setting
-    // updates after the REST API update, not when the property is saved.
-    cfnRestApi.addPropertyOverride(
-      "DisableExecuteApiEndpoint",
-      cdk.Fn.conditionIf(
-        disableExecuteApiEndpoint.logicalId,
-        true,
-        cdk.Aws.NO_VALUE,
-      ),
-    );
+    // AWS applies DisableExecuteApiEndpoint when a stage setting changes
+    // after the REST API update, not when the property is saved. The stage
+    // variable forces that update, and the stage depends on the REST API
+    // so the update runs after the property change.
+    cfnRestApi.addPropertyOverride("DisableExecuteApiEndpoint", true);
     cfnApiStage.addResourceDependency(cfnRestApi);
-    cfnApiStage.addPropertyOverride(
-      "Variables.executeApiEndpoint",
-      cdk.Fn.conditionIf(
-        disableExecuteApiEndpoint.logicalId,
-        "disabled",
-        cdk.Aws.NO_VALUE,
-      ),
-    );
+    cfnApiStage.addPropertyOverride("Variables.executeApiEndpoint", "disabled");
 
     // -------------------------------------------------------------------------
     // Gateway Responses – add CORS headers to API Gateway error responses
@@ -3790,18 +3748,9 @@ export class ApiStack extends cdk.Stack {
       apiKeyRequired: true,
     });
 
-    // Share links stay on execute-api until the disable flag. The custom
-    // domain's DNS target exists only after this stack deploys, so moving
-    // the origin in that same deploy would point CloudFront at the old record.
-    const executeApiHost = `${api.restApiId}.execute-api.${cdk.Stack.of(this).region}.${cdk.Stack.of(this).urlSuffix}`;
+    // Share links call the custom domain. The execute-api hostname is disabled.
     const assetShareApiOrigin = new origins.HttpOrigin(
-      cdk.Token.asString(
-        cdk.Fn.conditionIf(
-          disableExecuteApiEndpoint.logicalId,
-          apiCustomDomainName.valueAsString,
-          executeApiHost,
-        ),
-      ),
+      apiCustomDomainName.valueAsString,
       {
         originPath: `/${API_GATEWAY_STAGE_NAME}`,
         protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,

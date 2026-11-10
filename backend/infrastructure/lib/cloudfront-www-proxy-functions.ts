@@ -127,7 +127,7 @@ function handler(event) {
 }
 `;
 
-/** Dedicated behavior for POST/OPTIONS /www/v1/assets/free/request → execute-api. */
+/** Dedicated behavior for POST/OPTIONS /www/v1/assets/free/request → API origin. */
 export const MEDIA_REQUEST_PROXY_FUNCTION = `
 function handler(event) {
   var request = event.request;
