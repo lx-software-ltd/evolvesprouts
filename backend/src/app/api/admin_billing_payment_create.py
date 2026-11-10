@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
-from typing import Any, Callable, Mapping
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -33,6 +34,7 @@ from app.services.billing_enrollment_confirmation import (
 from app.services.customer_billing import (
     create_receipt_for_succeeded_inbound_payment,
     finalize_receipt_pdf_upload,
+    payment_unapplied_amount,
 )
 from app.utils import json_response
 from app.utils.logging import get_logger
@@ -42,31 +44,38 @@ ISSUE_PENDING_PAYMENT_METHOD = "fps"
 logger = get_logger(__name__)
 
 
-def _invoice_has_succeeded_stripe_payment(
-    session: Session, enrollment_ids: list[UUID]
-) -> bool:
-    """True when an enrollment on the invoice already has a succeeded Stripe charge.
+def _positive_open_payment_cover(
+    session: Session, enrollment_ids: list[UUID], currency: str
+) -> Decimal:
+    """Unapplied amount of same-currency payments that can still pay this invoice.
 
-    The issue-time stub is one inbound row for the whole invoice total. Creating
-    it would duplicate a Stripe payment already recorded for that enrollment
-    (public booking or a manual ``stripe_card`` row).
+    A zero-amount free payment does not count. Money already allocated to
+    another invoice, and payments in another currency, do not cover the stub.
     """
     if not enrollment_ids:
-        return False
-    found = session.execute(
-        select(CustomerPayment.id)
-        .where(
+        return Decimal(0)
+    wanted = currency.strip().upper()[:3]
+    payments = session.scalars(
+        select(CustomerPayment).where(
             CustomerPayment.enrollment_id.in_(enrollment_ids),
             CustomerPayment.direction == BillingPaymentDirection.INBOUND,
-            CustomerPayment.status == BillingPaymentStatus.SUCCEEDED,
-            or_(
-                CustomerPayment.stripe_payment_intent_id.is_not(None),
-                CustomerPayment.method == "stripe_card",
+            CustomerPayment.status.in_(
+                (BillingPaymentStatus.PENDING, BillingPaymentStatus.SUCCEEDED)
             ),
+            CustomerPayment.amount > 0,
         )
-        .limit(1)
-    ).scalar_one_or_none()
-    return found is not None
+    ).all()
+    covered = Decimal(0)
+    for payment in payments:
+        if str(getattr(payment, "currency", "") or "").strip().upper()[:3] != wanted:
+            continue
+        if payment.status == BillingPaymentStatus.PENDING:
+            covered += Decimal(str(payment.amount))
+            continue
+        unapplied = payment_unapplied_amount(session, payment.id)
+        if unapplied > 0:
+            covered += unapplied
+    return covered
 
 
 def create_pending_payment_for_issued_invoice(
@@ -78,16 +87,23 @@ def create_pending_payment_for_issued_invoice(
 ) -> CustomerPayment | None:
     """Create a pending inbound payment stub after invoice issue.
 
-    Skips zero-total invoices and invoices whose enrollments already have a
-    succeeded Stripe payment. Does not allocate to the invoice. Sets
-    ``enrollment_id`` only when the invoice has exactly one enrollment line;
-    customized and multi-enrollment invoices leave it unset.
+    Skips zero-total invoices and invoices already covered by positive pending
+    or succeeded payments. A partial cover creates a stub for the remainder.
+    Does not allocate. Sets ``enrollment_id`` only when the invoice has exactly
+    one enrollment line; customized and multi-enrollment invoices leave it unset.
     """
-    if Decimal(str(inv.total)) <= Decimal("0"):
+    total = Decimal(str(inv.total))
+    if total <= Decimal(0):
         return None
+    balance = getattr(inv, "balance_due", None)
+    due = Decimal(str(total if balance is None else balance))
 
+    currency = str(inv.currency or "").strip().upper()[:3]
+    if len(currency) != 3:
+        raise ValidationError("Invoice currency is required", field="currency")
     enrollment_ids = distinct_enrollment_ids_on_invoice(session, inv.id)
-    if _invoice_has_succeeded_stripe_payment(session, enrollment_ids):
+    remainder = due - _positive_open_payment_cover(session, enrollment_ids, currency)
+    if remainder <= Decimal(0):
         return None
     enrollment_id = enrollment_ids[0] if len(enrollment_ids) == 1 else None
 
@@ -95,15 +111,11 @@ def create_pending_payment_for_issued_invoice(
     if inv.bill_to_kind == BillingBillToKind.CONTACT:
         contact_id = inv.bill_to_contact_id
 
-    currency = str(inv.currency or "").strip().upper()[:3]
-    if len(currency) != 3:
-        raise ValidationError("Invoice currency is required", field="currency")
-
     pay = CustomerPayment(
         direction=BillingPaymentDirection.INBOUND,
         status=BillingPaymentStatus.PENDING,
         method=ISSUE_PENDING_PAYMENT_METHOD,
-        amount=Decimal(str(inv.total)),
+        amount=remainder,
         currency=currency,
         enrollment_id=enrollment_id,
         contact_id=contact_id,
@@ -127,6 +139,13 @@ def create_pending_payment_for_issued_invoice(
         },
     )
     return pay
+
+
+def _settle_succeeded_payment(session: Session, payment: CustomerPayment) -> None:
+    """Allocate when auto-invoice is on. Imported lazily to avoid a cycle."""
+    from app.services.enrollment_billing import settle_confirmed_payment
+
+    settle_confirmed_payment(session, payment)
 
 
 def normalize_manual_payment_method(raw: str) -> str:
@@ -240,7 +259,7 @@ def create_manual_inbound_payment(
 
     ext_ref = str(body.get("externalReference") or "").strip() or None
 
-    is_free_zero = amount == Decimal("0") or method == "free"
+    is_free_zero = amount == Decimal(0) or method == "free"
     if is_free_zero:
         method = "free"
         effective_status = "succeeded"
@@ -341,7 +360,7 @@ def create_manual_inbound_payment(
             action="MANUAL_INBOUND_PAYMENT_CREATED",
             new_values=audit_new,
         )
-        if pay_status == BillingPaymentStatus.SUCCEEDED:
+        if pay_status == BillingPaymentStatus.SUCCEEDED and amount > 0:
             existing_receipt = session.execute(
                 select(CustomerReceipt).where(
                     CustomerReceipt.customer_payment_id == pay.id
@@ -352,6 +371,7 @@ def create_manual_inbound_payment(
                     session, payment=pay
                 )
                 receipt_id_for_upload = rcpt.id
+            _settle_succeeded_payment(session, pay)
         deletable = batch_orphan_payment_deletable(session, [pay]).get(pay.id, False)
         payload = serialize_payment_for_response(
             session, pay, orphan_payment_deletable=deletable

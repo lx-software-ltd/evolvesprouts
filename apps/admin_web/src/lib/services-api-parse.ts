@@ -362,6 +362,10 @@ function parseEnrollment(value: unknown): Enrollment {
     updatedAt: asNullableString(item.updated_at),
     partyDisplayName: asNullableString(item.party_display_name),
     scheduledStartAt: asNullableString(item.scheduled_start_at),
+    invoiceNumber: asNullableString(item.invoice_number),
+    invoiceStatus: asNullableString(item.invoice_status),
+    paymentStatus: asNullableString(item.payment_status),
+    billingWarning: asNullableString(item.billing_warning),
   };
 }
 

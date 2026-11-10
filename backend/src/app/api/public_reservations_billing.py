@@ -1,9 +1,9 @@
-"""Bill-to and discount-scope validation for public reservations."""
+"""Bill-to checks and the website charge that follows a new enrollment."""
 
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy import select
@@ -12,11 +12,17 @@ from sqlalchemy.orm import Session
 from app.api.public_discount_validate import (
     _is_usable_now as discount_code_is_usable_now,
 )
+from app.api.public_reservations_persistence import (
+    _PUBLIC_RESERVATION_ENROLLMENT_ACTOR,
+)
 from app.db.models import Enrollment, Service, ServiceInstance
-from app.db.models.enums import BillingBillToKind, DiscountType
+from app.db.models.enums import BillingBillToKind, DiscountType, LeadEventType, LeadType
 from app.db.models.family import FamilyMember
 from app.db.models.organization import OrganizationMember
 from app.exceptions import ValidationError
+from app.services.customer_billing import record_reservation_customer_payment
+from app.services.enrollment_billing import attach_public_invoice
+from app.services.lead_funnel_automation import ensure_contact_lead
 
 
 def _apply_enrollment_bill_to(
@@ -133,3 +139,69 @@ def _validate_discount_code_redemption_scope(
             "Discount code is not valid for this booking",
             field="discountCode",
         )
+
+
+def record_public_enrollment_billing(
+    session: Session,
+    *,
+    enrollment: Enrollment,
+    contact: Any,
+    reservation_payload: Mapping[str, Any],
+    lead_metadata: Mapping[str, Any],
+) -> tuple[Any, bool, UUID | None, Any]:
+    """Create the lead, the payment, then the invoice. Lead comes first so a paid booking converts it."""
+    ensure_contact_lead(
+        session,
+        contact_id=contact.id,
+        contact=contact,
+        lead_type=LeadType.PROGRAM_ENROLLMENT,
+        metadata=cast("dict[str, object]", dict(lead_metadata)),
+        attach_event_type=LeadEventType.ACTION_RECORDED,
+    )
+    pay, _, duplicate = record_reservation_customer_payment(
+        session,
+        enrollment_id=enrollment.id,
+        contact_id=contact.id,
+        currency=reservation_payload["currency"],
+        total_amount=reservation_payload["total_amount"],
+        payment_method=reservation_payload["payment_method"],
+        stripe_payment_intent_id=reservation_payload.get("stripe_payment_intent_id"),
+        stripe_currency=reservation_payload.get("stripe_currency"),
+    )
+    if pay is None:
+        return None, False, None, None
+    followup = attach_public_invoice(
+        session,
+        enrollment,
+        pay,
+        actor=_PUBLIC_RESERVATION_ENROLLMENT_ACTOR,
+        attendee_name=str(reservation_payload.get("attendee_name") or ""),
+        attendee_email=str(reservation_payload.get("attendee_email") or ""),
+        duplicate=bool(duplicate),
+    )
+    return pay, bool(duplicate), pay.id, followup
+
+
+def heal_duplicate_public_invoice(
+    session: Session,
+    payment: Any,
+    *,
+    attendee_name: str,
+    attendee_email: str,
+) -> Any:
+    """A retried Stripe charge invoices the existing enrollment when it still has none."""
+    enrollment_id = getattr(payment, "enrollment_id", None)
+    if enrollment_id is None:
+        return None
+    enrollment = session.get(Enrollment, enrollment_id)
+    if enrollment is None:
+        return None
+    return attach_public_invoice(
+        session,
+        enrollment,
+        payment,
+        actor=_PUBLIC_RESERVATION_ENROLLMENT_ACTOR,
+        attendee_name=attendee_name,
+        attendee_email=attendee_email,
+        duplicate=True,
+    )

@@ -3765,6 +3765,14 @@ export interface components {
             /** Format: date-time */
             cancelled_at?: string | null;
             notes?: string | null;
+            /** @description Non-void invoice number for this enrollment, when one exists. */
+            invoice_number?: string | null;
+            /** @description draft or issued. Void invoices are omitted. */
+            invoice_status?: string | null;
+            /** @description Latest non-failed inbound payment status for this enrollment. */
+            payment_status?: string | null;
+            /** @description Set when the invoice was left as a draft, was not created, or needs a refund after cancellation. */
+            billing_warning?: string | null;
             /** @description Display label for the enrollment party. For contact enrollment this is `contact name · email` (middle dot) when both name and email are known; otherwise the best available single label. For family or organization enrollment this is `entity name · primary contact name` (middle dot) when both the entity and primary contact names are known; otherwise the best available single label. Matches the billing enrollment picker `partyDisplayName` convention. */
             party_display_name?: string;
             created_by?: string;
@@ -3799,6 +3807,14 @@ export interface components {
             amount_paid?: string | null;
             currency?: string | null;
             notes?: string | null;
+            /** @description When true, the enrollment is saved with no payment and no invoice so Finance can merge it onto a later invoice. Omit every billing field to keep the previous client, which records the payment in a second request. */
+            bill_later?: boolean;
+            /** @description fps (default), bank_transfer, cash, cheque, or free. Free is only valid when the amount is zero. */
+            payment_method?: string;
+            /** @description When true, the payment is recorded as succeeded. Otherwise it stays pending until staff confirm it. */
+            payment_received?: boolean;
+            /** @description When true and auto-invoicing is enabled, email the issued invoice. Default false. An invoice with no bill-to email is still issued. */
+            send_invoice_email?: boolean;
         };
         UpdateEnrollmentRequest: {
             /**

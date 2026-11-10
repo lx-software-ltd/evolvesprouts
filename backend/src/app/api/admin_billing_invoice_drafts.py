@@ -27,10 +27,15 @@ from app.config import get_default_currency_code
 from app.db.audit import AuditService, session_with_audit
 from app.db.models import Contact, Enrollment, Family, Organization
 from app.db.models.customer_invoice import CustomerInvoice, CustomerInvoiceLine
-from app.db.models.enums import BillingBillToKind, BillingInvoiceStatus
+from app.db.models.enums import (
+    BillingBillToKind,
+    BillingInvoiceStatus,
+    EnrollmentStatus,
+)
 from app.db.models.service_instance import ServiceInstance
-from app.exceptions import ValidationError
+from app.exceptions import ConflictError, ValidationError
 from app.services.customer_invoice_pdf import today_in_invoice_display_tz_or_utc
+from app.services.enrollment_invoice_links import open_invoice_enrollment_ids
 from app.utils import json_response
 
 _CUSTOMIZED_DRAFT_MAX_LINES = 50
@@ -113,9 +118,9 @@ def _create_customized_invoice_draft(
         inv = CustomerInvoice(
             status=BillingInvoiceStatus.DRAFT,
             currency=currency,
-            subtotal=Decimal("0"),
-            tax_total=Decimal("0"),
-            total=Decimal("0"),
+            subtotal=Decimal(0),
+            tax_total=Decimal(0),
+            total=Decimal(0),
             bill_to_kind=bill_kind,
             bill_to_contact_id=bill_cid,
             bill_to_family_id=bill_fid,
@@ -127,8 +132,8 @@ def _create_customized_invoice_draft(
         session.add(inv)
         session.flush()
 
-        subtotal_pre_tax = Decimal("0")
-        tax_sum = Decimal("0")
+        subtotal_pre_tax = Decimal(0)
+        tax_sum = Decimal(0)
         for order, raw_ln in enumerate(raw_lines):
             if not isinstance(raw_ln, Mapping):
                 raise ValidationError(
@@ -162,7 +167,7 @@ def _create_customized_invoice_draft(
             discount = (
                 _decimal_field(disc_raw, field=f"lines[{order}].discountAmount")
                 if disc_raw is not None and str(disc_raw).strip() != ""
-                else Decimal("0")
+                else Decimal(0)
             )
             if discount < 0 or discount > extended:
                 raise ValidationError(
@@ -191,7 +196,7 @@ def _create_customized_invoice_draft(
                     Decimal("0.0001"), rounding=ROUND_HALF_UP
                 )
             else:
-                tax_part = Decimal("0")
+                tax_part = Decimal(0)
                 tax_rate_val = None
             if tax_part < 0:
                 raise ValidationError(
@@ -366,6 +371,19 @@ def _create_invoice_draft(
                 field="enrollmentIds",
             )
 
+        for en in enrollments:
+            if en.status == EnrollmentStatus.CANCELLED:
+                raise ValidationError(
+                    "Cancelled enrollments cannot be invoiced",
+                    field="enrollmentIds",
+                )
+        already = open_invoice_enrollment_ids(session, [en.id for en in enrollments])
+        if already:
+            raise ConflictError(
+                "enrollment_already_invoiced",
+                enrollmentId=str(next(iter(already))),
+            )
+
         first = enrollments[0]
         bill_kind, bill_cid, bill_fid, bill_oid = effective_enrollment_bill_to_fks(
             first
@@ -373,9 +391,9 @@ def _create_invoice_draft(
         inv = CustomerInvoice(
             status=BillingInvoiceStatus.DRAFT,
             currency=currency,
-            subtotal=Decimal("0"),
-            tax_total=Decimal("0"),
-            total=Decimal("0"),
+            subtotal=Decimal(0),
+            tax_total=Decimal(0),
+            total=Decimal(0),
             bill_to_kind=bill_kind,
             bill_to_contact_id=bill_cid,
             bill_to_family_id=bill_fid,
@@ -387,20 +405,20 @@ def _create_invoice_draft(
         session.add(inv)
         session.flush()
 
-        subtotal = Decimal("0")
-        tax_total = Decimal("0")
+        subtotal = Decimal(0)
+        tax_total = Decimal(0)
         for order, en in enumerate(enrollments):
             if en.id in line_overrides:
                 line_total = line_overrides[en.id]
             else:
-                line_total = en.amount_paid or Decimal("0")
+                line_total = en.amount_paid or Decimal(0)
             line_desc = _build_enrollment_merge_line_description(en)
             line = CustomerInvoiceLine(
                 invoice_id=inv.id,
                 enrollment_id=en.id,
                 line_order=order,
                 description=line_desc,
-                quantity=Decimal("1"),
+                quantity=Decimal(1),
                 unit_amount=line_total,
                 line_total=line_total,
                 currency=currency,

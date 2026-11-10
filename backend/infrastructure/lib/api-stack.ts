@@ -3398,6 +3398,8 @@ export class ApiStack extends cdk.Stack {
       "INVOICE_DISPLAY_TIMEZONE",
       invoiceDisplayTimezone.valueAsString
     );
+    // Off until operations turn it on. Unset, false, 0, and no keep the old path.
+    adminFunction.addEnvironment("ENROLLMENT_AUTO_INVOICE", "false");
 
     const addAdminMethod = (resource: apigateway.IResource, method: string) =>
       resource.addMethod(method, adminIntegration, {

@@ -380,6 +380,12 @@ export interface Enrollment {
   partyDisplayName?: string | null;
   /** Present when the admin enrollment list includes instance scheduled-start metadata. */
   scheduledStartAt?: string | null;
+  /** Non-void invoice number, when this enrollment is already on an invoice. */
+  invoiceNumber?: string | null;
+  invoiceStatus?: string | null;
+  paymentStatus?: string | null;
+  /** Draft, missing invoice, or refund note returned with the enrollment. */
+  billingWarning?: string | null;
 }
 
 export interface DiscountCode {

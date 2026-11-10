@@ -8721,6 +8721,24 @@ components:
         notes:
           type: string
           nullable: true
+        invoice_number:
+          type: string
+          nullable: true
+          description: Non-void invoice number for this enrollment, when one exists.
+        invoice_status:
+          type: string
+          nullable: true
+          description: draft or issued. Void invoices are omitted.
+        payment_status:
+          type: string
+          nullable: true
+          description: Latest non-failed inbound payment status for this enrollment.
+        billing_warning:
+          type: string
+          nullable: true
+          description: >
+            Set when the invoice was left as a draft, was not created, or needs a refund
+            after cancellation.
         party_display_name:
           type: string
           description: >
@@ -8796,6 +8814,27 @@ components:
         notes:
           type: string
           nullable: true
+        bill_later:
+          type: boolean
+          description: >
+            When true, the enrollment is saved with no payment and no invoice so Finance
+            can merge it onto a later invoice. Omit every billing field to keep the
+            previous client, which records the payment in a second request.
+        payment_method:
+          type: string
+          description: >
+            fps (default), bank_transfer, cash, cheque, or free. Free is only valid when
+            the amount is zero.
+        payment_received:
+          type: boolean
+          description: >
+            When true, the payment is recorded as succeeded. Otherwise it stays pending
+            until staff confirm it.
+        send_invoice_email:
+          type: boolean
+          description: >
+            When true and auto-invoicing is enabled, email the issued invoice. Default
+            false. An invoice with no bill-to email is still issued.
     UpdateEnrollmentRequest:
       type: object
       minProperties: 1

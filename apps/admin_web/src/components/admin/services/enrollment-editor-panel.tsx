@@ -26,6 +26,29 @@ type ApiSchemas = components['schemas'];
 const ENROLLMENT_EDITOR_FORM_ID = 'enrollment-editor-form';
 const EMPTY_PARENT_VALUE = '';
 
+function sameMoney(next: string, previous: string | null | undefined): boolean {
+  const left = next.trim();
+  const right = (previous ?? '').trim();
+  if (left === right) {
+    return true;
+  }
+  const leftNumber = left === '' ? 0 : Number.parseFloat(left);
+  const rightNumber = right === '' ? 0 : Number.parseFloat(right);
+  if (!Number.isFinite(leftNumber) || !Number.isFinite(rightNumber)) {
+    return false;
+  }
+  return Math.abs(leftNumber - rightNumber) < 0.000001;
+}
+
+function sameCurrency(
+  next: string,
+  previous: string | null | undefined,
+  fallback: string
+): boolean {
+  const stored = (previous ?? '').trim() || fallback.trim();
+  return next.trim().toUpperCase() === stored.toUpperCase();
+}
+
 function ensureOption(
   options: EnrollmentParentPickerOption[],
   id: string | null | undefined,
@@ -90,6 +113,10 @@ export function EnrollmentEditorPanel({
     enrollment ? formatIsoForDatetimeLocalInput(enrollment.enrolledAt) : ''
   );
   const [enrolledAtError, setEnrolledAtError] = useState('');
+  const [billLater, setBillLater] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('fps');
+  const [paymentReceived, setPaymentReceived] = useState(false);
+  const [sendInvoiceEmail, setSendInvoiceEmail] = useState(false);
 
   /** Structural party is contact-only; API allows a single conversion to family or organization. */
   const canPromoteContactEnrollment = Boolean(
@@ -130,16 +157,24 @@ export function EnrollmentEditorPanel({
     amount_paid: amountPaid.trim() || null,
     currency: currency.trim() || null,
     notes: notes.trim() || null,
+    bill_later: billLater,
+    payment_method: paymentMethod,
+    payment_received: paymentReceived,
+    send_invoice_email: sendInvoiceEmail,
   });
 
   const buildUpdatePayload = (enrolledIso: string): ApiSchemas['UpdateEnrollmentRequest'] => {
     const base: ApiSchemas['UpdateEnrollmentRequest'] = {
       status,
-      amount_paid: amountPaid.trim() || null,
-      currency: currency.trim() || null,
       notes: notes.trim() || null,
       enrolled_at: enrolledIso,
     };
+    if (!sameMoney(amountPaid, enrollment?.amountPaid)) {
+      base.amount_paid = amountPaid.trim() || null;
+    }
+    if (!sameCurrency(currency, enrollment?.currency, defaultCurrencyCode)) {
+      base.currency = currency.trim() || null;
+    }
     const nextDiscount = discountCodeId.trim() || null;
     const previousDiscount = enrollment?.discountCodeId?.trim() || null;
     if (nextDiscount !== previousDiscount) {
@@ -174,6 +209,9 @@ export function EnrollmentEditorPanel({
   }
 
   const hasParty = Boolean(contactId.trim() || familyId.trim() || organizationId.trim());
+  const amountValue = Number.parseFloat(amountPaid);
+  const isFreeCharge = amountPaid.trim() === '' || !Number.isFinite(amountValue) || amountValue <= 0;
+  const showChargeFields = !isEditMode && !billLater && !isFreeCharge;
   const submitDisabled = isEditMode ? false : pickers.loading || !hasParty;
   const partyLocked = isEditMode && !canPromoteContactEnrollment;
 
@@ -334,6 +372,91 @@ export function EnrollmentEditorPanel({
             </Select>
           </AdminField>
         </AdminFieldGrid>
+        {isEditMode && enrollment ? (
+          <AdminFieldGrid columns={2}>
+            <AdminField label='Invoice' htmlFor='enrollment-invoice'>
+              <Input
+                id='enrollment-invoice'
+                value={
+                  enrollment.invoiceNumber ??
+                  (enrollment.invoiceStatus ? formatEnumLabel(enrollment.invoiceStatus) : '—')
+                }
+                readOnly
+              />
+            </AdminField>
+            <AdminField label='Payment' htmlFor='enrollment-payment'>
+              <Input
+                id='enrollment-payment'
+                value={enrollment.paymentStatus ? formatEnumLabel(enrollment.paymentStatus) : '—'}
+                readOnly
+              />
+            </AdminField>
+          </AdminFieldGrid>
+        ) : null}
+        {showChargeFields ? (
+          <AdminFieldGrid columns={2}>
+            <AdminField label='Payment method' htmlFor='enrollment-payment-method'>
+              <Select
+                id='enrollment-payment-method'
+                value={paymentMethod}
+                onChange={(event) => setPaymentMethod(event.target.value)}
+              >
+                <option value='fps'>FPS</option>
+                <option value='bank_transfer'>Bank transfer</option>
+                <option value='cash'>Cash</option>
+                <option value='cheque'>Cheque</option>
+              </Select>
+            </AdminField>
+            <AdminField label='Payment received' htmlFor='enrollment-payment-received'>
+              <div className='flex h-10 items-center gap-2'>
+                <input
+                  id='enrollment-payment-received'
+                  type='checkbox'
+                  className='h-4 w-4 rounded border-slate-300 text-slate-900'
+                  checked={paymentReceived}
+                  onChange={(event) => setPaymentReceived(event.target.checked)}
+                />
+                <label htmlFor='enrollment-payment-received' className='text-sm text-slate-700'>
+                  Money is already received
+                </label>
+              </div>
+            </AdminField>
+          </AdminFieldGrid>
+        ) : null}
+        {!isEditMode ? (
+          <AdminFieldGrid columns={2}>
+            <AdminField label='Bill later' htmlFor='enrollment-bill-later'>
+              <div className='flex h-10 items-center gap-2'>
+                <input
+                  id='enrollment-bill-later'
+                  type='checkbox'
+                  className='h-4 w-4 rounded border-slate-300 text-slate-900'
+                  checked={billLater}
+                  onChange={(event) => setBillLater(event.target.checked)}
+                />
+                <label htmlFor='enrollment-bill-later' className='text-sm text-slate-700'>
+                  Merge this onto an invoice later
+                </label>
+              </div>
+            </AdminField>
+            {showChargeFields ? (
+              <AdminField label='Email invoice' htmlFor='enrollment-email-invoice'>
+                <div className='flex h-10 items-center gap-2'>
+                  <input
+                    id='enrollment-email-invoice'
+                    type='checkbox'
+                    className='h-4 w-4 rounded border-slate-300 text-slate-900'
+                    checked={sendInvoiceEmail}
+                    onChange={(event) => setSendInvoiceEmail(event.target.checked)}
+                  />
+                  <label htmlFor='enrollment-email-invoice' className='text-sm text-slate-700'>
+                    Email the invoice when it is issued
+                  </label>
+                </div>
+              </AdminField>
+            ) : null}
+          </AdminFieldGrid>
+        ) : null}
         <AdminFieldGrid columns={1}>
           <AdminField label='Notes' htmlFor='enrollment-notes'>
             <Textarea id='enrollment-notes' value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} />

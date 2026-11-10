@@ -912,20 +912,28 @@ Migration `0055_customer_billing_ar` introduces:
 `GET /v1/admin/billing/invoices/{id}` returns the invoice with line items (for example allocation line UUIDs).
 
 Issuing a **positive-total** invoice (`POST /v1/admin/billing/invoices/{id}/issue`) also
-inserts one pending inbound `customer_payments` row with the invoice `total` and `currency`,
-method `fps`, and `enrollment_id` only when the invoice has exactly one enrollment line
-(customized and multi-enrollment invoices leave it unset), unless a succeeded inbound
-Stripe payment already exists for an enrollment on the invoice (`stripe_card` or a
-Stripe payment intent id). That stub is **not** allocated at issue time, so settlement
-(`amount_allocated` / `paid_at`) stays unchanged until staff allocate later. Zero-total
-issues and Stripe-covered issues do not create a payment. Voiding the invoice leaves any
-pending stub in place. Pending stubs can be deleted while they have no allocations,
-receipt, or refunds, including when `enrollment_id` still points at an active enrollment.
-Free or zero-amount payments stay deletable only when the enrollment is unlinked or cancelled.
+inserts one pending inbound `customer_payments` row for the uncovered remainder and the invoice
+`currency`, method `fps`, and `enrollment_id` only when the invoice has exactly one enrollment line
+(customized and multi-enrollment invoices leave it unset). Same-currency unapplied pending or succeeded payments
+already linked to the invoice's enrollments reduce that remainder. A payment in another currency,
+or the part of a payment already allocated to a different invoice, does not. A zero-amount free
+payment does not either. The stub is **not** allocated at issue time, so settlement (`amount_allocated` / `paid_at`)
+stays unchanged until a payment is allocated later. Zero-total issues and issues already covered in
+full do not create another payment. Voiding the invoice leaves any pending stub in place. Pending
+stubs can be deleted while they have no allocations, receipt, or refunds, including when
+`enrollment_id` still points at an active enrollment. Free or zero-amount payments stay deletable
+only when the enrollment is unlinked or cancelled.
+
+No schema or seed change accompanies automatic enrollment invoices. The behaviour is
+application code behind `ENROLLMENT_AUTO_INVOICE` (unset or `false` leaves issuing off).
 
 For offline inbound payments, the `customer_payments` row may be **pending** until staff
-confirm the payment via `POST /v1/admin/billing/payments/{id}/confirm` or an equivalent succeeded path;
-the receipt row (and PDF that lists applied invoice numbers) follows server rules after confirmation.
+confirm the payment via `POST /v1/admin/billing/payments/{id}/confirm` or an equivalent succeeded path.
+When `ENROLLMENT_AUTO_INVOICE` is on, confirming a payment, creating a succeeded manual payment, or
+editing a pending payment to succeeded allocates it to that enrollment's issued invoices (oldest
+`issued_at` first) before the receipt is rendered, so the PDF lists those invoice numbers. When the
+flag is off, those paths do not allocate. A succeeded manual payment above zero gets a receipt. A
+website booking gets that receipt only while the flag is on. A zero-amount payment does not.
 
 ### `service_tags` + `service_assets`
 

@@ -4,14 +4,12 @@ import { useCallback, useMemo, useState } from 'react';
 
 import { StatusBanner } from '@/components/status-banner';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { toErrorMessage } from '@/hooks/hook-errors';
 import { useAutoSelectOnce } from '@/hooks/use-auto-select-once';
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { useEnrollmentDiscountOptions } from '@/hooks/use-enrollment-discount-options';
 import { useEnrollmentList } from '@/hooks/use-enrollment-list';
 import { useEnrollmentMutations } from '@/hooks/use-enrollment-mutations';
 import { useEnrollmentParentPickers } from '@/hooks/use-enrollment-parent-pickers';
-import { createInitialCustomerPaymentAfterEnrollmentCreate } from '@/lib/billing-api';
 import {
   findEnrollmentForRelatedParty,
   relatedPartyFilterKey,
@@ -36,7 +34,7 @@ export interface InstanceEnrollmentsSectionProps {
 /**
  * Enrollments of one instance, mounted lazily inside the instance editor's
  * Enrollments disclosure. Owns the list, the parent/discount pickers, the
- * mutations (including the automatic customer payment after create), and the
+ * mutations, and the
  * single open enrollment row.
  */
 export function InstanceEnrollmentsSection({
@@ -50,7 +48,7 @@ export function InstanceEnrollmentsSection({
   const discount = useEnrollmentDiscountOptions(serviceId, instanceId);
   const [confirmDialogProps, requestConfirm] = useConfirmDialog();
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [customerPaymentError, setCustomerPaymentError] = useState('');
+  const [billingWarning, setBillingWarning] = useState('');
 
   const mutations = useEnrollmentMutations({
     onSuccess: async (detail) => {
@@ -59,22 +57,11 @@ export function InstanceEnrollmentsSection({
       } else if (detail.enrollment) {
         list.upsertEnrollmentInList(detail.enrollment);
       }
+      if (detail.operation === 'create' || detail.operation === 'update') {
+        setBillingWarning(detail.enrollment?.billingWarning ?? '');
+      }
       await list.refetch();
       await onEnrollmentsChanged?.();
-      if (detail.operation === 'create' && detail.enrollment) {
-        try {
-          setCustomerPaymentError('');
-          await createInitialCustomerPaymentAfterEnrollmentCreate(detail.enrollment);
-        } catch (error) {
-          setCustomerPaymentError(
-            toErrorMessage(
-              error,
-              'Enrollment was saved, but automatic customer payment failed. Record it from Finance.',
-              { honorBackendMessage: true }
-            )
-          );
-        }
-      }
     },
   });
 
@@ -149,9 +136,9 @@ export function InstanceEnrollmentsSection({
 
   return (
     <div className='space-y-3'>
-      {customerPaymentError ? (
-        <StatusBanner variant='error' title='Customer payment'>
-          {customerPaymentError}
+      {billingWarning ? (
+        <StatusBanner variant='info' title='Billing'>
+          {billingWarning}
         </StatusBanner>
       ) : null}
       <EnrollmentsRecordTable

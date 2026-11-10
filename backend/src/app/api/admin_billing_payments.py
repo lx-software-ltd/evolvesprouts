@@ -41,6 +41,7 @@ from app.services.customer_billing import (
     create_receipt_for_succeeded_inbound_payment,
     finalize_receipt_pdf_upload,
 )
+from app.services.enrollment_billing import settle_confirmed_payment
 from app.utils import json_response
 from app.utils.logging import get_logger
 
@@ -52,9 +53,7 @@ def _pending_or_free_payment(p: CustomerPayment) -> bool:
         return True
     if p.method.strip().lower() == "free":
         return True
-    if p.amount == Decimal("0"):
-        return True
-    return False
+    return p.amount == Decimal(0)
 
 
 def _enrollment_unlinked_or_cancelled(
@@ -294,7 +293,11 @@ def _confirm_payment(
         p.confirmed_by = user_sub
         p.external_reference = str(body.get("externalReference") or "").strip() or None
         session.flush()
-        if CustomerPaymentRepository(session).get_receipt(p.id) is None:
+        settle_confirmed_payment(session, p)
+        if (
+            p.amount > 0
+            and CustomerPaymentRepository(session).get_receipt(p.id) is None
+        ):
             rcpt = create_receipt_for_succeeded_inbound_payment(session, payment=p)
             receipt_id_for_upload = rcpt.id
         deletable = _batch_orphan_payment_deletable(session, [p]).get(p.id, False)

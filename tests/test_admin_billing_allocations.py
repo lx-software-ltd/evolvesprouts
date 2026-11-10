@@ -5,17 +5,17 @@ from __future__ import annotations
 import json
 from contextlib import contextmanager
 from decimal import Decimal
-from typing import Any
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import MagicMock
 from uuid import UUID, uuid4
 
 import pytest
-
 from app.api import admin_billing
 from app.api import admin_billing_allocations as admin_billing_allocations_mod
 from app.db.models.enums import (
     BillingInvoiceStatus,
+    BillingPaymentStatus,
 )
 from app.services import customer_billing
 
@@ -32,6 +32,7 @@ def test_create_allocation_calls_recompute_invoice_settlement(
     class _Pay:
         id = pay_id
         currency = "HKD"
+        status = BillingPaymentStatus.SUCCEEDED
 
     class _Inv:
         id = inv_id
@@ -54,7 +55,7 @@ def test_create_allocation_calls_recompute_invoice_settlement(
     monkeypatch.setattr(
         admin_billing_allocations_mod,
         "payment_unapplied_amount",
-        lambda _s, _pid: Decimal("500"),
+        lambda _s, _pid: Decimal(500),
     )
 
     @contextmanager
@@ -102,6 +103,7 @@ def test_allocate_no_enrollment_payment_to_customized_invoice(
     class _Pay:
         id = pay_id
         currency = "HKD"
+        status = BillingPaymentStatus.SUCCEEDED
         enrollment_id = None
 
     class _Inv:
@@ -125,7 +127,7 @@ def test_allocate_no_enrollment_payment_to_customized_invoice(
     monkeypatch.setattr(
         admin_billing_allocations_mod,
         "payment_unapplied_amount",
-        lambda _s, _pid: Decimal("500"),
+        lambda _s, _pid: Decimal(500),
     )
 
     @contextmanager
@@ -173,14 +175,15 @@ def test_create_allocation_triggers_refresh_invoice_pdf_when_invoice_becomes_pai
     class _Pay:
         id = pay_id
         currency = "HKD"
+        status = BillingPaymentStatus.SUCCEEDED
 
     inv = SimpleNamespace(
         id=inv_id,
         currency="HKD",
         status=BillingInvoiceStatus.ISSUED,
-        total=Decimal("100"),
-        amount_allocated=Decimal("0"),
-        balance_due=Decimal("100"),
+        total=Decimal(100),
+        amount_allocated=Decimal(0),
+        balance_due=Decimal(100),
         paid_at=None,
         issued_pdf_s3_key="billing/invoices/existing.pdf",
     )
@@ -206,7 +209,7 @@ def test_create_allocation_triggers_refresh_invoice_pdf_when_invoice_becomes_pai
     monkeypatch.setattr(
         admin_billing_allocations_mod,
         "payment_unapplied_amount",
-        lambda _s, _pid: Decimal("500"),
+        lambda _s, _pid: Decimal(500),
     )
 
     exec_n = {"n": 0}
@@ -219,7 +222,7 @@ def test_create_allocation_triggers_refresh_invoice_pdf_when_invoice_becomes_pai
         elif exec_n["n"] == 2:
             m.scalar_one.return_value = inv
         elif exec_n["n"] == 3:
-            m.scalar_one.return_value = Decimal("100")
+            m.scalar_one.return_value = Decimal(100)
         else:
             raise AssertionError(f"unexpected session.execute call {exec_n['n']}")
         return m
@@ -253,3 +256,50 @@ def test_create_allocation_triggers_refresh_invoice_pdf_when_invoice_becomes_pai
     assert r["statusCode"] == 201
     assert touched == [inv_id]
     assert refresh_ids == [inv_id]
+
+
+def test_pending_payment_cannot_be_allocated(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pay_id = uuid4()
+    inv_id = uuid4()
+
+    class _Pay:
+        id = pay_id
+        currency = "HKD"
+        status = BillingPaymentStatus.PENDING
+
+    class _Inv:
+        id = inv_id
+        currency = "HKD"
+        status = BillingInvoiceStatus.ISSUED
+
+    @contextmanager
+    def _fake_session(_u: str, _r: str | None) -> Any:
+        s = MagicMock()
+        pay_res = MagicMock()
+        pay_res.scalar_one_or_none.return_value = _Pay()
+        s.execute.return_value = pay_res
+        s.get.return_value = _Inv()
+        yield s
+
+    monkeypatch.setattr(
+        admin_billing_allocations_mod, "session_with_audit", _fake_session
+    )
+    from app.exceptions import ValidationError
+
+    with pytest.raises(ValidationError, match="succeeded"):
+        admin_billing_allocations_mod._create_allocation(
+            {
+                "body": json.dumps(
+                    {
+                        "paymentId": str(pay_id),
+                        "invoiceId": str(inv_id),
+                        "allocatedAmount": "10",
+                        "currency": "HKD",
+                    }
+                )
+            },
+            user_sub="user-1",
+            request_id=None,
+        )

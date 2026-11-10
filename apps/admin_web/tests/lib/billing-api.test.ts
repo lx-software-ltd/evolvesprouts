@@ -8,7 +8,6 @@ vi.mock('@/lib/api-admin-client', () => ({
 
 import {
   compareBillingEnrollmentPickerRowsByEnrolledAtDesc,
-  createInitialCustomerPaymentAfterEnrollmentCreate,
   listCustomerInvoices,
   listRecentEnrollmentsForInvoicing,
 } from '@/lib/billing-api';
@@ -104,85 +103,6 @@ describe('listRecentEnrollmentsForInvoicing', () => {
     mockAdminApiRequest.mockRejectedValueOnce(new Error('Unavailable'));
 
     await expect(listRecentEnrollmentsForInvoicing()).rejects.toThrow('Unavailable');
-  });
-});
-
-describe('createInitialCustomerPaymentAfterEnrollmentCreate', () => {
-  beforeEach(() => {
-    mockAdminApiRequest.mockReset();
-  });
-
-  const paymentResponse = { payment: { id: 'pay-1' } };
-
-  it('posts pending bank_transfer for a positive amount', async () => {
-    mockAdminApiRequest.mockResolvedValueOnce(paymentResponse);
-
-    await createInitialCustomerPaymentAfterEnrollmentCreate({
-      id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
-      amountPaid: '120.50',
-      currency: 'hkd',
-    });
-
-    expect(mockAdminApiRequest).toHaveBeenCalledTimes(1);
-    expect(mockAdminApiRequest).toHaveBeenCalledWith(
-      expect.objectContaining({
-        method: 'POST',
-        endpointPath: '/v1/admin/billing/payments',
-        body: {
-          direction: 'inbound',
-          enrollmentId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
-          amount: '120.50',
-          currency: 'HKD',
-          method: 'bank_transfer',
-          status: 'pending',
-          externalReference: null,
-        },
-      }),
-    );
-  });
-
-  it('posts succeeded free at zero when amount is empty', async () => {
-    mockAdminApiRequest.mockResolvedValueOnce(paymentResponse);
-
-    await createInitialCustomerPaymentAfterEnrollmentCreate({
-      id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
-      amountPaid: '',
-      currency: 'USD',
-    });
-
-    expect(mockAdminApiRequest).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: {
-          direction: 'inbound',
-          enrollmentId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
-          amount: '0',
-          currency: 'USD',
-          method: 'free',
-          status: 'succeeded',
-          externalReference: null,
-        },
-      }),
-    );
-  });
-
-  it('posts succeeded free when amount parses to zero', async () => {
-    mockAdminApiRequest.mockResolvedValueOnce(paymentResponse);
-
-    await createInitialCustomerPaymentAfterEnrollmentCreate({
-      id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
-      amountPaid: '0.00',
-      currency: 'HKD',
-    });
-
-    expect(mockAdminApiRequest).toHaveBeenCalledWith(
-      expect.objectContaining({
-        body: expect.objectContaining({
-          method: 'free',
-          status: 'succeeded',
-          amount: '0',
-        }),
-      }),
-    );
   });
 });
 
