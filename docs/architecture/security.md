@@ -559,11 +559,14 @@ Requirements:
 - Do not log raw email bodies, headers, or attachment bytes.
 - Mask sender addresses in application logs with `mask_email()`.
 - Optional sender allowlist: when `InboundInvoiceAllowedSenderPatterns` is
-  non-empty (deployed from GitHub Actions variable
+  non-empty (deployed from GitHub Actions secret
   `CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS` into Lambda env
   `INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS`), messages whose SES envelope
   `source` and RFC822 `From` address both fail substring matching are marked
   failed in `inbound_emails` and are not ingested as expenses.
+  `NoEcho` hides the CloudFormation parameter. It does not hide
+  `INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS` on the Lambda; anyone who can
+  read that function's configuration can read the allowlist.
 - Keep SES receipt processing least-privilege: only the configured receipt role
   can write raw email objects and publish the notification topic.
 - SES SourceArn conditions on the assets bucket, receipt role, and SNS KMS

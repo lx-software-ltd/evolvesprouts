@@ -3,7 +3,7 @@
   "SesSenderEmail": "no-reply@evolvesprouts.com",
   "SalesRecapDisplayTimezone": "<FROM_GITHUB_VAR: CDK_PARAM_SALES_RECAP_DISPLAY_TIMEZONE>",
   "InboundEmailDomainName": "inbound.evolvesprouts.com",
-  "InboundInvoiceAllowedSenderPatterns": "<FROM_GITHUB_VAR: CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS>",
+  "InboundInvoiceAllowedSenderPatterns": "<FROM_GITHUB_SECRET: CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS>",
   "CognitoDomainPrefix": "evolvesprouts-prod",
   "CognitoCustomDomainName": "auth.evolvesprouts.com",
   "CognitoCustomDomainCertificateArn": "arn:aws:acm:us-east-1:588024549699:certificate/6fe57a34-8eba-45a9-bcb4-3fa10eb56656",

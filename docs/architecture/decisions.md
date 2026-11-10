@@ -650,8 +650,8 @@ infrastructure.
 - `NEXT_PUBLIC_FPS_MERCHANT_NAME` (Public WWW FPS merchant label)
 - `NEXT_PUBLIC_FPS_MOBILE_NUMBER` (Public WWW FPS recipient number)
 - `NEXT_PUBLIC_GTM_ID` (Google Tag Manager container ID, e.g. `GTM-XXXXXXX`)
-- `NEXT_PUBLIC_GTM_ALLOWED_HOSTS` (optional comma-separated hostname
-  allowlist for GTM runtime gating; defaults to `NEXT_PUBLIC_SITE_ORIGIN` host)
+- `NEXT_PUBLIC_GTM_ALLOWED_HOSTS` (optional; normally unset. Falls back to the
+  `NEXT_PUBLIC_SITE_ORIGIN` hostname)
 - `NEXT_PUBLIC_EMAIL` (maintenance page email)
 - `NEXT_PUBLIC_WHATSAPP_URL` (maintenance page WhatsApp link)
 - `NEXT_PUBLIC_INSTAGRAM_URL` (maintenance page Instagram link)

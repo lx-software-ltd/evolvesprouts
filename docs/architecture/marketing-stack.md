@@ -94,7 +94,7 @@ changes are complete.
 | Variable | Purpose |
 |---|---|
 | `NEXT_PUBLIC_GTM_ID` | GTM container ID (`GTM-NJ2LB39H`). If unset, GTM does not load. |
-| `NEXT_PUBLIC_GTM_ALLOWED_HOSTS` | Comma-separated hostnames where GTM is allowed to fire. Falls back to `NEXT_PUBLIC_SITE_ORIGIN` hostname. |
+| `NEXT_PUBLIC_GTM_ALLOWED_HOSTS` | Comma-separated hostnames where GTM is allowed to fire. Normally unset. Falls back to `NEXT_PUBLIC_SITE_ORIGIN` hostname. |
 
 ### Live container contents (version 9)
 
@@ -411,7 +411,7 @@ Taxonomy and lint: `src/lib/meta-pixel-taxonomy.ts`, `npm run validate:meta-pixe
 | Variable | Purpose |
 |---|---|
 | `NEXT_PUBLIC_META_PIXEL_ID` | Meta Pixel ID (numeric). If unset, pixel does not load. |
-| `NEXT_PUBLIC_META_PIXEL_ALLOWED_HOSTS` | Comma-separated hostnames where pixel is allowed to fire. Falls back to `NEXT_PUBLIC_SITE_ORIGIN` hostname. |
+| `NEXT_PUBLIC_META_PIXEL_ALLOWED_HOSTS` | Comma-separated hostnames where pixel is allowed to fire. Normally unset. Falls back to `NEXT_PUBLIC_SITE_ORIGIN` hostname. |
 
 #### Meta Business account details
 
@@ -810,11 +810,11 @@ Meta Commerce Manager, or potentially via the Catalog API
 | Variable | Service | Purpose |
 |---|---|---|
 | `NEXT_PUBLIC_GTM_ID` | GTM | Container ID. If unset, GTM does not load. |
-| `NEXT_PUBLIC_GTM_ALLOWED_HOSTS` | GTM | Host allowlist for GTM firing. |
+| `NEXT_PUBLIC_GTM_ALLOWED_HOSTS` | GTM | Host allowlist for GTM firing. Normally unset. |
 | `NEXT_PUBLIC_SITE_ORIGIN` | SEO/GTM | Base URL for sitemap, canonicals, metadata, GTM host fallback. |
 | `NEXT_PUBLIC_SITEMAP_LASTMOD` | SEO | Optional override for sitemap lastModified dates. |
 | `NEXT_PUBLIC_META_PIXEL_ID` | Meta Pixel | Pixel ID (numeric). If unset, pixel does not load. |
-| `NEXT_PUBLIC_META_PIXEL_ALLOWED_HOSTS` | Meta Pixel | Host allowlist for pixel firing. |
+| `NEXT_PUBLIC_META_PIXEL_ALLOWED_HOSTS` | Meta Pixel | Host allowlist for pixel firing. Normally unset. |
 | `NEXT_PUBLIC_WHATSAPP_URL` | Social | WhatsApp Business link for CTAs. |
 | `NEXT_PUBLIC_BUSINESS_PHONE_NUMBER` | Social | Business phone for WhatsApp prefill. |
 | `NEXT_PUBLIC_INSTAGRAM_URL` | Social | Instagram profile URL for structured data `sameAs`. |

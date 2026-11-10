@@ -784,10 +784,11 @@ export class ApiStack extends cdk.Stack {
       {
         type: "String",
         default: "",
+        noEcho: true,
         description:
           "Comma-separated substrings (case-insensitive). Inbound invoice mail " +
           "must match at least one pattern on SES envelope source or RFC822 From. " +
-          "Empty disables allowlisting.",
+          "Empty disables allowlisting. GitHub secret CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS.",
       }
     );
     const sharedInboundReceiptRuleSetName = new cdk.CfnParameter(
@@ -1907,6 +1908,7 @@ export class ApiStack extends cdk.Stack {
         description:
           "IANA area/location timezone for Eventbrite event listings " +
           "(EVENTBRITE_DEFAULT_TIMEZONE). GitHub CDK_PARAM_EVENTBRITE_DEFAULT_TIMEZONE. " +
+          "UTC or Region/City. Backend deploy rejects Etc/ and names without a slash. " +
           "Empty uses UTC.",
       }
     );

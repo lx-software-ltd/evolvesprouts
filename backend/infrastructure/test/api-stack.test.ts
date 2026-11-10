@@ -613,6 +613,17 @@ function sourceArnValuesAllowLegacyAndShared(sourceArn: unknown): boolean {
   return hasLegacy && hasShared;
 }
 
+function assertInboundInvoiceSenderPatternsAreNoEcho(template: Template): void {
+  const senderPatterns = template.findParameters(
+    "InboundInvoiceAllowedSenderPatterns",
+  ).InboundInvoiceAllowedSenderPatterns;
+  if (!senderPatterns || senderPatterns.NoEcho !== true) {
+    throw new Error(
+      "Expected CfnParameter InboundInvoiceAllowedSenderPatterns with NoEcho",
+    );
+  }
+}
+
 function assertInboundInvoiceSharesReceiptRuleSet(template: Template): void {
   const serialized = JSON.stringify(template.toJSON());
   if (serialized.includes("setActiveReceiptRuleSet")) {
@@ -1076,6 +1087,7 @@ function main(): void {
   assertEventbriteProcessorTimezone(stack);
   assertEventbriteMediaUploadUrl(stack);
   assertSalesDailyPlanSchedule(stack);
+  assertInboundInvoiceSenderPatternsAreNoEcho(template);
   assertInboundInvoiceSharesReceiptRuleSet(template);
   assertFinanceReadonlyDataApi(template);
   assertLogGroupActionsUseLogGroupArn(template);

@@ -194,9 +194,8 @@ setup below).
 ## Deployment and host gating checklist
 
 1. Set `NEXT_PUBLIC_GTM_ID` in GitHub Variables.
-2. Set `NEXT_PUBLIC_GTM_ALLOWED_HOSTS` (recommended) as comma-separated hosts.
-3. If `NEXT_PUBLIC_GTM_ALLOWED_HOSTS` is unset, confirm
-   `NEXT_PUBLIC_SITE_ORIGIN` resolves to the intended production host.
+2. Leave `NEXT_PUBLIC_GTM_ALLOWED_HOSTS` unset unless this build must allow hosts other than the production site.
+3. Confirm `NEXT_PUBLIC_SITE_ORIGIN` resolves to the production host. That hostname is the gate when the allowlist is unset.
 4. Verify staging and preview hosts are excluded unless explicitly intended.
 
 ## Data quality and governance checklist

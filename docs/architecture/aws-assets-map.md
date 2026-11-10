@@ -693,7 +693,7 @@ group is not given a separate delivery resource policy.
 | `SesSenderEmail` | String | No | No | SES-verified sender email for notifications |
 | `InboundEmailDomainName` | String | Yes | No | SES-verified inbound email subdomain for invoice ingestion |
 | `InboundInvoiceRecipientLocalPart` | String | No | No | Local-part for the SES-managed invoice mailbox (default: `invoices`) |
-| `InboundInvoiceAllowedSenderPatterns` | String | No | No | Comma-separated sender substrings; empty disables allowlisting (GitHub var `CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS`) |
+| `InboundInvoiceAllowedSenderPatterns` | String | No | Yes | Comma-separated sender substrings; empty disables allowlisting (GitHub secret `CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS`). `NoEcho` hides the CloudFormation parameter. Lambda env `INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS` stays readable to anyone who can read the function configuration. |
 | `SharedInboundReceiptRuleSetName` | String | No | No | Shared SES receipt rule set that must stay active in the region (default: `lxsoftware-inbound-mail`). Invoice bucket/role/KMS policies allow this SourceArn plus the legacy Evolve Sprouts set. This stack does not call `SetActiveReceiptRuleSet`. |
 | `TurnstileSecretKey` | String | No | Yes | Cloudflare Turnstile secret key |
 | `MailchimpApiSecretArn` | String | Yes | Yes | Existing Secrets Manager ARN for Mailchimp API key |
@@ -703,7 +703,7 @@ group is not given a separate delivery resource policy.
 | `EventbriteOrganizationId` | String | No | No | Optional Eventbrite organization ID for DB-to-Eventbrite sync |
 | `EventbriteApiBaseUrl` | String | No | No | Eventbrite API base URL (default: `https://www.eventbriteapi.com/v3`) |
 | `EventbriteMediaUploadUrl` | String | No | No | Eventbrite image upload URL (default: `https://www.eventbrite.com/image-bff/api/upload`, the URL Eventbrite's upload instructions advertise). The sync posts the banner here and refuses instructions for any other target. Production passes this value because CloudFormation keeps the previous parameter when the key is omitted. |
-| `EventbriteDefaultTimezone` | String | No | No | IANA area/location timezone for Eventbrite listings (`EVENTBRITE_DEFAULT_TIMEZONE`; GitHub var `CDK_PARAM_EVENTBRITE_DEFAULT_TIMEZONE`; empty uses `UTC`) |
+| `EventbriteDefaultTimezone` | String | No | No | IANA area/location timezone for Eventbrite listings (`EVENTBRITE_DEFAULT_TIMEZONE`; GitHub var `CDK_PARAM_EVENTBRITE_DEFAULT_TIMEZONE`; empty uses `UTC`). Backend deploy accepts `UTC` or `Region/City` and rejects `Etc/` and names without a slash when the `evolvesprouts` stack is selected. |
 | `MediaDefaultResourceKey` | String | Yes | No | Default media resource key used when request payload omits `resource_key` |
 | `MailchimpMediaDownloadMergeTag` | String | No | No | Mailchimp audience merge field tag for media download URL (`/v1/assets/email-download/{token}`; empty default; set e.g. `MMDLURL` after creating the field) |
 | `MailchimpFreeResourceJourneyId` | String | No | No | Mailchimp Customer Journey ID for free-resource journey trigger API (empty disables) |
@@ -727,7 +727,7 @@ group is not given a separate delivery resource policy.
 | `OpenRouterModel` | String | Yes | No | OpenRouter model identifier for invoice parsing |
 | `OpenRouterMaxFileBytes` | String | No | No | Maximum attachment size (bytes) sent to OpenRouter parser (default: 15728640) |
 | `PublicWwwBusinessLegalName` | String | No | No | Legal entity name for AR invoice PDF footer (GitHub var `NEXT_PUBLIC_BUSINESS_LEGAL_NAME`) |
-| `InvoiceDisplayTimezone` | String | No | No | IANA timezone for persisted AR invoice dates (`INVOICE_DISPLAY_TIMEZONE`; GitHub var `CDK_PARAM_INVOICE_DISPLAY_TIMEZONE`) |
+| `InvoiceDisplayTimezone` | String | No | No | IANA timezone for persisted AR invoice dates (`INVOICE_DISPLAY_TIMEZONE`; GitHub var `CDK_PARAM_INVOICE_DISPLAY_TIMEZONE`). Backend deploy rejects a value `ZoneInfo` cannot load when the `evolvesprouts` stack is selected. |
 | `PublicWwwBusinessName` | String | No | No | Trading name on AR invoice **From** block (GitHub var `NEXT_PUBLIC_BUSINESS_NAME`) |
 | `PublicWwwBillingEmail` | String | No | No | Billing email for AR invoice payment confirmation copy (GitHub var `NEXT_PUBLIC_BILLING_EMAIL`; Lambda `PUBLIC_WWW_BILLING_EMAIL`) |
 | `PublicWwwBusinessAddress` | String | No | No | Issuer address lines; newline or literal `\n` separated (GitHub var `NEXT_PUBLIC_BUSINESS_ADDRESS`) |
