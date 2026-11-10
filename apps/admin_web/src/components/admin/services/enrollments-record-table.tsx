@@ -23,7 +23,7 @@ import type { DiscountCode, Enrollment } from '@/types/services';
 /** Row id of the unsaved enrollment; distinct from the instance table's draft id. */
 export const ENROLLMENT_DRAFT_ID = 'enrollment-draft';
 
-const COLUMN_COUNT = 7;
+const COLUMN_COUNT = 8;
 
 function formatEnrollmentAmount(enrollment: Enrollment, defaultCurrencyCode: string): string {
   const amountRaw = enrollment.amountPaid?.trim() ?? '';
@@ -107,6 +107,7 @@ export function EnrollmentsRecordTable({
           <AdminDataTableHeadCell priority='secondary'>Status</AdminDataTableHeadCell>
           <AdminDataTableHeadCell priority='secondary'>Amount</AdminDataTableHeadCell>
           <AdminDataTableHeadCell priority='tertiary'>Discount</AdminDataTableHeadCell>
+          <AdminDataTableHeadCell priority='tertiary'>Billing</AdminDataTableHeadCell>
           <AdminDataTableHeadCell priority='secondary'>Enrolled at</AdminDataTableHeadCell>
           <AdminDataTableOperationsHeadCell />
         </tr>
@@ -132,6 +133,9 @@ export function EnrollmentsRecordTable({
               <AdminDataTableCell priority='tertiary' className='text-slate-400'>
                 —
               </AdminDataTableCell>
+              <AdminDataTableCell priority='tertiary' className='text-slate-400'>
+                —
+              </AdminDataTableCell>
               <AdminDataTableCell priority='secondary' className='text-slate-400'>
                 —
               </AdminDataTableCell>
@@ -147,6 +151,11 @@ export function EnrollmentsRecordTable({
         const statusLabel = formatEnumLabel(enrollment.status);
         const amountLabel = formatEnrollmentAmount(enrollment, defaultCurrencyCode);
         const enrolledLabel = formatDate(enrollment.enrolledAt);
+        const billingLabel = enrollment.invoiceNumber?.trim()
+          ? enrollment.invoiceNumber
+          : enrollment.paymentStatus
+            ? formatEnumLabel(enrollment.paymentStatus)
+            : '—';
         return (
           <AdminExpandableRow
             key={enrollment.id}
@@ -161,6 +170,7 @@ export function EnrollmentsRecordTable({
                   {party}
                   <AdminDataTableCellMeta>
                     {statusLabel} · {amountLabel} · {enrolledLabel}
+                    {enrollment.invoiceNumber ? ` · ${enrollment.invoiceNumber}` : ''}
                   </AdminDataTableCellMeta>
                 </AdminDataTableCell>
                 <AdminDataTableCell priority='secondary' className='text-slate-700'>
@@ -171,6 +181,9 @@ export function EnrollmentsRecordTable({
                 </AdminDataTableCell>
                 <AdminDataTableCell priority='tertiary' className='text-slate-700'>
                   {discountLabel(enrollment)}
+                </AdminDataTableCell>
+                <AdminDataTableCell priority='tertiary' className='text-slate-700'>
+                  {billingLabel}
                 </AdminDataTableCell>
                 <AdminDataTableCell priority='secondary' className='text-slate-700'>
                   {enrolledLabel}
