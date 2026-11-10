@@ -15,13 +15,13 @@ import hashlib
 import json
 import logging
 import os
+import re
 import sys
 import traceback
-from contextvars import ContextVar
-from datetime import datetime
-from datetime import timezone
-from typing import Any
 from collections.abc import MutableMapping
+from contextvars import ContextVar
+from datetime import UTC, datetime
+from typing import Any
 
 
 def mask_email(email: str) -> str:
@@ -111,6 +111,13 @@ def _logrecord_builtin_keys() -> frozenset[str]:
 
 
 _LOGRECORD_BUILTIN_KEYS = _logrecord_builtin_keys()
+_DATABASE_LOG_MARKERS = (
+    "[SQL:",
+    "[parameters:",
+    "DETAIL:",
+    "(Background on this error at:",
+)
+_CONSTRAINT_NAME = re.compile(r"""constraint ["']([A-Za-z0-9_]+)["']""")
 
 
 class StructuredLogFormatter(logging.Formatter):
@@ -123,7 +130,7 @@ class StructuredLogFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         """Format a log record as JSON."""
         log_data: dict[str, Any] = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -146,13 +153,10 @@ class StructuredLogFormatter(logging.Formatter):
                 "function": record.funcName,
             }
 
-        # Add exception info if present
-        if record.exc_info:
-            log_data["exception"] = {
-                "type": record.exc_info[0].__name__ if record.exc_info[0] else None,
-                "message": str(record.exc_info[1]) if record.exc_info[1] else None,
-                "traceback": traceback.format_exception(*record.exc_info),
-            }
+        # Add exception info if present. Database errors include bound
+        # parameters, so those messages are reduced to the constraint name.
+        if record.exc_info and record.exc_info[0] is not None:
+            log_data["exception"] = _exception_fields(record.exc_info)
 
         # Merge ``logger.info(..., extra={...})`` fields (they become LogRecord attributes)
         for key, value in record.__dict__.items():
@@ -168,6 +172,31 @@ class StructuredLogFormatter(logging.Formatter):
                     log_data[key] = value
 
         return json.dumps(log_data, default=str)
+
+
+def _exception_fields(
+    exc_info: tuple[type[BaseException], BaseException, Any],
+) -> dict[str, Any]:
+    """Return type, a safe message, and a traceback without SQL parameters."""
+    exc_type, exc, tb = exc_info
+    message = _safe_exception_message(exc)
+    frames = traceback.format_tb(tb)
+    frames.append(f"{exc_type.__name__}: {message}\n")
+    return {
+        "type": exc_type.__name__,
+        "message": message,
+        "traceback": frames,
+    }
+
+
+def _safe_exception_message(exc: BaseException) -> str:
+    raw = str(exc)
+    if not any(marker in raw for marker in _DATABASE_LOG_MARKERS):
+        return raw
+    match = _CONSTRAINT_NAME.search(raw)
+    if match is not None:
+        return f"database constraint {match.group(1)}"
+    return "database error"
 
 
 class ContextLogger(logging.LoggerAdapter):

@@ -3,13 +3,22 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import Self
 from uuid import uuid4
 
 import pytest
-
 from app.db.models.enums import FunnelStage, WhatsAppMessageDirection
 from app.services import lead_funnel_automation as funnel
 from app.services import whatsapp_ingest as ingest
+from sqlalchemy.exc import IntegrityError
+
+
+class _Savepoint:
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, *_exc: object) -> bool:
+        return False
 
 
 def test_parse_wa_phone_hong_kong() -> None:
@@ -88,10 +97,13 @@ def test_ingest_stores_inbound_and_creates_lead(
         def add(self, obj: object) -> None:
             added.append(obj)
 
+        def begin_nested(self) -> _Savepoint:
+            return _Savepoint()
+
         def flush(self) -> None:
             for obj in added:
                 if getattr(obj, "id", "missing") is None:
-                    setattr(obj, "id", uuid4())
+                    obj.id = uuid4()
 
         def execute(self, *_a: object, **_k: object) -> SimpleNamespace:
             return SimpleNamespace(scalar_one_or_none=lambda: None)
@@ -229,10 +241,13 @@ def test_ingest_stores_coexistence_echo(monkeypatch: pytest.MonkeyPatch) -> None
         def add(self, obj: object) -> None:
             added.append(obj)
 
+        def begin_nested(self) -> _Savepoint:
+            return _Savepoint()
+
         def flush(self) -> None:
             for obj in added:
                 if getattr(obj, "id", "missing") is None:
-                    setattr(obj, "id", uuid4())
+                    obj.id = uuid4()
 
         def execute(self, *_a: object, **_k: object) -> SimpleNamespace:
             return SimpleNamespace(scalar_one_or_none=lambda: None)
@@ -315,6 +330,9 @@ def test_ingest_history_chunk_does_not_create_leads(
     class _FakeSession:
         def add(self, obj: object) -> None:
             added.append(obj)
+
+        def begin_nested(self) -> _Savepoint:
+            return _Savepoint()
 
         def flush(self) -> None:
             return None
@@ -417,6 +435,9 @@ def test_third_inbound_moves_existing_lead_to_engaged(
         def add(self, _obj: object) -> None:
             return None
 
+        def begin_nested(self) -> _Savepoint:
+            return _Savepoint()
+
         def flush(self) -> None:
             return None
 
@@ -450,3 +471,129 @@ def test_third_inbound_moves_existing_lead_to_engaged(
     assert counters["leads_created"] == 0
     assert lead.funnel_stage is FunnelStage.ENGAGED
     assert stage_events[0]["to_stage"] is FunnelStage.ENGAGED
+
+
+def test_ingest_reuses_conversation_after_wa_id_conflict(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    winner_id = uuid4()
+    lookups = {"count": 0}
+    flushes = {"count": 0}
+    added: list[object] = []
+
+    class _Winner:
+        def __init__(self) -> None:
+            self.id = winner_id
+            self.wa_id = "85251111111"
+            self.profile_name = "Mei"
+            self.contact_id = uuid4()
+            self.lead_id = uuid4()
+            self.inbound_count = 1
+            self.outbound_count = 0
+            self.first_inbound_at = None
+            self.last_message_at = None
+            self.updated_at = None
+
+    class _FakeConversation:
+        def __init__(self, **kwargs: object) -> None:
+            self.id = None
+            self.wa_id = kwargs.get("wa_id")
+            self.profile_name = kwargs.get("profile_name")
+
+    class _FakeRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def find_message_by_wa_message_id(self, _mid: str) -> None:
+            return None
+
+        def get_conversation_by_wa_id(self, _wa_id: str) -> _Winner | None:
+            lookups["count"] += 1
+            if lookups["count"] == 1:
+                return None
+            return _Winner()
+
+    class _FakeLeadRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def get_by_id(self, _lead_id: object) -> SimpleNamespace:
+            return SimpleNamespace(funnel_stage=FunnelStage.NEW)
+
+        def update(self, lead: object) -> object:
+            return lead
+
+        def add_event(self, **_k: object) -> SimpleNamespace:
+            return SimpleNamespace()
+
+    class _Orig(Exception):
+        pass
+
+    class _FakeSession:
+        def add(self, obj: object) -> None:
+            added.append(obj)
+
+        def begin_nested(self) -> _Savepoint:
+            return _Savepoint()
+
+        def flush(self) -> None:
+            flushes["count"] += 1
+            if flushes["count"] == 1:
+                raise IntegrityError(
+                    "INSERT INTO whatsapp_conversations",
+                    {"wa_id": "85251111111", "profile_name": "Mei"},
+                    _Orig(
+                        "duplicate key value violates unique constraint "
+                        '"whatsapp_conversations_wa_id_idx"'
+                    ),
+                )
+            for obj in added:
+                if getattr(obj, "id", None) is None:
+                    obj.id = uuid4()
+
+        def execute(self, *_a: object, **_k: object) -> SimpleNamespace:
+            return SimpleNamespace(scalar_one_or_none=lambda: None)
+
+        def get(self, *_a: object, **_k: object) -> None:
+            return None
+
+    monkeypatch.setattr(ingest, "WhatsAppConversation", _FakeConversation)
+    monkeypatch.setattr(ingest, "WhatsAppRepository", _FakeRepo)
+    monkeypatch.setattr(funnel, "SalesLeadRepository", _FakeLeadRepo)
+
+    payload = {
+        "entry": [
+            {
+                "changes": [
+                    {
+                        "field": "messages",
+                        "value": {
+                            "contacts": [
+                                {
+                                    "wa_id": "85251111111",
+                                    "profile": {"name": "Mei"},
+                                }
+                            ],
+                            "messages": [
+                                {
+                                    "from": "85251111111",
+                                    "id": "wamid.RACE",
+                                    "timestamp": "1710000000",
+                                    "type": "text",
+                                    "text": {"body": "Hello"},
+                                }
+                            ],
+                        },
+                    }
+                ]
+            }
+        ]
+    }
+    counters = ingest.ingest_webhook_payload(_FakeSession(), payload)
+    assert counters["stored"] == 1
+    assert lookups["count"] >= 2
+    stored_messages = [
+        item for item in added if getattr(item, "wa_message_id", None) == "wamid.RACE"
+    ]
+    assert len(stored_messages) == 1
+    assert stored_messages[0].conversation_id == winner_id

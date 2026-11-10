@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any
 from collections.abc import Mapping
+from datetime import UTC, datetime
+from typing import Any
 
 import phonenumbers
 from phonenumbers.phonenumberutil import NumberParseException
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -32,6 +33,7 @@ _MAX_WA_ID_LENGTH = 32
 _MAX_WA_MESSAGE_ID_LENGTH = 128
 _MAX_PROFILE_NAME_LENGTH = 256
 _MAX_MESSAGE_TYPE_LENGTH = 32
+_CONVERSATION_WA_ID_INDEX = "whatsapp_conversations_wa_id_idx"
 
 
 def ingest_webhook_payload(
@@ -162,13 +164,12 @@ def store_whatsapp_message(
         counters["duplicates"] += 1
         return
 
-    conversation = repository.get_conversation_by_wa_id(wa_id)
-    if conversation is None:
-        conversation = WhatsAppConversation(wa_id=wa_id, profile_name=profile_name)
-        session.add(conversation)
-        session.flush()
-    elif profile_name and conversation.profile_name != profile_name:
-        conversation.profile_name = profile_name
+    conversation = _load_or_create_conversation(
+        session,
+        repository,
+        wa_id=wa_id,
+        profile_name=profile_name,
+    )
 
     body = _extract_body(message)
     if match_existing_content and repository.find_message_by_content(
@@ -191,7 +192,7 @@ def store_whatsapp_message(
         )
     )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if direction is WhatsAppMessageDirection.INBOUND:
         conversation.inbound_count = (conversation.inbound_count or 0) + 1
         if (
@@ -217,6 +218,66 @@ def store_whatsapp_message(
 
     session.flush()
     counters["stored"] += 1
+
+
+def _load_or_create_conversation(
+    session: Session,
+    repository: WhatsAppRepository,
+    *,
+    wa_id: str,
+    profile_name: str | None,
+) -> WhatsAppConversation:
+    conversation = repository.get_conversation_by_wa_id(wa_id)
+    if conversation is not None:
+        _apply_profile_name(conversation, profile_name)
+        return conversation
+    return _insert_conversation(
+        session,
+        repository,
+        wa_id=wa_id,
+        profile_name=profile_name,
+    )
+
+
+def _insert_conversation(
+    session: Session,
+    repository: WhatsAppRepository,
+    *,
+    wa_id: str,
+    profile_name: str | None,
+) -> WhatsAppConversation:
+    """Insert a conversation, or reuse the row that won a concurrent insert."""
+    pending = WhatsAppConversation(wa_id=wa_id, profile_name=profile_name)
+    try:
+        with session.begin_nested():
+            session.add(pending)
+            session.flush()
+    except IntegrityError as exc:
+        if not _is_conversation_wa_id_conflict(exc):
+            raise
+        existing = repository.get_conversation_by_wa_id(wa_id)
+        if existing is None:
+            raise
+        _apply_profile_name(existing, profile_name)
+        return existing
+    return pending
+
+
+def _apply_profile_name(
+    conversation: WhatsAppConversation,
+    profile_name: str | None,
+) -> None:
+    if profile_name and conversation.profile_name != profile_name:
+        conversation.profile_name = profile_name
+
+
+def _is_conversation_wa_id_conflict(exc: IntegrityError) -> bool:
+    orig = getattr(exc.orig, "__cause__", None) or exc.orig
+    diag = getattr(orig, "diag", None)
+    constraint = getattr(diag, "constraint_name", None) if diag else None
+    if constraint == _CONVERSATION_WA_ID_INDEX:
+        return True
+    return _CONVERSATION_WA_ID_INDEX in str(exc)
 
 
 def _ensure_contact_and_lead(
@@ -368,7 +429,7 @@ def _parse_timestamp(raw_value: Any) -> datetime | None:
         return None
     if seconds <= 0:
         return None
-    return datetime.fromtimestamp(seconds, tz=timezone.utc)
+    return datetime.fromtimestamp(seconds, tz=UTC)
 
 
 def _normalized_id(raw_value: Any, *, max_length: int) -> str | None:
