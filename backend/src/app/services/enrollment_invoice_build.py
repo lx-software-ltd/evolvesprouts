@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from contextlib import nullcontext
+from contextlib import contextmanager
 from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 from uuid import UUID
@@ -63,6 +63,9 @@ _CATALOGUE_UNKNOWN = (
 _PDF_FAILED = (
     "Invoice was issued, but the PDF was not stored. Open it from Finance to retry."
 )
+_ALLOCATE_FAILED = (
+    "Invoice was issued, but the payment was not allocated. Allocate it from Finance."
+)
 
 
 @dataclass(frozen=True)
@@ -96,11 +99,28 @@ def money_amount(value: object) -> Decimal:
     return Decimal(str(value)).quantize(Decimal("0.01"))
 
 
-def _savepoint(session: Session):
+def stored_currency(value: object) -> str:
+    """Three-letter currency. A blank value uses the admin default."""
+    text = str(value or "").strip().upper()[:3]
+    return text or get_default_currency_code()
+
+
+@contextmanager
+def nested_savepoint(session: Session):
+    """Savepoint whose failure does not abort the caller's transaction."""
     begin = getattr(session, "begin_nested", None)
     if not callable(begin):
-        return nullcontext()
-    return begin()
+        yield
+        return
+    ctx = begin()
+    ctx.__enter__()
+    try:
+        yield
+    except Exception as exc:
+        ctx.__exit__(type(exc), exc, exc.__traceback__)
+        raise
+    else:
+        ctx.__exit__(None, None, None)
 
 
 def receipt_for_positive_succeeded_payment(
@@ -344,6 +364,41 @@ def _stored_pdf_key(invoice: CustomerInvoice) -> str:
     return str(getattr(invoice, "issued_pdf_s3_key", None) or "").strip()
 
 
+def _finish_issued_invoice(
+    session: Session,
+    payment: CustomerPayment,
+    invoice: CustomerInvoice,
+    enrollment_id: UUID,
+) -> str | None:
+    """Allocate, then render the PDF. Each step has its own savepoint."""
+    problems: list[str] = []
+    try:
+        with nested_savepoint(session):
+            allocate_succeeded_payment(session, payment, invoice)
+    except Exception:
+        logger.exception(
+            "enrollment_invoice_allocate_failed",
+            extra={"enrollment_id": str(enrollment_id)},
+        )
+        expire = getattr(session, "expire", None)
+        if callable(expire):
+            expire(invoice)
+        problems.append(_ALLOCATE_FAILED)
+    try:
+        if not _stored_pdf_key(invoice):
+            with nested_savepoint(session):
+                refresh_invoice_pdf(session, invoice)
+    except Exception:
+        logger.exception(
+            "enrollment_invoice_pdf_failed",
+            extra={"enrollment_id": str(enrollment_id)},
+        )
+        problems.append(_PDF_FAILED)
+    if not problems:
+        return None
+    return " ".join(problems)
+
+
 def invoice_for_payment(
     session: Session,
     enrollment: Enrollment,
@@ -380,7 +435,7 @@ def invoice_for_payment(
             receipt_id=receipt_for_positive_succeeded_payment(session, payment),
         )
     try:
-        with _savepoint(session):
+        with nested_savepoint(session):
             invoice = _draft_invoice(
                 session, enrollment, actor=actor, request_id=request_id
             )
@@ -419,20 +474,13 @@ def invoice_for_payment(
 
     if invoice.status != BillingInvoiceStatus.ISSUED:
         return followup
-    try:
-        allocate_succeeded_payment(session, payment, invoice)
-        if not _stored_pdf_key(invoice):
-            refresh_invoice_pdf(session, invoice)
-    except Exception:
-        logger.exception(
-            "enrollment_invoice_pdf_failed",
-            extra={"enrollment_id": str(enrollment.id)},
-        )
+    problem = _finish_issued_invoice(session, payment, invoice, enrollment.id)
+    if problem:
         return followup_from(
             payment,
             invoice,
             receipt_id=followup.receipt_id,
-            warning=_PDF_FAILED,
+            warning=problem,
         )
     email = None
     if send_email and _stored_pdf_key(invoice):

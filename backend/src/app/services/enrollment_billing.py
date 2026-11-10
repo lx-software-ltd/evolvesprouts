@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import case, select
 from sqlalchemy.orm import Session
 
 from app.api.admin_billing_payment_create import (
@@ -21,7 +21,6 @@ from app.api.admin_billing_payment_create import (
 from app.config import get_default_currency_code
 from app.db.audit import AuditService
 from app.db.engine import get_engine
-from app.db.models.customer_invoice import CustomerInvoice, CustomerInvoiceLine
 from app.db.models.customer_payment import CustomerPayment
 from app.db.models.enrollment import Enrollment
 from app.db.models.enums import (
@@ -37,10 +36,11 @@ from app.services.customer_billing import (
 )
 from app.services.enrollment_invoice_build import (
     BillingFollowup,
-    allocate_succeeded_payment,
     enrollment_auto_invoice_enabled,
     invoice_for_payment,
     money_amount,
+    nested_savepoint,
+    stored_currency,
 )
 from app.services.enrollment_invoice_links import (
     billing_summaries_for_enrollments,
@@ -59,6 +59,7 @@ def _record_admin_payment(
     *,
     method: str,
     received: bool,
+    send_invoice_email: bool,
     actor: str,
 ) -> CustomerPayment:
     amount = money_amount(enrollment.amount_paid)
@@ -104,6 +105,7 @@ def _record_admin_payment(
             "status": status.value,
             "method": method,
             "source": "enrollment_create",
+            "send_invoice_email": send_invoice_email,
         },
     )
     return payment
@@ -128,6 +130,7 @@ def apply_admin_enrollment_billing(
         enrollment,
         method=str(billing.get("payment_method") or "fps"),
         received=billing.get("payment_received") is True,
+        send_invoice_email=billing.get("send_invoice_email") is True,
         actor=actor,
     )
     followup = invoice_for_payment(
@@ -172,7 +175,9 @@ def bill_promoted_enrollment(
         EnrollmentStatus.CONFIRMED,
     ):
         return BillingFollowup()
-    existing = session.execute(
+    from app.services.enrollment_billing_release import invoice_email_requested
+
+    rows = session.scalars(
         select(CustomerPayment)
         .where(CustomerPayment.enrollment_id == enrollment.id)
         .where(CustomerPayment.direction == BillingPaymentDirection.INBOUND)
@@ -181,21 +186,49 @@ def bill_promoted_enrollment(
                 (BillingPaymentStatus.PENDING, BillingPaymentStatus.SUCCEEDED)
             )
         )
-        .limit(1)
-    ).scalar_one_or_none()
-    if isinstance(existing, CustomerPayment):
-        return invoice_for_payment(
-            session,
-            enrollment,
-            existing,
-            actor=actor,
-            request_id=request_id,
-            send_email=False,
-            display_name=None,
-            require_catalogue_match=False,
-            receipt_when_uninvoiced=True,
+        .order_by(
+            case(
+                (CustomerPayment.status == BillingPaymentStatus.SUCCEEDED, 0),
+                else_=1,
+            ),
+            CustomerPayment.created_at.asc(),
         )
-    return BillingFollowup()
+    ).all()
+    payments = [row for row in rows if isinstance(row, CustomerPayment)]
+    if not payments:
+        return BillingFollowup()
+    existing = next(
+        (
+            payment
+            for payment in payments
+            if money_amount(payment.amount) == money_amount(enrollment.amount_paid)
+            and stored_currency(payment.currency)
+            == stored_currency(enrollment.currency)
+        ),
+        None,
+    )
+    if existing is None:
+        return BillingFollowup(
+            payment_id=payments[0].id,
+            payment_status=getattr(
+                payments[0].status, "value", str(payments[0].status)
+            ),
+            warning=(
+                "The recorded payment does not match this enrollment's amount. "
+                "Update the payment in Finance before an invoice is issued."
+            ),
+        )
+    return invoice_for_payment(
+        session,
+        enrollment,
+        existing,
+        actor=actor,
+        request_id=request_id,
+        send_email=invoice_email_requested(session, existing.id),
+        display_name=None,
+        require_catalogue_match=False,
+        receipt_when_uninvoiced=True,
+    )
 
 
 def attach_public_invoice(
@@ -284,23 +317,18 @@ def settle_confirmed_payment(session: Session, payment: CustomerPayment) -> None
         return
     if payment.status != BillingPaymentStatus.SUCCEEDED:
         return
-    invoices = (
-        session.execute(
-            select(CustomerInvoice)
-            .join(
-                CustomerInvoiceLine,
-                CustomerInvoiceLine.invoice_id == CustomerInvoice.id,
+    try:
+        with nested_savepoint(session):
+            from app.services.enrollment_billing_release import (
+                allocate_confirmed_payment,
             )
-            .where(CustomerInvoiceLine.enrollment_id == payment.enrollment_id)
-            .where(CustomerInvoice.status == BillingInvoiceStatus.ISSUED)
-            .order_by(CustomerInvoice.issued_at.asc())
+
+            allocate_confirmed_payment(session, payment)
+    except Exception:
+        logger.exception(
+            "enrollment_payment_settle_failed",
+            extra={"payment_id": str(payment.id)},
         )
-        .scalars()
-        .all()
-    )
-    for invoice in invoices:
-        if isinstance(invoice, CustomerInvoice):
-            allocate_succeeded_payment(session, payment, invoice)
 
 
 def assert_enrollment_amount_unlocked(session: Session, enrollment: Enrollment) -> None:
@@ -322,9 +350,7 @@ def enrollment_charge_is_changing(
         return True
     if "currency" not in payload:
         return False
-    incoming = str(payload["currency"] or "").strip().upper()
-    current = str(enrollment.currency or "").strip().upper()
-    return incoming != current
+    return stored_currency(payload["currency"]) != stored_currency(enrollment.currency)
 
 
 def billing_for_enrollment_response(

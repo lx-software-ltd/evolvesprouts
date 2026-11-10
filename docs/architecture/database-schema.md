@@ -914,9 +914,10 @@ Migration `0055_customer_billing_ar` introduces:
 Issuing a **positive-total** invoice (`POST /v1/admin/billing/invoices/{id}/issue`) also
 inserts one pending inbound `customer_payments` row for the uncovered remainder and the invoice
 `currency`, method `fps`, and `enrollment_id` only when the invoice has exactly one enrollment line
-(customized and multi-enrollment invoices leave it unset). Positive pending or succeeded payments
-already linked to the invoice's enrollments reduce that remainder. A zero-amount free payment does
-not. The stub is **not** allocated at issue time, so settlement (`amount_allocated` / `paid_at`)
+(customized and multi-enrollment invoices leave it unset). Same-currency unapplied pending or succeeded payments
+already linked to the invoice's enrollments reduce that remainder. A payment in another currency,
+or the part of a payment already allocated to a different invoice, does not. A zero-amount free
+payment does not either. The stub is **not** allocated at issue time, so settlement (`amount_allocated` / `paid_at`)
 stays unchanged until a payment is allocated later. Zero-total issues and issues already covered in
 full do not create another payment. Voiding the invoice leaves any pending stub in place. Pending
 stubs can be deleted while they have no allocations, receipt, or refunds, including when

@@ -55,6 +55,8 @@ from app.services.enrollment_billing import (
     finalize_enrollment_billing,
 )
 from app.services.enrollment_billing_release import (
+    align_uninvoiced_enrollment_payment,
+    billing_gap_after_restore,
     release_billing_for_cancelled_enrollment,
 )
 from app.services.enrollment_invoice_links import billing_summaries_for_enrollments
@@ -296,7 +298,8 @@ def _update_enrollment(
         previous_status = enrollment.status
         followup = None
         billing_warning: str | None = None
-        if enrollment_charge_is_changing(enrollment, payload):
+        charge_changing = enrollment_charge_is_changing(enrollment, payload)
+        if charge_changing:
             assert_enrollment_amount_unlocked(session, enrollment)
 
         if "promote_to_family_id" in payload or "promote_to_organization_id" in payload:
@@ -383,6 +386,9 @@ def _update_enrollment(
                         )
                 enrollment.discount_code_id = new_id
 
+        if charge_changing and payload.get("status") != EnrollmentStatus.CANCELLED:
+            align_uninvoiced_enrollment_payment(session, enrollment)
+
         if "status" in payload and payload["status"] != previous_status:
             if payload["status"] == EnrollmentStatus.CANCELLED:
                 billing_warning = release_billing_for_cancelled_enrollment(
@@ -400,6 +406,8 @@ def _update_enrollment(
                     actor=actor_sub,
                     request_id=request_id(event),
                 )
+            elif previous_status == EnrollmentStatus.CANCELLED:
+                billing_warning = billing_gap_after_restore(session, enrollment)
 
         updated = repository.update(enrollment)
         if hasattr(session, "get"):

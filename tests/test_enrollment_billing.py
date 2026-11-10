@@ -10,15 +10,17 @@ from uuid import uuid4
 import pytest
 from app.api.admin_enrollments_payloads import parse_create_enrollment_payload
 from app.db.models.customer_invoice import CustomerInvoice, CustomerInvoiceLine
+from app.db.models.customer_payment import CustomerPayment
 from app.db.models.enums import (
     BillingInvoiceStatus,
+    BillingPaymentDirection,
     BillingPaymentStatus,
     ConsultationPricingModel,
     DiscountType,
     EnrollmentStatus,
     ServiceType,
 )
-from app.exceptions import ConflictError
+from app.exceptions import ConflictError, ValidationError
 from app.services import enrollment_billing as billing
 from app.services import enrollment_billing_release as release
 from app.services import enrollment_invoice_build as build
@@ -413,7 +415,7 @@ def test_promotion_does_not_invent_a_payment(monkeypatch: pytest.MonkeyPatch) ->
         amount_paid=Decimal(80),
     )
     session = MagicMock()
-    session.execute.return_value.scalar_one_or_none.return_value = None
+    session.scalars.return_value.all.return_value = []
     monkeypatch.setattr(
         billing,
         "apply_admin_enrollment_billing",
@@ -552,3 +554,254 @@ def test_confirm_does_not_allocate_when_the_flag_is_off(
     )
     billing.settle_confirmed_payment(session, payment)
     session.execute.assert_not_called()
+
+
+def test_blank_currency_matches_the_default() -> None:
+    enrollment = SimpleNamespace(amount_paid=Decimal("480.00"), currency=None)
+    assert (
+        billing.enrollment_charge_is_changing(enrollment, {"currency": "HKD"}) is False
+    )
+    assert (
+        billing.enrollment_charge_is_changing(enrollment, {"currency": "USD"}) is True
+    )
+
+
+def test_cancel_count_includes_lines_with_no_enrollment() -> None:
+    from sqlalchemy.dialects import postgresql
+
+    statement = release.other_charge_count_select(uuid4(), uuid4())
+    sql = str(statement.compile(dialect=postgresql.dialect()))
+    assert "IS NULL" in sql
+
+
+def test_cancelling_a_shared_unpaid_invoice_does_not_void_it() -> None:
+    invoice = _issued_invoice(allocated=Decimal(0), number="INV-2026-000005")
+    line = CustomerInvoiceLine(
+        invoice_id=invoice.id,
+        line_order=0,
+        description="Seat",
+        quantity=Decimal(1),
+        unit_amount=Decimal(40),
+        line_total=Decimal(40),
+        currency="HKD",
+    )
+    session = MagicMock()
+    session.execute.return_value.all.return_value = [_ResultRow(line, invoice)]
+    session.scalar.side_effect = [1, 0]
+    session.scalars.return_value.all.return_value = []
+    enrollment = SimpleNamespace(id=uuid4(), notes=None)
+    warning = release.release_billing_for_cancelled_enrollment(
+        session, enrollment, actor="staff"
+    )
+    assert invoice.status == BillingInvoiceStatus.ISSUED
+    assert warning is not None
+    assert "other charges" in warning
+    assert "Refund required" not in warning
+
+
+def test_pending_payment_follows_a_waitlist_amount_edit() -> None:
+    enrollment = SimpleNamespace(
+        id=uuid4(), amount_paid=Decimal("500.00"), currency="HKD"
+    )
+    payment = CustomerPayment(
+        direction=BillingPaymentDirection.INBOUND,
+        status=BillingPaymentStatus.PENDING,
+        method="fps",
+        amount=Decimal("480.00"),
+        currency="HKD",
+        enrollment_id=enrollment.id,
+    )
+    session = MagicMock()
+    session.scalars.return_value.all.return_value = [payment]
+    session.scalar.return_value = 0
+    release.align_uninvoiced_enrollment_payment(session, enrollment)
+    assert payment.amount == Decimal("500.00")
+
+
+def test_received_payment_blocks_a_different_charge() -> None:
+    enrollment = SimpleNamespace(
+        id=uuid4(), amount_paid=Decimal("500.00"), currency="HKD"
+    )
+    payment = CustomerPayment(
+        direction=BillingPaymentDirection.INBOUND,
+        status=BillingPaymentStatus.SUCCEEDED,
+        method="fps",
+        amount=Decimal("480.00"),
+        currency="HKD",
+        enrollment_id=enrollment.id,
+    )
+    session = MagicMock()
+    session.scalars.return_value.all.return_value = [payment]
+    with pytest.raises(ValidationError, match="received payment"):
+        release.align_uninvoiced_enrollment_payment(session, enrollment)
+
+
+def test_promotion_does_not_invoice_a_mismatched_payment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payment = CustomerPayment(
+        id=uuid4(),
+        direction=BillingPaymentDirection.INBOUND,
+        status=BillingPaymentStatus.PENDING,
+        method="fps",
+        amount=Decimal("20.00"),
+        currency="HKD",
+    )
+    payment.status = BillingPaymentStatus.PENDING
+    enrollment = SimpleNamespace(
+        id=uuid4(),
+        status=EnrollmentStatus.REGISTERED,
+        amount_paid=Decimal("80.00"),
+        currency="HKD",
+    )
+    session = MagicMock()
+    session.scalars.return_value.all.return_value = [payment]
+    monkeypatch.setattr(
+        billing,
+        "invoice_for_payment",
+        lambda *_a, **_k: pytest.fail("a mismatched payment is not invoiced"),
+    )
+    followup = billing.bill_promoted_enrollment(
+        session, enrollment, actor="staff", request_id=None
+    )
+    assert followup.invoice_id is None
+    assert followup.warning is not None
+    assert "does not match" in followup.warning
+
+
+def test_promotion_emails_when_the_enrollment_asked(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payment = CustomerPayment(
+        id=uuid4(),
+        direction=BillingPaymentDirection.INBOUND,
+        status=BillingPaymentStatus.SUCCEEDED,
+        method="fps",
+        amount=Decimal("80.00"),
+        currency="HKD",
+    )
+    enrollment = SimpleNamespace(
+        id=uuid4(),
+        status=EnrollmentStatus.CONFIRMED,
+        amount_paid=Decimal("80.00"),
+        currency="HKD",
+    )
+    session = MagicMock()
+    session.scalars.return_value.all.return_value = [payment]
+    seen: dict[str, object] = {}
+
+    def _invoice(*_args: object, **kwargs: object) -> billing.BillingFollowup:
+        seen["send_email"] = kwargs.get("send_email")
+        return billing.BillingFollowup()
+
+    monkeypatch.setattr(billing, "invoice_for_payment", _invoice)
+    monkeypatch.setattr(release, "invoice_email_requested", lambda *_a, **_k: True)
+    billing.bill_promoted_enrollment(
+        session, enrollment, actor="staff", request_id=None
+    )
+    assert seen["send_email"] is True
+
+
+def test_allocation_failure_keeps_the_issued_invoice(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ENROLLMENT_AUTO_INVOICE", "on")
+    invoice = SimpleNamespace(
+        id=uuid4(),
+        status=BillingInvoiceStatus.ISSUED,
+        invoice_number="INV-2026-000006",
+        bill_to_email=None,
+        issued_pdf_s3_key="billing/invoices/existing.pdf",
+    )
+    monkeypatch.setattr(build, "open_invoice_enrollment_ids", lambda *_a, **_k: set())
+    monkeypatch.setattr(build, "_draft_invoice", lambda *_a, **_k: invoice)
+    monkeypatch.setattr(build, "issue_draft_invoice", lambda *_a, **_k: None)
+    monkeypatch.setattr(
+        build, "receipt_for_positive_succeeded_payment", lambda *_a, **_k: None
+    )
+
+    def _fail(*_args: object, **_kwargs: object) -> None:
+        raise RuntimeError("allocation failed")
+
+    monkeypatch.setattr(build, "allocate_succeeded_payment", _fail)
+    payment = SimpleNamespace(
+        id=uuid4(),
+        amount=Decimal(40),
+        currency="HKD",
+        status=BillingPaymentStatus.SUCCEEDED,
+    )
+    enrollment = SimpleNamespace(id=uuid4(), status=EnrollmentStatus.REGISTERED)
+    followup = build.invoice_for_payment(
+        MagicMock(),
+        enrollment,
+        payment,
+        actor="staff",
+        request_id=None,
+        send_email=False,
+        display_name=None,
+        require_catalogue_match=False,
+        receipt_when_uninvoiced=True,
+    )
+    assert followup.invoice_id == invoice.id
+    assert followup.warning is not None
+    assert "not allocated" in followup.warning
+    assert "PDF" not in followup.warning
+
+
+def test_settle_failure_does_not_raise(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ENROLLMENT_AUTO_INVOICE", "on")
+
+    def _fail(*_args: object, **_kwargs: object) -> None:
+        raise RuntimeError("settle failed")
+
+    monkeypatch.setattr(release, "allocate_confirmed_payment", _fail)
+    payment = SimpleNamespace(
+        id=uuid4(),
+        enrollment_id=uuid4(),
+        amount=Decimal(10),
+        currency="HKD",
+        status=BillingPaymentStatus.SUCCEEDED,
+    )
+    billing.settle_confirmed_payment(MagicMock(), payment)
+
+
+def test_paid_invoice_drops_the_pending_stub(monkeypatch: pytest.MonkeyPatch) -> None:
+    invoice = CustomerInvoice(
+        id=uuid4(),
+        status=BillingInvoiceStatus.ISSUED,
+        currency="HKD",
+        subtotal=Decimal(40),
+        tax_total=Decimal(0),
+        total=Decimal(40),
+        balance_due=Decimal(0),
+    )
+    stub = CustomerPayment(
+        id=uuid4(),
+        direction=BillingPaymentDirection.INBOUND,
+        status=BillingPaymentStatus.PENDING,
+        method="fps",
+        amount=Decimal(40),
+        currency="HKD",
+    )
+    received = CustomerPayment(
+        id=uuid4(),
+        direction=BillingPaymentDirection.INBOUND,
+        status=BillingPaymentStatus.SUCCEEDED,
+        method="fps",
+        amount=Decimal(40),
+        currency="HKD",
+        enrollment_id=uuid4(),
+        confirmed_by="staff",
+    )
+    session = MagicMock()
+    session.execute.return_value.scalars.return_value.all.return_value = [invoice]
+    session.scalars.return_value.all.return_value = [stub]
+    session.scalar.return_value = 0
+    monkeypatch.setattr(release, "allocate_succeeded_payment", lambda *_a, **_k: None)
+    monkeypatch.setattr(
+        release,
+        "AuditService",
+        lambda *_a, **_k: SimpleNamespace(log_custom=lambda **_kw: None),
+    )
+    release.allocate_confirmed_payment(session, received)
+    session.delete.assert_called_once_with(stub)

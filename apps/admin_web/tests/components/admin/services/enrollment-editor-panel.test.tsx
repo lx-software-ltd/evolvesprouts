@@ -151,4 +151,50 @@ describe('EnrollmentEditorPanel billing fields', () => {
       expect.not.objectContaining({ amount_paid: expect.anything(), currency: expect.anything() })
     );
   });
+
+  it('omits the default currency when the enrollment has none stored', async () => {
+    const user = userEvent.setup();
+    const onUpdate = vi.fn();
+    const enrollment = {
+      id: 'enr-1',
+      instanceId: 'inst-1',
+      contactId: 'contact-1',
+      familyId: null,
+      organizationId: null,
+      ticketTierId: null,
+      discountCodeId: null,
+      status: 'registered',
+      amountPaid: '480.00',
+      currency: null,
+      enrolledAt: '2026-05-01T02:30:00.000Z',
+      cancelledAt: null,
+      notes: null,
+      createdBy: 'staff',
+      createdAt: null,
+      updatedAt: null,
+      invoiceNumber: null,
+      invoiceStatus: null,
+      paymentStatus: null,
+    } as Enrollment;
+
+    render(
+      <EnrollmentEditorPanel
+        mode='edit'
+        enrollment={enrollment}
+        pickers={pickers}
+        discountOptions={[]}
+        discountOptionsLoading={false}
+        discountOptionsError=''
+        isSaving={false}
+        onCreate={vi.fn()}
+        onUpdate={onUpdate}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Update enrollment' }));
+    expect(onUpdate).toHaveBeenCalledWith(
+      'enr-1',
+      expect.not.objectContaining({ currency: expect.anything() })
+    );
+  });
 });

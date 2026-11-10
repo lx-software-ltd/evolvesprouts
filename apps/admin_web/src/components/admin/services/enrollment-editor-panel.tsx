@@ -40,8 +40,13 @@ function sameMoney(next: string, previous: string | null | undefined): boolean {
   return Math.abs(leftNumber - rightNumber) < 0.000001;
 }
 
-function sameCurrency(next: string, previous: string | null | undefined): boolean {
-  return next.trim().toUpperCase() === (previous ?? '').trim().toUpperCase();
+function sameCurrency(
+  next: string,
+  previous: string | null | undefined,
+  fallback: string
+): boolean {
+  const stored = (previous ?? '').trim() || fallback.trim();
+  return next.trim().toUpperCase() === stored.toUpperCase();
 }
 
 function ensureOption(
@@ -167,7 +172,7 @@ export function EnrollmentEditorPanel({
     if (!sameMoney(amountPaid, enrollment?.amountPaid)) {
       base.amount_paid = amountPaid.trim() || null;
     }
-    if (!sameCurrency(currency, enrollment?.currency)) {
+    if (!sameCurrency(currency, enrollment?.currency, defaultCurrencyCode)) {
       base.currency = currency.trim() || null;
     }
     const nextDiscount = discountCodeId.trim() || null;

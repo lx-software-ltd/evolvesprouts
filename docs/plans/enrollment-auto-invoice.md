@@ -56,6 +56,13 @@ Set `ENROLLMENT_AUTO_INVOICE` to `false` and redeploy. Enrollments created while
 - Catalogue matching leaves a draft when the price cannot be determined (several ticket tiers, hourly consultation) and says so.
 - The invoice PDF is rendered once, after the savepoint, so a rolled-back invoice does not upload a PDF.
 - The website invoice email is finalized even when another post-booking hook fails.
+- A blank enrollment currency compares as the admin default, so an invoiced row with no currency can still be edited.
+- Cancellation counts invoice lines with no enrollment as other charges and does not call that a refund.
+- Allocation and PDF rendering each use a savepoint, so a database error there keeps the enrollment.
+- A waitlisted amount edit updates the single pending payment. A received payment for a different amount blocks the edit, and promotion will not invoice a mismatched payment.
+- The issue stub counts only same-currency unapplied money. A pending stub is removed once the invoice balance is zero.
+- The enrollment's email choice is stored on the payment audit and used when a waitlisted enrollment is promoted.
+- Restoring a cancelled enrollment with no payment or invoice returns a billing warning.
 
 ## Open questions
 

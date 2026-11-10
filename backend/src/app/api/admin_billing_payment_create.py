@@ -8,7 +8,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -34,6 +34,7 @@ from app.services.billing_enrollment_confirmation import (
 from app.services.customer_billing import (
     create_receipt_for_succeeded_inbound_payment,
     finalize_receipt_pdf_upload,
+    payment_unapplied_amount,
 )
 from app.utils import json_response
 from app.utils.logging import get_logger
@@ -44,17 +45,18 @@ logger = get_logger(__name__)
 
 
 def _positive_open_payment_cover(
-    session: Session, enrollment_ids: list[UUID]
+    session: Session, enrollment_ids: list[UUID], currency: str
 ) -> Decimal:
-    """Sum of positive pending or succeeded payments on these enrollments.
+    """Unapplied amount of same-currency payments that can still pay this invoice.
 
-    A zero-amount free payment does not count. One enrollment's payment must
-    not hide the rest of a merged invoice, so the stub is the uncovered part.
+    A zero-amount free payment does not count. Money already allocated to
+    another invoice, and payments in another currency, do not cover the stub.
     """
     if not enrollment_ids:
         return Decimal(0)
-    covered = session.execute(
-        select(func.coalesce(func.sum(CustomerPayment.amount), 0)).where(
+    wanted = currency.strip().upper()[:3]
+    payments = session.scalars(
+        select(CustomerPayment).where(
             CustomerPayment.enrollment_id.in_(enrollment_ids),
             CustomerPayment.direction == BillingPaymentDirection.INBOUND,
             CustomerPayment.status.in_(
@@ -62,8 +64,18 @@ def _positive_open_payment_cover(
             ),
             CustomerPayment.amount > 0,
         )
-    ).scalar_one()
-    return Decimal(str(covered))
+    ).all()
+    covered = Decimal(0)
+    for payment in payments:
+        if str(getattr(payment, "currency", "") or "").strip().upper()[:3] != wanted:
+            continue
+        if payment.status == BillingPaymentStatus.PENDING:
+            covered += Decimal(str(payment.amount))
+            continue
+        unapplied = payment_unapplied_amount(session, payment.id)
+        if unapplied > 0:
+            covered += unapplied
+    return covered
 
 
 def create_pending_payment_for_issued_invoice(
@@ -83,9 +95,14 @@ def create_pending_payment_for_issued_invoice(
     total = Decimal(str(inv.total))
     if total <= Decimal(0):
         return None
+    balance = getattr(inv, "balance_due", None)
+    due = Decimal(str(total if balance is None else balance))
 
+    currency = str(inv.currency or "").strip().upper()[:3]
+    if len(currency) != 3:
+        raise ValidationError("Invoice currency is required", field="currency")
     enrollment_ids = distinct_enrollment_ids_on_invoice(session, inv.id)
-    remainder = total - _positive_open_payment_cover(session, enrollment_ids)
+    remainder = due - _positive_open_payment_cover(session, enrollment_ids, currency)
     if remainder <= Decimal(0):
         return None
     enrollment_id = enrollment_ids[0] if len(enrollment_ids) == 1 else None
@@ -93,10 +110,6 @@ def create_pending_payment_for_issued_invoice(
     contact_id: UUID | None = None
     if inv.bill_to_kind == BillingBillToKind.CONTACT:
         contact_id = inv.bill_to_contact_id
-
-    currency = str(inv.currency or "").strip().upper()[:3]
-    if len(currency) != 3:
-        raise ValidationError("Invoice currency is required", field="currency")
 
     pay = CustomerPayment(
         direction=BillingPaymentDirection.INBOUND,
