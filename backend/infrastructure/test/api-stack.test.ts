@@ -90,12 +90,9 @@ function assertApiGatewayCloudWatchLogging(template: Template): void {
   }
 
   const policies = template.findResources("AWS::Logs::ResourcePolicy");
-  const delivery = Object.values(policies).find((policy) =>
-    containsExactString(policy.Properties ?? {}, DELIVERY_LOGS_PRINCIPAL),
-  );
-  if (!delivery) {
+  if (Object.keys(policies).length !== 0) {
     throw new Error(
-      "Expected a CloudWatch Logs resource policy for the delivery logs service",
+      "REST API logs use the account role, so the stack must not add a log resource policy",
     );
   }
 
@@ -105,11 +102,28 @@ function assertApiGatewayCloudWatchLogging(template: Template): void {
       key.Properties?.Description ===
       "KMS key for API Gateway CloudWatch log encryption",
   );
-  const keyAllowsDelivery =
+  if (
     logKey !== undefined &&
-    containsExactString(logKey.Properties ?? {}, DELIVERY_LOGS_PRINCIPAL);
-  if (!keyAllowsDelivery) {
-    throw new Error("ApiLogEncryptionKey must allow the delivery logs service");
+    containsExactString(logKey.Properties ?? {}, DELIVERY_LOGS_PRINCIPAL)
+  ) {
+    throw new Error(
+      "ApiLogEncryptionKey must not grant the delivery logs service",
+    );
+  }
+
+  const customResources = template.findResources("Custom::AWS");
+  const accountUpdate = Object.entries(customResources).find(([, item]) => {
+    const rendered = JSON.stringify(item.Properties ?? {});
+    return (
+      rendered.includes("updateAccount") &&
+      rendered.includes("/cloudwatchRoleArn") &&
+      rendered.includes("EvolvesproutsApiCloudWatchRole00972F46")
+    );
+  });
+  if (!accountUpdate) {
+    throw new Error(
+      "Expected ApiGatewayCloudWatchAccount to call updateAccount for the RestApi CloudWatch role",
+    );
   }
 }
 

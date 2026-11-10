@@ -9,7 +9,7 @@ The user asked to solve the outstanding items from the 5–10 Nov 2026 log revie
 
 A concurrent WhatsApp webhook for a new `wa_id` stores the message on the conversation that won the insert, and the webhook returns 200. Database exception logs keep the constraint name and omit SQL and bound parameters.
 
-API Gateway keeps the single account role that `RestApi` creates when `cloudWatchRole` is true. The access-log group allows `delivery.logs.amazonaws.com`, and `ApiLogEncryptionKey` allows that principal. A second `AWS::ApiGateway::Account` is not added, because the region can only have one.
+API Gateway keeps the single account role that `RestApi` creates when `cloudWatchRole` is true. `ApiGatewayCloudWatchAccount` calls `UpdateAccount` on create and when that role ARN changes, because an unchanged `AWS::ApiGateway::Account` does not correct a role set outside the stack. Execution and access logs both use that role. A second account resource and a `delivery.logs.amazonaws.com` resource policy are not added.
 
 ## Non-goals
 
@@ -32,7 +32,8 @@ API Gateway keeps the single account role that `RestApi` creates when `cloudWatc
 
 - A WhatsApp message that already exists is still counted as a duplicate.
 - An `IntegrityError` for a constraint other than `whatsapp_conversations_wa_id_idx` still fails the webhook.
-- Application exception text that is not a database error stays in the log.
+- Application exception text that is not a database error stays in the log, including each link in a cause chain.
+- A `DETAIL:` line that is not a Postgres key or constraint detail stays in the log.
 - API Gateway method logging stays INFO with data trace off.
 - One `AWS::ApiGateway::Account` per stack, which is one per account and region.
 
@@ -46,4 +47,4 @@ Revert the commit. API Gateway keeps the previous account role until a later dep
 
 ## Open questions
 
-None. The next deploy is what attaches the account role and the access-log delivery policy.
+None. The next deploy runs `ApiGatewayCloudWatchAccount`, which sets the regional CloudWatch role. That role is used by every API in the region.
