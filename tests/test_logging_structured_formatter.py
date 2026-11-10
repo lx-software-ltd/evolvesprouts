@@ -77,3 +77,52 @@ def test_structured_formatter_redacts_database_parameters() -> None:
     assert exception["message"] == (
         "database constraint whatsapp_conversations_wa_id_idx"
     )
+
+
+def test_structured_formatter_keeps_unrelated_detail_text() -> None:
+    data = _capture_exception(RuntimeError("DETAIL: cache refreshed"))
+    exception = data["exception"]
+    assert isinstance(exception, dict)
+    assert exception["message"] == "DETAIL: cache refreshed"
+
+
+def test_structured_formatter_keeps_cause_chain_and_redacts_database_text() -> None:
+    class _DatabaseError(Exception):
+        def __str__(self) -> str:
+            return (
+                "duplicate key value violates unique constraint "
+                '"whatsapp_conversations_wa_id_idx"\n'
+                "DETAIL:  Key (wa_id)=(85290000000) already exists.\n"
+                "[parameters: {'wa_id': '85290000000'}]"
+            )
+
+    stream = io.StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.setFormatter(StructuredLogFormatter())
+    log = logging.getLogger("test_structured_formatter_cause_chain")
+    log.handlers.clear()
+    log.propagate = False
+    log.addHandler(handler)
+    log.setLevel(logging.ERROR)
+    try:
+        try:
+            raise _DatabaseError()
+        except _DatabaseError as exc:
+            raise RuntimeError("webhook failed") from exc
+    except RuntimeError:
+        log.exception("request failed")
+
+    data = json.loads(stream.getvalue().strip())
+    encoded = json.dumps(data)
+    assert "85290000000" not in encoded
+    exception = data["exception"]
+    assert isinstance(exception, dict)
+    assert exception["type"] == "RuntimeError"
+    assert exception["message"] == "webhook failed"
+    traceback_text = "".join(exception["traceback"])
+    assert "webhook failed" in traceback_text
+    assert "database constraint whatsapp_conversations_wa_id_idx" in traceback_text
+    assert (
+        "The above exception was the direct cause of the following exception:"
+        in traceback_text
+    )

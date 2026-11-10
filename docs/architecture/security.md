@@ -88,10 +88,11 @@ logger.info(f"User ID: {mask_pii(user_id)}")  # Output: abc1***
 | `mask_pii(value)` | Mask any PII | `abc1***` |
 | `hash_for_correlation(value)` | Hash for log correlation | `a1b2c3d4e5f6` |
 
-`StructuredLogFormatter` keeps ordinary exception text. A database exception
-whose text includes SQL, bound parameters, or a `DETAIL` line is logged as
-the constraint name only, so a unique-violation retry does not write phone
-numbers or profile names to CloudWatch.
+`StructuredLogFormatter` keeps ordinary exception text, including each
+exception in a cause chain. A database exception whose text includes SQL,
+bound parameters, or a Postgres `DETAIL` line with a key or constraint is
+logged as the constraint name only, so a unique-violation retry does not
+write phone numbers or profile names to CloudWatch.
 
 ### Print Statements
 
