@@ -2,6 +2,8 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { InboxImportJobSummary } from '@/lib/inbox-import-api';
+
 vi.mock('next/link', () => ({
   default: ({
     children,
@@ -49,7 +51,7 @@ const { listState, mockListMessages, inboxImportApi } = vi.hoisted(() => {
     listState,
     mockListMessages: vi.fn(),
     inboxImportApi: {
-      listInboxImportJobs: vi.fn(async () => []),
+      listInboxImportJobs: vi.fn(async (): Promise<InboxImportJobSummary[]> => []),
       createWhatsAppExportImportJob: vi.fn(),
       formatInboxImportCounters: vi.fn(() => ''),
     },
@@ -200,7 +202,9 @@ describe('WhatsAppConversationsView', () => {
     inboxImportApi.listInboxImportJobs.mockResolvedValue([
       {
         id: 'job-fail',
+        kind: 'whatsapp_export',
         channel: null,
+        attachmentAssetId: null,
         status: 'failed',
         errorMessage: 'Could not read the export.',
         counters: null,
@@ -209,7 +213,9 @@ describe('WhatsAppConversationsView', () => {
       },
       {
         id: 'job-old',
+        kind: 'whatsapp_export',
         channel: null,
+        attachmentAssetId: null,
         status: 'succeeded',
         errorMessage: null,
         counters: { stored: 1, duplicates: 0, skipped: 0 },

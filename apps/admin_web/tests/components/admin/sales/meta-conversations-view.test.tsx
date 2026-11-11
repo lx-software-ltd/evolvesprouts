@@ -2,6 +2,8 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { InboxImportJobSummary } from '@/lib/inbox-import-api';
+
 vi.mock('next/link', () => ({
   default: ({
     children,
@@ -51,7 +53,7 @@ const { listState, mockListMessages, inboxImportApi } = vi.hoisted(() => {
     listState,
     mockListMessages: vi.fn(),
     inboxImportApi: {
-      listInboxImportJobs: vi.fn(async () => []),
+      listInboxImportJobs: vi.fn(async (): Promise<InboxImportJobSummary[]> => []),
       createMetaImportJob: vi.fn(),
       formatInboxImportCounters: vi.fn(() => ''),
     },
@@ -184,11 +186,14 @@ describe('MetaConversationsView', () => {
     inboxImportApi.listInboxImportJobs.mockResolvedValue([
       {
         id: 'job-old',
+        kind: 'meta_graph',
         channel: 'instagram',
+        attachmentAssetId: null,
         status: 'succeeded',
         errorMessage: null,
         counters: { stored: 2, duplicates: 0, skipped: 0 },
         createdAt: '2026-08-02T00:00:00+00:00',
+        updatedAt: '2026-08-02T00:00:00+00:00',
       },
     ]);
     inboxImportApi.formatInboxImportCounters.mockReturnValue('Stored 2, duplicates 0, skipped 0.');
@@ -205,7 +210,9 @@ describe('MetaConversationsView', () => {
     inboxImportApi.listInboxImportJobs.mockResolvedValue([
       {
         id: 'job-live',
+        kind: 'meta_graph',
         channel: 'instagram',
+        attachmentAssetId: null,
         status: 'processing',
         errorMessage: null,
         counters: {},
@@ -222,7 +229,9 @@ describe('MetaConversationsView', () => {
     inboxImportApi.listInboxImportJobs.mockResolvedValue([
       {
         id: 'job-stuck',
+        kind: 'meta_graph',
         channel: 'instagram',
+        attachmentAssetId: null,
         status: 'processing',
         errorMessage: null,
         counters: {},
@@ -243,7 +252,9 @@ describe('MetaConversationsView', () => {
     inboxImportApi.listInboxImportJobs.mockResolvedValue([
       {
         id: 'job-fail',
+        kind: 'meta_graph',
         channel: 'instagram',
+        attachmentAssetId: null,
         status: 'failed',
         errorMessage: 'Graph timeout',
         counters: {},
