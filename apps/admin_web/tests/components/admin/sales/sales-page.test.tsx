@@ -133,12 +133,16 @@ vi.mock('@/hooks/use-sales-page', () => ({
   useSalesPage: mockUseSalesPage,
 }));
 
-vi.mock('@/lib/inbox-import-api', () => ({
-  listInboxImportJobs: vi.fn(async () => []),
-  createMetaImportJob: vi.fn(),
-  createWhatsAppExportImportJob: vi.fn(),
-  formatInboxImportCounters: vi.fn(() => ''),
-}));
+vi.mock('@/lib/inbox-import-api', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/inbox-import-api')>('@/lib/inbox-import-api');
+  return {
+    ...actual,
+    listInboxImportJobs: vi.fn(async () => []),
+    createMetaImportJob: vi.fn(),
+    createWhatsAppExportImportJob: vi.fn(),
+    formatInboxImportCounters: vi.fn(() => ''),
+  };
+});
 
 vi.mock('@/hooks/use-whatsapp-conversations', () => ({
   useWhatsAppConversations: () => ({

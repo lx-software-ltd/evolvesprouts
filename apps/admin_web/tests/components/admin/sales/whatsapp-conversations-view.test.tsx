@@ -64,7 +64,13 @@ vi.mock('@/lib/whatsapp-api', () => ({
   listWhatsAppMessages: (...args: unknown[]) => mockListMessages(...args),
 }));
 
-vi.mock('@/lib/inbox-import-api', () => inboxImportApi);
+vi.mock('@/lib/inbox-import-api', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/inbox-import-api')>('@/lib/inbox-import-api');
+  return {
+    ...actual,
+    ...inboxImportApi,
+  };
+});
 
 vi.mock('@/lib/assets-api', () => ({
   createAdminAsset: vi.fn(),
@@ -98,6 +104,9 @@ describe('WhatsAppConversationsView', () => {
     window.history.replaceState(null, '', '/sales');
     mockListMessages.mockReset();
     listState.setFilter.mockClear();
+    inboxImportApi.listInboxImportJobs.mockReset();
+    inboxImportApi.listInboxImportJobs.mockResolvedValue([]);
+    window.sessionStorage.clear();
   });
 
   it('renders a title-less record table with the import accordion collapsed', () => {
@@ -184,5 +193,38 @@ describe('WhatsAppConversationsView', () => {
       '4'
     );
     expect(screen.getByRole('button', { name: 'Import export' })).toBeDisabled();
+  });
+
+  it('shows a recent failed export and hides a stale finished one', async () => {
+    const stamp = new Date().toISOString();
+    inboxImportApi.listInboxImportJobs.mockResolvedValue([
+      {
+        id: 'job-fail',
+        channel: null,
+        status: 'failed',
+        errorMessage: 'Could not read the export.',
+        counters: null,
+        createdAt: stamp,
+        updatedAt: stamp,
+      },
+      {
+        id: 'job-old',
+        channel: null,
+        status: 'succeeded',
+        errorMessage: null,
+        counters: { stored: 1, duplicates: 0, skipped: 0 },
+        createdAt: '2026-08-02T00:00:00+00:00',
+        updatedAt: '2026-08-02T00:00:00+00:00',
+      },
+    ]);
+    const user = userEvent.setup();
+    render(<WhatsAppConversationsView />);
+
+    await user.click(screen.getByRole('button', { name: 'Import WhatsApp export' }));
+    expect(await screen.findByText('Import failed')).toBeInTheDocument();
+    expect(screen.queryByText('Import finished')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }));
+    expect(screen.queryByText('Import failed')).not.toBeInTheDocument();
   });
 });

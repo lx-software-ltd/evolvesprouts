@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
 import { StatusBanner } from '@/components/status-banner';
 
@@ -36,5 +37,18 @@ describe('StatusBanner', () => {
 
     expect(screen.getByText('No title content')).toBeInTheDocument();
     expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+  });
+
+  it('calls onDismiss from the dismiss button', async () => {
+    const user = userEvent.setup();
+    const onDismiss = vi.fn();
+    render(
+      <StatusBanner variant='success' title='Done' onDismiss={onDismiss}>
+        Saved
+      </StatusBanner>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }));
+    expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 });

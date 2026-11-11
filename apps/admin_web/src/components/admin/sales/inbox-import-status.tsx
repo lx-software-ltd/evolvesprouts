@@ -30,13 +30,19 @@ function statusLabel(status: InboxImportJobSummary['status']): string {
   }
 }
 
-export function InboxImportStatus({ job }: { job: InboxImportJobSummary | null }) {
+export function InboxImportStatus({
+  job,
+  onDismiss,
+}: {
+  job: InboxImportJobSummary | null;
+  onDismiss?: () => void;
+}) {
   if (!job) {
     return null;
   }
   const counters = formatInboxImportCounters(job.counters);
   return (
-    <StatusBanner variant={bannerVariant(job.status)} title={statusLabel(job.status)}>
+    <StatusBanner variant={bannerVariant(job.status)} title={statusLabel(job.status)} onDismiss={onDismiss}>
       {[job.errorMessage, counters].filter(Boolean).join(' ')}
     </StatusBanner>
   );

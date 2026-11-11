@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { InboxConversationThread } from './inbox-conversation-thread';
 import { InboxConversationsTable, type InboxConversationRow } from './inbox-conversations-table';
@@ -11,15 +11,12 @@ import { Button } from '@/components/ui/button';
 import { toErrorMessage } from '@/hooks/hook-errors';
 import { useAutoExpandPartyConversation } from '@/hooks/use-auto-expand-party-conversation';
 import { useExpandedRecord } from '@/hooks/use-expanded-record';
+import { useInboxImportJob } from '@/hooks/use-inbox-import-job';
 import { useMetaConversations } from '@/hooks/use-meta-conversations';
 import { useMetaMessages } from '@/hooks/use-meta-messages';
 import { useRelatedPartySearchParams } from '@/hooks/use-related-party-search-params';
 import { ADMIN_CONVERSATION_QUERY_PARAM } from '@/lib/contact-related-links';
-import {
-  createMetaImportJob,
-  listInboxImportJobs,
-  type InboxImportJobSummary,
-} from '@/lib/inbox-import-api';
+import { createMetaImportJob } from '@/lib/inbox-import-api';
 import type { MetaChannel, MetaConversationSummary } from '@/lib/meta-api';
 
 const CHANNEL_COPY: Record<MetaChannel, { label: string; searchPlaceholder: string; idLabel: string }> = {
@@ -79,27 +76,13 @@ export function MetaConversationsView({ channel }: { channel: MetaChannel }) {
     isLoading: list.isLoading,
     expanded,
   });
-  const [importJob, setImportJob] = useState<InboxImportJobSummary | null>(null);
+  const { importJob, setImportJob, dismissImportJob } = useInboxImportJob({
+    endpointPath: '/v1/admin/meta/import-jobs',
+    channel,
+    onSettled: () => list.refetch(),
+  });
   const [importError, setImportError] = useState('');
   const [isImporting, setIsImporting] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    void listInboxImportJobs('/v1/admin/meta/import-jobs')
-      .then((jobs) => {
-        if (!cancelled) {
-          setImportJob(jobs.find((job) => job.channel === channel) ?? jobs[0] ?? null);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setImportJob(null);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [channel]);
 
   async function handleImportRecentHistory() {
     setIsImporting(true);
@@ -107,7 +90,6 @@ export function MetaConversationsView({ channel }: { channel: MetaChannel }) {
     try {
       const job = await createMetaImportJob(channel);
       setImportJob(job);
-      await list.refetch();
     } catch (error) {
       setImportError(toErrorMessage(error, 'Could not start inbox import.'));
     } finally {
@@ -124,7 +106,7 @@ export function MetaConversationsView({ channel }: { channel: MetaChannel }) {
             {importError}
           </StatusBanner>
         ) : null}
-        <InboxImportStatus job={importJob} />
+        <InboxImportStatus job={importJob} onDismiss={dismissImportJob} />
       </div>
     ) : null;
 

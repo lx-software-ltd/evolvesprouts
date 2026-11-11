@@ -42,6 +42,11 @@ export const adminQueryKeys = {
   calendarBlocks: resource('calendar-blocks'),
   tags: resource('tags'),
   conversations: resource('conversations'),
+  inboxImportJobs: {
+    all: () => [ROOT, 'inbox-import-jobs'] as const,
+    list: (endpointPath: string, limit: number) =>
+      [ROOT, 'inbox-import-jobs', 'list', endpointPath, limit] as const,
+  },
   salesDailyPlan: {
     latest: () => [ROOT, 'sales-daily-plan', 'latest'] as const,
   },

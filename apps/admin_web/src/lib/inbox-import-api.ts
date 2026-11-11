@@ -1,3 +1,4 @@
+import { buildAdminListPath } from './admin-list-query';
 import { adminApiRequest } from './api-admin-client';
 import { asNumber, asNullableString } from './api-payload';
 import { isRecord } from './type-guards';
@@ -26,6 +27,14 @@ export type InboxImportJobSummary = {
   createdAt: string | null;
   updatedAt: string | null;
 };
+
+export function isInboxImportInFlight(status: InboxImportJobStatus): boolean {
+  return status === 'pending' || status === 'processing';
+}
+
+export function isInboxImportSuccess(status: InboxImportJobStatus): boolean {
+  return status === 'succeeded' || status === 'succeeded_with_errors';
+}
 
 function parseStatus(value: unknown): InboxImportJobStatus {
   switch (asNullableString(value)) {
@@ -69,11 +78,11 @@ export function parseInboxImportJob(value: unknown): InboxImportJobSummary {
 
 export async function listInboxImportJobs(
   endpointPath: '/v1/admin/meta/import-jobs' | '/v1/admin/whatsapp/import-jobs',
-  signal?: AbortSignal
+  options?: { signal?: AbortSignal; limit?: number }
 ): Promise<InboxImportJobSummary[]> {
   const payload = await adminApiRequest<ApiJobList>({
-    endpointPath,
-    signal,
+    endpointPath: buildAdminListPath(endpointPath, { limit: options?.limit }),
+    signal: options?.signal,
   });
   const items = Array.isArray(payload.items) ? payload.items : [];
   return items.map(parseInboxImportJob);

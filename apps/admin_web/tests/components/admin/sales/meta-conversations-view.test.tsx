@@ -70,7 +70,13 @@ vi.mock('@/lib/meta-api', async () => {
   };
 });
 
-vi.mock('@/lib/inbox-import-api', () => inboxImportApi);
+vi.mock('@/lib/inbox-import-api', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/inbox-import-api')>('@/lib/inbox-import-api');
+  return {
+    ...actual,
+    ...inboxImportApi,
+  };
+});
 
 import { MetaConversationsView } from '@/components/admin/sales/meta-conversations-view';
 
@@ -98,6 +104,12 @@ describe('MetaConversationsView', () => {
     window.history.replaceState(null, '', '/sales');
     mockListMessages.mockReset();
     inboxImportApi.createMetaImportJob.mockReset();
+    inboxImportApi.listInboxImportJobs.mockReset();
+    inboxImportApi.listInboxImportJobs.mockResolvedValue([]);
+    inboxImportApi.formatInboxImportCounters.mockReset();
+    inboxImportApi.formatInboxImportCounters.mockReturnValue('');
+    listState.refetch.mockClear();
+    window.sessionStorage.clear();
   });
 
   it('lists Instagram conversations in a title-less table and expands the thread in place', async () => {
@@ -153,17 +165,99 @@ describe('MetaConversationsView', () => {
     expect(busy).toBeDisabled();
     expect(busy).toHaveAttribute('aria-busy', 'true');
 
+    const stamp = new Date().toISOString();
     resolveJob({
       id: 'job-1',
       channel: 'instagram',
       status: 'pending',
       errorMessage: null,
       counters: {},
-      createdAt: '2026-08-02T00:00:00+00:00',
+      createdAt: stamp,
+      updatedAt: stamp,
     });
     expect(await screen.findByRole('button', { name: 'Import recent history' })).toBeEnabled();
-    expect(listState.refetch).toHaveBeenCalled();
+    expect(listState.refetch).not.toHaveBeenCalled();
     expect(screen.getByText('Import queued')).toBeInTheDocument();
+  });
+
+  it('does not keep a finished import banner from a previous job', async () => {
+    inboxImportApi.listInboxImportJobs.mockResolvedValue([
+      {
+        id: 'job-old',
+        channel: 'instagram',
+        status: 'succeeded',
+        errorMessage: null,
+        counters: { stored: 2, duplicates: 0, skipped: 0 },
+        createdAt: '2026-08-02T00:00:00+00:00',
+      },
+    ]);
+    inboxImportApi.formatInboxImportCounters.mockReturnValue('Stored 2, duplicates 0, skipped 0.');
+    render(<MetaConversationsView channel='instagram' />);
+
+    await waitFor(() => {
+      expect(inboxImportApi.listInboxImportJobs).toHaveBeenCalled();
+    });
+    expect(screen.queryByText('Import finished')).not.toBeInTheDocument();
+  });
+
+  it('restores an in-flight import after refresh', async () => {
+    const stamp = new Date().toISOString();
+    inboxImportApi.listInboxImportJobs.mockResolvedValue([
+      {
+        id: 'job-live',
+        channel: 'instagram',
+        status: 'processing',
+        errorMessage: null,
+        counters: {},
+        createdAt: stamp,
+        updatedAt: stamp,
+      },
+    ]);
+    render(<MetaConversationsView channel='instagram' />);
+
+    expect(await screen.findByText('Import running')).toBeInTheDocument();
+  });
+
+  it('does not restore a stuck import from an earlier visit', async () => {
+    inboxImportApi.listInboxImportJobs.mockResolvedValue([
+      {
+        id: 'job-stuck',
+        channel: 'instagram',
+        status: 'processing',
+        errorMessage: null,
+        counters: {},
+        createdAt: '2026-08-02T00:00:00+00:00',
+        updatedAt: '2026-08-02T00:00:00+00:00',
+      },
+    ]);
+    render(<MetaConversationsView channel='instagram' />);
+
+    await waitFor(() => {
+      expect(inboxImportApi.listInboxImportJobs).toHaveBeenCalled();
+    });
+    expect(screen.queryByText('Import running')).not.toBeInTheDocument();
+  });
+
+  it('dismisses a recent failed import', async () => {
+    const stamp = new Date().toISOString();
+    inboxImportApi.listInboxImportJobs.mockResolvedValue([
+      {
+        id: 'job-fail',
+        channel: 'instagram',
+        status: 'failed',
+        errorMessage: 'Graph timeout',
+        counters: {},
+        createdAt: stamp,
+        updatedAt: stamp,
+      },
+    ]);
+    const user = userEvent.setup();
+    render(<MetaConversationsView channel='instagram' />);
+
+    expect(await screen.findByText('Import failed')).toBeInTheDocument();
+    expect(screen.getByText('Graph timeout')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }));
+    expect(screen.queryByText('Import failed')).not.toBeInTheDocument();
   });
 
   it('opens the first conversation when a contact deep link is present', async () => {
