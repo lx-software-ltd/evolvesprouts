@@ -27,6 +27,14 @@ export type InboxImportJobSummary = {
   updatedAt: string | null;
 };
 
+export function isInboxImportInFlight(status: InboxImportJobStatus): boolean {
+  return status === 'pending' || status === 'processing';
+}
+
+export function isInboxImportSuccess(status: InboxImportJobStatus): boolean {
+  return status === 'succeeded' || status === 'succeeded_with_errors';
+}
+
 function parseStatus(value: unknown): InboxImportJobStatus {
   switch (asNullableString(value)) {
     case 'processing':

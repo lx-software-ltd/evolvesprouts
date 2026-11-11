@@ -2,10 +2,21 @@ import { describe, expect, it } from 'vitest';
 
 import {
   formatInboxImportCounters,
+  isInboxImportInFlight,
+  isInboxImportSuccess,
   parseInboxImportJob,
 } from '@/lib/inbox-import-api';
 
 describe('inbox-import-api', () => {
+  it('classifies in-flight and success statuses', () => {
+    expect(isInboxImportInFlight('pending')).toBe(true);
+    expect(isInboxImportInFlight('processing')).toBe(true);
+    expect(isInboxImportInFlight('succeeded')).toBe(false);
+    expect(isInboxImportSuccess('succeeded')).toBe(true);
+    expect(isInboxImportSuccess('succeeded_with_errors')).toBe(true);
+    expect(isInboxImportSuccess('failed')).toBe(false);
+  });
+
   it('parses a job payload and formats counters', () => {
     const job = parseInboxImportJob({
       id: 'job-1',

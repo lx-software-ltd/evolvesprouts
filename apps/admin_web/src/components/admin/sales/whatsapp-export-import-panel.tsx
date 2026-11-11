@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { InboxImportStatus } from './inbox-import-status';
 
@@ -11,18 +11,15 @@ import { Button } from '@/components/ui/button';
 import { FileUploadButton } from '@/components/ui/file-upload-button';
 import { Input } from '@/components/ui/input';
 import { toErrorMessage } from '@/hooks/hook-errors';
+import { useInboxImportJob } from '@/hooks/use-inbox-import-job';
 import { createAdminAsset, deleteAdminAsset, uploadFileToPresignedUrl } from '@/lib/assets-api';
-import {
-  createWhatsAppExportImportJob,
-  listInboxImportJobs,
-  type InboxImportJobSummary,
-} from '@/lib/inbox-import-api';
+import { createWhatsAppExportImportJob } from '@/lib/inbox-import-api';
 
 const MAX_EXPORT_BYTES = 15 * 1024 * 1024;
 const IMPORT_FORM_ID = 'whatsapp-export-import';
 
 export interface WhatsAppExportImportPanelProps {
-  /** Called once a job is queued so the conversations list can refetch. */
+  /** Called once a job settles so the conversations list can refetch. */
   onImported?: () => void | Promise<unknown>;
   className?: string;
 }
@@ -36,27 +33,12 @@ export function WhatsAppExportImportPanel({ onImported, className }: WhatsAppExp
   const [exportFile, setExportFile] = useState<File | null>(null);
   const [counterpartyWaId, setCounterpartyWaId] = useState('');
   const [businessNames, setBusinessNames] = useState('');
-  const [importJob, setImportJob] = useState<InboxImportJobSummary | null>(null);
+  const { importJob, setImportJob } = useInboxImportJob({
+    endpointPath: '/v1/admin/whatsapp/import-jobs',
+    onSettled: onImported,
+  });
   const [importError, setImportError] = useState('');
   const [isImporting, setIsImporting] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    void listInboxImportJobs('/v1/admin/whatsapp/import-jobs')
-      .then((jobs) => {
-        if (!cancelled) {
-          setImportJob(jobs[0] ?? null);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setImportJob(null);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   async function handleImportExport() {
     if (!exportFile) {
@@ -99,7 +81,6 @@ export function WhatsAppExportImportPanel({ onImported, className }: WhatsAppExp
       });
       setImportJob(job);
       setExportFile(null);
-      await onImported?.();
     } catch (error) {
       if (uploadedAssetId) {
         try {
