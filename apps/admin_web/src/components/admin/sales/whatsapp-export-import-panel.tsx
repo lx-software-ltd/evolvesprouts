@@ -33,9 +33,11 @@ export function WhatsAppExportImportPanel({ onImported, className }: WhatsAppExp
   const [exportFile, setExportFile] = useState<File | null>(null);
   const [counterpartyWaId, setCounterpartyWaId] = useState('');
   const [businessNames, setBusinessNames] = useState('');
-  const { importJob, setImportJob } = useInboxImportJob({
+  const [importOpen, setImportOpen] = useState(false);
+  const { importJob, setImportJob, dismissImportJob } = useInboxImportJob({
     endpointPath: '/v1/admin/whatsapp/import-jobs',
     onSettled: onImported,
+    visible: importOpen,
   });
   const [importError, setImportError] = useState('');
   const [isImporting, setIsImporting] = useState(false);
@@ -101,6 +103,8 @@ export function WhatsAppExportImportPanel({ onImported, className }: WhatsAppExp
       title='Import WhatsApp export'
       summary={isImporting ? 'Importing…' : undefined}
       className={className}
+      open={importOpen}
+      onOpenChange={setImportOpen}
     >
       <div className='space-y-4'>
         <p className='text-sm text-slate-600'>
@@ -112,7 +116,7 @@ export function WhatsAppExportImportPanel({ onImported, className }: WhatsAppExp
             {importError}
           </StatusBanner>
         ) : null}
-        <InboxImportStatus job={importJob} />
+        <InboxImportStatus job={importJob} onDismiss={dismissImportJob} />
         <form
           id={IMPORT_FORM_ID}
           className='space-y-4'

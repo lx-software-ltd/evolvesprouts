@@ -76,7 +76,7 @@ export function MetaConversationsView({ channel }: { channel: MetaChannel }) {
     isLoading: list.isLoading,
     expanded,
   });
-  const { importJob, setImportJob } = useInboxImportJob({
+  const { importJob, setImportJob, dismissImportJob } = useInboxImportJob({
     endpointPath: '/v1/admin/meta/import-jobs',
     channel,
     onSettled: () => list.refetch(),
@@ -106,7 +106,7 @@ export function MetaConversationsView({ channel }: { channel: MetaChannel }) {
             {importError}
           </StatusBanner>
         ) : null}
-        <InboxImportStatus job={importJob} />
+        <InboxImportStatus job={importJob} onDismiss={dismissImportJob} />
       </div>
     ) : null;
 
