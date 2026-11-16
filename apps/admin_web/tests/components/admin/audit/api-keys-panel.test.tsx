@@ -71,32 +71,6 @@ describe('ApiKeysPanel', () => {
     });
   });
 
-  it('creates a contact-merge token from the scope select', async () => {
-    mockCreate.mockResolvedValue({
-      ...sampleKey,
-      id: '33333333-3333-4333-8333-333333333333',
-      name: 'Merge bot',
-      scope: 'contact_merge',
-      api_token: 'esk_merge_once',
-    });
-    const user = userEvent.setup();
-    render(<ApiKeysPanel />);
-    expect(await screen.findByText('Partner read')).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'New API key' }));
-    await user.type(screen.getByLabelText('Name'), 'Merge bot');
-    await user.selectOptions(screen.getByLabelText('Scope'), 'contact_merge');
-    await user.click(screen.getByRole('button', { name: 'Create API key' }));
-
-    await waitFor(() => {
-      expect(mockCreate).toHaveBeenCalledWith({
-        name: 'Merge bot',
-        scope: 'contact_merge',
-        expires_at: null,
-      });
-    });
-  });
-
   it('lays the draft out as Name 2/4, Scope 1/4, Expires at 1/4 in one field grid', async () => {
     const user = userEvent.setup();
     render(<ApiKeysPanel />);

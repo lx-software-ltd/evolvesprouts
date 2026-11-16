@@ -3233,10 +3233,10 @@ export interface components {
             business_display_names?: string[];
         };
         /**
-         * @description admin is full access on token-protected routes except contact merge. user is GET only. contact_merge may call only POST /v1/public/contacts/merge.
+         * @description admin is full access on token-protected routes; user is GET only.
          * @enum {string}
          */
-        ApiKeyScope: "admin" | "user" | "contact_merge";
+        ApiKeyScope: "admin" | "user";
         /** @enum {string} */
         ApiKeyStatus: "active" | "expired" | "revoked";
         ApiKeySummary: {

@@ -1026,15 +1026,14 @@ tab).
 
 **Decision:** Issue hashed API tokens (`esk_…`) stored in `api_keys` and
 validated by a VPC request authorizer on `x-api-token`. Scopes are `admin`
-(full access on token-protected routes except contact merge), `user` (GET
-only), and `contact_merge` (`POST /v1/public/contacts/merge` only). WhatsApp
+(full access on token-protected routes) and `user` (GET only). WhatsApp
 conversation reads live at `GET /v1/public/whatsapp/conversations` and
 `GET /v1/public/whatsapp/conversations/{id}/messages` and omit phone numbers
 and `wa_id`. CRM contacts live at `GET|POST /v1/public/contacts` and
 `GET|PATCH|DELETE /v1/public/contacts/{id}` with the admin contact payload
 (including PII), plus standalone notes at `/v1/public/contacts/{id}/notes`.
 `POST /v1/public/contacts/merge` calls the admin contact-merge handler for
-`contact_merge` tokens only. `admin` tokens receive 403 on that route.
+`admin` tokens.
 The same token scopes cover families, organisations, locations,
 geographic-area reads, and services under `/v1/public/families`,
 `/v1/public/organizations`, `/v1/public/locations`,
@@ -1050,8 +1049,6 @@ revoke tokens from Audit → API keys.
   website `x-api-key`.
 - Authorizer cache (5 minutes) plus handler-level GET-only enforcement for
   `user` tokens keeps revocation bounded and writes fail-closed.
-- Contact merge uses its own scope so an admin integration token cannot
-  fold contacts together.
 - Public conversation payloads stay useful for integrations without exposing
   WhatsApp numbers.
 

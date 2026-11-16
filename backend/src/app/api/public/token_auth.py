@@ -5,8 +5,7 @@ against the ``api_keys`` table and passes identity through authorizer
 context:
 
 - ``apiKeyId``: UUID of the validated token
-- ``scope``: ``admin`` (full access), ``user`` (GET only), or
-  ``contact_merge`` (``POST /v1/public/contacts/merge`` only)
+- ``scope``: ``admin`` (full access) or ``user`` (GET only)
 - ``userSub``: ``api-key:<id>`` so audit logging attributes writes to the token
 """
 
@@ -17,12 +16,7 @@ from typing import Any
 from collections.abc import Mapping
 
 from app.exceptions import AuthenticationError, AuthorizationError
-from app.services.api_keys import (
-    ALLOWED_SCOPES,
-    SCOPE_ADMIN,
-    SCOPE_CONTACT_MERGE,
-    SCOPE_USER,
-)
+from app.services.api_keys import ALLOWED_SCOPES, SCOPE_USER
 
 
 @dataclass(frozen=True)
@@ -46,30 +40,12 @@ def get_api_token_context(event: Mapping[str, Any]) -> ApiTokenContext | None:
 
 
 def require_api_token(event: Mapping[str, Any], method: str) -> ApiTokenContext:
-    """Require a valid token and enforce scope on ordinary public routes.
-
-    ``user`` may GET only. ``admin`` may call every method. ``contact_merge``
-    is rejected here; only ``require_contact_merge_token`` accepts it.
-    """
+    """Require a valid token and enforce user-scope GET-only access."""
     context = get_api_token_context(event)
     if context is None:
         raise AuthenticationError("API token is required")
-    if context.scope == SCOPE_ADMIN:
-        return context
-    if context.scope == SCOPE_USER and method == "GET":
-        return context
-    if context.scope == SCOPE_USER:
+    if context.scope == SCOPE_USER and method != "GET":
         raise AuthorizationError("Read-only API token")
-    raise AuthorizationError("API token scope cannot call this route")
-
-
-def require_contact_merge_token(event: Mapping[str, Any]) -> ApiTokenContext:
-    """Require the scope that may merge contacts and call nothing else."""
-    context = get_api_token_context(event)
-    if context is None:
-        raise AuthenticationError("API token is required")
-    if context.scope != SCOPE_CONTACT_MERGE:
-        raise AuthorizationError("Contact merge requires a contact_merge API token")
     return context
 
 

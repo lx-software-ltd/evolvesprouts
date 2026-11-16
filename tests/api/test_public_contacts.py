@@ -309,34 +309,17 @@ def test_public_contact_notes_user_cannot_write(api_gateway_event: Any) -> None:
         pcontacts.handle_public_contacts_request(event, "POST", path)
 
 
-@pytest.mark.parametrize("scope", ["user", "admin"])
-def test_public_contacts_merge_rejects_other_scopes(
-    api_gateway_event: Any, scope: str
-) -> None:
+def test_public_contacts_user_cannot_merge(api_gateway_event: Any) -> None:
     event = _token_event(
         api_gateway_event,
         "/v1/public/contacts/merge",
-        scope=scope,
+        scope="user",
         method="POST",
     )
-    with pytest.raises(
-        AuthorizationError, match="Contact merge requires a contact_merge API token"
-    ):
+    with pytest.raises(AuthorizationError, match="Read-only API token"):
         pcontacts.handle_public_contacts_request(
             event, "POST", "/v1/public/contacts/merge"
         )
-
-
-def test_public_contacts_contact_merge_cannot_create(api_gateway_event: Any) -> None:
-    event = _token_event(
-        api_gateway_event,
-        "/v1/public/contacts",
-        scope="contact_merge",
-        method="POST",
-        body="{}",
-    )
-    with pytest.raises(AuthorizationError, match="cannot call this route"):
-        pcontacts.handle_public_contacts_request(event, "POST", "/v1/public/contacts")
 
 
 def test_public_contacts_merge_runs_admin_handler(
@@ -408,7 +391,7 @@ def test_public_contacts_merge_runs_admin_handler(
         _token_event(
             api_gateway_event,
             "/v1/public/contacts/merge",
-            scope="contact_merge",
+            scope="admin",
             method="POST",
             api_key_id=api_key_id,
             body=json.dumps(
@@ -437,7 +420,7 @@ def test_public_contacts_merge_rejects_more_than_ten(
     event = _token_event(
         api_gateway_event,
         "/v1/public/contacts/merge",
-        scope="contact_merge",
+        scope="admin",
         method="POST",
         body=json.dumps({"contact_ids": ids, "keeper_contact_id": ids[0]}),
     )
@@ -452,7 +435,7 @@ def test_public_contacts_merge_rejects_non_post(api_gateway_event: Any) -> None:
         _token_event(
             api_gateway_event,
             "/v1/public/contacts/merge",
-            scope="contact_merge",
+            scope="admin",
             method="GET",
         ),
         "GET",

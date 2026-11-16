@@ -3,11 +3,11 @@
 **Status**: Done
 **Zone**: red
 
-The route registration in `backend/infrastructure/lib/api-stack.ts` and the `api_keys.scope` check change in `backend/db` are red. The handler, admin screen, and tests are the yellow surface of the same change.
+The API Gateway method for this route lives in `backend/infrastructure/lib/api-stack.ts`. That registration is the existing public-token pattern: one static `merge` resource and `POST`, same authorizer as the other `/v1/public/contacts` writes. No new Lambda, authorizer, secret, parameter, or token scope.
 
 ## Goal
 
-`POST /v1/public/contacts/merge` will merge CRM contacts for a `contact_merge` scoped `x-api-token` only. `admin` and `user` tokens will receive 403. The handler will call the existing admin `merge_contacts_request`, so identity fill, related-row moves, open-lead folding, Mailchimp archive, audit actor, and 400/409 behaviour stay the same as `POST /v1/admin/contacts/merge`. The audit actor will be `api-key:<id>`. A request will accept at most 10 contact ids. After commit, loser emails will be archived in Mailchimp; that call stays best effort.
+`POST /v1/public/contacts/merge` will merge CRM contacts for an `admin` scoped `x-api-token`, the same scope the other public contact writes use. The handler will call the existing admin `merge_contacts_request`, so identity fill, related-row moves, open-lead folding, Mailchimp archive, audit actor, and 400/409 behaviour stay the same as `POST /v1/admin/contacts/merge`. The audit actor will be `api-key:<id>`. `user` tokens will receive 403. A request will accept at most 10 contact ids. After commit, loser emails will be archived in Mailchimp; that call stays best effort.
 
 ## Non-goals
 
