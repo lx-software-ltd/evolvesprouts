@@ -68,7 +68,8 @@
     },
     "sharp": "^0.35.5",
     "source-map-js": "^1.2.2",
-    "minimatch@10": "11.0.4"
+    "minimatch@10": "11.0.4",
+    "deepmerge": "4.1.2"
   },
   "allowScripts": {
     "unrs-resolver": true

@@ -183,6 +183,12 @@ updates:
       # until both support TS 7 (see PRs #1876 / #1877).
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
+      # GHSA-gcqx-w48m-w2h4 covers deepmerge 4.2.0 through 4.3.1 and has no
+      # patched release (CVE-2026-93753 was rejected). @svgr/plugin-svgo
+      # declares it and does not call it. The override pins 4.1.2, outside the
+      # affected range. Ignore 4.2+ so a version update does not move back in.
+      - dependency-name: "deepmerge"
+        versions: [">= 4.2.0"]
 
   # NPM - Public website app
   - package-ecosystem: "npm"
