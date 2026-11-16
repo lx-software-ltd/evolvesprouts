@@ -59,9 +59,11 @@ updates:
       # version (>=1.10.3) is not resolvable in Dependabot security jobs yet.
       - dependency-name: "yaml"
       # Do not ignore minimatch. A security-only job whose only target is an
-      # ignored package fails as all_versions_ignored. GHSA-g3hv-75wg-m249 is
-      # cleared by the minimatch@10 -> 11.0.4 override and the aws-cdk-lib
-      # bundled-dep postinstall patcher.
+      # ignored package fails as all_versions_ignored. aws-cdk-lib bundles
+      # minimatch 10.2.6 (inBundle, so overrides cannot replace it) and that
+      # security job fails as security_update_not_possible. The postinstall
+      # script copies minimatch 11.0.4 over the bundle and records that version
+      # in the lockfile, which is what Dependabot reads.
 
   # Python - Lambda backend
   - package-ecosystem: "pip"
