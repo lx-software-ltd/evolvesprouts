@@ -3539,6 +3539,7 @@ export class ApiStack extends cdk.Stack {
     const publicContacts = publicRoot.addResource("contacts");
     addPublicTokenMethod(publicContacts, "GET");
     addPublicTokenMethod(publicContacts, "POST");
+    addPublicTokenMethod(publicContacts.addResource("merge"), "POST");
     const publicContactById = publicContacts.addResource("{id}");
     addPublicTokenMethod(publicContactById, "GET");
     addPublicTokenMethod(publicContactById, "PATCH");

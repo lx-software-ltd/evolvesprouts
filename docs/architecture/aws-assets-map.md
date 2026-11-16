@@ -550,6 +550,7 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | `/v1/public/meta/conversations` | GET | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token reads; name/dates only |
 | `/v1/public/meta/conversations/{id}/messages` | GET | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token message reads without scoped ids |
 | `/v1/public/contacts` | GET, POST | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token contact list/create; `user` GET only |
+| `/v1/public/contacts/merge` | POST | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token contact merge; `admin` only; same handler as `/v1/admin/contacts/merge` |
 | `/v1/public/contacts/{id}` | GET, PATCH, DELETE | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token contact get/update/delete; `user` GET only |
 | `/v1/public/services` | GET, POST | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token service list/create; `user` GET only |
 | `/v1/public/services/instances` | GET | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Cross-service instance list; `user` GET only |
