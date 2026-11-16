@@ -9,7 +9,7 @@ Make Deploy Mobile App able to build a release app bundle on Flutter stable 3.50
 
 ## Non-goals
 
-- Do not change `.github/workflows/deploy-mobile.yml`. It already selects Java 17, which Gradle 9.5 and Android Gradle Plugin 9.3 accept.
+- This change left `.github/workflows/deploy-mobile.yml` on Java 17. Android Gradle Plugin 9.3 lint then failed on that JDK. The follow-up is `docs/plans/deploy-mobile-java-21.md`.
 - Do not switch the app to AGP built-in Kotlin or the AGP 9 DSL.
 - Do not change the Play Integrity dependency, application id, or signing script behavior.
 
