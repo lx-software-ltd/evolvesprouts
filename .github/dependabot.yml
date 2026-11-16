@@ -59,9 +59,11 @@ updates:
       # version (>=1.10.3) is not resolvable in Dependabot security jobs yet.
       - dependency-name: "yaml"
       # Do not ignore minimatch. A security-only job whose only target is an
-      # ignored package fails as all_versions_ignored. GHSA-g3hv-75wg-m249 is
-      # cleared by the minimatch@10 -> 11.0.4 override and the aws-cdk-lib
-      # bundled-dep postinstall patcher.
+      # ignored package fails as all_versions_ignored. aws-cdk-lib bundles
+      # minimatch 10.2.6 (inBundle, so overrides cannot replace it) and that
+      # security job fails as security_update_not_possible. The postinstall
+      # script copies minimatch 11.0.4 over the bundle and records that version
+      # in the lockfile, which is what Dependabot reads.
 
   # Python - Lambda backend
   - package-ecosystem: "pip"
@@ -181,6 +183,12 @@ updates:
       # until both support TS 7 (see PRs #1876 / #1877).
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
+      # GHSA-gcqx-w48m-w2h4 covers deepmerge 4.2.0 through 4.3.1 and has no
+      # patched release (CVE-2026-93753 was rejected). @svgr/plugin-svgo
+      # declares it and does not call it. The override pins 4.1.2, outside the
+      # affected range. Ignore 4.2+ so a version update does not move back in.
+      - dependency-name: "deepmerge"
+        versions: [">= 4.2.0"]
 
   # NPM - Public website app
   - package-ecosystem: "npm"
