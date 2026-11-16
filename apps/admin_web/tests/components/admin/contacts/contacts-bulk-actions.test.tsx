@@ -72,6 +72,20 @@ describe('ContactsBulkActions', () => {
     expect(screen.getByRole('button', { name: 'Merge contacts' })).toBeInTheDocument();
   });
 
+  it('refuses a merge of more than ten contacts', () => {
+    const contacts = Array.from({ length: 11 }, (_, index) =>
+      buildContact({
+        id: `11111111-1111-4111-8111-${String(index).padStart(12, '0')}`,
+        first_name: `Person${index}`,
+      })
+    );
+    render(
+      <ContactsBulkActions selectedCount={11} selectedContacts={contacts} onBulkMerge={vi.fn()} />
+    );
+    expect(screen.queryByRole('button', { name: 'Merge contacts' })).not.toBeInTheDocument();
+    expect(screen.getByText('Select at most 10 contacts to merge.')).toBeInTheDocument();
+  });
+
   it('merges selected contacts after choosing a keeper', async () => {
     const user = userEvent.setup();
     const onBulkMerge = vi.fn();

@@ -1,10 +1,12 @@
 """Token-authenticated public CRM contacts API.
 
-``user`` tokens may GET only. ``admin`` tokens may create, update, delete, and
-merge. Payloads match the admin contact contract, including email, phone, and
-date of birth. ``POST /v1/public/contacts/merge`` calls the admin contact-merge
-handler. Standalone contact notes are exposed. Services and Mailchimp sync jobs
-are not.
+``user`` tokens may GET only. ``admin`` tokens may create, update, and delete.
+``POST /v1/public/contacts/merge`` accepts only a ``contact_merge`` token and
+calls the admin contact-merge handler (at most 10 contacts). After commit,
+emails that left the keeper are archived in Mailchimp; that call is best
+effort. Payloads match the admin contact contract, including email, phone, and
+date of birth. Standalone contact notes are exposed. Services and Mailchimp
+sync jobs are not.
 """
 
 from __future__ import annotations
@@ -21,12 +23,12 @@ from app.api.admin_contact_notes import (
     list_contact_notes,
     update_contact_note,
 )
-from app.api.admin_contacts_delete import delete_contact
-from app.api.admin_contacts_merge import merge_contacts_request
 from app.api.admin_contacts_mutations import (
     create_contact,
     update_contact,
 )
+from app.api.admin_contacts_delete import delete_contact
+from app.api.admin_contacts_merge import merge_contacts_request
 from app.api.admin_contacts_related import related_flags_for_contacts
 from app.api.admin_entities_helpers import (
     parse_active_filter,
@@ -36,8 +38,12 @@ from app.api.admin_entities_helpers import (
 from app.api.admin_entities_serializers import serialize_contact_summary
 from app.api.admin_request import encode_cursor, parse_cursor, parse_uuid, query_param
 from app.api.admin_validators import validate_string_length
-from app.api.public.token_auth import require_api_token, token_actor_sub
 from app.api.shared_request import route_has_prefix, split_route_parts
+from app.api.public.token_auth import (
+    require_api_token,
+    require_contact_merge_token,
+    token_actor_sub,
+)
 from app.db.engine import get_engine
 from app.db.repositories import ContactRepository
 from app.exceptions import NotFoundError
@@ -60,6 +66,12 @@ def handle_public_contacts_request(
     if not route_has_prefix(parts, "public", "contacts"):
         return not_found(event)
 
+    if len(parts) == 3 and parts[2] == "merge":
+        merge_token = require_contact_merge_token(event)
+        if method != "POST":
+            return method_not_allowed(event)
+        return merge_contacts_request(event, actor_sub=token_actor_sub(merge_token))
+
     token = require_api_token(event, method)
     actor_sub = token_actor_sub(token)
 
@@ -68,11 +80,6 @@ def handle_public_contacts_request(
             return _list_contacts(event)
         if method == "POST":
             return create_contact(event, actor_sub=actor_sub)
-        return method_not_allowed(event)
-
-    if len(parts) == 3 and parts[2] == "merge":
-        if method == "POST":
-            return merge_contacts_request(event, actor_sub=actor_sub)
         return method_not_allowed(event)
 
     contact_id = parse_uuid(parts[2])

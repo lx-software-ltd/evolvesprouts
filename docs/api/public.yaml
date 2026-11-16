@@ -53,8 +53,11 @@ info:
     - Token-authenticated CRM contacts (`GET|POST /v1/public/contacts`,
       `POST /v1/public/contacts/merge`, and
       `GET|PATCH|DELETE /v1/public/contacts/{id}`) using `x-api-token`.
-      `user` tokens are GET only; `admin` tokens may create, update, delete,
-      and merge. Merge reuses `POST /v1/admin/contacts/merge`.
+      `user` tokens are GET only; `admin` tokens may create, update, and delete.
+      `POST /v1/public/contacts/merge` accepts only a `contact_merge` token
+      and reuses `POST /v1/admin/contacts/merge` (at most 10 contacts).
+      `admin` and `user` tokens receive `403` on that route. After commit,
+      emails that left the keeper are archived in Mailchimp (best effort).
       Payloads match the admin contact contract (including email, phone, and
       date of birth). Standalone contact notes are exposed at
       `/v1/public/contacts/{id}/notes`. Contact purchased-service labels and
@@ -63,7 +66,8 @@ info:
       areas, and services under `/v1/public/families`,
       `/v1/public/organizations`, `/v1/public/locations`,
       `/v1/public/geographic-areas`, and `/v1/public/services`. Same
-      `x-api-token` scopes as contacts (`user` GET only; `admin` may write).
+      `x-api-token` scopes as ordinary contact routes (`user` GET only; `admin`
+      may write). `contact_merge` tokens receive `403` on these routes.
       Payloads and route nesting match the corresponding admin contracts.
       Family/organisation purchased-service labels, instance enrollments,
       cover-image upload, discount-code usage summary, and location delete
@@ -693,8 +697,11 @@ paths:
         An incoming open automated lead is folded onto the keeper's open lead
         before the move is saved. The surviving lead keeps the higher
         lead-type rank and the further-along funnel stage. Orphaned loser
-        contacts are deleted. Requires an `admin` scoped API token. `user`
-        tokens receive `403`.
+        contacts are deleted. At most 10 contacts per request. After the
+        merge commits, emails that left the keeper are archived in
+        Mailchimp. That call is best effort: a Mailchimp failure does not
+        roll back the merge. Requires a `contact_merge` scoped API token.
+        `admin` and `user` tokens receive `403`.
       security:
         - ApiTokenAuth: []
       requestBody:
@@ -5411,6 +5418,7 @@ components:
         contact_ids:
           type: array
           minItems: 2
+          maxItems: 10
           items:
             type: string
             format: uuid

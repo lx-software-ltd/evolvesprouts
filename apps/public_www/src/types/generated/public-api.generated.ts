@@ -335,8 +335,11 @@ export interface paths {
          *     An incoming open automated lead is folded onto the keeper's open lead
          *     before the move is saved. The surviving lead keeps the higher
          *     lead-type rank and the further-along funnel stage. Orphaned loser
-         *     contacts are deleted. Requires an `admin` scoped API token. `user`
-         *     tokens receive `403`.
+         *     contacts are deleted. At most 10 contacts per request. After the
+         *     merge commits, emails that left the keeper are archived in
+         *     Mailchimp. That call is best effort: a Mailchimp failure does not
+         *     roll back the merge. Requires a `contact_merge` scoped API token.
+         *     `admin` and `user` tokens receive `403`.
          */
         post: operations["postV1PublicContactsMerge"];
         delete?: never;

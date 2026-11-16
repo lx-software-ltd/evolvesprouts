@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Self
 from uuid import uuid4
 
 import pytest
@@ -104,7 +104,7 @@ def test_admin_api_keys_create_returns_plaintext_once(
             return entity
 
     class _Session:
-        def __enter__(self) -> "_Session":
+        def __enter__(self) -> Self:
             return self
 
         def __exit__(self, *_a: object) -> bool:
@@ -134,6 +134,64 @@ def test_admin_api_keys_create_returns_plaintext_once(
     body = json.loads(response["body"])
     assert body["api_token"] == generated.plaintext
     assert body["scope"] == "admin"
+
+
+def test_admin_api_keys_accepts_contact_merge_scope(
+    api_gateway_event: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    generated = generate_api_key()
+    captured: dict[str, str] = {}
+
+    class _FakeRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def create(self, entity: Any) -> object:
+            captured["scope"] = entity.scope
+            return entity
+
+    class _Session:
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, *_a: object) -> bool:
+            return False
+
+        def commit(self) -> None:
+            return None
+
+        def refresh(self, entity: Any) -> None:
+            entity.id = uuid4()
+            entity.created_at = datetime.now(UTC)
+
+    monkeypatch.setattr(aak, "ApiKeyRepository", _FakeRepo)
+    monkeypatch.setattr(aak, "Session", lambda _e: _Session())
+    monkeypatch.setattr(aak, "get_engine", lambda: object())
+    monkeypatch.setattr(aak, "set_audit_context", lambda *_a, **_k: None)
+    monkeypatch.setattr(aak, "generate_api_key", lambda: generated)
+
+    event = _identity_event(
+        api_gateway_event,
+        "/v1/admin/api-keys",
+        method="POST",
+        body=json.dumps({"name": "Merge bot", "scope": "contact_merge"}),
+    )
+    response = aak.handle_admin_api_keys_request(event, "POST", "/v1/admin/api-keys")
+    assert response["statusCode"] == 201
+    assert captured["scope"] == "contact_merge"
+    assert json.loads(response["body"])["scope"] == "contact_merge"
+
+
+def test_admin_api_keys_rejects_unknown_scope(api_gateway_event: Any) -> None:
+    event = _identity_event(
+        api_gateway_event,
+        "/v1/admin/api-keys",
+        method="POST",
+        body=json.dumps({"name": "Nope", "scope": "merge"}),
+    )
+    with pytest.raises(ValidationError, match="contact_merge"):
+        aak.handle_admin_api_keys_request(event, "POST", "/v1/admin/api-keys")
 
 
 def test_admin_api_keys_rejects_past_expiry(api_gateway_event: Any) -> None:

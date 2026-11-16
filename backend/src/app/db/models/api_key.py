@@ -23,7 +23,7 @@ class ApiKey(Base):
     __tablename__ = "api_keys"
     __table_args__ = (
         CheckConstraint(
-            "scope IN ('admin', 'user')",
+            "scope IN ('admin', 'user', 'contact_merge')",
             name="api_keys_scope_allowed",
         ),
     )
@@ -52,7 +52,7 @@ class ApiKey(Base):
     scope: Mapped[str] = mapped_column(
         Text(),
         nullable=False,
-        comment="Access scope: admin (full) or user (read-only)",
+        comment="Access scope: admin (full), user (read-only), or contact_merge",
     )
     created_by: Mapped[str | None] = mapped_column(
         Text(),

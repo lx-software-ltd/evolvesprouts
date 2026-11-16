@@ -1389,7 +1389,7 @@ export interface paths {
         put?: never;
         /**
          * Merge selected CRM contacts
-         * @description Merges two or more contacts into the chosen keeper contact. Loser fields fill empty keeper identity fields. Related records (notes, enrollments, invoices, payments, conversations, certificates, tags, and sales leads) move onto the keeper. Sales leads stay as separate rows except uniqueness conflicts (same-guide dedupe and one open automated lead per contact). An incoming open automated lead is folded onto the keeper's open lead before the move is saved. The surviving lead keeps the higher lead-type rank and the further-along funnel stage. Orphaned loser contacts are deleted. Conflicting emails, Instagram handles, families, or organisations return 400. A remaining one-open-lead conflict returns 409.
+         * @description Merges two or more contacts into the chosen keeper contact. Loser fields fill empty keeper identity fields. Related records (notes, enrollments, invoices, payments, conversations, certificates, tags, and sales leads) move onto the keeper. Sales leads stay as separate rows except uniqueness conflicts (same-guide dedupe and one open automated lead per contact). An incoming open automated lead is folded onto the keeper's open lead before the move is saved. The surviving lead keeps the higher lead-type rank and the further-along funnel stage. Orphaned loser contacts are deleted. At most 10 contacts per request. After the merge commits, emails that left the keeper are archived in Mailchimp. That call is best effort: a Mailchimp failure does not roll back the merge. Conflicting emails, Instagram handles, families, or organisations return 400. A remaining one-open-lead conflict returns 409.
          */
         post: operations["postV1AdminContactsMerge"];
         delete?: never;
@@ -3233,10 +3233,10 @@ export interface components {
             business_display_names?: string[];
         };
         /**
-         * @description admin is full access on token-protected routes; user is GET only.
+         * @description admin is full access on token-protected routes except contact merge. user is GET only. contact_merge may call only POST /v1/public/contacts/merge.
          * @enum {string}
          */
-        ApiKeyScope: "admin" | "user";
+        ApiKeyScope: "admin" | "user" | "contact_merge";
         /** @enum {string} */
         ApiKeyStatus: "active" | "expired" | "revoked";
         ApiKeySummary: {

@@ -94,8 +94,9 @@ their primary responsibilities.
   contact list/get for `user` and `admin` scopes; create/update/delete for `admin`
   only; payloads match `/v1/admin/contacts`; standalone notes at
   `/v1/public/contacts/{id}/notes`; `POST /v1/public/contacts/merge` reuses the
-  admin contact-merge handler for `admin` tokens; services and Mailchimp sync
-  jobs are not exposed),
+  admin contact-merge handler for `contact_merge` tokens only (at most 10
+  contacts; loser emails are archived in Mailchimp after commit, best effort);
+  services and Mailchimp sync jobs are not exposed),
   `/v1/public/families` and `/v1/public/families/{id}` plus `{id}/members`
   (hashed `x-api-token`; payloads match `/v1/admin/families`; includes GET by
   id; services are not exposed),

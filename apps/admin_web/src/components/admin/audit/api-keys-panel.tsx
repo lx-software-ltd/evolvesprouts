@@ -33,7 +33,20 @@ function formatWhen(value: string | null | undefined): string {
 }
 
 function scopeLabel(scope: AdminApiKeySummary['scope']): string {
-  return scope === 'admin' ? 'Admin' : 'User';
+  if (scope === 'admin') {
+    return 'Admin';
+  }
+  if (scope === 'contact_merge') {
+    return 'Contact merge';
+  }
+  return 'User';
+}
+
+function asApiKeyScope(value: string): AdminApiKeySummary['scope'] {
+  if (value === 'admin' || value === 'contact_merge') {
+    return value;
+  }
+  return 'user';
 }
 
 function ApiKeyDraftEditor({ page }: { page: ReturnType<typeof useApiKeysPanel> }) {
@@ -65,15 +78,16 @@ function ApiKeyDraftEditor({ page }: { page: ReturnType<typeof useApiKeysPanel> 
           <AdminField
             label='Scope'
             htmlFor='api-key-scope'
-            hint='Admin tokens have full access to /v1/public routes; User tokens are read-only.'
+            hint='Admin tokens can call public routes except contact merge. User tokens are read-only. Contact merge tokens can only merge contacts.'
           >
             <Select
               id='api-key-scope'
               value={page.scope}
-              onChange={(event) => page.setScope(event.target.value === 'admin' ? 'admin' : 'user')}
+              onChange={(event) => page.setScope(asApiKeyScope(event.target.value))}
             >
               <option value='user'>User (read-only)</option>
               <option value='admin'>Admin (full access)</option>
+              <option value='contact_merge'>Contact merge</option>
             </Select>
           </AdminField>
           <AdminField label='Expires at (optional)' htmlFor='api-key-expires'>

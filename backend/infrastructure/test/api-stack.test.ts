@@ -1066,6 +1066,65 @@ function assertApiCustomDomainKeepsProdPath(template: Template): void {
   }
 }
 
+function assertPublicContactMergeRoute(template: Template): void {
+  const resources = template.findResources("AWS::ApiGateway::Resource") as Record<
+    string,
+    { Properties?: { PathPart?: unknown; ParentId?: unknown } }
+  >;
+
+  function resourcePath(logicalId: string, seen: Set<string>): string {
+    if (seen.has(logicalId)) {
+      throw new Error(`API Gateway resource cycle at ${logicalId}`);
+    }
+    const properties = resources[logicalId]?.Properties;
+    const part = properties?.PathPart;
+    if (typeof part !== "string") {
+      return "";
+    }
+    const nextSeen = new Set(seen);
+    nextSeen.add(logicalId);
+    const parent = properties?.ParentId;
+    const parentRef =
+      parent && typeof parent === "object" && parent !== null && "Ref" in parent
+        ? String((parent as { Ref: unknown }).Ref)
+        : "";
+    const parentPath = parentRef ? resourcePath(parentRef, nextSeen) : "";
+    return `${parentPath}/${part}`;
+  }
+
+  const mergeIds = Object.keys(resources).filter(
+    (logicalId) => resourcePath(logicalId, new Set()) === "/v1/public/contacts/merge",
+  );
+  if (mergeIds.length !== 1) {
+    throw new Error(
+      `Expected one /v1/public/contacts/merge resource, found ${mergeIds.join(", ") || "none"}`,
+    );
+  }
+  const methods = template.findResources("AWS::ApiGateway::Method") as Record<
+    string,
+    { Properties?: { HttpMethod?: unknown; ResourceId?: unknown; AuthorizationType?: unknown } }
+  >;
+  const posts = Object.values(methods).filter((method) => {
+    const properties = method.Properties;
+    const resourceId = properties?.ResourceId;
+    const ref =
+      resourceId && typeof resourceId === "object" && resourceId !== null && "Ref" in resourceId
+        ? String((resourceId as { Ref: unknown }).Ref)
+        : "";
+    return properties?.HttpMethod === "POST" && ref === mergeIds[0];
+  });
+  if (posts.length !== 1) {
+    throw new Error(
+      `Expected one POST method on /v1/public/contacts/merge, found ${posts.length}`,
+    );
+  }
+  if (posts[0].Properties?.AuthorizationType !== "CUSTOM") {
+    throw new Error(
+      "POST /v1/public/contacts/merge must use the API token authorizer",
+    );
+  }
+}
+
 function main(): void {
   assertProductionApiCustomDomain();
   const app = new cdk.App();
@@ -1081,6 +1140,7 @@ function main(): void {
   assertPollResponsesTableHasExpiresAtTtl(template);
   assertCognitoClientAllowlistWiring(template);
   assertApiTokenAuthorizerHasNoReservedConcurrency(template);
+  assertPublicContactMergeRoute(template);
   assertMailchimpWebhookInactivityAlarm(template);
   assertInboxImportHasNoReservedConcurrency(stack);
   assertInboxImportUsesDedicatedPageToken(stack);
