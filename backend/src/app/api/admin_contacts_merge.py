@@ -27,6 +27,8 @@ from app.utils.logging import get_logger, mask_email
 
 logger = get_logger(__name__)
 
+MAX_MERGE_CONTACT_IDS = 10
+
 
 def parse_merge_contacts_payload(
     body: Mapping[str, Any],
@@ -35,6 +37,11 @@ def parse_merge_contacts_payload(
     if not isinstance(raw_ids, list) or len(raw_ids) < 2:
         raise ValidationError(
             "contact_ids must contain at least two ids", field="contact_ids"
+        )
+    if len(raw_ids) > MAX_MERGE_CONTACT_IDS:
+        raise ValidationError(
+            f"contact_ids must contain at most {MAX_MERGE_CONTACT_IDS} ids",
+            field="contact_ids",
         )
     contact_ids = parse_uuid_list(raw_ids, "contact_ids", reject_empty_members=True)
     if len(contact_ids) < 2:

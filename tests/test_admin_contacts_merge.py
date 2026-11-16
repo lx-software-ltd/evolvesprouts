@@ -30,6 +30,12 @@ def test_parse_merge_contacts_payload_requires_two_ids() -> None:
         )
 
 
+def test_parse_merge_contacts_payload_caps_ids() -> None:
+    ids = [str(uuid4()) for _ in range(11)]
+    with pytest.raises(ValidationError, match="at most 10"):
+        parse_merge_contacts_payload({"contact_ids": ids, "keeper_contact_id": ids[0]})
+
+
 def test_parse_merge_contacts_payload_requires_keeper() -> None:
     first = str(uuid4())
     second = str(uuid4())

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Self
 from uuid import uuid4
 
 import pytest
@@ -104,7 +104,7 @@ def test_admin_api_keys_create_returns_plaintext_once(
             return entity
 
     class _Session:
-        def __enter__(self) -> "_Session":
+        def __enter__(self) -> Self:
             return self
 
         def __exit__(self, *_a: object) -> bool:
@@ -134,6 +134,17 @@ def test_admin_api_keys_create_returns_plaintext_once(
     body = json.loads(response["body"])
     assert body["api_token"] == generated.plaintext
     assert body["scope"] == "admin"
+
+
+def test_admin_api_keys_rejects_unknown_scope(api_gateway_event: Any) -> None:
+    event = _identity_event(
+        api_gateway_event,
+        "/v1/admin/api-keys",
+        method="POST",
+        body=json.dumps({"name": "Nope", "scope": "merge"}),
+    )
+    with pytest.raises(ValidationError, match="scope must be one of"):
+        aak.handle_admin_api_keys_request(event, "POST", "/v1/admin/api-keys")
 
 
 def test_admin_api_keys_rejects_past_expiry(api_gateway_event: Any) -> None:

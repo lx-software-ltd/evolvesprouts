@@ -315,6 +315,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/contacts/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge selected CRM contacts (token API)
+         * @description Merges two or more contacts into the chosen keeper contact by calling
+         *     the admin contact-merge handler. Loser fields fill empty keeper
+         *     identity fields. Related records (notes, enrollments, invoices,
+         *     payments, conversations, certificates, tags, and sales leads) move
+         *     onto the keeper. Sales leads stay as separate rows except uniqueness
+         *     conflicts (same-guide dedupe and one open automated lead per contact).
+         *     An incoming open automated lead is folded onto the keeper's open lead
+         *     before the move is saved. The surviving lead keeps the higher
+         *     lead-type rank and the further-along funnel stage. Orphaned loser
+         *     contacts are deleted. At most 10 contacts per request. After the
+         *     merge commits, emails that left the keeper are archived in
+         *     Mailchimp. That call is best effort: a Mailchimp failure does not
+         *     roll back the merge. Requires an `admin` scoped API token.
+         *     `user` tokens receive `403`.
+         */
+        post: operations["postV1PublicContactsMerge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/contacts/{id}": {
         parameters: {
             query?: never;
@@ -2035,6 +2068,14 @@ export interface components {
         PublicContactResponse: {
             contact: components["schemas"]["PublicContact"];
         };
+        MergePublicContactsRequest: {
+            contact_ids: string[];
+            /**
+             * Format: uuid
+             * @description Contact that survives the merge; must be one of `contact_ids`.
+             */
+            keeper_contact_id: string;
+        };
         CreatePublicContactRequest: {
             first_name: string;
             last_name?: string | null;
@@ -3221,6 +3262,51 @@ export interface operations {
                 };
             };
             403: components["responses"]["Forbidden"];
+        };
+    };
+    postV1PublicContactsMerge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergePublicContactsRequest"];
+            };
+        };
+        responses: {
+            /** @description Surviving contact after merge. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicContactResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Missing or invalid API token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The selected contacts each already have an open automated sales lead, and the merge could not fold them. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
         };
     };
     getV1PublicContactsById: {

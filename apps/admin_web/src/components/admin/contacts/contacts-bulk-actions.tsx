@@ -9,6 +9,8 @@ import type { components } from '@/types/generated/admin-api.generated';
 
 type AdminContact = components['schemas']['AdminContact'];
 
+const MAX_MERGE_CONTACTS = 10;
+
 export interface ContactsBulkActionsProps {
   selectedCount: number;
   selectedContacts: AdminContact[];
@@ -41,7 +43,9 @@ export function ContactsBulkActions({
     return null;
   }
 
-  const canMerge = selectedCount >= 2;
+  const mergeCount = Math.max(selectedCount, selectedContacts.length);
+  const canMerge = mergeCount >= 2 && mergeCount <= MAX_MERGE_CONTACTS;
+  const mergeOverLimit = mergeCount > MAX_MERGE_CONTACTS;
 
   async function runMerge() {
     if (!keeperContactId) {
@@ -76,6 +80,9 @@ export function ContactsBulkActions({
           >
             Merge contacts
           </Button>
+        ) : null}
+        {mergeOverLimit ? (
+          <p className='text-sm text-slate-700'>Select at most 10 contacts to merge.</p>
         ) : null}
       </div>
       <ConfirmDialog

@@ -1,9 +1,11 @@
 """Token-authenticated public CRM contacts API.
 
-``user`` tokens may GET only. ``admin`` tokens may create, update, and delete.
-Payloads match the admin contact contract, including email, phone, and date of
-birth. Standalone contact notes are exposed. Services and Mailchimp sync jobs
-are not.
+``user`` tokens may GET only. ``admin`` tokens may create, update, delete, and
+merge. ``POST /v1/public/contacts/merge`` calls the admin contact-merge handler
+(at most 10 contacts). After commit, emails that left the keeper are archived
+in Mailchimp; that call is best effort. Payloads match the admin contact
+contract, including email, phone, and date of birth. Standalone contact notes
+are exposed. Services and Mailchimp sync jobs are not.
 """
 
 from __future__ import annotations
@@ -25,6 +27,7 @@ from app.api.admin_contacts_mutations import (
     update_contact,
 )
 from app.api.admin_contacts_delete import delete_contact
+from app.api.admin_contacts_merge import merge_contacts_request
 from app.api.admin_contacts_related import related_flags_for_contacts
 from app.api.admin_entities_helpers import (
     parse_active_filter,
@@ -60,6 +63,11 @@ def handle_public_contacts_request(
 
     token = require_api_token(event, method)
     actor_sub = token_actor_sub(token)
+
+    if len(parts) == 3 and parts[2] == "merge":
+        if method == "POST":
+            return merge_contacts_request(event, actor_sub=actor_sub)
+        return method_not_allowed(event)
 
     if len(parts) == 2:
         if method == "GET":

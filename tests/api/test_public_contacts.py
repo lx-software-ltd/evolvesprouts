@@ -2,14 +2,19 @@ from __future__ import annotations
 
 import json
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Self
 from uuid import uuid4
 
 import pytest
 
 from app.api.admin_contacts_related import empty_related_flags
 from app.api.public import contacts as pcontacts
-from app.exceptions import AuthenticationError, AuthorizationError, NotFoundError
+from app.exceptions import (
+    AuthenticationError,
+    AuthorizationError,
+    NotFoundError,
+    ValidationError,
+)
 
 
 def _token_event(
@@ -302,6 +307,141 @@ def test_public_contact_notes_user_cannot_write(api_gateway_event: Any) -> None:
     event = _token_event(api_gateway_event, path, scope="user", method="POST")
     with pytest.raises(AuthorizationError, match="Read-only API token"):
         pcontacts.handle_public_contacts_request(event, "POST", path)
+
+
+def test_public_contacts_user_cannot_merge(api_gateway_event: Any) -> None:
+    event = _token_event(
+        api_gateway_event,
+        "/v1/public/contacts/merge",
+        scope="user",
+        method="POST",
+    )
+    with pytest.raises(AuthorizationError, match="Read-only API token"):
+        pcontacts.handle_public_contacts_request(
+            event, "POST", "/v1/public/contacts/merge"
+        )
+
+
+def test_public_contacts_merge_runs_admin_handler(
+    api_gateway_event: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.api import admin_contacts_merge as merge_api
+
+    api_key_id = str(uuid4())
+    keeper_id = uuid4()
+    loser_id = uuid4()
+    captured: dict[str, object] = {}
+
+    def _merge(
+        _session: object,
+        *,
+        contact_ids: list[object],
+        keeper_contact_id: object,
+        actor_sub: str,
+    ) -> tuple[object, list[str]]:
+        captured["contact_ids"] = contact_ids
+        captured["keeper"] = keeper_contact_id
+        captured["actor"] = actor_sub
+        return SimpleNamespace(id=keeper_contact_id), ["loser@example.com"]
+
+    class _Session:
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, *_a: object) -> bool:
+            return False
+
+        def commit(self) -> None:
+            return None
+
+    class _Repo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def get_by_id_for_admin(self, contact_id: object) -> object:
+            return SimpleNamespace(id=contact_id)
+
+        def count_standalone_notes_for_contacts(
+            self, ids: list[object]
+        ) -> dict[object, int]:
+            return {ids[0]: 0}
+
+    def _remove(*, email: str, **_kwargs: object) -> str:
+        captured["mailchimp_email"] = email
+        return "removed"
+
+    monkeypatch.setattr(merge_api, "merge_contacts", _merge)
+    monkeypatch.setattr(merge_api, "Session", lambda _e: _Session())
+    monkeypatch.setattr(merge_api, "get_engine", lambda: object())
+    monkeypatch.setattr(merge_api, "set_audit_context", lambda *_a, **_k: None)
+    monkeypatch.setattr(merge_api, "ContactRepository", _Repo)
+    monkeypatch.setattr(
+        merge_api, "contact_ids_with_issued_certificates", lambda _s, _ids: set()
+    )
+    monkeypatch.setattr(merge_api, "related_flags_for_contacts", _empty_related_flags)
+    monkeypatch.setattr(
+        merge_api,
+        "serialize_contact_summary",
+        lambda contact, **_kwargs: {"id": str(contact.id)},
+    )
+    monkeypatch.setattr(merge_api, "remove_contact_from_mailchimp", _remove)
+
+    response = pcontacts.handle_public_contacts_request(
+        _token_event(
+            api_gateway_event,
+            "/v1/public/contacts/merge",
+            scope="admin",
+            method="POST",
+            api_key_id=api_key_id,
+            body=json.dumps(
+                {
+                    "contact_ids": [str(keeper_id), str(loser_id)],
+                    "keeper_contact_id": str(keeper_id),
+                }
+            ),
+        ),
+        "POST",
+        "/v1/public/contacts/merge",
+    )
+    body = json.loads(response["body"])
+    assert response["statusCode"] == 200
+    assert body["contact"]["id"] == str(keeper_id)
+    assert captured["contact_ids"] == [keeper_id, loser_id]
+    assert captured["keeper"] == keeper_id
+    assert captured["actor"] == f"api-key:{api_key_id}"
+    assert captured["mailchimp_email"] == "loser@example.com"
+
+
+def test_public_contacts_merge_rejects_more_than_ten(
+    api_gateway_event: Any,
+) -> None:
+    ids = [str(uuid4()) for _ in range(11)]
+    event = _token_event(
+        api_gateway_event,
+        "/v1/public/contacts/merge",
+        scope="admin",
+        method="POST",
+        body=json.dumps({"contact_ids": ids, "keeper_contact_id": ids[0]}),
+    )
+    with pytest.raises(ValidationError, match="at most 10"):
+        pcontacts.handle_public_contacts_request(
+            event, "POST", "/v1/public/contacts/merge"
+        )
+
+
+def test_public_contacts_merge_rejects_non_post(api_gateway_event: Any) -> None:
+    response = pcontacts.handle_public_contacts_request(
+        _token_event(
+            api_gateway_event,
+            "/v1/public/contacts/merge",
+            scope="admin",
+            method="GET",
+        ),
+        "GET",
+        "/v1/public/contacts/merge",
+    )
+    assert response["statusCode"] == 405
 
 
 def test_public_contact_notes_admin_create_uses_token_actor(

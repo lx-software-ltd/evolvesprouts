@@ -3431,7 +3431,10 @@ paths:
         An incoming open automated lead is folded onto the keeper's open lead
         before the move is saved. The surviving lead keeps the higher
         lead-type rank and the further-along funnel stage. Orphaned loser
-        contacts are deleted.
+        contacts are deleted. At most 10 contacts per request. After the
+        merge commits, emails that left the keeper are archived in
+        Mailchimp. That call is best effort: a Mailchimp failure does not
+        roll back the merge.
         Conflicting emails, Instagram handles, families, or organisations
         return 400. A remaining one-open-lead conflict returns 409.
       security:
@@ -7614,6 +7617,7 @@ components:
         contact_ids:
           type: array
           minItems: 2
+          maxItems: 10
           items:
             type: string
             format: uuid

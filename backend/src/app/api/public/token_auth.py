@@ -16,9 +16,7 @@ from typing import Any
 from collections.abc import Mapping
 
 from app.exceptions import AuthenticationError, AuthorizationError
-from app.services.api_keys import SCOPE_ADMIN, SCOPE_USER
-
-ALLOWED_SCOPES = (SCOPE_ADMIN, SCOPE_USER)
+from app.services.api_keys import ALLOWED_SCOPES, SCOPE_USER
 
 
 @dataclass(frozen=True)
