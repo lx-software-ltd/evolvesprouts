@@ -253,9 +253,11 @@ their primary responsibilities.
   confirmed, completed) for admin capacity display; optional `capacity_left_override`
   with read-only `capacity_left_effective` for a display-only soft cap on spots left;
   listing instances and
-  mutating enrollments reconcile `status` to `full` when `max_capacity` is set
-  and no seats remain, and from `full` back to `open` when seats free (only
-  among scheduled/open/full); `partner_organizations` entries include optional
+  mutating enrollments reconcile `status` to `full` when an `open` instance
+  with `max_capacity` has no seats left, and from `full` back to `open` when
+  seats free; a `scheduled` event stays `scheduled`, while a `scheduled`
+  training course still becomes `full`;
+  `partner_organizations` entries include optional
   `location_id` (partner venue); and
   `GET /v1/admin/services/{id}/discount-code-usage-summary` for
   aggregate discount usage before service key changes; `DELETE /v1/admin/services/{id}`

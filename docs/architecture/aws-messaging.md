@@ -191,18 +191,27 @@ and DLQ support.
   omit `Content-Type`.
 - Publish follows the remote event status. An open or full instance
   publishes only a `draft`. A live or started event is updated and left
-  published. A cancelled or completed instance unpublishes a live or
-  started event. A 400 from unpublish stays `synced`. The log and
+  published. A scheduled, cancelled, or completed instance unpublishes
+  a live or started event. A scheduled, cancelled, or completed
+  instance sends `listed: false`. A scheduled instance also sends
+  `hidden: true` on each ticket class. Open, full, and in-progress
+  instances send `listed: true` and `hidden: false`, so reopening shows
+  the tickets again. Cancelled and completed syncs leave ticket
+  visibility unchanged. A 400 from unpublish stays `synced`. For a
+  scheduled instance the payload hash is cleared, so the next save
+  tries again. A cancelled or completed refusal keeps the hash. The log and
   `eventbrite_last_error` quote Eventbrite's message. A completed
   instance also says a paid event can be unpublished after it is paid
-  out. Any other instance says the listing stays published. Any other
-  unpublish status fails the sync. An ended, completed, or canceled
-  remote event is left unchanged: no event, venue, image, or ticket
-  write. An open or full instance records that a new Eventbrite event
-  is required. A hidden instance records that the sync left it
-  unchanged. A missing remote status still updates the event and skips
-  publish. Admin instance responses include `eventbrite_last_error`,
-  and the instance editor shows it under the Eventbrite status.
+  out. A scheduled instance says the event is hidden from search, its
+  tickets are hidden, and a save retries unpublish. Any other instance
+  says the listing stays published. Any other unpublish status fails
+  the sync. An ended, completed, or canceled remote event is left
+  unchanged: no event, venue, image, or ticket write. An open or full
+  instance records that a new Eventbrite event is required. A hidden
+  instance records that the sync left it unchanged. A missing remote
+  status still updates the event and skips publish. Admin instance
+  responses include `eventbrite_last_error`, and the instance editor
+  shows it under the Eventbrite status.
 - A physical event with a location name and an ISO country code on its
   geographic area gets an Eventbrite venue (created, or updated when the
   event already has `venue_id`). Online events and locations without a
