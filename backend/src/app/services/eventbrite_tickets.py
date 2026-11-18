@@ -6,7 +6,9 @@ from decimal import Decimal
 from typing import Any
 
 
-def build_ticket_class_payload(tier: Any) -> dict[str, Any]:
+def build_ticket_class_payload(
+    tier: Any, *, hidden: bool | None = None
+) -> dict[str, Any]:
     is_free = _is_zero_or_less(tier.price)
     payload: dict[str, Any] = {
         "name": tier.name,
@@ -20,6 +22,8 @@ def build_ticket_class_payload(tier: Any) -> dict[str, Any]:
     if not is_free:
         amount = _decimal_to_minor_units(tier.price)
         payload["cost"] = f"{tier.currency.upper()},{amount}"
+    if hidden is not None:
+        payload["hidden"] = hidden
     return payload
 
 

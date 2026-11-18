@@ -849,6 +849,13 @@ blockers are unchanged, so a scheduled event still blocks the venue.
 `scheduled` to the public status `open` made those dates bookable. Training cohorts
 use `scheduled` as their public state and stay bookable.
 
+**Eventbrite:** Syncing a `scheduled` event sets Eventbrite `listed` to false, hides
+its ticket classes, and unpublishes a live or started event. `open` and `full` set
+`listed` true, show the ticket classes, and publish a draft, so the same Eventbrite
+event comes back. A refused unpublish stays `synced`, stores Eventbrite's message
+on `eventbrite_last_error`, and clears the payload hash so the next save tries
+again. Capacity reconciliation does not move `scheduled` to `full`.
+
 ## Display-only capacity left override on service instances
 
 **Decision:** `service_instances.capacity_left_override` (nullable integer ≥ 0) soft-caps how

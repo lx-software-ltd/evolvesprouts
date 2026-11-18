@@ -32,9 +32,12 @@ from app.services.eventbrite_logo import (
 )
 from app.services.eventbrite_publish import (
     apply_publish_state,
+    event_is_listed,
     guard_unpublish,
     is_closed_remote,
     notice_for_closed_remote,
+    record_eventbrite_synced,
+    ticket_hidden,
 )
 from app.services.eventbrite_tickets import build_ticket_class_payload
 from app.services.eventbrite_venue import (
@@ -109,7 +112,7 @@ def sync_instance_to_eventbrite(
         remote_status = str(remote.get("status") or "")
         event_id = str(instance.eventbrite_event_id)
         if is_closed_remote(remote_status):
-            _mark_eventbrite_synced(
+            record_eventbrite_synced(
                 instance,
                 payload_hash=payload_hash,
                 notice=notice_for_closed_remote(
@@ -143,7 +146,7 @@ def sync_instance_to_eventbrite(
             )
             _sync_structured_overview(instance, config=config)
             ticket_map = _sync_ticket_classes(instance, config=config)
-            _mark_eventbrite_synced(
+            record_eventbrite_synced(
                 instance,
                 payload_hash=payload_hash,
                 notice=apply_publish_state(
@@ -279,7 +282,11 @@ def _sync_ticket_classes(instance: Any, *, config: _EventbriteConfig) -> dict[st
     for tier in sorted(instance.ticket_tiers, key=lambda row: row.sort_order):
         local_tier_id = str(tier.id)
         remote_ticket_class_id = existing_map.get(local_tier_id)
-        ticket_body = {"ticket_class": build_ticket_class_payload(tier)}
+        ticket_body = {
+            "ticket_class": build_ticket_class_payload(
+                tier, hidden=ticket_hidden(instance.status)
+            )
+        }
         if remote_ticket_class_id:
             _eventbrite_call(
                 method="POST",
@@ -301,22 +308,6 @@ def _sync_ticket_classes(instance: Any, *, config: _EventbriteConfig) -> dict[st
             raise EventbriteSyncError("Ticket class create response missing id")
         next_map[local_tier_id] = created_id
     return next_map
-
-
-def _mark_eventbrite_synced(
-    instance: Any,
-    *,
-    payload_hash: str,
-    notice: str | None,
-    ticket_map: dict[str, str] | None = None,
-) -> None:
-    if ticket_map is not None:
-        instance.eventbrite_ticket_class_map = ticket_map
-    instance.eventbrite_last_payload_hash = payload_hash
-    instance.eventbrite_last_synced_at = datetime.now(UTC)
-    instance.eventbrite_last_error = notice
-    instance.eventbrite_retry_count = 0
-    instance.eventbrite_sync_status = EventbriteSyncStatus.SYNCED
 
 
 def _sync_structured_overview(instance: Any, *, config: _EventbriteConfig) -> None:
@@ -377,7 +368,7 @@ def _build_event_payload(
         },
         "currency": currency,
         "online_event": resolved_delivery_mode == ServiceDeliveryMode.ONLINE,
-        "listed": True,
+        "listed": event_is_listed(instance.status),
     }
     if venue_id:
         payload["venue_id"] = venue_id

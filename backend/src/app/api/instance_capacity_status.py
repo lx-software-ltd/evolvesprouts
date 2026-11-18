@@ -12,10 +12,11 @@ from app.db.repositories import ServiceInstanceRepository
 def bulk_reconcile_instance_capacity_status(
     session: Any, instances: list[ServiceInstance]
 ) -> None:
-    """Set status FULL when capped instances have no seats; reopen FULL to OPEN when seats free.
+    """Set status FULL when an open capped instance has no seats; reopen FULL to OPEN.
 
-    Only considers instances with ``max_capacity`` set. Only transitions among
-    ``scheduled``, ``open``, and ``full``; leaves other statuses unchanged.
+    Only considers instances with ``max_capacity`` set. Only transitions between
+    ``open`` and ``full``. A ``scheduled`` instance stays scheduled when it fills,
+    so holding an event does not put it on sale. Other statuses are unchanged.
     Persists with ``session.flush()`` when any row changes (caller may ``commit()``).
     """
     if not instances:
@@ -34,7 +35,7 @@ def bulk_reconcile_instance_capacity_status(
             continue
         used = counts.get(instance.id, 0)
         if used >= cap:
-            if instance.status in (InstanceStatus.OPEN, InstanceStatus.SCHEDULED):
+            if instance.status == InstanceStatus.OPEN:
                 instance.status = InstanceStatus.FULL
                 changed = True
         elif instance.status == InstanceStatus.FULL:

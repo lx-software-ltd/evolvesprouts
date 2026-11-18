@@ -3,24 +3,61 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
 
-from app.db.models import InstanceStatus
+from app.db.models import EventbriteSyncStatus, InstanceStatus
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
 _WANTS_PUBLIC = {InstanceStatus.OPEN, InstanceStatus.FULL}
-_WANTS_HIDDEN = {InstanceStatus.CANCELLED, InstanceStatus.COMPLETED}
+_WANTS_HIDDEN = {
+    InstanceStatus.CANCELLED,
+    InstanceStatus.COMPLETED,
+    InstanceStatus.SCHEDULED,
+}
+_TICKETS_VISIBLE = {
+    InstanceStatus.OPEN,
+    InstanceStatus.FULL,
+    InstanceStatus.IN_PROGRESS,
+}
 _PUBLIC_REMOTE = {"live", "started"}
 _CLOSED_REMOTE = {"ended", "completed", "canceled"}
 
 UNKNOWN_STATUS_NOTICE = "Eventbrite event status was missing, so publish was skipped."
 _UNPUBLISH_FALLBACK = "Eventbrite rejected the request."
+_SCHEDULED_UNPUBLISH_TAIL = (
+    "The event is hidden from Eventbrite search and its tickets are hidden. "
+    "Save again to retry unpublish."
+)
 
 
 class UnpublishRejected(Exception):
     """Eventbrite refused to unpublish. The listing stays published."""
+
+
+@dataclass(frozen=True)
+class PublishOutcome:
+    """Notice to store, and whether this sync reached the remote state."""
+
+    notice: str | None = None
+    remember_payload: bool = True
+
+
+def event_is_listed(instance_status: Any) -> bool:
+    """Scheduled events stay out of Eventbrite search. Other statuses stay listed."""
+    return instance_status != InstanceStatus.SCHEDULED
+
+
+def ticket_hidden(instance_status: Any) -> bool | None:
+    """Hide tickets while scheduled, show them for a public status, else leave them."""
+    if instance_status == InstanceStatus.SCHEDULED:
+        return True
+    if instance_status in _TICKETS_VISIBLE:
+        return False
+    return None
 
 
 def publish_action(instance_status: Any, remote_status: str) -> str:
@@ -58,6 +95,8 @@ def unpublish_notice(instance_status: Any, eventbrite_message: str) -> str:
     lead = f"Eventbrite would not unpublish this event: {detail}"
     if instance_status == InstanceStatus.COMPLETED:
         return f"{lead} A paid event can be unpublished after it is paid out."
+    if instance_status == InstanceStatus.SCHEDULED:
+        return f"{lead} {_SCHEDULED_UNPUBLISH_TAIL}"
     return f"{lead} The listing stays published until this is handled in Eventbrite."
 
 
@@ -116,12 +155,12 @@ def apply_publish_state(
     remote_status: str,
     event_id: str,
     call: Callable[[str, str], Any],
-) -> str | None:
-    """Publish or unpublish when needed. Return a notice, or None."""
+) -> PublishOutcome:
+    """Publish or unpublish when needed. Return the notice to store."""
     action = publish_action(instance_status, remote_status)
     if action == "publish":
         call("POST", f"/events/{event_id}/publish/")
-        return None
+        return PublishOutcome()
     if action == "unpublish":
         try:
             call("POST", f"/events/{event_id}/unpublish/")
@@ -131,18 +170,48 @@ def apply_publish_state(
                 "Eventbrite unpublish was rejected",
                 extra={"event_id": event_id, "eventbrite_message": detail},
             )
-            return unpublish_notice(instance_status, detail)
-        return None
+            return PublishOutcome(
+                notice=unpublish_notice(instance_status, detail),
+                remember_payload=False,
+            )
+        return PublishOutcome()
     if action == "closed":
         logger.warning(
             "Eventbrite event cannot be published again",
             extra={"event_id": event_id, "remote_status": remote_status},
         )
-        return closed_event_notice(remote_status)
+        return PublishOutcome(notice=closed_event_notice(remote_status))
     if action == "unknown":
         logger.warning(
             "Eventbrite event status was missing",
             extra={"event_id": event_id},
         )
-        return UNKNOWN_STATUS_NOTICE
-    return None
+        return PublishOutcome(notice=UNKNOWN_STATUS_NOTICE)
+    return PublishOutcome()
+
+
+def record_eventbrite_synced(
+    instance: Any,
+    *,
+    payload_hash: str,
+    notice: str | PublishOutcome | None,
+    ticket_map: dict[str, str] | None = None,
+) -> None:
+    """Store a successful sync.
+
+    A refused unpublish forgets the hash so the next save retries.
+    """
+    if ticket_map is not None:
+        instance.eventbrite_ticket_class_map = ticket_map
+    text: str | None
+    remember = True
+    if isinstance(notice, PublishOutcome):
+        text = notice.notice
+        remember = notice.remember_payload
+    else:
+        text = notice
+    instance.eventbrite_last_payload_hash = payload_hash if remember else None
+    instance.eventbrite_last_synced_at = datetime.now(UTC)
+    instance.eventbrite_last_error = text
+    instance.eventbrite_retry_count = 0
+    instance.eventbrite_sync_status = EventbriteSyncStatus.SYNCED

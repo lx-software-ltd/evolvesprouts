@@ -118,10 +118,12 @@ def test_sync_creates_updates_ticket_and_publishes(monkeypatch: Any) -> None:
         "/events/1001/publish/",
     ]
     created = calls[0]["payload"]["event"]
+    assert created["listed"] is True
     assert created["start"]["utc"] == "2026-11-20T10:00:00Z"
     assert created["end"]["utc"] == "2026-11-20T12:00:00Z"
     assert created["start"]["timezone"] == "Asia/Hong_Kong"
     ticket = calls[3]["payload"]["ticket_class"]
+    assert ticket["hidden"] is False
     assert ticket["quantity_total"] == 12
     assert isinstance(ticket["quantity_total"], int)
     assert ticket["cost"] == "HKD,15000"

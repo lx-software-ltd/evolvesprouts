@@ -83,7 +83,7 @@ def test_reconcile_sets_full_when_open_and_at_capacity(monkeypatch) -> None:
     session.flush.assert_called_once()
 
 
-def test_reconcile_sets_full_from_scheduled_when_at_capacity(monkeypatch) -> None:
+def test_reconcile_leaves_scheduled_when_at_capacity(monkeypatch) -> None:
     iid = uuid4()
     instance = _minimal_instance(
         instance_id=iid, max_capacity=1, status=InstanceStatus.SCHEDULED
@@ -101,7 +101,8 @@ def test_reconcile_sets_full_from_scheduled_when_at_capacity(monkeypatch) -> Non
         "app.api.instance_capacity_status.ServiceInstanceRepository", _Repo
     )
     bulk_reconcile_instance_capacity_status(session, [instance])
-    assert instance.status == InstanceStatus.FULL
+    assert instance.status == InstanceStatus.SCHEDULED
+    session.flush.assert_not_called()
 
 
 def test_reconcile_opens_full_when_seats_available(monkeypatch) -> None:
