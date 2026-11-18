@@ -850,11 +850,14 @@ blockers are unchanged, so a scheduled event still blocks the venue.
 use `scheduled` as their public state and stay bookable.
 
 **Eventbrite:** Syncing a `scheduled` event sets Eventbrite `listed` to false, hides
-its ticket classes, and unpublishes a live or started event. `open` and `full` set
-`listed` true, show the ticket classes, and publish a draft, so the same Eventbrite
-event comes back. A refused unpublish stays `synced`, stores Eventbrite's message
-on `eventbrite_last_error`, and clears the payload hash so the next save tries
-again. Capacity reconciliation does not move `scheduled` to `full`.
+its ticket classes, and unpublishes a live or started event. `cancelled` and
+`completed` also send `listed` false and leave ticket visibility unchanged.
+`open` and `full` set `listed` true, show the ticket classes, and publish a draft,
+so the same Eventbrite event comes back. A refused unpublish stays `synced` and
+stores Eventbrite's message on `eventbrite_last_error`. Only a `scheduled` refusal
+clears the payload hash, so the next save tries again. Capacity reconciliation
+does not move a scheduled event to `full`. A scheduled training course still
+becomes `full`.
 
 ## Display-only capacity left override on service instances
 

@@ -192,12 +192,14 @@ and DLQ support.
 - Publish follows the remote event status. An open or full instance
   publishes only a `draft`. A live or started event is updated and left
   published. A scheduled, cancelled, or completed instance unpublishes
-  a live or started event. A scheduled instance sends `listed: false`
-  and `hidden: true` on each ticket class. Open, full, and in-progress
+  a live or started event. A scheduled, cancelled, or completed
+  instance sends `listed: false`. A scheduled instance also sends
+  `hidden: true` on each ticket class. Open, full, and in-progress
   instances send `listed: true` and `hidden: false`, so reopening shows
-  the tickets again. Other statuses leave `listed` true and do not
-  change ticket visibility. A 400 from unpublish stays `synced` and
-  clears the payload hash, so the next save tries again. The log and
+  the tickets again. Cancelled and completed syncs leave ticket
+  visibility unchanged. A 400 from unpublish stays `synced`. For a
+  scheduled instance the payload hash is cleared, so the next save
+  tries again. A cancelled or completed refusal keeps the hash. The log and
   `eventbrite_last_error` quote Eventbrite's message. A completed
   instance also says a paid event can be unpublished after it is paid
   out. A scheduled instance says the event is hidden from search, its

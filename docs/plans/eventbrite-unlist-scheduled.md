@@ -5,7 +5,7 @@
 
 ## Goal
 
-Moving an event instance from `open` to `scheduled` removes it from Eventbrite search, hides its ticket classes, and unpublishes the Eventbrite event when Eventbrite allows that. Moving it back to `open` or `full` lists the same event and shows the ticket classes again. A refused unpublish is retried on the next save. A `scheduled` instance stays `scheduled` when it fills.
+Moving an event instance from `open` to `scheduled` removes it from Eventbrite search, hides its ticket classes, and unpublishes the Eventbrite event when Eventbrite allows that. Moving it back to `open` or `full` lists the same event and shows the ticket classes again. A refused unpublish of a scheduled event is retried on the next save. A scheduled event stays `scheduled` when it fills. A scheduled training course still becomes `full`. `cancelled` and `completed` stay out of Eventbrite search.
 
 ## Non-goals
 
@@ -30,9 +30,9 @@ Moving an event instance from `open` to `scheduled` removes it from Eventbrite s
 ## Invariants this change preserves
 
 - An `open` or `full` instance still publishes a draft and leaves a live event published.
-- `listed` stays true for every status except `scheduled`.
+- `listed` is false for `scheduled`, `cancelled`, and `completed`.
 - Ticket classes stay unchanged for `cancelled` and `completed`.
-- A 400 from unpublish stays `synced` so the queue does not retry it. The payload hash is cleared, so the next save runs the sync again.
+- A 400 from unpublish stays `synced` so the queue does not retry it. Only a scheduled refusal clears the payload hash.
 - Any other unpublish failure stays `failed` and increments the retry count.
 - `eventbrite_sync.py` stays at or under 500 lines.
 
@@ -46,4 +46,4 @@ Revert the commit. The next save uses the previous publish rules. Eventbrite kee
 
 ## Open questions
 
-None. A `scheduled` event that later moves to `cancelled` is listed again on that sync, because only `scheduled` sends `listed: false`. Unpublish still runs when the remote event is live.
+None.

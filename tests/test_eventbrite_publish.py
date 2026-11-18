@@ -80,6 +80,8 @@ def test_cancelled_live_event_is_unpublished(monkeypatch: Any) -> None:
     assert result["status"] == "synced"
     assert [call["path"] for call in calls].count("/events/1001/unpublish/") == 1
     assert instance.eventbrite_last_error is None
+    assert _events(calls)[-1]["listed"] is False
+    assert "hidden" not in _tickets(calls)[-1]
 
 
 @pytest.mark.parametrize(
@@ -131,9 +133,16 @@ def test_rejected_unpublish_stays_synced_and_quotes_eventbrite(
     assert detail in instance.eventbrite_last_error
     assert tail in instance.eventbrite_last_error
     assert "tickets stay on sale" not in instance.eventbrite_last_error
-    assert instance.eventbrite_last_payload_hash is None
+    assert instance.eventbrite_last_payload_hash
+    assert _events(calls)[-1]["listed"] is False
+    assert "hidden" not in _tickets(calls)[-1]
     assert warnings[0]["eventbrite_message"] == detail
     assert "/events/1001/unpublish/" in [call["path"] for call in calls]
+
+    calls.clear()
+    again = sync_instance_to_eventbrite(session=_Session(), instance_id=instance.id)
+    assert again["status"] == "noop"
+    assert calls == []
 
 
 def test_unpublish_server_error_fails_the_sync(monkeypatch: Any) -> None:
@@ -234,8 +243,8 @@ def _tickets(calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
         (InstanceStatus.FULL, True, False),
         (InstanceStatus.IN_PROGRESS, True, False),
         (InstanceStatus.SCHEDULED, False, True),
-        (InstanceStatus.CANCELLED, True, None),
-        (InstanceStatus.COMPLETED, True, None),
+        (InstanceStatus.CANCELLED, False, None),
+        (InstanceStatus.COMPLETED, False, None),
     ],
 )
 def test_listing_and_ticket_visibility(

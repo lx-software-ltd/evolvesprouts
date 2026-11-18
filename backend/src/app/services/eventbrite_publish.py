@@ -46,9 +46,16 @@ class PublishOutcome:
     remember_payload: bool = True
 
 
+_UNLISTED = {
+    InstanceStatus.SCHEDULED,
+    InstanceStatus.CANCELLED,
+    InstanceStatus.COMPLETED,
+}
+
+
 def event_is_listed(instance_status: Any) -> bool:
-    """Scheduled events stay out of Eventbrite search. Other statuses stay listed."""
-    return instance_status != InstanceStatus.SCHEDULED
+    """Keep held, cancelled, and completed events out of Eventbrite search."""
+    return instance_status not in _UNLISTED
 
 
 def ticket_hidden(instance_status: Any) -> bool | None:
@@ -172,7 +179,7 @@ def apply_publish_state(
             )
             return PublishOutcome(
                 notice=unpublish_notice(instance_status, detail),
-                remember_payload=False,
+                remember_payload=instance_status != InstanceStatus.SCHEDULED,
             )
         return PublishOutcome()
     if action == "closed":
@@ -194,24 +201,19 @@ def record_eventbrite_synced(
     instance: Any,
     *,
     payload_hash: str,
-    notice: str | PublishOutcome | None,
+    notice: PublishOutcome,
     ticket_map: dict[str, str] | None = None,
 ) -> None:
     """Store a successful sync.
 
-    A refused unpublish forgets the hash so the next save retries.
+    A refused unpublish of a scheduled event forgets the hash so the next save retries.
     """
     if ticket_map is not None:
         instance.eventbrite_ticket_class_map = ticket_map
-    text: str | None
-    remember = True
-    if isinstance(notice, PublishOutcome):
-        text = notice.notice
-        remember = notice.remember_payload
-    else:
-        text = notice
-    instance.eventbrite_last_payload_hash = payload_hash if remember else None
+    instance.eventbrite_last_payload_hash = (
+        payload_hash if notice.remember_payload else None
+    )
     instance.eventbrite_last_synced_at = datetime.now(UTC)
-    instance.eventbrite_last_error = text
+    instance.eventbrite_last_error = notice.notice
     instance.eventbrite_retry_count = 0
     instance.eventbrite_sync_status = EventbriteSyncStatus.SYNCED

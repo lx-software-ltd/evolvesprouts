@@ -255,7 +255,8 @@ their primary responsibilities.
   listing instances and
   mutating enrollments reconcile `status` to `full` when an `open` instance
   with `max_capacity` has no seats left, and from `full` back to `open` when
-  seats free; a `scheduled` instance stays `scheduled`;
+  seats free; a `scheduled` event stays `scheduled`, while a `scheduled`
+  training course still becomes `full`;
   `partner_organizations` entries include optional
   `location_id` (partner venue); and
   `GET /v1/admin/services/{id}/discount-code-usage-summary` for

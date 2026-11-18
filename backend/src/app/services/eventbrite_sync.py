@@ -31,6 +31,7 @@ from app.services.eventbrite_logo import (
     upload_event_logo,
 )
 from app.services.eventbrite_publish import (
+    PublishOutcome,
     apply_publish_state,
     event_is_listed,
     guard_unpublish,
@@ -115,10 +116,12 @@ def sync_instance_to_eventbrite(
             record_eventbrite_synced(
                 instance,
                 payload_hash=payload_hash,
-                notice=notice_for_closed_remote(
-                    instance_status=instance.status,
-                    remote_status=remote_status,
-                    event_id=event_id,
+                notice=PublishOutcome(
+                    notice=notice_for_closed_remote(
+                        instance_status=instance.status,
+                        remote_status=remote_status,
+                        event_id=event_id,
+                    )
                 ),
             )
         else:
