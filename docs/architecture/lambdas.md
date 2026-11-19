@@ -81,8 +81,9 @@ their primary responsibilities.
   audit actor `webhook:whatsapp`),
   `/v1/meta/webhook` (GET handshake + POST Messenger/Instagram inbound and
   `is_echo` messages from `entry.messaging`, `entry.standby`, and
-  `entry.changes` with `field: messages`; comment and mention changes are
-  ignored; same HMAC and verify token; persists
+  `entry.changes` with `field: messages` for Instagram Login and Page
+  subscriptions; Page feed, comment, and mention changes are ignored;
+  same HMAC and verify token; persists
   `meta_conversations` / `meta_messages` and creates CRM contacts/leads;
   live webhooks apply the same `contacted` / `engaged` stage rules;
   Instagram ingest skips counterparties whose username matches the last

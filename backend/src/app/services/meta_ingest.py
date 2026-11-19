@@ -474,10 +474,10 @@ def _as_list(value: Any) -> list[Mapping[str, Any]]:
 
 
 def _messaging_events(entry: Mapping[str, Any]) -> list[Mapping[str, Any]]:
-    """DM events from messaging, standby, and Instagram Login changes.
+    """DMs from messaging, standby, and changes field ``messages``.
 
-    Instagram Login puts the event on ``changes[].value`` when ``field`` is
-    ``messages``. Comment and mention changes stay out.
+    Instagram Login and Page ``messages`` put the event on ``value``.
+    Feed, comment, and mention changes stay out.
     """
     events = list(_as_list(entry.get("messaging")))
     events.extend(_as_list(entry.get("standby")))

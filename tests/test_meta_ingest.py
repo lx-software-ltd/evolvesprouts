@@ -8,7 +8,12 @@ from uuid import uuid4
 import pytest
 
 from app.db.models import Contact
-from app.db.models.enums import FunnelStage, MetaChannel, MetaMessageDirection
+from app.db.models.enums import (
+    ContactSource,
+    FunnelStage,
+    MetaChannel,
+    MetaMessageDirection,
+)
 from app.services import lead_funnel_automation as funnel
 from app.services import meta_ingest as ingest
 from app.utils.validators import (
@@ -260,6 +265,114 @@ def test_ingest_stores_instagram_login_changes_and_standby(
     assert any(
         getattr(item, "platform_user_id", None) == "igsid-user-1"
         and getattr(item, "profile_name", None) == "mei.c"
+        for item in added
+    )
+
+
+def test_ingest_stores_page_messages_change_and_ignores_feed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Page ``messages`` uses the same changes envelope as Instagram Login."""
+    added: list[object] = []
+
+    class _FakeConversation:
+        def __init__(self, **kwargs: object) -> None:
+            self.id = uuid4()
+            self.channel = kwargs.get("channel")
+            self.platform_user_id = kwargs.get("platform_user_id")
+            self.page_id = kwargs.get("page_id")
+            self.profile_name = kwargs.get("profile_name")
+            self.contact_id = None
+            self.lead_id = None
+            self.inbound_count = 0
+            self.outbound_count = 0
+            self.first_inbound_at = None
+            self.last_message_at = None
+            self.updated_at = None
+
+    class _FakeRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def find_message_by_platform_message_id(self, _mid: str) -> None:
+            return None
+
+        def get_conversation_by_platform_user(self, **_k: object) -> None:
+            return None
+
+    class _FakeLeadRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def find_open_by_contact(self, _contact_id: object) -> None:
+            return None
+
+        def create_with_event(self, *_a: object, **_k: object) -> SimpleNamespace:
+            return SimpleNamespace(id=uuid4())
+
+    class _FakeSession:
+        def add(self, obj: object) -> None:
+            added.append(obj)
+
+        def flush(self) -> None:
+            for obj in added:
+                if getattr(obj, "id", None) is None:
+                    obj.id = uuid4()
+
+    monkeypatch.setattr(ingest, "MetaConversation", _FakeConversation)
+    monkeypatch.setattr(ingest, "MetaRepository", _FakeRepo)
+    monkeypatch.setattr(funnel, "SalesLeadRepository", _FakeLeadRepo)
+    monkeypatch.setattr(ingest, "ContactRepository", _contact_repo())
+
+    payload = {
+        "object": "page",
+        "entry": [
+            {
+                "id": "page-1",
+                "time": 1710000000000,
+                "changes": [
+                    {
+                        "field": "feed",
+                        "value": {
+                            "from": {"id": "user-1", "name": "Mei"},
+                            "item": "post",
+                            "post_id": "page-1_1",
+                            "verb": "add",
+                            "message": "Thursday cake",
+                        },
+                    },
+                    {
+                        "field": "messages",
+                        "value": {
+                            "sender": {"id": "psid-user-1"},
+                            "recipient": {"id": "page-1"},
+                            "timestamp": "1710000000",
+                            "message": {
+                                "mid": "m_page",
+                                "text": "Hello from Messenger",
+                            },
+                        },
+                    },
+                ],
+            }
+        ],
+    }
+    counters = ingest.ingest_webhook_payload(_FakeSession(), payload)
+    bodies = [
+        getattr(item, "body", None)
+        for item in added
+        if getattr(item, "body", None) is not None
+    ]
+    contact = next(item for item in added if isinstance(item, Contact))
+    assert counters["stored"] == 1
+    assert counters["leads_created"] == 1
+    assert bodies == ["Hello from Messenger"]
+    assert contact.source is ContactSource.FACEBOOK
+    assert contact.instagram_handle is None
+    assert any(
+        getattr(item, "channel", None) is MetaChannel.FACEBOOK
+        and getattr(item, "platform_user_id", None) == "psid-user-1"
+        and getattr(item, "page_id", None) == "page-1"
         for item in added
     )
 

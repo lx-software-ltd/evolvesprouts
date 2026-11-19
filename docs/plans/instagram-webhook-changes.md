@@ -8,6 +8,7 @@
 Store Instagram Direct messages that Meta delivers on `entry.changes[]`
 (`field: messages`, event in `value`) and on `entry.standby`. Those
 deliveries currently return HTTP 200 and never become conversations.
+Page `messages` uses that same `changes` envelope; cover it with a test.
 
 ## Non-goals
 
@@ -34,7 +35,8 @@ deliveries currently return HTTP 200 and never become conversations.
 ## Done when
 
 `pytest tests/test_meta_ingest.py` passes, including a payload that mixes
-a `messages` change, a `comments` change, and a `standby` event.
+a `messages` change, a `comments` change, and a `standby` event, and a
+Page payload that stores `field: messages` and ignores `field: feed`.
 `pre-commit run ruff-format --all-files` passes.
 
 ## Rollback

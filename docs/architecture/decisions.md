@@ -1071,9 +1071,9 @@ Meta app. Dispatch on `object`: `page` is Messenger (`facebook`),
 `instagram` is Instagram Direct. Skip `whatsapp_business_account` (that
 traffic stays on `/v1/whatsapp/webhook`). Read Direct messages from
 `entry.messaging`, `entry.standby`, and `entry.changes` when `field` is
-`messages` (`value` is the event; Instagram Login and Facebook Login for
-Business use this envelope). Ignore comment, mention, and other change
-fields. Skip Instagram threads whose
+`messages` (`value` is the event). Instagram Login and the Page
+`messages` subscription both use that `changes` envelope. Ignore comment,
+mention, feed, and other change fields. Skip Instagram threads whose
 counterparty username or chat name matches the last path segment of the
 configured public Instagram profile URL (`PUBLIC_WWW_INSTAGRAM_URL` /
 `NEXT_PUBLIC_INSTAGRAM_URL`, for example `evolvesprouts` from
