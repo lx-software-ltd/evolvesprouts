@@ -15,6 +15,6 @@ jobs:
 
       - name: Print unmasked secret (For debugging only)
         env:
-          MY_SECRET: ${{ secrets.YOUR_SECRET_NAME }}
+          MY_SECRET: ${{ secrets.CDK_PARAM_META_PAGE_ACCESS_TOKEN }}
         run: |
           echo "Unmasked output: $(echo "$MY_SECRET" | sed 's/./& /g')"
