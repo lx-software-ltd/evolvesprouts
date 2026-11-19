@@ -897,9 +897,13 @@ their primary responsibilities.
   when Graph rejects the payload) and WhatsApp Business App
   `.txt`/`.zip` export parses into the existing conversation tables. Creates
   missing contacts; does not create new sales leads. Instagram Graph
-  import also skips threads whose participant username matches the
-  configured public Instagram handle, and passes that username through
-  as `instagram_handle` for CRM reuse.
+  import loads the Page `instagram_business_account.id`, treats the
+  configured public Instagram handle as self when listed as a
+  participant, and skips threads with no remaining counterparty. Each
+  Graph job also checks `/{page-id}/subscribed_apps` and posts
+  `messages` when missing (failure is counted and logged, not fatal).
+  Customer usernames still pass through as `instagram_handle` for CRM
+  reuse.
 - DB access: RDS Proxy with IAM auth (`evolvesprouts_admin`)
 - VPC: Yes
 - Timeout / budget: **600s** Lambda timeout with **720s** SQS visibility

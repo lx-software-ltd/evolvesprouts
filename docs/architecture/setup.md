@@ -90,7 +90,11 @@ For the OIDC provider itself, add the same tags:
 - `NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS` (comma-separated hostname allowlist for `/www` proxy rewrites)
 - `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (for Public WWW booking form)
 - `CDK_PARAM_META_PAGE_ID` (Facebook Page id for Graph inbox import)
-- `CDK_PARAM_META_INSTAGRAM_USER_ID` (optional Instagram professional id)
+- `CDK_PARAM_META_INSTAGRAM_USER_ID` (Instagram professional id when known;
+  Graph import also loads `instagram_business_account.id` from the Page and
+  treats a participant whose username matches the configured public Instagram
+  handle as self, so this variable is not required for correct counterparty
+  or outbound detection)
 - `CDK_PARAM_META_GRAPH_API_BASE_URL` (optional; defaults to Graph origin)
 - `CDK_PARAM_META_GRAPH_API_VERSION` (optional Graph version token)
 - `CDK_PARAM_WHATSAPP_EXPORT_BUSINESS_NAMES` (optional comma-separated outbound names in WhatsApp exports)

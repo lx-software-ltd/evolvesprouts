@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import os
-from typing import Any
 from collections.abc import Mapping
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -17,6 +17,7 @@ from app.services.meta_graph_client import (
     resolve_page_access_token,
 )
 from app.services.meta_ingest import is_own_instagram_handle, store_meta_message
+from app.services.meta_page_subscription import ensure_page_messages_subscription
 from app.utils.logging import get_logger, mask_pii
 from app.utils.validators import parse_instagram_username
 
@@ -57,6 +58,12 @@ def sync_meta_channel_history(
 
     platform = "instagram" if channel is MetaChannel.INSTAGRAM else "messenger"
     page_token = resolve_page_access_token()
+    counters.update(
+        ensure_page_messages_subscription(page_id=page_id, token=page_token)
+    )
+    iba_id = _instagram_business_account_id(page_id, token=page_token)
+    if iba_id:
+        self_ids.add(iba_id)
     after: str | None = None
     pages = 0
     while pages < _MAX_PAGES:
@@ -101,6 +108,27 @@ def _commit_progress(session: Session) -> None:
     commit = getattr(session, "commit", None)
     if callable(commit):
         commit()
+
+
+def _instagram_business_account_id(page_id: str, *, token: str) -> str | None:
+    """Return the Page-linked Instagram professional id when Graph exposes it."""
+    try:
+        payload = graph_get(
+            page_id,
+            params={"fields": "instagram_business_account"},
+            token=token,
+        )
+    except MetaGraphApiError as exc:
+        logger.warning(
+            "Could not load Page instagram_business_account; continuing import",
+            extra={"page_id": page_id, "status_code": exc.status_code},
+        )
+        return None
+    account = payload.get("instagram_business_account")
+    if not isinstance(account, Mapping):
+        return None
+    account_id = str(account.get("id") or "").strip()
+    return account_id or None
 
 
 def _graph_get_reducing_limit(
@@ -347,10 +375,13 @@ def _counterparty(
         raw_username = participant.get("username")
         name = raw_name.strip() if isinstance(raw_name, str) else ""
         username = raw_username.strip() if isinstance(raw_username, str) else ""
-        profile = name or username or None
         handle = parse_instagram_username(
             username or None, platform_user_id=participant_id
         )
+        if is_own_instagram_handle(username) or is_own_instagram_handle(handle):
+            self_ids.add(participant_id)
+            continue
+        profile = name or username or None
         return participant_id, profile, handle
     return None, None, None
 

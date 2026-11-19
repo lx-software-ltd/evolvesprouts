@@ -1129,8 +1129,17 @@ pulling history inline on the admin Lambda. Jobs live in `inbox_import_jobs`.
   Commit after each thread so earlier imports survive a later timeout.
   Nested `messages.limit(20)` on a wide conversation page exceeds Graph
   payload limits.
-  Skip Instagram threads whose participant username matches the last path
-  segment of `PUBLIC_WWW_INSTAGRAM_URL` / `NEXT_PUBLIC_INSTAGRAM_URL`.
+  Skip Instagram threads whose only remaining participant is the business
+  handle (or whose counterparty is the business account after self filtering).
+  Self ids start from `META_PAGE_ID`, optional `META_INSTAGRAM_USER_ID`, and
+  one Graph `GET /{page-id}?fields=instagram_business_account`. A participant
+  whose username matches the configured public Instagram handle is added to
+  self ids so business-first participant order still finds the customer.
+  At the start of each Graph import job, read
+  `GET /{page-id}/subscribed_apps` and `POST` the subscription when
+  `messages` is missing; record `subscription_ok` /
+  `subscription_repaired` / `subscription_failed` on the job counters and
+  log a warning. A subscription failure does not fail the import.
   Meta only returns message **bodies** for the last 20 messages per thread.
   Persist through the same `store_meta_message` path as webhooks (unique
   `platform_message_id`). Pass participant `username` as `instagram_handle`
