@@ -6,7 +6,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.db.audit import META_GRAPH_SYNC_SCHEDULE_AUDIT_USER_ID, set_audit_context
+from app.db.audit import set_audit_context
 from app.db.engine import get_engine
 from app.db.models.enums import MetaChannel
 from app.db.models.inbox_import_job import (
@@ -20,13 +20,7 @@ from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
-# Re-export for callers and tests.
-__all__ = (
-    "META_GRAPH_SYNC_SCHEDULE_AUDIT_USER_ID",
-    "SCHEDULE_REQUEST_ID_PREFIX",
-    "enqueue_scheduled_meta_graph_sync",
-)
-
+META_GRAPH_SYNC_SCHEDULE_AUDIT_USER_ID = "system:meta-graph-sync"
 SCHEDULE_REQUEST_ID_PREFIX = "meta-graph-sync-schedule"
 _CHANNELS = (MetaChannel.INSTAGRAM, MetaChannel.FACEBOOK)
 
