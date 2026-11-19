@@ -448,16 +448,8 @@ def test_promote_contact_enrollment_to_family_updates_row(
             pass
 
     class _FakeSession:
-        def __init__(self) -> None:
-            self._scalar_queues: list[list[Any]] = [[member_id]]
-
         def commit(self) -> None:
             return None
-
-        def scalars(self, _stmt: object) -> _FakeScalarResult:
-            if not self._scalar_queues:
-                raise AssertionError("unexpected scalars() call")
-            return _FakeScalarResult(self._scalar_queues.pop(0))
 
         def get(self, model: Any, eid: Any) -> Any:
             if model is Family and eid == family_id:
@@ -532,8 +524,10 @@ def test_promote_contact_enrollment_to_family_updates_row(
     assert row.bill_to_kind == BillingBillToKind.FAMILY
     assert row.bill_to_family_id == family_id
     assert row.bill_to_contact_id is None
-    assert family_row.relationship_type == RelationshipType.CLIENT
-    assert member_contact.relationship_type == RelationshipType.CLIENT
+    # Moving the enrollment onto a family must not promote CRM parties; only
+    # full invoice payment allocation does that.
+    assert family_row.relationship_type == RelationshipType.PROSPECT
+    assert member_contact.relationship_type == RelationshipType.PROSPECT
 
 
 def test_delete_enrollment_decrements_discount_usage(

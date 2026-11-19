@@ -43,9 +43,6 @@ from app.db.repositories import (
     ServiceInstanceRepository,
 )
 from app.exceptions import ConflictError, NotFoundError, ValidationError
-from app.services.billing_enrollment_confirmation import (
-    promote_prospect_party_for_enrollment,
-)
 from app.services.enrollment_billing import (
     apply_admin_enrollment_billing,
     assert_enrollment_amount_unlocked,
@@ -342,8 +339,6 @@ def _update_enrollment(
                 enrollment.bill_to_organization_id = oid
                 enrollment.bill_to_contact_id = None
                 enrollment.bill_to_family_id = None
-
-            promote_prospect_party_for_enrollment(session, enrollment)
 
         if "status" in payload:
             enrollment.status = payload["status"]
