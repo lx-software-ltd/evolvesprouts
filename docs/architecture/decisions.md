@@ -1070,14 +1070,19 @@ Reuse `META_APP_SECRET` and `WHATSAPP_WEBHOOK_VERIFY_TOKEN` from the same
 Meta app. Dispatch on `object`: `page` is Messenger (`facebook`),
 `instagram` is Instagram Direct. Skip `whatsapp_business_account` (that
 traffic stays on `/v1/whatsapp/webhook`). Read Direct messages from
-`entry.messaging`, `entry.standby`, and `entry.changes` when `field` is
-`messages` or `message_echoes` (`value` is the event). Store
-`message_echoes` as outbound even when `is_echo` is absent. Standby
-events follow the same persist path as `messaging`, including contact
-and sales-lead creation and the contacted/engaged stage rules.
-Instagram Login and the Page `messages` subscription both use that
-`changes` envelope. Ignore comment, mention, feed, and other change
-fields, and log those field names without message text. Skip Instagram threads whose
+`entry.messaging`, `entry.standby`, and `entry.changes`. Live Instagram
+Login and Page deliveries use `entry.messaging`. The App Dashboard test
+button and some subscriptions use `changes`. The event is `value`
+itself, or each item of `value.messaging` when that list is present,
+including when `field` is `messages`. Store `message_echoes` as outbound
+even when `is_echo` is absent. A `message_echoes` change does not open a
+contact or sales lead when the thread is new; a later message on that
+platform user id does. `entry.messaging` echoes still open a lead on a
+new thread. Standby events follow the same persist path as `messaging`,
+including contact and sales-lead creation and the contacted/engaged
+stage rules. This was not checked against a production webhook log.
+Ignore comment, mention, feed, and other change fields, and log those
+field names without message text. Skip Instagram threads whose
 counterparty username or chat name matches the last path segment of the
 configured public Instagram profile URL (`PUBLIC_WWW_INSTAGRAM_URL` /
 `NEXT_PUBLIC_INSTAGRAM_URL`, for example `evolvesprouts` from
@@ -1085,7 +1090,8 @@ configured public Instagram profile URL (`PUBLIC_WWW_INSTAGRAM_URL` /
 not imported as a contact. Persist threads in unified
 `meta_conversations` / `meta_messages` keyed by `(channel, platform_user_id)`.
 Create a Contact plus open SalesLead on first inbound or first outbound
-when none exists. Live webhooks move that open lead to `contacted` on the
+when none exists, except a `message_echoes` change on a thread that does
+not exist yet. Live webhooks move that open lead to `contacted` on the
 first outbound message and to `engaged` after three inbound messages on the
 same thread. Graph history import still skips new leads and does not change
 funnel stage.

@@ -17,6 +17,7 @@ from app.db.models.enums import (
 )
 from app.services import lead_funnel_automation as funnel
 from app.services import meta_ingest as ingest
+from app.services.meta_webhook_events import collect_messaging_events
 from app.utils.validators import (
     instagram_handle_from_profile_url,
     parse_instagram_username,
@@ -39,6 +40,90 @@ def _contact_repo(
             return linked
 
     return _FakeContactRepo
+
+
+def _recording_meta_fakes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> tuple[list[object], object]:
+    """Remember threads, message ids, and open leads across events in one test."""
+    added: list[object] = []
+    threads: dict[tuple[object, object], object] = {}
+    seen_mids: dict[str, object] = {}
+    open_leads: dict[object, object] = {}
+
+    class _FakeConversation:
+        def __init__(self, **kwargs: object) -> None:
+            self.id = uuid4()
+            self.channel = kwargs.get("channel")
+            self.platform_user_id = kwargs.get("platform_user_id")
+            self.page_id = kwargs.get("page_id")
+            self.profile_name = kwargs.get("profile_name")
+            self.contact_id = None
+            self.lead_id = None
+            self.inbound_count = 0
+            self.outbound_count = 0
+            self.first_inbound_at = None
+            self.last_message_at = None
+            self.updated_at = None
+            threads[(self.channel, self.platform_user_id)] = self
+
+    class _FakeRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def find_message_by_platform_message_id(self, mid: str) -> object | None:
+            return seen_mids.get(mid)
+
+        def get_conversation_by_platform_user(
+            self, *, channel: object, platform_user_id: object
+        ) -> object | None:
+            return threads.get((channel, platform_user_id))
+
+    class _FakeLeadRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def find_open_by_contact(self, contact_id: object) -> object | None:
+            return open_leads.get(contact_id)
+
+        def find_reusable_by_contact(self, contact_id: object) -> object | None:
+            return open_leads.get(contact_id)
+
+        def create_with_event(self, lead: object, *_a: object, **_k: object) -> object:
+            if getattr(lead, "id", None) is None:
+                lead.id = uuid4()
+            open_leads[getattr(lead, "contact_id", None)] = lead
+            return lead
+
+        def get_by_id(self, lead_id: object) -> object | None:
+            for lead in open_leads.values():
+                if getattr(lead, "id", None) == lead_id:
+                    return lead
+            return None
+
+        def update(self, lead: object) -> object:
+            return lead
+
+        def add_event(self, **_k: object) -> SimpleNamespace:
+            return SimpleNamespace()
+
+    class _FakeSession:
+        def add(self, obj: object) -> None:
+            added.append(obj)
+            mid = getattr(obj, "platform_message_id", None)
+            if isinstance(mid, str):
+                seen_mids[mid] = obj
+
+        def flush(self) -> None:
+            for obj in added:
+                if getattr(obj, "id", None) is None:
+                    obj.id = uuid4()
+
+    monkeypatch.setattr(ingest, "MetaConversation", _FakeConversation)
+    monkeypatch.setattr(ingest, "MetaRepository", _FakeRepo)
+    monkeypatch.setattr(funnel, "SalesLeadRepository", _FakeLeadRepo)
+    monkeypatch.setattr(ingest, "ContactRepository", _contact_repo())
+    return added, _FakeSession()
 
 
 def test_parse_timestamp_seconds_and_milliseconds() -> None:
@@ -167,56 +252,7 @@ def test_ingest_stores_instagram_login_changes_and_standby(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Instagram Login puts the DM on changes.value, not value.messaging."""
-    added: list[object] = []
-
-    class _FakeConversation:
-        def __init__(self, **kwargs: object) -> None:
-            self.id = uuid4()
-            self.channel = kwargs.get("channel")
-            self.platform_user_id = kwargs.get("platform_user_id")
-            self.page_id = kwargs.get("page_id")
-            self.profile_name = kwargs.get("profile_name")
-            self.contact_id = None
-            self.lead_id = None
-            self.inbound_count = 0
-            self.outbound_count = 0
-            self.first_inbound_at = None
-            self.last_message_at = None
-            self.updated_at = None
-
-    class _FakeRepo:
-        def __init__(self, _session: object) -> None:
-            pass
-
-        def find_message_by_platform_message_id(self, _mid: str) -> None:
-            return None
-
-        def get_conversation_by_platform_user(self, **_k: object) -> None:
-            return None
-
-    class _FakeLeadRepo:
-        def __init__(self, _session: object) -> None:
-            pass
-
-        def find_open_by_contact(self, _contact_id: object) -> None:
-            return None
-
-        def create_with_event(self, *_a: object, **_k: object) -> SimpleNamespace:
-            return SimpleNamespace(id=uuid4())
-
-    class _FakeSession:
-        def add(self, obj: object) -> None:
-            added.append(obj)
-
-        def flush(self) -> None:
-            for obj in added:
-                if getattr(obj, "id", None) is None:
-                    obj.id = uuid4()
-
-    monkeypatch.setattr(ingest, "MetaConversation", _FakeConversation)
-    monkeypatch.setattr(ingest, "MetaRepository", _FakeRepo)
-    monkeypatch.setattr(funnel, "SalesLeadRepository", _FakeLeadRepo)
-    monkeypatch.setattr(ingest, "ContactRepository", _contact_repo())
+    added, session = _recording_meta_fakes(monkeypatch)
 
     payload = {
         "object": "instagram",
@@ -255,7 +291,7 @@ def test_ingest_stores_instagram_login_changes_and_standby(
         ],
     }
     with caplog.at_level(logging.INFO, logger="app.services.meta_ingest"):
-        counters = ingest.ingest_webhook_payload(_FakeSession(), payload)
+        counters = ingest.ingest_webhook_payload(session, payload)
     bodies = {
         item.body: item for item in added if getattr(item, "body", None) is not None
     }
@@ -280,56 +316,7 @@ def test_ingest_stores_page_messages_change_and_ignores_feed(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Page ``messages`` uses the same changes envelope as Instagram Login."""
-    added: list[object] = []
-
-    class _FakeConversation:
-        def __init__(self, **kwargs: object) -> None:
-            self.id = uuid4()
-            self.channel = kwargs.get("channel")
-            self.platform_user_id = kwargs.get("platform_user_id")
-            self.page_id = kwargs.get("page_id")
-            self.profile_name = kwargs.get("profile_name")
-            self.contact_id = None
-            self.lead_id = None
-            self.inbound_count = 0
-            self.outbound_count = 0
-            self.first_inbound_at = None
-            self.last_message_at = None
-            self.updated_at = None
-
-    class _FakeRepo:
-        def __init__(self, _session: object) -> None:
-            pass
-
-        def find_message_by_platform_message_id(self, _mid: str) -> None:
-            return None
-
-        def get_conversation_by_platform_user(self, **_k: object) -> None:
-            return None
-
-    class _FakeLeadRepo:
-        def __init__(self, _session: object) -> None:
-            pass
-
-        def find_open_by_contact(self, _contact_id: object) -> None:
-            return None
-
-        def create_with_event(self, *_a: object, **_k: object) -> SimpleNamespace:
-            return SimpleNamespace(id=uuid4())
-
-    class _FakeSession:
-        def add(self, obj: object) -> None:
-            added.append(obj)
-
-        def flush(self) -> None:
-            for obj in added:
-                if getattr(obj, "id", None) is None:
-                    obj.id = uuid4()
-
-    monkeypatch.setattr(ingest, "MetaConversation", _FakeConversation)
-    monkeypatch.setattr(ingest, "MetaRepository", _FakeRepo)
-    monkeypatch.setattr(funnel, "SalesLeadRepository", _FakeLeadRepo)
-    monkeypatch.setattr(ingest, "ContactRepository", _contact_repo())
+    added, session = _recording_meta_fakes(monkeypatch)
 
     payload = {
         "object": "page",
@@ -374,26 +361,154 @@ def test_ingest_stores_page_messages_change_and_ignores_feed(
         ],
     }
     with caplog.at_level(logging.INFO, logger="app.services.meta_ingest"):
-        counters = ingest.ingest_webhook_payload(_FakeSession(), payload)
+        counters = ingest.ingest_webhook_payload(session, payload)
     bodies = {
         item.body: item for item in added if getattr(item, "body", None) is not None
     }
-    contact = next(item for item in added if isinstance(item, Contact))
+    contacts = [item for item in added if isinstance(item, Contact)]
     page_threads = [
         item.platform_user_id
         for item in added
         if getattr(item, "channel", None) is MetaChannel.FACEBOOK
     ]
     assert counters["stored"] == 2
-    assert counters["leads_created"] == 2
+    assert counters["leads_created"] == 1
+    assert counters["contacts_created"] == 1
     assert set(bodies) == {"Hello from Messenger", "Thanks"}
     assert bodies["Hello from Messenger"].direction is MetaMessageDirection.INBOUND
     assert bodies["Thanks"].direction is MetaMessageDirection.OUTBOUND
-    assert page_threads == ["psid-user-1", "psid-user-1"]
-    assert contact.source is ContactSource.FACEBOOK
-    assert contact.instagram_handle is None
+    assert page_threads == ["psid-user-1"]
+    assert len(contacts) == 1
+    assert contacts[0].source is ContactSource.FACEBOOK
+    assert contacts[0].instagram_handle is None
     assert "Thursday cake" not in caplog.text
     assert "feed" in caplog.text
+
+
+def test_collect_prefers_nested_value_messaging() -> None:
+    """A messages change whose event sits under value.messaging is not the wrapper."""
+    inner = {
+        "sender": {"id": "psid-user-1"},
+        "recipient": {"id": "page-1"},
+        "timestamp": "1710000000",
+        "message": {"mid": "m_nested", "text": "Nested hello"},
+    }
+    echo = {
+        "sender": {"id": "page-1"},
+        "recipient": {"id": "psid-user-1"},
+        "timestamp": "1710000001",
+        "message": {"mid": "m_nested_echo", "text": "Nested thanks"},
+    }
+    events, ignored = collect_messaging_events(
+        {
+            "changes": [
+                {"field": "messages", "value": {"messaging": [inner]}},
+                {"field": "message_echoes", "value": {"messaging": [echo]}},
+                {"field": "other", "value": {"messaging": [inner]}},
+            ]
+        }
+    )
+    assert ignored == []
+    assert len(events) == 3
+    assert events[0] == (inner, True)
+    assert events[1][1] is False
+    assert events[1][0]["message"]["is_echo"] is True
+    assert events[1][0]["message"]["text"] == "Nested thanks"
+    assert events[2] == (inner, True)
+
+
+def test_ingest_stores_nested_messages_change(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    added, session = _recording_meta_fakes(monkeypatch)
+    payload = {
+        "object": "page",
+        "entry": [
+            {
+                "id": "page-1",
+                "changes": [
+                    {
+                        "field": "messages",
+                        "value": {
+                            "messaging": [
+                                {
+                                    "sender": {"id": "psid-user-1"},
+                                    "recipient": {"id": "page-1"},
+                                    "timestamp": "1710000000",
+                                    "message": {
+                                        "mid": "m_nested",
+                                        "text": "Nested hello",
+                                    },
+                                }
+                            ]
+                        },
+                    }
+                ],
+            }
+        ],
+    }
+    counters = ingest.ingest_webhook_payload(session, payload)
+    bodies = [item.body for item in added if getattr(item, "body", None) is not None]
+    assert counters["stored"] == 1
+    assert counters["leads_created"] == 1
+    assert bodies == ["Nested hello"]
+
+
+def test_message_echoes_alone_does_not_open_a_lead(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    added, session = _recording_meta_fakes(monkeypatch)
+    echo = {
+        "object": "page",
+        "entry": [
+            {
+                "id": "page-1",
+                "changes": [
+                    {
+                        "field": "message_echoes",
+                        "value": {
+                            "sender": {"id": "page-1"},
+                            "recipient": {"id": "psid-user-1"},
+                            "timestamp": "1710000001",
+                            "message": {"mid": "m_echo_only", "text": "We wrote first"},
+                        },
+                    }
+                ],
+            }
+        ],
+    }
+    counters = ingest.ingest_webhook_payload(session, echo)
+    outbound = next(item for item in added if getattr(item, "body", None) is not None)
+    assert counters["stored"] == 1
+    assert counters["leads_created"] == 0
+    assert counters["contacts_created"] == 0
+    assert outbound.direction is MetaMessageDirection.OUTBOUND
+    assert not any(isinstance(item, Contact) for item in added)
+
+    inbound = {
+        "object": "page",
+        "entry": [
+            {
+                "id": "page-1",
+                "messaging": [
+                    {
+                        "sender": {"id": "psid-user-1"},
+                        "recipient": {"id": "page-1"},
+                        "timestamp": "1710000002",
+                        "message": {"mid": "m_later", "text": "Now they reply"},
+                    }
+                ],
+            }
+        ],
+    }
+    later = ingest.ingest_webhook_payload(session, inbound)
+    threads = [
+        item for item in added if getattr(item, "channel", None) is MetaChannel.FACEBOOK
+    ]
+    assert later["stored"] == 1
+    assert later["leads_created"] == 1
+    assert later["contacts_created"] == 1
+    assert len(threads) == 1
 
 
 def test_ingest_stores_messenger_echo_as_outbound(

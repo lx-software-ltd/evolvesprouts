@@ -179,11 +179,13 @@ export interface paths {
          * @description Public webhook for inbound Messenger and Instagram Direct messages
          *     plus `is_echo` outbound copies. Direct messages are read from
          *     `entry.messaging`, `entry.standby`, and `entry.changes` when
-         *     `field` is `messages` or `message_echoes` (`value` is the event).
-         *     `message_echoes` is stored as outbound. Standby events create
-         *     contacts and sales leads the same way as `messaging`. Instagram
-         *     Login and the Page `messages` subscription both use that
-         *     `changes` envelope. Page feed, comment, mention, and other change
+         *     `field` is `messages` or `message_echoes`. The event is `value`,
+         *     or each item of `value.messaging` when that list is present.
+         *     Live deliveries use `entry.messaging`. The App Dashboard test
+         *     button uses `changes`. `message_echoes` is stored as outbound
+         *     and does not open a contact or sales lead when the thread is new.
+         *     Standby events create contacts and sales leads the same way as
+         *     `messaging`. Page feed, comment, mention, and other change
          *     fields are ignored, and their field names are logged without
          *     message text. Requests must include a valid
          *     `X-Hub-Signature-256` HMAC of the raw body using `META_APP_SECRET`.

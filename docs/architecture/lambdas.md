@@ -81,8 +81,10 @@ their primary responsibilities.
   audit actor `webhook:whatsapp`),
   `/v1/meta/webhook` (GET handshake + POST Messenger/Instagram inbound and
   `is_echo` messages from `entry.messaging`, `entry.standby`, and
-  `entry.changes` with `field: messages` or `message_echoes` (Page
-  echoes are outbound even without `is_echo`); standby creates contacts
+  `entry.changes` with `field: messages` or `message_echoes`, including
+  events nested under `value.messaging` (Page echoes are outbound even
+  without `is_echo`, and a `message_echoes` change does not open a
+  contact or lead when the thread is new); standby creates contacts
   and leads the same way as `messaging`; Page feed, comment, and mention
   changes are ignored and their field names are logged without message
   text; same HMAC and verify token; persists
