@@ -9,7 +9,12 @@ from unittest.mock import MagicMock
 from uuid import uuid4
 
 from app.db.models import Contact, Enrollment, Family, Organization
-from app.db.models.enums import BillingInvoiceStatus, EnrollmentStatus, RelationshipType
+from app.db.models.enums import (
+    BillingBillToKind,
+    BillingInvoiceStatus,
+    EnrollmentStatus,
+    RelationshipType,
+)
 from app.services import billing_enrollment_confirmation as bec
 
 
@@ -218,3 +223,70 @@ def test_confirm_skips_non_registered_enrollment() -> None:
 
     assert en.status == EnrollmentStatus.CONFIRMED
     assert contact.relationship_type == RelationshipType.PROSPECT
+
+
+def test_allocation_promotes_bill_to_contact_without_enrollment() -> None:
+    """Paid invoices with no enrollment lines still promote the bill-to contact."""
+    cid = uuid4()
+    contact = SimpleNamespace(id=cid, relationship_type=RelationshipType.PROSPECT)
+    session = _FakeSession()
+    session.contacts[cid] = contact
+    # No enrollment ids on the invoice.
+    session.scalar_queues.append([])
+    session.scalar_queues.append([])
+    inv = SimpleNamespace(
+        id=uuid4(),
+        total=Decimal("100"),
+        status=BillingInvoiceStatus.ISSUED,
+        bill_to_kind=BillingBillToKind.CONTACT,
+        bill_to_contact_id=cid,
+        bill_to_family_id=None,
+        bill_to_organization_id=None,
+    )
+
+    bec.maybe_confirm_enrollments_on_positive_invoice_payment_allocation(
+        session,
+        inv,  # type: ignore[arg-type]
+    )
+
+    assert contact.relationship_type == RelationshipType.CLIENT
+
+
+def test_allocation_promotes_already_confirmed_enrollment_party() -> None:
+    """FPS / admin creates often store confirmed before payment allocation."""
+    eid = uuid4()
+    cid = uuid4()
+    en = SimpleNamespace(
+        id=eid,
+        status=EnrollmentStatus.CONFIRMED,
+        organization_id=None,
+        family_id=None,
+        contact_id=cid,
+        cancelled_at=None,
+    )
+    contact = SimpleNamespace(id=cid, relationship_type=RelationshipType.PROSPECT)
+    session = _FakeSession()
+    session.contacts[cid] = contact
+    session.enrollments[eid] = en
+    # bill-to promote (contact path uses get, no scalars)
+    # registered confirm loop
+    session.scalar_queues.append([eid])
+    # already-confirmed promote loop
+    session.scalar_queues.append([eid])
+    inv = SimpleNamespace(
+        id=uuid4(),
+        total=Decimal("100"),
+        status=BillingInvoiceStatus.ISSUED,
+        bill_to_kind=BillingBillToKind.CONTACT,
+        bill_to_contact_id=cid,
+        bill_to_family_id=None,
+        bill_to_organization_id=None,
+    )
+
+    bec.maybe_confirm_enrollments_on_positive_invoice_payment_allocation(
+        session,
+        inv,  # type: ignore[arg-type]
+    )
+
+    assert en.status == EnrollmentStatus.CONFIRMED
+    assert contact.relationship_type == RelationshipType.CLIENT
