@@ -21,6 +21,7 @@ from app.db.models import (
 from app.db.repositories.contact import ContactRepository
 from app.db.repositories.meta import MetaRepository
 from app.services.lead_funnel_automation import link_conversation_lead_and_advance
+from app.services.meta_webhook_events import collect_messaging_events
 from app.utils.logging import get_logger, mask_pii
 from app.utils.validators import extract_instagram_username, is_own_instagram_handle
 
@@ -34,7 +35,6 @@ _MAX_PROFILE_NAME_LENGTH = 256
 _MAX_MESSAGE_TYPE_LENGTH = 32
 _MS_TIMESTAMP_THRESHOLD = 10_000_000_000
 _CHANNEL_BY_OBJECT = {"page": MetaChannel.FACEBOOK, "instagram": MetaChannel.INSTAGRAM}
-_MESSAGE_CHANGE_FIELDS = frozenset({"messages"})
 _ANONYMOUS_NAMES = {
     MetaChannel.FACEBOOK: "Messenger contact",
     MetaChannel.INSTAGRAM: "Instagram contact",
@@ -65,9 +65,12 @@ def ingest_webhook_payload(
         counters["skipped"] += 1
         return counters
 
+    ignored_fields: list[str] = []
     for entry in _as_list(payload.get("entry")):
         page_id = _normalized_id(entry.get("id"), max_length=_MAX_PAGE_ID_LENGTH)
-        for event in _messaging_events(entry):
+        events, ignored = collect_messaging_events(entry)
+        ignored_fields.extend(ignored)
+        for event in events:
             _ingest_messaging_event(
                 session,
                 event,
@@ -75,6 +78,11 @@ def ingest_webhook_payload(
                 page_id=page_id,
                 counters=counters,
             )
+    if ignored_fields:
+        logger.info(
+            "Ignored Meta webhook change fields: %s",
+            ",".join(sorted(set(ignored_fields))),
+        )
     return counters
 
 
@@ -471,24 +479,3 @@ def _as_list(value: Any) -> list[Mapping[str, Any]]:
     if not isinstance(value, list):
         return []
     return [item for item in value if isinstance(item, Mapping)]
-
-
-def _messaging_events(entry: Mapping[str, Any]) -> list[Mapping[str, Any]]:
-    """DMs from messaging, standby, and changes field ``messages``.
-
-    Instagram Login and Page ``messages`` put the event on ``value``.
-    Feed, comment, and mention changes stay out.
-    """
-    events = list(_as_list(entry.get("messaging")))
-    events.extend(_as_list(entry.get("standby")))
-    for change in _as_list(entry.get("changes")):
-        value = change.get("value")
-        if not isinstance(value, Mapping):
-            continue
-        nested = _as_list(value.get("messaging"))
-        if nested:
-            events.extend(nested)
-            continue
-        if change.get("field") in _MESSAGE_CHANGE_FIELDS:
-            events.append(value)
-    return events

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -163,6 +164,7 @@ def test_ingest_stores_inbound_instagram_and_creates_lead(
 
 def test_ingest_stores_instagram_login_changes_and_standby(
     monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Instagram Login puts the DM on changes.value, not value.messaging."""
     added: list[object] = []
@@ -252,16 +254,20 @@ def test_ingest_stores_instagram_login_changes_and_standby(
             }
         ],
     }
-    counters = ingest.ingest_webhook_payload(_FakeSession(), payload)
-    bodies = sorted(
-        getattr(item, "body", None)
-        for item in added
-        if getattr(item, "body", None) is not None
-    )
+    with caplog.at_level(logging.INFO, logger="app.services.meta_ingest"):
+        counters = ingest.ingest_webhook_payload(_FakeSession(), payload)
+    bodies = {
+        item.body: item for item in added if getattr(item, "body", None) is not None
+    }
+    handles = [item.instagram_handle for item in added if isinstance(item, Contact)]
     assert counters["stored"] == 2
     assert counters["leads_created"] == 2
-    assert bodies == ["How much?", "Still here"]
-    assert "Nice post" not in bodies
+    assert set(bodies) == {"How much?", "Still here"}
+    assert bodies["How much?"].direction is MetaMessageDirection.INBOUND
+    assert bodies["Still here"].direction is MetaMessageDirection.INBOUND
+    assert "mei.c" in handles
+    assert "Nice post" not in caplog.text
+    assert "comments" in caplog.text
     assert any(
         getattr(item, "platform_user_id", None) == "igsid-user-1"
         and getattr(item, "profile_name", None) == "mei.c"
@@ -271,6 +277,7 @@ def test_ingest_stores_instagram_login_changes_and_standby(
 
 def test_ingest_stores_page_messages_change_and_ignores_feed(
     monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Page ``messages`` uses the same changes envelope as Instagram Login."""
     added: list[object] = []
@@ -353,28 +360,40 @@ def test_ingest_stores_page_messages_change_and_ignores_feed(
                             },
                         },
                     },
+                    {
+                        "field": "message_echoes",
+                        "value": {
+                            "sender": {"id": "page-1"},
+                            "recipient": {"id": "psid-user-1"},
+                            "timestamp": "1710000001",
+                            "message": {"mid": "m_page_echo", "text": "Thanks"},
+                        },
+                    },
                 ],
             }
         ],
     }
-    counters = ingest.ingest_webhook_payload(_FakeSession(), payload)
-    bodies = [
-        getattr(item, "body", None)
-        for item in added
-        if getattr(item, "body", None) is not None
-    ]
+    with caplog.at_level(logging.INFO, logger="app.services.meta_ingest"):
+        counters = ingest.ingest_webhook_payload(_FakeSession(), payload)
+    bodies = {
+        item.body: item for item in added if getattr(item, "body", None) is not None
+    }
     contact = next(item for item in added if isinstance(item, Contact))
-    assert counters["stored"] == 1
-    assert counters["leads_created"] == 1
-    assert bodies == ["Hello from Messenger"]
+    page_threads = [
+        item.platform_user_id
+        for item in added
+        if getattr(item, "channel", None) is MetaChannel.FACEBOOK
+    ]
+    assert counters["stored"] == 2
+    assert counters["leads_created"] == 2
+    assert set(bodies) == {"Hello from Messenger", "Thanks"}
+    assert bodies["Hello from Messenger"].direction is MetaMessageDirection.INBOUND
+    assert bodies["Thanks"].direction is MetaMessageDirection.OUTBOUND
+    assert page_threads == ["psid-user-1", "psid-user-1"]
     assert contact.source is ContactSource.FACEBOOK
     assert contact.instagram_handle is None
-    assert any(
-        getattr(item, "channel", None) is MetaChannel.FACEBOOK
-        and getattr(item, "platform_user_id", None) == "psid-user-1"
-        and getattr(item, "page_id", None) == "page-1"
-        for item in added
-    )
+    assert "Thursday cake" not in caplog.text
+    assert "feed" in caplog.text
 
 
 def test_ingest_stores_messenger_echo_as_outbound(

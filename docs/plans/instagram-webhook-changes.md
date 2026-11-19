@@ -8,7 +8,9 @@
 Store Instagram Direct messages that Meta delivers on `entry.changes[]`
 (`field: messages`, event in `value`) and on `entry.standby`. Those
 deliveries currently return HTTP 200 and never become conversations.
-Page `messages` uses that same `changes` envelope; cover it with a test.
+Page `messages` uses that same `changes` envelope. Page `message_echoes`
+are stored as outbound. Ignored change field names are logged without
+message text. Standby events create contacts and sales leads.
 
 ## Non-goals
 
@@ -19,6 +21,7 @@ Page `messages` uses that same `changes` envelope; cover it with a test.
 ## Files
 
 - `backend/src/app/services/meta_ingest.py`
+- `backend/src/app/services/meta_webhook_events.py`
 - `tests/test_meta_ingest.py`
 - `docs/api/public.yaml`
 - `docs/architecture/decisions.md`
@@ -36,7 +39,8 @@ Page `messages` uses that same `changes` envelope; cover it with a test.
 
 `pytest tests/test_meta_ingest.py` passes, including a payload that mixes
 a `messages` change, a `comments` change, and a `standby` event, and a
-Page payload that stores `field: messages` and ignores `field: feed`.
+Page payload that stores `field: messages`, stores `message_echoes` as
+outbound, ignores `field: feed`, and logs the ignored field name.
 `pre-commit run ruff-format --all-files` passes.
 
 ## Rollback
