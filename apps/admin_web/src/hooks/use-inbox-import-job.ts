@@ -10,6 +10,7 @@ import { getAdminQueryClient } from '@/lib/admin-query-client';
 import {
   isInboxImportInFlight,
   isInboxImportSuccess,
+  isScheduledMetaGraphSyncJob,
   listInboxImportJobs,
   type InboxImportJobStatus,
   type InboxImportJobSummary,
@@ -84,13 +85,14 @@ function forChannel(
   jobs: readonly InboxImportJobSummary[],
   channel: string | null | undefined
 ): InboxImportJobSummary[] {
-  if (!channel) {
-    return [...jobs];
-  }
-  return jobs.filter((job) => job.channel === channel);
+  const scoped = channel ? jobs.filter((job) => job.channel === channel) : [...jobs];
+  return scoped.filter((job) => !isScheduledMetaGraphSyncJob(job));
 }
 
 function shouldShow(job: InboxImportJobSummary, session: SessionState, now: number): boolean {
+  if (isScheduledMetaGraphSyncJob(job)) {
+    return false;
+  }
   if (session.dismissed.includes(job.id)) {
     return false;
   }
@@ -126,6 +128,7 @@ function hasLiveJob(
   now: number
 ): boolean {
   const live = (job: InboxImportJobSummary) =>
+    !isScheduledMetaGraphSyncJob(job) &&
     (!channel || job.channel === channel) &&
     isInboxImportInFlight(job.status) &&
     !isInboxImportJobStale(job, now);

@@ -32,6 +32,7 @@ function job(overrides: Partial<InboxImportJobSummary> = {}): InboxImportJobSumm
     kind: 'meta_graph',
     channel: 'instagram',
     attachmentAssetId: null,
+    createdBy: 'admin-sub',
     status: 'pending',
     errorMessage: null,
     counters: null,
@@ -216,6 +217,29 @@ describe('useInboxImportJob', () => {
 
   it('ignores a job for a different Meta channel', async () => {
     listJobs.mockResolvedValue([job({ channel: 'facebook', status: 'processing' })]);
+    const { result } = renderHook(() =>
+      useInboxImportJob({ endpointPath: '/v1/admin/meta/import-jobs', channel: 'instagram' })
+    );
+    await waitFor(() => {
+      expect(listJobs).toHaveBeenCalled();
+    });
+    expect(result.current.importJob).toBeNull();
+  });
+
+  it('ignores scheduled Meta Graph sync jobs in the banner', async () => {
+    listJobs.mockResolvedValue([
+      job({
+        id: 'job-scheduled',
+        createdBy: 'system:meta-graph-sync',
+        status: 'processing',
+      }),
+      job({
+        id: 'job-scheduled-fail',
+        createdBy: 'system:meta-graph-sync',
+        status: 'failed',
+        errorMessage: 'token expired',
+      }),
+    ]);
     const { result } = renderHook(() =>
       useInboxImportJob({ endpointPath: '/v1/admin/meta/import-jobs', channel: 'instagram' })
     );

@@ -55,5 +55,6 @@ Revert the commits. Existing conversation rows stay.
 
 - Red-zone item 3 (scheduled incremental sync): wait for Standard Access
   confirmation or explicit insurance approval before CDK writes.
-- Should polled incremental messages open sales leads? Recommendation:
-  no (`create_leads=False`), matching history import.
+- Should polled incremental messages open sales leads? Resolved in
+  `docs/plans/meta-import-review-fixes.md`: yes for incremental
+  (`create_leads=True`); manual history import stays false.

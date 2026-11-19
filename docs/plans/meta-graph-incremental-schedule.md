@@ -6,14 +6,14 @@
 ## Goal
 
 Enqueue an incremental `meta_graph` inbox import per channel on a schedule.
-The worker reads conversations newest first, stops at the stored channel
-watermark, keeps `create_leads=False`, and relies on unique message ids to
-dedupe with webhooks.
+The worker reads conversations newest first, uses per-thread watermarks
+with a channel lookback, opens leads for incremental jobs, and relies on
+unique message ids to dedupe with webhooks.
 
 ## Non-goals
 
-- Opening sales leads from polled messages.
-- Changing the admin-triggered full recent import (still last 20 bodies).
+- Changing the admin-triggered full recent import (still last 20 bodies,
+  `create_leads=False`).
 - New admin routes.
 
 ## Files
@@ -35,8 +35,8 @@ dedupe with webhooks.
 
 ## Invariants this change preserves
 
-- Live webhooks still create leads; Graph import (manual and scheduled)
-  does not.
+- Live webhooks still create leads; manual Graph import does not;
+  scheduled incremental Graph import does (product decision after review).
 - Unique `platform_message_id` still dedupes webhook and Graph rows.
 - Manual admin import remains a non-incremental recent backfill.
 
@@ -53,4 +53,6 @@ deploy. Existing conversation rows stay.
 
 ## Open questions
 
-Resolved: polled messages do not open sales leads (`create_leads=False`).
+Superseded by `docs/plans/meta-import-review-fixes.md`: incremental
+polled messages open sales leads (`create_leads=True`); manual backfill
+does not.

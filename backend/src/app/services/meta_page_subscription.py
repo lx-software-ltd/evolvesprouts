@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Mapping
 from typing import Any
 
@@ -10,7 +11,7 @@ from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
-_MESSAGES_FIELD = "messages"
+_REQUIRED_FIELDS = ("messages", "message_echoes")
 
 
 def ensure_page_messages_subscription(
@@ -18,23 +19,40 @@ def ensure_page_messages_subscription(
     page_id: str,
     token: str,
 ) -> dict[str, int]:
-    """Ensure the Page app subscription includes ``messages``.
+    """Ensure this app's Page subscription includes messages and echoes.
 
     Returns integer counter flags for the inbox import job. Failures are
     logged and recorded; they never raise.
     """
+    app_id = os.getenv("META_APP_ID", "").strip()
+    if not app_id:
+        logger.warning(
+            "META_APP_ID is not configured; skipping subscribed_apps check",
+            extra={"page_id": page_id},
+        )
+        return {"subscription_failed": 1}
     try:
         payload = graph_get(f"{page_id}/subscribed_apps", token=token)
-        if _messages_subscribed(payload):
+        current = _fields_for_app(payload, app_id=app_id)
+        if current is not None and all(field in current for field in _REQUIRED_FIELDS):
             return {"subscription_ok": 1}
-        graph_post(
+        merged = sorted(
+            (current or set()) | set(_REQUIRED_FIELDS),
+            key=str,
+        )
+        response = graph_post(
             f"{page_id}/subscribed_apps",
-            params={"subscribed_fields": _MESSAGES_FIELD},
+            params={"subscribed_fields": ",".join(merged)},
             token=token,
         )
+        if response.get("success") is not True:
+            raise MetaGraphApiError(
+                status_code=502,
+                message="Meta subscribed_apps POST did not return success: true",
+            )
         logger.warning(
-            "Repaired Meta Page subscribed_apps; messages was missing",
-            extra={"page_id": page_id},
+            "Repaired Meta Page subscribed_apps for this app",
+            extra={"page_id": page_id, "fields": ",".join(merged)},
         )
         return {"subscription_repaired": 1}
     except MetaGraphApiError as exc:
@@ -55,18 +73,22 @@ def ensure_page_messages_subscription(
         return {"subscription_failed": 1}
 
 
-def _messages_subscribed(payload: Mapping[str, Any]) -> bool:
+def _fields_for_app(payload: Mapping[str, Any], *, app_id: str) -> set[str] | None:
     rows = payload.get("data")
     if not isinstance(rows, list):
-        return False
+        return None
     for row in rows:
         if not isinstance(row, Mapping):
             continue
-        fields = row.get("subscribed_fields")
-        if isinstance(fields, list) and _MESSAGES_FIELD in fields:
-            return True
-        if isinstance(fields, str) and _MESSAGES_FIELD in {
-            part.strip() for part in fields.split(",")
-        }:
-            return True
-    return False
+        if str(row.get("id") or "").strip() != app_id:
+            continue
+        return _normalize_fields(row.get("subscribed_fields"))
+    return None
+
+
+def _normalize_fields(raw: Any) -> set[str]:
+    if isinstance(raw, list):
+        return {str(item).strip() for item in raw if str(item).strip()}
+    if isinstance(raw, str):
+        return {part.strip() for part in raw.split(",") if part.strip()}
+    return set()

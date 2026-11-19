@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -20,6 +20,7 @@ from app.db.repositories.asset import AssetRepository
 from app.db.repositories.inbox_import_job import InboxImportJobRepository
 from app.exceptions import ValidationError
 from app.services.aws_clients import get_s3_client
+from app.services.inbox_import_timing import inbox_import_stale_threshold
 from app.services.meta_graph_client import MetaGraphApiError
 from app.services.meta_history_sync import sync_meta_channel_history
 from app.services.whatsapp_export_import import import_parsed_whatsapp_chats
@@ -38,16 +39,8 @@ class InboxImportOutcome:
     ack_sqs_message: bool
 
 
-def _lambda_timeout_seconds() -> int:
-    raw = os.environ.get("INBOX_IMPORT_LAMBDA_TIMEOUT_SECONDS", "600").strip()
-    try:
-        return max(60, int(raw))
-    except ValueError:
-        return 600
-
-
-def _processing_stale_threshold() -> timedelta:
-    return timedelta(seconds=_lambda_timeout_seconds() * 2 + 120)
+def _processing_stale_threshold():
+    return inbox_import_stale_threshold()
 
 
 def process_inbox_import_job(job_id: UUID) -> InboxImportOutcome:
@@ -84,8 +77,10 @@ def process_inbox_import_job(job_id: UUID) -> InboxImportOutcome:
         _fail_job(job_id, "Inbox import failed. Try again shortly.")
         return InboxImportOutcome(ack_sqs_message=True)
 
-    skipped = int(counters.get("skipped") or 0) + int(
-        counters.get("skipped_no_wa_id") or 0
+    skipped = (
+        int(counters.get("skipped") or 0)
+        + int(counters.get("skipped_no_wa_id") or 0)
+        + int(counters.get("subscription_failed") or 0)
     )
     status = (
         InboxImportJobStatus.SUCCEEDED_WITH_ERRORS
@@ -117,6 +112,7 @@ def _run_job(job_id: UUID) -> dict[str, int]:
                 session,
                 job.channel,
                 incremental=incremental,
+                create_leads=incremental,
             )
             session.commit()
             return counters

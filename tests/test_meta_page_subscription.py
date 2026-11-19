@@ -3,24 +3,28 @@
 from __future__ import annotations
 
 import pytest
+
 from app.services import meta_page_subscription as sub
 from app.services.meta_graph_client import MetaGraphApiError
 
 
-def test_ensure_subscription_ok_when_messages_present(
+def test_ensure_subscription_ok_when_our_app_has_messages(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     posts: list[object] = []
+    monkeypatch.setenv("META_APP_ID", "app-ours")
 
     def _graph_get(path: str, *, params=None, token=None):
-        assert path == "page-1/subscribed_apps"
-        assert token == "page-token"
         return {
             "data": [
                 {
-                    "id": "app-1",
+                    "id": "app-other",
+                    "subscribed_fields": ["messages", "message_echoes"],
+                },
+                {
+                    "id": "app-ours",
                     "subscribed_fields": ["feed", "messages", "message_echoes"],
-                }
+                },
             ]
         }
 
@@ -34,13 +38,22 @@ def test_ensure_subscription_ok_when_messages_present(
     assert posts == []
 
 
-def test_ensure_subscription_repairs_when_messages_missing(
+def test_ensure_subscription_ignores_other_apps_messages(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     posts: list[tuple[object, object]] = []
+    monkeypatch.setenv("META_APP_ID", "app-ours")
 
     def _graph_get(path: str, *, params=None, token=None):
-        return {"data": [{"id": "app-1", "subscribed_fields": ["feed"]}]}
+        return {
+            "data": [
+                {
+                    "id": "app-other",
+                    "subscribed_fields": ["messages", "message_echoes"],
+                },
+                {"id": "app-ours", "subscribed_fields": ["feed"]},
+            ]
+        }
 
     def _graph_post(path: str, *, params=None, token=None):
         posts.append((path, params, token))
@@ -54,15 +67,40 @@ def test_ensure_subscription_repairs_when_messages_missing(
     assert posts == [
         (
             "page-1/subscribed_apps",
-            {"subscribed_fields": "messages"},
+            {"subscribed_fields": "feed,message_echoes,messages"},
             "page-token",
         )
     ]
 
 
+def test_ensure_subscription_fails_without_success_true(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("META_APP_ID", "app-ours")
+
+    def _graph_get(path: str, *, params=None, token=None):
+        return {"data": [{"id": "app-ours", "subscribed_fields": ["feed"]}]}
+
+    monkeypatch.setattr(sub, "graph_get", _graph_get)
+    monkeypatch.setattr(sub, "graph_post", lambda **_k: {"success": False})
+
+    result = sub.ensure_page_messages_subscription(page_id="page-1", token="page-token")
+    assert result == {"subscription_failed": 1}
+
+
+def test_ensure_subscription_fails_without_app_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("META_APP_ID", raising=False)
+    result = sub.ensure_page_messages_subscription(page_id="page-1", token="page-token")
+    assert result == {"subscription_failed": 1}
+
+
 def test_ensure_subscription_failure_is_recorded(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setenv("META_APP_ID", "app-ours")
+
     def _graph_get(path: str, *, params=None, token=None):
         raise MetaGraphApiError(status_code=500, message="boom")
 

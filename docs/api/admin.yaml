@@ -7425,6 +7425,10 @@ components:
           type: string
           format: uuid
           nullable: true
+        created_by:
+          type: string
+          nullable: true
+          description: Cognito sub or system actor (for example system:meta-graph-sync)
         status:
           $ref: "#/components/schemas/InboxImportJobStatus"
         error_message:

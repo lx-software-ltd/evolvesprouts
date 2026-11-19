@@ -1136,22 +1136,29 @@ pulling history inline on the admin Lambda. Jobs live in `inbox_import_jobs`.
   whose username matches the configured public Instagram handle is added to
   self ids so business-first participant order still finds the customer.
   At the start of each Graph import job, read
-  `GET /{page-id}/subscribed_apps` and `POST` the subscription when
-  `messages` is missing; record `subscription_ok` /
-  `subscription_repaired` / `subscription_failed` on the job counters and
-  log a warning. A subscription failure does not fail the import.
+  `GET /{page-id}/subscribed_apps` for this app (`META_APP_ID`), merge
+  `messages` and `message_echoes` into the existing field list, and
+  `POST` only when required fields are missing; require
+  `success: true`. Record `subscription_ok` /
+  `subscription_repaired` / `subscription_failed` on the job counters
+  (`subscription_failed` drives `succeeded_with_errors`) and log a
+  warning. A subscription failure does not abort the import.
   An hourly EventBridge schedule
   (`evolvesprouts-meta-graph-sync-schedule`) enqueues one incremental
-  `meta_graph` job per channel via `MetaGraphSyncSchedulerFunction`.
-  Incremental jobs read conversations newest first (`updated_time`) and
-  stop at the channel's stored `last_message_at` watermark; message
-  bodies still dedupe on unique `platform_message_id`. Polled messages
-  do **not** open sales leads (same as manual history import).
+  `meta_graph` job per channel via `MetaGraphSyncSchedulerFunction`
+  (`created_by=system:meta-graph-sync`). Incremental jobs compare each
+  thread's `updated_time` to that thread's own `last_message_at` and
+  only stop channel paging after a 24h lookback from the channel
+  watermark; message bodies still dedupe on unique
+  `platform_message_id`. Incremental polled messages **do** open sales
+  leads (stand-in while webhooks are missing); manual history import
+  still does not. Admin import banners ignore scheduled sync jobs.
   Meta only returns message **bodies** for the last 20 messages per thread.
   Persist through the same `store_meta_message` path as webhooks (unique
   `platform_message_id`). Pass participant `username` as `instagram_handle`
   so history import reuses CRM contacts the same way live ingest does.
-  Create placeholder contacts when missing. Do **not** create new Sales leads.
+  Create placeholder contacts when missing. Manual history import does
+  **not** create new Sales leads.
 - **WhatsApp Cloud API:** there is no GET history endpoint. Continue live
   webhook ingest, and persist coexistence `history` webhook chunks when Meta
   sends them (still no new leads). Older chats come from a Business App

@@ -95,6 +95,9 @@ For the OIDC provider itself, add the same tags:
   treats a participant whose username matches the configured public Instagram
   handle as self, so this variable is not required for correct counterparty
   or outbound detection)
+- `CDK_PARAM_META_APP_ID` (Meta app id; Graph import checks
+  `/{page-id}/subscribed_apps` for this app before repairing `messages` /
+  `message_echoes`)
 - `CDK_PARAM_META_GRAPH_API_BASE_URL` (optional; defaults to Graph origin)
 - `CDK_PARAM_META_GRAPH_API_VERSION` (optional Graph version token)
 - `CDK_PARAM_WHATSAPP_EXPORT_BUSINESS_NAMES` (optional comma-separated outbound names in WhatsApp exports)

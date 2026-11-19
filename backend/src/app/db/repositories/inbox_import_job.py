@@ -16,6 +16,7 @@ from app.db.models.inbox_import_job import (
     InboxImportKind,
 )
 from app.db.repositories.base import BaseRepository
+from app.services.inbox_import_timing import inbox_import_stale_threshold
 
 
 class InboxImportJobRepository(BaseRepository[InboxImportJob]):
@@ -34,7 +35,11 @@ class InboxImportJobRepository(BaseRepository[InboxImportJob]):
         kind: InboxImportKind,
         channel: MetaChannel,
     ) -> InboxImportJob | None:
-        """Return one pending or processing job for kind+channel, if any."""
+        """Return a fresh pending/processing job for kind+channel, if any."""
+        stale_before = datetime.now(UTC) - inbox_import_stale_threshold()
+        activity_at = func.coalesce(
+            InboxImportJob.updated_at, InboxImportJob.created_at
+        )
         statement = (
             select(InboxImportJob)
             .where(
@@ -46,6 +51,7 @@ class InboxImportJobRepository(BaseRepository[InboxImportJob]):
                         InboxImportJobStatus.PROCESSING,
                     )
                 ),
+                activity_at > stale_before,
             )
             .limit(1)
         )

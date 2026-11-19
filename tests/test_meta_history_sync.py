@@ -122,10 +122,10 @@ def test_sync_without_instagram_user_id_treats_business_participant_as_self(
     assert stored[1]["platform_user_id"] == "igsid-9"
 
 
-def test_incremental_sync_stops_at_channel_watermark(
+def test_incremental_sync_uses_per_thread_watermark_and_lookback(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Newest-first conversations stop once updated_time is at the watermark."""
+    """Missed older threads still import; channel stop uses a 24h lookback."""
     from datetime import UTC, datetime
 
     stored: list[object] = []
@@ -139,23 +139,31 @@ def test_incremental_sync_stops_at_channel_watermark(
     ) -> dict[str, object]:
         calls.append(path)
         if path == "page-1/conversations":
-            assert params is not None
-            assert "updated_time" in str(params.get("fields") or "")
             return {
                 "data": [
                     {
-                        "id": "conv-new",
+                        "id": "conv-a",
                         "updated_time": "2026-03-02T12:00:00+0000",
                         "participants": {
                             "data": [
                                 {"id": "page-1"},
-                                {"id": "user-new", "name": "New"},
+                                {"id": "user-a", "name": "A"},
                             ]
                         },
                     },
                     {
-                        "id": "conv-old",
-                        "updated_time": "2026-03-01T08:00:00+0000",
+                        "id": "conv-b",
+                        "updated_time": "2026-03-02T11:00:00+0000",
+                        "participants": {
+                            "data": [
+                                {"id": "page-1"},
+                                {"id": "user-b", "name": "B"},
+                            ]
+                        },
+                    },
+                    {
+                        "id": "conv-ancient",
+                        "updated_time": "2026-02-01T08:00:00+0000",
                         "participants": {
                             "data": [
                                 {"id": "page-1"},
@@ -166,26 +174,36 @@ def test_incremental_sync_stops_at_channel_watermark(
                 ],
                 "paging": {"cursors": {"after": "more"}},
             }
-        if path == "conv-new/messages":
+        if path == "conv-a/messages":
             return {
                 "data": [
                     {
-                        "id": "m_new",
+                        "id": "m_a",
                         "created_time": "2026-03-02T12:00:00+0000",
-                        "from": {"id": "user-new"},
-                        "message": "fresh",
-                    },
-                    {
-                        "id": "m_seen",
-                        "created_time": "2026-03-01T09:00:00+0000",
-                        "from": {"id": "user-new"},
-                        "message": "already stored era",
-                    },
+                        "from": {"id": "user-a"},
+                        "message": "a",
+                    }
                 ]
             }
-        if path == "conv-old/messages":
-            raise AssertionError("old conversation should not be fetched")
+        if path == "conv-b/messages":
+            return {
+                "data": [
+                    {
+                        "id": "m_b",
+                        "created_time": "2026-03-02T11:00:00+0000",
+                        "from": {"id": "user-b"},
+                        "message": "missed webhook",
+                    }
+                ]
+            }
+        if path == "conv-ancient/messages":
+            raise AssertionError("ancient conversation should stop paging")
         raise AssertionError(f"unexpected Graph path {path}")
+
+    def _thread_wm(_session, channel, platform_user_id):
+        if platform_user_id == "user-a":
+            return datetime(2026, 3, 2, 10, 0, tzinfo=UTC)
+        return None
 
     monkeypatch.setenv("META_PAGE_ID", "page-1")
     monkeypatch.setattr(sync, "resolve_page_access_token", lambda: "page-token")
@@ -194,19 +212,21 @@ def test_incremental_sync_stops_at_channel_watermark(
     monkeypatch.setattr(
         sync,
         "_channel_watermark",
-        lambda _session, _channel: datetime(2026, 3, 1, 10, 0, tzinfo=UTC),
+        lambda _session, _channel: datetime(2026, 3, 2, 12, 0, tzinfo=UTC),
     )
+    monkeypatch.setattr(sync, "_thread_last_message_at", _thread_wm)
 
     counters = sync.sync_meta_channel_history(
         SimpleNamespace(),
         MetaChannel.FACEBOOK,
         incremental=True,
+        create_leads=True,
     )
-    assert counters["conversations"] == 1
-    assert counters["stored"] == 1
-    assert stored[0]["create_leads"] is False
-    assert stored[0]["platform_user_id"] == "user-new"
-    assert "conv-old/messages" not in calls
+    assert counters["conversations"] == 2
+    assert counters["stored"] == 2
+    assert {item["platform_user_id"] for item in stored} == {"user-a", "user-b"}
+    assert all(item["create_leads"] is True for item in stored)
+    assert "conv-ancient/messages" not in calls
     assert counters.get("stopped_at_watermark") == 1
 
 

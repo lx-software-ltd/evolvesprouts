@@ -233,6 +233,7 @@ interface InboxImportNestedStackProps extends cdk.NestedStackProps {
   metaPageAccessToken: string;
   metaPageId: string;
   metaInstagramUserId: string;
+  metaAppId: string;
   metaGraphApiBaseUrl: string;
   metaGraphApiVersion: string;
   whatsappExportBusinessNames: string;
@@ -299,6 +300,7 @@ class InboxImportNestedStack extends cdk.NestedStack {
         META_PAGE_ACCESS_TOKEN: props.metaPageAccessToken,
         META_PAGE_ID: props.metaPageId,
         META_INSTAGRAM_USER_ID: props.metaInstagramUserId,
+        META_APP_ID: props.metaAppId,
         META_GRAPH_API_BASE_URL: props.metaGraphApiBaseUrl,
         META_GRAPH_API_VERSION: props.metaGraphApiVersion,
         WHATSAPP_EXPORT_BUSINESS_NAMES: props.whatsappExportBusinessNames,
@@ -933,6 +935,12 @@ export class ApiStack extends cdk.Stack {
           "Optional Instagram professional account id used to identify outbound Graph messages.",
       }
     );
+    const metaAppId = new cdk.CfnParameter(this, "MetaAppId", {
+      type: "String",
+      default: "",
+      description:
+        "Meta app id used to verify Page subscribed_apps includes messages for this app.",
+    });
     const metaGraphApiBaseUrl = new cdk.CfnParameter(
       this,
       "MetaGraphApiBaseUrl",
@@ -2437,6 +2445,7 @@ export class ApiStack extends cdk.Stack {
       metaPageAccessToken: metaPageAccessToken.valueAsString,
       metaPageId: metaPageId.valueAsString,
       metaInstagramUserId: metaInstagramUserId.valueAsString,
+      metaAppId: metaAppId.valueAsString,
       metaGraphApiBaseUrl: metaGraphApiBaseUrl.valueAsString,
       metaGraphApiVersion: metaGraphApiVersion.valueAsString,
       whatsappExportBusinessNames: whatsappExportBusinessNames.valueAsString,

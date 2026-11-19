@@ -359,6 +359,18 @@ function assertInboxImportUsesDedicatedPageToken(stack: cdk.Stack): void {
       "InboxImportFunction must set PUBLIC_WWW_INSTAGRAM_URL so Graph import can skip the business Instagram handle",
     );
   }
+  const metaAppId = (vars as Record<string, unknown>).META_APP_ID;
+  if (metaAppId === undefined || metaAppId === null) {
+    throw new Error(
+      "InboxImportFunction must set META_APP_ID so subscription repair targets this app",
+    );
+  }
+  const rootParams = template.findParameters("MetaAppId");
+  if (!rootParams.MetaAppId) {
+    throw new Error(
+      "Expected CfnParameter MetaAppId for Graph subscribed_apps checks",
+    );
+  }
 }
 
 function assertEventbriteMediaUploadUrl(stack: cdk.Stack): void {
