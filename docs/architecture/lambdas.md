@@ -80,7 +80,9 @@ their primary responsibilities.
   message and to `engaged` after three inbound messages on that thread; sets
   audit actor `webhook:whatsapp`),
   `/v1/meta/webhook` (GET handshake + POST Messenger/Instagram inbound and
-  `is_echo` messages; same HMAC and verify token; persists
+  `is_echo` messages from `entry.messaging`, `entry.standby`, and
+  `entry.changes` with `field: messages`; comment and mention changes are
+  ignored; same HMAC and verify token; persists
   `meta_conversations` / `meta_messages` and creates CRM contacts/leads;
   live webhooks apply the same `contacted` / `engaged` stage rules;
   Instagram ingest skips counterparties whose username matches the last

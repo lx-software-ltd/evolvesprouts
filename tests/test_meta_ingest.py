@@ -156,6 +156,114 @@ def test_ingest_stores_inbound_instagram_and_creates_lead(
     )
 
 
+def test_ingest_stores_instagram_login_changes_and_standby(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Instagram Login puts the DM on changes.value, not value.messaging."""
+    added: list[object] = []
+
+    class _FakeConversation:
+        def __init__(self, **kwargs: object) -> None:
+            self.id = uuid4()
+            self.channel = kwargs.get("channel")
+            self.platform_user_id = kwargs.get("platform_user_id")
+            self.page_id = kwargs.get("page_id")
+            self.profile_name = kwargs.get("profile_name")
+            self.contact_id = None
+            self.lead_id = None
+            self.inbound_count = 0
+            self.outbound_count = 0
+            self.first_inbound_at = None
+            self.last_message_at = None
+            self.updated_at = None
+
+    class _FakeRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def find_message_by_platform_message_id(self, _mid: str) -> None:
+            return None
+
+        def get_conversation_by_platform_user(self, **_k: object) -> None:
+            return None
+
+    class _FakeLeadRepo:
+        def __init__(self, _session: object) -> None:
+            pass
+
+        def find_open_by_contact(self, _contact_id: object) -> None:
+            return None
+
+        def create_with_event(self, *_a: object, **_k: object) -> SimpleNamespace:
+            return SimpleNamespace(id=uuid4())
+
+    class _FakeSession:
+        def add(self, obj: object) -> None:
+            added.append(obj)
+
+        def flush(self) -> None:
+            for obj in added:
+                if getattr(obj, "id", None) is None:
+                    obj.id = uuid4()
+
+    monkeypatch.setattr(ingest, "MetaConversation", _FakeConversation)
+    monkeypatch.setattr(ingest, "MetaRepository", _FakeRepo)
+    monkeypatch.setattr(funnel, "SalesLeadRepository", _FakeLeadRepo)
+    monkeypatch.setattr(ingest, "ContactRepository", _contact_repo())
+
+    payload = {
+        "object": "instagram",
+        "entry": [
+            {
+                "id": "17841400000000000",
+                "time": 1710000000000,
+                "changes": [
+                    {
+                        "field": "comments",
+                        "value": {
+                            "from": {"id": "igsid-commenter", "username": "mei.c"},
+                            "text": "Nice post",
+                            "comment_id": "c_1",
+                        },
+                    },
+                    {
+                        "field": "messages",
+                        "value": {
+                            "sender": {"id": "igsid-user-1", "username": "mei.c"},
+                            "recipient": {"id": "17841400000000000"},
+                            "timestamp": "1710000000",
+                            "message": {"mid": "m_changes", "text": "How much?"},
+                        },
+                    },
+                ],
+                "standby": [
+                    {
+                        "sender": {"id": "igsid-user-2"},
+                        "recipient": {"id": "17841400000000000"},
+                        "timestamp": 1710000001000,
+                        "message": {"mid": "m_standby", "text": "Still here"},
+                    }
+                ],
+            }
+        ],
+    }
+    counters = ingest.ingest_webhook_payload(_FakeSession(), payload)
+    bodies = sorted(
+        getattr(item, "body", None)
+        for item in added
+        if getattr(item, "body", None) is not None
+    )
+    assert counters["stored"] == 2
+    assert counters["leads_created"] == 2
+    assert bodies == ["How much?", "Still here"]
+    assert "Nice post" not in bodies
+    assert any(
+        getattr(item, "platform_user_id", None) == "igsid-user-1"
+        and getattr(item, "profile_name", None) == "mei.c"
+        for item in added
+    )
+
+
 def test_ingest_stores_messenger_echo_as_outbound(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

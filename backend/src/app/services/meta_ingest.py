@@ -34,6 +34,7 @@ _MAX_PROFILE_NAME_LENGTH = 256
 _MAX_MESSAGE_TYPE_LENGTH = 32
 _MS_TIMESTAMP_THRESHOLD = 10_000_000_000
 _CHANNEL_BY_OBJECT = {"page": MetaChannel.FACEBOOK, "instagram": MetaChannel.INSTAGRAM}
+_MESSAGE_CHANGE_FIELDS = frozenset({"messages"})
 _ANONYMOUS_NAMES = {
     MetaChannel.FACEBOOK: "Messenger contact",
     MetaChannel.INSTAGRAM: "Instagram contact",
@@ -66,12 +67,7 @@ def ingest_webhook_payload(
 
     for entry in _as_list(payload.get("entry")):
         page_id = _normalized_id(entry.get("id"), max_length=_MAX_PAGE_ID_LENGTH)
-        events = list(_as_list(entry.get("messaging")))
-        for change in _as_list(entry.get("changes")):
-            value = change.get("value")
-            if isinstance(value, Mapping):
-                events.extend(_as_list(value.get("messaging")))
-        for event in events:
+        for event in _messaging_events(entry):
             _ingest_messaging_event(
                 session,
                 event,
@@ -475,3 +471,24 @@ def _as_list(value: Any) -> list[Mapping[str, Any]]:
     if not isinstance(value, list):
         return []
     return [item for item in value if isinstance(item, Mapping)]
+
+
+def _messaging_events(entry: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    """DM events from messaging, standby, and Instagram Login changes.
+
+    Instagram Login puts the event on ``changes[].value`` when ``field`` is
+    ``messages``. Comment and mention changes stay out.
+    """
+    events = list(_as_list(entry.get("messaging")))
+    events.extend(_as_list(entry.get("standby")))
+    for change in _as_list(entry.get("changes")):
+        value = change.get("value")
+        if not isinstance(value, Mapping):
+            continue
+        nested = _as_list(value.get("messaging"))
+        if nested:
+            events.extend(nested)
+            continue
+        if change.get("field") in _MESSAGE_CHANGE_FIELDS:
+            events.append(value)
+    return events
