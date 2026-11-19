@@ -243,6 +243,7 @@ class InboxImportNestedStack extends cdk.NestedStack {
   public readonly queue: sqs.Queue;
   public readonly deadLetterQueue: sqs.Queue;
   public readonly processorFunction: lambda.Function;
+  public readonly schedulerFunction: lambda.Function;
 
   public constructor(
     scope: Construct,
@@ -316,6 +317,45 @@ class InboxImportNestedStack extends cdk.NestedStack {
       new lambdaEventSources.SqsEventSource(this.queue, {
         batchSize: 1,
         reportBatchItemFailures: true,
+      })
+    );
+
+    this.schedulerFunction = lambdaFactory.create(
+      "MetaGraphSyncSchedulerFunction",
+      {
+        functionName: name("MetaGraphSyncSchedulerFunction"),
+        handler: "lambda/meta_graph_sync_scheduler/handler.lambda_handler",
+        timeout: cdk.Duration.seconds(30),
+        memorySize: 256,
+        manageLogGroup: false,
+        reservedConcurrentExecutions: -1,
+        environment: {
+          DATABASE_SECRET_ARN: props.databaseSecretArn,
+          DATABASE_NAME: "evolvesprouts",
+          DATABASE_USERNAME: "evolvesprouts_admin",
+          DATABASE_PROXY_ENDPOINT: props.databaseProxyEndpoint,
+          DATABASE_IAM_AUTH: "true",
+          INBOX_IMPORT_QUEUE_URL: this.queue.queueUrl,
+        },
+      }
+    ).function;
+    this.queue.grantSendMessages(this.schedulerFunction);
+
+    const metaGraphSyncSchedule = new cdk.aws_events.Rule(
+      this,
+      "MetaGraphSyncSchedule",
+      {
+        ruleName: name("meta-graph-sync-schedule"),
+        description:
+          "Enqueue incremental Meta Graph inbox sync hourly as webhook insurance",
+        schedule: cdk.aws_events.Schedule.cron({
+          minute: "0",
+        }),
+      }
+    );
+    metaGraphSyncSchedule.addTarget(
+      new cdk.aws_events_targets.LambdaFunction(this.schedulerFunction, {
+        retryAttempts: 2,
       })
     );
 
@@ -2405,6 +2445,8 @@ export class ApiStack extends cdk.Stack {
     database.grantAdminUserSecretRead(inboxImport.processorFunction);
     database.grantConnect(inboxImport.processorFunction, "evolvesprouts_admin");
     awsProxyFunction.grantInvoke(inboxImport.processorFunction);
+    database.grantAdminUserSecretRead(inboxImport.schedulerFunction);
+    database.grantConnect(inboxImport.schedulerFunction, "evolvesprouts_admin");
     inboxImport.queue.grantSendMessages(adminFunction);
 
     // -------------------------------------------------------------------------

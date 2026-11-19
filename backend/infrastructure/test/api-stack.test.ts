@@ -499,6 +499,54 @@ function assertInboxImportHasNoReservedConcurrency(stack: cdk.Stack): void {
   }
 }
 
+function assertMetaGraphSyncSchedule(stack: cdk.Stack): void {
+  const nested = stack.node.tryFindChild("InboxImport");
+  if (!(nested instanceof cdk.NestedStack)) {
+    throw new Error("Expected InboxImport nested stack on ApiStack");
+  }
+  const template = Template.fromStack(nested);
+  const functions = template.findResources("AWS::Lambda::Function");
+  const match = Object.entries(functions).find(([, resource]) => {
+    const name = (resource.Properties ?? {}).FunctionName;
+    return name === "evolvesprouts-MetaGraphSyncSchedulerFunction";
+  });
+  if (!match) {
+    throw new Error(
+      "Expected Lambda FunctionName evolvesprouts-MetaGraphSyncSchedulerFunction",
+    );
+  }
+  const [logicalId, resource] = match;
+  const reserved = (resource.Properties ?? {}).ReservedConcurrentExecutions;
+  if (reserved !== undefined) {
+    throw new Error(
+      `MetaGraphSyncSchedulerFunction ${logicalId} must omit ReservedConcurrentExecutions; found ${JSON.stringify(reserved)}`,
+    );
+  }
+  const vars = ((resource.Properties ?? {}).Environment ?? {}).Variables ?? {};
+  if ((vars as Record<string, unknown>).INBOX_IMPORT_QUEUE_URL == null) {
+    throw new Error(
+      "MetaGraphSyncSchedulerFunction must set INBOX_IMPORT_QUEUE_URL",
+    );
+  }
+  const rules = template.findResources("AWS::Events::Rule");
+  const schedule = Object.entries(rules).find(([, resource]) => {
+    return (
+      (resource.Properties ?? {}).Name === "evolvesprouts-meta-graph-sync-schedule"
+    );
+  });
+  if (!schedule) {
+    throw new Error(
+      "Expected EventBridge rule evolvesprouts-meta-graph-sync-schedule",
+    );
+  }
+  const expression = (schedule[1].Properties ?? {}).ScheduleExpression;
+  if (expression !== "cron(0 * * * ? *)") {
+    throw new Error(
+      `Meta Graph sync schedule must be cron(0 * * * ? *) hourly; found ${JSON.stringify(expression)}`,
+    );
+  }
+}
+
 function assertSalesDailyPlanSchedule(stack: cdk.Stack): void {
   const nested = stack.node.tryFindChild("Messaging");
   if (!(nested instanceof cdk.NestedStack)) {
@@ -1144,6 +1192,7 @@ function main(): void {
   assertMailchimpWebhookInactivityAlarm(template);
   assertInboxImportHasNoReservedConcurrency(stack);
   assertInboxImportUsesDedicatedPageToken(stack);
+  assertMetaGraphSyncSchedule(stack);
   assertEventbriteProcessorTimezone(stack);
   assertEventbriteMediaUploadUrl(stack);
   assertSalesDailyPlanSchedule(stack);
