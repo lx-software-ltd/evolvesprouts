@@ -3,12 +3,13 @@
 import { Fragment, useMemo, useState } from 'react';
 
 import { DashboardCard } from '@/components/admin/dashboard/dashboard-card';
-import { useFxMultipliersForCurrencies } from '@/hooks/use-fx-multipliers-for-currencies';
+import { useIssuedInvoiceMonthFxRates } from '@/hooks/use-issued-invoice-month-fx-rates';
 import type { CustomerInvoiceSummary } from '@/lib/billing-api';
 import { getAdminDefaultCurrencyCode } from '@/lib/config';
 import {
   buildIssuedInvoiceMonthTotals,
   collectIssuedInvoiceMonthForeignCurrencies,
+  issuedInvoiceRateWindow,
 } from '@/lib/dashboard-issued-invoice-months';
 import { formatAmountInDefaultCurrency } from '@/lib/vendor-spend';
 
@@ -25,6 +26,7 @@ export function IssuedInvoiceMonthsCard({
 }: IssuedInvoiceMonthsCardProps) {
   const [now] = useState(() => new Date());
   const defaultCurrency = useMemo(() => getAdminDefaultCurrencyCode(), []);
+  const rateWindow = useMemo(() => issuedInvoiceRateWindow(now), [now]);
 
   const foreignFxCodes = useMemo(() => {
     if (!issuedInvoices) {
@@ -36,40 +38,36 @@ export function IssuedInvoiceMonthsCard({
   const fxEnabled =
     foreignFxCodes.length > 0 && Boolean(issuedInvoices && !isLoading && !loadError);
 
-  const { fxMultipliers, fxError } = useFxMultipliersForCurrencies(foreignFxCodes, fxEnabled);
-
-  const multipliersForSum = useMemo(
-    () => fxMultipliers ?? new Map<string, number>(),
-    [fxMultipliers],
+  const { ratesByCurrency } = useIssuedInvoiceMonthFxRates(
+    foreignFxCodes,
+    rateWindow.startDate,
+    rateWindow.endDate,
+    defaultCurrency,
+    fxEnabled,
   );
-  const sumsReady = !fxEnabled || fxMultipliers !== null;
+
+  const ratesForSum = useMemo(() => ratesByCurrency ?? new Map(), [ratesByCurrency]);
+  const sumsReady = !fxEnabled || ratesByCurrency !== null;
 
   const report = useMemo(() => {
     if (!issuedInvoices || !sumsReady) {
       return null;
     }
-    return buildIssuedInvoiceMonthTotals(
-      issuedInvoices,
-      multipliersForSum,
-      defaultCurrency,
-      now,
-    );
-  }, [defaultCurrency, issuedInvoices, multipliersForSum, now, sumsReady]);
+    return buildIssuedInvoiceMonthTotals(issuedInvoices, ratesForSum, defaultCurrency, now);
+  }, [defaultCurrency, issuedInvoices, now, ratesForSum, sumsReady]);
 
   const fxGapMessage =
     report && report.skippedForeignCurrencies.length > 0
-      ? `FX unavailable for ${report.skippedForeignCurrencies.join(', ')}. Amounts in those currencies are excluded from totals.`
+      ? `No published rate for ${report.skippedForeignCurrencies.join(', ')} on some issue dates. Those amounts are excluded from the totals.`
       : '';
-
-  const blockingError = [loadError, fxEnabled ? fxError : ''].filter(Boolean).join(' • ');
 
   return (
     <DashboardCard width='half' title='Invoiced (last 6 months)'>
       <div className='space-y-4'>
         {isLoading || !issuedInvoices || !sumsReady ? (
           <div className='h-36 animate-pulse rounded-md bg-slate-100' aria-hidden />
-        ) : blockingError ? (
-          <p className='text-sm text-red-600'>{blockingError}</p>
+        ) : loadError ? (
+          <p className='text-sm text-red-600'>{loadError}</p>
         ) : report ? (
           <>
             {fxGapMessage ? (
@@ -82,7 +80,14 @@ export function IssuedInvoiceMonthsCard({
                 <Fragment key={month.monthKey}>
                   <dt className='text-slate-600'>{month.label}</dt>
                   <dd className='text-right font-medium tabular-nums text-slate-900'>
-                    {formatAmountInDefaultCurrency(month.total)}
+                    {month.excludedOnly ? (
+                      <>
+                        <span aria-hidden>—</span>
+                        <span className='sr-only'>Exchange rate unavailable</span>
+                      </>
+                    ) : (
+                      formatAmountInDefaultCurrency(month.total)
+                    )}
                   </dd>
                 </Fragment>
               ))}

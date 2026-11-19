@@ -8,8 +8,8 @@ vi.mock('@/lib/config', () => ({
 }));
 
 const mockUseFx = vi.fn();
-vi.mock('@/hooks/use-fx-multipliers-for-currencies', () => ({
-  useFxMultipliersForCurrencies: (...args: unknown[]) => mockUseFx(...args),
+vi.mock('@/hooks/use-issued-invoice-month-fx-rates', () => ({
+  useIssuedInvoiceMonthFxRates: (...args: unknown[]) => mockUseFx(...args),
 }));
 
 import { IssuedInvoiceMonthsCard } from '@/components/admin/dashboard/cards/issued-invoice-months-card';
@@ -33,7 +33,7 @@ describe('IssuedInvoiceMonthsCard', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW);
-    mockUseFx.mockReturnValue({ fxMultipliers: new Map(), fxError: '' });
+    mockUseFx.mockReturnValue({ ratesByCurrency: new Map() });
   });
 
   afterEach(() => {
@@ -43,7 +43,7 @@ describe('IssuedInvoiceMonthsCard', () => {
   it('shows a skeleton while invoices are loading', () => {
     render(<IssuedInvoiceMonthsCard issuedInvoices={null} loadError='' isLoading />);
     expect(document.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Nov 2026')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nov 2026 (so far)')).not.toBeInTheDocument();
   });
 
   it('shows the finance load error', () => {
@@ -57,12 +57,22 @@ describe('IssuedInvoiceMonthsCard', () => {
     expect(screen.getByText('Could not load dashboard finance data.')).toBeInTheDocument();
   });
 
-  it('lists six months with issued totals in the default currency', () => {
+  it('lists six months and marks the current month as still open', () => {
     render(
       <IssuedInvoiceMonthsCard
         issuedInvoices={[
-          invoice({ id: 'nov', total: '1000', invoiceDate: '2026-11-02' }),
-          invoice({ id: 'jun', total: '200.5', invoiceDate: '2026-06-15' }),
+          invoice({
+            id: 'nov',
+            total: '1000',
+            invoiceDate: '2026-01-15',
+            issuedAt: '2026-11-02T01:00:00.000Z',
+          }),
+          invoice({
+            id: 'jun',
+            total: '200.5',
+            invoiceDate: '2026-04-01',
+            issuedAt: '2026-06-15T02:00:00.000Z',
+          }),
         ]}
         loadError=''
         isLoading={false}
@@ -71,50 +81,21 @@ describe('IssuedInvoiceMonthsCard', () => {
 
     expect(screen.getByRole('heading', { name: 'Invoiced (last 6 months)' })).toBeInTheDocument();
     const terms = screen.getAllByRole('term').map((term) => term.textContent);
-    expect(terms).toEqual(['Nov 2026', 'Oct 2026', 'Sep 2026', 'Aug 2026', 'Jul 2026', 'Jun 2026']);
+    expect(terms).toEqual([
+      'Nov 2026 (so far)',
+      'Oct 2026',
+      'Sep 2026',
+      'Aug 2026',
+      'Jul 2026',
+      'Jun 2026',
+    ]);
     expect(screen.getByText('HK$1,000.00')).toBeInTheDocument();
     expect(screen.getByText('HK$200.50')).toBeInTheDocument();
     expect(screen.getAllByText('HK$0.00')).toHaveLength(4);
   });
 
-  it('keeps the skeleton until foreign-currency multipliers resolve', () => {
-    mockUseFx.mockReturnValue({ fxMultipliers: null, fxError: '' });
-    render(
-      <IssuedInvoiceMonthsCard
-        issuedInvoices={[invoice({ id: 'usd', currency: 'USD', total: '10', invoiceDate: '2026-11-02' })]}
-        loadError=''
-        isLoading={false}
-      />,
-    );
-    expect(document.querySelector('.animate-pulse')).toBeTruthy();
-    expect(mockUseFx).toHaveBeenCalledWith(['USD'], true);
-  });
-
-  it('warns when a foreign currency has no multiplier and still shows converted months', () => {
-    mockUseFx.mockReturnValue({ fxMultipliers: new Map([['USD', 7.8]]), fxError: '' });
-    render(
-      <IssuedInvoiceMonthsCard
-        issuedInvoices={[
-          invoice({ id: 'hkd', total: '22', currency: 'HKD', invoiceDate: '2026-11-01' }),
-          invoice({ id: 'usd', total: '10', currency: 'USD', invoiceDate: '2026-11-02' }),
-          invoice({ id: 'eur', total: '5', currency: 'EUR', invoiceDate: '2026-11-03' }),
-        ]}
-        loadError=''
-        isLoading={false}
-      />,
-    );
-
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'FX unavailable for EUR. Amounts in those currencies are excluded from totals.',
-    );
-    expect(screen.getByText('HK$100.00')).toBeInTheDocument();
-  });
-
-  it('shows an FX load error', () => {
-    mockUseFx.mockReturnValue({
-      fxMultipliers: new Map(),
-      fxError: 'Could not load FX rates for currency conversion.',
-    });
+  it('keeps the skeleton until historical rates resolve', () => {
+    mockUseFx.mockReturnValue({ ratesByCurrency: null });
     render(
       <IssuedInvoiceMonthsCard
         issuedInvoices={[invoice({ id: 'usd', currency: 'USD', total: '10' })]}
@@ -122,6 +103,46 @@ describe('IssuedInvoiceMonthsCard', () => {
         isLoading={false}
       />,
     );
-    expect(screen.getByText('Could not load FX rates for currency conversion.')).toBeInTheDocument();
+    expect(document.querySelector('.animate-pulse')).toBeTruthy();
+    expect(mockUseFx).toHaveBeenCalledWith(['USD'], '2026-05-25', '2026-11-19', 'HKD', true);
+  });
+
+  it('converts with the dated rate, keeps other months, and names a currency with no rate', () => {
+    mockUseFx.mockReturnValue({
+      ratesByCurrency: new Map([['USD', new Map([['2026-11-02', 7.8]])]]),
+    });
+    render(
+      <IssuedInvoiceMonthsCard
+        issuedInvoices={[
+          invoice({ id: 'hkd', total: '22', currency: 'HKD' }),
+          invoice({ id: 'usd', total: '10', currency: 'USD' }),
+          invoice({ id: 'eur', total: '5', currency: 'EUR' }),
+        ]}
+        loadError=''
+        isLoading={false}
+      />,
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'No published rate for EUR on some issue dates. Those amounts are excluded from the totals.',
+    );
+    expect(screen.getByText('HK$100.00')).toBeInTheDocument();
+    expect(screen.getByText('Oct 2026')).toBeInTheDocument();
+  });
+
+  it('shows a dash instead of zero when a month’s invoices were all excluded', () => {
+    mockUseFx.mockReturnValue({ ratesByCurrency: new Map() });
+    render(
+      <IssuedInvoiceMonthsCard
+        issuedInvoices={[invoice({ id: 'eur', currency: 'EUR', total: '10' })]}
+        loadError=''
+        isLoading={false}
+      />,
+    );
+
+    expect(screen.getByText('Exchange rate unavailable')).toBeInTheDocument();
+    expect(screen.getAllByText('HK$0.00')).toHaveLength(5);
+    expect(screen.getByRole('status')).toHaveTextContent('No published rate for EUR');
+    expect(screen.queryByText('Could not load FX rates for currency conversion.')).not.toBeInTheDocument();
   });
 });
