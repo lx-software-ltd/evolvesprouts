@@ -38,7 +38,15 @@ export interface IssuedInvoiceMonthTotal {
 export interface IssuedInvoiceMonthReport {
   /** Current month first, then the five preceding months. */
   months: IssuedInvoiceMonthTotal[];
+  /** Currencies with no usable rate inside the lookback. A failed request looks the same here. */
   skippedForeignCurrencies: string[];
+  /**
+   * Currencies that converted with a published rate dated before the Hong Kong issue date.
+   * The lookback is at most {@link ISSUED_INVOICE_FX_LOOKBACK_DAYS} days, so this is at most a week early.
+   */
+  priorRateCurrencies: string[];
+  /** Issued invoices with a blank currency, counted in the admin default currency. */
+  assumedDefaultCurrencyCount: number;
 }
 
 /** Published rates for one currency, keyed by `YYYY-MM-DD`. */
@@ -155,13 +163,16 @@ export function collectIssuedInvoiceMonthForeignCurrencies(
   return Array.from(codes).sort();
 }
 
-function rateOnOrBefore(rates: Map<string, number> | undefined, issueDate: string): number | null {
+function rateOnOrBefore(
+  rates: Map<string, number> | undefined,
+  issueDate: string,
+): { rate: number; date: string } | null {
   if (!rates) {
     return null;
   }
   const exact = rates.get(issueDate);
   if (exact != null && Number.isFinite(exact)) {
-    return exact;
+    return { rate: exact, date: issueDate };
   }
   const earliest = addIsoDays(issueDate, -ISSUED_INVOICE_FX_LOOKBACK_DAYS);
   let bestDate: string | null = null;
@@ -175,7 +186,7 @@ function rateOnOrBefore(rates: Map<string, number> | undefined, issueDate: strin
       bestRate = rate;
     }
   }
-  return bestDate == null ? null : bestRate;
+  return bestDate == null ? null : { rate: bestRate, date: bestDate };
 }
 
 export function buildIssuedInvoiceMonthTotals(
@@ -191,6 +202,8 @@ export function buildIssuedInvoiceMonthTotals(
   );
   const keys = new Set(buckets.keys());
   const skipped = new Set<string>();
+  const priorRates = new Set<string>();
+  let assumedDefaultCurrencyCount = 0;
 
   for (const invoice of invoices) {
     const placed = invoiceCountsInWindow(invoice, keys);
@@ -205,19 +218,26 @@ export function buildIssuedInvoiceMonthTotals(
     if (!bucket) {
       continue;
     }
-    const currency = invoice.currency?.trim().toUpperCase() || target;
+    const rawCurrency = invoice.currency?.trim() ?? '';
+    const currency = rawCurrency.toUpperCase() || target;
+    if (!rawCurrency) {
+      assumedDefaultCurrencyCount += 1;
+    }
     if (currency === target) {
       bucket.total += amount;
       bucket.included += 1;
       continue;
     }
-    const rate = rateOnOrBefore(ratesByCurrency.get(currency), placed.date);
-    if (rate == null) {
+    const matched = rateOnOrBefore(ratesByCurrency.get(currency), placed.date);
+    if (matched == null) {
       skipped.add(currency);
       bucket.excluded += 1;
       continue;
     }
-    bucket.total += amount * rate;
+    if (matched.date !== placed.date) {
+      priorRates.add(currency);
+    }
+    bucket.total += amount * matched.rate;
     bucket.included += 1;
   }
 
@@ -233,5 +253,7 @@ export function buildIssuedInvoiceMonthTotals(
       };
     }),
     skippedForeignCurrencies: Array.from(skipped).sort(),
+    priorRateCurrencies: Array.from(priorRates).sort(),
+    assumedDefaultCurrencyCount,
   };
 }

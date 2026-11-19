@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CustomerInvoiceSummary } from '@/lib/billing-api';
@@ -13,6 +13,7 @@ vi.mock('@/hooks/use-issued-invoice-month-fx-rates', () => ({
 }));
 
 import { IssuedInvoiceMonthsCard } from '@/components/admin/dashboard/cards/issued-invoice-months-card';
+import { nextHongKongMonthBoundary } from '@/lib/fiscal-year';
 
 const NOW = new Date('2026-11-19T04:00:00.000Z');
 
@@ -33,7 +34,7 @@ describe('IssuedInvoiceMonthsCard', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW);
-    mockUseFx.mockReturnValue({ ratesByCurrency: new Map() });
+    mockUseFx.mockReturnValue({ ratesByCurrency: new Map(), failedCurrencies: [] });
   });
 
   afterEach(() => {
@@ -95,7 +96,7 @@ describe('IssuedInvoiceMonthsCard', () => {
   });
 
   it('keeps the skeleton until historical rates resolve', () => {
-    mockUseFx.mockReturnValue({ ratesByCurrency: null });
+    mockUseFx.mockReturnValue({ ratesByCurrency: null, failedCurrencies: [] });
     render(
       <IssuedInvoiceMonthsCard
         issuedInvoices={[invoice({ id: 'usd', currency: 'USD', total: '10' })]}
@@ -110,6 +111,7 @@ describe('IssuedInvoiceMonthsCard', () => {
   it('converts with the dated rate, keeps other months, and names a currency with no rate', () => {
     mockUseFx.mockReturnValue({
       ratesByCurrency: new Map([['USD', new Map([['2026-11-02', 7.8]])]]),
+      failedCurrencies: [],
     });
     render(
       <IssuedInvoiceMonthsCard
@@ -131,7 +133,7 @@ describe('IssuedInvoiceMonthsCard', () => {
   });
 
   it('shows a dash instead of zero when a month’s invoices were all excluded', () => {
-    mockUseFx.mockReturnValue({ ratesByCurrency: new Map() });
+    mockUseFx.mockReturnValue({ ratesByCurrency: new Map(), failedCurrencies: [] });
     render(
       <IssuedInvoiceMonthsCard
         issuedInvoices={[invoice({ id: 'eur', currency: 'EUR', total: '10' })]}
@@ -144,5 +146,86 @@ describe('IssuedInvoiceMonthsCard', () => {
     expect(screen.getAllByText('HK$0.00')).toHaveLength(5);
     expect(screen.getByRole('status')).toHaveTextContent('No published rate for EUR');
     expect(screen.queryByText('Could not load FX rates for currency conversion.')).not.toBeInTheDocument();
+  });
+
+  it('names a failed rate request separately from a missing published rate', () => {
+    mockUseFx.mockReturnValue({
+      ratesByCurrency: new Map(),
+      failedCurrencies: ['USD'],
+    });
+    render(
+      <IssuedInvoiceMonthsCard
+        issuedInvoices={[
+          invoice({ id: 'usd', currency: 'USD', total: '10' }),
+          invoice({ id: 'eur', currency: 'EUR', total: '5' }),
+        ]}
+        loadError=''
+        isLoading={false}
+      />,
+    );
+
+    const statuses = screen.getAllByRole('status').map((node) => node.textContent);
+    expect(statuses).toEqual([
+      'Could not load exchange rates for USD. Those amounts are excluded from the totals.',
+      'No published rate for EUR on some issue dates. Those amounts are excluded from the totals.',
+    ]);
+  });
+
+  it('says when a blank currency was counted as the default', () => {
+    render(
+      <IssuedInvoiceMonthsCard
+        issuedInvoices={[invoice({ id: 'blank', currency: '', total: '40' })]}
+        loadError=''
+        isLoading={false}
+      />,
+    );
+    expect(screen.getByText('HK$40.00')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '1 invoice has no currency and was counted as HKD.',
+    );
+  });
+
+  it('says when the applied rate is from an earlier published date', () => {
+    mockUseFx.mockReturnValue({
+      ratesByCurrency: new Map([['USD', new Map([['2026-11-01', 7.8]])]]),
+      failedCurrencies: [],
+    });
+    render(
+      <IssuedInvoiceMonthsCard
+        issuedInvoices={[invoice({ id: 'usd', currency: 'USD', total: '10' })]}
+        loadError=''
+        isLoading={false}
+      />,
+    );
+    expect(screen.getByText('HK$78.00')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Rate for USD is from the previous published date, not the issue date.',
+    );
+  });
+
+  it('moves to the next Hong Kong month while the tab stays open', () => {
+    render(
+      <IssuedInvoiceMonthsCard issuedInvoices={[]} loadError='' isLoading={false} />,
+    );
+    expect(screen.getByText('Nov 2026 (so far)')).toBeInTheDocument();
+
+    const delay = nextHongKongMonthBoundary(NOW).getTime() - NOW.getTime();
+    act(() => {
+      vi.advanceTimersByTime(delay);
+    });
+
+    expect(screen.getByText('Dec 2026 (so far)')).toBeInTheDocument();
+    expect(screen.getByText('Nov 2026')).toBeInTheDocument();
+  });
+
+  it('catches a Hong Kong month change when the tab becomes visible', () => {
+    render(
+      <IssuedInvoiceMonthsCard issuedInvoices={[]} loadError='' isLoading={false} />,
+    );
+    act(() => {
+      vi.setSystemTime(new Date('2026-11-30T16:00:00.000Z'));
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    expect(screen.getByText('Dec 2026 (so far)')).toBeInTheDocument();
   });
 });

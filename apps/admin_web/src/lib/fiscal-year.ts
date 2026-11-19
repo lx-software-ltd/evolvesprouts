@@ -80,6 +80,19 @@ export function todayHongKongDateString(now: Date = new Date()): string {
   }).format(now);
 }
 
+/**
+ * The next `00:00` in Hong Kong after `now`. Hong Kong is UTC+8 all year.
+ * An open dashboard tab uses this to move the current month without a reload.
+ */
+export function nextHongKongMonthBoundary(now: Date = new Date()): Date {
+  const today = todayHongKongDateString(now);
+  const year = Number(today.slice(0, 4));
+  const month = Number(today.slice(5, 7));
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  return new Date(Date.UTC(nextYear, nextMonth - 1, 1) - 8 * 60 * 60 * 1000);
+}
+
 /** Year options: `startYear` from `fromYear` through `throughYear` inclusive. */
 export function enumerateFiscalYearStartYears(fromYear: number, throughYear: number): number[] {
   const lo = Math.min(fromYear, throughYear);
