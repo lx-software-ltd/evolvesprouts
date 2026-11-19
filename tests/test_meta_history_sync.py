@@ -122,6 +122,94 @@ def test_sync_without_instagram_user_id_treats_business_participant_as_self(
     assert stored[1]["platform_user_id"] == "igsid-9"
 
 
+def test_incremental_sync_stops_at_channel_watermark(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Newest-first conversations stop once updated_time is at the watermark."""
+    from datetime import UTC, datetime
+
+    stored: list[object] = []
+    calls: list[str] = []
+
+    def _graph_get(
+        path: str,
+        *,
+        params: dict[str, str] | None = None,
+        token: str | None = None,
+    ) -> dict[str, object]:
+        calls.append(path)
+        if path == "page-1/conversations":
+            assert params is not None
+            assert "updated_time" in str(params.get("fields") or "")
+            return {
+                "data": [
+                    {
+                        "id": "conv-new",
+                        "updated_time": "2026-03-02T12:00:00+0000",
+                        "participants": {
+                            "data": [
+                                {"id": "page-1"},
+                                {"id": "user-new", "name": "New"},
+                            ]
+                        },
+                    },
+                    {
+                        "id": "conv-old",
+                        "updated_time": "2026-03-01T08:00:00+0000",
+                        "participants": {
+                            "data": [
+                                {"id": "page-1"},
+                                {"id": "user-old", "name": "Old"},
+                            ]
+                        },
+                    },
+                ],
+                "paging": {"cursors": {"after": "more"}},
+            }
+        if path == "conv-new/messages":
+            return {
+                "data": [
+                    {
+                        "id": "m_new",
+                        "created_time": "2026-03-02T12:00:00+0000",
+                        "from": {"id": "user-new"},
+                        "message": "fresh",
+                    },
+                    {
+                        "id": "m_seen",
+                        "created_time": "2026-03-01T09:00:00+0000",
+                        "from": {"id": "user-new"},
+                        "message": "already stored era",
+                    },
+                ]
+            }
+        if path == "conv-old/messages":
+            raise AssertionError("old conversation should not be fetched")
+        raise AssertionError(f"unexpected Graph path {path}")
+
+    monkeypatch.setenv("META_PAGE_ID", "page-1")
+    monkeypatch.setattr(sync, "resolve_page_access_token", lambda: "page-token")
+    monkeypatch.setattr(sync, "store_meta_message", _store_capturing(stored))
+    monkeypatch.setattr(sync, "graph_get", _with_page_lookup(_graph_get))
+    monkeypatch.setattr(
+        sync,
+        "_channel_watermark",
+        lambda _session, _channel: datetime(2026, 3, 1, 10, 0, tzinfo=UTC),
+    )
+
+    counters = sync.sync_meta_channel_history(
+        SimpleNamespace(),
+        MetaChannel.FACEBOOK,
+        incremental=True,
+    )
+    assert counters["conversations"] == 1
+    assert counters["stored"] == 1
+    assert stored[0]["create_leads"] is False
+    assert stored[0]["platform_user_id"] == "user-new"
+    assert "conv-old/messages" not in calls
+    assert counters.get("stopped_at_watermark") == 1
+
+
 def test_sync_continues_when_subscription_check_fails(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import os
 from collections.abc import Mapping
+from datetime import UTC, datetime
 from typing import Any
 
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models.enums import MetaChannel, MetaMessageDirection
+from app.db.models.meta import MetaConversation
 from app.services.meta_graph_client import (
     MetaGraphApiError,
     graph_get,
@@ -29,12 +32,14 @@ _MESSAGE_LIMIT = 20
 _MESSAGE_PAGE = 5
 _MAX_PAGES = 80
 _MESSAGE_FIELDS = "id,created_time,from{id,name,username},message"
-_CONVERSATION_FIELDS = "id,participants.limit(5){id,name,username}"
+_CONVERSATION_FIELDS = "id,updated_time,participants.limit(5){id,name,username}"
 
 
 def sync_meta_channel_history(
     session: Session,
     channel: MetaChannel,
+    *,
+    incremental: bool = False,
 ) -> dict[str, int]:
     """Import the last 20 Graph messages per conversation for one channel."""
     counters = {
@@ -64,6 +69,7 @@ def sync_meta_channel_history(
     iba_id = _instagram_business_account_id(page_id, token=page_token)
     if iba_id:
         self_ids.add(iba_id)
+    watermark = _channel_watermark(session, channel) if incremental else None
     after: str | None = None
     pages = 0
     while pages < _MAX_PAGES:
@@ -83,18 +89,29 @@ def sync_meta_channel_history(
         rows = payload.get("data")
         if not isinstance(rows, list):
             break
+        stop_paging = False
         for row in rows:
-            if isinstance(row, Mapping):
-                _ingest_conversation(
-                    session,
-                    row,
-                    channel=channel,
-                    page_id=page_id,
-                    self_ids=self_ids,
-                    counters=counters,
-                    page_token=page_token,
-                )
-                _commit_progress(session)
+            if not isinstance(row, Mapping):
+                continue
+            if watermark is not None:
+                updated = _parse_graph_datetime(row.get("updated_time"))
+                if updated is not None and updated <= watermark:
+                    counters["stopped_at_watermark"] = 1
+                    stop_paging = True
+                    break
+            _ingest_conversation(
+                session,
+                row,
+                channel=channel,
+                page_id=page_id,
+                self_ids=self_ids,
+                counters=counters,
+                page_token=page_token,
+                watermark=watermark,
+            )
+            _commit_progress(session)
+        if stop_paging:
+            break
         paging = payload.get("paging")
         cursors = paging.get("cursors") if isinstance(paging, Mapping) else None
         next_after = cursors.get("after") if isinstance(cursors, Mapping) else None
@@ -108,6 +125,34 @@ def _commit_progress(session: Session) -> None:
     commit = getattr(session, "commit", None)
     if callable(commit):
         commit()
+
+
+def _channel_watermark(session: Session, channel: MetaChannel) -> datetime | None:
+    """Latest stored conversation activity for the channel, if any."""
+    statement = select(func.max(MetaConversation.last_message_at)).where(
+        MetaConversation.channel == channel
+    )
+    value = session.execute(statement).scalar_one_or_none()
+    if not isinstance(value, datetime):
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
+def _parse_graph_datetime(raw_value: Any) -> datetime | None:
+    if not isinstance(raw_value, str) or not raw_value.strip():
+        return None
+    normalized = raw_value.strip().replace("Z", "+00:00")
+    if len(normalized) >= 5 and normalized[-5] in "+-" and normalized[-3] != ":":
+        normalized = f"{normalized[:-2]}:{normalized[-2:]}"
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
 
 
 def _instagram_business_account_id(page_id: str, *, token: str) -> str | None:
@@ -183,7 +228,10 @@ def _list_conversation_page(
 
 
 def _conversation_messages(
-    conversation_id: str, *, token: str
+    conversation_id: str,
+    *,
+    token: str,
+    watermark: datetime | None = None,
 ) -> list[Mapping[str, Any]]:
     collected: list[Mapping[str, Any]] = []
     after: str | None = None
@@ -208,7 +256,18 @@ def _conversation_messages(
         rows = payload.get("data")
         if not isinstance(rows, list) or not rows:
             break
-        collected.extend(row for row in rows if isinstance(row, Mapping))
+        hit_watermark = False
+        for row in rows:
+            if not isinstance(row, Mapping):
+                continue
+            if watermark is not None:
+                created = _parse_graph_datetime(row.get("created_time"))
+                if created is not None and created <= watermark:
+                    hit_watermark = True
+                    break
+            collected.append(row)
+        if hit_watermark:
+            break
         paging = payload.get("paging")
         cursors = paging.get("cursors") if isinstance(paging, Mapping) else None
         next_after = cursors.get("after") if isinstance(cursors, Mapping) else None
@@ -216,6 +275,22 @@ def _conversation_messages(
             break
         after = next_after.strip()
     return collected[:_MESSAGE_LIMIT]
+
+
+def _messages_after_watermark(
+    rows: list[Mapping[str, Any]],
+    *,
+    watermark: datetime | None,
+) -> list[Mapping[str, Any]]:
+    if watermark is None:
+        return rows
+    kept: list[Mapping[str, Any]] = []
+    for row in rows:
+        created = _parse_graph_datetime(row.get("created_time"))
+        if created is not None and created <= watermark:
+            break
+        kept.append(row)
+    return kept
 
 
 def _ingest_conversation(
@@ -227,6 +302,7 @@ def _ingest_conversation(
     self_ids: set[str],
     counters: dict[str, int],
     page_token: str,
+    watermark: datetime | None = None,
 ) -> None:
     conversation_id = str(row.get("id") or "").strip()
     detail = row
@@ -265,13 +341,20 @@ def _ingest_conversation(
         messages_wrapper.get("data") if isinstance(messages_wrapper, Mapping) else None
     )
     if isinstance(nested_rows, list):
-        message_rows = [item for item in nested_rows if isinstance(item, Mapping)]
+        message_rows = _messages_after_watermark(
+            [item for item in nested_rows if isinstance(item, Mapping)],
+            watermark=watermark,
+        )
     else:
         if not conversation_id:
             counters["skipped"] += 1
             return
         try:
-            message_rows = _conversation_messages(conversation_id, token=page_token)
+            message_rows = _conversation_messages(
+                conversation_id,
+                token=page_token,
+                watermark=watermark,
+            )
         except MetaGraphApiError as exc:
             if is_graph_skippable_failure(exc):
                 counters["skipped"] += 1

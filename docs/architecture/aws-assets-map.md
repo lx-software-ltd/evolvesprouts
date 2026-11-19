@@ -418,6 +418,7 @@ Each Lambda function created by `PythonLambda` construct includes:
 | `ExpenseParserFunction` | `lambda/expense_parser/handler.lambda_handler` | 512 MB | 90s | Yes | SQS-triggered expense invoice parser (nested stack `evolvesprouts-Messaging`) |
 | `SalesDailyPlanFunction` | `lambda/sales_daily_plan/handler.lambda_handler` | 512 MB | 180s | Yes | SQS-triggered org-wide sales daily plan (nested stack `evolvesprouts-Messaging`) |
 | `SalesDailyPlanSchedulerFunction` | `lambda/sales_daily_plan_scheduler/handler.lambda_handler` | 256 MB | 30s | Yes | EventBridge 06:00 HKT enqueue for sales daily plan (nested stack `evolvesprouts-Messaging`) |
+| `MetaGraphSyncSchedulerFunction` | `lambda/meta_graph_sync_scheduler/handler.lambda_handler` | 256 MB | 30s | Yes | EventBridge hourly enqueue for incremental Meta Graph inbox sync (nested stack `InboxImport`) |
 | `InboundInvoiceEmailProcessor` | `lambda/inbound_invoice_email/handler.lambda_handler` | 512 MB | 30s | Yes | SQS-triggered inbound invoice email processor |
 | `EventbriteSyncProcessor` | `lambda/eventbrite_sync_processor/handler.lambda_handler` | 512 MB | 120s | Yes | SQS-triggered Eventbrite sync processor |
 
@@ -461,6 +462,7 @@ For each function above, the following resources are created:
 | `ExpenseParserFunction` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, S3 read for the assets bucket, read OpenRouter API secret (Secrets Manager + KMS decrypt on the `secrets-encryption-key` CMK), invoke `AwsApiProxyFunction` |
 | `SalesDailyPlanFunction` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, read OpenRouter API secret (Secrets Manager + KMS decrypt on the `secrets-encryption-key` CMK), invoke `AwsApiProxyFunction` |
 | `SalesDailyPlanSchedulerFunction` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, SQS send on `evolvesprouts-sales-daily-plan-queue` |
+| `MetaGraphSyncSchedulerFunction` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, SQS send on `evolvesprouts-inbox-import-queue` |
 | `InboundInvoiceEmailProcessor` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, S3 read/write for the assets bucket (including the `inbound-email/raw/` prefix), publish to the expense parser SNS topic |
 | `EventbriteSyncProcessor` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, read Eventbrite token secret, invoke `AwsApiProxyFunction` |
 | `InboxImportFunction` | Read DB secret, connect to RDS Proxy as `evolvesprouts_admin`, S3 read on the assets bucket, invoke `AwsApiProxyFunction` for Graph HTTP; Graph token is `META_PAGE_ACCESS_TOKEN` from `MetaPageAccessToken`; `PUBLIC_WWW_INSTAGRAM_URL` from `PublicWwwInstagramUrl` skips Graph threads whose participant username is the business Instagram handle |

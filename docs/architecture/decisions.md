@@ -1140,6 +1140,13 @@ pulling history inline on the admin Lambda. Jobs live in `inbox_import_jobs`.
   `messages` is missing; record `subscription_ok` /
   `subscription_repaired` / `subscription_failed` on the job counters and
   log a warning. A subscription failure does not fail the import.
+  An hourly EventBridge schedule
+  (`evolvesprouts-meta-graph-sync-schedule`) enqueues one incremental
+  `meta_graph` job per channel via `MetaGraphSyncSchedulerFunction`.
+  Incremental jobs read conversations newest first (`updated_time`) and
+  stop at the channel's stored `last_message_at` watermark; message
+  bodies still dedupe on unique `platform_message_id`. Polled messages
+  do **not** open sales leads (same as manual history import).
   Meta only returns message **bodies** for the last 20 messages per thread.
   Persist through the same `store_meta_message` path as webhooks (unique
   `platform_message_id`). Pass participant `username` as `instagram_handle`

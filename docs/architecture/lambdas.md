@@ -903,7 +903,10 @@ their primary responsibilities.
   Graph job also checks `/{page-id}/subscribed_apps` and posts
   `messages` when missing (failure is counted and logged, not fatal).
   Customer usernames still pass through as `instagram_handle` for CRM
-  reuse.
+  reuse. Jobs with `options.incremental=true` (hourly schedule) walk
+  conversations newest first and stop at the channel
+  `last_message_at` watermark; unique `platform_message_id` still
+  dedupes with webhooks.
 - DB access: RDS Proxy with IAM auth (`evolvesprouts_admin`)
 - VPC: Yes
 - Timeout / budget: **600s** Lambda timeout with **720s** SQS visibility
@@ -925,6 +928,22 @@ their primary responsibilities.
   - `PUBLIC_WWW_INSTAGRAM_URL` (CDK `PublicWwwInstagramUrl`; last path
     segment is the business Instagram handle skipped during Graph import)
   - `INBOX_IMPORT_LAMBDA_TIMEOUT_SECONDS`
+
+### Meta Graph sync scheduler
+- Function: MetaGraphSyncSchedulerFunction
+- Handler: backend/lambda/meta_graph_sync_scheduler/handler.py
+- Trigger: EventBridge rule `evolvesprouts-meta-graph-sync-schedule`
+  (`cron(0 * * * ? *)` hourly UTC)
+- Purpose: enqueue one incremental `meta_graph` inbox import job per
+  channel (`instagram`, `facebook`) when none is already pending or
+  processing. Does not call Graph itself.
+- DB access: RDS Proxy with IAM auth (`evolvesprouts_admin`)
+- VPC: Yes
+- Timeout: 30s
+- Environment:
+  - `DATABASE_SECRET_ARN`, `DATABASE_NAME`, `DATABASE_USERNAME`,
+    `DATABASE_PROXY_ENDPOINT`, `DATABASE_IAM_AUTH`
+  - `INBOX_IMPORT_QUEUE_URL`
 
 ### Eventbrite sync processor
 - Function: EventbriteSyncProcessor

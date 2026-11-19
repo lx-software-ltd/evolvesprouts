@@ -111,7 +111,13 @@ def _run_job(job_id: UUID) -> dict[str, int]:
         if job.kind is InboxImportKind.META_GRAPH:
             if job.channel is None:
                 raise ValidationError("channel is required", field="channel")
-            counters = sync_meta_channel_history(session, job.channel)
+            options = job.options if isinstance(job.options, dict) else {}
+            incremental = bool(options.get("incremental"))
+            counters = sync_meta_channel_history(
+                session,
+                job.channel,
+                incremental=incremental,
+            )
             session.commit()
             return counters
         if job.kind is InboxImportKind.WHATSAPP_EXPORT:

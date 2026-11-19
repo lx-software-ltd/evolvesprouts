@@ -9,6 +9,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.db.models.enums import MetaChannel
 from app.db.models.inbox_import_job import (
     InboxImportJob,
     InboxImportJobStatus,
@@ -26,6 +27,29 @@ class InboxImportJobRepository(BaseRepository[InboxImportJob]):
     def get_by_id(self, job_id: UUID) -> InboxImportJob | None:
         """Fetch one job by primary key."""
         return self._session.get(InboxImportJob, job_id)
+
+    def find_in_flight_for_channel(
+        self,
+        *,
+        kind: InboxImportKind,
+        channel: MetaChannel,
+    ) -> InboxImportJob | None:
+        """Return one pending or processing job for kind+channel, if any."""
+        statement = (
+            select(InboxImportJob)
+            .where(
+                InboxImportJob.kind == kind,
+                InboxImportJob.channel == channel,
+                InboxImportJob.status.in_(
+                    (
+                        InboxImportJobStatus.PENDING,
+                        InboxImportJobStatus.PROCESSING,
+                    )
+                ),
+            )
+            .limit(1)
+        )
+        return self._session.execute(statement).scalar_one_or_none()
 
     def list_for_kind(
         self,
