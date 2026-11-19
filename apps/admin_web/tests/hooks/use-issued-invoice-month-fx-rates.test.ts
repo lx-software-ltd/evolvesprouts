@@ -37,6 +37,7 @@ describe('useIssuedInvoiceMonthFxRates', () => {
 
     expect(result.current.ratesByCurrency?.get('USD')?.get('2026-09-01')).toBe(7.8);
     expect(result.current.ratesByCurrency?.has('EUR')).toBe(false);
+    expect(result.current.failedCurrencies).toEqual(['EUR']);
     expect(mockGetRates).toHaveBeenCalledWith('USD', 'HKD', '2026-05-25', '2026-11-19');
     expect(mockGetRates).toHaveBeenCalledWith('EUR', 'HKD', '2026-05-25', '2026-11-19');
   });

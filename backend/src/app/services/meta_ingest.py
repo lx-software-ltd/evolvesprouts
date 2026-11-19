@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import Any
-from collections.abc import Mapping
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -21,6 +21,7 @@ from app.db.models import (
 from app.db.repositories.contact import ContactRepository
 from app.db.repositories.meta import MetaRepository
 from app.services.lead_funnel_automation import link_conversation_lead_and_advance
+from app.services.meta_webhook_events import collect_messaging_events
 from app.utils.logging import get_logger, mask_pii
 from app.utils.validators import extract_instagram_username, is_own_instagram_handle
 
@@ -64,21 +65,25 @@ def ingest_webhook_payload(
         counters["skipped"] += 1
         return counters
 
+    ignored_fields: list[str] = []
     for entry in _as_list(payload.get("entry")):
         page_id = _normalized_id(entry.get("id"), max_length=_MAX_PAGE_ID_LENGTH)
-        events = list(_as_list(entry.get("messaging")))
-        for change in _as_list(entry.get("changes")):
-            value = change.get("value")
-            if isinstance(value, Mapping):
-                events.extend(_as_list(value.get("messaging")))
-        for event in events:
+        events, ignored = collect_messaging_events(entry)
+        ignored_fields.extend(ignored)
+        for event, open_crm_if_new in events:
             _ingest_messaging_event(
                 session,
                 event,
                 channel=channel,
                 page_id=page_id,
                 counters=counters,
+                open_crm_if_new=open_crm_if_new,
             )
+    if ignored_fields:
+        logger.info(
+            "Ignored Meta webhook change fields: %s",
+            ",".join(sorted(set(ignored_fields))),
+        )
     return counters
 
 
@@ -89,6 +94,7 @@ def _ingest_messaging_event(
     channel: MetaChannel,
     page_id: str | None,
     counters: dict[str, int],
+    open_crm_if_new: bool = True,
 ) -> None:
     message = event.get("message")
     if not isinstance(message, Mapping):
@@ -138,6 +144,7 @@ def _ingest_messaging_event(
             MetaMessageDirection.OUTBOUND if is_echo else MetaMessageDirection.INBOUND
         ),
         counters=counters,
+        open_crm_if_new=open_crm_if_new,
     )
 
 
@@ -155,6 +162,7 @@ def store_meta_message(
     counters: dict[str, int],
     create_leads: bool = True,
     create_contacts: bool = True,
+    open_crm_if_new: bool = True,
     source_detail: str = _SOURCE_DETAIL,
 ) -> None:
     platform_message_id = _normalized_id(
@@ -174,6 +182,7 @@ def store_meta_message(
         channel=channel,
         platform_user_id=platform_user_id,
     )
+    created_conversation = conversation is None
     if conversation is None:
         conversation = MetaConversation(
             channel=channel,
@@ -214,7 +223,7 @@ def store_meta_message(
         conversation.last_message_at = sent_at
     conversation.updated_at = now
 
-    if create_contacts:
+    if create_contacts and (open_crm_if_new or not created_conversation):
         resolved_handle = instagram_handle
         if resolved_handle is None and channel is MetaChannel.INSTAGRAM:
             resolved_handle = extract_instagram_username(

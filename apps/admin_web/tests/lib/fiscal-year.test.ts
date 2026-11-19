@@ -7,6 +7,7 @@ import {
   inferCurrentFiscalYearStartYear,
   isDateInInclusiveRange,
   parseIsoDateOnly,
+  nextHongKongMonthBoundary,
   todayHongKongDateString,
 } from '@/lib/fiscal-year';
 
@@ -43,6 +44,15 @@ describe('fiscal-year', () => {
 
   it('enumerates fiscal start years descending', () => {
     expect(enumerateFiscalYearStartYears(2023, 2025)).toEqual([2025, 2024, 2023]);
+  });
+
+  it('returns the next Hong Kong month start as a UTC instant', () => {
+    expect(nextHongKongMonthBoundary(new Date('2026-11-19T04:00:00.000Z')).toISOString()).toBe(
+      '2026-11-30T16:00:00.000Z',
+    );
+    expect(nextHongKongMonthBoundary(new Date('2026-12-15T04:00:00.000Z')).toISOString()).toBe(
+      '2026-12-31T16:00:00.000Z',
+    );
   });
 
   it('returns today in Hong Kong as YYYY-MM-DD', () => {

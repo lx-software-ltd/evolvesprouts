@@ -43,6 +43,8 @@ describe('buildIssuedInvoiceMonthTotals', () => {
     ]);
     expect(report.months.every((month) => month.total === 0 && !month.excludedOnly)).toBe(true);
     expect(report.skippedForeignCurrencies).toEqual([]);
+    expect(report.priorRateCurrencies).toEqual([]);
+    expect(report.assumedDefaultCurrencyCount).toBe(0);
     expect(issuedInvoiceRateWindow(NOW)).toEqual({
       startDate: '2026-05-25',
       endDate: '2026-11-19',
@@ -199,6 +201,8 @@ describe('buildIssuedInvoiceMonthTotals', () => {
     expect(monthTotal(report, '2026-08')?.total).toBe(0);
     expect(monthTotal(report, '2026-08')?.excludedOnly).toBe(true);
     expect(report.skippedForeignCurrencies).toEqual(['EUR', 'USD']);
+    expect(report.priorRateCurrencies).toEqual(['USD']);
+    expect(report.assumedDefaultCurrencyCount).toBe(0);
     expect(
       collectIssuedInvoiceMonthForeignCurrencies(
         [
@@ -225,5 +229,36 @@ describe('buildIssuedInvoiceMonthTotals', () => {
         NOW,
       ),
     ).toEqual(['EUR', 'USD']);
+  });
+
+  it('prefers the rate published on the issue date', () => {
+    const rates: IssuedInvoiceFxSeries = new Map([
+      [
+        'USD',
+        new Map([
+          ['2026-11-01', 7],
+          ['2026-11-02', 8],
+        ]),
+      ],
+    ]);
+    const report = buildIssuedInvoiceMonthTotals(
+      [invoice({ id: 'usd', total: '10', currency: 'USD', issuedAt: '2026-11-02T01:00:00.000Z' })],
+      rates,
+      'HKD',
+      NOW,
+    );
+    expect(monthTotal(report, '2026-11')?.total).toBeCloseTo(80);
+    expect(report.priorRateCurrencies).toEqual([]);
+  });
+
+  it('counts a blank currency as the default and does not request a rate for it', () => {
+    const rows = [
+      invoice({ id: 'blank', currency: '', total: '40', issuedAt: '2026-11-02T01:00:00.000Z' }),
+      invoice({ id: 'missing', currency: '   ', total: '10', issuedAt: '2026-11-03T01:00:00.000Z' }),
+    ];
+    const report = buildIssuedInvoiceMonthTotals(rows, new Map(), 'HKD', NOW);
+    expect(monthTotal(report, '2026-11')?.total).toBeCloseTo(50);
+    expect(report.assumedDefaultCurrencyCount).toBe(2);
+    expect(collectIssuedInvoiceMonthForeignCurrencies(rows, 'HKD', NOW)).toEqual([]);
   });
 });
