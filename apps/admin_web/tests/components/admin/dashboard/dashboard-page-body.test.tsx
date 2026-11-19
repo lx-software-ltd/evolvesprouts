@@ -61,7 +61,15 @@ describe('DashboardPageBody', () => {
     await waitFor(() => {
       expect(screen.getByText(ADMIN_TAX_FISCAL_YEAR_EMPTY_MESSAGE)).toBeInTheDocument();
     });
-    expect(screen.getByRole('heading', { name: 'Sale Plan of the Day' })).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent),
+    ).toEqual([
+      'Sale Plan of the Day',
+      'Tax Position',
+      'Top contact spenders (issued invoices)',
+      'Invoiced (last 6 months)',
+    ]);
+    expect(screen.getAllByRole('term')).toHaveLength(6);
 
     expect(mockResolveBillToPrimaryContacts).not.toHaveBeenCalled();
   });
