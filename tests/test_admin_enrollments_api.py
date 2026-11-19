@@ -108,6 +108,125 @@ def test_create_enrollment_rejects_invalid_or_exhausted_discount_code(
         )
 
 
+def test_create_confirmed_enrollment_promotes_prospect_party(
+    monkeypatch: Any,
+    api_gateway_event: Any,
+) -> None:
+    instance_id = uuid4()
+    contact_id = uuid4()
+    promote_calls: list[Any] = []
+
+    class _FakeSession:
+        def commit(self) -> None:
+            return None
+
+        def flush(self) -> None:
+            return None
+
+    class _SessionCtx:
+        def __init__(self, _engine: Any) -> None:
+            self._session = _FakeSession()
+
+        def __enter__(self) -> _FakeSession:
+            return self._session
+
+        def __exit__(self, *_args: Any) -> bool:
+            return False
+
+    class _FakeEnrollment:
+        def __init__(self, **kwargs: Any) -> None:
+            self.__dict__.update(kwargs)
+
+    class _FakeEnrollmentRepository:
+        def __init__(self, _session: Any) -> None:
+            pass
+
+        def create_enrollment(self, enrollment: Any) -> Any:
+            return enrollment
+
+    monkeypatch.setattr(admin_enrollments, "Session", _SessionCtx)
+    monkeypatch.setattr(admin_enrollments, "get_engine", lambda: object())
+    monkeypatch.setattr(
+        admin_enrollments, "set_audit_context", lambda *_args, **_kwargs: None
+    )
+    monkeypatch.setattr(
+        admin_enrollments,
+        "batch_enrollment_party_display_names",
+        lambda _session, rows: ["—"] * len(rows),
+    )
+    monkeypatch.setattr(
+        admin_enrollments,
+        "parse_body",
+        lambda _event: json.loads(_event["body"]),
+    )
+    monkeypatch.setattr(
+        admin_enrollments,
+        "parse_create_enrollment_payload",
+        lambda _body: {
+            "contact_id": contact_id,
+            "family_id": None,
+            "organization_id": None,
+            "ticket_tier_id": None,
+            "discount_code_id": None,
+            "status": EnrollmentStatus.CONFIRMED,
+            "amount_paid": None,
+            "currency": None,
+            "notes": None,
+            "billing": None,
+        },
+    )
+    monkeypatch.setattr(admin_enrollments, "Enrollment", _FakeEnrollment)
+    monkeypatch.setattr(
+        admin_enrollments,
+        "EnrollmentRepository",
+        _FakeEnrollmentRepository,
+    )
+    monkeypatch.setattr(
+        admin_enrollments,
+        "promote_prospect_party_for_enrollment",
+        lambda session, enrollment: promote_calls.append((session, enrollment)),
+    )
+
+    class _FakeServiceInstanceRepository:
+        def __init__(self, _session: Any) -> None:
+            pass
+
+        def get_by_id(self, _instance_id: Any) -> None:
+            return None
+
+    monkeypatch.setattr(
+        admin_enrollments,
+        "ServiceInstanceRepository",
+        _FakeServiceInstanceRepository,
+    )
+    monkeypatch.setattr(
+        admin_enrollments,
+        "serialize_enrollment",
+        lambda e, **_kwargs: {"id": "new-1", "status": e.status.value},
+    )
+    _patch_enrollment_discount_scope_ok(monkeypatch)
+
+    response = admin_enrollments._create_enrollment(
+        api_gateway_event(
+            method="POST",
+            path="/v1/admin/services/x/instances/y/enrollments",
+            body=json.dumps(
+                {
+                    "contact_id": str(contact_id),
+                    "status": "confirmed",
+                }
+            ),
+        ),
+        instance_id=instance_id,
+        actor_sub="test-admin-sub-12345",
+    )
+
+    assert response["statusCode"] == 201
+    assert len(promote_calls) == 1
+    assert promote_calls[0][1].contact_id == contact_id
+    assert promote_calls[0][1].status == EnrollmentStatus.CONFIRMED
+
+
 def test_create_enrollment_with_discount_code_calls_validate_and_increment(
     monkeypatch: Any,
     api_gateway_event: Any,

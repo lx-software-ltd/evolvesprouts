@@ -92,18 +92,30 @@ def _confirm_registered_enrollments_for_invoice(
 ) -> None:
     for eid in _distinct_enrollment_ids_on_invoice(session, invoice_id):
         enrollment = session.get(Enrollment, eid)
-        if enrollment is None or enrollment.status != EnrollmentStatus.REGISTERED:
+        if enrollment is None:
             continue
-        enrollment.status = EnrollmentStatus.CONFIRMED
-        enrollment.cancelled_at = None
-        promote_prospect_party_for_enrollment(session, enrollment)
-        logger.info(
-            "Enrollment status set to confirmed from billing milestone",
-            extra={
-                "enrollment_id": str(eid),
-                "invoice_id": str(invoice_id),
-            },
-        )
+        # Admin FPS / manual flows often create the row already as confirmed.
+        # Still promote the prospect party when payment lands on that enrollment.
+        if enrollment.status == EnrollmentStatus.REGISTERED:
+            enrollment.status = EnrollmentStatus.CONFIRMED
+            enrollment.cancelled_at = None
+            promote_prospect_party_for_enrollment(session, enrollment)
+            logger.info(
+                "Enrollment status set to confirmed from billing milestone",
+                extra={
+                    "enrollment_id": str(eid),
+                    "invoice_id": str(invoice_id),
+                },
+            )
+        elif enrollment.status == EnrollmentStatus.CONFIRMED:
+            promote_prospect_party_for_enrollment(session, enrollment)
+            logger.info(
+                "Prospect party promoted for already-confirmed enrollment",
+                extra={
+                    "enrollment_id": str(eid),
+                    "invoice_id": str(invoice_id),
+                },
+            )
 
 
 def maybe_confirm_enrollments_on_zero_total_invoice_issue(

@@ -197,7 +197,8 @@ def test_confirm_org_promotes_org_and_prospect_members_only() -> None:
     assert contact2.relationship_type == RelationshipType.CLIENT
 
 
-def test_confirm_skips_non_registered_enrollment() -> None:
+def test_confirm_promotes_already_confirmed_enrollment() -> None:
+    """FPS / admin creates often store confirmed before payment allocation."""
     eid = uuid4()
     cid = uuid4()
     en = SimpleNamespace(
@@ -217,4 +218,27 @@ def test_confirm_skips_non_registered_enrollment() -> None:
     bec._confirm_registered_enrollments_for_invoice(session, uuid4())  # noqa: SLF001
 
     assert en.status == EnrollmentStatus.CONFIRMED
+    assert contact.relationship_type == RelationshipType.CLIENT
+
+
+def test_confirm_skips_waitlisted_and_cancelled_enrollment() -> None:
+    eid = uuid4()
+    cid = uuid4()
+    en = SimpleNamespace(
+        id=eid,
+        status=EnrollmentStatus.WAITLISTED,
+        organization_id=None,
+        family_id=None,
+        contact_id=cid,
+        cancelled_at=None,
+    )
+    contact = SimpleNamespace(id=cid, relationship_type=RelationshipType.PROSPECT)
+    session = _FakeSession()
+    session.scalar_queues.append([eid])
+    session.enrollments[eid] = en
+    session.contacts[cid] = contact
+
+    bec._confirm_registered_enrollments_for_invoice(session, uuid4())  # noqa: SLF001
+
+    assert en.status == EnrollmentStatus.WAITLISTED
     assert contact.relationship_type == RelationshipType.PROSPECT

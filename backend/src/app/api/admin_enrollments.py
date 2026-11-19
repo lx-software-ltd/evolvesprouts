@@ -251,6 +251,10 @@ def _create_enrollment(
                 actor=actor_sub,
                 request_id=request_id(event),
             )
+        # Confirmed creates (common for FPS already received) must promote even
+        # when billing is deferred or the row never passed through registered.
+        if created.status == EnrollmentStatus.CONFIRMED:
+            promote_prospect_party_for_enrollment(session, created)
         party_labels = batch_enrollment_party_display_names(session, [created])
         body = serialize_enrollment(
             created,
@@ -351,6 +355,8 @@ def _update_enrollment(
                 enrollment.cancelled_at = datetime.now(UTC)
             else:
                 enrollment.cancelled_at = None
+            if payload["status"] == EnrollmentStatus.CONFIRMED:
+                promote_prospect_party_for_enrollment(session, enrollment)
         if "enrolled_at" in payload:
             enrollment.enrolled_at = payload["enrolled_at"]
         if "amount_paid" in payload:
