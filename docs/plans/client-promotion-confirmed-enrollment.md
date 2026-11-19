@@ -7,13 +7,13 @@
 
 Contacts who paid and were enrolled as `confirmed` (common for FPS / manual admin
 enrollment) should get `relationship_type=client` so the contacts list shows the
-🤝 icon. Mel Zhou is a live example: she paid for Tantrums and limits, has a
-service instance and invoice, but stayed `prospect`.
+🤝 icon. A reported live case had a service instance and invoice but stayed
+`prospect`.
 
 ## Non-goals
 
-- Backfilling every historical prospect-with-invoice contact (except Mel Zhou,
-  who is the reported case).
+- Backfilling every historical prospect-with-invoice contact (except the one
+  reported case, corrected via API).
 - Changing when enrollments auto-invoice or how payment allocation works.
 - UI changes to the contacts list icon rules.
 
@@ -35,12 +35,12 @@ service instance and invoice, but stayed `prospect`.
 - `pytest tests/test_billing_enrollment_confirmation.py` and related enrollment
   tests pass.
 - Creating or billing a `confirmed` enrollment promotes a prospect contact.
-- Mel Zhou’s live contact is `client` (API check).
+- The reported live contact is `client` (API check).
 
 ## Rollback
 
-Revert the PR. Mel’s relationship can be set back to `prospect` in admin if
-needed.
+Revert the PR. The corrected contact’s relationship can be set back to
+`prospect` in admin if needed.
 
 ## Open questions
 
