@@ -7,8 +7,8 @@ import os
 from typing import Any
 from urllib.parse import urlencode
 
-from app.services.aws_proxy import AwsProxyError, http_invoke
 from app.services.aws_clients import get_secretsmanager_client
+from app.services.aws_proxy import AwsProxyError, http_invoke
 from app.utils.logging import get_logger
 from app.utils.retry import run_with_retry
 
@@ -122,16 +122,37 @@ def graph_get(
     token: str | None = None,
 ) -> dict[str, Any]:
     """GET a Graph path through the AWS HTTP proxy with retry on 429/5xx."""
+    return _graph_request("GET", path, params=params, token=token)
+
+
+def graph_post(
+    path: str,
+    *,
+    params: dict[str, str] | None = None,
+    token: str | None = None,
+) -> dict[str, Any]:
+    """POST a Graph path through the AWS HTTP proxy with retry on 429/5xx."""
+    return _graph_request("POST", path, params=params, token=token)
+
+
+def _graph_request(
+    method: str,
+    path: str,
+    *,
+    params: dict[str, str] | None = None,
+    token: str | None = None,
+) -> dict[str, Any]:
     access_token = token or load_page_access_token()
     query = dict(params or {})
     encoded = urlencode(query)
     suffix = f"?{encoded}" if encoded else ""
     url = f"{graph_base_url()}/{graph_api_version()}/{path.lstrip('/')}{suffix}"
+    operation_name = f"meta.graph.{method.lower()}"
 
     def _call() -> dict[str, Any]:
         try:
             response = http_invoke(
-                method="GET",
+                method=method,
                 url=url,
                 headers={"Authorization": f"Bearer {access_token}"},
                 timeout=40,
@@ -182,7 +203,7 @@ def graph_get(
         base_delay_seconds=1.0,
         should_retry=_is_retryable_graph_error,
         logger=logger,
-        operation_name="meta.graph.get",
+        operation_name=operation_name,
     )
 
 

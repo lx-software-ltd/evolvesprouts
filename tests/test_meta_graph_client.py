@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 
 import pytest
-
 from app.services import meta_graph_client as client
 from app.services.meta_graph_client import MetaGraphApiError
 
@@ -142,6 +141,34 @@ def test_graph_get_payload_too_large_is_not_retried(
     assert "reduce the amount of data" in str(exc_info.value).lower()
     assert "smaller limit" in str(exc_info.value)
     assert calls["count"] == 1
+
+
+def test_graph_post_sends_form_body(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("META_PAGE_ACCESS_TOKEN", "page-token")
+    captured: dict[str, object] = {}
+
+    def _fake_http_invoke(**kwargs: object) -> dict[str, object]:
+        captured.update(kwargs)
+        return {"status": 200, "body": json.dumps({"success": True})}
+
+    monkeypatch.setattr(client, "http_invoke", _fake_http_invoke)
+
+    payload = client.graph_post(
+        "page-1/subscribed_apps",
+        params={"subscribed_fields": "messages"},
+        token="page-token",
+    )
+
+    assert payload == {"success": True}
+    assert captured.get("method") == "POST"
+    url = str(captured.get("url") or "")
+    assert "page-1/subscribed_apps" in url
+    assert "subscribed_fields=messages" in url
+    headers = captured.get("headers")
+    assert isinstance(headers, dict)
+    assert headers.get("Authorization") == "Bearer page-token"
 
 
 def test_is_graph_skippable_failure_includes_proxy_timeout() -> None:
