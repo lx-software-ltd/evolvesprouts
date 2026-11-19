@@ -108,13 +108,13 @@ def _promote_organization_party(session: Session, organization_id: UUID) -> None
 def _confirm_registered_enrollments_for_invoice(
     session: Session, invoice_id: UUID
 ) -> None:
+    """Mark registered enrollments confirmed. Does not change CRM relationship."""
     for eid in _distinct_enrollment_ids_on_invoice(session, invoice_id):
         enrollment = session.get(Enrollment, eid)
         if enrollment is None or enrollment.status != EnrollmentStatus.REGISTERED:
             continue
         enrollment.status = EnrollmentStatus.CONFIRMED
         enrollment.cancelled_at = None
-        promote_prospect_party_for_enrollment(session, enrollment)
         logger.info(
             "Enrollment status set to confirmed from billing milestone",
             extra={
@@ -124,20 +124,26 @@ def _confirm_registered_enrollments_for_invoice(
         )
 
 
-def _promote_confirmed_enrollment_parties_for_invoice(
-    session: Session, invoice_id: UUID
+def _promote_parties_for_fully_paid_invoice(
+    session: Session, invoice: CustomerInvoice
 ) -> None:
-    """Promote parties on already-confirmed enrollments linked to the invoice."""
-    for eid in _distinct_enrollment_ids_on_invoice(session, invoice_id):
+    """Promote bill-to and linked enrollment parties after the invoice is fully paid."""
+    promote_prospect_party_for_invoice_bill_to(session, invoice)
+    for eid in _distinct_enrollment_ids_on_invoice(session, invoice.id):
         enrollment = session.get(Enrollment, eid)
-        if enrollment is None or enrollment.status != EnrollmentStatus.CONFIRMED:
+        if enrollment is None:
+            continue
+        if enrollment.status not in (
+            EnrollmentStatus.REGISTERED,
+            EnrollmentStatus.CONFIRMED,
+        ):
             continue
         promote_prospect_party_for_enrollment(session, enrollment)
         logger.info(
-            "Prospect party promoted for confirmed enrollment after payment allocation",
+            "Prospect party promoted after invoice fully paid",
             extra={
                 "enrollment_id": str(eid),
-                "invoice_id": str(invoice_id),
+                "invoice_id": str(invoice.id),
             },
         )
 
@@ -145,7 +151,10 @@ def _promote_confirmed_enrollment_parties_for_invoice(
 def maybe_confirm_enrollments_on_zero_total_invoice_issue(
     session: Session, invoice: CustomerInvoice
 ) -> None:
-    """After a zero-total invoice is issued, confirm linked registered enrollments."""
+    """After a zero-total invoice is issued, confirm linked registered enrollments.
+
+    Free / fully-discounted invoices do not promote CRM parties to client.
+    """
     if invoice.total != Decimal("0"):
         return
     _confirm_registered_enrollments_for_invoice(session, invoice.id)
@@ -154,15 +163,18 @@ def maybe_confirm_enrollments_on_zero_total_invoice_issue(
 def maybe_confirm_enrollments_on_positive_invoice_payment_allocation(
     session: Session, invoice: CustomerInvoice
 ) -> None:
-    """After payment is allocated to a positive-total issued invoice, promote clients.
+    """After payment allocation on a positive-total issued invoice.
 
-    Promotes the invoice bill-to party and enrollment parties. Registered
-    enrollments are confirmed; already-confirmed enrollments are still promoted.
+    Registered enrollments are confirmed on any allocation. CRM parties become
+    ``client`` only when the invoice is fully paid (``paid_at`` set by
+    ``recompute_invoice_settlement`` before this runs). Part-payments leave
+    parties as prospect. Promotion is not reversed on refund or void.
     """
     if invoice.status != BillingInvoiceStatus.ISSUED:
         return
     if invoice.total <= Decimal("0"):
         return
-    promote_prospect_party_for_invoice_bill_to(session, invoice)
     _confirm_registered_enrollments_for_invoice(session, invoice.id)
-    _promote_confirmed_enrollment_parties_for_invoice(session, invoice.id)
+    if invoice.paid_at is None:
+        return
+    _promote_parties_for_fully_paid_invoice(session, invoice)
