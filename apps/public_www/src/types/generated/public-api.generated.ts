@@ -177,7 +177,12 @@ export interface paths {
         /**
          * Receive Messenger and Instagram webhook events
          * @description Public webhook for inbound Messenger and Instagram Direct messages
-         *     plus `is_echo` outbound copies. Requests must include a valid
+         *     plus `is_echo` outbound copies. Direct messages are read from
+         *     `entry.messaging`, `entry.standby`, and `entry.changes` when
+         *     `field` is `messages` (`value` is the event). Instagram Login and
+         *     the Page `messages` subscription both use that `changes` envelope.
+         *     Page feed, comment, mention, and other change fields are ignored.
+         *     Requests must include a valid
          *     `X-Hub-Signature-256` HMAC of the raw body using `META_APP_SECRET`.
          *     WhatsApp payloads (`object: whatsapp_business_account`) are ignored
          *     here and stay on `/v1/whatsapp/webhook`. Instagram events whose
