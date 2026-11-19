@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 from app.db.models.enums import MetaChannel, MetaMessageDirection
+from app.services import meta_history_graph_fetch as graph_fetch
 from app.services import meta_history_sync as sync
 from app.services.meta_graph_client import MetaGraphApiError
 
@@ -44,6 +45,12 @@ def _with_page_lookup(handler):
             raise
 
     return _graph_get
+
+
+def _patch_graph_get(monkeypatch: pytest.MonkeyPatch, handler) -> None:
+    patched = _with_page_lookup(handler)
+    monkeypatch.setattr(sync, "graph_get", patched)
+    monkeypatch.setattr(graph_fetch, "graph_get", patched)
 
 
 def test_sync_without_instagram_user_id_treats_business_participant_as_self(
@@ -104,7 +111,7 @@ def test_sync_without_instagram_user_id_treats_business_participant_as_self(
     monkeypatch.delenv("PUBLIC_WWW_INSTAGRAM_URL", raising=False)
     monkeypatch.setattr(sync, "resolve_page_access_token", lambda: "page-token")
     monkeypatch.setattr(sync, "store_meta_message", _store_capturing(stored))
-    monkeypatch.setattr(sync, "graph_get", _with_page_lookup(_graph_get))
+    _patch_graph_get(monkeypatch, _graph_get)
     monkeypatch.setattr(
         sync,
         "ensure_page_messages_subscription",
@@ -208,7 +215,7 @@ def test_incremental_sync_uses_per_thread_watermark_and_lookback(
     monkeypatch.setenv("META_PAGE_ID", "page-1")
     monkeypatch.setattr(sync, "resolve_page_access_token", lambda: "page-token")
     monkeypatch.setattr(sync, "store_meta_message", _store_capturing(stored))
-    monkeypatch.setattr(sync, "graph_get", _with_page_lookup(_graph_get))
+    _patch_graph_get(monkeypatch, _graph_get)
     monkeypatch.setattr(
         sync,
         "_channel_watermark",
@@ -271,7 +278,7 @@ def test_sync_continues_when_subscription_check_fails(
     monkeypatch.setenv("META_PAGE_ID", "page-1")
     monkeypatch.setattr(sync, "resolve_page_access_token", lambda: "page-token")
     monkeypatch.setattr(sync, "store_meta_message", _store_capturing(stored))
-    monkeypatch.setattr(sync, "graph_get", _with_page_lookup(_graph_get))
+    _patch_graph_get(monkeypatch, _graph_get)
     monkeypatch.setattr(
         sync,
         "ensure_page_messages_subscription",
@@ -342,7 +349,7 @@ def test_sync_maps_graph_conversation_without_leads(
     monkeypatch.setenv("META_INSTAGRAM_USER_ID", "ig-biz-1")
     monkeypatch.setattr(sync, "resolve_page_access_token", lambda: "page-token")
     monkeypatch.setattr(sync, "store_meta_message", _store_capturing(stored))
-    monkeypatch.setattr(sync, "graph_get", _with_page_lookup(_graph_get))
+    _patch_graph_get(monkeypatch, _graph_get)
 
     counters = sync.sync_meta_channel_history(SimpleNamespace(), MetaChannel.INSTAGRAM)
     assert [path for path, _params in calls] == [
@@ -436,7 +443,7 @@ def test_sync_skips_own_instagram_handle_conversation(
     monkeypatch.delenv("PUBLIC_WWW_INSTAGRAM_URL", raising=False)
     monkeypatch.setattr(sync, "resolve_page_access_token", lambda: "page-token")
     monkeypatch.setattr(sync, "store_meta_message", _store_capturing(stored))
-    monkeypatch.setattr(sync, "graph_get", _with_page_lookup(_graph_get))
+    _patch_graph_get(monkeypatch, _graph_get)
 
     counters = sync.sync_meta_channel_history(SimpleNamespace(), MetaChannel.INSTAGRAM)
     assert counters["skipped"] >= 1
@@ -483,7 +490,7 @@ def test_sync_skips_own_handle_when_participant_has_display_name(
     monkeypatch.delenv("PUBLIC_WWW_INSTAGRAM_URL", raising=False)
     monkeypatch.setattr(sync, "resolve_page_access_token", lambda: "page-token")
     monkeypatch.setattr(sync, "store_meta_message", _store_capturing(stored))
-    monkeypatch.setattr(sync, "graph_get", _with_page_lookup(_graph_get))
+    _patch_graph_get(monkeypatch, _graph_get)
 
     counters = sync.sync_meta_channel_history(SimpleNamespace(), MetaChannel.INSTAGRAM)
     assert counters["skipped"] >= 1
@@ -531,7 +538,7 @@ def test_sync_retries_conversation_list_with_smaller_limit(
     monkeypatch.setenv("META_PAGE_ID", "page-1")
     monkeypatch.setattr(sync, "resolve_page_access_token", lambda: "page-token")
     monkeypatch.setattr(sync, "store_meta_message", _store_capturing([]))
-    monkeypatch.setattr(sync, "graph_get", _with_page_lookup(_graph_get))
+    _patch_graph_get(monkeypatch, _graph_get)
 
     counters = sync.sync_meta_channel_history(SimpleNamespace(), MetaChannel.INSTAGRAM)
     assert limits == ["5", "2"]
@@ -587,7 +594,7 @@ def test_sync_skips_conversation_when_messages_still_too_large(
     monkeypatch.setenv("META_PAGE_ID", "page-1")
     monkeypatch.setattr(sync, "resolve_page_access_token", lambda: "page-token")
     monkeypatch.setattr(sync, "store_meta_message", _store_capturing(stored))
-    monkeypatch.setattr(sync, "graph_get", _with_page_lookup(_graph_get))
+    _patch_graph_get(monkeypatch, _graph_get)
 
     counters = sync.sync_meta_channel_history(SimpleNamespace(), MetaChannel.FACEBOOK)
     assert counters["stored"] == 1
@@ -644,7 +651,7 @@ def test_sync_skips_conversation_on_proxy_timeout(
     monkeypatch.setenv("META_PAGE_ID", "page-1")
     monkeypatch.setattr(sync, "resolve_page_access_token", lambda: "page-token")
     monkeypatch.setattr(sync, "store_meta_message", _store_capturing(stored))
-    monkeypatch.setattr(sync, "graph_get", _with_page_lookup(_graph_get))
+    _patch_graph_get(monkeypatch, _graph_get)
 
     counters = sync.sync_meta_channel_history(SimpleNamespace(), MetaChannel.INSTAGRAM)
     assert counters["stored"] == 1
@@ -686,9 +693,272 @@ def test_sync_stops_paging_after_later_list_timeout(
     monkeypatch.setenv("META_PAGE_ID", "page-1")
     monkeypatch.setattr(sync, "resolve_page_access_token", lambda: "page-token")
     monkeypatch.setattr(sync, "store_meta_message", _store_capturing([]))
-    monkeypatch.setattr(sync, "graph_get", _with_page_lookup(_graph_get))
+    _patch_graph_get(monkeypatch, _graph_get)
 
     counters = sync.sync_meta_channel_history(SimpleNamespace(), MetaChannel.INSTAGRAM)
     assert counters["conversations"] == 1
     assert counters["skipped"] >= 1
     assert pages["count"] == 2
+
+
+def _fatal_graph_error() -> MetaGraphApiError:
+    return MetaGraphApiError(
+        status_code=400,
+        message="Meta Graph request failed (400): Fatal",
+        code=-1,
+        error_subcode=2207085,
+        fbtrace_id="trace-ig-1",
+        is_transient=False,
+    )
+
+
+def test_sync_keeps_partial_messages_on_fatal_page(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Fifth message page Fatal keeps earlier pages and continues the job."""
+    stored: list[object] = []
+    message_pages = {"conv-bad": 0}
+
+    def _message_batch(prefix: str, start: int, count: int) -> list[dict[str, object]]:
+        return [
+            {
+                "id": f"{prefix}-{index}",
+                "created_time": "2026-01-02T03:04:05+0000",
+                "from": {"id": "user-bad" if prefix == "bad" else "user-ok"},
+                "message": f"body-{index}",
+            }
+            for index in range(start, start + count)
+        ]
+
+    def _graph_get(
+        path: str,
+        *,
+        params: dict[str, str] | None = None,
+        token: str | None = None,
+    ) -> dict[str, object]:
+        if path == "page-1/conversations":
+            return {
+                "data": [
+                    {
+                        "id": "conv-bad",
+                        "participants": {
+                            "data": [
+                                {"id": "page-1"},
+                                {"id": "user-bad", "name": "Bad"},
+                            ]
+                        },
+                    },
+                    {
+                        "id": "conv-ok",
+                        "participants": {
+                            "data": [
+                                {"id": "page-1"},
+                                {"id": "user-ok", "name": "Ok"},
+                            ]
+                        },
+                    },
+                ]
+            }
+        if path == "conv-bad/messages":
+            message_pages["conv-bad"] += 1
+            page = message_pages["conv-bad"]
+            if page == 5:
+                raise _fatal_graph_error()
+            # Four messages per page so a fifth page is requested before the 20-cap.
+            start = (page - 1) * 4 + 1
+            return {
+                "data": _message_batch("bad", start, 4),
+                "paging": {"cursors": {"after": f"cursor-{page}"}},
+            }
+        if path == "conv-ok/messages":
+            return {
+                "data": [
+                    {
+                        "id": "ok-1",
+                        "created_time": "2026-01-02T03:04:05+0000",
+                        "from": {"id": "user-ok"},
+                        "message": "next thread",
+                    }
+                ]
+            }
+        raise AssertionError(f"unexpected Graph path {path}")
+
+    monkeypatch.setenv("META_PAGE_ID", "page-1")
+    monkeypatch.setattr(sync, "resolve_page_access_token", lambda: "page-token")
+    monkeypatch.setattr(sync, "store_meta_message", _store_capturing(stored))
+    _patch_graph_get(monkeypatch, _graph_get)
+
+    counters = sync.sync_meta_channel_history(SimpleNamespace(), MetaChannel.INSTAGRAM)
+    assert message_pages["conv-bad"] == 5
+    assert counters["conversations"] == 2
+    assert counters["stored"] == 17  # 16 from bad + 1 from ok
+    assert counters["partial_threads"] >= 1
+    assert counters["skipped"] == 0
+    assert {item["platform_user_id"] for item in stored} == {"user-bad", "user-ok"}
+    assert sum(1 for item in stored if item["platform_user_id"] == "user-bad") == 16
+
+
+def test_sync_skips_conversation_when_first_message_page_is_fatal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stored: list[object] = []
+
+    def _graph_get(
+        path: str,
+        *,
+        params: dict[str, str] | None = None,
+        token: str | None = None,
+    ) -> dict[str, object]:
+        if path == "page-1/conversations":
+            return {
+                "data": [
+                    {
+                        "id": "conv-fatal",
+                        "participants": {
+                            "data": [
+                                {"id": "page-1"},
+                                {"id": "user-f", "name": "F"},
+                            ]
+                        },
+                    },
+                    {
+                        "id": "conv-ok",
+                        "participants": {
+                            "data": [
+                                {"id": "page-1"},
+                                {"id": "user-ok", "name": "Ok"},
+                            ]
+                        },
+                    },
+                ]
+            }
+        if path == "conv-fatal/messages":
+            raise _fatal_graph_error()
+        if path == "conv-ok/messages":
+            return {
+                "data": [
+                    {
+                        "id": "ok-1",
+                        "created_time": "2026-01-02T03:04:05+0000",
+                        "from": {"id": "user-ok"},
+                        "message": "hi",
+                    }
+                ]
+            }
+        raise AssertionError(f"unexpected Graph path {path}")
+
+    monkeypatch.setenv("META_PAGE_ID", "page-1")
+    monkeypatch.setattr(sync, "resolve_page_access_token", lambda: "page-token")
+    monkeypatch.setattr(sync, "store_meta_message", _store_capturing(stored))
+    _patch_graph_get(monkeypatch, _graph_get)
+
+    counters = sync.sync_meta_channel_history(SimpleNamespace(), MetaChannel.INSTAGRAM)
+    assert counters["stored"] == 1
+    assert counters["skipped"] >= 1
+    assert stored[0]["platform_user_id"] == "user-ok"
+
+
+def test_sync_skips_conversation_when_object_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stored: list[object] = []
+
+    def _graph_get(
+        path: str,
+        *,
+        params: dict[str, str] | None = None,
+        token: str | None = None,
+    ) -> dict[str, object]:
+        if path == "page-1/conversations":
+            return {
+                "data": [
+                    {
+                        "id": "conv-gone",
+                        "participants": {
+                            "data": [
+                                {"id": "page-1"},
+                                {"id": "user-g", "name": "G"},
+                            ]
+                        },
+                    },
+                    {
+                        "id": "conv-ok",
+                        "participants": {
+                            "data": [
+                                {"id": "page-1"},
+                                {"id": "user-ok", "name": "Ok"},
+                            ]
+                        },
+                    },
+                ]
+            }
+        if path == "conv-gone/messages":
+            raise MetaGraphApiError(
+                status_code=400,
+                message="Meta Graph request failed (400): (#100) Object does not exist",
+                code=100,
+            )
+        if path == "conv-ok/messages":
+            return {
+                "data": [
+                    {
+                        "id": "ok-1",
+                        "created_time": "2026-01-02T03:04:05+0000",
+                        "from": {"id": "user-ok"},
+                        "message": "hi",
+                    }
+                ]
+            }
+        raise AssertionError(f"unexpected Graph path {path}")
+
+    monkeypatch.setenv("META_PAGE_ID", "page-1")
+    monkeypatch.setattr(sync, "resolve_page_access_token", lambda: "page-token")
+    monkeypatch.setattr(sync, "store_meta_message", _store_capturing(stored))
+    _patch_graph_get(monkeypatch, _graph_get)
+
+    counters = sync.sync_meta_channel_history(SimpleNamespace(), MetaChannel.INSTAGRAM)
+    assert counters["stored"] == 1
+    assert counters["skipped"] >= 1
+    assert counters["partial_threads"] == 0
+    assert stored[0]["platform_user_id"] == "user-ok"
+
+
+def test_sync_fails_job_on_rate_limit_after_retries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _graph_get(
+        path: str,
+        *,
+        params: dict[str, str] | None = None,
+        token: str | None = None,
+    ) -> dict[str, object]:
+        if path == "page-1/conversations":
+            return {
+                "data": [
+                    {
+                        "id": "conv-1",
+                        "participants": {
+                            "data": [
+                                {"id": "page-1"},
+                                {"id": "user-1", "name": "A"},
+                            ]
+                        },
+                    }
+                ]
+            }
+        if path == "conv-1/messages":
+            raise MetaGraphApiError(
+                status_code=400,
+                message="Application request limit reached",
+                code=4,
+            )
+        raise AssertionError(f"unexpected Graph path {path}")
+
+    monkeypatch.setenv("META_PAGE_ID", "page-1")
+    monkeypatch.setattr(sync, "resolve_page_access_token", lambda: "page-token")
+    monkeypatch.setattr(sync, "store_meta_message", _store_capturing([]))
+    _patch_graph_get(monkeypatch, _graph_get)
+
+    with pytest.raises(MetaGraphApiError) as exc_info:
+        sync.sync_meta_channel_history(SimpleNamespace(), MetaChannel.INSTAGRAM)
+    assert exc_info.value.code == 4

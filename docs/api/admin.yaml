@@ -7396,6 +7396,9 @@ components:
           type: integer
         skipped:
           type: integer
+        partial_threads:
+          type: integer
+          description: Conversations truncated after a conversation-scoped Graph error on a later message page
         contacts_created:
           type: integer
         leads_created:

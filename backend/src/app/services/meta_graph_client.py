@@ -21,8 +21,21 @@ _DEFAULT_GRAPH_VERSION = "v21.0"
 class MetaGraphApiError(RuntimeError):
     """Raised when a Graph API request fails."""
 
-    def __init__(self, *, status_code: int, message: str) -> None:
+    def __init__(
+        self,
+        *,
+        status_code: int,
+        message: str,
+        code: int | None = None,
+        error_subcode: int | None = None,
+        fbtrace_id: str | None = None,
+        is_transient: bool | None = None,
+    ) -> None:
         self.status_code = status_code
+        self.code = code
+        self.error_subcode = error_subcode
+        self.fbtrace_id = fbtrace_id
+        self.is_transient = is_transient
         super().__init__(message)
 
 
@@ -194,6 +207,10 @@ def _graph_request(
             raise MetaGraphApiError(
                 status_code=status_code,
                 message=f"Meta Graph request failed ({status_code}): {detail}",
+                code=_optional_int(error.get("code")),
+                error_subcode=_optional_int(error.get("error_subcode")),
+                fbtrace_id=_optional_str(error.get("fbtrace_id")),
+                is_transient=_optional_bool(error.get("is_transient")),
             )
         return parsed
 
@@ -214,26 +231,101 @@ def is_graph_payload_too_large(exc: BaseException) -> bool:
     return _is_graph_payload_too_large(exc.status_code, str(exc))
 
 
-def is_graph_skippable_failure(exc: BaseException) -> bool:
-    """Return True when one conversation or page can be skipped.
+# Meta Graph app-level rate-limit codes (often HTTP 400, not 429).
+_GRAPH_RATE_LIMIT_CODES = frozenset({4, 17, 32, 613})
 
-    Payload-too-large and outbound proxy timeouts (502 TimeoutError) should
-    not fail the whole inbox import after Graph retries are exhausted.
+
+def is_graph_auth_or_permission_failure(exc: BaseException) -> bool:
+    """Return True for token / permission failures that must fail the job."""
+    if not isinstance(exc, MetaGraphApiError):
+        return False
+    if exc.status_code == 401:
+        return True
+    if exc.code is None:
+        return False
+    if exc.code in {10, 102, 190}:
+        return True
+    return 200 <= exc.code <= 299
+
+
+def is_graph_rate_limit_failure(exc: BaseException) -> bool:
+    """Return True for Graph app rate-limit responses that should retry or fail."""
+    if not isinstance(exc, MetaGraphApiError):
+        return False
+    if exc.status_code == 429:
+        return True
+    return exc.code in _GRAPH_RATE_LIMIT_CODES
+
+
+def is_graph_skippable_failure(exc: BaseException) -> bool:
+    """Return True when one conversation can be skipped without failing the job.
+
+    Conversation-scoped errors: payload-too-large, outbound proxy timeouts,
+    Meta internal Fatal (code -1 / subcode 2207085), and missing objects
+    (code 100). Auth, permission, and rate-limit failures are never skippable.
     """
     if not isinstance(exc, MetaGraphApiError):
         return False
+    if is_graph_auth_or_permission_failure(exc):
+        return False
+    if is_graph_rate_limit_failure(exc):
+        return False
     if is_graph_payload_too_large(exc):
         return True
-    return exc.status_code == 502 and "timeout" in str(exc).lower()
+    if exc.status_code == 502 and "timeout" in str(exc).lower():
+        return True
+    if exc.code == 100:
+        return True
+    return bool(
+        exc.code == -1 and (exc.error_subcode == 2207085 or exc.is_transient is False)
+    )
+
+
+def is_graph_partial_page_failure(exc: BaseException) -> bool:
+    """Return True when a later message page can keep earlier pages.
+
+    Only conversation-scoped errors (same set as skippable): not rate limits
+    and not auth/permission failures.
+    """
+    return is_graph_skippable_failure(exc)
 
 
 def _is_graph_payload_too_large(status_code: int, detail: str) -> bool:
     return "reduce the amount of data" in detail.lower() and status_code >= 400
 
 
+def _optional_int(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.strip():
+        try:
+            return int(value.strip())
+        except ValueError:
+            return None
+    return None
+
+
+def _optional_str(value: Any) -> str | None:
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
+
+
+def _optional_bool(value: Any) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    return None
+
+
 def _is_retryable_graph_error(exc: Exception) -> bool:
     if isinstance(exc, MetaGraphApiError):
         if _is_graph_payload_too_large(exc.status_code, str(exc)):
             return False
+        if is_graph_skippable_failure(exc) and exc.status_code < 500:
+            return False
+        if is_graph_rate_limit_failure(exc):
+            return True
         return exc.status_code == 429 or exc.status_code >= 500
     return isinstance(exc, (ConnectionError, TimeoutError))

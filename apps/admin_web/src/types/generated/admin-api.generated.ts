@@ -3190,6 +3190,8 @@ export interface components {
             stored?: number;
             duplicates?: number;
             skipped?: number;
+            /** @description Conversations truncated after a conversation-scoped Graph error on a later message page */
+            partial_threads?: number;
             contacts_created?: number;
             leads_created?: number;
             conversations?: number;

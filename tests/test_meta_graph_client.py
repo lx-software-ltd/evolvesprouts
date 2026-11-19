@@ -183,3 +183,130 @@ def test_is_graph_skippable_failure_includes_proxy_timeout() -> None:
         )
         is False
     )
+
+
+def test_graph_get_parses_fatal_error_fields(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("META_PAGE_ACCESS_TOKEN", "page-token")
+
+    def _fake_http_invoke(**_kwargs: object) -> dict[str, object]:
+        return {
+            "status": 400,
+            "body": json.dumps(
+                {
+                    "error": {
+                        "message": "Fatal",
+                        "type": "OAuthException",
+                        "code": -1,
+                        "error_subcode": 2207085,
+                        "is_transient": False,
+                        "fbtrace_id": "trace-abc",
+                    }
+                }
+            ),
+        }
+
+    monkeypatch.setattr(client, "http_invoke", _fake_http_invoke)
+
+    with pytest.raises(MetaGraphApiError) as exc_info:
+        client.graph_get("conv-1/messages")
+
+    err = exc_info.value
+    assert err.status_code == 400
+    assert err.code == -1
+    assert err.error_subcode == 2207085
+    assert err.is_transient is False
+    assert err.fbtrace_id == "trace-abc"
+    assert client.is_graph_skippable_failure(err) is True
+
+
+def test_is_graph_skippable_failure_keeps_auth_fatal() -> None:
+    auth = MetaGraphApiError(
+        status_code=400,
+        message="expired",
+        code=190,
+        error_subcode=None,
+        is_transient=False,
+    )
+    permission = MetaGraphApiError(
+        status_code=403,
+        message="denied",
+        code=200,
+    )
+    permission_range = MetaGraphApiError(
+        status_code=400,
+        message="pages_messaging",
+        code=230,
+    )
+    session = MetaGraphApiError(status_code=400, message="expired session", code=102)
+    app_perm = MetaGraphApiError(status_code=400, message="permission", code=10)
+    assert client.is_graph_auth_or_permission_failure(auth) is True
+    assert client.is_graph_auth_or_permission_failure(permission) is True
+    assert client.is_graph_auth_or_permission_failure(permission_range) is True
+    assert client.is_graph_auth_or_permission_failure(session) is True
+    assert client.is_graph_auth_or_permission_failure(app_perm) is True
+    assert client.is_graph_skippable_failure(auth) is False
+    assert client.is_graph_skippable_failure(permission) is False
+    assert client.is_graph_skippable_failure(permission_range) is False
+    assert (
+        client.is_graph_skippable_failure(
+            MetaGraphApiError(status_code=401, message="nope")
+        )
+        is False
+    )
+
+
+def test_is_graph_partial_page_excludes_rate_limits_and_generic_4xx() -> None:
+    rate = MetaGraphApiError(
+        status_code=400,
+        message="Application request limit reached",
+        code=4,
+    )
+    generic = MetaGraphApiError(status_code=400, message="bad request", code=1)
+    fatal = MetaGraphApiError(
+        status_code=400,
+        message="Fatal",
+        code=-1,
+        error_subcode=2207085,
+        is_transient=False,
+    )
+    missing = MetaGraphApiError(status_code=400, message="does not exist", code=100)
+    assert client.is_graph_rate_limit_failure(rate) is True
+    assert client.is_graph_partial_page_failure(rate) is False
+    assert client.is_graph_skippable_failure(rate) is False
+    assert client.is_graph_partial_page_failure(generic) is False
+    assert client.is_graph_skippable_failure(generic) is False
+    assert client.is_graph_partial_page_failure(fatal) is True
+    assert client.is_graph_skippable_failure(missing) is True
+    assert client.is_graph_partial_page_failure(missing) is True
+
+
+def test_graph_rate_limit_code_is_retried(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("META_PAGE_ACCESS_TOKEN", "page-token")
+    calls = {"count": 0}
+
+    def _fake_http_invoke(**_kwargs: object) -> dict[str, object]:
+        calls["count"] += 1
+        if calls["count"] < 3:
+            return {
+                "status": 400,
+                "body": json.dumps(
+                    {
+                        "error": {
+                            "message": "Application request limit reached",
+                            "code": 4,
+                        }
+                    }
+                ),
+            }
+        return {"status": 200, "body": json.dumps({"data": []})}
+
+    monkeypatch.setattr(client, "http_invoke", _fake_http_invoke)
+    monkeypatch.setattr("app.utils.retry.time.sleep", lambda _s: None)
+
+    payload = client.graph_get("page-1/conversations")
+    assert payload == {"data": []}
+    assert calls["count"] == 3

@@ -899,8 +899,13 @@ their primary responsibilities.
   missing contacts; does not create new sales leads. Instagram Graph
   import loads the Page `instagram_business_account.id`, treats the
   configured public Instagram handle as self when listed as a
-  participant, and skips threads with no remaining counterparty. Each
-  Graph job also checks this app's `/{page-id}/subscribed_apps` row
+  participant, and skips threads with no remaining counterparty. One
+  thread that returns Meta Fatal (`code=-1` / subcode `2207085`), a
+  missing object (`code=100`), or a proxy timeout is skipped (earlier
+  message pages kept as `partial_threads`); auth/permission failures
+  and exhausted rate limits fail the job and are logged with
+  status/code/subcode/`fbtrace_id`.
+  Each Graph job also checks this app's `/{page-id}/subscribed_apps` row
   (`META_APP_ID`) and merges `messages` plus `message_echoes` when
   missing (failure is counted and logged, not fatal). Customer
   usernames still pass through as `instagram_handle` for CRM reuse.
