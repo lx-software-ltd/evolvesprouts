@@ -103,6 +103,7 @@ def test_admin_meta_lists_import_jobs(
         kind=InboxImportKind.META_GRAPH,
         channel=MetaChannel.FACEBOOK,
         attachment_asset_id=None,
+        created_by="admin-sub",
         status=InboxImportJobStatus.SUCCEEDED,
         error_message=None,
         counters={"stored": 3, "duplicates": 1, "skipped": 0},
@@ -141,3 +142,4 @@ def test_admin_meta_lists_import_jobs(
     body = json.loads(response["body"])
     assert body["total_count"] == 1
     assert body["items"][0]["counters"]["stored"] == 3
+    assert body["items"][0]["created_by"] == "admin-sub"
