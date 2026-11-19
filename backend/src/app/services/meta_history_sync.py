@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import os
-from typing import Any
 from collections.abc import Mapping
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models.enums import MetaChannel, MetaMessageDirection
+from app.db.models.meta import MetaConversation
 from app.services.meta_graph_client import (
     MetaGraphApiError,
     graph_get,
@@ -17,6 +20,7 @@ from app.services.meta_graph_client import (
     resolve_page_access_token,
 )
 from app.services.meta_ingest import is_own_instagram_handle, store_meta_message
+from app.services.meta_page_subscription import ensure_page_messages_subscription
 from app.utils.logging import get_logger, mask_pii
 from app.utils.validators import parse_instagram_username
 
@@ -28,12 +32,17 @@ _MESSAGE_LIMIT = 20
 _MESSAGE_PAGE = 5
 _MAX_PAGES = 80
 _MESSAGE_FIELDS = "id,created_time,from{id,name,username},message"
-_CONVERSATION_FIELDS = "id,participants.limit(5){id,name,username}"
+_CONVERSATION_FIELDS = "id,updated_time,participants.limit(5){id,name,username}"
+_INCREMENTAL_LOOKBACK = timedelta(hours=24)
+_MAX_PAGES_COLD = 3
 
 
 def sync_meta_channel_history(
     session: Session,
     channel: MetaChannel,
+    *,
+    incremental: bool = False,
+    create_leads: bool = False,
 ) -> dict[str, int]:
     """Import the last 20 Graph messages per conversation for one channel."""
     counters = {
@@ -57,9 +66,22 @@ def sync_meta_channel_history(
 
     platform = "instagram" if channel is MetaChannel.INSTAGRAM else "messenger"
     page_token = resolve_page_access_token()
+    counters.update(
+        ensure_page_messages_subscription(page_id=page_id, token=page_token)
+    )
+    iba_id = _instagram_business_account_id(page_id, token=page_token)
+    if iba_id:
+        self_ids.add(iba_id)
+    channel_latest = _channel_watermark(session, channel) if incremental else None
+    stop_before = (
+        channel_latest - _INCREMENTAL_LOOKBACK if channel_latest is not None else None
+    )
+    max_pages = (
+        _MAX_PAGES_COLD if incremental and channel_latest is None else _MAX_PAGES
+    )
     after: str | None = None
     pages = 0
-    while pages < _MAX_PAGES:
+    while pages < max_pages:
         pages += 1
         try:
             payload = _list_conversation_page(
@@ -76,18 +98,30 @@ def sync_meta_channel_history(
         rows = payload.get("data")
         if not isinstance(rows, list):
             break
+        stop_paging = False
         for row in rows:
-            if isinstance(row, Mapping):
-                _ingest_conversation(
-                    session,
-                    row,
-                    channel=channel,
-                    page_id=page_id,
-                    self_ids=self_ids,
-                    counters=counters,
-                    page_token=page_token,
-                )
-                _commit_progress(session)
+            if not isinstance(row, Mapping):
+                continue
+            if stop_before is not None:
+                updated = _parse_graph_datetime(row.get("updated_time"))
+                if updated is not None and updated <= stop_before:
+                    counters["stopped_at_watermark"] = 1
+                    stop_paging = True
+                    break
+            _ingest_conversation(
+                session,
+                row,
+                channel=channel,
+                page_id=page_id,
+                self_ids=self_ids,
+                counters=counters,
+                page_token=page_token,
+                incremental=incremental,
+                create_leads=create_leads,
+            )
+            _commit_progress(session)
+        if stop_paging:
+            break
         paging = payload.get("paging")
         cursors = paging.get("cursors") if isinstance(paging, Mapping) else None
         next_after = cursors.get("after") if isinstance(cursors, Mapping) else None
@@ -101,6 +135,55 @@ def _commit_progress(session: Session) -> None:
     commit = getattr(session, "commit", None)
     if callable(commit):
         commit()
+
+
+def _channel_watermark(session: Session, channel: MetaChannel) -> datetime | None:
+    """Latest stored conversation activity for the channel, if any."""
+    statement = select(func.max(MetaConversation.last_message_at)).where(
+        MetaConversation.channel == channel
+    )
+    value = session.execute(statement).scalar_one_or_none()
+    if not isinstance(value, datetime):
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
+def _parse_graph_datetime(raw_value: Any) -> datetime | None:
+    if not isinstance(raw_value, str) or not raw_value.strip():
+        return None
+    normalized = raw_value.strip().replace("Z", "+00:00")
+    if len(normalized) >= 5 and normalized[-5] in "+-" and normalized[-3] != ":":
+        normalized = f"{normalized[:-2]}:{normalized[-2:]}"
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
+
+
+def _instagram_business_account_id(page_id: str, *, token: str) -> str | None:
+    """Return the Page-linked Instagram professional id when Graph exposes it."""
+    try:
+        payload = graph_get(
+            page_id,
+            params={"fields": "instagram_business_account"},
+            token=token,
+        )
+    except MetaGraphApiError as exc:
+        logger.warning(
+            "Could not load Page instagram_business_account; continuing import",
+            extra={"page_id": page_id, "status_code": exc.status_code},
+        )
+        return None
+    account = payload.get("instagram_business_account")
+    if not isinstance(account, Mapping):
+        return None
+    account_id = str(account.get("id") or "").strip()
+    return account_id or None
 
 
 def _graph_get_reducing_limit(
@@ -190,6 +273,21 @@ def _conversation_messages(
     return collected[:_MESSAGE_LIMIT]
 
 
+def _thread_last_message_at(
+    session: Session, channel: MetaChannel, platform_user_id: str
+) -> datetime | None:
+    statement = select(MetaConversation.last_message_at).where(
+        MetaConversation.channel == channel,
+        MetaConversation.platform_user_id == platform_user_id,
+    )
+    value = session.execute(statement).scalar_one_or_none()
+    if not isinstance(value, datetime):
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
 def _ingest_conversation(
     session: Session,
     row: Mapping[str, Any],
@@ -199,6 +297,8 @@ def _ingest_conversation(
     self_ids: set[str],
     counters: dict[str, int],
     page_token: str,
+    incremental: bool = False,
+    create_leads: bool = False,
 ) -> None:
     conversation_id = str(row.get("id") or "").strip()
     detail = row
@@ -231,6 +331,11 @@ def _ingest_conversation(
             "Skipped Instagram history thread for the configured business handle"
         )
         return
+    if incremental:
+        thread_wm = _thread_last_message_at(session, channel, platform_user_id)
+        updated = _parse_graph_datetime(detail.get("updated_time"))
+        if thread_wm is not None and updated is not None and updated <= thread_wm:
+            return
     counters["conversations"] += 1
     messages_wrapper = detail.get("messages")
     nested_rows = (
@@ -263,6 +368,7 @@ def _ingest_conversation(
             instagram_handle=instagram_handle,
             self_ids=self_ids,
             counters=counters,
+            create_leads=create_leads,
         )
 
 
@@ -277,6 +383,7 @@ def _ingest_graph_message(
     instagram_handle: str | None,
     self_ids: set[str],
     counters: dict[str, int],
+    create_leads: bool = False,
 ) -> None:
     message_id = message_row.get("id")
     if not isinstance(message_id, str) or not message_id.strip():
@@ -313,14 +420,16 @@ def _ingest_graph_message(
             MetaMessageDirection.OUTBOUND if is_echo else MetaMessageDirection.INBOUND
         ),
         counters=counters,
-        create_leads=False,
+        create_leads=create_leads,
         source_detail=_SOURCE_DETAIL,
     )
-    if counters["stored"] == before_stored and counters.get("skipped", 0) >= 0:
-        if webhook_message.get("text") in (None, "") and not webhook_message.get(
-            "attachments"
-        ):
-            counters["skipped_no_body"] = counters.get("skipped_no_body", 0)
+    if (
+        counters["stored"] == before_stored
+        and counters.get("skipped", 0) >= 0
+        and webhook_message.get("text") in (None, "")
+        and not webhook_message.get("attachments")
+    ):
+        counters["skipped_no_body"] = counters.get("skipped_no_body", 0)
     logger.debug(
         "Imported Graph inbox message",
         extra={
@@ -347,10 +456,13 @@ def _counterparty(
         raw_username = participant.get("username")
         name = raw_name.strip() if isinstance(raw_name, str) else ""
         username = raw_username.strip() if isinstance(raw_username, str) else ""
-        profile = name or username or None
         handle = parse_instagram_username(
             username or None, platform_user_id=participant_id
         )
+        if is_own_instagram_handle(username) or is_own_instagram_handle(handle):
+            self_ids.add(participant_id)
+            continue
+        profile = name or username or None
         return participant_id, profile, handle
     return None, None, None
 

@@ -233,6 +233,7 @@ interface InboxImportNestedStackProps extends cdk.NestedStackProps {
   metaPageAccessToken: string;
   metaPageId: string;
   metaInstagramUserId: string;
+  metaAppId: string;
   metaGraphApiBaseUrl: string;
   metaGraphApiVersion: string;
   whatsappExportBusinessNames: string;
@@ -243,6 +244,7 @@ class InboxImportNestedStack extends cdk.NestedStack {
   public readonly queue: sqs.Queue;
   public readonly deadLetterQueue: sqs.Queue;
   public readonly processorFunction: lambda.Function;
+  public readonly schedulerFunction: lambda.Function;
 
   public constructor(
     scope: Construct,
@@ -298,6 +300,7 @@ class InboxImportNestedStack extends cdk.NestedStack {
         META_PAGE_ACCESS_TOKEN: props.metaPageAccessToken,
         META_PAGE_ID: props.metaPageId,
         META_INSTAGRAM_USER_ID: props.metaInstagramUserId,
+        META_APP_ID: props.metaAppId,
         META_GRAPH_API_BASE_URL: props.metaGraphApiBaseUrl,
         META_GRAPH_API_VERSION: props.metaGraphApiVersion,
         WHATSAPP_EXPORT_BUSINESS_NAMES: props.whatsappExportBusinessNames,
@@ -316,6 +319,45 @@ class InboxImportNestedStack extends cdk.NestedStack {
       new lambdaEventSources.SqsEventSource(this.queue, {
         batchSize: 1,
         reportBatchItemFailures: true,
+      })
+    );
+
+    this.schedulerFunction = lambdaFactory.create(
+      "MetaGraphSyncSchedulerFunction",
+      {
+        functionName: name("MetaGraphSyncSchedulerFunction"),
+        handler: "lambda/meta_graph_sync_scheduler/handler.lambda_handler",
+        timeout: cdk.Duration.seconds(30),
+        memorySize: 256,
+        manageLogGroup: false,
+        reservedConcurrentExecutions: -1,
+        environment: {
+          DATABASE_SECRET_ARN: props.databaseSecretArn,
+          DATABASE_NAME: "evolvesprouts",
+          DATABASE_USERNAME: "evolvesprouts_admin",
+          DATABASE_PROXY_ENDPOINT: props.databaseProxyEndpoint,
+          DATABASE_IAM_AUTH: "true",
+          INBOX_IMPORT_QUEUE_URL: this.queue.queueUrl,
+        },
+      }
+    ).function;
+    this.queue.grantSendMessages(this.schedulerFunction);
+
+    const metaGraphSyncSchedule = new cdk.aws_events.Rule(
+      this,
+      "MetaGraphSyncSchedule",
+      {
+        ruleName: name("meta-graph-sync-schedule"),
+        description:
+          "Enqueue incremental Meta Graph inbox sync hourly as webhook insurance",
+        schedule: cdk.aws_events.Schedule.cron({
+          minute: "0",
+        }),
+      }
+    );
+    metaGraphSyncSchedule.addTarget(
+      new cdk.aws_events_targets.LambdaFunction(this.schedulerFunction, {
+        retryAttempts: 2,
       })
     );
 
@@ -893,6 +935,12 @@ export class ApiStack extends cdk.Stack {
           "Optional Instagram professional account id used to identify outbound Graph messages.",
       }
     );
+    const metaAppId = new cdk.CfnParameter(this, "MetaAppId", {
+      type: "String",
+      default: "",
+      description:
+        "Meta app id used to verify Page subscribed_apps includes messages for this app.",
+    });
     const metaGraphApiBaseUrl = new cdk.CfnParameter(
       this,
       "MetaGraphApiBaseUrl",
@@ -2397,6 +2445,7 @@ export class ApiStack extends cdk.Stack {
       metaPageAccessToken: metaPageAccessToken.valueAsString,
       metaPageId: metaPageId.valueAsString,
       metaInstagramUserId: metaInstagramUserId.valueAsString,
+      metaAppId: metaAppId.valueAsString,
       metaGraphApiBaseUrl: metaGraphApiBaseUrl.valueAsString,
       metaGraphApiVersion: metaGraphApiVersion.valueAsString,
       whatsappExportBusinessNames: whatsappExportBusinessNames.valueAsString,
@@ -2405,6 +2454,8 @@ export class ApiStack extends cdk.Stack {
     database.grantAdminUserSecretRead(inboxImport.processorFunction);
     database.grantConnect(inboxImport.processorFunction, "evolvesprouts_admin");
     awsProxyFunction.grantInvoke(inboxImport.processorFunction);
+    database.grantAdminUserSecretRead(inboxImport.schedulerFunction);
+    database.grantConnect(inboxImport.schedulerFunction, "evolvesprouts_admin");
     inboxImport.queue.grantSendMessages(adminFunction);
 
     // -------------------------------------------------------------------------

@@ -359,6 +359,18 @@ function assertInboxImportUsesDedicatedPageToken(stack: cdk.Stack): void {
       "InboxImportFunction must set PUBLIC_WWW_INSTAGRAM_URL so Graph import can skip the business Instagram handle",
     );
   }
+  const metaAppId = (vars as Record<string, unknown>).META_APP_ID;
+  if (metaAppId === undefined || metaAppId === null) {
+    throw new Error(
+      "InboxImportFunction must set META_APP_ID so subscription repair targets this app",
+    );
+  }
+  const rootParams = template.findParameters("MetaAppId");
+  if (!rootParams.MetaAppId) {
+    throw new Error(
+      "Expected CfnParameter MetaAppId for Graph subscribed_apps checks",
+    );
+  }
 }
 
 function assertEventbriteMediaUploadUrl(stack: cdk.Stack): void {
@@ -495,6 +507,54 @@ function assertInboxImportHasNoReservedConcurrency(stack: cdk.Stack): void {
   if (reserved !== undefined) {
     throw new Error(
       `InboxImportFunction ${logicalId} must omit ReservedConcurrentExecutions so the account unreserved pool stays above 100; found ${JSON.stringify(reserved)}`,
+    );
+  }
+}
+
+function assertMetaGraphSyncSchedule(stack: cdk.Stack): void {
+  const nested = stack.node.tryFindChild("InboxImport");
+  if (!(nested instanceof cdk.NestedStack)) {
+    throw new Error("Expected InboxImport nested stack on ApiStack");
+  }
+  const template = Template.fromStack(nested);
+  const functions = template.findResources("AWS::Lambda::Function");
+  const match = Object.entries(functions).find(([, resource]) => {
+    const name = (resource.Properties ?? {}).FunctionName;
+    return name === "evolvesprouts-MetaGraphSyncSchedulerFunction";
+  });
+  if (!match) {
+    throw new Error(
+      "Expected Lambda FunctionName evolvesprouts-MetaGraphSyncSchedulerFunction",
+    );
+  }
+  const [logicalId, resource] = match;
+  const reserved = (resource.Properties ?? {}).ReservedConcurrentExecutions;
+  if (reserved !== undefined) {
+    throw new Error(
+      `MetaGraphSyncSchedulerFunction ${logicalId} must omit ReservedConcurrentExecutions; found ${JSON.stringify(reserved)}`,
+    );
+  }
+  const vars = ((resource.Properties ?? {}).Environment ?? {}).Variables ?? {};
+  if ((vars as Record<string, unknown>).INBOX_IMPORT_QUEUE_URL == null) {
+    throw new Error(
+      "MetaGraphSyncSchedulerFunction must set INBOX_IMPORT_QUEUE_URL",
+    );
+  }
+  const rules = template.findResources("AWS::Events::Rule");
+  const schedule = Object.entries(rules).find(([, resource]) => {
+    return (
+      (resource.Properties ?? {}).Name === "evolvesprouts-meta-graph-sync-schedule"
+    );
+  });
+  if (!schedule) {
+    throw new Error(
+      "Expected EventBridge rule evolvesprouts-meta-graph-sync-schedule",
+    );
+  }
+  const expression = (schedule[1].Properties ?? {}).ScheduleExpression;
+  if (expression !== "cron(0 * * * ? *)") {
+    throw new Error(
+      `Meta Graph sync schedule must be cron(0 * * * ? *) hourly; found ${JSON.stringify(expression)}`,
     );
   }
 }
@@ -1144,6 +1204,7 @@ function main(): void {
   assertMailchimpWebhookInactivityAlarm(template);
   assertInboxImportHasNoReservedConcurrency(stack);
   assertInboxImportUsesDedicatedPageToken(stack);
+  assertMetaGraphSyncSchedule(stack);
   assertEventbriteProcessorTimezone(stack);
   assertEventbriteMediaUploadUrl(stack);
   assertSalesDailyPlanSchedule(stack);

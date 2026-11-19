@@ -9,12 +9,14 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.db.models.enums import MetaChannel
 from app.db.models.inbox_import_job import (
     InboxImportJob,
     InboxImportJobStatus,
     InboxImportKind,
 )
 from app.db.repositories.base import BaseRepository
+from app.services.inbox_import_timing import inbox_import_stale_threshold
 
 
 class InboxImportJobRepository(BaseRepository[InboxImportJob]):
@@ -26,6 +28,34 @@ class InboxImportJobRepository(BaseRepository[InboxImportJob]):
     def get_by_id(self, job_id: UUID) -> InboxImportJob | None:
         """Fetch one job by primary key."""
         return self._session.get(InboxImportJob, job_id)
+
+    def find_in_flight_for_channel(
+        self,
+        *,
+        kind: InboxImportKind,
+        channel: MetaChannel,
+    ) -> InboxImportJob | None:
+        """Return a fresh pending/processing job for kind+channel, if any."""
+        stale_before = datetime.now(UTC) - inbox_import_stale_threshold()
+        activity_at = func.coalesce(
+            InboxImportJob.updated_at, InboxImportJob.created_at
+        )
+        statement = (
+            select(InboxImportJob)
+            .where(
+                InboxImportJob.kind == kind,
+                InboxImportJob.channel == channel,
+                InboxImportJob.status.in_(
+                    (
+                        InboxImportJobStatus.PENDING,
+                        InboxImportJobStatus.PROCESSING,
+                    )
+                ),
+                activity_at > stale_before,
+            )
+            .limit(1)
+        )
+        return self._session.execute(statement).scalar_one_or_none()
 
     def list_for_kind(
         self,

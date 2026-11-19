@@ -16,11 +16,15 @@ export type InboxImportJobStatus =
   | 'succeeded_with_errors'
   | 'failed';
 
+/** Scheduled Meta Graph sync actor; banners ignore these jobs. */
+export const META_GRAPH_SYNC_SCHEDULE_ACTOR = 'system:meta-graph-sync';
+
 export type InboxImportJobSummary = {
   id: string;
   kind: string | null;
   channel: string | null;
   attachmentAssetId: string | null;
+  createdBy: string | null;
   status: InboxImportJobStatus;
   errorMessage: string | null;
   counters: Record<string, number> | null;
@@ -68,12 +72,17 @@ export function parseInboxImportJob(value: unknown): InboxImportJobSummary {
     kind: asNullableString(row.kind),
     channel: asNullableString(row.channel),
     attachmentAssetId: asNullableString(row.attachment_asset_id),
+    createdBy: asNullableString(row.created_by),
     status: parseStatus(row.status),
     errorMessage: asNullableString(row.error_message),
     counters: parseCounters(row.counters),
     createdAt: asNullableString(row.created_at),
     updatedAt: asNullableString(row.updated_at),
   };
+}
+
+export function isScheduledMetaGraphSyncJob(job: InboxImportJobSummary): boolean {
+  return job.createdBy === META_GRAPH_SYNC_SCHEDULE_ACTOR;
 }
 
 export async function listInboxImportJobs(

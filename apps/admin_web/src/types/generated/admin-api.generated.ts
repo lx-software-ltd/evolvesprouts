@@ -3205,6 +3205,8 @@ export interface components {
             channel?: components["schemas"]["MetaChannel"];
             /** Format: uuid */
             attachment_asset_id?: string | null;
+            /** @description Cognito sub or system actor (for example system:meta-graph-sync) */
+            created_by?: string | null;
             status: components["schemas"]["InboxImportJobStatus"];
             error_message?: string | null;
             counters?: components["schemas"]["InboxImportJobCounters"];

@@ -897,9 +897,19 @@ their primary responsibilities.
   when Graph rejects the payload) and WhatsApp Business App
   `.txt`/`.zip` export parses into the existing conversation tables. Creates
   missing contacts; does not create new sales leads. Instagram Graph
-  import also skips threads whose participant username matches the
-  configured public Instagram handle, and passes that username through
-  as `instagram_handle` for CRM reuse.
+  import loads the Page `instagram_business_account.id`, treats the
+  configured public Instagram handle as self when listed as a
+  participant, and skips threads with no remaining counterparty. Each
+  Graph job also checks this app's `/{page-id}/subscribed_apps` row
+  (`META_APP_ID`) and merges `messages` plus `message_echoes` when
+  missing (failure is counted and logged, not fatal). Customer
+  usernames still pass through as `instagram_handle` for CRM reuse.
+  Jobs with `options.incremental=true` (hourly schedule) walk
+  conversations newest first, compare each thread's `updated_time` to
+  that thread's own `last_message_at`, and only stop channel paging
+  after a 24h lookback from the channel watermark (cold channels cap
+  at 3 pages). Incremental jobs open leads; unique
+  `platform_message_id` still dedupes with webhooks.
 - DB access: RDS Proxy with IAM auth (`evolvesprouts_admin`)
 - VPC: Yes
 - Timeout / budget: **600s** Lambda timeout with **720s** SQS visibility
@@ -915,12 +925,30 @@ their primary responsibilities.
     system-user token, not the webhook verify string). Conversations
     use a Page token; a system-user token is exchanged via
     `GET /{page-id}?fields=access_token`.
-  - `META_PAGE_ID`, `META_INSTAGRAM_USER_ID`
+  - `META_PAGE_ID`, `META_INSTAGRAM_USER_ID`, `META_APP_ID`
   - `META_GRAPH_API_BASE_URL`, `META_GRAPH_API_VERSION`
   - `WHATSAPP_EXPORT_BUSINESS_NAMES`
   - `PUBLIC_WWW_INSTAGRAM_URL` (CDK `PublicWwwInstagramUrl`; last path
     segment is the business Instagram handle skipped during Graph import)
   - `INBOX_IMPORT_LAMBDA_TIMEOUT_SECONDS`
+
+### Meta Graph sync scheduler
+- Function: MetaGraphSyncSchedulerFunction
+- Handler: backend/lambda/meta_graph_sync_scheduler/handler.py
+- Trigger: EventBridge rule `evolvesprouts-meta-graph-sync-schedule`
+  (`cron(0 * * * ? *)` hourly UTC)
+- Purpose: enqueue one incremental `meta_graph` inbox import job per
+  channel (`instagram`, `facebook`) when no fresh pending/processing
+  job exists (stale in-flight jobs are ignored; SQS send failures mark
+  the job failed). Uses a per-channel advisory lock. Does not call
+  Graph itself.
+- DB access: RDS Proxy with IAM auth (`evolvesprouts_admin`)
+- VPC: Yes
+- Timeout: 30s
+- Environment:
+  - `DATABASE_SECRET_ARN`, `DATABASE_NAME`, `DATABASE_USERNAME`,
+    `DATABASE_PROXY_ENDPOINT`, `DATABASE_IAM_AUTH`
+  - `INBOX_IMPORT_QUEUE_URL`
 
 ### Eventbrite sync processor
 - Function: EventbriteSyncProcessor

@@ -341,6 +341,8 @@ All functions use Python 3.12, KMS-encrypted environment variables,
 | ApiKeyRotationFunction | `lambda/api_key_rotation/handler.py` | EventBridge (90 days) | API key rotation |
 | SalesDailyPlanFunction | `lambda/sales_daily_plan/handler.py` | SQS | Org-wide sales plan of the day (OpenRouter) |
 | SalesDailyPlanSchedulerFunction | `lambda/sales_daily_plan_scheduler/handler.py` | EventBridge (06:00 HKT) | Enqueue daily sales plan job |
+| MetaGraphSyncSchedulerFunction | `lambda/meta_graph_sync_scheduler/handler.py` | EventBridge (hourly) | Enqueue incremental Meta Graph inbox sync jobs |
+| InboxImportFunction | `lambda/inbox_import/handler.py` | SQS | Process Meta Graph / WhatsApp inbox import jobs |
 | MediaRequestProcessor | `lambda/media_processor/handler.py` | SQS | Process media leads → DB + Mailchimp + SES |
 | InboundInvoiceEmailProcessor | `lambda/inbound_invoice_email/handler.py` | SQS | Store inbound invoice attachments as expenses and enqueue parsing |
 

@@ -220,6 +220,7 @@ def _serialize_job(job: InboxImportJob) -> dict[str, Any]:
         "attachment_asset_id": (
             str(job.attachment_asset_id) if job.attachment_asset_id else None
         ),
+        "created_by": job.created_by,
         "status": job.status.value,
         "error_message": job.error_message,
         "counters": job.counters,
