@@ -15,9 +15,17 @@ from app.db.models.meta import MetaConversation
 from app.services.meta_graph_client import (
     MetaGraphApiError,
     graph_get,
-    is_graph_payload_too_large,
     is_graph_skippable_failure,
     resolve_page_access_token,
+)
+from app.services.meta_history_graph_fetch import (
+    CONVERSATION_FIELDS,
+)
+from app.services.meta_history_graph_fetch import (
+    conversation_messages as _conversation_messages,
+)
+from app.services.meta_history_graph_fetch import (
+    list_conversation_page as _list_conversation_page,
 )
 from app.services.meta_ingest import is_own_instagram_handle, store_meta_message
 from app.services.meta_page_subscription import ensure_page_messages_subscription
@@ -27,12 +35,7 @@ from app.utils.validators import parse_instagram_username
 logger = get_logger(__name__)
 
 _SOURCE_DETAIL = "meta_history_sync"
-_CONVERSATION_LIMIT = 5
-_MESSAGE_LIMIT = 20
-_MESSAGE_PAGE = 5
 _MAX_PAGES = 80
-_MESSAGE_FIELDS = "id,created_time,from{id,name,username},message"
-_CONVERSATION_FIELDS = "id,updated_time,participants.limit(5){id,name,username}"
 _INCREMENTAL_LOOKBACK = timedelta(hours=24)
 _MAX_PAGES_COLD = 3
 
@@ -186,93 +189,6 @@ def _instagram_business_account_id(page_id: str, *, token: str) -> str | None:
     return account_id or None
 
 
-def _graph_get_reducing_limit(
-    path: str,
-    *,
-    params: dict[str, str],
-    token: str,
-) -> dict[str, Any]:
-    raw_limit = str(params.get("limit") or "1").strip()
-    try:
-        current = max(1, int(raw_limit))
-    except ValueError:
-        current = 1
-    while True:
-        attempt = dict(params)
-        attempt["limit"] = str(current)
-        try:
-            return graph_get(path, params=attempt, token=token)
-        except MetaGraphApiError as exc:
-            if not is_graph_payload_too_large(exc) or current <= 1:
-                raise
-            current = max(1, current // 2)
-
-
-def _list_conversation_page(
-    page_id: str,
-    *,
-    platform: str,
-    after: str | None,
-    token: str,
-) -> dict[str, Any]:
-    params = {
-        "platform": platform,
-        "fields": _CONVERSATION_FIELDS,
-        "limit": str(_CONVERSATION_LIMIT),
-    }
-    if after:
-        params["after"] = after
-    try:
-        return _graph_get_reducing_limit(
-            f"{page_id}/conversations",
-            params=params,
-            token=token,
-        )
-    except MetaGraphApiError as exc:
-        if not is_graph_payload_too_large(exc):
-            raise
-        slim = dict(params)
-        slim["fields"] = "id"
-        slim["limit"] = "1"
-        return graph_get(f"{page_id}/conversations", params=slim, token=token)
-
-
-def _conversation_messages(
-    conversation_id: str, *, token: str
-) -> list[Mapping[str, Any]]:
-    collected: list[Mapping[str, Any]] = []
-    after: str | None = None
-    while len(collected) < _MESSAGE_LIMIT:
-        remaining = _MESSAGE_LIMIT - len(collected)
-        params = {
-            "fields": _MESSAGE_FIELDS,
-            "limit": str(min(_MESSAGE_PAGE, remaining)),
-        }
-        if after:
-            params["after"] = after
-        try:
-            payload = _graph_get_reducing_limit(
-                f"{conversation_id}/messages",
-                params=params,
-                token=token,
-            )
-        except MetaGraphApiError as exc:
-            if is_graph_payload_too_large(exc) and collected:
-                break
-            raise
-        rows = payload.get("data")
-        if not isinstance(rows, list) or not rows:
-            break
-        collected.extend(row for row in rows if isinstance(row, Mapping))
-        paging = payload.get("paging")
-        cursors = paging.get("cursors") if isinstance(paging, Mapping) else None
-        next_after = cursors.get("after") if isinstance(cursors, Mapping) else None
-        if not isinstance(next_after, str) or not next_after.strip():
-            break
-        after = next_after.strip()
-    return collected[:_MESSAGE_LIMIT]
-
-
 def _thread_last_message_at(
     session: Session, channel: MetaChannel, platform_user_id: str
 ) -> datetime | None:
@@ -306,12 +222,22 @@ def _ingest_conversation(
         try:
             fetched = graph_get(
                 conversation_id,
-                params={"fields": _CONVERSATION_FIELDS},
+                params={"fields": CONVERSATION_FIELDS},
                 token=page_token,
             )
         except MetaGraphApiError as exc:
             if is_graph_skippable_failure(exc):
                 counters["skipped"] += 1
+                logger.warning(
+                    "Skipped Graph conversation detail fetch",
+                    extra={
+                        "conversation_id": conversation_id,
+                        "status_code": exc.status_code,
+                        "graph_error_code": exc.code,
+                        "graph_error_subcode": exc.error_subcode,
+                        "fbtrace_id": exc.fbtrace_id,
+                    },
+                )
                 return
             raise
         if fetched:
@@ -348,10 +274,24 @@ def _ingest_conversation(
             counters["skipped"] += 1
             return
         try:
-            message_rows = _conversation_messages(conversation_id, token=page_token)
+            message_rows = _conversation_messages(
+                conversation_id,
+                token=page_token,
+                counters=counters,
+            )
         except MetaGraphApiError as exc:
             if is_graph_skippable_failure(exc):
                 counters["skipped"] += 1
+                logger.warning(
+                    "Skipped Graph conversation message fetch",
+                    extra={
+                        "conversation_id": conversation_id,
+                        "status_code": exc.status_code,
+                        "graph_error_code": exc.code,
+                        "graph_error_subcode": exc.error_subcode,
+                        "fbtrace_id": exc.fbtrace_id,
+                    },
+                )
                 return
             raise
     for message_row in message_rows:

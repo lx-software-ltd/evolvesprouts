@@ -70,6 +70,16 @@ def process_inbox_import_job(job_id: UUID) -> InboxImportOutcome:
         _fail_job(job_id, str(exc))
         return InboxImportOutcome(ack_sqs_message=True)
     except MetaGraphApiError as exc:
+        logger.warning(
+            "Inbox import Graph failure",
+            extra={
+                "job_id": str(job_id),
+                "status_code": exc.status_code,
+                "graph_error_code": exc.code,
+                "graph_error_subcode": exc.error_subcode,
+                "fbtrace_id": exc.fbtrace_id,
+            },
+        )
         _fail_job(job_id, str(exc))
         return InboxImportOutcome(ack_sqs_message=True)
     except Exception:

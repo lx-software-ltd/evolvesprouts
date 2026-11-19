@@ -97,7 +97,9 @@ For the OIDC provider itself, add the same tags:
   or outbound detection)
 - `CDK_PARAM_META_APP_ID` (Meta app id; Graph import checks
   `/{page-id}/subscribed_apps` for this app before repairing `messages` /
-  `message_echoes`)
+  `message_echoes`). Create this repository variable with the Meta app id
+  before relying on automatic subscription repair; an empty value records
+  `subscription_failed` and leaves Page webhook fields unchanged.
 - `CDK_PARAM_META_GRAPH_API_BASE_URL` (optional; defaults to Graph origin)
 - `CDK_PARAM_META_GRAPH_API_VERSION` (optional Graph version token)
 - `CDK_PARAM_WHATSAPP_EXPORT_BUSINESS_NAMES` (optional comma-separated outbound names in WhatsApp exports)

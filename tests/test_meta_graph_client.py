@@ -183,3 +183,63 @@ def test_is_graph_skippable_failure_includes_proxy_timeout() -> None:
         )
         is False
     )
+
+
+def test_graph_get_parses_fatal_error_fields(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("META_PAGE_ACCESS_TOKEN", "page-token")
+
+    def _fake_http_invoke(**_kwargs: object) -> dict[str, object]:
+        return {
+            "status": 400,
+            "body": json.dumps(
+                {
+                    "error": {
+                        "message": "Fatal",
+                        "type": "OAuthException",
+                        "code": -1,
+                        "error_subcode": 2207085,
+                        "is_transient": False,
+                        "fbtrace_id": "trace-abc",
+                    }
+                }
+            ),
+        }
+
+    monkeypatch.setattr(client, "http_invoke", _fake_http_invoke)
+
+    with pytest.raises(MetaGraphApiError) as exc_info:
+        client.graph_get("conv-1/messages")
+
+    err = exc_info.value
+    assert err.status_code == 400
+    assert err.code == -1
+    assert err.error_subcode == 2207085
+    assert err.is_transient is False
+    assert err.fbtrace_id == "trace-abc"
+    assert client.is_graph_skippable_failure(err) is True
+
+
+def test_is_graph_skippable_failure_keeps_auth_fatal() -> None:
+    auth = MetaGraphApiError(
+        status_code=400,
+        message="expired",
+        code=190,
+        error_subcode=None,
+        is_transient=False,
+    )
+    permission = MetaGraphApiError(
+        status_code=403,
+        message="denied",
+        code=200,
+    )
+    assert client.is_graph_auth_or_permission_failure(auth) is True
+    assert client.is_graph_skippable_failure(auth) is False
+    assert client.is_graph_skippable_failure(permission) is False
+    assert (
+        client.is_graph_skippable_failure(
+            MetaGraphApiError(status_code=401, message="nope")
+        )
+        is False
+    )
