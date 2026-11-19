@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
+import { IssuedInvoiceMonthsCard } from '@/components/admin/dashboard/cards/issued-invoice-months-card';
 import { SalePlanOfTheDayCard } from '@/components/admin/dashboard/cards/sale-plan-of-the-day-card';
 import { TaxPositionCard } from '@/components/admin/dashboard/cards/tax-position-card';
 import { TopContactSpendersCard } from '@/components/admin/dashboard/cards/top-contact-spenders-card';
@@ -57,6 +58,7 @@ export function DashboardPageBody() {
         isLoading={isLoading}
       />
       <TopContactSpendersCard issuedInvoices={invoices} loadError={loadError} isLoading={isLoading} />
+      <IssuedInvoiceMonthsCard issuedInvoices={invoices} loadError={loadError} isLoading={isLoading} />
     </div>
   );
 }
