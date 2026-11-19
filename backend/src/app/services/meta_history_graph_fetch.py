@@ -97,7 +97,9 @@ def conversation_messages(
             )
         except MetaGraphApiError as exc:
             if collected and is_graph_partial_page_failure(exc):
-                counters["skipped"] += 1
+                counters["partial_threads"] = (
+                    int(counters.get("partial_threads") or 0) + 1
+                )
                 logger.warning(
                     "Stopped Graph message paging; keeping earlier pages",
                     extra={

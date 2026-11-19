@@ -792,7 +792,8 @@ def test_sync_keeps_partial_messages_on_fatal_page(
     assert message_pages["conv-bad"] == 5
     assert counters["conversations"] == 2
     assert counters["stored"] == 17  # 16 from bad + 1 from ok
-    assert counters["skipped"] >= 1
+    assert counters["partial_threads"] >= 1
+    assert counters["skipped"] == 0
     assert {item["platform_user_id"] for item in stored} == {"user-bad", "user-ok"}
     assert sum(1 for item in stored if item["platform_user_id"] == "user-bad") == 16
 
@@ -855,3 +856,109 @@ def test_sync_skips_conversation_when_first_message_page_is_fatal(
     assert counters["stored"] == 1
     assert counters["skipped"] >= 1
     assert stored[0]["platform_user_id"] == "user-ok"
+
+
+def test_sync_skips_conversation_when_object_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stored: list[object] = []
+
+    def _graph_get(
+        path: str,
+        *,
+        params: dict[str, str] | None = None,
+        token: str | None = None,
+    ) -> dict[str, object]:
+        if path == "page-1/conversations":
+            return {
+                "data": [
+                    {
+                        "id": "conv-gone",
+                        "participants": {
+                            "data": [
+                                {"id": "page-1"},
+                                {"id": "user-g", "name": "G"},
+                            ]
+                        },
+                    },
+                    {
+                        "id": "conv-ok",
+                        "participants": {
+                            "data": [
+                                {"id": "page-1"},
+                                {"id": "user-ok", "name": "Ok"},
+                            ]
+                        },
+                    },
+                ]
+            }
+        if path == "conv-gone/messages":
+            raise MetaGraphApiError(
+                status_code=400,
+                message="Meta Graph request failed (400): (#100) Object does not exist",
+                code=100,
+            )
+        if path == "conv-ok/messages":
+            return {
+                "data": [
+                    {
+                        "id": "ok-1",
+                        "created_time": "2026-01-02T03:04:05+0000",
+                        "from": {"id": "user-ok"},
+                        "message": "hi",
+                    }
+                ]
+            }
+        raise AssertionError(f"unexpected Graph path {path}")
+
+    monkeypatch.setenv("META_PAGE_ID", "page-1")
+    monkeypatch.setattr(sync, "resolve_page_access_token", lambda: "page-token")
+    monkeypatch.setattr(sync, "store_meta_message", _store_capturing(stored))
+    _patch_graph_get(monkeypatch, _graph_get)
+
+    counters = sync.sync_meta_channel_history(SimpleNamespace(), MetaChannel.INSTAGRAM)
+    assert counters["stored"] == 1
+    assert counters["skipped"] >= 1
+    assert counters["partial_threads"] == 0
+    assert stored[0]["platform_user_id"] == "user-ok"
+
+
+def test_sync_fails_job_on_rate_limit_after_retries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _graph_get(
+        path: str,
+        *,
+        params: dict[str, str] | None = None,
+        token: str | None = None,
+    ) -> dict[str, object]:
+        if path == "page-1/conversations":
+            return {
+                "data": [
+                    {
+                        "id": "conv-1",
+                        "participants": {
+                            "data": [
+                                {"id": "page-1"},
+                                {"id": "user-1", "name": "A"},
+                            ]
+                        },
+                    }
+                ]
+            }
+        if path == "conv-1/messages":
+            raise MetaGraphApiError(
+                status_code=400,
+                message="Application request limit reached",
+                code=4,
+            )
+        raise AssertionError(f"unexpected Graph path {path}")
+
+    monkeypatch.setenv("META_PAGE_ID", "page-1")
+    monkeypatch.setattr(sync, "resolve_page_access_token", lambda: "page-token")
+    monkeypatch.setattr(sync, "store_meta_message", _store_capturing([]))
+    _patch_graph_get(monkeypatch, _graph_get)
+
+    with pytest.raises(MetaGraphApiError) as exc_info:
+        sync.sync_meta_channel_history(SimpleNamespace(), MetaChannel.INSTAGRAM)
+    assert exc_info.value.code == 4

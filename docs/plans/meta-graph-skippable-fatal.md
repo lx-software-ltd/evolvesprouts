@@ -50,3 +50,9 @@ Revert the commits.
 
 None. `META_APP_ID` remains a deploy/config action (GitHub var already
 referenced by CDK).
+
+## Review follow-up
+
+- Partial pages only for conversation-scoped errors (Fatal, payload, timeout, code 100).
+- Permission codes 10/102/190/200–299 fail the job; rate limits 4/17/32/613 retry then fail.
+- `partial_threads` counter distinct from `skipped`.

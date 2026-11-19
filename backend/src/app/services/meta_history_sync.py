@@ -12,20 +12,12 @@ from sqlalchemy.orm import Session
 
 from app.db.models.enums import MetaChannel, MetaMessageDirection
 from app.db.models.meta import MetaConversation
+from app.services import meta_history_graph_fetch as graph_fetch
 from app.services.meta_graph_client import (
     MetaGraphApiError,
     graph_get,
     is_graph_skippable_failure,
     resolve_page_access_token,
-)
-from app.services.meta_history_graph_fetch import (
-    CONVERSATION_FIELDS,
-)
-from app.services.meta_history_graph_fetch import (
-    conversation_messages as _conversation_messages,
-)
-from app.services.meta_history_graph_fetch import (
-    list_conversation_page as _list_conversation_page,
 )
 from app.services.meta_ingest import is_own_instagram_handle, store_meta_message
 from app.services.meta_page_subscription import ensure_page_messages_subscription
@@ -52,6 +44,7 @@ def sync_meta_channel_history(
         "stored": 0,
         "duplicates": 0,
         "skipped": 0,
+        "partial_threads": 0,
         "leads_created": 0,
         "contacts_created": 0,
         "conversations": 0,
@@ -87,7 +80,7 @@ def sync_meta_channel_history(
     while pages < max_pages:
         pages += 1
         try:
-            payload = _list_conversation_page(
+            payload = graph_fetch.list_conversation_page(
                 page_id,
                 platform=platform,
                 after=after,
@@ -222,7 +215,7 @@ def _ingest_conversation(
         try:
             fetched = graph_get(
                 conversation_id,
-                params={"fields": CONVERSATION_FIELDS},
+                params={"fields": graph_fetch.CONVERSATION_FIELDS},
                 token=page_token,
             )
         except MetaGraphApiError as exc:
@@ -274,7 +267,7 @@ def _ingest_conversation(
             counters["skipped"] += 1
             return
         try:
-            message_rows = _conversation_messages(
+            message_rows = graph_fetch.conversation_messages(
                 conversation_id,
                 token=page_token,
                 counters=counters,

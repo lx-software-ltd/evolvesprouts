@@ -1125,14 +1125,17 @@ pulling history inline on the admin Lambda. Jobs live in `inbox_import_jobs`.
   `Please reduce the amount of data you're asking for`; skip a thread that
   still fails at `limit=1`. Skip a thread (and stop paging after the
   first list page) when the outbound Graph proxy times out (`502
-  TimeoutError`) or Meta returns an internal Fatal
-  (`code=-1`, `error_subcode=2207085` / `is_transient=false`) so one bad
-  Instagram thread does not fail the job. When a later message page fails
-  with a non-auth Graph 4xx, keep earlier pages for that thread and count
-  a skip. Auth/permission failures (HTTP 401, Graph codes 190 and 200)
-  still fail the job; the worker logs status, Graph code/subcode, and
-  `fbtrace_id` without message text. Commit after each thread so earlier
-  imports survive a later timeout.
+  TimeoutError`), Meta returns an internal Fatal
+  (`code=-1`, `error_subcode=2207085` / `is_transient=false`), or the
+  object is gone (`code=100`), so one bad Instagram thread does not fail
+  the job. When a later message page hits the same conversation-scoped
+  errors, keep earlier pages and count `partial_threads` (not a generic
+  skip). Auth/permission failures (HTTP 401; Graph codes 10, 102, 190,
+  and 200–299) and app rate limits (HTTP 429 or codes 4/17/32/613, which
+  are retried then fail the job) are never treated as per-thread skips.
+  The worker logs status, Graph code/subcode, and `fbtrace_id` without
+  message text. Commit after each thread so earlier imports survive a
+  later timeout.
   Nested `messages.limit(20)` on a wide conversation page exceeds Graph
   payload limits.
   Skip Instagram threads whose only remaining participant is the business
