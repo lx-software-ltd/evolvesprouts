@@ -1,5 +1,8 @@
 name: Check Lockfiles
 
+permissions:
+  contents: read
+
 on:
   repository_dispatch:
     types: [check-lockfiles]
