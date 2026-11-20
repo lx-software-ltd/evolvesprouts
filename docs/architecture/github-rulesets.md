@@ -19,7 +19,7 @@ The `main` branch requires protection as it triggers production deployments.
 | Rule | Setting | Purpose |
 |------|---------|---------|
 | Require pull request before merging | ✅ Enabled | Prevents direct pushes |
-| Required approvals | 1+ | Ensures code review |
+| Required approvals | 0 | Ensures code review |
 | Dismiss stale reviews | ✅ Enabled | Re-review after changes |
 | Require status checks to pass | ✅ Enabled | CI must pass |
 | Require branches to be up to date | ✅ Enabled | Prevents stale merges |
@@ -63,7 +63,7 @@ Release tags should be protected from modification or deletion.
 4. Enable rules:
    - ✅ Restrict deletions
    - ✅ Require a pull request before merging
-     - Required approvals: `1`
+     - Required approvals: `0`
      - ✅ Dismiss stale pull request approvals when new commits are pushed
    - ✅ Require status checks to pass
      - ✅ Require branches to be up to date before merging
@@ -98,7 +98,7 @@ gh api repos/{owner}/{repo}/rulesets \
   --field 'rules[][type]=deletion' \
   --field 'rules[][type]=non_fast_forward' \
   --field 'rules[][type]=pull_request' \
-  --field 'rules[2][parameters][required_approving_review_count]=1' \
+  --field 'rules[2][parameters][required_approving_review_count]=0' \
   --field 'rules[2][parameters][dismiss_stale_reviews_on_push]=true' \
   --field 'rules[][type]=required_status_checks' \
   --field 'rules[3][parameters][strict_required_status_checks_policy]=true' \
@@ -125,15 +125,14 @@ demand to verify that branch protection rules are correctly configured.
 
 The workflow grants `contents: read` only. `administration` is not a valid
 Actions permission, and classic branch-protection reads return 403 for that
-token. The script treats 403 and 404 on the legacy protection endpoints as
-"not readable" and still evaluates repository rulesets. A disabled ruleset
-does not count as protection, so the job fails until `main-protection` is
-Active and meets the checks below.
+token. The weekly job calls the pinned verify-rulesets action and does not
+run a local script. A disabled ruleset does not count as protection, so the
+job fails until `main-protection` is Active and meets the checks below.
 
 The verification checks fail the job when any of these are missing:
-- An active ruleset targets `main` (or legacy branch protection does)
-- At least one approving review is required
-- Required status checks include names containing `lint` and `test`
+- An active ruleset targets `main`
+- An approving-review count of exactly 0
+- Required status checks are exactly `lint` and `test`
 - Force pushes and deletions are blocked
 - An active ruleset protects `v*` tags
 
