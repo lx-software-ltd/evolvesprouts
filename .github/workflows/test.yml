@@ -5,15 +5,8 @@ on:
     types: [test]
   workflow_dispatch:
   pull_request:
-    paths:
-      - "apps/**"
-      - "packages/**"
-      - "backend/**"
-      - "shared/**"
-      - "tests/**"
-      - "docs/api/**"
-      - "docs/architecture/**"
-      - ".github/workflows/test.yml"
+    # No path filter. The gate job is a required check, and a skipped
+    # required check leaves the pull request blocked.
   push:
     branches:
       - main
@@ -311,3 +304,43 @@ jobs:
 
       - name: Run staging worker tests
         run: node --test backend/infrastructure/test/*.test.mjs scripts/cloudflare/workers/*.test.mjs apps/public_www/scripts/smoke-staging.test.mjs
+
+  test:
+    name: test
+    runs-on: ubuntu-24.04
+    needs:
+      - test-public-www
+      - test-training
+      - test-flutter
+      - test-node
+      - test-python
+      - test-infrastructure
+    if: always()
+    steps:
+      - name: Require every test job
+        env:
+          TEST_PUBLIC_WWW: ${{ needs.test-public-www.result }}
+          TEST_TRAINING: ${{ needs.test-training.result }}
+          TEST_FLUTTER: ${{ needs.test-flutter.result }}
+          TEST_NODE: ${{ needs.test-node.result }}
+          TEST_PYTHON: ${{ needs.test-python.result }}
+          TEST_INFRASTRUCTURE: ${{ needs.test-infrastructure.result }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import sys
+
+          jobs = {
+              "test-public-www": os.environ["TEST_PUBLIC_WWW"],
+              "test-training": os.environ["TEST_TRAINING"],
+              "test-flutter": os.environ["TEST_FLUTTER"],
+              "test-node": os.environ["TEST_NODE"],
+              "test-python": os.environ["TEST_PYTHON"],
+              "test-infrastructure": os.environ["TEST_INFRASTRUCTURE"],
+          }
+          failed = [f"{name}={result}" for name, result in jobs.items() if result != "success"]
+          if failed:
+              print("Test jobs did not all succeed: " + ", ".join(failed))
+              sys.exit(1)
+          print("All test jobs succeeded.")
+          PY
