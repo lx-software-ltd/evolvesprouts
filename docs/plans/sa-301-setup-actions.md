@@ -9,7 +9,7 @@ The parent is `docs/plans/shared-actions-and-ci-convergence.md` in `lx-software-
 
 ## Goal
 
-CI workflows call `lx-software-ltd/actions/setup-node` and `lx-software-ltd/actions/setup-python` at `c850872471a02a3f6112a9c5321b485e7f181443` (`# main 2026-11-20`). Each caller passes the Node or Python version it uses today. The `require-jobs` pin in `lint.yml` and `test.yml` moves from `1a3cca7c38163f8164c262323601c34a4df5b7a4` to that same commit.
+CI workflows call `lx-software-ltd/actions/setup-node` and `lx-software-ltd/actions/setup-python` at `61d2a581a1d880533982bada88923ad1b6431700` (`# main 2026-11-20`). Each caller passes the Node or Python version it uses today. The `require-jobs` pin in `lint.yml` and `test.yml` moves from `1a3cca7c38163f8164c262323601c34a4df5b7a4` to that same commit.
 
 ## Non-goals
 
@@ -20,9 +20,9 @@ CI workflows call `lx-software-ltd/actions/setup-node` and `lx-software-ltd/acti
 
 ## Pin
 
-Every `lx-software-ltd/actions` reference in the workflows this change touches is:
+The pin is `61d2a58` so this pull request and the ruleset pull request use one actions SHA. Every `lx-software-ltd/actions` reference in the workflows this change touches is:
 
-`c850872471a02a3f6112a9c5321b485e7f181443` `# main 2026-11-20`
+`61d2a581a1d880533982bada88923ad1b6431700` `# main 2026-11-20`
 
 ## Files
 
@@ -130,7 +130,7 @@ Python callers that do not cache pip pass only `python-version: "3.12"` and keep
 
 ## Done when
 
-The five workflow files contain no `actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1`, no `actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0`, and no `1a3cca7`. Every `lx-software-ltd/actions` reference in those files is `c850872471a02a3f6112a9c5321b485e7f181443`. `cdk-diff.yml` stays on `actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1`. The deploy, Amplify, key, and bootstrap workflows still use the pins listed above. `pytest tests/test_agent_harness_checks.py::test_pytest_coverage_floor_is_enforced_in_ci` passes.
+The five workflow files contain no `actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1`, no `actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0`, and no `1a3cca7`. Every `lx-software-ltd/actions` reference in those files is `61d2a581a1d880533982bada88923ad1b6431700`. `cdk-diff.yml` stays on `actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1`. The deploy, Amplify, key, and bootstrap workflows still use the pins listed above. `pytest tests/test_agent_harness_checks.py::test_pytest_coverage_floor_is_enforced_in_ci` passes.
 
 ## Rollback
 
