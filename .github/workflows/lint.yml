@@ -252,29 +252,6 @@ jobs:
     if: always()
     steps:
       - name: Require every lint job
-        env:
-          VALIDATE_AGENT_RULES: ${{ needs.validate-agent-rules.result }}
-          LINT_DART: ${{ needs.lint-dart.result }}
-          LINT_REACT: ${{ needs.lint-react.result }}
-          LINT_PYTHON: ${{ needs.lint-python.result }}
-          LINT_CDK: ${{ needs.lint-cdk.result }}
-          LINT_OPENAPI: ${{ needs.lint-openapi.result }}
-        run: |
-          python3 - <<'PY'
-          import os
-          import sys
-
-          jobs = {
-              "validate-agent-rules": os.environ["VALIDATE_AGENT_RULES"],
-              "lint-dart": os.environ["LINT_DART"],
-              "lint-react": os.environ["LINT_REACT"],
-              "lint-python": os.environ["LINT_PYTHON"],
-              "lint-cdk": os.environ["LINT_CDK"],
-              "lint-openapi": os.environ["LINT_OPENAPI"],
-          }
-          failed = [f"{name}={result}" for name, result in jobs.items() if result != "success"]
-          if failed:
-              print("Lint jobs did not all succeed: " + ", ".join(failed))
-              sys.exit(1)
-          print("All lint jobs succeeded.")
-          PY
+        uses: lx-software-ltd/actions/require-jobs@1a3cca7c38163f8164c262323601c34a4df5b7a4 # main 2026-11-20
+        with:
+          needs-json: ${{ toJson(needs) }}
