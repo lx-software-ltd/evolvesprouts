@@ -5,7 +5,7 @@
 
 Parent plan: Shared actions repository and CI convergence, step SA-304.
 
-This is the Monday fix. A pull request is opened.
+This is the Monday fix. A pull request is opened. The setup samples now say 0 reviews.
 
 ## Goal
 

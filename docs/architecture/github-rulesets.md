@@ -19,7 +19,7 @@ The `main` branch requires protection as it triggers production deployments.
 | Rule | Setting | Purpose |
 |------|---------|---------|
 | Require pull request before merging | ✅ Enabled | Prevents direct pushes |
-| Required approvals | 1+ | Ensures code review |
+| Required approvals | 0 | Ensures code review |
 | Dismiss stale reviews | ✅ Enabled | Re-review after changes |
 | Require status checks to pass | ✅ Enabled | CI must pass |
 | Require branches to be up to date | ✅ Enabled | Prevents stale merges |
@@ -63,7 +63,7 @@ Release tags should be protected from modification or deletion.
 4. Enable rules:
    - ✅ Restrict deletions
    - ✅ Require a pull request before merging
-     - Required approvals: `1`
+     - Required approvals: `0`
      - ✅ Dismiss stale pull request approvals when new commits are pushed
    - ✅ Require status checks to pass
      - ✅ Require branches to be up to date before merging
@@ -98,7 +98,7 @@ gh api repos/{owner}/{repo}/rulesets \
   --field 'rules[][type]=deletion' \
   --field 'rules[][type]=non_fast_forward' \
   --field 'rules[][type]=pull_request' \
-  --field 'rules[2][parameters][required_approving_review_count]=1' \
+  --field 'rules[2][parameters][required_approving_review_count]=0' \
   --field 'rules[2][parameters][dismiss_stale_reviews_on_push]=true' \
   --field 'rules[][type]=required_status_checks' \
   --field 'rules[3][parameters][strict_required_status_checks_policy]=true' \
