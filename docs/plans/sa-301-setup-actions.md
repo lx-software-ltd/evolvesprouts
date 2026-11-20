@@ -32,7 +32,6 @@ Changed:
 - `.github/workflows/test.yml`
 - `.github/workflows/security.yml`
 - `.github/workflows/check-lockfiles.yml`
-- `.github/workflows/cdk-diff.yml`
 - `.github/workflows/lighthouse-public-www.yml`
 - `docs/plans/sa-301-setup-actions.md`
 
@@ -40,6 +39,7 @@ Left on `actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1` and, where
 
 - `deploy-admin-web.yml`, `deploy-backend.yml`, `deploy-public-www.yml`, `deploy-training.yml` (deploy)
 - `cdk-bootstrap.yml` (bootstrap deploy)
+- `cdk-diff.yml` stays on `actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1`. It configures AWS credentials and runs CDK diff. Gate G5 is closed.
 - `promote-public-www.yml` and `amplify-promote.yml` (Amplify hosting; the promote workflow is the one with setup-node)
 - `figma-refresh-token.yml` (key workflow; it has no setup action)
 - `figma-token-studio-sync.yml` (design-token sync, not a CI workflow)
@@ -63,7 +63,6 @@ Node `lts/*`:
 - Test Node
 - Test Infrastructure
 - Checkov IaC Security
-- CDK Diff
 - Lighthouse audit
 
 Python `3.12`:
@@ -78,7 +77,7 @@ Python `3.12`:
 
 `npm ci` is folded into `setup-node` only where that following step is exactly `npm ci` in the lockfile directory. Those calls set `cache: npm` and `working-directory`, and leave `install` at its default:
 
-- `backend/infrastructure` in Lint Python, Lint CDK, Checkov IaC Security, and CDK Diff
+- `backend/infrastructure` in Lint Python, Lint CDK, and Checkov IaC Security
 - `apps/public_www` in Lighthouse audit
 
 These installs are not exactly `npm ci`, so the install step stays:
@@ -131,7 +130,7 @@ Python callers that do not cache pip pass only `python-version: "3.12"` and keep
 
 ## Done when
 
-The six workflow files contain no `actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1`, no `actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0`, and no `1a3cca7`. Every `lx-software-ltd/actions` reference in those files is `c850872471a02a3f6112a9c5321b485e7f181443`. The deploy, Amplify, key, and bootstrap workflows still use the pins listed above. `pytest tests/test_agent_harness_checks.py::test_pytest_coverage_floor_is_enforced_in_ci` passes.
+The five workflow files contain no `actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1`, no `actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0`, and no `1a3cca7`. Every `lx-software-ltd/actions` reference in those files is `c850872471a02a3f6112a9c5321b485e7f181443`. `cdk-diff.yml` stays on `actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1`. The deploy, Amplify, key, and bootstrap workflows still use the pins listed above. `pytest tests/test_agent_harness_checks.py::test_pytest_coverage_floor_is_enforced_in_ci` passes.
 
 ## Rollback
 
