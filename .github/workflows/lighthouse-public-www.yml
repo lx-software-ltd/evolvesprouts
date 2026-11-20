@@ -31,11 +31,11 @@ jobs:
           echo "site_origin=https://${SITE_DOMAIN}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        uses: lx-software-ltd/actions/setup-node@c850872471a02a3f6112a9c5321b485e7f181443 # main 2026-11-20
         with:
           node-version: 'lts/*'
-          cache: 'npm'
-          cache-dependency-path: apps/public_www/package-lock.json
+          cache: npm
+          working-directory: apps/public_www
 
       - name: Restore Next.js build cache (public_www)
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -44,10 +44,6 @@ jobs:
           key: ${{ runner.os }}-nextjs-public-www-${{ hashFiles('apps/public_www/package-lock.json') }}-${{ hashFiles('apps/public_www/src/**/*.{js,jsx,ts,tsx}', 'apps/public_www/scripts/**/*.mjs', 'apps/public_www/next.config.*') }}
           restore-keys: |
             ${{ runner.os }}-nextjs-public-www-${{ hashFiles('apps/public_www/package-lock.json') }}-
-
-      - name: Install dependencies
-        working-directory: apps/public_www
-        run: npm ci
 
       - name: Build static website
         working-directory: apps/public_www

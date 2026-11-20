@@ -44,11 +44,12 @@ jobs:
           echo "site_origin=https://${SITE_DOMAIN}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        uses: lx-software-ltd/actions/setup-node@c850872471a02a3f6112a9c5321b485e7f181443 # main 2026-11-20
         with:
           node-version: "lts/*"
           cache: npm
-          cache-dependency-path: apps/public_www/package-lock.json
+          working-directory: apps/public_www
+          install: "false"
 
       - name: Restore Next.js build cache (public_www)
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -108,11 +109,12 @@ jobs:
           echo "public_www_origin=https://${PUBLIC_WWW_DOMAIN}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        uses: lx-software-ltd/actions/setup-node@c850872471a02a3f6112a9c5321b485e7f181443 # main 2026-11-20
         with:
           node-version: "lts/*"
           cache: npm
-          cache-dependency-path: apps/training/package-lock.json
+          working-directory: apps/training
+          install: "false"
 
       - name: Validate Training Website
         working-directory: apps/training
@@ -167,7 +169,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        uses: lx-software-ltd/actions/setup-node@c850872471a02a3f6112a9c5321b485e7f181443 # main 2026-11-20
         with:
           node-version: "lts/*"
 
@@ -212,7 +214,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        uses: lx-software-ltd/actions/setup-python@c850872471a02a3f6112a9c5321b485e7f181443 # main 2026-11-20
         with:
           python-version: "3.12"
 
@@ -273,12 +275,12 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        uses: lx-software-ltd/actions/setup-python@c850872471a02a3f6112a9c5321b485e7f181443 # main 2026-11-20
         with:
           python-version: "3.12"
 
       - name: Set up Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        uses: lx-software-ltd/actions/setup-node@c850872471a02a3f6112a9c5321b485e7f181443 # main 2026-11-20
         with:
           node-version: "lts/*"
 
@@ -321,6 +323,6 @@ jobs:
     if: always()
     steps:
       - name: Require every test job
-        uses: lx-software-ltd/actions/require-jobs@1a3cca7c38163f8164c262323601c34a4df5b7a4 # main 2026-11-20
+        uses: lx-software-ltd/actions/require-jobs@c850872471a02a3f6112a9c5321b485e7f181443 # main 2026-11-20
         with:
           needs-json: ${{ toJson(needs) }}
