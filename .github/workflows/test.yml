@@ -321,29 +321,6 @@ jobs:
     if: always()
     steps:
       - name: Require every test job
-        env:
-          TEST_PUBLIC_WWW: ${{ needs.test-public-www.result }}
-          TEST_TRAINING: ${{ needs.test-training.result }}
-          TEST_FLUTTER: ${{ needs.test-flutter.result }}
-          TEST_NODE: ${{ needs.test-node.result }}
-          TEST_PYTHON: ${{ needs.test-python.result }}
-          TEST_INFRASTRUCTURE: ${{ needs.test-infrastructure.result }}
-        run: |
-          python3 - <<'PY'
-          import os
-          import sys
-
-          jobs = {
-              "test-public-www": os.environ["TEST_PUBLIC_WWW"],
-              "test-training": os.environ["TEST_TRAINING"],
-              "test-flutter": os.environ["TEST_FLUTTER"],
-              "test-node": os.environ["TEST_NODE"],
-              "test-python": os.environ["TEST_PYTHON"],
-              "test-infrastructure": os.environ["TEST_INFRASTRUCTURE"],
-          }
-          failed = [f"{name}={result}" for name, result in jobs.items() if result != "success"]
-          if failed:
-              print("Test jobs did not all succeed: " + ", ".join(failed))
-              sys.exit(1)
-          print("All test jobs succeeded.")
-          PY
+        uses: lx-software-ltd/actions/require-jobs@1a3cca7c38163f8164c262323601c34a4df5b7a4 # main 2026-11-20
+        with:
+          needs-json: ${{ toJson(needs) }}
