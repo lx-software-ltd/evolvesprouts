@@ -125,15 +125,14 @@ demand to verify that branch protection rules are correctly configured.
 
 The workflow grants `contents: read` only. `administration` is not a valid
 Actions permission, and classic branch-protection reads return 403 for that
-token. The script treats 403 and 404 on the legacy protection endpoints as
-"not readable" and still evaluates repository rulesets. A disabled ruleset
-does not count as protection, so the job fails until `main-protection` is
-Active and meets the checks below.
+token. The weekly job calls the pinned verify-rulesets action and does not
+run a local script. A disabled ruleset does not count as protection, so the
+job fails until `main-protection` is Active and meets the checks below.
 
 The verification checks fail the job when any of these are missing:
-- An active ruleset targets `main` (or legacy branch protection does)
-- At least one approving review is required
-- Required status checks include names containing `lint` and `test`
+- An active ruleset targets `main`
+- An approving-review count of exactly 0
+- Required status checks are exactly `lint` and `test`
 - Force pushes and deletions are blocked
 - An active ruleset protects `v*` tags
 
