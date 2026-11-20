@@ -44,7 +44,7 @@ jobs:
           echo "site_origin=https://${SITE_DOMAIN}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@c850872471a02a3f6112a9c5321b485e7f181443 # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-node@61d2a581a1d880533982bada88923ad1b6431700 # main 2026-11-20
         with:
           node-version: "lts/*"
           cache: npm
@@ -109,7 +109,7 @@ jobs:
           echo "public_www_origin=https://${PUBLIC_WWW_DOMAIN}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@c850872471a02a3f6112a9c5321b485e7f181443 # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-node@61d2a581a1d880533982bada88923ad1b6431700 # main 2026-11-20
         with:
           node-version: "lts/*"
           cache: npm
@@ -169,7 +169,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@c850872471a02a3f6112a9c5321b485e7f181443 # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-node@61d2a581a1d880533982bada88923ad1b6431700 # main 2026-11-20
         with:
           node-version: "lts/*"
 
@@ -214,7 +214,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@c850872471a02a3f6112a9c5321b485e7f181443 # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-python@61d2a581a1d880533982bada88923ad1b6431700 # main 2026-11-20
         with:
           python-version: "3.12"
 
@@ -275,12 +275,12 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@c850872471a02a3f6112a9c5321b485e7f181443 # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-python@61d2a581a1d880533982bada88923ad1b6431700 # main 2026-11-20
         with:
           python-version: "3.12"
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@c850872471a02a3f6112a9c5321b485e7f181443 # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-node@61d2a581a1d880533982bada88923ad1b6431700 # main 2026-11-20
         with:
           node-version: "lts/*"
 
@@ -323,6 +323,6 @@ jobs:
     if: always()
     steps:
       - name: Require every test job
-        uses: lx-software-ltd/actions/require-jobs@c850872471a02a3f6112a9c5321b485e7f181443 # main 2026-11-20
+        uses: lx-software-ltd/actions/require-jobs@61d2a581a1d880533982bada88923ad1b6431700 # main 2026-11-20
         with:
           needs-json: ${{ toJson(needs) }}
