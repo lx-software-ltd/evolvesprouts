@@ -1,0 +1,71 @@
+{
+  "rules": {
+    "agents-phrases": [
+      "## Zones",
+      "docs/architecture/zones.md",
+      "## Cursor Cloud"
+    ],
+    "core-rule": "00-repository-core.mdc",
+    "agents-limit": 150,
+    "rule-limit": 200,
+    "skill-limit": 220,
+    "pointer-limit": 12,
+    "required-rules": {
+      "00-repository-core.mdc": true,
+      "backend-api.mdc": false,
+      "infrastructure-cdk.mdc": false,
+      "admin-web.mdc": false,
+      "public-www.mdc": false,
+      "training-web.mdc": false,
+      "flutter-app.mdc": false
+    },
+    "required-skills": [
+      "db-migration",
+      "admin-api-endpoint",
+      "admin-crud-screen",
+      "public-www-section",
+      "verify-change"
+    ],
+    "required-files": [
+      "docs/architecture/zones.md",
+      ".github/PULL_REQUEST_TEMPLATE.md",
+      ".cursor/hooks.json"
+    ],
+    "extra-rules": "always-only",
+    "verify-why-commits": false,
+    "skills": "required"
+  },
+  "file-length": {
+    "mode": "python-counted",
+    "limit": 500,
+    "allowlist": "scripts/python-file-length-allowlist.txt",
+    "scan-roots": [
+      "backend/src",
+      "backend/lambda"
+    ]
+  },
+  "test-focus": {
+    "mode": "all-sources",
+    "roots": [
+      "tests",
+      "apps/admin_web/tests",
+      "apps/public_www/tests",
+      "apps/training/tests",
+      "apps/evolvesprouts_app/test",
+      "packages",
+      "backend/infrastructure/test"
+    ],
+    "suffixes": [
+      ".py",
+      ".ts",
+      ".tsx",
+      ".js",
+      ".jsx",
+      ".mjs",
+      ".dart"
+    ],
+    "skip-parts": [
+      "node_modules"
+    ]
+  }
+}
