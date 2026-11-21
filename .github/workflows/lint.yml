@@ -31,6 +31,7 @@ on:
       - ".cursor/**"
       - ".pre-commit-config.yaml"
       - ".github/workflows/lint.yml"
+      - ".github/harness.json"
 
 jobs:
   validate-agent-rules:
@@ -45,7 +46,7 @@ jobs:
           fetch-depth: 0
 
       - name: Validate agent rules
-        run: python3 scripts/validate_agent_rules.py
+        uses: lx-software-ltd/actions/agent-harness@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
 
   lint-dart:
     name: Lint Dart
@@ -85,7 +86,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@61d2a581a1d880533982bada88923ad1b6431700 # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-node@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-20
         with:
           node-version: "22.22.2"
 
@@ -154,13 +155,13 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@61d2a581a1d880533982bada88923ad1b6431700 # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-python@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-20
         with:
           python-version: "3.12"
           requirements: "**/requirements.txt"
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@61d2a581a1d880533982bada88923ad1b6431700 # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-node@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-20
         with:
           node-version: "22.22.2"
           cache: npm
@@ -185,14 +186,14 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@61d2a581a1d880533982bada88923ad1b6431700 # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-node@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-20
         with:
           node-version: "22.22.2"
           cache: npm
           working-directory: backend/infrastructure
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@61d2a581a1d880533982bada88923ad1b6431700 # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-python@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-20
         with:
           python-version: "3.12"
 
@@ -244,6 +245,6 @@ jobs:
     if: always()
     steps:
       - name: Require every lint job
-        uses: lx-software-ltd/actions/require-jobs@61d2a581a1d880533982bada88923ad1b6431700 # main 2026-11-20
+        uses: lx-software-ltd/actions/require-jobs@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-20
         with:
           needs-json: ${{ toJson(needs) }}
