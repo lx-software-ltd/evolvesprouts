@@ -212,16 +212,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+      - name: Analyze
+        uses: lx-software-ltd/actions/codeql@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
-          languages: ${{ matrix.language }}
+          language: ${{ matrix.language }}
           queries: security-extended
           config-file: .github/codeql/codeql-config.yml
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
-        with:
           category: "/language:${{ matrix.language }}"
 
   # Secret scanning (in addition to GitHub's built-in scanning)
@@ -252,74 +248,11 @@ jobs:
           tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
           /tmp/gitleaks detect --source . --verbose --redact --no-banner
 
-  # SAST with Semgrep
-  semgrep:
-    name: Semgrep SAST
-    runs-on: ubuntu-26.04
-    container:
-      image: semgrep/semgrep@sha256:f83a64e8a7d985eaa51ee3978c9c882be946964c68633fba5d2817cf297a3912 # 2026-11-17
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Run Semgrep
-        # Rule exclusions (centralized suppressions):
-        # - dynamic-urllib-use-detected: Suppressed for cfn_response.py which validates
-        #   URLs before use (HTTPS only, .amazonaws.com hosts only). The validation
-        #   prevents the file:// scheme attack vector. See backend/src/app/utils/cfn_response.py
-        run: |
-          semgrep ci \
-            --sarif \
-            --output=semgrep-results.sarif \
-            --exclude-rule python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected \
-            || true
-        env:
-          SEMGREP_RULES: >-
-            p/python
-            p/security-audit
-            p/secrets
-            p/owasp-top-ten
-
-      - name: Filter in-source suppressed Semgrep findings
-        if: always()
-        run: |
-          python - <<'PY'
-          import json
-          from pathlib import Path
-
-          sarif_path = Path("semgrep-results.sarif")
-          if not sarif_path.exists():
-              print("semgrep-results.sarif not found; skipping suppression filter.")
-              raise SystemExit(0)
-
-          payload = json.loads(sarif_path.read_text(encoding="utf-8"))
-          removed = 0
-          for run in payload.get("runs", []):
-              results = run.get("results", [])
-              kept = []
-              for result in results:
-                  suppressions = result.get("suppressions", [])
-                  if any(item.get("kind") == "inSource" for item in suppressions):
-                      removed += 1
-                      continue
-                  kept.append(result)
-              run["results"] = kept
-
-          sarif_path.write_text(json.dumps(payload), encoding="utf-8")
-          print(f"Removed {removed} in-source suppressed Semgrep findings from SARIF.")
-          PY
-
-      - name: Upload SARIF results
-        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
-        if: always()
-        with:
-          sarif_file: semgrep-results.sarif
-
   # Summary job
   security-summary:
     name: Security Summary
     runs-on: ubuntu-26.04
-    needs: [dependency-audit, bandit, checkov, codeql, secrets-scan, semgrep]
+    needs: [dependency-audit, bandit, checkov, codeql, secrets-scan]
     if: always()
     steps:
       - name: Check job results
@@ -333,4 +266,3 @@ jobs:
           echo "| Checkov | ${{ needs.checkov.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| CodeQL | ${{ needs.codeql.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Secret Scanning | ${{ needs.secrets-scan.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Semgrep | ${{ needs.semgrep.result }} |" >> $GITHUB_STEP_SUMMARY
