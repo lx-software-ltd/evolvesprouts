@@ -19,84 +19,6 @@ permissions:
   actions: read
 
 jobs:
-  # Python dependency vulnerability scanning
-  dependency-audit:
-    name: Python Dependency Audit
-    runs-on: ubuntu-26.04
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
-        with:
-          python-version: '3.12'
-
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip
-
-      - name: Install pip-audit
-        run: python -m pip install pip-audit
-
-      - name: Run pip-audit
-        working-directory: backend
-        # Ignored advisories:
-        # - PYSEC-2025-183 / CVE-2025-45768: disputed by the pyjwt maintainer
-        #   (advisory states "this is disputed by the Supplier because the key
-        #   length is chosen by the application that uses the library").
-        #   Affects all pyjwt versions with no published fix version, so it is
-        #   not actionable here. Application code that signs/verifies JWTs is
-        #   responsible for enforcing minimum key length.
-        run: |
-          pip-audit -r requirements.txt --desc on --ignore-vuln PYSEC-2025-183 --format json --output audit-results.json || true
-          pip-audit -r requirements.txt --desc on --ignore-vuln PYSEC-2025-183
-
-      - name: Upload audit results
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: always()
-        with:
-          name: pip-audit-results
-          path: backend/audit-results.json
-          retention-days: 30
-
-  # Python security linting with Bandit
-  bandit:
-    name: Bandit Security Linter
-    runs-on: ubuntu-26.04
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
-        with:
-          python-version: '3.12'
-
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip
-
-      - name: Install Bandit
-        run: python -m pip install bandit[toml]
-
-      - name: Run Bandit
-        working-directory: backend
-        # Rule skips (centralized suppressions):
-        # - B310 (urllib_urlopen): Suppressed because cfn_response.py validates URLs
-        #   before use (HTTPS only, .amazonaws.com hosts only), preventing the
-        #   file:// scheme attack vector. See src/app/utils/cfn_response.py
-        run: |
-          bandit -r src lambda -f json -o bandit-results.json --skip B310 || true
-          bandit -r src lambda -f txt --skip B310
-
-      - name: Upload Bandit results
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: always()
-        with:
-          name: bandit-results
-          path: backend/bandit-results.json
-          retention-days: 30
-
-  # Infrastructure as Code scanning with Checkov
   checkov:
     name: Checkov IaC Security
     runs-on: ubuntu-26.04
@@ -130,77 +52,12 @@ jobs:
         run: npx cdk synth --quiet --output cdk.out
 
       - name: Run Checkov
-        uses: bridgecrewio/checkov-action@45edc9d8856b664db2ec251f5f8632361f0a67aa # v12.3139.0
+        uses: lx-software-ltd/actions/checkov-cloudformation@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
           directory: backend/infrastructure/cdk.out
-          config_file: backend/infrastructure/.checkov.yaml
-          output_format: cli,sarif
-          output_file_path: console,backend/infrastructure/checkov-results.sarif
+          config-file: backend/infrastructure/.checkov.yaml
+          framework: cloudformation
 
-      - name: Filter in-source suppressed Checkov findings
-        id: filter_checkov_sarif
-        if: always()
-        run: |
-          python - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          sarif_path = Path("backend/infrastructure/checkov-results.sarif")
-          if not sarif_path.exists():
-              print("checkov-results.sarif not found; skipping suppression filter.")
-              payload = {"version": "2.1.0", "runs": []}
-              output_path = Path(os.environ["RUNNER_TEMP"]) / "checkov-results.filtered.sarif"
-              output_path.write_text(json.dumps(payload), encoding="utf-8")
-              output_file = os.environ.get("GITHUB_OUTPUT")
-              if output_file:
-                  with open(output_file, "a", encoding="utf-8") as fh:
-                      fh.write(f"filtered_sarif={output_path}\n")
-              raise SystemExit(0)
-          if sarif_path.is_dir():
-              candidates = sorted(sarif_path.glob("*.sarif"))
-              if not candidates:
-                  print("No SARIF files found in checkov-results.sarif directory; skipping suppression filter.")
-                  payload = {"version": "2.1.0", "runs": []}
-                  output_path = Path(os.environ["RUNNER_TEMP"]) / "checkov-results.filtered.sarif"
-                  output_path.write_text(json.dumps(payload), encoding="utf-8")
-                  output_file = os.environ.get("GITHUB_OUTPUT")
-                  if output_file:
-                      with open(output_file, "a", encoding="utf-8") as fh:
-                          fh.write(f"filtered_sarif={output_path}\n")
-                  raise SystemExit(0)
-              sarif_path = candidates[0]
-
-          payload = json.loads(sarif_path.read_text(encoding="utf-8"))
-          removed = 0
-          for run in payload.get("runs", []):
-              results = run.get("results", [])
-              kept = []
-              for result in results:
-                  suppressions = result.get("suppressions", [])
-                  if any(item.get("kind") == "inSource" for item in suppressions):
-                      removed += 1
-                      continue
-                  kept.append(result)
-              run["results"] = kept
-
-          output_path = Path(os.environ["RUNNER_TEMP"]) / "checkov-results.filtered.sarif"
-          output_path.write_text(json.dumps(payload), encoding="utf-8")
-          output_file = os.environ.get("GITHUB_OUTPUT")
-          if output_file:
-              with open(output_file, "a", encoding="utf-8") as fh:
-                  fh.write(f"filtered_sarif={output_path}\n")
-          print(f"Removed {removed} in-source suppressed Checkov findings from SARIF.")
-          PY
-
-      - name: Upload SARIF results
-        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
-        with:
-          sarif_file: ${{ steps.filter_checkov_sarif.outputs.filtered_sarif }}
-          # Checkov SARIF is large; do not fail job on processing wait jitter.
-          wait-for-processing: false
-
-  # CodeQL analysis (per-language matrix for Security tab categorization)
   codeql:
     name: CodeQL Analysis
     runs-on: ubuntu-26.04
@@ -220,7 +77,23 @@ jobs:
           config-file: .github/codeql/codeql-config.yml
           category: "/language:${{ matrix.language }}"
 
-  # Secret scanning (in addition to GitHub's built-in scanning)
+  pii-denylist:
+    name: PII denylist
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: lx-software-ltd/actions/setup-python@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
+        with:
+          python-version: "3.12"
+
+      - name: Check hashed PII denylist
+        uses: lx-software-ltd/actions/pii-denylist@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
+        with:
+          denylist-path: scripts/pii-denylist.sha256
+
   secrets-scan:
     name: Secret Scanning
     runs-on: ubuntu-26.04
@@ -230,39 +103,93 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Use the MIT-licensed gitleaks CLI instead of gitleaks-action.
-      # The action requires GITLEAKS_LICENSE on organization repos, and
-      # Dependabot pull_request runs cannot read Actions secrets
-      # (Secret source: Dependabot), so the action fails with
-      # "missing gitleaks license" on every Dependabot PR. The CLI
-      # needs no license and still scans the checked-out history.
+      # The shared action runs the MIT-licensed CLI. The licensed
+      # gitleaks-action cannot read Actions secrets on Dependabot pull
+      # requests, so those runs failed with a missing license.
       - name: Run Gitleaks
-        env:
-          GITLEAKS_VERSION: "8.30.1"
-          GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
-        run: |
-          curl -sSfL \
-            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
-            -o /tmp/gitleaks.tgz
-          echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tgz" | sha256sum -c -
-          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
-          /tmp/gitleaks detect --source . --verbose --redact --no-banner
+        uses: lx-software-ltd/actions/gitleaks@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
+        with:
+          config-path: .gitleaks.toml
 
-  # Summary job
+  dependency-audit:
+    name: Python Dependency Audit
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: lx-software-ltd/actions/setup-python@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
+        with:
+          python-version: "3.12"
+
+      # Ignored advisories:
+      # - PYSEC-2025-183 / CVE-2025-45768: disputed by the pyjwt maintainer
+      #   (advisory states "this is disputed by the Supplier because the key
+      #   length is chosen by the application that uses the library").
+      #   Affects all pyjwt versions with no published fix version, so it is
+      #   not actionable here. Application code that signs/verifies JWTs is
+      #   responsible for enforcing minimum key length.
+      - name: Audit Python requirements
+        uses: lx-software-ltd/actions/pip-audit@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
+        with:
+          requirements: backend/requirements.txt
+          ignore-vulns: PYSEC-2025-183
+
+  bandit:
+    name: Bandit Security Linter
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: lx-software-ltd/actions/setup-python@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
+        with:
+          python-version: "3.12"
+
+      # Measured 22 Nov 2026 with Bandit 1.9.4 on backend/src and
+      # backend/lambda. No high findings and no B105 or B106 findings.
+      # Two medium B310 urlopen calls remain, so the directory skip stays
+      # B310. cfn_response.py allows only HTTPS hosts ending in
+      # .amazonaws.com. aws_proxy.py allows only http and https URLs that
+      # are on the proxy allow-list.
+      - name: Run Bandit
+        uses: lx-software-ltd/actions/bandit@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
+        with:
+          paths: src lambda
+          root: backend
+          skip: B310
+
+  npm-audit:
+    name: npm audit
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: lx-software-ltd/actions/setup-node@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
+        with:
+          node-version: "26"
+
+      - name: Audit npm lockfiles
+        uses: lx-software-ltd/actions/npm-audit@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
+        with:
+          directories: |
+            apps/admin_web
+            apps/public_www
+            apps/training
+            backend/infrastructure
+          audit-level: high
+
   security-summary:
     name: Security Summary
     runs-on: ubuntu-26.04
-    needs: [dependency-audit, bandit, checkov, codeql, secrets-scan]
+    needs: [checkov, codeql, pii-denylist, secrets-scan, dependency-audit, bandit, npm-audit]
     if: always()
     steps:
-      - name: Check job results
-        run: |
-          echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Dependency Audit | ${{ needs.dependency-audit.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Bandit | ${{ needs.bandit.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Checkov | ${{ needs.checkov.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| CodeQL | ${{ needs.codeql.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Secret Scanning | ${{ needs.secrets-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+      - name: Require every security job
+        uses: lx-software-ltd/actions/require-jobs@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
+        with:
+          needs-json: ${{ toJson(needs) }}
