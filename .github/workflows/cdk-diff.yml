@@ -32,6 +32,11 @@ jobs:
           cache: 'npm'
           cache-dependency-path: backend/infrastructure/package-lock.json
 
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
@@ -48,10 +53,8 @@ jobs:
         run: |
           npx cdk acknowledge 34892 || true
           npm run build --if-present
-          QUALIFIER_ARGS=()
-          if [ -n "$CDK_BOOTSTRAP_QUALIFIER" ]; then
-            QUALIFIER_ARGS=(--qualifier "$CDK_BOOTSTRAP_QUALIFIER")
-          fi
+          # The CDK app reads CDK_BOOTSTRAP_QUALIFIER. `cdk diff` has no
+          # --qualifier flag; passing one is ignored.
           STACK_ARGS=()
           if [ -n "${CDK_STACKS:-}" ]; then
             IFS=$', \n\t' read -r -a STACK_LIST <<< "$CDK_STACKS"
@@ -64,9 +67,9 @@ jobs:
             done
           fi
           if [ ${#STACK_ARGS[@]} -gt 0 ]; then
-            npx cdk diff --no-color "${QUALIFIER_ARGS[@]}" "${STACK_ARGS[@]}"
+            npx cdk diff --no-color "${STACK_ARGS[@]}"
           else
-            npx cdk diff --no-color "${QUALIFIER_ARGS[@]}"
+            npx cdk diff --no-color
           fi
         env:
           CDK_STACKS: ${{ inputs.stacks }}
