@@ -46,7 +46,6 @@ jobs:
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
         with:
-          node-version: "26"
           cache: npm
           working-directory: apps/public_www
           install: "false"
@@ -111,7 +110,6 @@ jobs:
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
         with:
-          node-version: "26"
           cache: npm
           working-directory: apps/training
           install: "false"
@@ -171,8 +169,6 @@ jobs:
 
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
-        with:
-          node-version: "26"
 
       - name: Run Node tests
         run: |
@@ -282,8 +278,6 @@ jobs:
 
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
-        with:
-          node-version: "26"
 
       - name: Install infrastructure dependencies
         run: |
