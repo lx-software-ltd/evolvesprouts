@@ -150,16 +150,14 @@ jobs:
 
       # Measured 22 Nov 2026 with Bandit 1.9.4 on backend/src and
       # backend/lambda. No high findings and no B105 or B106 findings.
-      # Two medium B310 urlopen calls remain, so the directory skip stays
-      # B310. cfn_response.py allows only HTTPS hosts ending in
-      # .amazonaws.com. aws_proxy.py allows only http and https URLs that
-      # are on the proxy allow-list.
+      # Two B310 urlopen calls are marked on the line: cfn_response.py
+      # allows only HTTPS hosts ending in .amazonaws.com, and aws_proxy.py
+      # allows only http and https URLs on the proxy allow-list.
       - name: Run Bandit
         uses: lx-software-ltd/actions/bandit@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
           paths: src lambda
           root: backend
-          skip: B310
 
   npm-audit:
     name: npm audit
