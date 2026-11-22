@@ -26,7 +26,7 @@ on:
 jobs:
   test-public-www:
     name: Verify Public Website
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -44,9 +44,9 @@ jobs:
           echo "site_origin=https://${SITE_DOMAIN}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-node@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
-          node-version: "lts/*"
+          node-version: "26"
           cache: npm
           working-directory: apps/public_www
           install: "false"
@@ -87,7 +87,7 @@ jobs:
 
   test-training:
     name: Verify Training Website
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -109,9 +109,9 @@ jobs:
           echo "public_www_origin=https://${PUBLIC_WWW_DOMAIN}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-node@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
-          node-version: "lts/*"
+          node-version: "26"
           cache: npm
           working-directory: apps/training
           install: "false"
@@ -132,7 +132,7 @@ jobs:
 
   test-flutter:
     name: Test Flutter
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -163,15 +163,15 @@ jobs:
 
   test-node:
     name: Test Node
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-node@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
-          node-version: "lts/*"
+          node-version: "26"
 
       - name: Run Node tests
         run: |
@@ -192,7 +192,7 @@ jobs:
 
   test-python:
     name: Test Python
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     services:
       postgres:
         image: postgres:16
@@ -214,7 +214,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-python@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
           python-version: "3.12"
 
@@ -269,20 +269,20 @@ jobs:
 
   test-infrastructure:
     name: Test Infrastructure
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-python@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
           python-version: "3.12"
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-node@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
-          node-version: "lts/*"
+          node-version: "26"
 
       - name: Install infrastructure dependencies
         run: |
@@ -312,7 +312,7 @@ jobs:
 
   test:
     name: test
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs:
       - test-public-www
       - test-training
@@ -323,6 +323,6 @@ jobs:
     if: always()
     steps:
       - name: Require every test job
-        uses: lx-software-ltd/actions/require-jobs@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-20
+        uses: lx-software-ltd/actions/require-jobs@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
           needs-json: ${{ toJson(needs) }}

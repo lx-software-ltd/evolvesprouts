@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build-and-deploy:
-    runs-on: macos-latest
+    runs-on: macos-26
     environment: production
     env:
       MATCH_DEPLOY_KEY: ${{ secrets.MATCH_DEPLOY_KEY }}

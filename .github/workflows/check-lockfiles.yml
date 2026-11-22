@@ -15,7 +15,7 @@ on:
 jobs:
   flutter-lockfiles:
     name: Check Flutter lockfiles
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -45,15 +45,15 @@ jobs:
 
   node-lockfiles:
     name: Check Node.js lockfiles
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-node@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
-          node-version: "22.22.2"
+          node-version: "26"
 
       - name: Validate package-lock.json
         run: |
@@ -76,7 +76,7 @@ jobs:
 
   ios-lockfiles:
     name: Check iOS lockfiles
-    runs-on: macos-latest
+    runs-on: macos-26
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -103,7 +103,7 @@ jobs:
 
   python-requirements:
     name: Check Python requirements
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

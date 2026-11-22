@@ -37,7 +37,7 @@ jobs:
   validate-agent-rules:
     # Check name is "Lint / Validate agent rules". Ruleset matching looks for "lint".
     name: Validate agent rules
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -46,11 +46,11 @@ jobs:
           fetch-depth: 0
 
       - name: Validate agent rules
-        uses: lx-software-ltd/actions/agent-harness@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
+        uses: lx-software-ltd/actions/agent-harness@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
 
   lint-dart:
     name: Lint Dart
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -77,7 +77,7 @@ jobs:
 
   lint-react:
     name: Lint React
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -86,9 +86,9 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-node@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
-          node-version: "22.22.2"
+          node-version: "26"
 
       - name: Run React lint
         run: |
@@ -146,7 +146,7 @@ jobs:
 
   lint-python:
     name: Lint Python
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -155,15 +155,15 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-python@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
           python-version: "3.12"
           requirements: "**/requirements.txt"
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-node@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
-          node-version: "22.22.2"
+          node-version: "26"
           cache: npm
           working-directory: backend/infrastructure
 
@@ -178,7 +178,7 @@ jobs:
 
   lint-cdk:
     name: Lint CDK
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -186,14 +186,14 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-node@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
-          node-version: "22.22.2"
+          node-version: "26"
           cache: npm
           working-directory: backend/infrastructure
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-python@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
           python-version: "3.12"
 
@@ -222,7 +222,7 @@ jobs:
 
   lint-openapi:
     name: Lint OpenAPI
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -234,7 +234,7 @@ jobs:
 
   lint:
     name: lint
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs:
       - validate-agent-rules
       - lint-dart
@@ -245,6 +245,6 @@ jobs:
     if: always()
     steps:
       - name: Require every lint job
-        uses: lx-software-ltd/actions/require-jobs@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-20
+        uses: lx-software-ltd/actions/require-jobs@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
           needs-json: ${{ toJson(needs) }}
