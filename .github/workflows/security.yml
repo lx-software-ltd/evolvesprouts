@@ -257,7 +257,7 @@ jobs:
     name: Semgrep SAST
     runs-on: ubuntu-26.04
     container:
-      image: semgrep/semgrep
+      image: semgrep/semgrep@sha256:f83a64e8a7d985eaa51ee3978c9c882be946964c68633fba5d2817cf297a3912 # 2026-11-17
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

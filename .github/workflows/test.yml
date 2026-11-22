@@ -195,7 +195,7 @@ jobs:
     runs-on: ubuntu-26.04
     services:
       postgres:
-        image: postgres:16
+        image: postgres:16@sha256:72d22ce26d04fe56a5384e9f6b026152d1cf05db602a7a3524a3ed337d5f5752 # linux/amd64 2026-11-22
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
