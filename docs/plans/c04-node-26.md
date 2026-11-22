@@ -3,7 +3,9 @@
 **Status**: Draft
 **Zone**: red
 
-The pre-commit `rev` is a red path. Pair B also pins `verify-rulesets.yml`, which is red. Deploy workflows that still pass an older Node version are red. Gate G2 already covers the hook repository. This pull request does not change hook behaviour: `9235676` does not touch the hook scripts or `verify-rulesets`. No deploy workflow is run.
+The pre-commit `rev` is a red path. Pair B also pins `verify-rulesets.yml`, which is red. Deploy workflows that still pass an older Node version are red. Gate G2 already covers the hook repository. This pull request does not change hook behaviour: `9235676` does not touch the hook scripts or `verify-rulesets`. This pull request does not run a deploy workflow.
+
+Replacing `lts/*` with `"26"` does not change the runtime. `lts/*` already selects Node 26.
 
 ## Goal
 
@@ -16,7 +18,7 @@ Stages 5 and 6. SA-701 and SA-702. Flutter version pins. No deploy, bootstrap, o
 ## Files
 
 `.github/workflows/*.yml`, `.pre-commit-config.yaml`, this plan.
-Direct setup-node calls in the deploy, promote, smoke, bootstrap, diff, and Figma workflows move from `lts/*` to `"26"`. The shared Lighthouse call drops `node-version`.
+Direct setup-node calls in the deploy, promote, smoke, bootstrap, diff, and Figma workflows move from `lts/*` to `"26"`. That string change keeps Node 26. The shared Lighthouse call drops `node-version`, and the action default is 26.
 
 ## Invariants this change preserves
 
