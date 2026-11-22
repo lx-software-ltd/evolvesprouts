@@ -136,9 +136,9 @@ The verification checks fail the job when any of these are missing:
 - Force pushes and deletions are blocked
 - An active ruleset protects `v*` tags
 
-The `lint` workflow runs `scripts/validate_agent_rules.py`. If required rule
-files are removed or grow past their budget, the lint status fails and merge
-is blocked by branch protection.
+The `lint` workflow runs the shared agent harness. If required rule files
+are removed or grow past their budget, the lint status fails and merge is
+blocked by branch protection.
 
 ---
 

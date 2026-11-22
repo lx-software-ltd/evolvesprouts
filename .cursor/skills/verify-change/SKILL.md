@@ -12,7 +12,8 @@ Run the narrowest command that exercises the edit, then the area lint.
 - Public website: `npm run lint` and `npx vitest run <test>` in `apps/public_www`. Dev server port is 3001.
 - Training: `npm run lint` and `npx vitest run` in `apps/training`. Dev server port is 3002.
 - CDK: `npm run test:infra` in `backend/infrastructure` when a stack changed.
-- Agent rules: `python3 scripts/validate_agent_rules.py`.
+- Agent rules, file length, and test focus: `pre-commit run validate-agent-rules --all-files`, `pre-commit run check-file-length --all-files`, and `pre-commit run check-test-focus --all-files`.
+- Personal data: `pre-commit run check-pii --all-files`. The hash list is `scripts/pii-denylist.sha256`.
 
 A UI behavior change is verified in the browser (click, type, submit, and the other screens that share the state), not by a single screenshot.
 
@@ -22,4 +23,4 @@ Paste the commands and the result into the pull request. CI remains the merge ga
 
 ## Done
 
-The pull request lists the zone, the checks you ran, and the docs or seed decision. Local harness scripts pass.
+The pull request lists the zone, the checks you ran, and the docs or seed decision. Local harness hooks pass.

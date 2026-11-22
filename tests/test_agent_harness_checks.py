@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import importlib.util
+import io
+import json
 import subprocess
-import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -42,17 +43,14 @@ def test_shell_guard_blocks_destructive_commands() -> None:
 
 
 def test_harness_scripts_pass() -> None:
-    commands = (
-        [sys.executable, "scripts/check_python_file_length.py"],
-        [sys.executable, "scripts/check_test_focus.py"],
+    result = subprocess.run(
         ["node", "scripts/check-lambda-docs.mjs"],
-        [sys.executable, "scripts/validate_agent_rules.py"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
     )
-    for command in commands:
-        result = subprocess.run(
-            command, cwd=ROOT, check=False, capture_output=True, text=True
-        )
-        assert result.returncode == 0, result.stderr or result.stdout
+    assert result.returncode == 0, result.stderr or result.stdout
 
 
 def test_pytest_coverage_floor_is_enforced_in_ci() -> None:
@@ -63,11 +61,61 @@ def test_pytest_coverage_floor_is_enforced_in_ci() -> None:
 
 
 def test_python_length_ratchet_scans_backend_source_only() -> None:
-    checker = _load(
-        "check_python_file_length", ROOT / "scripts" / "check_python_file_length.py"
-    )
-    roots = {path.relative_to(ROOT).as_posix() for path in checker.SCAN_ROOTS}
-    assert roots == {"backend/src", "backend/lambda"}
+    config = json.loads((ROOT / ".github" / "harness.json").read_text(encoding="utf-8"))
+    assert config["file-length"]["scan-roots"] == ["backend/src", "backend/lambda"]
+
+
+class _Completed:
+    def __init__(self, stdout: str, returncode: int = 0) -> None:
+        self.stdout = stdout
+        self.stderr = ""
+        self.returncode = returncode
+
+
+def test_stop_gate_missing_pre_commit_is_one_followup(monkeypatch) -> None:
+    stop = _load("stop_gate", ROOT / ".cursor" / "hooks" / "stop_gate.py")
+
+    def fake_run(command, **kwargs):
+        if command[0] == "git":
+            return _Completed(" M file.py\n")
+        if command[0] == "node":
+            return _Completed("")
+        raise FileNotFoundError(command[0])
+
+    monkeypatch.setattr(stop.subprocess, "run", fake_run)
+    stdin = io.StringIO(json.dumps({"status": "completed"}))
+    monkeypatch.setattr(stop.sys, "stdin", stdin)
+    output = io.StringIO()
+    monkeypatch.setattr(stop.sys, "stdout", output)
+    assert stop.main() == 0
+    message = json.loads(output.getvalue())["followup_message"]
+    assert message.count("pre-commit is not on PATH") == 1
+    assert "lx-software-ltd/actions" in message
+    assert "network" in message
+    assert "clone" in message
+
+
+def test_stop_gate_rule_failure_is_not_rewritten_as_a_missing_binary(
+    monkeypatch,
+) -> None:
+    stop = _load("stop_gate", ROOT / ".cursor" / "hooks" / "stop_gate.py")
+
+    def fake_run(command, **kwargs):
+        if command[0] == "git":
+            return _Completed(" M file.py\n")
+        if command[:4] == ["pre-commit", "run", "validate-agent-rules", "--all-files"]:
+            return _Completed("rule bullet is missing [why:]", 1)
+        return _Completed("")
+
+    monkeypatch.setattr(stop.subprocess, "run", fake_run)
+    stdin = io.StringIO(json.dumps({"status": "completed"}))
+    monkeypatch.setattr(stop.sys, "stdin", stdin)
+    output = io.StringIO()
+    monkeypatch.setattr(stop.sys, "stdout", output)
+    assert stop.main() == 0
+    message = json.loads(output.getvalue())["followup_message"]
+    assert "pre-commit is not on PATH" not in message
+    assert "rule bullet is missing [why:]" in message
 
 
 def test_post_edit_reads_documented_hook_paths() -> None:

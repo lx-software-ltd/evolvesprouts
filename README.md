@@ -8,8 +8,10 @@ Cursor loads `AGENTS.md` and `.cursor/rules/*.mdc`. Always-on constraints are
 in `.cursor/rules/00-repository-core.mdc`. Area rules attach by path, and
 procedures live in `.cursor/skills/`. `.cursorrules` is a legacy pointer.
 
-`scripts/validate_agent_rules.py` fails CI and pre-commit when those files
-grow past their size budget, lose a `[why:]` tag, or drop a required skill.
+The harness check fails CI, and `pre-commit run validate-agent-rules
+--all-files` fails a commit, when those files grow past their size budget,
+lose a `[why:]` tag, or drop a required skill. The hooks live in
+`lx-software-ltd/actions`.
 
 ## Setup
 
