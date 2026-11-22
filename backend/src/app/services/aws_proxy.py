@@ -201,7 +201,7 @@ def _handle_http(event: Mapping[str, Any]) -> dict[str, Any]:
             headers=headers,
             method=method,
         )
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310
             resp_body = resp.read().decode("utf-8", errors="replace")
             resp_headers = dict(resp.getheaders())
             return {

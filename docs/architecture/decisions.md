@@ -284,8 +284,8 @@ Lambdas or NAT Gateway.
 **Branch protection for `main`:**
 - Require pull request with at least 1 approval.
 - Require `lint` and `test` status checks to pass.
-- The `lint` workflow includes agent-rule validation via
-  `scripts/validate_agent_rules.py`.
+- The `lint` workflow includes agent-rule validation via the shared
+  agent harness.
 - Require branches to be up to date before merging.
 - Block force pushes and deletions.
 
@@ -1498,7 +1498,7 @@ URLs.
 - Destructive commands and formatting belong in hooks, which run whether or not the model remembers them.
 
 **Consequences:**
-- `scripts/validate_agent_rules.py` checks file size, `[why:]` tags, and required skills.
+- The `validate-agent-rules` hook checks file size, `[why:]` tags, and required skills.
 - `.cursor/hooks.json` blocks destructive shell commands, formats edits, and re-prompts when local checks fail.
 - Red-zone paths still require a written plan and explicit approval before edits.
 

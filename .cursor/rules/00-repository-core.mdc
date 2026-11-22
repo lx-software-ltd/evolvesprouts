@@ -12,7 +12,7 @@ These constraints apply to every change. Path-scoped rules in this directory and
 - Allowed literals are protocol constants, `localhost` for local development, `example.com` in non-behavioral tests and docs, and the invoice PDF footer clause "Proudly registered in Hong Kong". [why: convention]
 - For CDK `new secretsmanager.Secret(...)`, set `secretName` to `${resourcePrefix}-<kebab-case>`. [why: convention]
 - Do not put real personal names, phone numbers, email addresses, street addresses, bank account numbers, or business-registration numbers in source or docs. Tests use fictional fixtures. Business identity comes from `NEXT_PUBLIC_FOUNDER_NAME`, `NEXT_PUBLIC_EMAIL`, `NEXT_PUBLIC_BUSINESS_PHONE_NUMBER`, and `NEXT_PUBLIC_BUSINESS_ADDRESS`, and may be hardcoded only in `apps/public_www/src/content/**/*.json` and test-fixture JSON. [why: 2fbc06dd hashed PII denylist]
-- Do not add plaintext denylist entries. `scripts/check-pii.sh` enforces the hash list. [why: 2fbc06dd hashed PII denylist]
+- Do not add plaintext denylist entries. The `check-pii` hook enforces `scripts/pii-denylist.sha256`. [why: 2fbc06dd hashed PII denylist]
 - Never log unmasked PII. Use `mask_email()` and `mask_pii()`. [why: convention]
 - Never use `print()` in production Python. Use `get_logger()`. [why: 90a441e4 replaced Alembic print() with logging]
 - Never use `random` for security tokens. Use `secrets`. [why: convention]
