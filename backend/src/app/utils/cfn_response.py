@@ -65,7 +65,7 @@ def send_cfn_response(
         # 3. Hostname must end with .amazonaws.com or .amazonaws.com.cn
         # This is safe because CloudFormation ResponseURLs are always S3 pre-signed URLs
         # and the validation prevents the file:// scheme attack vector.
-        with urllib.request.urlopen(request, context=ssl_context) as response:  # nosec B310
+        with urllib.request.urlopen(request, context=ssl_context) as response:  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected # nosec B310
             response.read()
             logger.info(
                 "Sent CloudFormation response",
