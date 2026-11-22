@@ -11,6 +11,7 @@
     "generate:admin-api-types": "openapi-typescript ../../docs/api/admin.yaml -o src/types/generated/admin-api.generated.ts",
     "check:admin-api-types": "node ./scripts/check-admin-api-types.mjs",
     "lint": "npm run check:admin-api-types && eslint --max-warnings=0 .",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

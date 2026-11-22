@@ -30,6 +30,7 @@
     "validate:analytics-governance": "node ./scripts/validate-analytics-governance.mjs",
     "validate:meta-pixel-contract": "node ./scripts/validate-meta-pixel-contract.mjs",
     "lint": "npm run check:public-api-types && npm run validate:analytics-contract && npm run validate:analytics-governance && npm run validate:meta-pixel-contract && eslint --max-warnings=0 .",
+    "typecheck": "tsc --noEmit",
     "generate:public-api-types": "openapi-typescript ../../docs/api/public.yaml -o src/types/generated/public-api.generated.ts",
     "check:public-api-types": "node ./scripts/check-public-api-types.mjs",
     "test": "vitest run",
