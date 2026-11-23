@@ -282,7 +282,7 @@ jobs:
           import os
           from pathlib import Path
 
-          plan = json.loads(Path("backend/infrastructure/cdk-plan.json").read_text(encoding="utf-8"))
+          plan = json.loads(Path("cdk-plan.json").read_text(encoding="utf-8"))
           qualifier = os.environ.get("CDK_BOOTSTRAP_QUALIFIER", "")
           if qualifier:
               plan["groups"][0]["extra-args"] = ["--qualifier", qualifier]
