@@ -111,15 +111,14 @@ jobs:
           echo "should_run=true" >> "${GITHUB_OUTPUT}"
 
       - name: Configure AWS credentials (OIDC)
-        if: ${{ steps.config.outputs.should_run == 'true' }}
-        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        if: ${{ success() && steps.config.outputs.should_run == 'true' }}
+        uses: lx-software-ltd/actions/aws-oidc@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
-          aws-region: ${{ vars.AWS_REGION }}
-          role-session-name: import-legacy-crm-${{ github.run_id }}
+          account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          region: ${{ vars.AWS_REGION }}
 
       - name: Resolve import resources (vars or stack outputs)
-        if: ${{ steps.config.outputs.should_run == 'true' }}
+        if: ${{ success() && steps.config.outputs.should_run == 'true' }}
         env:
           IMPORT_DUMP_BUCKET_NAME: ${{ vars.IMPORT_DUMP_BUCKET_NAME }}
           IMPORT_LAMBDA_FUNCTION_NAME: ${{ vars.IMPORT_LAMBDA_FUNCTION_NAME }}
@@ -174,7 +173,7 @@ jobs:
           echo "IMPORT_LAMBDA_FUNCTION=${RESOLVED_FUNC}" >> "${GITHUB_ENV}"
 
       - name: Verify Lambda and IAM (preflight)
-        if: ${{ steps.config.outputs.should_run == 'true' }}
+        if: ${{ success() && steps.config.outputs.should_run == 'true' }}
         env:
           FUNC: ${{ env.IMPORT_LAMBDA_FUNCTION }}
           BUCKET: ${{ env.IMPORT_DUMP_BUCKET }}
@@ -201,7 +200,7 @@ jobs:
 
       - name: Download SQL dump or use bucket object key
         id: sql_dump
-        if: ${{ steps.config.outputs.should_run == 'true' }}
+        if: ${{ success() && steps.config.outputs.should_run == 'true' }}
         env:
           ENTITY: ${{ github.event.inputs.entity }}
           INPUT_URL: ${{ github.event.inputs.sql_download_url }}
@@ -249,7 +248,7 @@ jobs:
           fi
 
       - name: Upload dump to S3
-        if: ${{ steps.config.outputs.should_run == 'true' && steps.sql_dump.outputs.use_existing_bucket_object != 'true' }}
+        if: ${{ success() && steps.config.outputs.should_run == 'true' && steps.sql_dump.outputs.use_existing_bucket_object != 'true' }}
         env:
           ENTITY: ${{ github.event.inputs.entity }}
           IMPORT_DUMP_BUCKET: ${{ env.IMPORT_DUMP_BUCKET }}
@@ -266,7 +265,7 @@ jobs:
           echo "IMPORT_S3_KEY=${KEY}" >> "${GITHUB_ENV}"
 
       - name: Invoke import Lambda
-        if: ${{ steps.config.outputs.should_run == 'true' }}
+        if: ${{ success() && steps.config.outputs.should_run == 'true' }}
         env:
           ENTITY: ${{ github.event.inputs.entity }}
           BUCKET: ${{ env.IMPORT_DUMP_BUCKET }}

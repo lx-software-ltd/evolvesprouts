@@ -67,11 +67,10 @@ jobs:
           echo "region=$INPUT_AWS_REGION" >> "$GITHUB_OUTPUT"
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        uses: lx-software-ltd/actions/aws-oidc@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
-          aws-region: ${{ steps.region.outputs.region }}
-          role-session-name: GitHubActions-${{ github.run_id }}
+          account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          region: ${{ steps.region.outputs.region }}
 
       - name: Install CDK dependencies
         working-directory: backend/infrastructure
