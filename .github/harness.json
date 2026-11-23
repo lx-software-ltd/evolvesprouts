@@ -31,21 +31,22 @@
       ".github/PULL_REQUEST_TEMPLATE.md",
       ".cursor/hooks.json"
     ],
-    "extra-rules": "always-only",
+    "extra-rules": "full",
     "verify-why-commits": false,
     "skills": "required"
   },
   "file-length": {
-    "mode": "python-counted",
-    "limit": 500,
+    "mode": "typed",
     "allowlist": "scripts/python-file-length-allowlist.txt",
+    "python-limit": 500,
+    "python-prefix": "backend/",
     "scan-roots": [
       "backend/src",
       "backend/lambda"
     ]
   },
   "test-focus": {
-    "mode": "all-sources",
+    "mode": "test-names",
     "roots": [
       "tests",
       "apps/admin_web/tests",
