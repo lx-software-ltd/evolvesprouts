@@ -2,7 +2,7 @@ alembic==1.20.1
 boto3==1.43.126
 pyjwt[crypto]==2.15.1
 pydantic==2.14.3
-psycopg[binary]==3.3.8
+psycopg[binary]==3.3.9
 sqlalchemy==2.1.8
 phonenumbers==9.0.43
 reportlab==5.1.0
