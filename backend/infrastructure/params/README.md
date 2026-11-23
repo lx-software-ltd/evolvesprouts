@@ -30,9 +30,9 @@ is empty.
 public website stacks:
 
 - `PublicWwwDomainName`
-- `PublicWwwCertificateArn`
+- `PublicWwwCertificateArn` (`CDK_PARAM_PUBLIC_WWW_CERTIFICATE_ARN`)
 - `PublicWwwStagingDomainName`
-- `PublicWwwStagingCertificateArn`
+- `PublicWwwStagingCertificateArn` (`CDK_PARAM_PUBLIC_WWW_STAGING_CERTIFICATE_ARN`)
 - `PublicWwwEdgeVerifySecret` (`CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY`)
 - `PublicWwwEdgeVerifySecretPrevious` (`CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS`)
 - `PublicWwwStagingEdgeVerifySecret` (`CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY`)
