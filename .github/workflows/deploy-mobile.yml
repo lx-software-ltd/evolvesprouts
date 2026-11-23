@@ -44,17 +44,13 @@ jobs:
           java-version: "21"
 
       - name: Set up Flutter
-        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
-        with:
-          channel: "stable"
-          flutter-version: "3.50.1"
-          cache: true
+        uses: lx-software-ltd/actions/setup-flutter@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
 
       - name: Point Flutter at Java 21
         run: flutter config --jdk-dir "$JAVA_HOME"
 
       - name: Configure Android signing
-        uses: lx-software-ltd/actions/android-signing@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
+        uses: lx-software-ltd/actions/android-signing@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
         with:
           working-directory: apps/evolvesprouts_app
           keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -80,7 +76,7 @@ jobs:
 
       - name: Check Play Store upload prerequisites
         id: playstore
-        uses: lx-software-ltd/actions/play-prerequisites@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
+        uses: lx-software-ltd/actions/play-prerequisites@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
         with:
           service-account: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
           track: ${{ vars.ANDROID_RELEASE_TRACK }}

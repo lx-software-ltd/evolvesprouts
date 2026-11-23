@@ -23,11 +23,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Flutter
-        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
-        with:
-          channel: "stable"
-          flutter-version: "3.50.1"
-          cache: true
+        uses: lx-software-ltd/actions/setup-flutter@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
 
       - name: Install CocoaPods
         run: sudo gem install cocoapods
@@ -63,7 +59,7 @@ jobs:
           FASTLANE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
 
       - name: Generate ExportOptions.plist
-        uses: lx-software-ltd/actions/ios-export-options@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
+        uses: lx-software-ltd/actions/ios-export-options@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
         with:
           working-directory: apps/evolvesprouts_app
           team-id: ${{ vars.APPLE_TEAM_ID }}
@@ -84,7 +80,7 @@ jobs:
         working-directory: apps/evolvesprouts_app
 
       - name: Load App Store Connect API key
-        uses: lx-software-ltd/actions/appstore-api-key@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
+        uses: lx-software-ltd/actions/appstore-api-key@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
         with:
           api-key-json: ${{ secrets.APPSTORE_API_KEY_JSON }}
           issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
