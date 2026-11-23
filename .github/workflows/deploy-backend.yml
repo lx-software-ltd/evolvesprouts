@@ -433,8 +433,6 @@ jobs:
           attempts: "3"
           no-notices: "true"
           pass-empty: WafWebAclArn,PublicWwwEdgeVerifySecret,PublicWwwEdgeVerifySecretPrevious,PublicWwwStagingEdgeVerifySecret,PublicWwwStagingEdgeVerifySecretPrevious
-          escape-newlines: "false"
-          rollback-match: is in UPDATE_ROLLBACK_FAILED state and can not be updated
           run-seed: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_seed_data || 'false' }}
           region: ${{ vars.AWS_REGION }}
         env:
