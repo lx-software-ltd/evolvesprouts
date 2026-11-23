@@ -1,4 +1,8 @@
 name: Security Scanning
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 
 on:
   push:
@@ -14,12 +18,14 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
-  security-events: write
-  actions: read
 
 jobs:
   checkov:
+    permissions:
+      contents: read
+      pull-requests: read
+      security-events: write
+      actions: read
     name: Checkov IaC Security
     runs-on: ubuntu-26.04
     steps:
@@ -58,6 +64,11 @@ jobs:
           framework: cloudformation
 
   codeql:
+    permissions:
+      contents: read
+      pull-requests: read
+      security-events: write
+      actions: read
     name: CodeQL Analysis
     runs-on: ubuntu-26.04
     strategy:
@@ -77,6 +88,11 @@ jobs:
           category: "/language:${{ matrix.language }}"
 
   pii-denylist:
+    permissions:
+      contents: read
+      pull-requests: read
+      security-events: write
+      actions: read
     name: PII denylist
     runs-on: ubuntu-26.04
     steps:
@@ -94,6 +110,11 @@ jobs:
           denylist-path: scripts/pii-denylist.sha256
 
   secrets-scan:
+    permissions:
+      contents: read
+      pull-requests: read
+      security-events: write
+      actions: read
     name: Secret Scanning
     runs-on: ubuntu-26.04
     steps:
@@ -111,6 +132,11 @@ jobs:
           config-path: .gitleaks.toml
 
   dependency-audit:
+    permissions:
+      contents: read
+      pull-requests: read
+      security-events: write
+      actions: read
     name: Python Dependency Audit
     runs-on: ubuntu-26.04
     steps:
@@ -138,6 +164,11 @@ jobs:
           ignore-vulns: PYSEC-2025-183
 
   bandit:
+    permissions:
+      contents: read
+      pull-requests: read
+      security-events: write
+      actions: read
     name: Bandit Security Linter
     runs-on: ubuntu-26.04
     steps:
@@ -161,6 +192,11 @@ jobs:
           root: backend
 
   npm-audit:
+    permissions:
+      contents: read
+      pull-requests: read
+      security-events: write
+      actions: read
     name: npm audit
     runs-on: ubuntu-26.04
     steps:
@@ -183,6 +219,11 @@ jobs:
           audit-level: high
 
   security-summary:
+    permissions:
+      contents: read
+      pull-requests: read
+      security-events: write
+      actions: read
     name: security-summary
     runs-on: ubuntu-26.04
     needs: [checkov, codeql, pii-denylist, secrets-scan, dependency-audit, bandit, npm-audit]

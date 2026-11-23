@@ -32,7 +32,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: deploy-backend
@@ -40,6 +39,9 @@ concurrency:
 
 jobs:
   deploy:
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-26.04
     environment: production
     steps:
@@ -58,37 +60,21 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Determine deployment region
-        id: region
-        env:
-          INPUT_CDK_STACKS: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
-          INPUT_AWS_REGION: ${{ vars.AWS_REGION }}
-        run: |
-          echo "region=$INPUT_AWS_REGION" >> "$GITHUB_OUTPUT"
-
       - name: Configure AWS credentials
         uses: lx-software-ltd/actions/aws-oidc@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
-          region: ${{ steps.region.outputs.region }}
+          region: ${{ vars.AWS_REGION }}
 
       - name: Install CDK dependencies
         working-directory: backend/infrastructure
         run: npm ci
 
-      - name: Bootstrap CDK
-        working-directory: backend/infrastructure
-        run: |
-          npx cdk acknowledge 34892 || true
-          if [ -n "$CDK_BOOTSTRAP_QUALIFIER" ]; then
-            npx cdk bootstrap --no-notices --qualifier "$CDK_BOOTSTRAP_QUALIFIER" "aws://$AWS_ACCOUNT_ID/$AWS_REGION"
-          else
-            npx cdk bootstrap --no-notices "aws://$AWS_ACCOUNT_ID/$AWS_REGION"
-          fi
-        env:
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-          AWS_REGION: ${{ steps.region.outputs.region }}
-          CDK_BOOTSTRAP_QUALIFIER: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
+      - name: Check CDK bootstrap
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
+        with:
+          qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
+          region: ${{ vars.AWS_REGION }}
 
       - name: Check CDK parameters
         id: prep
@@ -358,7 +344,7 @@ jobs:
               handle.write("PLANJSON\n")
           PY
         env:
-          AWS_REGION: ${{ steps.region.outputs.region }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
           CDK_STACKS: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
           RUN_SEED_DATA: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_seed_data || 'false' }}
           CDK_PARAM_FILE: ${{ vars.CDK_PARAM_FILE }}
@@ -450,9 +436,9 @@ jobs:
           escape-newlines: "false"
           rollback-match: is in UPDATE_ROLLBACK_FAILED state and can not be updated
           run-seed: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_seed_data || 'false' }}
-          region: ${{ steps.region.outputs.region }}
+          region: ${{ vars.AWS_REGION }}
         env:
-          AWS_REGION: ${{ steps.region.outputs.region }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
           CDK_STACKS: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
           RUN_SEED_DATA: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_seed_data || 'false' }}
           CDK_PARAM_FILE: ${{ vars.CDK_PARAM_FILE }}
@@ -533,7 +519,7 @@ jobs:
       - name: Report public website edge verify
         if: steps.prep.outputs.stacks != '' && contains(steps.prep.outputs.stacks, 'evolvesprouts-public-www')
         env:
-          AWS_REGION: ${{ steps.region.outputs.region }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
         run: |
           set -euo pipefail
           read_one() {

@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: cdk-bootstrap
@@ -15,6 +14,9 @@ concurrency:
 
 jobs:
   bootstrap:
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository

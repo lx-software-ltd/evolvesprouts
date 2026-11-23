@@ -38,7 +38,7 @@ on:
       - 'apps/public_www/scripts/figma/build-from-token-studio.mjs'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: figma-token-studio-sync-${{ github.ref }}
@@ -46,6 +46,8 @@ concurrency:
 
 jobs:
   sync-tokens:
+    permissions:
+      contents: write
     runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
