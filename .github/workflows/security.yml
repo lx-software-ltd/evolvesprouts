@@ -1,7 +1,7 @@
 name: Security Scanning
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 
 on:
@@ -23,7 +23,6 @@ jobs:
   checkov:
     permissions:
       contents: read
-      pull-requests: read
       security-events: write
       actions: read
     name: Checkov IaC Security
@@ -90,9 +89,6 @@ jobs:
   pii-denylist:
     permissions:
       contents: read
-      pull-requests: read
-      security-events: write
-      actions: read
     name: PII denylist
     runs-on: ubuntu-26.04
     steps:
@@ -112,9 +108,6 @@ jobs:
   secrets-scan:
     permissions:
       contents: read
-      pull-requests: read
-      security-events: write
-      actions: read
     name: Secret Scanning
     runs-on: ubuntu-26.04
     steps:
@@ -134,9 +127,6 @@ jobs:
   dependency-audit:
     permissions:
       contents: read
-      pull-requests: read
-      security-events: write
-      actions: read
     name: Python Dependency Audit
     runs-on: ubuntu-26.04
     steps:
@@ -166,9 +156,6 @@ jobs:
   bandit:
     permissions:
       contents: read
-      pull-requests: read
-      security-events: write
-      actions: read
     name: Bandit Security Linter
     runs-on: ubuntu-26.04
     steps:
@@ -194,9 +181,6 @@ jobs:
   npm-audit:
     permissions:
       contents: read
-      pull-requests: read
-      security-events: write
-      actions: read
     name: npm audit
     runs-on: ubuntu-26.04
     steps:
@@ -221,9 +205,6 @@ jobs:
   security-summary:
     permissions:
       contents: read
-      pull-requests: read
-      security-events: write
-      actions: read
     name: security-summary
     runs-on: ubuntu-26.04
     needs: [checkov, codeql, pii-denylist, secrets-scan, dependency-audit, bandit, npm-audit]
