@@ -1,6 +1,6 @@
 # Plan: Keep rebuilt Lambda bundles out of the source hash
 
-**Status**: In progress. The `.lambda-build/**` exclude is on main. The nested build directories are not.
+**Status**: Done. Deploy Backend `45145962265` updated no Lambda functions.
 **Zone**: yellow
 
 ## Goal
@@ -23,7 +23,7 @@ Stop Deploy Backend from updating every Lambda function when the source has not 
 
 ## Done when
 
-The exclude list contains `.lambda-build/**`, `**/cdk.out/**`, `**/node_modules/**`, `**/dist/**`, and `**/build/**`. The next source-only deploy still updates the functions once, because the hash changes. A later deploy with the same source should leave the function code unchanged. The `.lambda-build/**` exclude alone did not: Deploy Backend `45143397092` and `45143458088` each updated the same 27 functions.
+The exclude list contains `.lambda-build/**`, `**/cdk.out/**`, `**/node_modules/**`, `**/dist/**`, and `**/build/**`. The next source-only deploy still updates the functions once, because the hash changes. A later deploy with the same source should leave the function code unchanged. The `.lambda-build/**` exclude alone did not: Deploy Backend `45143397092` and `45143458088` each updated the same 27 functions. After the nested excludes, `45145939814` updated those functions once and `45145962265` updated none.
 
 ## Rollback
 
