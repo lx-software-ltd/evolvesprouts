@@ -8,7 +8,7 @@
 # **Production only** — fails unless the GitHub Environment name is `production`.
 #
 # GitHub Environment (production):
-# - vars: `AWS_ACCOUNT_ID`, `AWS_REGION` (required).
+# - secret: `AWS_ACCOUNT_ID`. Variable: `AWS_REGION` (required).
 # - optional vars: `IMPORT_DUMP_BUCKET_NAME`, `IMPORT_LAMBDA_FUNCTION_NAME`
 #   (if omitted, workflow resolves from stack outputs `ImportDumpBucketName` and
 #   `ImportLegacyFunctionName`/`ImportLegacyVenuesFunctionName` on stack `evolvesprouts`).
@@ -98,16 +98,13 @@ jobs:
       - name: Validate import workflow configuration
         id: config
         env:
-          AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
           AWS_REGION: ${{ vars.AWS_REGION }}
         run: |
           set -euo pipefail
-          MISSING_VARS=()
-          [ -z "${AWS_ACCOUNT_ID:-}" ] && MISSING_VARS+=("AWS_ACCOUNT_ID")
-          [ -z "${AWS_REGION:-}" ] && MISSING_VARS+=("AWS_REGION")
-          if [ "${#MISSING_VARS[@]}" -gt 0 ]; then
-            echo "Missing required environment variables: ${MISSING_VARS[*]}"
-            echo "This run will be skipped until production environment vars are configured."
+          if [ -z "${AWS_ACCOUNT_ID:-}" ] || [ -z "${AWS_REGION:-}" ]; then
+            echo "Set AWS_ACCOUNT_ID as a repository secret and AWS_REGION as a variable."
+            echo "This run will be skipped until those are configured."
             echo "should_run=false" >> "${GITHUB_OUTPUT}"
             exit 0
           fi
@@ -117,7 +114,7 @@ jobs:
         if: ${{ steps.config.outputs.should_run == 'true' }}
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
-          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
           aws-region: ${{ vars.AWS_REGION }}
           role-session-name: import-legacy-crm-${{ github.run_id }}
 
@@ -346,6 +343,6 @@ jobs:
           {
             echo "## Legacy CRM import skipped"
             echo ""
-            echo "Required production environment variables are not configured."
-            echo "Set AWS_ACCOUNT_ID and AWS_REGION."
+            echo "AWS_ACCOUNT_ID or AWS_REGION is not configured."
+            echo "Set AWS_ACCOUNT_ID as a repository secret and AWS_REGION as a variable."
           } >> "${GITHUB_STEP_SUMMARY}"
