@@ -76,10 +76,12 @@ concurrency:
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
   import:
+    permissions:
+      contents: read
+      id-token: write
     name: Upload dump and run import Lambda
     runs-on: ubuntu-26.04
     environment: ${{ github.event.inputs.environment }}

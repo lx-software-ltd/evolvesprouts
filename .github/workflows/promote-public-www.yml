@@ -21,7 +21,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: promote-public-www
@@ -29,6 +28,9 @@ concurrency:
 
 jobs:
   promote:
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-26.04
     environment: production
     steps:

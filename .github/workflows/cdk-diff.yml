@@ -1,6 +1,10 @@
 name: CDK Diff
 
 on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/cdk-diff.yml"
   repository_dispatch:
     types: [cdk-diff]
   workflow_dispatch:
@@ -12,14 +16,16 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
-  group: cdk-diff
-  cancel-in-progress: false
+  group: cdk-diff-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   diff:
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-26.04
     env:
       CDK_BOOTSTRAP_QUALIFIER: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
@@ -39,24 +45,41 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Refuse the deploy role on a pull request
+        if: github.event_name == 'pull_request' && vars.AWS_DIFF_ROLE_NAME == 'GitHubActionsRole'
+        run: |
+          echo "::error::AWS_DIFF_ROLE_NAME must name a read-only role. A pull request does not assume GitHubActionsRole."
+          exit 1
+
       - name: Configure AWS credentials
         id: aws
+        if: github.event_name != 'pull_request' || vars.AWS_DIFF_ROLE_NAME != ''
         uses: lx-software-ltd/actions/aws-oidc@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
+          role-name: ${{ github.event_name == 'pull_request' && vars.AWS_DIFF_ROLE_NAME || 'GitHubActionsRole' }}
+          required: ${{ github.event_name == 'pull_request' && 'false' || 'true' }}
+
+      - name: Note when a pull request diff did not run
+        if: github.event_name == 'pull_request' && steps.aws.outputs.ready != 'true'
+        run: |
+          echo "::warning::This pull request did not assume a role. Set AWS_DIFF_ROLE_NAME to a read-only role that trusts only pull_request. GitHubActionsRole is not assumed from a pull request."
 
       - name: Install infrastructure dependencies
+        if: steps.aws.outputs.ready == 'true'
         working-directory: backend/infrastructure
         run: npm ci
 
       - name: Check CDK Bootstrap status
+        if: steps.aws.outputs.ready == 'true'
         uses: lx-software-ltd/actions/cdk-bootstrap-check@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ vars.AWS_REGION }}
 
       - name: Prepare CDK diff
+        if: steps.aws.outputs.ready == 'true'
         id: prep
         working-directory: backend/infrastructure
         run: |
@@ -84,7 +107,7 @@ jobs:
           CDK_BOOTSTRAP_QUALIFIER: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
 
       - name: Run CDK diff
-        if: steps.prep.outputs.run == 'true'
+        if: steps.aws.outputs.ready == 'true' && steps.prep.outputs.run == 'true'
         uses: lx-software-ltd/actions/cdk-diff@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
         with:
           working-directory: backend/infrastructure

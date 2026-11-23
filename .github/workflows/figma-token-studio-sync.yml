@@ -38,14 +38,16 @@ on:
       - 'apps/public_www/scripts/figma/build-from-token-studio.mjs'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: figma-token-studio-sync-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   sync-tokens:
+    permissions:
+      contents: write
     runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository

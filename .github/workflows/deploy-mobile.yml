@@ -54,19 +54,13 @@ jobs:
         run: flutter config --jdk-dir "$JAVA_HOME"
 
       - name: Configure Android signing
-        run: |
-          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ]; then
-            echo "Skipping Android signing (missing secrets)"
-            exit 0
-          fi
-          mkdir -p apps/evolvesprouts_app/android/app
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > apps/evolvesprouts_app/android/app/keystore.p12
-          chmod 600 apps/evolvesprouts_app/android/app/keystore.p12
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        uses: lx-software-ltd/actions/android-signing@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
+        with:
+          working-directory: apps/evolvesprouts_app
+          keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          keystore-password: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          key-password: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          key-alias: ${{ secrets.ANDROID_KEY_ALIAS }}
 
       - name: Install dependencies
         run: flutter pub get
@@ -86,25 +80,14 @@ jobs:
 
       - name: Check Play Store upload prerequisites
         id: playstore
-        run: |
-          if [ -z "$GOOGLE_PLAY_SERVICE_ACCOUNT" ] || [ -z "$ANDROID_RELEASE_TRACK" ]; then
-            echo "Skipping Play Store upload (missing config)"
-            echo "should_upload=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ]; then
-            echo "Skipping Play Store upload (missing Android signing secrets)"
-            echo "should_upload=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          echo "should_upload=true" >> "$GITHUB_OUTPUT"
-        env:
-          GOOGLE_PLAY_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
-          ANDROID_RELEASE_TRACK: ${{ vars.ANDROID_RELEASE_TRACK }}
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        uses: lx-software-ltd/actions/play-prerequisites@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
+        with:
+          service-account: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
+          track: ${{ vars.ANDROID_RELEASE_TRACK }}
+          keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          keystore-password: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          key-password: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          key-alias: ${{ secrets.ANDROID_KEY_ALIAS }}
 
       - name: Upload AAB to Play Store
         if: ${{ steps.playstore.outputs.should_upload == 'true' }}
