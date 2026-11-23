@@ -66,25 +66,32 @@ jobs:
           region: ${{ vars.AWS_REGION }}
 
       - name: Checkout the pinned deploy action
-        if: ${{ success() && vars.AMPLIFY_APP_ID != '' && vars.AMPLIFY_BRANCH != '' }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: lx-software-ltd/actions
-          ref: e6be2629d7206b0d5c079662f364772bc816acc1
+          ref: ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f
           path: .actions-pin
 
-      - name: Compare the dry run with the current release
-        if: ${{ success() && vars.AMPLIFY_APP_ID != '' && vars.AMPLIFY_BRANCH != '' }}
+      - name: Compare the dry run with the current deploy
         continue-on-error: true
         env:
-          AMPLIFY_APP_ID: ${{ vars.AMPLIFY_APP_ID }}
-          AMPLIFY_BRANCH: ${{ vars.AMPLIFY_BRANCH }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
         run: |
           set -euo pipefail
+          stack="${ADMIN_WEB_STACK_NAME:-evolvesprouts-admin-web}"
+          bucket="$(aws cloudformation describe-stacks --stack-name "$stack" --query "Stacks[0].Outputs[?OutputKey=='AdminWebBucketName'].OutputValue" --output text)"
+          distribution="$(aws cloudformation describe-stacks --stack-name "$stack" --query "Stacks[0].Outputs[?OutputKey=='AdminWebDistributionId'].OutputValue" --output text)"
+          if [ -z "$bucket" ] || [ "$bucket" = "None" ]; then
+            echo "Admin web bucket output not found for $stack" >&2
+            exit 1
+          fi
+          if [ "$distribution" = "None" ]; then
+            distribution=""
+          fi
           real_aws="$(command -v aws)"
           bindir="$RUNNER_TEMP/aws-dry/bin"
           mkdir -p "$bindir"
-          REAL_AWS="$real_aws" BINDIR="$bindir" LOG="$RUNNER_TEMP/amplify-action.txt" python3 - << 'PY'
+          REAL_AWS="$real_aws" BINDIR="$bindir" python3 - << 'PY'
           import os
           from pathlib import Path
           path = Path(os.environ["BINDIR"]) / "aws"
@@ -92,56 +99,57 @@ jobs:
               "#!/usr/bin/env bash\n"
               "set -euo pipefail\n"
               f"real={os.environ['REAL_AWS']!r}\n"
-              f"log={os.environ['LOG']!r}\n"
-              'if [[ "$1" == "amplify" && "$2" == "start-job" ]]; then\n'
-              "  printf 'aws %s\\n' \"$*\" >> \"$log\"\n"
-              "  printf '%s\\n' '{\"jobSummary\":{\"jobId\":\"dry-run\"}}'\n"
+              'if [[ "$1" == "s3" ]]; then\n'
+              '  exec "$real" s3 "$2" --dryrun "${@:3}"\n'
+              "fi\n"
+              'if [[ "$1" == "cloudfront" ]]; then\n'
+              '  echo "Dry run: skipping CloudFront invalidation" >&2\n'
               "  exit 0\n"
               "fi\n"
               'exec "$real" "$@"\n'
           )
           path.chmod(0o755)
           PY
-          : > "$RUNNER_TEMP/amplify-action.txt"
-          PATH="$bindir:$PATH" \
-            APP_ID="$AMPLIFY_APP_ID" \
-            BRANCH="$AMPLIFY_BRANCH" \
-            MODE=release \
-            WAIT=false \
-            python3 "$GITHUB_WORKSPACE/.actions-pin/amplify-release/amplify_release.py"
-          printf 'aws amplify start-job --app-id %s --branch-name %s --job-type RELEASE\n' "$AMPLIFY_APP_ID" "$AMPLIFY_BRANCH" > "$RUNNER_TEMP/amplify-current.txt"
-          CURRENT="$RUNNER_TEMP/amplify-current.txt" ACTION="$RUNNER_TEMP/amplify-action.txt" python3 - << 'PY'
+          PATH="$bindir:$PATH" bash scripts/deploy/deploy-admin-web.sh > "$RUNNER_TEMP/current-deploy.txt"
+          SOURCE="$GITHUB_WORKSPACE/apps/admin_web/out" \
+            BUCKET="$bucket" \
+            DISTRIBUTION_ID="$distribution" \
+            PROFILE=next-export \
+            DRY_RUN=true \
+            python3 "$GITHUB_WORKSPACE/.actions-pin/s3-cloudfront-deploy/s3_sync.py" > "$RUNNER_TEMP/action-deploy.txt"
+          CURRENT="$RUNNER_TEMP/current-deploy.txt" ACTION="$RUNNER_TEMP/action-deploy.txt" python3 - << 'PY'
           import os
+          import re
           import sys
           from pathlib import Path
 
-          def norm(text):
-              found = []
-              for line in text.splitlines():
-                  if "start-job" not in line:
-                      continue
-                  tokens = line.split()
-                  kept = []
-                  skip = False
-                  for token in tokens:
-                      if skip:
-                          skip = False
-                          continue
-                      if token == "--output":
-                          skip = True
-                          continue
-                      kept.append(token)
-                  found.append(kept)
-              return found
+          account = re.compile(r"\b\d{12}\b")
 
-          current = norm(Path(os.environ["CURRENT"]).read_text(encoding="utf-8"))
-          action = norm(Path(os.environ["ACTION"]).read_text(encoding="utf-8"))
-          if current != action or not current:
-              print("planned Amplify releases differ", file=sys.stderr)
-              print("current: " + str(current), file=sys.stderr)
-              print("action: " + str(action), file=sys.stderr)
+          def planned(path):
+              found = []
+              for line in Path(path).read_text(encoding="utf-8").splitlines():
+                  if "(dryrun)" not in line:
+                      continue
+                  if " to " in line:
+                      found.append("upload " + line.split(" to ", 1)[1].strip())
+                  else:
+                      found.append(line.split("(dryrun)", 1)[1].strip())
+              return sorted(found)
+
+          current = planned(os.environ["CURRENT"])
+          action = planned(os.environ["ACTION"])
+          if not current or not action:
+              raise SystemExit("dry run produced no planned S3 changes")
+          if current != action:
+              print("planned S3 changes differ", file=sys.stderr)
+              for line in current:
+                  if line not in action:
+                      print("current only: " + account.sub("************", line), file=sys.stderr)
+              for line in action:
+                  if line not in current:
+                      print("action only: " + account.sub("************", line), file=sys.stderr)
               raise SystemExit(1)
-          print(f"Dry run matches the current deploy ({len(current)} planned Amplify RELEASE)")
+          print(f"Dry run matches the current deploy ({len(current)} planned S3 changes)")
           PY
 
       - name: Trigger Amplify Hosting release
