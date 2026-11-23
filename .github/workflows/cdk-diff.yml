@@ -21,6 +21,8 @@ concurrency:
 jobs:
   diff:
     runs-on: ubuntu-26.04
+    env:
+      CDK_BOOTSTRAP_QUALIFIER: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -38,17 +40,24 @@ jobs:
           python-version: "3.12"
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        id: aws
+        uses: lx-software-ltd/actions/aws-oidc@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
-          aws-region: ${{ vars.AWS_REGION }}
-          role-session-name: GitHubActions-${{ github.run_id }}
+          account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          region: ${{ vars.AWS_REGION }}
 
       - name: Install infrastructure dependencies
         working-directory: backend/infrastructure
         run: npm ci
 
-      - name: Run CDK diff
+      - name: Check CDK Bootstrap status
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
+        with:
+          qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
+          region: ${{ vars.AWS_REGION }}
+
+      - name: Prepare CDK diff
+        id: prep
         working-directory: backend/infrastructure
         run: |
           npx cdk acknowledge 34892 || true
@@ -66,11 +75,18 @@ jobs:
               fi
             done
           fi
-          if [ ${#STACK_ARGS[@]} -gt 0 ]; then
-            npx cdk diff --no-color "${STACK_ARGS[@]}"
-          else
-            npx cdk diff --no-color
-          fi
+          {
+            echo "run=true"
+            echo "stacks=${STACK_ARGS[*]}"
+          } >> "$GITHUB_OUTPUT"
         env:
           CDK_STACKS: ${{ inputs.stacks }}
           CDK_BOOTSTRAP_QUALIFIER: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
+
+      - name: Run CDK diff
+        if: steps.prep.outputs.run == 'true'
+        uses: lx-software-ltd/actions/cdk-diff@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
+        with:
+          working-directory: backend/infrastructure
+          stacks: ${{ steps.prep.outputs.stacks }}
+          account-id: ${{ secrets.AWS_ACCOUNT_ID }}
