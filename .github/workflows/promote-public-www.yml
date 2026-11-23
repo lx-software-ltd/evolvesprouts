@@ -68,7 +68,49 @@ jobs:
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
           AWS_REGION: ${{ vars.AWS_REGION }}
 
+      - name: Set up Node.js
+        if: ${{ success() && github.event.inputs.promotion_mode != 'maintenance_on' }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+          cache: 'npm'
+          cache-dependency-path: apps/public_www/package-lock.json
+
+      - name: Install public website dependencies
+        if: ${{ success() && github.event.inputs.promotion_mode != 'maintenance_on' }}
+        run: npm ci
+        working-directory: apps/public_www
+
+      - name: Build public website for production
+        if: ${{ success() && github.event.inputs.promotion_mode != 'maintenance_on' }}
+        run: npm run build
+        working-directory: apps/public_www
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+          NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_public_site_domains.outputs.production_site_origin }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+          NEXT_PUBLIC_FPS_MERCHANT_NAME: ${{ vars.NEXT_PUBLIC_FPS_MERCHANT_NAME }}
+          NEXT_PUBLIC_FPS_MOBILE_NUMBER: ${{ vars.NEXT_PUBLIC_FPS_MOBILE_NUMBER }}
+          NEXT_PUBLIC_BANK_NAME: ${{ vars.NEXT_PUBLIC_BANK_NAME }}
+          NEXT_PUBLIC_BANK_ACCOUNT_HOLDER: ${{ vars.NEXT_PUBLIC_BANK_ACCOUNT_HOLDER }}
+          NEXT_PUBLIC_BANK_ACCOUNT_NUMBER: ${{ vars.NEXT_PUBLIC_BANK_ACCOUNT_NUMBER }}
+          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_WWW_API_BASE_URL || vars.NEXT_PUBLIC_API_BASE_URL }}
+          NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS: ${{ vars.NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS }}
+          NEXT_PUBLIC_WWW_CRM_API_KEY: ${{ secrets.NEXT_PUBLIC_WWW_CRM_API_KEY }}
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_ASSET_SHARE_BASE_URL: ${{ steps.resolve_public_site_domains.outputs.asset_share_base_url }}
+          NEXT_PUBLIC_GTM_ID: ${{ vars.NEXT_PUBLIC_GTM_ID }}
+          NEXT_PUBLIC_META_PIXEL_ID: ${{ vars.NEXT_PUBLIC_META_PIXEL_ID }}
+          NEXT_PUBLIC_EMAIL: ${{ vars.NEXT_PUBLIC_EMAIL }}
+          NEXT_PUBLIC_WHATSAPP_URL: ${{ vars.NEXT_PUBLIC_WHATSAPP_URL }}
+          NEXT_PUBLIC_INSTAGRAM_URL: ${{ vars.NEXT_PUBLIC_INSTAGRAM_URL }}
+          NEXT_PUBLIC_LINKEDIN_URL: ${{ vars.NEXT_PUBLIC_LINKEDIN_URL }}
+          NEXT_PUBLIC_BUSINESS_ADDRESS: ${{ vars.NEXT_PUBLIC_BUSINESS_ADDRESS }}
+          NEXT_PUBLIC_BUSINESS_PHONE_NUMBER: ${{ vars.NEXT_PUBLIC_BUSINESS_PHONE_NUMBER }}
+          NEXT_PUBLIC_FOUNDER_NAME: ${{ vars.NEXT_PUBLIC_FOUNDER_NAME }}
+
       - name: Configure AWS credentials
+        # After the build. npm ci and the build must not see the deploy role.
         uses: lx-software-ltd/actions/aws-oidc@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
@@ -123,47 +165,6 @@ jobs:
           PROMOTION_MODE: ${{ inputs.promotion_mode }}
           INPUT_RELEASE_ID: ${{ inputs.release_id }}
           STACK_NAME: evolvesprouts-public-www
-
-      - name: Set up Node.js
-        if: ${{ steps.resolve_release.outputs.maintenance_mode != 'true' }}
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: "26"
-          cache: 'npm'
-          cache-dependency-path: apps/public_www/package-lock.json
-
-      - name: Install public website dependencies
-        if: ${{ steps.resolve_release.outputs.maintenance_mode != 'true' }}
-        run: npm ci
-        working-directory: apps/public_www
-
-      - name: Build public website for production
-        if: ${{ steps.resolve_release.outputs.maintenance_mode != 'true' }}
-        run: npm run build
-        working-directory: apps/public_www
-        env:
-          NEXT_TELEMETRY_DISABLED: '1'
-          NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_public_site_domains.outputs.production_site_origin }}
-          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
-          NEXT_PUBLIC_FPS_MERCHANT_NAME: ${{ vars.NEXT_PUBLIC_FPS_MERCHANT_NAME }}
-          NEXT_PUBLIC_FPS_MOBILE_NUMBER: ${{ vars.NEXT_PUBLIC_FPS_MOBILE_NUMBER }}
-          NEXT_PUBLIC_BANK_NAME: ${{ vars.NEXT_PUBLIC_BANK_NAME }}
-          NEXT_PUBLIC_BANK_ACCOUNT_HOLDER: ${{ vars.NEXT_PUBLIC_BANK_ACCOUNT_HOLDER }}
-          NEXT_PUBLIC_BANK_ACCOUNT_NUMBER: ${{ vars.NEXT_PUBLIC_BANK_ACCOUNT_NUMBER }}
-          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_WWW_API_BASE_URL || vars.NEXT_PUBLIC_API_BASE_URL }}
-          NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS: ${{ vars.NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS }}
-          NEXT_PUBLIC_WWW_CRM_API_KEY: ${{ secrets.NEXT_PUBLIC_WWW_CRM_API_KEY }}
-          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
-          NEXT_PUBLIC_ASSET_SHARE_BASE_URL: ${{ steps.resolve_public_site_domains.outputs.asset_share_base_url }}
-          NEXT_PUBLIC_GTM_ID: ${{ vars.NEXT_PUBLIC_GTM_ID }}
-          NEXT_PUBLIC_META_PIXEL_ID: ${{ vars.NEXT_PUBLIC_META_PIXEL_ID }}
-          NEXT_PUBLIC_EMAIL: ${{ vars.NEXT_PUBLIC_EMAIL }}
-          NEXT_PUBLIC_WHATSAPP_URL: ${{ vars.NEXT_PUBLIC_WHATSAPP_URL }}
-          NEXT_PUBLIC_INSTAGRAM_URL: ${{ vars.NEXT_PUBLIC_INSTAGRAM_URL }}
-          NEXT_PUBLIC_LINKEDIN_URL: ${{ vars.NEXT_PUBLIC_LINKEDIN_URL }}
-          NEXT_PUBLIC_BUSINESS_ADDRESS: ${{ vars.NEXT_PUBLIC_BUSINESS_ADDRESS }}
-          NEXT_PUBLIC_BUSINESS_PHONE_NUMBER: ${{ vars.NEXT_PUBLIC_BUSINESS_PHONE_NUMBER }}
-          NEXT_PUBLIC_FOUNDER_NAME: ${{ vars.NEXT_PUBLIC_FOUNDER_NAME }}
 
       - name: Promote release or enable maintenance mode
         run: |
