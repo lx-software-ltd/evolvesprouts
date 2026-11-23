@@ -1,0 +1,51 @@
+{
+  "api-stack": "evolvesprouts",
+  "also-api": [
+    "PublicWwwDomainName",
+    "PublicWwwStagingDomainName",
+    "AdminWebDomainName",
+    "TrainingDomainName"
+  ],
+  "routes": [
+    {
+      "stack": "evolvesprouts-admin-web",
+      "parameters": ["AdminWebDomainName", "AdminWebCertificateArn", "WafWebAclArn"]
+    },
+    {
+      "stack": "evolvesprouts-public-www",
+      "parameters": [
+        "PublicWwwDomainName",
+        "PublicWwwCertificateArn",
+        "PublicWwwStagingDomainName",
+        "PublicWwwStagingCertificateArn",
+        "PublicWwwApiBaseUrl",
+        "PublicWwwMediaRequestApiBaseUrl",
+        "PublicWwwEdgeVerifySecret",
+        "PublicWwwEdgeVerifySecretPrevious",
+        "PublicWwwStagingEdgeVerifySecret",
+        "PublicWwwStagingEdgeVerifySecretPrevious",
+        "WafWebAclArn"
+      ]
+    },
+    {
+      "stack": "evolvesprouts-training",
+      "parameters": [
+        "TrainingDomainName",
+        "TrainingCertificateArn",
+        "TrainingApiBaseUrl",
+        "TrainingMediaRequestApiBaseUrl",
+        "WafWebAclArn"
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "stacks": [
+        "evolvesprouts",
+        "evolvesprouts-admin-web",
+        "evolvesprouts-public-www",
+        "evolvesprouts-training"
+      ]
+    }
+  ]
+}
