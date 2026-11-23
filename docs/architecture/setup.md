@@ -64,7 +64,6 @@ For the OIDC provider itself, add the same tags:
 
 ### Variables (non-secret)
 
-- `AWS_ACCOUNT_ID`
 - `AWS_REGION`
 - `CDK_STACKS` (optional; `all stacks`, `backend`, `admin web`, or `public website`)
 - `CDK_BOOTSTRAP_QUALIFIER` (optional)
@@ -145,6 +144,7 @@ For the OIDC provider itself, add the same tags:
 
 ### Secrets
 
+- `AWS_ACCOUNT_ID` (repository secret. Workflows read `secrets.AWS_ACCOUNT_ID`. A variable of the same name is not read.)
 - `CDK_PARAM_GOOGLE_CLIENT_SECRET`
 - `CDK_PARAM_PUBLIC_API_KEY_VALUE`
 - `CDK_PARAM_TURNSTILE_SECRET_KEY`
@@ -208,7 +208,7 @@ messaging permissions. Do not reuse the webhook verify string.
 
 `.github/workflows/import-legacy-crm.yml` is **production-only** (it fails if the selected environment name is not `production`). On the **`production`** GitHub Environment, set:
 
-- **Variables:** `AWS_ACCOUNT_ID`, `AWS_REGION`.
+- **Secret:** `AWS_ACCOUNT_ID`. **Variable:** `AWS_REGION`.
   - Optional override vars: `IMPORT_DUMP_BUCKET_NAME`, `IMPORT_LAMBDA_FUNCTION_NAME`.
   - If either override is missing, the workflow auto-resolves from CloudFormation stack outputs on `evolvesprouts` (`ImportDumpBucketName` and `ImportLegacyFunctionName`, with fallback to `ImportLegacyVenuesFunctionName` for backward compatibility).
 - **Secrets (optional):** `IMPORT_LEGACY_CRM_SQL_URL` — HTTPS URL to the `.sql` file when the workflow input is left empty.
