@@ -61,7 +61,7 @@ jobs:
           python-version: '3.12'
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
+        uses: lx-software-ltd/actions/aws-oidc@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
@@ -71,7 +71,7 @@ jobs:
         run: npm ci
 
       - name: Check CDK bootstrap
-        uses: lx-software-ltd/actions/cdk-bootstrap-check@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ vars.AWS_REGION }}
@@ -277,6 +277,72 @@ jobs:
           echo "staging_before=$EDGE_VERIFY_BEFORE_STAGING" >> "$GITHUB_OUTPUT"
           echo "production_before=$EDGE_VERIFY_BEFORE_PRODUCTION" >> "$GITHUB_OUTPUT"
           echo "stacks=$CDK_STACKS" >> "$GITHUB_OUTPUT"
+          CDK_BOOTSTRAP_QUALIFIER="$CDK_BOOTSTRAP_QUALIFIER" CDK_STACKS="$CDK_STACKS" python3 - << 'PY'
+          import json as _json
+          import os
+          from pathlib import Path
+
+          extra = []
+          qualifier = os.environ.get("CDK_BOOTSTRAP_QUALIFIER", "")
+          if qualifier:
+              extra = ["--qualifier", qualifier]
+          plan = {
+              "api-stack": "evolvesprouts",
+              "also-api": [
+                  "PublicWwwDomainName",
+                  "PublicWwwStagingDomainName",
+                  "AdminWebDomainName",
+                  "TrainingDomainName",
+              ],
+              "routes": [
+                  {
+                      "stack": "evolvesprouts-admin-web",
+                      "parameters": ["AdminWebDomainName", "AdminWebCertificateArn", "WafWebAclArn"],
+                  },
+                  {
+                      "stack": "evolvesprouts-public-www",
+                      "parameters": [
+                          "PublicWwwDomainName",
+                          "PublicWwwCertificateArn",
+                          "PublicWwwStagingDomainName",
+                          "PublicWwwStagingCertificateArn",
+                          "PublicWwwApiBaseUrl",
+                          "PublicWwwMediaRequestApiBaseUrl",
+                          "PublicWwwEdgeVerifySecret",
+                          "PublicWwwEdgeVerifySecretPrevious",
+                          "PublicWwwStagingEdgeVerifySecret",
+                          "PublicWwwStagingEdgeVerifySecretPrevious",
+                          "WafWebAclArn",
+                      ],
+                  },
+                  {
+                      "stack": "evolvesprouts-training",
+                      "parameters": [
+                          "TrainingDomainName",
+                          "TrainingCertificateArn",
+                          "TrainingApiBaseUrl",
+                          "TrainingMediaRequestApiBaseUrl",
+                          "WafWebAclArn",
+                      ],
+                  },
+              ],
+              "groups": [
+                  {
+                      "stacks": [
+                          "evolvesprouts",
+                          "evolvesprouts-admin-web",
+                          "evolvesprouts-public-www",
+                          "evolvesprouts-training",
+                      ],
+                      "extra-args": extra,
+                  }
+              ],
+          }
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as handle:
+              handle.write("plan<<PLANJSON\n")
+              handle.write(_json.dumps(plan) + "\n")
+              handle.write("PLANJSON\n")
+          PY
         env:
           AWS_REGION: ${{ vars.AWS_REGION }}
           CDK_STACKS: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
@@ -357,10 +423,10 @@ jobs:
           CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS }}
 
       - name: Deploy stacks
-        uses: lx-software-ltd/actions/cdk-deploy@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
+        uses: lx-software-ltd/actions/cdk-deploy@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
         with:
           working-directory: backend/infrastructure
-          plan-file: backend/infrastructure/cdk-plan.json
+          plan: ${{ steps.prep.outputs.plan }}
           stacks: ${{ steps.prep.outputs.stacks }}
           param-file: ${{ vars.CDK_PARAM_FILE }}
           format: plain-json

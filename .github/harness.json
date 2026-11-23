@@ -31,26 +31,21 @@
       ".github/PULL_REQUEST_TEMPLATE.md",
       ".cursor/hooks.json"
     ],
-    "extra-rules": "full",
+    "extra-rules": "always-only",
     "verify-why-commits": false,
     "skills": "required"
   },
   "file-length": {
-    "mode": "typed",
+    "mode": "python-counted",
+    "limit": 500,
     "allowlist": "scripts/python-file-length-allowlist.txt",
-    "python-limit": 500,
-    "typescript-limit": 800,
-    "python-prefix": "backend/",
-    "typescript-app-prefix": "apps/__not_scanned__/",
-    "typescript-lib-prefix": "backend/__not_scanned__/",
-    "generated-suffix": "src/lib/contracts/generated.ts",
     "scan-roots": [
       "backend/src",
       "backend/lambda"
     ]
   },
   "test-focus": {
-    "mode": "test-names",
+    "mode": "all-sources",
     "roots": [
       "tests",
       "apps/admin_web/tests",

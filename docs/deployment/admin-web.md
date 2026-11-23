@@ -45,9 +45,14 @@ aws cloudformation describe-stacks \
   --output table
 ```
 
-**Deploy Admin Web** uploads the build with `s3-cloudfront-deploy`.
-It reads the admin stack outputs. The stack name defaults to
-`evolvesprouts-admin-web`.
+From the repo root:
+
+```bash
+bash scripts/deploy/deploy-admin-web.sh
+```
+
+The deploy script reads `ADMIN_WEB_STACK_NAME` (default:
+`evolvesprouts-admin-web`) when resolving CloudFormation outputs.
 
 ## CORS configuration
 

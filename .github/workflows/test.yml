@@ -48,7 +48,7 @@ jobs:
           echo "site_origin=https://${SITE_DOMAIN}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
         with:
           cache: npm
           working-directory: apps/public_www
@@ -112,7 +112,7 @@ jobs:
           echo "public_www_origin=https://${PUBLIC_WWW_DOMAIN}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
         with:
           cache: npm
           working-directory: apps/training
@@ -140,7 +140,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: "stable"
+          flutter-version: "3.50.1"
+          cache: true
 
       - name: Run Flutter tests
         run: |
@@ -168,7 +172,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
 
       - name: Run Node tests
         run: |
@@ -211,7 +215,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-python@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
         with:
           python-version: "3.12"
 
@@ -272,12 +276,12 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-python@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
         with:
           python-version: "3.12"
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
 
       - name: Install infrastructure dependencies
         run: |
@@ -318,6 +322,6 @@ jobs:
     if: always()
     steps:
       - name: Require every test job
-        uses: lx-software-ltd/actions/require-jobs@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
+        uses: lx-software-ltd/actions/require-jobs@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
         with:
           needs-json: ${{ toJson(needs) }}
