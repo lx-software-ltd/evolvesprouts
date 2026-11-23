@@ -144,7 +144,7 @@ Bot protection for public forms (media download, reservations).
 
 | Field | Value |
 |---|---|
-| Account ID | `588024549699` |
+| Account ID | `<ACCOUNT_ID>` |
 | Primary region | `ap-southeast-1` (Singapore) |
 | CloudFront/ACM region | `us-east-1` (required by CloudFront) |
 | IAM deploy role | `GitHubActionsRole` (OIDC, no long-lived credentials) |
