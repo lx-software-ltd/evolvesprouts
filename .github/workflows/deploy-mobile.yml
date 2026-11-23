@@ -44,7 +44,7 @@ jobs:
           java-version: "21"
 
       - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-flutter@385abf462c6d47a66afcb7cebc15152ffe7049e7 # main 2026-11-23
         with:
           channel: "stable"
           flutter-version: "3.50.1"
@@ -54,7 +54,7 @@ jobs:
         run: flutter config --jdk-dir "$JAVA_HOME"
 
       - name: Configure Android signing
-        uses: lx-software-ltd/actions/android-signing@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
+        uses: lx-software-ltd/actions/android-signing@385abf462c6d47a66afcb7cebc15152ffe7049e7 # main 2026-11-23
         with:
           working-directory: apps/evolvesprouts_app
           keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -80,7 +80,7 @@ jobs:
 
       - name: Check Play Store upload prerequisites
         id: playstore
-        uses: lx-software-ltd/actions/play-prerequisites@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
+        uses: lx-software-ltd/actions/play-prerequisites@385abf462c6d47a66afcb7cebc15152ffe7049e7 # main 2026-11-23
         with:
           service-account: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
           track: ${{ vars.ANDROID_RELEASE_TRACK }}
