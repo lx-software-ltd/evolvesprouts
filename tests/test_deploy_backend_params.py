@@ -133,6 +133,39 @@ def test_backend_deploy_does_not_read_apple_signing_inputs() -> None:
     assert "CDK_PARAM_APPLE_PRIVATE_KEY" not in env
 
 
+_CERTIFICATE_SECRET_PARAMS = (
+    (
+        "CognitoCustomDomainCertificateArn",
+        "CDK_PARAM_COGNITO_CUSTOM_DOMAIN_CERTIFICATE_ARN",
+    ),
+    ("AdminWebCertificateArn", "CDK_PARAM_ADMIN_WEB_CERTIFICATE_ARN"),
+    ("PublicWwwCertificateArn", "CDK_PARAM_PUBLIC_WWW_CERTIFICATE_ARN"),
+    ("PublicWwwStagingCertificateArn", "CDK_PARAM_PUBLIC_WWW_STAGING_CERTIFICATE_ARN"),
+    ("TrainingCertificateArn", "CDK_PARAM_TRAINING_CERTIFICATE_ARN"),
+    ("ApiCustomDomainCertificateArn", "CDK_PARAM_API_CUSTOM_DOMAIN_CERTIFICATE_ARN"),
+    (
+        "AssetDownloadCustomDomainCertificateArn",
+        "CDK_PARAM_ASSET_DOWNLOAD_CUSTOM_DOMAIN_CERTIFICATE_ARN",
+    ),
+)
+
+
+def test_certificate_arns_come_from_repository_secrets() -> None:
+    env = _deploy_step_env()
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    params = json.loads(PARAMS.read_text(encoding="utf-8"))
+    fake_arn = "arn:aws:acm:ap-southeast-1:111111111111:certificate/example"
+    rows = resolve(
+        f"{BACKEND_STACK} evolvesprouts-admin-web evolvesprouts-public-www evolvesprouts-training",
+        {env_name: fake_arn for _key, env_name in _CERTIFICATE_SECRET_PARAMS},
+    )
+    for key, env_name in _CERTIFICATE_SECRET_PARAMS:
+        assert _GITHUB_REF.findall(env[env_name]) == [("secrets", env_name)]
+        assert workflow.count(f"secrets.{env_name}") == 2
+        assert params[key] == f"<FROM_GITHUB_SECRET: {env_name}>"
+        assert any(row[1] == key and row[2] == fake_arn for row in rows)
+
+
 def test_inbound_sender_patterns_come_from_the_secret() -> None:
     expression = _deploy_step_env()["CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS"]
     assert _GITHUB_REF.findall(expression) == [
