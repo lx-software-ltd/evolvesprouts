@@ -10,6 +10,8 @@ import { assertApiStackInvariants } from "./stack-invariants.test";
 // The REST API is regional, so its custom-domain certificate must live in the
 // stack region. A us-east-1 ARN is only valid for CloudFront and Cognito.
 const API_STACK_REGION = "ap-southeast-1";
+const API_CERTIFICATE_SECRET_PLACEHOLDER =
+  "<FROM_GITHUB_SECRET: CDK_PARAM_API_CUSTOM_DOMAIN_CERTIFICATE_ARN>";
 
 function assertProductionApiCustomDomain(): void {
   const paramsPath = path.join(__dirname, "../params/production.json");
@@ -28,7 +30,12 @@ function assertProductionApiCustomDomain(): void {
     );
   }
   const arn = params.ApiCustomDomainCertificateArn ?? "";
-  if (!arn.startsWith(`arn:aws:acm:${API_STACK_REGION}:`)) {
+  // Deploy substitutes the secret before CDK runs. A committed literal ARN
+  // must be an ACM certificate in the API stack region.
+  if (
+    arn !== API_CERTIFICATE_SECRET_PLACEHOLDER &&
+    !arn.startsWith(`arn:aws:acm:${API_STACK_REGION}:`)
+  ) {
     throw new Error(
       `ApiCustomDomainCertificateArn must be an ACM certificate in ${API_STACK_REGION}. Found ${arn}`,
     );
