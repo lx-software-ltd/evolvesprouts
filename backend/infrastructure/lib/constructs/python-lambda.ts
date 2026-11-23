@@ -207,6 +207,9 @@ export class PythonLambda extends Construct {
             "**/__pycache__/**",
             "**/*.pyc",
             "**/*.pyo",
+            // Rebuilt before every synth. Its bytes are not source, and
+            // hashing them makes every function look changed.
+            ".lambda-build/**",
           ],
           bundling: {
             image: lambda.Runtime.PYTHON_3_12.bundlingImage,
