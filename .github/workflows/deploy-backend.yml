@@ -67,7 +67,7 @@ jobs:
           echo "region=$INPUT_AWS_REGION" >> "$GITHUB_OUTPUT"
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
+        uses: lx-software-ltd/actions/aws-oidc@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ steps.region.outputs.region }}
@@ -90,405 +90,8 @@ jobs:
           AWS_REGION: ${{ steps.region.outputs.region }}
           CDK_BOOTSTRAP_QUALIFIER: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
 
-      - name: Checkout the pinned deploy action
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: lx-software-ltd/actions
-          ref: ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f
-          path: .actions-pin
-
-      - name: Compare the dry run with the current deploy
-        continue-on-error: true
-        working-directory: backend/infrastructure
-        env:
-          AWS_REGION: ${{ steps.region.outputs.region }}
-          CDK_STACKS: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
-          RUN_SEED_DATA: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_seed_data || 'false' }}
-          CDK_PARAM_FILE: ${{ vars.CDK_PARAM_FILE }}
-          CDK_BOOTSTRAP_QUALIFIER: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
-          CDK_PARAM_GOOGLE_CLIENT_SECRET: ${{ secrets.CDK_PARAM_GOOGLE_CLIENT_SECRET }}
-          CDK_PARAM_PUBLIC_API_KEY_VALUE: ${{ secrets.CDK_PARAM_PUBLIC_API_KEY_VALUE }}
-          CDK_PARAM_TURNSTILE_SECRET_KEY: ${{ secrets.CDK_PARAM_TURNSTILE_SECRET_KEY }}
-          CDK_PARAM_STRIPE_SECRET_KEY: ${{ secrets.CDK_PARAM_STRIPE_SECRET_KEY }}
-          CDK_PARAM_STAGING_STRIPE_SECRET_KEY: ${{ secrets.CDK_PARAM_STAGING_STRIPE_SECRET_KEY }}
-          CDK_PARAM_MAILCHIMP_API_SECRET_ARN: ${{ secrets.CDK_PARAM_MAILCHIMP_API_SECRET_ARN }}
-          CDK_PARAM_MAILCHIMP_LIST_ID: ${{ vars.CDK_PARAM_MAILCHIMP_LIST_ID }}
-          CDK_PARAM_MAILCHIMP_SERVER_PREFIX: ${{ vars.CDK_PARAM_MAILCHIMP_SERVER_PREFIX }}
-          CDK_PARAM_MAILCHIMP_WEBHOOK_SECRET: ${{ secrets.CDK_PARAM_MAILCHIMP_WEBHOOK_SECRET }}
-          CDK_PARAM_META_APP_SECRET: ${{ secrets.CDK_PARAM_META_APP_SECRET }}
-          CDK_PARAM_WHATSAPP_WEBHOOK_VERIFY_TOKEN: ${{ secrets.CDK_PARAM_WHATSAPP_WEBHOOK_VERIFY_TOKEN }}
-          CDK_PARAM_META_PAGE_ACCESS_TOKEN: ${{ secrets.CDK_PARAM_META_PAGE_ACCESS_TOKEN }}
-          CDK_PARAM_META_PAGE_ID: ${{ vars.CDK_PARAM_META_PAGE_ID }}
-          CDK_PARAM_META_INSTAGRAM_USER_ID: ${{ vars.CDK_PARAM_META_INSTAGRAM_USER_ID }}
-          CDK_PARAM_META_APP_ID: ${{ vars.CDK_PARAM_META_APP_ID }}
-          CDK_PARAM_META_GRAPH_API_BASE_URL: ${{ vars.CDK_PARAM_META_GRAPH_API_BASE_URL }}
-          CDK_PARAM_META_GRAPH_API_VERSION: ${{ vars.CDK_PARAM_META_GRAPH_API_VERSION }}
-          CDK_PARAM_WHATSAPP_EXPORT_BUSINESS_NAMES: ${{ vars.CDK_PARAM_WHATSAPP_EXPORT_BUSINESS_NAMES }}
-          CDK_PARAM_MAILCHIMP_MEDIA_DOWNLOAD_MERGE_TAG: ${{ vars.CDK_PARAM_MAILCHIMP_MEDIA_DOWNLOAD_MERGE_TAG }}
-          CDK_PARAM_MAILCHIMP_WELCOME_JOURNEY_ID: ${{ vars.CDK_PARAM_MAILCHIMP_WELCOME_JOURNEY_ID }}
-          CDK_PARAM_MAILCHIMP_WELCOME_JOURNEY_STEP_ID: ${{ vars.CDK_PARAM_MAILCHIMP_WELCOME_JOURNEY_STEP_ID }}
-          CDK_PARAM_EVENTBRITE_TOKEN_SECRET_ARN: ${{ secrets.CDK_PARAM_EVENTBRITE_TOKEN_SECRET_ARN }}
-          CDK_PARAM_EVENTBRITE_ORGANIZATION_ID: ${{ vars.CDK_PARAM_EVENTBRITE_ORGANIZATION_ID }}
-          CDK_PARAM_EVENTBRITE_DEFAULT_TIMEZONE: ${{ vars.CDK_PARAM_EVENTBRITE_DEFAULT_TIMEZONE }}
-          CDK_PARAM_MEDIA_DEFAULT_RESOURCE_KEY: ${{ vars.CDK_PARAM_MEDIA_DEFAULT_RESOURCE_KEY }}
-          CDK_PARAM_SALES_RECAP_DISPLAY_TIMEZONE: ${{ vars.CDK_PARAM_SALES_RECAP_DISPLAY_TIMEZONE }}
-          CDK_PARAM_OPENROUTER_API_KEY: ${{ secrets.CDK_PARAM_OPENROUTER_API_KEY }}
-          CDK_PARAM_OPENROUTER_CHAT_COMPLETIONS_URL: ${{ vars.CDK_PARAM_OPENROUTER_CHAT_COMPLETIONS_URL }}
-          CDK_PARAM_OPENROUTER_MODEL: ${{ vars.CDK_PARAM_OPENROUTER_MODEL }}
-          # Production-environment job. A secret that exists only in the
-          # staging environment is invisible here. An empty value omits the
-          # parameter and CloudFormation keeps the previous allowlist.
-          CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS: ${{ secrets.CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS }}
-          STRIPE_PAYMENT_METHOD_CONFIGURATION_ID: ${{ vars.STRIPE_PAYMENT_METHOD_CONFIGURATION_ID }}
-          CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD: ${{ secrets.CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD }}
-          CDK_PARAM_ASSET_DOWNLOAD_CLOUDFRONT_PUBLIC_KEY_PEM: ${{ secrets.CDK_PARAM_ASSET_DOWNLOAD_CLOUDFRONT_PUBLIC_KEY_PEM }}
-          CDK_PARAM_ASSET_DOWNLOAD_CLOUDFRONT_PRIVATE_KEY_SECRET_ARN: ${{ secrets.CDK_PARAM_ASSET_DOWNLOAD_CLOUDFRONT_PRIVATE_KEY_SECRET_ARN }}
-          CDK_PARAM_CERTIFICATE_ES_FOUNDER_NAME: ${{ vars.CDK_PARAM_CERTIFICATE_ES_FOUNDER_NAME }}
-          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
-          PUBLIC_WWW_API_BASE_URL: ${{ vars.PUBLIC_WWW_API_BASE_URL || vars.NEXT_PUBLIC_API_BASE_URL }}
-          PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL: ${{ vars.PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL || vars.NEXT_PUBLIC_API_BASE_URL }}
-          NEXT_PUBLIC_INSTAGRAM_URL: ${{ vars.NEXT_PUBLIC_INSTAGRAM_URL }}
-          NEXT_PUBLIC_LINKEDIN_URL: ${{ vars.NEXT_PUBLIC_LINKEDIN_URL }}
-          NEXT_PUBLIC_WHATSAPP_URL: ${{ vars.NEXT_PUBLIC_WHATSAPP_URL }}
-          NEXT_PUBLIC_BUSINESS_NAME: ${{ vars.NEXT_PUBLIC_BUSINESS_NAME }}
-          NEXT_PUBLIC_BUSINESS_LEGAL_NAME: ${{ vars.NEXT_PUBLIC_BUSINESS_LEGAL_NAME }}
-          NEXT_PUBLIC_BUSINESS_ADDRESS: ${{ vars.NEXT_PUBLIC_BUSINESS_ADDRESS }}
-          NEXT_PUBLIC_BUSINESS_PHONE_NUMBER: ${{ vars.NEXT_PUBLIC_BUSINESS_PHONE_NUMBER }}
-          NEXT_PUBLIC_BILLING_EMAIL: ${{ vars.NEXT_PUBLIC_BILLING_EMAIL }}
-          NEXT_PUBLIC_BUSINESS_REGISTRATION: ${{ vars.NEXT_PUBLIC_BUSINESS_REGISTRATION }}
-          NEXT_PUBLIC_BANK_NAME: ${{ vars.NEXT_PUBLIC_BANK_NAME }}
-          NEXT_PUBLIC_BANK_ACCOUNT_HOLDER: ${{ vars.NEXT_PUBLIC_BANK_ACCOUNT_HOLDER }}
-          NEXT_PUBLIC_BANK_ACCOUNT_NUMBER: ${{ vars.NEXT_PUBLIC_BANK_ACCOUNT_NUMBER }}
-          NEXT_PUBLIC_FPS_MERCHANT_NAME: ${{ vars.NEXT_PUBLIC_FPS_MERCHANT_NAME }}
-          NEXT_PUBLIC_FPS_MOBILE_NUMBER: ${{ vars.NEXT_PUBLIC_FPS_MOBILE_NUMBER }}
-          CDK_PARAM_INVOICE_DISPLAY_TIMEZONE: ${{ vars.CDK_PARAM_INVOICE_DISPLAY_TIMEZONE }}
-          CDK_PARAM_INVOICE_PAYMENT_TERMS_DAYS: ${{ vars.CDK_PARAM_INVOICE_PAYMENT_TERMS_DAYS }}
-          # This job uses the production environment. These secrets must be
-          # repository secrets or production-environment secrets. A secret
-          # that exists only in the staging environment is invisible here,
-          # the parameter stays empty, and the origin lock stays off.
-          CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY }}
-          CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS }}
-          CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY }}
-          CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS }}
-        run: |
-          set -euo pipefail
-          umask 077
-          real_npx="$(command -v npx)"
-          real_aws="$(command -v aws)"
-          bindir="$RUNNER_TEMP/cdk-dry/bin"
-          mkdir -p "$bindir"
-          CURRENT_LOG="$RUNNER_TEMP/cdk-current.jsonl"
-          ACTION_LOG="$RUNNER_TEMP/cdk-action.jsonl"
-          rm -f "$CURRENT_LOG" "$ACTION_LOG"
-          trap 'rm -f "$CURRENT_LOG" "$ACTION_LOG" "$RUNNER_TEMP/current-cdk.sh"' EXIT
-          REAL_NPX="$real_npx" REAL_AWS="$real_aws" BINDIR="$bindir" python3 - << 'PY'
-          import os
-          from pathlib import Path
-
-          bindir = Path(os.environ["BINDIR"])
-          (bindir / "record.py").write_text(
-              "import json, os, sys\n"
-              'open(os.environ["DEPLOY_LOG"], "a", encoding="utf-8").write(json.dumps(sys.argv[1:]) + "\\n")\n'
-          )
-          npx = bindir / "npx"
-          npx.write_text(
-              "\n".join(
-                  [
-                      "#!/usr/bin/env bash",
-                      "set -euo pipefail",
-                      'real="${REAL_NPX:?}"',
-                      'log="${DEPLOY_LOG:?}"',
-                      'here="$(cd "$(dirname "$0")" && pwd)"',
-                      'if [[ "${1:-}" == "cdk" && ( "${2:-}" == "deploy" || "${2:-}" == "destroy" || "${2:-}" == "bootstrap" ) ]]; then',
-                      '  DEPLOY_LOG="$log" python3 "$here/record.py" npx "$@"',
-                      "  exit 0",
-                      "fi",
-                      'exec "$real" "$@"',
-                      "",
-                  ]
-              )
-          )
-          npx.chmod(0o755)
-          aws = bindir / "aws"
-          aws.write_text(
-              "\n".join(
-                  [
-                      "#!/usr/bin/env bash",
-                      "set -euo pipefail",
-                      'real="${REAL_AWS:?}"',
-                      'log="${DEPLOY_LOG:?}"',
-                      'here="$(cd "$(dirname "$0")" && pwd)"',
-                      'if [[ "${1:-}" == "cloudformation" ]]; then',
-                      '  case "${2:-}" in',
-                      "    describe-*|list-*|get-*)",
-                      '      exec "$real" "$@"',
-                      "      ;;",
-                      "  esac",
-                      "fi",
-                      'DEPLOY_LOG="$log" python3 "$here/record.py" aws "$@"',
-                      "exit 0",
-                      "",
-                  ]
-              )
-          )
-          aws.chmod(0o755)
-          PY
-          : > "$CURRENT_LOG"
-          REAL_NPX=/bin/false REAL_AWS=/bin/false DEPLOY_LOG="$CURRENT_LOG" PATH="$bindir:$PATH" \
-            npx cdk deploy --require-approval never sentinel-stack
-          REAL_NPX=/bin/false REAL_AWS=/bin/false DEPLOY_LOG="$CURRENT_LOG" PATH="$bindir:$PATH" \
-            npx cdk destroy --force sentinel-stack
-          REAL_NPX=/bin/false REAL_AWS=/bin/false DEPLOY_LOG="$CURRENT_LOG" PATH="$bindir:$PATH" \
-            aws cloudformation continue-update-rollback --stack-name sentinel-stack
-          LOG="$CURRENT_LOG" python3 - << 'PY'
-          import json as _json
-          import os
-          from pathlib import Path
-
-          rows = [_json.loads(line) for line in Path(os.environ["LOG"]).read_text(encoding="utf-8").splitlines()]
-          cdk = [row for row in rows if row[:1] == ["npx"]]
-          aws = [row for row in rows if row[:1] == ["aws"]]
-          if [row[1:3] for row in cdk] != [["cdk", "deploy"], ["cdk", "destroy"]]:
-              raise SystemExit("npx stub executed or failed to record")
-          if len(aws) != 1 or aws[0][:3] != ["aws", "cloudformation", "continue-update-rollback"]:
-              raise SystemExit("aws stub executed a CloudFormation write")
-          PY
-          : > "$CURRENT_LOG"
-          export REAL_NPX="$real_npx"
-          export REAL_AWS="$real_aws"
-          export PATH="$bindir:$PATH"
-          STEP_NAME="Deploy stacks" \
-            WORKFLOW="$GITHUB_WORKSPACE/.github/workflows/deploy-backend.yml" \
-            OUT="$RUNNER_TEMP/current-cdk.sh" \
-            python3 - << 'PY'
-          import os
-          from pathlib import Path
-
-          text = Path(os.environ["WORKFLOW"]).read_text(encoding="utf-8")
-          lines = text.splitlines()
-          name = os.environ["STEP_NAME"]
-          start = None
-          for index, line in enumerate(lines):
-              if line == f"      - name: {name}":
-                  start = index
-                  break
-          if start is None:
-              raise SystemExit("deploy step not found")
-          end = len(lines)
-          for index in range(start + 1, len(lines)):
-              if lines[index].startswith("      - ") or (
-                  lines[index].strip() and not lines[index].startswith(" ")
-              ):
-                  end = index
-                  break
-          step = lines[start:end]
-          body = None
-          for index, line in enumerate(step):
-              if line != "        run: |":
-                  continue
-              kept = []
-              for later in step[index + 1 :]:
-                  if later.strip() == "":
-                      kept.append("")
-                      continue
-                  if later.startswith("          "):
-                      kept.append(later[10:])
-                      continue
-                  break
-              body = "\n".join(kept).rstrip() + "\n"
-              break
-          if body is None or "npx cdk deploy" not in body:
-              raise SystemExit("refusing to run a step that is not the current cdk deploy")
-          if "REAL_NPX" in body or "cdk_deploy.py" in body:
-              raise SystemExit("refusing to run the comparison step")
-          Path(os.environ["OUT"]).write_text(body, encoding="utf-8")
-          PY
-          export DEPLOY_LOG="$CURRENT_LOG"
-          bash "$RUNNER_TEMP/current-cdk.sh" || true
-          export DEPLOY_LOG="$ACTION_LOG"
-          python3 - << 'PY' || true
-          import importlib.util
-          import os
-          import sys
-
-          import json as _json
-          import os
-
-          def normalize(value):
-              text = value.strip()
-              if text == "all stacks":
-                  return "evolvesprouts evolvesprouts-admin-web evolvesprouts-public-www evolvesprouts-training"
-              if text == "backend":
-                  return "evolvesprouts"
-              if text == "admin web":
-                  return "evolvesprouts-admin-web"
-              if text in {"public website", "public www", "public website staging", "public www staging"}:
-                  return "evolvesprouts-public-www"
-              if text in {"training", "training web"}:
-                  return "evolvesprouts-training"
-              return text
-
-          def build_plan():
-              os.environ["STACKS"] = normalize(os.environ.get("CDK_STACKS", ""))
-              extra = []
-              qualifier = os.environ.get("CDK_BOOTSTRAP_QUALIFIER", "")
-              if qualifier:
-                  extra = ["--qualifier", qualifier]
-              return {
-                  "api-stack": "evolvesprouts",
-                  "also-api": [
-                      "PublicWwwDomainName",
-                      "PublicWwwStagingDomainName",
-                      "AdminWebDomainName",
-                      "TrainingDomainName",
-                  ],
-                  "routes": [
-                      {
-                          "stack": "evolvesprouts-admin-web",
-                          "parameters": ["AdminWebDomainName", "AdminWebCertificateArn", "WafWebAclArn"],
-                      },
-                      {
-                          "stack": "evolvesprouts-public-www",
-                          "parameters": [
-                              "PublicWwwDomainName",
-                              "PublicWwwCertificateArn",
-                              "PublicWwwStagingDomainName",
-                              "PublicWwwStagingCertificateArn",
-                              "PublicWwwApiBaseUrl",
-                              "PublicWwwMediaRequestApiBaseUrl",
-                              "PublicWwwEdgeVerifySecret",
-                              "PublicWwwEdgeVerifySecretPrevious",
-                              "PublicWwwStagingEdgeVerifySecret",
-                              "PublicWwwStagingEdgeVerifySecretPrevious",
-                              "WafWebAclArn",
-                          ],
-                      },
-                      {
-                          "stack": "evolvesprouts-training",
-                          "parameters": [
-                              "TrainingDomainName",
-                              "TrainingCertificateArn",
-                              "TrainingApiBaseUrl",
-                              "TrainingMediaRequestApiBaseUrl",
-                              "WafWebAclArn",
-                          ],
-                      },
-                  ],
-                  "groups": [
-                      {
-                          "stacks": [
-                              "evolvesprouts",
-                              "evolvesprouts-admin-web",
-                              "evolvesprouts-public-www",
-                              "evolvesprouts-training",
-                          ],
-                          "extra-args": extra,
-                      }
-                  ],
-              }
-
-          def configure() -> None:
-              os.environ["PLAN"] = _json.dumps(build_plan())
-              os.environ["PARAM_FILE"] = os.environ.get("CDK_PARAM_FILE", "")
-              os.environ["WORKING_DIRECTORY"] = ""
-              os.environ["FORMAT"] = "plain-json"
-              os.environ["ATTEMPTS"] = "3"
-              os.environ["NO_NOTICES"] = "true"
-              os.environ["PASS_EMPTY"] = "WafWebAclArn,PublicWwwEdgeVerifySecret,PublicWwwEdgeVerifySecretPrevious,PublicWwwStagingEdgeVerifySecret,PublicWwwStagingEdgeVerifySecretPrevious"
-              os.environ["ESCAPE_NEWLINES"] = "false"
-              os.environ["SKIP_RESOURCE"] = ""
-              os.environ["ROLLBACK_MATCH"] = "is in UPDATE_ROLLBACK_FAILED state and can not be updated"
-              seed = os.environ.get("RUN_SEED_DATA", "false").strip().lower()
-              os.environ["RUN_SEED"] = "true" if seed == "true" else "false"
-              destroy = os.environ.get("DESTROY_BEFORE_DEPLOY", "false").strip().lower()
-              os.environ["DESTROY"] = "true" if destroy == "true" else "false"
-
-          configure()
-          path = os.environ["GITHUB_WORKSPACE"] + "/.actions-pin/cdk-deploy/cdk_deploy.py"
-          spec = importlib.util.spec_from_file_location("cdk_deploy", path)
-          if spec is None or spec.loader is None:
-              raise SystemExit("cdk_deploy.py is not in the pinned checkout")
-          module = importlib.util.module_from_spec(spec)
-          spec.loader.exec_module(module)
-          raise SystemExit(module.main())
-          PY
-          CURRENT="$CURRENT_LOG" ACTION="$ACTION_LOG" python3 - << 'PY'
-          import json as _json
-          import os
-          import re
-          import sys
-          from pathlib import Path
-
-          account = re.compile(r"\b\d{12}\b")
-
-          def load(path):
-              text = Path(path).read_text(encoding="utf-8")
-              return [_json.loads(line) for line in text.splitlines() if line.strip()]
-
-          def signature(argv):
-              flags = []
-              params = []
-              positional = []
-              index = 0
-              while index < len(argv):
-                  token = argv[index]
-                  if token == "--parameters" and index + 1 < len(argv):
-                      params.append(argv[index + 1])
-                      index += 2
-                      continue
-                  if token.startswith("--") and index + 1 < len(argv) and not argv[index + 1].startswith("-"):
-                      flags.append((token, argv[index + 1]))
-                      index += 2
-                      continue
-                  if token.startswith("-"):
-                      flags.append((token, ""))
-                      index += 1
-                      continue
-                  positional.append(token)
-                  index += 1
-              if len(positional) < 3 or positional[1] != "cdk":
-                  return None
-              if positional[2] not in {"deploy", "destroy"}:
-                  return None
-              return (positional[2], tuple(positional[3:]), tuple(sorted(flags)), tuple(sorted(params)))
-
-          def keys(params):
-              return [item.split("=", 1)[0] for item in params]
-
-          def show(label, sig):
-              command, stacks, flags, params = sig
-              flag_text = " ".join(flag + (" " + value if value else "") for flag, value in flags)
-              print(
-                  account.sub("************", f"{label}: cdk {command} {flag_text} stacks {' '.join(stacks)}"),
-                  file=sys.stderr,
-              )
-              print(f"{label} parameters: {', '.join(keys(params))}", file=sys.stderr)
-
-          current = [item for item in (signature(row) for row in load(os.environ["CURRENT"])) if item]
-          action = [item for item in (signature(row) for row in load(os.environ["ACTION"])) if item]
-          if not current or current != action:
-              print("planned CDK changes differ", file=sys.stderr)
-              for index in range(max(len(current), len(action))):
-                  left = current[index] if index < len(current) else None
-                  right = action[index] if index < len(action) else None
-                  if left == right:
-                      continue
-                  if left is not None:
-                      show("current", left)
-                  if right is not None:
-                      show("action", right)
-                  if left is not None and right is not None:
-                      left_values = {item.split("=", 1)[0]: item.split("=", 1)[1] for item in left[3]}
-                      right_values = {item.split("=", 1)[0]: item.split("=", 1)[1] for item in right[3]}
-                      for key in sorted(set(left_values) & set(right_values)):
-                          if left_values[key] != right_values[key]:
-                              print(f"parameter value differs for {key}", file=sys.stderr)
-              raise SystemExit(1)
-          print(f"Dry run matches the current deploy ({len(current)} planned CDK changes)")
-          PY
-
-      - name: Deploy stacks
+      - name: Check CDK parameters
+        id: prep
         working-directory: backend/infrastructure
         run: |
           npx cdk acknowledge 34892 || true
@@ -667,148 +270,93 @@ jobs:
                       f"{target}:{key}={value_str}".encode("utf-8") + b"\0"
                   )
           PY
-            mapfile -d '' -t PARAM_ARGS < "$PARAM_ARGS_FILE"
+            rm -f "$PARAM_ARGS_FILE"
           fi
-
-          RUN_SEED_DATA_NORMALIZED="$(printf '%s' "${RUN_SEED_DATA:-false}" | tr '[:upper:]' '[:lower:]')"
-          if [ "$RUN_SEED_DATA_NORMALIZED" = "true" ]; then
-            if [[ " $CDK_STACKS " == *" evolvesprouts "* ]]; then
-              FILTERED_PARAM_ARGS=()
-              for arg in "${PARAM_ARGS[@]}"; do
-                if [[ "$arg" == "evolvesprouts:RunSeedData="* ]]; then
-                  continue
-                fi
-                FILTERED_PARAM_ARGS+=("$arg")
-              done
-              PARAM_ARGS=("${FILTERED_PARAM_ARGS[@]}")
-              PARAM_ARGS+=("--parameters" "evolvesprouts:RunSeedData=true")
-              echo "RunSeedData override enabled for evolvesprouts stack."
-            else
-              echo "run_seed_data=true requested, but backend stack is not selected; skipping seed override."
-            fi
-          fi
-
-          QUALIFIER_ARGS=()
-          if [ -n "$CDK_BOOTSTRAP_QUALIFIER" ]; then
-            QUALIFIER_ARGS=(--qualifier "$CDK_BOOTSTRAP_QUALIFIER")
-          fi
-
-          IFS=$', \n\t' read -r -a STACK_LIST <<< "$CDK_STACKS"
-
-          read_public_www_output() {
-            local key="$1"
-            local value
-            value="$(aws cloudformation describe-stacks \
-              --stack-name evolvesprouts-public-www \
-              --region "$AWS_REGION" \
-              --query "Stacks[0].Outputs[?OutputKey=='${key}'].OutputValue | [0]" \
-              --output text 2>/dev/null || true)"
-            if [ -z "$value" ] || [ "$value" = "None" ]; then
-              echo "absent"
-            else
-              printf '%s\n' "$value"
-            fi
-          }
 
           EDGE_VERIFY_BEFORE_STAGING="skipped"
           EDGE_VERIFY_BEFORE_PRODUCTION="skipped"
           if [[ " $CDK_STACKS " == *" evolvesprouts-public-www "* ]]; then
-            EDGE_VERIFY_BEFORE_STAGING="$(read_public_www_output PublicWwwStagingEdgeVerifyEnabled)"
-            EDGE_VERIFY_BEFORE_PRODUCTION="$(read_public_www_output PublicWwwEdgeVerifyEnabled)"
+            read_one() {
+              local key="$1" value
+              value="$(aws cloudformation describe-stacks --stack-name evolvesprouts-public-www --region "$AWS_REGION" --query "Stacks[0].Outputs[?OutputKey=='${key}'].OutputValue | [0]" --output text 2>/dev/null || true)"
+              if [ -z "$value" ] || [ "$value" = "None" ]; then
+                echo absent
+              else
+                printf '%s\n' "$value"
+              fi
+            }
+            EDGE_VERIFY_BEFORE_STAGING="$(read_one PublicWwwStagingEdgeVerifyEnabled)"
+            EDGE_VERIFY_BEFORE_PRODUCTION="$(read_one PublicWwwEdgeVerifyEnabled)"
           fi
+          echo "staging_before=$EDGE_VERIFY_BEFORE_STAGING" >> "$GITHUB_OUTPUT"
+          echo "production_before=$EDGE_VERIFY_BEFORE_PRODUCTION" >> "$GITHUB_OUTPUT"
+          echo "stacks=$CDK_STACKS" >> "$GITHUB_OUTPUT"
+          CDK_BOOTSTRAP_QUALIFIER="$CDK_BOOTSTRAP_QUALIFIER" CDK_STACKS="$CDK_STACKS" python3 - << 'PY'
+          import json as _json
+          import os
+          from pathlib import Path
 
-          # Lambda occasionally returns 500 during UpdateFunctionCode (SDK retries
-          # exhaust inside CloudFormation). Brief backoff + redeploy usually succeeds.
-          # Some CloudFormation rollbacks themselves fail (e.g., CloudFront Functions
-          # rate-limit during rollback) and leave the stack wedged in
-          # UPDATE_ROLLBACK_FAILED, which CloudFormation then refuses to update
-          # further. Detect that state and call ``continue-update-rollback`` to
-          # nudge it back to ``UPDATE_ROLLBACK_COMPLETE`` before the next retry.
-          MANAGED_STACKS=(
-            evolvesprouts
-            evolvesprouts-admin-web
-            evolvesprouts-public-www
-            evolvesprouts-training
-          )
-
-          continue_rollback_for_wedged_stacks() {
-            for managed in "${MANAGED_STACKS[@]}"; do
-              if [[ ! " $CDK_STACKS " == *" $managed "* ]]; then
-                continue
-              fi
-              local status
-              status="$(aws cloudformation describe-stacks \
-                --stack-name "$managed" \
-                --region "$AWS_REGION" \
-                --query 'Stacks[0].StackStatus' \
-                --output text 2>/dev/null || echo MISSING)"
-              if [ "$status" != "UPDATE_ROLLBACK_FAILED" ]; then
-                continue
-              fi
-              echo "Stack ${managed} is in UPDATE_ROLLBACK_FAILED; calling continue-update-rollback."
-              if ! aws cloudformation continue-update-rollback \
-                --stack-name "$managed" \
-                --region "$AWS_REGION"; then
-                echo "continue-update-rollback failed for ${managed}; the next deploy attempt will report the wedged state."
-                continue
-              fi
-              echo "Waiting for ${managed} to reach UPDATE_ROLLBACK_COMPLETE (timeout ~15m)."
-              if ! aws cloudformation wait stack-rollback-complete \
-                --stack-name "$managed" \
-                --region "$AWS_REGION"; then
-                echo "Wait for stack-rollback-complete on ${managed} timed out or failed."
-              fi
-            done
+          extra = []
+          qualifier = os.environ.get("CDK_BOOTSTRAP_QUALIFIER", "")
+          if qualifier:
+              extra = ["--qualifier", qualifier]
+          plan = {
+              "api-stack": "evolvesprouts",
+              "also-api": [
+                  "PublicWwwDomainName",
+                  "PublicWwwStagingDomainName",
+                  "AdminWebDomainName",
+                  "TrainingDomainName",
+              ],
+              "routes": [
+                  {
+                      "stack": "evolvesprouts-admin-web",
+                      "parameters": ["AdminWebDomainName", "AdminWebCertificateArn", "WafWebAclArn"],
+                  },
+                  {
+                      "stack": "evolvesprouts-public-www",
+                      "parameters": [
+                          "PublicWwwDomainName",
+                          "PublicWwwCertificateArn",
+                          "PublicWwwStagingDomainName",
+                          "PublicWwwStagingCertificateArn",
+                          "PublicWwwApiBaseUrl",
+                          "PublicWwwMediaRequestApiBaseUrl",
+                          "PublicWwwEdgeVerifySecret",
+                          "PublicWwwEdgeVerifySecretPrevious",
+                          "PublicWwwStagingEdgeVerifySecret",
+                          "PublicWwwStagingEdgeVerifySecretPrevious",
+                          "WafWebAclArn",
+                      ],
+                  },
+                  {
+                      "stack": "evolvesprouts-training",
+                      "parameters": [
+                          "TrainingDomainName",
+                          "TrainingCertificateArn",
+                          "TrainingApiBaseUrl",
+                          "TrainingMediaRequestApiBaseUrl",
+                          "WafWebAclArn",
+                      ],
+                  },
+              ],
+              "groups": [
+                  {
+                      "stacks": [
+                          "evolvesprouts",
+                          "evolvesprouts-admin-web",
+                          "evolvesprouts-public-www",
+                          "evolvesprouts-training",
+                      ],
+                      "extra-args": extra,
+                  }
+              ],
           }
-
-          MAX_CDK_DEPLOY_ATTEMPTS=3
-          attempt=1
-          deploy_exit=1
-          while [ "$attempt" -le "$MAX_CDK_DEPLOY_ATTEMPTS" ]; do
-            echo "CDK deploy attempt ${attempt} of ${MAX_CDK_DEPLOY_ATTEMPTS}"
-            ATTEMPT_LOG="$(mktemp)"
-            npx cdk deploy --no-notices --require-approval never \
-              "${QUALIFIER_ARGS[@]}" "${PARAM_ARGS[@]}" "${STACK_LIST[@]}" 2>&1 | tee "$ATTEMPT_LOG"
-            deploy_exit=${PIPESTATUS[0]}
-            if [ "$deploy_exit" -eq 0 ]; then
-              rm -f "$ATTEMPT_LOG"
-              if [[ " $CDK_STACKS " == *" evolvesprouts-public-www "* ]]; then
-                bash "${GITHUB_WORKSPACE}/scripts/deploy/report_public_www_edge_verify.sh" \
-                  "$EDGE_VERIFY_BEFORE_STAGING" \
-                  "$(read_public_www_output PublicWwwStagingEdgeVerifyEnabled)" \
-                  "$EDGE_VERIFY_BEFORE_PRODUCTION" \
-                  "$(read_public_www_output PublicWwwEdgeVerifyEnabled)"
-              fi
-              exit 0
-            fi
-
-            if grep -Eiq 'HandlerErrorCode: (InvalidRequest|AlreadyExists)|must be in ARN format or "\\*"|already exists\.' "$ATTEMPT_LOG"; then
-              echo "Detected non-retryable CloudFormation error; failing fast without additional retries."
-              rm -f "$ATTEMPT_LOG"
-              exit "$deploy_exit"
-            fi
-
-            saw_rollback_failed=0
-            if grep -Eiq 'is in UPDATE_ROLLBACK_FAILED state and can not be updated' "$ATTEMPT_LOG"; then
-              saw_rollback_failed=1
-            fi
-
-            rm -f "$ATTEMPT_LOG"
-            if [ "$attempt" -eq "$MAX_CDK_DEPLOY_ATTEMPTS" ]; then
-              break
-            fi
-
-            if [ "$saw_rollback_failed" -eq 1 ]; then
-              echo "Detected UPDATE_ROLLBACK_FAILED; attempting continue-update-rollback before retry."
-              continue_rollback_for_wedged_stacks
-            fi
-
-            delay=$((45 * attempt))
-            echo "CDK deploy failed (exit ${deploy_exit}); waiting ${delay}s before retry..."
-            sleep "$delay"
-            attempt=$((attempt + 1))
-          done
-          exit "$deploy_exit"
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as handle:
+              handle.write("plan<<PLANJSON\n")
+              handle.write(_json.dumps(plan) + "\n")
+              handle.write("PLANJSON\n")
+          PY
         env:
           AWS_REGION: ${{ steps.region.outputs.region }}
           CDK_STACKS: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
@@ -816,6 +364,13 @@ jobs:
           CDK_PARAM_FILE: ${{ vars.CDK_PARAM_FILE }}
           CDK_BOOTSTRAP_QUALIFIER: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           CDK_PARAM_GOOGLE_CLIENT_SECRET: ${{ secrets.CDK_PARAM_GOOGLE_CLIENT_SECRET }}
+          CDK_PARAM_COGNITO_CUSTOM_DOMAIN_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_COGNITO_CUSTOM_DOMAIN_CERTIFICATE_ARN }}
+          CDK_PARAM_ADMIN_WEB_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_ADMIN_WEB_CERTIFICATE_ARN }}
+          CDK_PARAM_PUBLIC_WWW_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_PUBLIC_WWW_CERTIFICATE_ARN }}
+          CDK_PARAM_PUBLIC_WWW_STAGING_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_CERTIFICATE_ARN }}
+          CDK_PARAM_TRAINING_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_TRAINING_CERTIFICATE_ARN }}
+          CDK_PARAM_API_CUSTOM_DOMAIN_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_API_CUSTOM_DOMAIN_CERTIFICATE_ARN }}
+          CDK_PARAM_ASSET_DOWNLOAD_CUSTOM_DOMAIN_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_ASSET_DOWNLOAD_CUSTOM_DOMAIN_CERTIFICATE_ARN }}
           CDK_PARAM_PUBLIC_API_KEY_VALUE: ${{ secrets.CDK_PARAM_PUBLIC_API_KEY_VALUE }}
           CDK_PARAM_TURNSTILE_SECRET_KEY: ${{ secrets.CDK_PARAM_TURNSTILE_SECRET_KEY }}
           CDK_PARAM_STRIPE_SECRET_KEY: ${{ secrets.CDK_PARAM_STRIPE_SECRET_KEY }}
@@ -880,3 +435,118 @@ jobs:
           CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS }}
           CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY }}
           CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS }}
+
+      - name: Deploy stacks
+        uses: lx-software-ltd/actions/cdk-deploy@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
+        with:
+          working-directory: backend/infrastructure
+          plan: ${{ steps.prep.outputs.plan }}
+          stacks: ${{ steps.prep.outputs.stacks }}
+          param-file: ${{ vars.CDK_PARAM_FILE }}
+          format: plain-json
+          attempts: "3"
+          no-notices: "true"
+          pass-empty: WafWebAclArn,PublicWwwEdgeVerifySecret,PublicWwwEdgeVerifySecretPrevious,PublicWwwStagingEdgeVerifySecret,PublicWwwStagingEdgeVerifySecretPrevious
+          escape-newlines: "false"
+          rollback-match: is in UPDATE_ROLLBACK_FAILED state and can not be updated
+          run-seed: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_seed_data || 'false' }}
+          region: ${{ steps.region.outputs.region }}
+        env:
+          AWS_REGION: ${{ steps.region.outputs.region }}
+          CDK_STACKS: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
+          RUN_SEED_DATA: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_seed_data || 'false' }}
+          CDK_PARAM_FILE: ${{ vars.CDK_PARAM_FILE }}
+          CDK_BOOTSTRAP_QUALIFIER: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
+          CDK_PARAM_GOOGLE_CLIENT_SECRET: ${{ secrets.CDK_PARAM_GOOGLE_CLIENT_SECRET }}
+          CDK_PARAM_COGNITO_CUSTOM_DOMAIN_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_COGNITO_CUSTOM_DOMAIN_CERTIFICATE_ARN }}
+          CDK_PARAM_ADMIN_WEB_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_ADMIN_WEB_CERTIFICATE_ARN }}
+          CDK_PARAM_PUBLIC_WWW_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_PUBLIC_WWW_CERTIFICATE_ARN }}
+          CDK_PARAM_PUBLIC_WWW_STAGING_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_CERTIFICATE_ARN }}
+          CDK_PARAM_TRAINING_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_TRAINING_CERTIFICATE_ARN }}
+          CDK_PARAM_API_CUSTOM_DOMAIN_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_API_CUSTOM_DOMAIN_CERTIFICATE_ARN }}
+          CDK_PARAM_ASSET_DOWNLOAD_CUSTOM_DOMAIN_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_ASSET_DOWNLOAD_CUSTOM_DOMAIN_CERTIFICATE_ARN }}
+          CDK_PARAM_PUBLIC_API_KEY_VALUE: ${{ secrets.CDK_PARAM_PUBLIC_API_KEY_VALUE }}
+          CDK_PARAM_TURNSTILE_SECRET_KEY: ${{ secrets.CDK_PARAM_TURNSTILE_SECRET_KEY }}
+          CDK_PARAM_STRIPE_SECRET_KEY: ${{ secrets.CDK_PARAM_STRIPE_SECRET_KEY }}
+          CDK_PARAM_STAGING_STRIPE_SECRET_KEY: ${{ secrets.CDK_PARAM_STAGING_STRIPE_SECRET_KEY }}
+          CDK_PARAM_MAILCHIMP_API_SECRET_ARN: ${{ secrets.CDK_PARAM_MAILCHIMP_API_SECRET_ARN }}
+          CDK_PARAM_MAILCHIMP_LIST_ID: ${{ vars.CDK_PARAM_MAILCHIMP_LIST_ID }}
+          CDK_PARAM_MAILCHIMP_SERVER_PREFIX: ${{ vars.CDK_PARAM_MAILCHIMP_SERVER_PREFIX }}
+          CDK_PARAM_MAILCHIMP_WEBHOOK_SECRET: ${{ secrets.CDK_PARAM_MAILCHIMP_WEBHOOK_SECRET }}
+          CDK_PARAM_META_APP_SECRET: ${{ secrets.CDK_PARAM_META_APP_SECRET }}
+          CDK_PARAM_WHATSAPP_WEBHOOK_VERIFY_TOKEN: ${{ secrets.CDK_PARAM_WHATSAPP_WEBHOOK_VERIFY_TOKEN }}
+          CDK_PARAM_META_PAGE_ACCESS_TOKEN: ${{ secrets.CDK_PARAM_META_PAGE_ACCESS_TOKEN }}
+          CDK_PARAM_META_PAGE_ID: ${{ vars.CDK_PARAM_META_PAGE_ID }}
+          CDK_PARAM_META_INSTAGRAM_USER_ID: ${{ vars.CDK_PARAM_META_INSTAGRAM_USER_ID }}
+          CDK_PARAM_META_APP_ID: ${{ vars.CDK_PARAM_META_APP_ID }}
+          CDK_PARAM_META_GRAPH_API_BASE_URL: ${{ vars.CDK_PARAM_META_GRAPH_API_BASE_URL }}
+          CDK_PARAM_META_GRAPH_API_VERSION: ${{ vars.CDK_PARAM_META_GRAPH_API_VERSION }}
+          CDK_PARAM_WHATSAPP_EXPORT_BUSINESS_NAMES: ${{ vars.CDK_PARAM_WHATSAPP_EXPORT_BUSINESS_NAMES }}
+          CDK_PARAM_MAILCHIMP_MEDIA_DOWNLOAD_MERGE_TAG: ${{ vars.CDK_PARAM_MAILCHIMP_MEDIA_DOWNLOAD_MERGE_TAG }}
+          CDK_PARAM_MAILCHIMP_WELCOME_JOURNEY_ID: ${{ vars.CDK_PARAM_MAILCHIMP_WELCOME_JOURNEY_ID }}
+          CDK_PARAM_MAILCHIMP_WELCOME_JOURNEY_STEP_ID: ${{ vars.CDK_PARAM_MAILCHIMP_WELCOME_JOURNEY_STEP_ID }}
+          CDK_PARAM_EVENTBRITE_TOKEN_SECRET_ARN: ${{ secrets.CDK_PARAM_EVENTBRITE_TOKEN_SECRET_ARN }}
+          CDK_PARAM_EVENTBRITE_ORGANIZATION_ID: ${{ vars.CDK_PARAM_EVENTBRITE_ORGANIZATION_ID }}
+          CDK_PARAM_EVENTBRITE_DEFAULT_TIMEZONE: ${{ vars.CDK_PARAM_EVENTBRITE_DEFAULT_TIMEZONE }}
+          CDK_PARAM_MEDIA_DEFAULT_RESOURCE_KEY: ${{ vars.CDK_PARAM_MEDIA_DEFAULT_RESOURCE_KEY }}
+          CDK_PARAM_SALES_RECAP_DISPLAY_TIMEZONE: ${{ vars.CDK_PARAM_SALES_RECAP_DISPLAY_TIMEZONE }}
+          CDK_PARAM_OPENROUTER_API_KEY: ${{ secrets.CDK_PARAM_OPENROUTER_API_KEY }}
+          CDK_PARAM_OPENROUTER_CHAT_COMPLETIONS_URL: ${{ vars.CDK_PARAM_OPENROUTER_CHAT_COMPLETIONS_URL }}
+          CDK_PARAM_OPENROUTER_MODEL: ${{ vars.CDK_PARAM_OPENROUTER_MODEL }}
+          # Production-environment job. A secret that exists only in the
+          # staging environment is invisible here. An empty value omits the
+          # parameter and CloudFormation keeps the previous allowlist.
+          CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS: ${{ secrets.CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS }}
+          STRIPE_PAYMENT_METHOD_CONFIGURATION_ID: ${{ vars.STRIPE_PAYMENT_METHOD_CONFIGURATION_ID }}
+          CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD: ${{ secrets.CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD }}
+          CDK_PARAM_ASSET_DOWNLOAD_CLOUDFRONT_PUBLIC_KEY_PEM: ${{ secrets.CDK_PARAM_ASSET_DOWNLOAD_CLOUDFRONT_PUBLIC_KEY_PEM }}
+          CDK_PARAM_ASSET_DOWNLOAD_CLOUDFRONT_PRIVATE_KEY_SECRET_ARN: ${{ secrets.CDK_PARAM_ASSET_DOWNLOAD_CLOUDFRONT_PRIVATE_KEY_SECRET_ARN }}
+          CDK_PARAM_CERTIFICATE_ES_FOUNDER_NAME: ${{ vars.CDK_PARAM_CERTIFICATE_ES_FOUNDER_NAME }}
+          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
+          PUBLIC_WWW_API_BASE_URL: ${{ vars.PUBLIC_WWW_API_BASE_URL || vars.NEXT_PUBLIC_API_BASE_URL }}
+          PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL: ${{ vars.PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL || vars.NEXT_PUBLIC_API_BASE_URL }}
+          NEXT_PUBLIC_INSTAGRAM_URL: ${{ vars.NEXT_PUBLIC_INSTAGRAM_URL }}
+          NEXT_PUBLIC_LINKEDIN_URL: ${{ vars.NEXT_PUBLIC_LINKEDIN_URL }}
+          NEXT_PUBLIC_WHATSAPP_URL: ${{ vars.NEXT_PUBLIC_WHATSAPP_URL }}
+          NEXT_PUBLIC_BUSINESS_NAME: ${{ vars.NEXT_PUBLIC_BUSINESS_NAME }}
+          NEXT_PUBLIC_BUSINESS_LEGAL_NAME: ${{ vars.NEXT_PUBLIC_BUSINESS_LEGAL_NAME }}
+          NEXT_PUBLIC_BUSINESS_ADDRESS: ${{ vars.NEXT_PUBLIC_BUSINESS_ADDRESS }}
+          NEXT_PUBLIC_BUSINESS_PHONE_NUMBER: ${{ vars.NEXT_PUBLIC_BUSINESS_PHONE_NUMBER }}
+          NEXT_PUBLIC_BILLING_EMAIL: ${{ vars.NEXT_PUBLIC_BILLING_EMAIL }}
+          NEXT_PUBLIC_BUSINESS_REGISTRATION: ${{ vars.NEXT_PUBLIC_BUSINESS_REGISTRATION }}
+          NEXT_PUBLIC_BANK_NAME: ${{ vars.NEXT_PUBLIC_BANK_NAME }}
+          NEXT_PUBLIC_BANK_ACCOUNT_HOLDER: ${{ vars.NEXT_PUBLIC_BANK_ACCOUNT_HOLDER }}
+          NEXT_PUBLIC_BANK_ACCOUNT_NUMBER: ${{ vars.NEXT_PUBLIC_BANK_ACCOUNT_NUMBER }}
+          NEXT_PUBLIC_FPS_MERCHANT_NAME: ${{ vars.NEXT_PUBLIC_FPS_MERCHANT_NAME }}
+          NEXT_PUBLIC_FPS_MOBILE_NUMBER: ${{ vars.NEXT_PUBLIC_FPS_MOBILE_NUMBER }}
+          CDK_PARAM_INVOICE_DISPLAY_TIMEZONE: ${{ vars.CDK_PARAM_INVOICE_DISPLAY_TIMEZONE }}
+          CDK_PARAM_INVOICE_PAYMENT_TERMS_DAYS: ${{ vars.CDK_PARAM_INVOICE_PAYMENT_TERMS_DAYS }}
+          # This job uses the production environment. These secrets must be
+          # repository secrets or production-environment secrets. A secret
+          # that exists only in the staging environment is invisible here,
+          # the parameter stays empty, and the origin lock stays off.
+          CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY }}
+          CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS }}
+          CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY }}
+          CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS }}
+
+      - name: Report public website edge verify
+        if: steps.prep.outputs.stacks != '' && contains(steps.prep.outputs.stacks, 'evolvesprouts-public-www')
+        env:
+          AWS_REGION: ${{ steps.region.outputs.region }}
+        run: |
+          set -euo pipefail
+          read_one() {
+            local key="$1" value
+            value="$(aws cloudformation describe-stacks --stack-name evolvesprouts-public-www --region "$AWS_REGION" --query "Stacks[0].Outputs[?OutputKey=='${key}'].OutputValue | [0]" --output text 2>/dev/null || true)"
+            if [ -z "$value" ] || [ "$value" = "None" ]; then
+              echo absent
+            else
+              printf '%s\n' "$value"
+            fi
+          }
+          bash "${GITHUB_WORKSPACE}/scripts/deploy/report_public_www_edge_verify.sh" \
+            "${{ steps.prep.outputs.staging_before }}" \
+            "$(read_one PublicWwwStagingEdgeVerifyEnabled)" \
+            "${{ steps.prep.outputs.production_before }}" \
+            "$(read_one PublicWwwEdgeVerifyEnabled)"
