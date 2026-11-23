@@ -94,8 +94,8 @@ custom media subdomain.
 ## API custom domain
 
 `ApiCustomDomainName` is `api.evolvesprouts.com`.
-`ApiCustomDomainCertificateArn` is the issued `*.evolvesprouts.com`
-certificate in `ap-southeast-1`. The `*.lx-software.com` certificate in that
+`ApiCustomDomainCertificateArn` (`CDK_PARAM_API_CUSTOM_DOMAIN_CERTIFICATE_ARN`)
+is the issued `*.evolvesprouts.com` certificate in `ap-southeast-1`. The `*.lx-software.com` certificate in that
 region does not match this hostname, and the `us-east-1` wildcard is only for
 CloudFront and Cognito. The domain mapping uses the stage name as its base
 path (`/prod`). `ApiCustomDomainUrl` includes that path, the same way `ApiUrl`
