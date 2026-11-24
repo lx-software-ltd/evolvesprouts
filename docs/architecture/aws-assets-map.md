@@ -8,14 +8,6 @@ This document maps all AWS resources created by the `backend-deploy` workflow
 **Stack Definition:** `backend/infrastructure/lib/api-stack.ts`  
 **Nested stacks (same CDK app):** `MessagingNestedStack` in `backend/infrastructure/lib/messaging-stack.ts` (media, expense parser, SES templates); `EventbriteSyncNestedStack` in `api-stack.ts`.
 
-### GitHub Actions `GitHubActionsRole` (manual IAM)
-
-The import workflow (`.github/workflows/import-legacy-crm.yml`) uses OIDC to assume `GitHubActionsRole` (see `docs/architecture/setup.md`). That role is **not** created by this CDK stack. If the role is narrowly scoped instead of administrator-like, attach least-privilege statements for the legacy import path:
-
-- `s3:PutObject` and `s3:DeleteObject` on `arn:aws:s3:::evolvesprouts-import-dump-{account}-{region}/dumps/*` (objects live under `dumps/<entity>/<run_id>/`; delete is post-run cleanup).
-- Optional: `s3:GetObject` and `s3:HeadObject` on specific object keys (or a chosen prefix) when using repository variable `IMPORT_LEGACY_CRM_SQL_OBJECT_KEY` to point at an existing dump object outside `dumps/*` (workflow checks existence with `HeadObject`; that object is not deleted after the run).
-- `lambda:InvokeFunction` and `lambda:GetFunction` on `arn:aws:lambda:{region}:{account}:function:evolvesprouts-ImportLegacyVenuesFunction` (preflight uses `get-function`; it first checks explicit GitHub vars and then falls back to `evolvesprouts` stack outputs).
-
 ---
 
 ## Frontend static website stacks (S3 + CloudFront)
@@ -195,7 +187,7 @@ credentials):
 |--------------|------------|------------------|-------|
 | S3 Bucket | `AssetsBucket` | `evolvesprouts-assets-{account}-{region}` | Private bucket for assets |
 | S3 Bucket | `AssetsLogBucket` | `evolvesprouts-assets-logs-{account}-{region}` | Access logs for the assets bucket |
-| S3 Bucket | `ImportDumpBucket` | `evolvesprouts-import-dump-{account}-{region}` | Ephemeral legacy-import SQL dumps (SSE-S3, 7-day expiration on current and noncurrent versions, abort incomplete multipart after 1 day); GitHub Actions uploads; `ImportLegacyVenuesFunction` reads |
+| S3 Bucket | `ImportDumpBucket` | `evolvesprouts-import-dump-{account}-{region}` | Ephemeral legacy-import SQL dumps (SSE-S3, 7-day expiration on current and noncurrent versions, abort incomplete multipart after 1 day); operators upload dumps; `ImportLegacyVenuesFunction` reads |
 | S3 Prefix | `AssetsBucket/inbound-email/raw/` | `s3://evolvesprouts-assets-{account}-{region}/inbound-email/raw/` | Reserved prefix for raw inbound invoice emails |
 
 ## Asset download CDN (CloudFront)
@@ -761,9 +753,9 @@ These raster files ship with `EvolvesproutsAdminFunction` under `backend/src/app
 | `DatabaseSecretArn` | Secrets Manager secret ARN | ARN of database credentials secret |
 | `FinanceReadonlyDatabaseSecretArn` | Secrets Manager secret ARN | ARN of `evolvesprouts-db-finance-readonly-credentials` (`evolvesprouts_finance_ro`) |
 | `DatabaseProxyEndpoint` | RDS Proxy endpoint | Endpoint for database connections via proxy |
-| `ImportLegacyVenuesFunctionName` | Lambda function name | Physical name of `ImportLegacyVenuesFunction` (workflow auto-resolves from stack output when GitHub var is unset) |
+| `ImportLegacyVenuesFunctionName` | Lambda function name | Physical name of `ImportLegacyVenuesFunction` |
 | `ImportLegacyFunctionName` | Lambda function name | Same value as `ImportLegacyVenuesFunctionName` (alias output) |
-| `ImportDumpBucketName` | S3 bucket name | Ephemeral legacy-import SQL dumps bucket (workflow auto-resolves from stack output when GitHub var is unset) |
+| `ImportDumpBucketName` | S3 bucket name | Ephemeral legacy-import SQL dumps bucket |
 | `UserPoolId` | Cognito User Pool ID | User Pool identifier |
 | `UserPoolClientId` | Cognito User Pool Client ID | OAuth client identifier |
 | `AssetsBucketName` | S3 bucket name | Assets bucket |

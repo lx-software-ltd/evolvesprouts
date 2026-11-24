@@ -204,19 +204,6 @@ the exchange.
 A WhatsApp Cloud API send token is a Graph token, but it usually lacks Page
 messaging permissions. Do not reuse the webhook verify string.
 
-### Production environment — legacy CRM import workflow
-
-`.github/workflows/import-legacy-crm.yml` is **production-only** (it fails if the selected environment name is not `production`). On the **`production`** GitHub Environment, set:
-
-- **Secret:** `AWS_ACCOUNT_ID`. **Variable:** `AWS_REGION`.
-  - Optional override vars: `IMPORT_DUMP_BUCKET_NAME`, `IMPORT_LAMBDA_FUNCTION_NAME`.
-  - If either override is missing, the workflow auto-resolves from CloudFormation stack outputs on `evolvesprouts` (`ImportDumpBucketName` and `ImportLegacyFunctionName`, with fallback to `ImportLegacyVenuesFunctionName` for backward compatibility).
-- **Secrets (optional):** `IMPORT_LEGACY_CRM_SQL_URL` — HTTPS URL to the `.sql` file when the workflow input is left empty.
-- **Repository variable (optional):** `IMPORT_LEGACY_CRM_SQL_OBJECT_KEY` — object key for a `.sql` file **already in** the import bucket (e.g. `legacy/full-dump.sql`). When both the workflow URL input and `IMPORT_LEGACY_CRM_SQL_URL` are empty, the workflow verifies the object with `HeadObject`, enforces the 2 MiB cap, invokes the Lambda with that `s3_key`, and **does not** delete this object after the run (ephemeral `dumps/<entity>/...` uploads are still removed). Requires `s3:GetObject` (or equivalent) on that key for `GitHubActionsRole`.
-- **Workflow input (optional):** `skip_legacy_keys` — comma-separated legacy primary-key values to exclude (passed through to the import Lambda as `skip_legacy_keys`; venues: numeric ids as strings, e.g. `10,11,12`). Leave empty to import every row from the dump.
-- **Run order:** `venues`, `families`, `organizations`, `labels`, and `contacts` are independent of each other. For membership links, run `families` and/or `organizations` before `contacts` when you need `family_members` / `organization_members` rows. `contacts` can run without prior `families` (contacts insert standalone; membership is optional). Run `notes` after `contacts` (non-dry-run requires `contacts` in `legacy_import_refs`). **Events stack:** `event_services` after the independent batch (optional `venues` / `organizations` / `labels` deps may be empty); then `event_instances` (needs `event_services` + optional `venues`); then `event_instance_tags`, `event_enrollments`, and optionally `event_discount_codes` (global codes can import right after `event_services`; scoped codes need the matching `event_services` / `event_instances` refs). Use **`dry_run: true`** to get `preview` + `row_details` for PII entities (including planned contact rows).
-- **Obsolete for this workflow:** `DATABASE_URL`, `DATABASE_SECRET_ARN`, `DATABASE_PROXY_ENDPOINT`, and other runner-side DB variables used by the old script-based workflow are **not** read; remove them from the environment if you no longer need them elsewhere.
-
 ### Backend deploy manual seed toggle
 
 When running `.github/workflows/deploy-backend.yml` with `workflow_dispatch`,
