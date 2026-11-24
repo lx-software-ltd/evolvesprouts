@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 import { render, screen } from '@testing-library/react';
 import { type AnchorHTMLAttributes, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -6,19 +5,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { HeroBanner } from '@/components/sections/hero-banner';
 import enContent from '@/content/en.json';
 import zhCNContent from '@/content/zh-CN.json';
-
-vi.mock('next/image', () => ({
-  default: ({
-    alt,
-    fill: _fill,
-    priority: _priority,
-    ...props
-  }: {
-    alt?: string;
-    fill?: boolean;
-    priority?: boolean;
-  } & Record<string, unknown>) => <img alt={alt ?? ''} {...props} />,
-}));
 
 vi.mock('next/link', () => ({
   default: ({
@@ -56,6 +42,12 @@ describe('HeroBanner section', () => {
     expect(frameBackground).toHaveAttribute('src', '/images/evolvesprouts-logo.svg');
     expect(frameBackground).toHaveAttribute('alt', '');
     expect(frameBackground).toHaveAttribute('aria-hidden', 'true');
+    expect(frameBackground).toHaveAttribute('fetchpriority', 'low');
+
+    const heroPhoto = screen.getByRole('img', { name: enContent.hero.imageAlt });
+    expect(heroPhoto).toHaveAttribute('src', '/images/hero/child-hero.webp');
+    expect(heroPhoto).toHaveAttribute('decoding', 'sync');
+    expect(heroPhoto).toHaveAttribute('fetchpriority', 'high');
 
     const headline = screen.getByRole('heading', { level: 1 });
     expect(headline.className).toContain('es-hero-headline');

@@ -20,7 +20,7 @@
     "figma:full-sync": "npm run figma:studio-sync && npm run figma:scaffold && npm run figma:specs",
     "generate:phone-countries": "node ../../scripts/generate-phone-countries.mjs",
     "prebuild": "npm run generate:phone-countries",
-    "build": "npm run validate:content && npm run validate:token-fallbacks && npm run figma:build:studio && next build && node ./scripts/emit-landing-pages-manifest.mjs && npm run csp:inject && npm run csp:validate",
+    "build": "npm run validate:content && npm run validate:token-fallbacks && npm run figma:build:studio && next build && node ./scripts/emit-landing-pages-manifest.mjs && node ./scripts/defer-static-scripts.mjs && npm run csp:inject && npm run csp:validate",
     "assert:build-env-contract": "node ./scripts/assert-build-env-contract.mjs",
     "csp:inject": "node ./scripts/inject-csp-meta.mjs",
     "csp:validate": "node ./scripts/validate-csp-meta.mjs",

@@ -940,7 +940,6 @@
   .es-contact-us-left-decor {
     width: 1125px;
     height: 563px;
-    filter: sepia(1) opacity(7%) hue-rotate(-50deg) saturate(250%);
     mask-image: linear-gradient(to bottom, black 60%, transparent 90%);
     -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 90%);
   }
@@ -948,12 +947,14 @@
   .es-hero-frame-bg {
     object-fit: cover;
     object-position: -563px -75px;
+    opacity: 0.07;
   }
 
   .es-contact-us-left-decor {
     background-image: url('/images/evolvesprouts-logo.svg');
     background-size: cover;
     background-position: -563px -75px;
+    filter: sepia(1) opacity(7%) hue-rotate(-50deg) saturate(250%);
   }
 
   .es-hero-headline {
