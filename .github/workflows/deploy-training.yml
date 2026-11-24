@@ -46,7 +46,7 @@ jobs:
           echo "public_www_origin=https://${PUBLIC_WWW_DOMAIN}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@cd643d664bed34eca3fbb1e77edcb498e7ff6ef6 # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/training
@@ -70,7 +70,7 @@ jobs:
           NEXT_PUBLIC_TRAINING_API_KEY: ${{ secrets.NEXT_PUBLIC_WWW_CRM_API_KEY }}
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@cd643d664bed34eca3fbb1e77edcb498e7ff6ef6 # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
