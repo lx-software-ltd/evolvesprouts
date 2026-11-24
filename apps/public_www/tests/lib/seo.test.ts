@@ -13,7 +13,7 @@ import {
 } from '@/lib/seo';
 
 const APP_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const PNG_COLOR_TYPE_RGB = 2;
+const PNG_COLOR_TYPE_RGBA = 6;
 
 describe('seo metadata builder', () => {
   it('builds localized alternates and social metadata', () => {
@@ -136,6 +136,6 @@ describe('seo metadata builder', () => {
     expect(bytes.readUInt32BE(16)).toBe(DEFAULT_SOCIAL_IMAGE_WIDTH);
     expect(bytes.readUInt32BE(20)).toBe(DEFAULT_SOCIAL_IMAGE_HEIGHT);
     expect(bytes[24]).toBe(8);
-    expect(bytes[25]).toBe(PNG_COLOR_TYPE_RGB);
+    expect(bytes[25]).toBe(PNG_COLOR_TYPE_RGBA);
   });
 });
