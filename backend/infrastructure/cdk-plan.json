@@ -9,7 +9,11 @@
   "routes": [
     {
       "stack": "evolvesprouts-admin-web",
-      "parameters": ["AdminWebDomainName", "AdminWebCertificateArn", "WafWebAclArn"]
+      "parameters": [
+        "AdminWebDomainName",
+        "AdminWebCertificateArn",
+        "WafWebAclArn"
+      ]
     },
     {
       "stack": "evolvesprouts-public-www",
@@ -47,5 +51,37 @@
         "evolvesprouts-training"
       ]
     }
-  ]
+  ],
+  "aliases": {
+    "all stacks": [
+      "evolvesprouts",
+      "evolvesprouts-admin-web",
+      "evolvesprouts-public-www",
+      "evolvesprouts-training"
+    ],
+    "backend": [
+      "evolvesprouts"
+    ],
+    "admin web": [
+      "evolvesprouts-admin-web"
+    ],
+    "public website": [
+      "evolvesprouts-public-www"
+    ],
+    "public www": [
+      "evolvesprouts-public-www"
+    ],
+    "public website staging": [
+      "evolvesprouts-public-www"
+    ],
+    "public www staging": [
+      "evolvesprouts-public-www"
+    ],
+    "training": [
+      "evolvesprouts-training"
+    ],
+    "training web": [
+      "evolvesprouts-training"
+    ]
+  }
 }

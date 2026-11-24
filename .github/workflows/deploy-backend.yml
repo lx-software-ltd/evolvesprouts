@@ -49,17 +49,17 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@67d19fe22da0c68541b24034c56d52d25fe9c420 # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
           install: "false"
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-python@67d19fe22da0c68541b24034c56d52d25fe9c420 # main 2026-11-24
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/aws-oidc@67d19fe22da0c68541b24034c56d52d25fe9c420 # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
@@ -69,7 +69,7 @@ jobs:
         run: npm ci
 
       - name: Check CDK bootstrap
-        uses: lx-software-ltd/actions/cdk-bootstrap-check@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@67d19fe22da0c68541b24034c56d52d25fe9c420 # main 2026-11-24
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ vars.AWS_REGION }}
@@ -81,17 +81,20 @@ jobs:
           npx cdk acknowledge 34892 || true
           npm run build --if-present
 
-          if [ "${CDK_STACKS:-}" = "all stacks" ]; then
-            CDK_STACKS="evolvesprouts evolvesprouts-admin-web evolvesprouts-public-www evolvesprouts-training"
-          elif [ "${CDK_STACKS:-}" = "backend" ]; then
-            CDK_STACKS="evolvesprouts"
-          elif [ "${CDK_STACKS:-}" = "admin web" ]; then
-            CDK_STACKS="evolvesprouts-admin-web"
-          elif [ "${CDK_STACKS:-}" = "public website" ] || [ "${CDK_STACKS:-}" = "public www" ] || [ "${CDK_STACKS:-}" = "public website staging" ] || [ "${CDK_STACKS:-}" = "public www staging" ]; then
-            CDK_STACKS="evolvesprouts-public-www"
-          elif [ "${CDK_STACKS:-}" = "training" ] || [ "${CDK_STACKS:-}" = "training web" ]; then
-            CDK_STACKS="evolvesprouts-training"
-          fi
+          # Labels live in cdk-plan.json. The deploy step sends the label.
+          # This expansion is only for the timezone check and the edge-verify report.
+          CDK_STACKS="$(python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          plan = json.loads(Path("cdk-plan.json").read_text(encoding="utf-8"))
+          raw = os.environ.get("CDK_STACKS", "").strip()
+          aliases = plan.get("aliases") or {}
+          chosen = aliases[raw] if raw in aliases else raw.split()
+          print(" ".join(chosen))
+          PY
+          )"
 
           PARAM_ARGS=()
 
@@ -257,23 +260,6 @@ jobs:
             rm -f "$PARAM_ARGS_FILE"
           fi
 
-          EDGE_VERIFY_BEFORE_STAGING="skipped"
-          EDGE_VERIFY_BEFORE_PRODUCTION="skipped"
-          if [[ " $CDK_STACKS " == *" evolvesprouts-public-www "* ]]; then
-            read_one() {
-              local key="$1" value
-              value="$(aws cloudformation describe-stacks --stack-name evolvesprouts-public-www --region "$AWS_REGION" --query "Stacks[0].Outputs[?OutputKey=='${key}'].OutputValue | [0]" --output text 2>/dev/null || true)"
-              if [ -z "$value" ] || [ "$value" = "None" ]; then
-                echo absent
-              else
-                printf '%s\n' "$value"
-              fi
-            }
-            EDGE_VERIFY_BEFORE_STAGING="$(read_one PublicWwwStagingEdgeVerifyEnabled)"
-            EDGE_VERIFY_BEFORE_PRODUCTION="$(read_one PublicWwwEdgeVerifyEnabled)"
-          fi
-          echo "staging_before=$EDGE_VERIFY_BEFORE_STAGING" >> "$GITHUB_OUTPUT"
-          echo "production_before=$EDGE_VERIFY_BEFORE_PRODUCTION" >> "$GITHUB_OUTPUT"
           echo "stacks=$CDK_STACKS" >> "$GITHUB_OUTPUT"
           CDK_BOOTSTRAP_QUALIFIER="$CDK_BOOTSTRAP_QUALIFIER" python3 - << 'PY'
           import json
@@ -366,12 +352,22 @@ jobs:
           CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY }}
           CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS }}
 
+      - name: Read edge verify before deploy
+        id: edge_before
+        if: contains(steps.prep.outputs.stacks, 'evolvesprouts-public-www')
+        uses: lx-software-ltd/actions/cfn-stack-outputs@67d19fe22da0c68541b24034c56d52d25fe9c420 # main 2026-11-24
+        with:
+          stack: evolvesprouts-public-www
+          optional: PublicWwwStagingEdgeVerifyEnabled PublicWwwEdgeVerifyEnabled
+          allow-missing: "true"
+          region: ${{ vars.AWS_REGION }}
+
       - name: Deploy stacks
-        uses: lx-software-ltd/actions/cdk-deploy@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/cdk-deploy@67d19fe22da0c68541b24034c56d52d25fe9c420 # main 2026-11-24
         with:
           working-directory: backend/infrastructure
           plan-file: ${{ runner.temp }}/cdk-plan.json
-          stacks: ${{ steps.prep.outputs.stacks }}
+          stacks: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
           param-file: ${{ vars.CDK_PARAM_FILE }}
           format: plain-json
           attempts: "3"
@@ -458,23 +454,28 @@ jobs:
           CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY }}
           CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS }}
 
+      - name: Read edge verify after deploy
+        id: edge_after
+        if: contains(steps.prep.outputs.stacks, 'evolvesprouts-public-www')
+        uses: lx-software-ltd/actions/cfn-stack-outputs@67d19fe22da0c68541b24034c56d52d25fe9c420 # main 2026-11-24
+        with:
+          stack: evolvesprouts-public-www
+          optional: PublicWwwStagingEdgeVerifyEnabled PublicWwwEdgeVerifyEnabled
+          allow-missing: "true"
+          region: ${{ vars.AWS_REGION }}
+
       - name: Report public website edge verify
-        if: steps.prep.outputs.stacks != '' && contains(steps.prep.outputs.stacks, 'evolvesprouts-public-www')
+        if: contains(steps.prep.outputs.stacks, 'evolvesprouts-public-www')
         env:
-          AWS_REGION: ${{ vars.AWS_REGION }}
+          BEFORE: ${{ steps.edge_before.outputs.json }}
+          AFTER: ${{ steps.edge_after.outputs.json }}
         run: |
           set -euo pipefail
-          read_one() {
-            local key="$1" value
-            value="$(aws cloudformation describe-stacks --stack-name evolvesprouts-public-www --region "$AWS_REGION" --query "Stacks[0].Outputs[?OutputKey=='${key}'].OutputValue | [0]" --output text 2>/dev/null || true)"
-            if [ -z "$value" ] || [ "$value" = "None" ]; then
-              echo absent
-            else
-              printf '%s\n' "$value"
-            fi
+          one() {
+            DOC="$1" python3 -c 'import json,os,sys; data=json.loads(os.environ["DOC"]); value=data.get(sys.argv[1]) or ""; print(value or "absent")' "$2"
           }
           bash "${GITHUB_WORKSPACE}/scripts/deploy/report_public_www_edge_verify.sh" \
-            "${{ steps.prep.outputs.staging_before }}" \
-            "$(read_one PublicWwwStagingEdgeVerifyEnabled)" \
-            "${{ steps.prep.outputs.production_before }}" \
-            "$(read_one PublicWwwEdgeVerifyEnabled)"
+            "$(one "$BEFORE" PublicWwwStagingEdgeVerifyEnabled)" \
+            "$(one "$AFTER" PublicWwwStagingEdgeVerifyEnabled)" \
+            "$(one "$BEFORE" PublicWwwEdgeVerifyEnabled)" \
+            "$(one "$AFTER" PublicWwwEdgeVerifyEnabled)"
