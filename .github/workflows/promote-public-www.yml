@@ -37,28 +37,23 @@ jobs:
     runs-on: ubuntu-26.04
     environment: production
     outputs:
-# template:set
-      production_site_origin: ${{ steps.resolve_public_site_domains.outputs.production_site_origin }}
-      asset_share_base_url: ${{ steps.resolve_public_site_domains.outputs.asset_share_base_url }}
+      deploy: ${{ steps.resolve_release.outputs.deploy }}
       maintenance_mode: ${{ steps.resolve_release.outputs.maintenance_mode }}
+      skip: ${{ steps.resolve_release.outputs.skip }}
+      build_sha: ${{ steps.resolve_release.outputs.build_sha }}
       release_id: ${{ steps.resolve_release.outputs.release_id }}
       promotion_mode: ${{ steps.resolve_release.outputs.promotion_mode }}
-# template:end
+      production_site_origin: ${{ steps.resolve_public_site_config.outputs.production_site_origin }}
+      asset_share_base_url: ${{ steps.resolve_public_site_config.outputs.asset_share_base_url }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-# template:set
-# template:end
 
-      - name: Resolve public site build config from infrastructure params
-# template:set
-        id: resolve_public_site_domains
-# template:end
-# template:set
+      - name: Resolve public site build config
+        id: resolve_public_site_config
+        run: bash scripts/deploy/resolve-public-www-build-env.sh
         env:
           PROMOTION_MODE: ${{ github.event.inputs.promotion_mode }}
-# template:end
-        run: bash scripts/deploy/resolve-public-www-build-env.sh
 
       - name: Validate AWS configuration
         run: |
@@ -71,33 +66,15 @@ jobs:
           AWS_REGION: ${{ vars.AWS_REGION }}
 
       - name: Configure AWS credentials
-# template:set
-        # After the build. npm ci and the build must not see the deploy role.
-# template:end
-        uses: lx-software-ltd/actions/aws-oidc@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@0e5dbcbbe9fb3dc7eff728b7725de461a3a2ff6f # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
 
-      - name: Choose promotion mode
-        id: promotion_mode
-# template:set
-        env:
-          PROMOTION_MODE: ${{ inputs.promotion_mode }}
-        run: |
-          MODE="${PROMOTION_MODE:-latest_staging}"
-          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
-          if [ "$MODE" = "latest_staging" ]; then
-            echo "read_staging=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "read_staging=false" >> "$GITHUB_OUTPUT"
-          fi
-# template:end
-
       - name: Read staging bucket
         id: staging
-        if: ${{ steps.promotion_mode.outputs.read_staging == 'true' }}
-        uses: lx-software-ltd/actions/cfn-stack-outputs@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        if: ${{ github.event.inputs.promotion_mode == '' || github.event.inputs.promotion_mode == 'latest_staging' }}
+        uses: lx-software-ltd/actions/cfn-stack-outputs@0e5dbcbbe9fb3dc7eff728b7725de461a3a2ff6f # main 2026-11-24
         with:
 # template:set
           stack: evolvesprouts-public-www
@@ -108,7 +85,7 @@ jobs:
       - name: Resolve release ID
         id: resolve_release
         env:
-          PROMOTION_MODE: ${{ steps.promotion_mode.outputs.mode }}
+          PROMOTION_MODE: ${{ github.event.inputs.promotion_mode }}
           INPUT_RELEASE_ID: ${{ inputs.release_id }}
           STACK_JSON: ${{ steps.staging.outputs.json }}
         run: bash scripts/deploy/resolve-release-id.sh
@@ -123,23 +100,34 @@ jobs:
     runs-on: ubuntu-26.04
     environment: production
     steps:
-# template:optional promote-direct
       - name: Checkout repository
+        if: ${{ needs.prepare.outputs.deploy == 'true' || needs.prepare.outputs.maintenance_mode == 'true' }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # template:set
+          ref: ${{ needs.prepare.outputs.build_sha || github.sha }}
+          lfs: false
+          # template:end
+
 
       - name: Set up Node.js
-        if: ${{ success() && github.event.inputs.promotion_mode != 'maintenance_on' }}
-        uses: lx-software-ltd/actions/setup-node@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
+        uses: lx-software-ltd/actions/setup-node@0e5dbcbbe9fb3dc7eff728b7725de461a3a2ff6f # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
 
+      - name: Run pre-build checks
+        if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
+        run: bash scripts/deploy/public-www-checks.sh pre-build
+
       - name: Build public website for production
-        if: ${{ success() && github.event.inputs.promotion_mode != 'maintenance_on' }}
+        if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
         run: npm run build
         working-directory: apps/public_www
+        # template:set
         env:
-          NEXT_TELEMETRY_DISABLED: '1'
+          NEXT_TELEMETRY_DISABLED: "1"
           NEXT_PUBLIC_SITE_ORIGIN: ${{ needs.prepare.outputs.production_site_origin }}
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
           NEXT_PUBLIC_FPS_MERCHANT_NAME: ${{ vars.NEXT_PUBLIC_FPS_MERCHANT_NAME }}
@@ -161,29 +149,39 @@ jobs:
           NEXT_PUBLIC_BUSINESS_ADDRESS: ${{ vars.NEXT_PUBLIC_BUSINESS_ADDRESS }}
           NEXT_PUBLIC_BUSINESS_PHONE_NUMBER: ${{ vars.NEXT_PUBLIC_BUSINESS_PHONE_NUMBER }}
           NEXT_PUBLIC_FOUNDER_NAME: ${{ vars.NEXT_PUBLIC_FOUNDER_NAME }}
+        # template:end
+
+      - name: Run post-build checks
+        if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
+        run: bash scripts/deploy/public-www-checks.sh post-build
+
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        if: ${{ success() && (needs.prepare.outputs.maintenance_mode == 'true' || needs.prepare.outputs.deploy == 'true') }}
+        uses: lx-software-ltd/actions/aws-oidc@0e5dbcbbe9fb3dc7eff728b7725de461a3a2ff6f # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
 
       - name: Promote release or enable maintenance mode
+        if: ${{ success() && (needs.prepare.outputs.maintenance_mode == 'true' || needs.prepare.outputs.deploy == 'true') }}
         run: bash scripts/deploy/deploy-public-www.sh
+        # template:set
         env:
           PUBLIC_WWW_STACK_NAME: evolvesprouts-public-www
           PUBLIC_WWW_ENVIRONMENT: production
           PUBLIC_WWW_MAINTENANCE_MODE: ${{ needs.prepare.outputs.maintenance_mode }}
           PUBLIC_WWW_PROMOTE_RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
           PUBLIC_WWW_PROMOTION_BUILD_DIR: ${{ needs.prepare.outputs.maintenance_mode != 'true' && format('{0}/apps/public_www/out', github.workspace) || '' }}
-          NEXT_PUBLIC_EMAIL: ${{ vars.NEXT_PUBLIC_EMAIL }}
-          NEXT_PUBLIC_WHATSAPP_URL: ${{ vars.NEXT_PUBLIC_WHATSAPP_URL }}
-          NEXT_PUBLIC_INSTAGRAM_URL: ${{ vars.NEXT_PUBLIC_INSTAGRAM_URL }}
+        # template:end
+
+
 
       - name: Publish promotion summary
         run: bash scripts/deploy/publish-promotion-summary.sh
+        # template:set
         env:
           PROMOTION_MODE: ${{ needs.prepare.outputs.promotion_mode }}
           RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
           PRODUCTION_SITE_ORIGIN: ${{ needs.prepare.outputs.production_site_origin }}
-# template:end
+        # template:end
