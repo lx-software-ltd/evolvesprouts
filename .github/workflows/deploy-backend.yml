@@ -282,7 +282,6 @@ jobs:
           CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY }}
           CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS }}
         # template:end
-
       # template:optional edge-verify-report
       - name: Read edge verify after deploy
         id: edge_after
