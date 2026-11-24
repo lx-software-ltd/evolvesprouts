@@ -59,26 +59,12 @@ jobs:
           NEXT_PUBLIC_FOUNDER_NAME: ${{ vars.NEXT_PUBLIC_FOUNDER_NAME }}
         run: npm run build
 
-      # The action's default install is `npx --yes @lhci/cli@0.15.1`. That
-      # tree still pulls inflight 1, glob 7, rimraf 2 and 3, and uuid 8.
-      # Bumping the CLI to 0.16.1 removes uuid 8 and rimraf 2 only.
-      # chrome-launcher stays on 0.13.4, which is the rimraf 3 / glob 7 /
-      # inflight chain. dry-run keeps the runtime config writer. The audit
-      # then uses the app install, which pins chrome-launcher 0.15.2.
-      - name: Write the Lighthouse runtime config
-        id: lighthouse
+      - name: Run Lighthouse CI
         uses: lx-software-ltd/actions/lighthouse-ci@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           working-directory: apps/public_www
           page-paths: ${{ inputs.page_paths }}
           default-paths: /en/,/zh-CN/,/zh-HK/
-          dry-run: "true"
-
-      - name: Run Lighthouse CI
-        working-directory: apps/public_www
-        env:
-          CONFIG_PATH: ${{ steps.lighthouse.outputs.config-path }}
-        run: ./node_modules/.bin/lhci autorun --config="$CONFIG_PATH"
 
       - name: Upload Lighthouse artifacts
         if: always()
