@@ -72,7 +72,7 @@ jobs:
 
       - name: Set up Node.js
         if: ${{ success() && github.event.inputs.promotion_mode != 'maintenance_on' }}
-        uses: lx-software-ltd/actions/setup-node@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
@@ -107,7 +107,7 @@ jobs:
 
       - name: Configure AWS credentials
         # After the build. npm ci and the build must not see the deploy role.
-        uses: lx-software-ltd/actions/aws-oidc@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
@@ -128,7 +128,7 @@ jobs:
       - name: Read staging bucket
         id: staging
         if: ${{ steps.promotion_mode.outputs.read_staging == 'true' }}
-        uses: lx-software-ltd/actions/cfn-stack-outputs@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
+        uses: lx-software-ltd/actions/cfn-stack-outputs@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
         with:
           stack: evolvesprouts-public-www
           outputs: PublicWwwStagingBucketName

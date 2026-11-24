@@ -47,7 +47,7 @@ jobs:
           fetch-depth: 0
 
       - name: Validate agent rules
-        uses: lx-software-ltd/actions/agent-harness@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
+        uses: lx-software-ltd/actions/agent-harness@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
 
   lint-dart:
     name: Lint Dart
@@ -59,7 +59,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-flutter@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
         with:
           channel: "stable"
           flutter-version: "3.50.1"
@@ -88,7 +88,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
 
       - name: Run React lint
         run: |
@@ -155,13 +155,13 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
         with:
           python-version: "3.12"
           requirements: "**/requirements.txt"
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
@@ -185,13 +185,13 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
         with:
           python-version: "3.12"
 
@@ -240,7 +240,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Check workflows
-        uses: lx-software-ltd/actions/workflow-conformance@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
+        uses: lx-software-ltd/actions/workflow-conformance@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
         with:
           mode: enforce
           profile: product
@@ -257,7 +257,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
 
       - name: Type-check Node apps
         run: |
@@ -283,6 +283,6 @@ jobs:
     if: always()
     steps:
       - name: Require every lint job
-        uses: lx-software-ltd/actions/require-jobs@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
+        uses: lx-software-ltd/actions/require-jobs@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
         with:
           needs-json: ${{ toJson(needs) }}
