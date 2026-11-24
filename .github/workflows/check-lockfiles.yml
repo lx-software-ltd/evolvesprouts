@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-# template:optional flutter-lockfiles
+  # template:optional flutter-lockfiles
   flutter-lockfiles:
     name: Check Flutter lockfiles
     runs-on: ubuntu-26.04
@@ -26,11 +26,11 @@ jobs:
       - name: Check Flutter lockfile
         uses: lx-software-ltd/actions/flutter-lockfiles@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
         with:
-# template:set
+          # template:set
           working-directory: apps/evolvesprouts_app
-# template:end
-# template:end
+          # template:end
 
+  # template:end
   node-lockfiles:
     name: Check Node.js lockfiles
     runs-on: ubuntu-26.04
@@ -44,15 +44,15 @@ jobs:
       - name: Validate package-lock.json
         uses: lx-software-ltd/actions/node-lockfiles@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
         with:
-# template:set
+          # template:set
           directories: |
             apps/admin_web
             apps/public_www
             apps/training
             backend/infrastructure
-# template:end
+          # template:end
 
-# template:optional ios-lockfiles
+  # template:optional ios-lockfiles
   ios-lockfiles:
     name: Check iOS lockfiles
     runs-on: macos-26
@@ -63,11 +63,11 @@ jobs:
       - name: Validate Podfile.lock
         uses: lx-software-ltd/actions/pod-lockfiles@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
         with:
-# template:set
+          # template:set
           working-directory: apps/evolvesprouts_app/ios
-# template:end
-# template:end
+          # template:end
 
+  # template:end
   python-requirements:
     name: Check Python requirements
     runs-on: ubuntu-26.04
@@ -78,6 +78,6 @@ jobs:
       - name: Check requirement pins
         uses: lx-software-ltd/actions/python-requirements-pins@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
         with:
-# template:set
+          # template:set
           files: backend/requirements.txt
-# template:end
+          # template:end
