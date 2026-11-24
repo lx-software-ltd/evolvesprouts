@@ -49,17 +49,17 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@67d19fe22da0c68541b24034c56d52d25fe9c420 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
           install: "false"
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@67d19fe22da0c68541b24034c56d52d25fe9c420 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@67d19fe22da0c68541b24034c56d52d25fe9c420 # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
@@ -69,7 +69,7 @@ jobs:
         run: npm ci
 
       - name: Check CDK bootstrap
-        uses: lx-software-ltd/actions/cdk-bootstrap-check@67d19fe22da0c68541b24034c56d52d25fe9c420 # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ vars.AWS_REGION }}
@@ -261,18 +261,8 @@ jobs:
           fi
 
           echo "stacks=$CDK_STACKS" >> "$GITHUB_OUTPUT"
-          CDK_BOOTSTRAP_QUALIFIER="$CDK_BOOTSTRAP_QUALIFIER" python3 - << 'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          plan = json.loads(Path("cdk-plan.json").read_text(encoding="utf-8"))
-          qualifier = os.environ.get("CDK_BOOTSTRAP_QUALIFIER", "")
-          if qualifier:
-              plan["groups"][0]["extra-args"] = ["--qualifier", qualifier]
-          destination = Path(os.environ["RUNNER_TEMP"]) / "cdk-plan.json"
-          destination.write_text(json.dumps(plan) + "\n", encoding="utf-8")
-          PY
+          # The app reads CDK_BOOTSTRAP_QUALIFIER. Diff and deploy both use
+          # the committed plan. cdk deploy does not take --qualifier.
         env:
           AWS_REGION: ${{ vars.AWS_REGION }}
           CDK_STACKS: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
@@ -355,7 +345,7 @@ jobs:
       - name: Read edge verify before deploy
         id: edge_before
         if: contains(steps.prep.outputs.stacks, 'evolvesprouts-public-www')
-        uses: lx-software-ltd/actions/cfn-stack-outputs@67d19fe22da0c68541b24034c56d52d25fe9c420 # main 2026-11-24
+        uses: lx-software-ltd/actions/cfn-stack-outputs@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           stack: evolvesprouts-public-www
           optional: PublicWwwStagingEdgeVerifyEnabled PublicWwwEdgeVerifyEnabled
@@ -363,10 +353,10 @@ jobs:
           region: ${{ vars.AWS_REGION }}
 
       - name: Deploy stacks
-        uses: lx-software-ltd/actions/cdk-deploy@67d19fe22da0c68541b24034c56d52d25fe9c420 # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-deploy@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           working-directory: backend/infrastructure
-          plan-file: ${{ runner.temp }}/cdk-plan.json
+          plan-file: backend/infrastructure/cdk-plan.json
           stacks: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
           param-file: ${{ vars.CDK_PARAM_FILE }}
           format: plain-json
@@ -457,7 +447,7 @@ jobs:
       - name: Read edge verify after deploy
         id: edge_after
         if: contains(steps.prep.outputs.stacks, 'evolvesprouts-public-www')
-        uses: lx-software-ltd/actions/cfn-stack-outputs@67d19fe22da0c68541b24034c56d52d25fe9c420 # main 2026-11-24
+        uses: lx-software-ltd/actions/cfn-stack-outputs@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           stack: evolvesprouts-public-www
           optional: PublicWwwStagingEdgeVerifyEnabled PublicWwwEdgeVerifyEnabled

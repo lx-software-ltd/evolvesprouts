@@ -29,7 +29,7 @@ jobs:
       # 44916864555, commit 58ab636, 2026-11-21). The setup script was
       # invoked with -n 3.50.1.
       - name: Validate pubspec.lock
-        uses: lx-software-ltd/actions/flutter-lockfiles@67d19fe22da0c68541b24034c56d52d25fe9c420 # main 2026-11-24
+        uses: lx-software-ltd/actions/flutter-lockfiles@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           working-directory: apps/evolvesprouts_app
           flutter-version: "3.50.1"
@@ -42,10 +42,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@67d19fe22da0c68541b24034c56d52d25fe9c420 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
 
       - name: Validate package-lock.json
-        uses: lx-software-ltd/actions/node-lockfiles@67d19fe22da0c68541b24034c56d52d25fe9c420 # main 2026-11-24
+        uses: lx-software-ltd/actions/node-lockfiles@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           directories: |
             apps/admin_web
@@ -61,7 +61,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Validate Podfile.lock
-        uses: lx-software-ltd/actions/pod-lockfiles@67d19fe22da0c68541b24034c56d52d25fe9c420 # main 2026-11-24
+        uses: lx-software-ltd/actions/pod-lockfiles@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           working-directory: apps/evolvesprouts_app/ios
 
@@ -73,6 +73,6 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Validate requirements.txt pins
-        uses: lx-software-ltd/actions/python-requirements-pins@67d19fe22da0c68541b24034c56d52d25fe9c420 # main 2026-11-24
+        uses: lx-software-ltd/actions/python-requirements-pins@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           files: backend/requirements.txt
