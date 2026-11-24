@@ -469,7 +469,7 @@ CloudFront distribution
 | Stack | `evolvesprouts-admin-web` |
 | Hosting | S3 + CloudFront |
 | Framework | Next.js App Router |
-| Deploy | Amplify Hosting (release jobs triggered in CI) |
+| Deploy | `deploy-admin-web.yml` publishes the static export with `s3-cloudfront-deploy` |
 | Domain | `admin.evolvesprouts.com` |
 
 ## VPC and networking
@@ -521,7 +521,7 @@ All keys have automatic annual rotation enabled.
 | Workflow | Trigger | Deploys |
 |---|---|---|
 | `deploy-backend.yml` | Push to main (backend/) | CDK stacks: `evolvesprouts`, `evolvesprouts-admin-web`, `evolvesprouts-public-www` |
-| `deploy-admin-web.yml` | Push to main (admin_web/) | Admin web via Amplify |
+| `deploy-admin-web.yml` | Push to main (`apps/admin_web/`) | Admin web to S3 and CloudFront |
 | `deploy-public-www.yml` | Push to main (public_www/) | Public website → staging |
 | `promote-public-www.yml` | Manual dispatch | Promote staging → production (or enable maintenance mode) |
 | `cdk-bootstrap.yml` | Manual dispatch | CDK bootstrap for account/region |

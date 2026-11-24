@@ -15,48 +15,21 @@ This repository is public. Secrets and private personal data stay out of git.
 
 | Path | What it is |
 | --- | --- |
-| `apps/public_www/` | The public website. |
-| `apps/training/` | The training site: course forms and polls. |
-| `apps/admin_web/` | The admin console. |
-| `apps/evolvesprouts_app/` | The Flutter mobile app. |
-| `backend/` | The Python API (`lambda/` and `src/app/`), the database migrations (`db/`), and the AWS CDK app (`infrastructure/`). |
-| `shared/` | Config and styles the web apps share. |
-| `tests/` | Backend tests. |
-| `scripts/` | Checks, code generation, imports, and deploy scripts. |
-| `docs/` | Architecture, API specs, and deployment runbooks. |
+| [`apps/public_www/`](apps/public_www/) | The public website. |
+| [`apps/training/`](apps/training/) | The training site: course forms and polls. |
+| [`apps/admin_web/`](apps/admin_web/) | The admin console. |
+| [`apps/evolvesprouts_app/`](apps/evolvesprouts_app/) | The Flutter mobile app. |
+| [`backend/`](backend/) | The Python API (`lambda/` and `src/app/`), the database migrations (`db/`), and the AWS CDK app (`infrastructure/`). |
+| [`shared/`](shared/) | Config and styles the web apps share. |
+| [`tests/`](tests/) | Backend tests. |
+| [`scripts/`](scripts/) | Checks, code generation, imports, and deploy scripts. |
+| [`docs/`](docs/) | Architecture, API specs, and deployment runbooks. |
 
 ## Working here
 
 Read [`AGENTS.md`](AGENTS.md) before changing anything. The zone map,
 [`docs/architecture/zones.md`](docs/architecture/zones.md), says which paths
 need a plan or an approval first.
-
-### AI agent rules
-
-Cursor loads `AGENTS.md` and `.cursor/rules/*.mdc`. Always-on constraints are
-in `.cursor/rules/00-repository-core.mdc`. Area rules attach by path, and
-procedures live in `.cursor/skills/`. `.cursorrules` is a legacy pointer.
-
-The harness check fails CI, and `pre-commit run validate-agent-rules
---all-files` fails a commit, when those files grow past their size budget,
-lose a `[why:]` tag, or drop a required skill. The hooks live in
-`lx-software-ltd/actions`.
-
-### Setup
-
-All deployment prerequisites and configuration steps are now documented in
-`docs/architecture/setup.md`.
-
-### My Best Auntie instance UUIDs (local dev)
-
-To print Aurora `service_instances.id` values for the My Best Auntie service (for aligning with
-`GET /v1/calendar/public` instance data), run:
-
-```
-ATTESTATION_FAIL_CLOSED=false python backend/scripts/dump_mba_instance_uuids.py --execute
-```
-
-Without `--execute`, the script exits without connecting (see script docstring for `DATABASE_URL` requirements).
 
 ## Documentation
 
@@ -66,9 +39,40 @@ Without `--execute`, the script exits without connecting (see script docstring f
   security controls.
 - [`docs/architecture/setup.md`](docs/architecture/setup.md): deployment
   prerequisites and configuration.
+- [`docs/architecture/zones.md`](docs/architecture/zones.md): which paths
+  need a plan or an approval first.
+- [`docs/architecture/decisions.md`](docs/architecture/decisions.md):
+  architecture decisions.
+- [`docs/architecture/infrastructure-map.md`](docs/architecture/infrastructure-map.md):
+  Cloudflare, AWS, the VPC, and deployments.
+- [`docs/architecture/aws-assets-map.md`](docs/architecture/aws-assets-map.md):
+  assets the backend deploy creates.
+- [`docs/architecture/aws-messaging.md`](docs/architecture/aws-messaging.md):
+  SNS and SQS.
+- [`docs/architecture/lambdas.md`](docs/architecture/lambdas.md): the
+  Lambda catalogue.
+- [`docs/architecture/database-schema.md`](docs/architecture/database-schema.md):
+  the Aurora schema.
+- [`docs/architecture/audit-logging.md`](docs/architecture/audit-logging.md):
+  database audit logging.
+- [`docs/architecture/github-rulesets.md`](docs/architecture/github-rulesets.md):
+  the rulesets on `main` and on `v*` tags.
+- [`docs/architecture/marketing-stack.md`](docs/architecture/marketing-stack.md):
+  the marketing stack.
+- [`docs/architecture/analytics-ga4-gtm-runbook.md`](docs/architecture/analytics-ga4-gtm-runbook.md)
+  and [`docs/architecture/analytics-change-log.md`](docs/architecture/analytics-change-log.md):
+  GA4 and Tag Manager.
+- [`docs/architecture/public-www-figma-pipeline.md`](docs/architecture/public-www-figma-pipeline.md):
+  the Figma design pipeline.
 - [`docs/api/admin.yaml`](docs/api/admin.yaml) and
   [`docs/api/public.yaml`](docs/api/public.yaml): the API specs.
-- [`docs/deployment/`](docs/deployment/): the deployment runbooks.
+- [`docs/deployment/admin-web.md`](docs/deployment/admin-web.md),
+  [`docs/deployment/backend.md`](docs/deployment/backend.md),
+  [`docs/deployment/public-www.md`](docs/deployment/public-www.md),
+  [`docs/deployment/android-play-store.md`](docs/deployment/android-play-store.md),
+  and [`docs/deployment/ios-testflight.md`](docs/deployment/ios-testflight.md):
+  the deployment runbooks.
+- [`docs/plans/README.md`](docs/plans/README.md): open plans.
 
 ## Security
 

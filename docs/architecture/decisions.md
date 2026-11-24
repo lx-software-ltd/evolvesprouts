@@ -202,17 +202,13 @@ Lambdas or NAT Gateway.
 
 ## 5) Amplify Usage
 
-**Decision:** Use Amplify for client SDKs and hosting where appropriate.
+**Decision:** Use Amplify client SDKs in the Flutter app. Host the admin console on S3 and CloudFront.
 
 **Notes:**
-- Amplify SDKs are used for auth/API integration on client apps.
-- Infrastructure is provisioned via CDK for stronger control.
-- Admin web hosting is triggered via GitHub Actions using
-  `aws amplify start-job`.
-- Promotions from staging to production are handled via the
-  `amplify-promote` workflow.
-- The `amplify-promote` workflow uses the production environment to
-  support GitHub approval gates.
+- Amplify SDKs (`amplify_flutter`, `amplify_auth_cognito`, `amplify_api`) handle auth and API calls in `apps/evolvesprouts_app`.
+- Infrastructure is provisioned via CDK.
+- The admin console is a static Next.js export. [`deploy-admin-web.yml`](../../.github/workflows/deploy-admin-web.yml) publishes `apps/admin_web/out` with `s3-cloudfront-deploy` to the `evolvesprouts-admin-web` stack.
+- There is no Amplify hosting workflow.
 
 ## 6) Public Website Release Promotion (S3 + CloudFront)
 

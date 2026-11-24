@@ -19,7 +19,7 @@ The `main` branch requires protection as it triggers production deployments.
 | Rule | Setting | Purpose |
 |------|---------|---------|
 | Require pull request before merging | ✅ Enabled | Prevents direct pushes |
-| Required approvals | 0 | Ensures code review |
+| Required approvals | 0 | Exactly 0 approving reviews |
 | Dismiss stale reviews | ✅ Enabled | Re-review after changes |
 | Require status checks to pass | ✅ Enabled | CI must pass |
 | Require branches to be up to date | ✅ Enabled | Prevents stale merges |
@@ -34,6 +34,7 @@ These workflows must pass before merging to `main`:
 |-------|----------|---------|
 | `lint` | `.github/workflows/lint.yml` | Code style, linting, and agent-rule validation |
 | `test` | `.github/workflows/test.yml` | Unit and integration tests |
+| `security-summary` | `.github/workflows/security.yml` | Every security job in that workflow |
 
 ---
 
@@ -44,7 +45,8 @@ Release tags should be protected from modification or deletion.
 | Rule | Setting | Purpose |
 |------|---------|---------|
 | Protect tags matching `v*` | ✅ Enabled | Protects release versions |
-| Restrict who can create | Maintainers only | Controlled releases |
+| Block update and deletion | `release-tags` | A `v*` tag cannot be moved or deleted |
+| Block creation | `release-tags-create` | Creation is blocked. Organization admin can bypass |
 
 ---
 
@@ -67,7 +69,7 @@ Release tags should be protected from modification or deletion.
      - ✅ Dismiss stale pull request approvals when new commits are pushed
    - ✅ Require status checks to pass
      - ✅ Require branches to be up to date before merging
-     - Add checks: `lint`, `test`
+     - Add checks: `lint`, `test`, `security-summary`
    - ✅ Block force pushes
 5. Click **Create**
 
@@ -82,8 +84,8 @@ Release tags should be protected from modification or deletion.
 4. Enable rules:
    - ✅ Restrict deletions
    - ✅ Restrict updates
-   - ✅ Restrict creations (optional, maintainers only)
 5. Click **Create**
+6. Create a second tag ruleset, `release-tags-create`, on the same `v*` pattern, and enable **Restrict creations**. Organization admin is the bypass actor.
 
 ### Option 2: GitHub CLI
 
@@ -103,9 +105,11 @@ gh api repos/{owner}/{repo}/rulesets \
   --field 'rules[][type]=required_status_checks' \
   --field 'rules[3][parameters][strict_required_status_checks_policy]=true' \
   --field 'rules[3][parameters][required_status_checks][][context]=lint' \
-  --field 'rules[3][parameters][required_status_checks][][context]=test'
+  --field 'rules[3][parameters][required_status_checks][][context]=test' \
+  --field 'rules[3][parameters][required_status_checks][][context]=security-summary'
 
-# Tag protection for releases
+# Tag protection for releases. Update and deletion are one ruleset.
+# Creation is a second ruleset so organization admin can bypass creation only.
 gh api repos/{owner}/{repo}/rulesets \
   --method POST \
   --field name='release-tags' \
@@ -114,6 +118,14 @@ gh api repos/{owner}/{repo}/rulesets \
   --field 'conditions[ref_name][include][]=refs/tags/v*' \
   --field 'rules[][type]=deletion' \
   --field 'rules[][type]=update'
+
+gh api repos/{owner}/{repo}/rulesets \
+  --method POST \
+  --field name='release-tags-create' \
+  --field target='tag' \
+  --field enforcement='active' \
+  --field 'conditions[ref_name][include][]=refs/tags/v*' \
+  --field 'rules[][type]=creation'
 ```
 
 ---
@@ -132,9 +144,9 @@ job fails until `main-protection` is Active and meets the checks below.
 The verification checks fail the job when any of these are missing:
 - An active ruleset targets `main`
 - An approving-review count of exactly 0
-- Required status checks are exactly `lint` and `test`
+- Required status checks are exactly `lint`, `test`, and `security-summary`
 - Force pushes and deletions are blocked
-- An active ruleset protects `v*` tags
+- Active rulesets on `v*` tags block creation, update, and deletion together
 
 The `lint` workflow runs the shared agent harness. If required rule files
 are removed or grow past their budget, the lint status fails and merge is
