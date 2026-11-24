@@ -58,26 +58,7 @@ jobs:
           working-directory: apps/public_www
 
       - name: Validate Figma credentials
-        run: |
-          ERRORS=0
-          if [ -z "$FIGMA_OAUTH_CLIENT_ID" ]; then
-            echo '::error::FIGMA_OAUTH_CLIENT_ID secret is not set.'
-            ERRORS=1
-          fi
-          if [ -z "$FIGMA_OAUTH_CLIENT_SECRET" ]; then
-            echo '::error::FIGMA_OAUTH_CLIENT_SECRET secret is not set.'
-            ERRORS=1
-          fi
-          if [ -z "$FIGMA_OAUTH_REFRESH_TOKEN" ]; then
-            echo '::error::FIGMA_OAUTH_REFRESH_TOKEN secret is not set.'
-            ERRORS=1
-          fi
-          if [ -z "$FIGMA_FILE_KEY" ]; then
-            echo '::error::PUBLIC_WWW_FIGMA_FILE_KEY variable is not set.'
-            ERRORS=1
-          fi
-          if [ "$ERRORS" -eq 1 ]; then exit 1; fi
-          echo 'All Figma credentials are present.'
+        run: bash scripts/figma/validate-figma-credentials.sh
         env:
           FIGMA_OAUTH_CLIENT_ID: ${{ secrets.FIGMA_OAUTH_CLIENT_ID }}
           FIGMA_OAUTH_CLIENT_SECRET: ${{ secrets.FIGMA_OAUTH_CLIENT_SECRET }}
@@ -149,38 +130,7 @@ jobs:
 
       - name: Publish summary
         if: always()
-        run: |
-          {
-            echo '## Figma Token Studio Sync'
-            echo ''
-
-            if [ "$HAS_CHANGES" = "true" ]; then
-              echo '### Status: Tokens updated'
-              echo ''
-              echo 'New design tokens were extracted from Figma and committed.'
-              echo ''
-              echo '| Detail | Value |'
-              echo '|--------|-------|'
-              echo "| Branch | \`${GITHUB_REF_NAME}\` |"
-              echo "| Commit | \`$(git rev-parse --short HEAD)\` |"
-              echo "| Figma file key | \`${FIGMA_FILE_KEY}\` |"
-            else
-              echo '### Status: No changes'
-              echo ''
-              echo 'Figma tokens are already up to date — nothing to commit.'
-            fi
-
-            echo ''
-            echo '---'
-            echo ''
-            echo '**Files checked:**'
-            echo '- `apps/public_www/figma/token-studio/global.json`'
-            echo '- `apps/public_www/figma/token-studio/semantic.json`'
-            echo '- `apps/public_www/figma/token-studio/component.json`'
-            echo '- `shared/styles/generated/figma-tokens.css`'
-            echo '- `apps/public_www/src/components/sections/*.tsx` (new only)'
-            echo '- `apps/public_www/src/content/*.json` (new keys only)'
-          } >> "$GITHUB_STEP_SUMMARY"
+        run: bash scripts/figma/publish-token-studio-summary.sh
         env:
           HAS_CHANGES: ${{ steps.changes.outputs.has_changes }}
           FIGMA_FILE_KEY: ${{ vars.PUBLIC_WWW_FIGMA_FILE_KEY }}
