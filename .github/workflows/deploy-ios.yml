@@ -15,6 +15,8 @@ concurrency:
 jobs:
   build-and-deploy:
     if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
     runs-on: macos-26
     environment: production
     env:
@@ -27,6 +29,8 @@ jobs:
         uses: lx-software-ltd/actions/setup-flutter@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           channel: "stable"
+# template:set
+# template:end
           flutter-version: "3.50.1"
           cache: "true"
 
@@ -38,7 +42,9 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+# template:set
         working-directory: apps/evolvesprouts_app
+# template:end
 
       - name: Setup SSH for certificates repo
         uses: webfactory/ssh-agent@e83874834305fe9a4a2997156cb26c5de65a8555 # v0.10.0
@@ -47,7 +53,9 @@ jobs:
           ssh-private-key: ${{ env.MATCH_DEPLOY_KEY }}
 
       - name: Sync signing assets (match)
+# template:set
         working-directory: apps/evolvesprouts_app/ios
+# template:end
         run: |
           if [ -z "$MATCH_GIT_URL" ] || [ -z "$MATCH_PASSWORD" ] || [ -z "$FASTLANE_USER" ] || [ -z "$FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD" ]; then
             echo "Skipping fastlane match (missing secrets)"
@@ -66,12 +74,16 @@ jobs:
       - name: Generate ExportOptions.plist
         uses: lx-software-ltd/actions/ios-export-options@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
+# template:set
           working-directory: apps/evolvesprouts_app
+# template:end
           team-id: ${{ vars.APPLE_TEAM_ID }}
           bundle-id: ${{ vars.IOS_BUNDLE_ID }}
           provisioning-profile: ${{ vars.IOS_PROVISIONING_PROFILE }}
 
+
       - name: Build release IPA
+# template:set
         run: |
           flutter build ipa --release --export-options-plist=ios/ExportOptions.plist \
             --dart-define=AMPLIFY_API_KEY=${{ secrets.AMPLIFY_API_KEY }} \
@@ -83,6 +95,7 @@ jobs:
             --dart-define=FIREBASE_STORAGE_BUCKET=${{ vars.FIREBASE_STORAGE_BUCKET }} \
             --dart-define=FIREBASE_APP_CHECK_DEBUG=${{ vars.FIREBASE_APP_CHECK_DEBUG }}
         working-directory: apps/evolvesprouts_app
+# template:end
 
       - name: Load App Store Connect API key
         uses: lx-software-ltd/actions/appstore-api-key@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
@@ -96,7 +109,9 @@ jobs:
         if: env.APPSTORE_ISSUER_ID != '' && env.APPSTORE_API_KEY_ID != '' && env.APPSTORE_API_PRIVATE_KEY != ''
         uses: apple-actions/upload-testflight-build@665328adbecbc3ad929d3da710696d928b8a7ba9 # v5.9.0
         with:
+# template:set
           app-path: apps/evolvesprouts_app/build/ios/ipa/*.ipa
+# template:end
           issuer-id: ${{ env.APPSTORE_ISSUER_ID }}
           api-key-id: ${{ env.APPSTORE_API_KEY_ID }}
           api-private-key: ${{ env.APPSTORE_API_PRIVATE_KEY }}

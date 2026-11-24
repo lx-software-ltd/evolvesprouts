@@ -35,8 +35,10 @@ jobs:
 
       - name: Resolve public site build config from infrastructure params
         id: resolve_staging_site_origin
+# template:set
         env:
           REQUIRE_ASSET: "false"
+# template:end
         run: bash scripts/deploy/resolve-public-www-build-env.sh
 
       - name: Set up Node.js
@@ -47,6 +49,7 @@ jobs:
 
       - name: Run staging smoke checks
         working-directory: apps/public_www
+# template:set
         env:
           NEXT_TELEMETRY_DISABLED: '1'
           SMOKE_BASE_URL: ${{ steps.resolve_staging_site_origin.outputs.staging_site_origin }}
@@ -56,10 +59,12 @@ jobs:
           SMOKE_MEDIA_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
           SMOKE_SCOPE: ${{ github.event.inputs.scope || 'all' }}
           SMOKE_MAX_PAGES: ${{ github.event.inputs.max_pages || '' }}
+# template:end
         run: npm run smoke:staging
 
       - name: Publish smoke summary
         if: always()
+# template:set
         env:
           SUMMARY_TARGET_URL: ${{ steps.resolve_staging_site_origin.outputs.staging_site_origin }}
           SUMMARY_SCOPE: ${{ github.event.inputs.scope || 'all' }}
@@ -75,3 +80,4 @@ jobs:
               echo "- Max pages: \`${SUMMARY_MAX_PAGES}\`"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
+# template:end

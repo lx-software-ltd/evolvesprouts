@@ -11,9 +11,11 @@ on:
         default: 'latest_staging'
         type: choice
         options:
+# template:set
           - latest_staging
           - release_id
           - maintenance_on
+# template:end
       release_id:
         description: 'Required when promotion_mode=release_id'
         required: false
@@ -35,19 +37,27 @@ jobs:
     runs-on: ubuntu-26.04
     environment: production
     outputs:
+# template:set
       production_site_origin: ${{ steps.resolve_public_site_domains.outputs.production_site_origin }}
       asset_share_base_url: ${{ steps.resolve_public_site_domains.outputs.asset_share_base_url }}
       maintenance_mode: ${{ steps.resolve_release.outputs.maintenance_mode }}
       release_id: ${{ steps.resolve_release.outputs.release_id }}
       promotion_mode: ${{ steps.resolve_release.outputs.promotion_mode }}
+# template:end
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+# template:set
+# template:end
 
       - name: Resolve public site build config from infrastructure params
+# template:set
         id: resolve_public_site_domains
+# template:end
+# template:set
         env:
           PROMOTION_MODE: ${{ github.event.inputs.promotion_mode }}
+# template:end
         run: bash scripts/deploy/resolve-public-www-build-env.sh
 
       - name: Validate AWS configuration
@@ -61,7 +71,9 @@ jobs:
           AWS_REGION: ${{ vars.AWS_REGION }}
 
       - name: Configure AWS credentials
+# template:set
         # After the build. npm ci and the build must not see the deploy role.
+# template:end
         uses: lx-software-ltd/actions/aws-oidc@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
@@ -69,6 +81,7 @@ jobs:
 
       - name: Choose promotion mode
         id: promotion_mode
+# template:set
         env:
           PROMOTION_MODE: ${{ inputs.promotion_mode }}
         run: |
@@ -79,13 +92,16 @@ jobs:
           else
             echo "read_staging=false" >> "$GITHUB_OUTPUT"
           fi
+# template:end
 
       - name: Read staging bucket
         id: staging
         if: ${{ steps.promotion_mode.outputs.read_staging == 'true' }}
         uses: lx-software-ltd/actions/cfn-stack-outputs@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
+# template:set
           stack: evolvesprouts-public-www
+# template:end
           outputs: PublicWwwStagingBucketName
           region: ${{ vars.AWS_REGION }}
 
@@ -97,6 +113,7 @@ jobs:
           STACK_JSON: ${{ steps.staging.outputs.json }}
         run: bash scripts/deploy/resolve-release-id.sh
 
+
   promote:
     permissions:
       contents: read
@@ -106,6 +123,7 @@ jobs:
     runs-on: ubuntu-26.04
     environment: production
     steps:
+# template:optional promote-direct
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -168,3 +186,4 @@ jobs:
           PROMOTION_MODE: ${{ needs.prepare.outputs.promotion_mode }}
           RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
           PRODUCTION_SITE_ORIGIN: ${{ needs.prepare.outputs.production_site_origin }}
+# template:end
