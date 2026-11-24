@@ -42,7 +42,7 @@ jobs:
 
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
 
       - name: Run Python tests
         run: bash scripts/ci/test-python.sh
@@ -61,7 +61,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/admin_web
@@ -96,7 +96,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
@@ -175,7 +175,7 @@ jobs:
           PY
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/training
@@ -209,13 +209,13 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
 
       - name: Run infrastructure tests
         run: npm run test:infra
@@ -234,13 +234,13 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
 
       - name: Install Playwright browsers
-        uses: lx-software-ltd/actions/playwright-install@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
+        uses: lx-software-ltd/actions/playwright-install@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
         with:
           working-directory: apps/public_www
 
@@ -267,7 +267,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-flutter@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
 
       - name: Run Flutter tests
         run: bash scripts/ci/test-flutter.sh
@@ -276,6 +276,10 @@ jobs:
   build-android:
     name: Build Android
     runs-on: ubuntu-26.04
+    env:
+      # Maven Central returns 429 from shared CI egress. Gradle retries that
+      # status and doubles this delay between attempts (5s, 10s, 20s, 40s).
+      GRADLE_OPTS: -Dorg.gradle.internal.repository.max.tentatives=5 -Dorg.gradle.internal.repository.initial.backoff=5000
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -289,7 +293,7 @@ jobs:
           # template:end
 
       - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-flutter@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
 
       - name: Point Flutter at Java 21
         run: flutter config --jdk-dir "$JAVA_HOME"
@@ -318,6 +322,6 @@ jobs:
     if: always()
     steps:
       - name: Require every test job
-        uses: lx-software-ltd/actions/require-jobs@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
+        uses: lx-software-ltd/actions/require-jobs@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
         with:
           needs-json: ${{ toJson(needs) }}
