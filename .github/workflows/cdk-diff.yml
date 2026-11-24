@@ -81,7 +81,6 @@ jobs:
         id: prep
         working-directory: backend/infrastructure
         run: |
-          npx cdk acknowledge 34892 || true
           npm run build --if-present
           # The CDK app reads CDK_BOOTSTRAP_QUALIFIER. `cdk diff` has no
           # --qualifier flag; passing one is ignored. The plan resolves a

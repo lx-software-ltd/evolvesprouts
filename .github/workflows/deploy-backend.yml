@@ -78,7 +78,6 @@ jobs:
         id: prep
         working-directory: backend/infrastructure
         run: |
-          npx cdk acknowledge 34892 || true
           npm run build --if-present
 
           # Labels live in cdk-plan.json. The deploy step sends the label.
@@ -361,7 +360,6 @@ jobs:
           param-file: ${{ vars.CDK_PARAM_FILE }}
           format: plain-json
           attempts: "3"
-          no-notices: "true"
           pass-empty: WafWebAclArn,PublicWwwEdgeVerifySecret,PublicWwwEdgeVerifySecretPrevious,PublicWwwStagingEdgeVerifySecret,PublicWwwStagingEdgeVerifySecretPrevious
           run-seed: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_seed_data || 'false' }}
           region: ${{ vars.AWS_REGION }}
