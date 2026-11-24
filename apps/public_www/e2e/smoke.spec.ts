@@ -1,8 +1,22 @@
 import { expect, test, type Page } from '@playwright/test';
 
-const englishHero = /The person who spends the most time with your child was never trained/;
+import enContent from '../src/content/en.json';
+import zhHkContent from '../src/content/zh-HK.json';
 
-function collectPageErrors(page: Page): string[] {
+function navbarLabel(href: string): string {
+  const item = enContent.navbar.menuItems.find((entry) => entry.href === href);
+  if (!item) {
+    throw new Error(`Navbar item missing for ${href}`);
+  }
+  return item.label;
+}
+
+function localizedPath(path: string): RegExp {
+  const escapedPath = path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`/en${escapedPath}/?$`);
+}
+
+function watchPageErrors(page: Page): string[] {
   const errors: string[] = [];
   page.on('pageerror', (error) => {
     errors.push(error.message);
@@ -11,43 +25,52 @@ function collectPageErrors(page: Page): string[] {
 }
 
 test('english home shows the hero and stays free of page errors', async ({ page }) => {
-  const errors = collectPageErrors(page);
+  const errors = watchPageErrors(page);
   const response = await page.goto('/en/');
 
   expect(response?.status()).toBe(200);
-  await expect(page).toHaveTitle(/Evolve Sprouts/);
-  await expect(page.getByRole('heading', { level: 1, name: englishHero })).toBeVisible();
+  await expect(page).toHaveTitle(enContent.seo.home.title);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(enContent.hero.title);
   expect(errors).toEqual([]);
 });
 
 test('hero call to action opens the training course', async ({ page }) => {
+  const errors = watchPageErrors(page);
   await page.goto('/en/');
   await page
     .locator('#hero-banner')
-    .getByRole('link', { name: 'See how the programme works' })
+    .getByRole('link', { name: enContent.hero.cta })
     .click();
 
-  await expect(page).toHaveURL(/\/en\/services\/my-best-auntie-training-course\/?$/);
-  await expect(page.getByRole('heading', { level: 1, name: /My Best Auntie/ })).toBeVisible();
+  await expect(page).toHaveURL(localizedPath(enContent.hero.ctaHref));
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(enContent.myBestAuntie.hero.title);
+  expect(errors).toEqual([]);
 });
 
 test('about us opens from the navigation', async ({ page }) => {
+  const errors = watchPageErrors(page);
+  const aboutHref = '/about-us';
   await page.goto('/en/');
-  await page.getByRole('banner').getByRole('link', { name: 'About Us', exact: true }).click();
+  await page.getByRole('banner').getByRole('link', { name: navbarLabel(aboutHref), exact: true }).click();
 
-  await expect(page).toHaveURL(/\/en\/about-us\/?$/);
-  await expect(page.getByRole('heading', { level: 1, name: 'Hello, fellow parents!' })).toBeVisible();
+  await expect(page).toHaveURL(localizedPath(aboutHref));
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(enContent.aboutUs.hero.title);
+  expect(errors).toEqual([]);
 });
 
-test('traditional chinese home uses chinese copy', async ({ page }) => {
+test('traditional chinese home uses the locale hero', async ({ page }) => {
+  const errors = watchPageErrors(page);
   await page.goto('/zh-HK/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(/[\u4e00-\u9fff]/);
+
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(zhHkContent.hero.title);
+  expect(errors).toEqual([]);
 });
 
 test('privacy and terms pages render', async ({ page }) => {
+  const errors = watchPageErrors(page);
   const pages = [
-    { path: '/en/privacy/', heading: 'Privacy Policy' },
-    { path: '/en/terms/', heading: 'Terms and Conditions' },
+    { path: '/en/privacy/', heading: enContent.privacyPolicy.title },
+    { path: '/en/terms/', heading: enContent.termsAndConditions.title },
   ];
 
   for (const entry of pages) {
@@ -55,13 +78,15 @@ test('privacy and terms pages render', async ({ page }) => {
     expect(response?.status()).toBe(200);
     await expect(page.getByRole('heading', { level: 2, name: entry.heading })).toBeVisible();
   }
+  expect(errors).toEqual([]);
 });
 
 test('phone home does not scroll sideways', async ({ page }) => {
+  const errors = watchPageErrors(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/en/');
 
-  await expect(page.getByRole('heading', { level: 1, name: englishHero })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(enContent.hero.title);
   await expect(page.locator('footer')).toBeVisible();
 
   const metrics = await page.evaluate(() => ({
@@ -69,4 +94,5 @@ test('phone home does not scroll sideways', async ({ page }) => {
     innerWidth: window.innerWidth,
   }));
   expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.innerWidth + 1);
+  expect(errors).toEqual([]);
 });
