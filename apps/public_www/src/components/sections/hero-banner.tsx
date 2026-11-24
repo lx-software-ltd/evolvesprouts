@@ -1,5 +1,4 @@
 import Image from 'next/image';
-import { preload } from 'react-dom';
 
 import { SectionCtaAnchor } from '@/components/sections/shared/section-cta-link';
 import {
@@ -26,7 +25,6 @@ const HERO_FRAME_SRC = '/images/evolvesprouts-logo.svg';
 const HERO_BODY_TEXT_CLASSNAME = 'max-w-[458px] es-hero-subheadline';
 
 export function HeroBanner({ content, ctaHref }: HeroBannerProps) {
-  preload(HERO_FRAME_SRC, { as: 'image', fetchPriority: 'high' });
   const copy = resolveHeroCopy(content);
   const resolvedCtaHref =
     ctaHref?.trim()
@@ -40,9 +38,14 @@ export function HeroBanner({ content, ctaHref }: HeroBannerProps) {
       dataFigmaNode='hero-banner'
       className='relative w-full overflow-hidden es-hero-section'
     >
-      <div
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={HERO_FRAME_SRC}
+        alt=''
+        width={1125}
+        height={563}
         aria-hidden='true'
-        className='pointer-events-none absolute left-0 top-0 bg-no-repeat es-hero-frame-bg'
+        className='pointer-events-none absolute left-0 top-0 es-hero-frame-bg'
       />
       <SectionContainer
         className={buildSectionSplitLayoutClassName(
