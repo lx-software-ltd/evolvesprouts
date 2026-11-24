@@ -102,7 +102,8 @@ jobs:
         with:
           cache: npm
           working-directory: apps/public_www
-      # template:set
+
+      # template:optional public-origin
       - name: Resolve public site origin from infrastructure params
         id: resolve_public_site_origin
         run: |
@@ -112,8 +113,8 @@ jobs:
             exit 1
           fi
           echo "site_origin=https://${SITE_DOMAIN}" >> "$GITHUB_OUTPUT"
-      # template:end
 
+      # template:end
       - name: Run tests
         run: npm run test:ci
         working-directory: apps/public_www
@@ -237,9 +238,10 @@ jobs:
       run:
         working-directory: apps/public_www
     steps:
-      # template:set
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # template:set
+        # template:end
 
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
@@ -264,7 +266,6 @@ jobs:
           name: public-www-test-results
           path: apps/public_www/test-results/
           retention-days: 7
-      # template:end
 
   # template:end
   # template:optional mobile
@@ -277,15 +278,14 @@ jobs:
 
       - name: Set up Flutter
         uses: lx-software-ltd/actions/setup-flutter@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
-      # template:set
-      # template:end
+
 
       - name: Run Flutter tests
         run: |
           set -euo pipefail
           shopt -s globstar nullglob
           # template:set
-          for dir in apps/evolvesprouts_app packages/flutter_ui packages/api_client_dart; do
+          for dir in apps/evolvesprouts_app; do
           # template:end
             if [ ! -f "$dir/pubspec.yaml" ]; then echo "Skipping missing $dir"; continue; fi
             test_files=("$dir"/test/**/*_test.dart)
