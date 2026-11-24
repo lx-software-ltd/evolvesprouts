@@ -26,11 +26,9 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-flutter@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           channel: "stable"
-# template:set
-# template:end
           flutter-version: "3.50.1"
           cache: "true"
 
@@ -72,7 +70,7 @@ jobs:
           FASTLANE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
 
       - name: Generate ExportOptions.plist
-        uses: lx-software-ltd/actions/ios-export-options@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/ios-export-options@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
 # template:set
           working-directory: apps/evolvesprouts_app
@@ -83,22 +81,22 @@ jobs:
 
 
       - name: Build release IPA
-# template:set
-        run: |
-          flutter build ipa --release --export-options-plist=ios/ExportOptions.plist \
-            --dart-define=AMPLIFY_API_KEY=${{ secrets.AMPLIFY_API_KEY }} \
-            --dart-define=FIREBASE_API_KEY=${{ vars.FIREBASE_API_KEY }} \
-            --dart-define=FIREBASE_PROJECT_ID=${{ vars.FIREBASE_PROJECT_ID }} \
-            --dart-define=FIREBASE_MESSAGING_SENDER_ID=${{ vars.FIREBASE_MESSAGING_SENDER_ID }} \
-            --dart-define=FIREBASE_IOS_APP_ID=${{ vars.FIREBASE_IOS_APP_ID }} \
-            --dart-define=FIREBASE_IOS_BUNDLE_ID=${{ vars.IOS_BUNDLE_ID }} \
-            --dart-define=FIREBASE_STORAGE_BUCKET=${{ vars.FIREBASE_STORAGE_BUCKET }} \
-            --dart-define=FIREBASE_APP_CHECK_DEBUG=${{ vars.FIREBASE_APP_CHECK_DEBUG }}
-        working-directory: apps/evolvesprouts_app
-# template:end
+        run: bash scripts/deploy/build-mobile-release.sh ipa
+        env:
+          AMPLIFY_API_KEY: ${{ secrets.AMPLIFY_API_KEY }}
+          FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_IOS_APP_ID: ${{ vars.FIREBASE_IOS_APP_ID }}
+          FIREBASE_IOS_BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID }}
+          FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET }}
+          FIREBASE_APP_CHECK_DEBUG: ${{ vars.FIREBASE_APP_CHECK_DEBUG }}
+          # template:set
+          APP_DIRECTORY: apps/evolvesprouts_app
+          # template:end
 
       - name: Load App Store Connect API key
-        uses: lx-software-ltd/actions/appstore-api-key@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/appstore-api-key@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           api-key-json: ${{ secrets.APPSTORE_API_KEY_JSON }}
           issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}

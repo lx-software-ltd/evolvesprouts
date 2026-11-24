@@ -33,16 +33,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Resolve public site build config from infrastructure params
-        id: resolve_staging_site_origin
-# template:set
+      - name: Resolve public site build config
+        id: resolve_public_site_config
+        run: bash scripts/deploy/resolve-public-www-build-env.sh
         env:
           REQUIRE_ASSET: "false"
-# template:end
-        run: bash scripts/deploy/resolve-public-www-build-env.sh
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
@@ -51,7 +49,7 @@ jobs:
         working-directory: apps/public_www
 # template:set
         env:
-          NEXT_TELEMETRY_DISABLED: '1'
+          NEXT_TELEMETRY_DISABLED: "1"
           SMOKE_BASE_URL: ${{ steps.resolve_staging_site_origin.outputs.staging_site_origin }}
           STAGING_BYPASS_SECRET: ${{ secrets.STAGING_BYPASS_SECRET }}
           SMOKE_API_KEY: ${{ secrets.NEXT_PUBLIC_WWW_CRM_API_KEY }}
@@ -64,20 +62,8 @@ jobs:
 
       - name: Publish smoke summary
         if: always()
-# template:set
+        run: bash scripts/deploy/publish-staging-summary.sh smoke
         env:
-          SUMMARY_TARGET_URL: ${{ steps.resolve_staging_site_origin.outputs.staging_site_origin }}
+          SUMMARY_TARGET_URL: ${{ steps.resolve_public_site_config.outputs.staging_site_origin }}
           SUMMARY_SCOPE: ${{ github.event.inputs.scope || 'all' }}
           SUMMARY_MAX_PAGES: ${{ github.event.inputs.max_pages || '' }}
-        run: |
-          {
-            echo '## Public Website staging smoke test'
-            echo ''
-            echo "- Target URL: \`${SUMMARY_TARGET_URL}\`"
-            echo "- Trigger: \`workflow_dispatch\`"
-            echo "- Scope: \`${SUMMARY_SCOPE}\`"
-            if [ -n "${SUMMARY_MAX_PAGES}" ]; then
-              echo "- Max pages: \`${SUMMARY_MAX_PAGES}\`"
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
-# template:end

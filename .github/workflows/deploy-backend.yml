@@ -5,19 +5,29 @@ on:
     types: [deploy-backend]
   workflow_dispatch:
     inputs:
-      # template:set
-      cdk_stacks:
-        description: 'CDK stacks to deploy'
+      # template:optional database
+      force_migration_run:
+        description: "Force RunMigrations custom resource"
         required: false
-        default: 'all stacks'
+        default: false
+        type: boolean
+      # template:end
+      cdk_stacks:
+        description: "CDK stacks to deploy"
+        required: false
+        default: "all stacks"
         type: choice
         options:
-          - 'all stacks'
-          - 'backend'
-          - 'admin web'
-          - 'public website'
+          # template:set
+          - "all stacks"
+          - "backend"
+          - "admin web"
+          - "public website"
+          - "training"
+          # template:end
+      # template:optional database
       run_seed_data:
-        description: 'Run seed data after migrations (backend stack only)'
+        description: "Run seed data after migrations (backend stack only)"
         required: false
         default: false
         type: boolean
@@ -27,11 +37,11 @@ on:
       - main
     # template:set
     paths:
-      - 'backend/**'
-      - 'scripts/**'
-      - 'apps/public_www/src/content/landing-pages/**'
-      - 'apps/public_www/src/content/eventbrite-banners/**'
-      - '.github/workflows/deploy-backend.yml'
+      - "backend/**"
+      - "scripts/**"
+      - "apps/public_www/src/content/landing-pages/**"
+      - "apps/public_www/src/content/eventbrite-banners/**"
+      - ".github/workflows/deploy-backend.yml"
     # template:end
 
 permissions:
@@ -43,8 +53,6 @@ concurrency:
 
 jobs:
   deploy:
-    # template:set
-    # template:end
     if: github.ref == 'refs/heads/main'
     permissions:
       contents: read
@@ -54,39 +62,42 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        # template:set
-        # template:end
 
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
-      # template:set
-      # template:end
-      - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
 
+      - name: Set up Python
+        uses: lx-software-ltd/actions/setup-python@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
+
+      - name: Determine deployment region
+        id: region
+        env:
+          INPUT_CDK_STACKS: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
+          INPUT_AWS_REGION: ${{ vars.AWS_REGION }}
+        run: bash scripts/deploy/cdk-prepare.sh region
 
       - name: Configure AWS credentials
-        # template:set
-        # template:end
-        uses: lx-software-ltd/actions/aws-oidc@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        id: aws
+        uses: lx-software-ltd/actions/aws-oidc@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
-          # template:set
-          region: ${{ vars.AWS_REGION }}
-          # template:end
+          region: ${{ steps.region.outputs.region }}
+
+      - name: Set up QEMU for arm64 Lambda bundling
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
 
 
       - name: Check CDK bootstrap
-        uses: lx-software-ltd/actions/cdk-bootstrap-check@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
-          # template:set
-          region: ${{ vars.AWS_REGION }}
-          # template:end
+          region: ${{ steps.region.outputs.region }}
       - name: Prepare CDK app
         id: prep
         run: bash scripts/deploy/cdk-prepare.sh deploy
@@ -133,9 +144,6 @@ jobs:
           CDK_PARAM_OPENROUTER_API_KEY: ${{ secrets.CDK_PARAM_OPENROUTER_API_KEY }}
           CDK_PARAM_OPENROUTER_CHAT_COMPLETIONS_URL: ${{ vars.CDK_PARAM_OPENROUTER_CHAT_COMPLETIONS_URL }}
           CDK_PARAM_OPENROUTER_MODEL: ${{ vars.CDK_PARAM_OPENROUTER_MODEL }}
-          # Production-environment job. A secret that exists only in the
-          # staging environment is invisible here. An empty value omits the
-          # parameter and CloudFormation keeps the previous allowlist.
           CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS: ${{ secrets.CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS }}
           STRIPE_PAYMENT_METHOD_CONFIGURATION_ID: ${{ vars.STRIPE_PAYMENT_METHOD_CONFIGURATION_ID }}
           CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD: ${{ secrets.CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD }}
@@ -161,10 +169,6 @@ jobs:
           NEXT_PUBLIC_FPS_MOBILE_NUMBER: ${{ vars.NEXT_PUBLIC_FPS_MOBILE_NUMBER }}
           CDK_PARAM_INVOICE_DISPLAY_TIMEZONE: ${{ vars.CDK_PARAM_INVOICE_DISPLAY_TIMEZONE }}
           CDK_PARAM_INVOICE_PAYMENT_TERMS_DAYS: ${{ vars.CDK_PARAM_INVOICE_PAYMENT_TERMS_DAYS }}
-          # This job uses the production environment. These secrets must be
-          # repository secrets or production-environment secrets. A secret
-          # that exists only in the staging environment is invisible here,
-          # the parameter stays empty, and the origin lock stays off.
           CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY }}
           CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS }}
           CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY }}
@@ -174,18 +178,20 @@ jobs:
       # template:optional edge-verify
       - name: Read edge verify before deploy
         id: edge_before
-        if: contains(steps.prep.outputs.stacks, 'evolvesprouts-public-www')
-        uses: lx-software-ltd/actions/cfn-stack-outputs@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        if: steps.prep.outputs.edge_verify == 'true'
+        uses: lx-software-ltd/actions/cfn-stack-outputs@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
+          # template:set
           stack: evolvesprouts-public-www
+          # template:end
           optional: PublicWwwStagingEdgeVerifyEnabled PublicWwwEdgeVerifyEnabled
           allow-missing: "true"
-          region: ${{ vars.AWS_REGION }}
+          region: ${{ steps.region.outputs.region }}
 
       # template:end
 
       - name: Deploy stacks
-        uses: lx-software-ltd/actions/cdk-deploy@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-deploy@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           working-directory: backend/infrastructure
           plan-file: backend/infrastructure/cdk-plan.json
@@ -199,14 +205,15 @@ jobs:
           pass-empty: WafWebAclArn,PublicWwwEdgeVerifySecret,PublicWwwEdgeVerifySecretPrevious,PublicWwwStagingEdgeVerifySecret,PublicWwwStagingEdgeVerifySecretPrevious
           run-seed: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_seed_data || 'false' }}
           # template:end
-          # template:set
-          region: ${{ vars.AWS_REGION }}
-          # template:end
+          region: ${{ steps.region.outputs.region }}
         # template:set
         env:
           AWS_REGION: ${{ vars.AWS_REGION }}
           CDK_STACKS: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
           RUN_SEED_DATA: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_seed_data || 'false' }}
+          MIGRATIONS_FORCE_RUN_ID: >-
+            ${{ github.event.inputs.force_migration_run == 'true' &&
+            github.run_id || '' }}
           CDK_PARAM_FILE: ${{ vars.CDK_PARAM_FILE }}
           CDK_BOOTSTRAP_QUALIFIER: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           CDK_PARAM_GOOGLE_CLIENT_SECRET: ${{ secrets.CDK_PARAM_GOOGLE_CLIENT_SECRET }}
@@ -245,9 +252,6 @@ jobs:
           CDK_PARAM_OPENROUTER_API_KEY: ${{ secrets.CDK_PARAM_OPENROUTER_API_KEY }}
           CDK_PARAM_OPENROUTER_CHAT_COMPLETIONS_URL: ${{ vars.CDK_PARAM_OPENROUTER_CHAT_COMPLETIONS_URL }}
           CDK_PARAM_OPENROUTER_MODEL: ${{ vars.CDK_PARAM_OPENROUTER_MODEL }}
-          # Production-environment job. A secret that exists only in the
-          # staging environment is invisible here. An empty value omits the
-          # parameter and CloudFormation keeps the previous allowlist.
           CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS: ${{ secrets.CDK_PARAM_INBOUND_INVOICE_ALLOWED_SENDER_PATTERNS }}
           STRIPE_PAYMENT_METHOD_CONFIGURATION_ID: ${{ vars.STRIPE_PAYMENT_METHOD_CONFIGURATION_ID }}
           CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD: ${{ secrets.CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD }}
@@ -273,28 +277,26 @@ jobs:
           NEXT_PUBLIC_FPS_MOBILE_NUMBER: ${{ vars.NEXT_PUBLIC_FPS_MOBILE_NUMBER }}
           CDK_PARAM_INVOICE_DISPLAY_TIMEZONE: ${{ vars.CDK_PARAM_INVOICE_DISPLAY_TIMEZONE }}
           CDK_PARAM_INVOICE_PAYMENT_TERMS_DAYS: ${{ vars.CDK_PARAM_INVOICE_PAYMENT_TERMS_DAYS }}
-          # This job uses the production environment. These secrets must be
-          # repository secrets or production-environment secrets. A secret
-          # that exists only in the staging environment is invisible here,
-          # the parameter stays empty, and the origin lock stays off.
           CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY }}
           CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS }}
           CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY }}
           CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS }}
         # template:end
-      # template:optional edge-verify-report
+      # template:optional edge-verify
       - name: Read edge verify after deploy
         id: edge_after
-        if: contains(steps.prep.outputs.stacks, 'evolvesprouts-public-www')
-        uses: lx-software-ltd/actions/cfn-stack-outputs@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        if: steps.prep.outputs.edge_verify == 'true'
+        uses: lx-software-ltd/actions/cfn-stack-outputs@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
+          # template:set
           stack: evolvesprouts-public-www
+          # template:end
           optional: PublicWwwStagingEdgeVerifyEnabled PublicWwwEdgeVerifyEnabled
           allow-missing: "true"
-          region: ${{ vars.AWS_REGION }}
+          region: ${{ steps.region.outputs.region }}
 
       - name: Report public website edge verify
-        if: contains(steps.prep.outputs.stacks, 'evolvesprouts-public-www')
+        if: steps.prep.outputs.edge_verify == 'true'
         env:
           BEFORE: ${{ steps.edge_before.outputs.json }}
           AFTER: ${{ steps.edge_after.outputs.json }}

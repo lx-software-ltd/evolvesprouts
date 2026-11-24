@@ -37,24 +37,22 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        # template:set
-        # template:end
+        with:
+          fetch-depth: 0
+
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
 
       - name: Run Python tests
         run: bash scripts/ci/test-python.sh
-        # template:set
-        # template:end
-      # template:optional coverage-upload
       - name: Upload coverage report
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:
           name: python-coverage
           path: coverage.xml
-      # template:end
+          if-no-files-found: ignore
   test-admin-web:
     name: Test Admin Web
     runs-on: ubuntu-26.04
@@ -63,7 +61,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/admin_web
@@ -98,21 +96,15 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
 
-      # template:optional public-origin
-      - name: Resolve public site origin from infrastructure params
-        id: resolve_public_site_origin
-        run: |
-          SITE_DOMAIN="$(python3 -c "import json; from pathlib import Path; params=json.loads(Path('backend/infrastructure/params/production.json').read_text(encoding='utf-8')); print(str(params.get('PublicWwwDomainName', '')).strip())")"
-          if [ -z "$SITE_DOMAIN" ]; then
-            echo "PublicWwwDomainName is required in backend/infrastructure/params/production.json"
-            exit 1
-          fi
-          echo "site_origin=https://${SITE_DOMAIN}" >> "$GITHUB_OUTPUT"
+      # template:optional public-build-env
+      - name: Resolve public site build config
+        id: resolve_public_site_config
+        run: bash scripts/deploy/resolve-public-www-build-env.sh
 
       # template:end
       - name: Run tests
@@ -121,7 +113,7 @@ jobs:
         # template:set
         env:
           NEXT_TELEMETRY_DISABLED: "1"
-          NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_public_site_origin.outputs.site_origin }}
+          NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_public_site_config.outputs.production_site_origin }}
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
           NEXT_PUBLIC_FPS_MERCHANT_NAME: ${{ vars.NEXT_PUBLIC_FPS_MERCHANT_NAME }}
@@ -143,7 +135,7 @@ jobs:
         # template:set
         env:
           NEXT_TELEMETRY_DISABLED: "1"
-          NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_public_site_origin.outputs.site_origin }}
+          NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_public_site_config.outputs.production_site_origin }}
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
           NEXT_PUBLIC_FPS_MERCHANT_NAME: ${{ vars.NEXT_PUBLIC_FPS_MERCHANT_NAME }}
@@ -183,7 +175,7 @@ jobs:
           PY
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/training
@@ -217,13 +209,13 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
 
       - name: Run infrastructure tests
         run: npm run test:infra
@@ -240,17 +232,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        # template:set
-        # template:end
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
 
       - name: Install Playwright browsers
-        uses: lx-software-ltd/actions/playwright-install@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/playwright-install@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           working-directory: apps/public_www
 
@@ -277,27 +267,19 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
-
+        uses: lx-software-ltd/actions/setup-flutter@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
 
       - name: Run Flutter tests
-        run: |
-          set -euo pipefail
-          shopt -s globstar nullglob
-          # template:set
-          for dir in apps/evolvesprouts_app; do
-          # template:end
-            if [ ! -f "$dir/pubspec.yaml" ]; then echo "Skipping missing $dir"; continue; fi
-            test_files=("$dir"/test/**/*_test.dart)
-            if [ "${#test_files[@]}" -eq 0 ]; then echo "ERROR: $dir has a pubspec.yaml but no test/**/*_test.dart files"; exit 1; fi
-            echo "Testing Flutter in $dir"
-            (cd "$dir" && flutter pub get && flutter test)
-          done
+        run: bash scripts/ci/test-flutter.sh
 
 
   build-android:
     name: Build Android
     runs-on: ubuntu-26.04
+    env:
+      # Maven Central returns 429 from shared CI egress. Gradle retries that
+      # status and doubles this delay between attempts (5s, 10s, 20s, 40s).
+      GRADLE_OPTS: -Dorg.gradle.internal.repository.max.tentatives=5 -Dorg.gradle.internal.repository.initial.backoff=5000
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -311,7 +293,7 @@ jobs:
           # template:end
 
       - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-flutter@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
 
       - name: Point Flutter at Java 21
         run: flutter config --jdk-dir "$JAVA_HOME"
@@ -326,8 +308,8 @@ jobs:
   test:
     name: test
     runs-on: ubuntu-26.04
-    # template:set
     needs:
+      # template:set
       - test-python
       - test-admin-web
       - test-public-www
@@ -340,6 +322,6 @@ jobs:
     if: always()
     steps:
       - name: Require every test job
-        uses: lx-software-ltd/actions/require-jobs@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/require-jobs@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           needs-json: ${{ toJson(needs) }}

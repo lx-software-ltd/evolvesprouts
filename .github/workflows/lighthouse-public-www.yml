@@ -1,17 +1,15 @@
 name: Lighthouse Public Website
-# template:set
-# template:end
 
 on:
   workflow_dispatch:
     inputs:
       page_paths:
         # template:set
-        description: 'Comma/newline-separated page paths or full URLs to audit (e.g. /en/, /en/about-us)'
+        description: "Comma/newline-separated page paths or full URLs to audit (e.g. /en/, /en/about-us)"
         # template:end
         required: false
         # template:set
-        default: '/en/,/zh-CN/,/zh-HK/'
+        default: "/en/,/zh-CN/,/zh-HK/"
         # template:end
   pull_request:
     paths:
@@ -33,43 +31,38 @@ jobs:
       contents: read
       statuses: write
     name: Lighthouse audit
-
-
     runs-on: ubuntu-26.04
     timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         # template:set
+        with:
+          lfs: false
         # template:end
 
-      # template:optional public-origin
-      - name: Resolve public site build config from infrastructure params
-        # template:set
-        id: resolve_public_site_origin
+      # template:optional public-build-env
+      - name: Resolve public site build config
+        id: resolve_public_site_config
+        run: bash scripts/deploy/resolve-public-www-build-env.sh
         env:
           REQUIRE_ASSET: "false"
-        # template:end
-        run: bash scripts/deploy/resolve-public-www-build-env.sh
 
       # template:end
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
 
-      # template:optional next-cache
-      - name: Restore Next.js build cache (public_www)
+      # template:optional next-public
+      - name: Restore Next.js build cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: apps/public_www/.next/cache
-          # template:set
-          key: ${{ runner.os }}-nextjs-public-www-${{ hashFiles('apps/public_www/package-lock.json') }}-${{ hashFiles('apps/public_www/src/**/*.{js,jsx,ts,tsx}', 'apps/public_www/scripts/**/*.mjs', 'apps/public_www/next.config.*') }}
-          restore-keys: |
-            ${{ runner.os }}-nextjs-public-www-${{ hashFiles('apps/public_www/package-lock.json') }}-
-          # template:end
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('apps/public_www/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-nextjs-
 
       # template:end
 
@@ -77,8 +70,8 @@ jobs:
         working-directory: apps/public_www
         # template:set
         env:
-          NEXT_TELEMETRY_DISABLED: '1'
-          NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_public_site_origin.outputs.production_site_origin }}
+          NEXT_TELEMETRY_DISABLED: "1"
+          NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_public_site_config.outputs.production_site_origin }}
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
           NEXT_PUBLIC_FPS_MERCHANT_NAME: ${{ vars.NEXT_PUBLIC_FPS_MERCHANT_NAME }}
@@ -92,7 +85,7 @@ jobs:
         run: npm run build
 
       - name: Run Lighthouse CI
-        uses: lx-software-ltd/actions/lighthouse-ci@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/lighthouse-ci@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           working-directory: apps/public_www
           page-paths: ${{ inputs.page_paths }}

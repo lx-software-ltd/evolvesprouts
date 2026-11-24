@@ -3,6 +3,10 @@
 set -euo pipefail
 mode="${1:-}"
 case "$mode" in
+  region)
+    echo "region=${INPUT_AWS_REGION:-}" >> "${GITHUB_OUTPUT:?}"
+    exit 0
+    ;;
   diff|deploy) ;;
   *) echo "::error::cdk-prepare.sh requires diff or deploy" >&2; exit 1 ;;
 esac
@@ -229,6 +233,11 @@ PY
 fi
 
 echo "stacks=${CDK_STACKS:-}" >> "$GITHUB_OUTPUT"
+if [[ " ${CDK_STACKS} " == *" evolvesprouts-public-www "* ]]; then
+  echo "edge_verify=true" >> "$GITHUB_OUTPUT"
+else
+  echo "edge_verify=false" >> "$GITHUB_OUTPUT"
+fi
 # The app reads CDK_BOOTSTRAP_QUALIFIER. Diff and deploy both use
 # the committed plan. cdk deploy does not take --qualifier.
 echo "run=true" >> "${GITHUB_OUTPUT:?}"

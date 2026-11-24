@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # template:optional flutter-lockfiles
+  # template:optional mobile
   flutter-lockfiles:
     name: Check Flutter lockfiles
     runs-on: ubuntu-26.04
@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Check Flutter lockfile
-        uses: lx-software-ltd/actions/flutter-lockfiles@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/flutter-lockfiles@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           # template:set
           working-directory: apps/evolvesprouts_app
@@ -39,10 +39,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
 
       - name: Validate package-lock.json
-        uses: lx-software-ltd/actions/node-lockfiles@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/node-lockfiles@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           # template:set
           directories: |
@@ -52,22 +52,6 @@ jobs:
             backend/infrastructure
           # template:end
 
-  # template:optional ios-lockfiles
-  ios-lockfiles:
-    name: Check iOS lockfiles
-    runs-on: macos-26
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Validate Podfile.lock
-        uses: lx-software-ltd/actions/pod-lockfiles@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
-        with:
-          # template:set
-          working-directory: apps/evolvesprouts_app/ios
-          # template:end
-
-  # template:end
   python-requirements:
     name: Check Python requirements
     runs-on: ubuntu-26.04
@@ -76,7 +60,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Check requirement pins
-        uses: lx-software-ltd/actions/python-requirements-pins@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/python-requirements-pins@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           # template:set
           files: backend/requirements.txt
