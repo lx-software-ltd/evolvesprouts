@@ -31,12 +31,12 @@ This document outlines security best practices and requirements for the Evolve S
 
 ### Gitleaks Secret Scanning
 
-Secret Scanning in `.github/workflows/security.yml` runs the MIT-licensed
-`gitleaks` CLI (pinned version + SHA-256). It does not use
-`gitleaks/gitleaks-action`, which requires a `GITLEAKS_LICENSE` on
-organization repositories. Dependabot `pull_request` runs cannot read
-Actions secrets, so the licensed action failed every Dependabot PR with
-"missing gitleaks license".
+Secret Scanning in `.github/workflows/security.yml` runs the shared
+`lx-software-ltd/actions/gitleaks` action. That action downloads the
+MIT-licensed `gitleaks` CLI at a pinned version and checks its SHA-256.
+It does not read `GITLEAKS_LICENSE`. The secret has been removed from
+this repository. The licensed `gitleaks/gitleaks-action` is not used,
+because Dependabot `pull_request` runs cannot read Actions secrets.
 
 ### Example - CDK Parameter for Secrets
 
