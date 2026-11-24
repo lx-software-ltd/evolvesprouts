@@ -191,6 +191,25 @@ jobs:
             fi
           done
 
+  install-playwright:
+    name: Install Playwright Chromium
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: lx-software-ltd/actions/setup-node@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
+        with:
+          cache: npm
+          working-directory: apps/admin_web
+
+      - name: Install Playwright Chromium
+        uses: lx-software-ltd/actions/playwright-install@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
+        with:
+          working-directory: apps/admin_web
+          browsers: chromium
+
   test-python:
     name: Test Python
     runs-on: ubuntu-26.04
@@ -317,6 +336,7 @@ jobs:
       - test-training
       - test-flutter
       - test-node
+      - install-playwright
       - test-python
       - test-infrastructure
     if: always()
