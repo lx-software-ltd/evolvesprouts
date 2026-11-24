@@ -70,8 +70,16 @@ function parseArgs(argv) {
     process.exit(0);
   }
 
-  const pagesOnly = args.has('--pages-only');
-  const apiOnly = args.has('--api-only');
+  const scope = (process.env.SMOKE_SCOPE || 'all').trim();
+  let pagesOnly = args.has('--pages-only');
+  let apiOnly = args.has('--api-only');
+  if (scope === 'pages') {
+    pagesOnly = true;
+  } else if (scope === 'api') {
+    apiOnly = true;
+  } else if (scope !== 'all') {
+    throw new Error(`Unsupported scope: ${scope}`);
+  }
   if (pagesOnly && apiOnly) {
     throw new Error('Cannot combine --pages-only and --api-only.');
   }

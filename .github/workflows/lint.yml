@@ -1,148 +1,54 @@
 name: Lint
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+on:
+  pull_request:
+  push:
+    branches:
+      - "main"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-on:
-  repository_dispatch:
-    types: [lint]
-  workflow_dispatch:
-  pull_request:
-    # No path filter. The gate job is a required check, and a skipped
-    # required check leaves the pull request blocked.
-  push:
-    branches:
-      - main
-    paths:
-      - "apps/**"
-      - "packages/**"
-      - "backend/**"
-      - "shared/**"
-      - "tests/**"
-      - "docs/api/**"
-      - "docs/architecture/**"
-      - ".cursorrules"
-      - "AGENTS.md"
-      - "scripts/check-lambda-docs.mjs"
-      - "scripts/python-file-length-allowlist.txt"
-      - ".cursor/**"
-      - ".pre-commit-config.yaml"
-      - ".github/workflows/lint.yml"
-      - ".github/harness.json"
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  validate-agent-rules:
-    # Check name is "Lint / Validate agent rules". Ruleset matching looks for "lint".
-    name: Validate agent rules
+  validate-agent-harness:
+    name: Validate agent harness
     runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
 
-      - name: Validate agent rules
+      - name: Set up Python
+        uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+
+      - name: Run harness checks
         uses: lx-software-ltd/actions/agent-harness@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
 
-  lint-dart:
-    name: Lint Dart
+  repo-checks:
+    name: Repository checks
     runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
-      - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
-        with:
-          channel: "stable"
-          flutter-version: "3.50.1"
-          cache: "true"
-
-      - name: Run Dart/Flutter lint
-        run: |
-          set -e
-          for dir in apps/evolvesprouts_app packages/flutter_ui packages/api_client_dart; do
-            if [ -d "$dir" ]; then
-              echo "Linting Dart in $dir"
-              (cd "$dir" && flutter pub get && flutter analyze)
-            else
-              echo "Skipping missing $dir"
-            fi
-          done
-
-  lint-react:
-    name: Lint React
-    runs-on: ubuntu-26.04
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
+
+      - name: Set up Python
+        uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
 
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        with:
+          install: "false"
 
-      - name: Run React lint
-        run: |
-          set -euo pipefail
-
-          # Retry only npm-registry audit outages (HTTP 503). Real high-severity
-          # findings still fail immediately.
-          run_npm_audit() {
-            local dir="$1"
-            local attempt=1
-            local max_attempts=4
-            local delay=8
-            local audit_output
-            local audit_status
-
-            while [ "$attempt" -le "$max_attempts" ]; do
-              echo "npm audit (attempt ${attempt}/${max_attempts}) in ${dir}"
-              set +e
-              audit_output="$(cd "$dir" && npm audit --omit=dev --audit-level=high 2>&1)"
-              audit_status=$?
-              set -e
-              printf '%s\n' "$audit_output"
-              if [ "$audit_status" -eq 0 ]; then
-                return 0
-              fi
-              if printf '%s' "$audit_output" | grep -Eq '503 Service Unavailable|audit endpoint returned an error'; then
-                if [ "$attempt" -lt "$max_attempts" ]; then
-                  echo "npm audit registry unavailable; retrying in ${delay}s..."
-                  sleep "$delay"
-                  delay=$((delay * 2))
-                  attempt=$((attempt + 1))
-                  continue
-                fi
-              fi
-              return "$audit_status"
-            done
-          }
-
-          for dir in apps/admin_web apps/public_www apps/training; do
-            if [ -f "$dir/package.json" ]; then
-              echo "Linting React in $dir"
-              if [ -f "$dir/package-lock.json" ]; then
-                (cd "$dir" && npm ci)
-              else
-                (cd "$dir" && npm install)
-              fi
-              (cd "$dir" && npm run lint --if-present)
-              if [ "$dir" = "apps/admin_web" ] || [ "$dir" = "apps/training" ]; then
-                run_npm_audit "$dir"
-              fi
-            else
-              echo "Skipping missing $dir"
-            fi
-          done
+      - name: Run repository checks
+        run: bash scripts/ci/repo-checks.sh
 
   lint-python:
     name: Lint Python
@@ -150,39 +56,121 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          # Avoid depending on pull_request merge refs which can intermittently fail to fetch.
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        # template:set
+        # template:end
 
       - name: Set up Python
         uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        # template:set
         with:
-          python-version: "3.12"
           requirements: "**/requirements.txt"
+        # template:end
+
+      - name: Set up Node.js
+        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        with:
+          install: "false"
+
+      # template:optional hook-deps
+      - name: Install hook dependencies
+        # template:set
+        run: npm ci --prefix backend/infrastructure
+        # template:end
+
+      # template:end
+      - name: Install pre-commit
+        run: python -m pip install pre-commit
+
+      - name: Run pre-commit checks
+        run: pre-commit run --all-files --show-diff-on-failure
+
+      - name: Run mypy
+        run: bash scripts/ci/mypy.sh
+
+  lint-admin-web:
+    name: Lint Admin Web
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           cache: npm
-          working-directory: backend/infrastructure
+          working-directory: apps/admin_web
 
-      - name: Install pre-commit
+      - name: Run lint
+        run: npm run lint --if-present
+        working-directory: apps/admin_web
+
+  lint-public-www:
+    name: Lint Public Website
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        with:
+          cache: npm
+          working-directory: apps/public_www
+
+      - name: Run lint
+        run: npm run lint --if-present
+        working-directory: apps/public_www
+
+  # template:optional training
+  lint-training:
+    name: Lint Training
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        with:
+          cache: npm
+          working-directory: apps/training
+
+      - name: Run lint
+        run: npm run lint --if-present
+        working-directory: apps/training
+
+  # template:end
+  # template:optional mobile
+  lint-dart:
+    name: Lint Dart
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Flutter
+        uses: lx-software-ltd/actions/setup-flutter@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+
+      - name: Run Dart/Flutter lint
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install pre-commit
+          set -euo pipefail
+          # template:set
+          for dir in apps/evolvesprouts_app; do
+          # template:end
+            if [ ! -d "$dir" ]; then echo "Skipping missing $dir"; continue; fi
+            echo "Linting Dart in $dir"
+            (cd "$dir" && flutter pub get && flutter analyze)
+          done
 
-      - name: Run pre-commit checks
-        run: |
-          pre-commit run --all-files --show-diff-on-failure
-
+  # template:end
   lint-cdk:
     name: Lint CDK
     runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+        # template:set
+        # template:end
 
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
@@ -192,69 +180,35 @@ jobs:
 
       - name: Set up Python
         uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
-        with:
-          python-version: "3.12"
 
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip
-
-      - name: Acknowledge CDK CLI notice
-        working-directory: backend/infrastructure
-        run: npx cdk acknowledge 34892 || true
-
-      - name: Run CDK lint
-        working-directory: backend/infrastructure
+      - name: Lint CDK
         run: npm run lint --if-present
+        working-directory: backend/infrastructure
 
       - name: Synthesize CDK
+        run: npm run synth:ci
         working-directory: backend/infrastructure
-        env:
-          CDK_DISABLE_CONTEXT_LOOKUPS: "1"
-        run: npx cdk synth --quiet --output cdk.out
 
-      - name: Check CDK routes match admin OpenAPI spec
-        run: node scripts/check-cdk-admin-api-routes.mjs
-
-      - name: Check Lambda docs match handlers
-        run: node scripts/check-lambda-docs.mjs
-
+  # template:optional openapi
   lint-openapi:
     name: Lint OpenAPI
     runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Lint OpenAPI specs
+        # template:set
         run: npx --yes @redocly/cli@1.34.11 lint docs/api/admin.yaml docs/api/public.yaml
+        # template:end
 
-  workflow-conformance:
-    name: Workflow conformance
-    runs-on: ubuntu-26.04
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
-      - name: Check workflows
-        uses: lx-software-ltd/actions/workflow-conformance@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
-        with:
-          mode: enforce
-          profile: product
-          alignment: enforce
-
+  # template:end
   type-check:
     name: Type-check
     runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 0
 
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
@@ -262,24 +216,42 @@ jobs:
       - name: Type-check Node apps
         run: |
           set -euo pipefail
+          # template:set
           for dir in apps/admin_web apps/public_www apps/training backend/infrastructure; do
+          # template:end
+            if [ ! -f "$dir/package.json" ]; then echo "Skipping missing $dir"; continue; fi
             echo "Type-checking $dir"
             npm ci --prefix "$dir"
-            npm run typecheck --prefix "$dir"
+            npm run typecheck --if-present --prefix "$dir"
           done
+
+  workflow-conformance:
+    name: Workflow conformance
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check workflows
+        uses: lx-software-ltd/actions/workflow-conformance@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
 
   lint:
     name: lint
     runs-on: ubuntu-26.04
+    # template:set
     needs:
-      - validate-agent-rules
-      - lint-dart
-      - lint-react
+      - validate-agent-harness
+      - repo-checks
       - lint-python
+      - lint-admin-web
+      - lint-public-www
+      - lint-training
+      - lint-dart
       - lint-cdk
       - lint-openapi
-      - workflow-conformance
       - type-check
+      - workflow-conformance
+    # template:end
     if: always()
     steps:
       - name: Require every lint job

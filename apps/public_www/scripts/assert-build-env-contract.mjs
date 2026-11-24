@@ -1,6 +1,6 @@
 /**
  * Fails if required NEXT_PUBLIC_* vars for public www build are unset or empty.
- * Keep the variable list in sync with `.github/workflows/deploy-public-www.yml`
+ * Keep the variable list in sync with `.github/workflows/deploy-public-www-staging.yml`
  * "Build public website" step env block.
  */
 const REQUIRED = [

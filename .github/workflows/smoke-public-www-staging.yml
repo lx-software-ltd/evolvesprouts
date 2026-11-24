@@ -26,7 +26,6 @@ concurrency:
 
 jobs:
   smoke:
-    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-26.04
     timeout-minutes: 20
     environment: staging
@@ -34,15 +33,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Resolve staging site origin from infrastructure params
+      - name: Resolve public site build config from infrastructure params
         id: resolve_staging_site_origin
-        run: |
-          STAGING_SITE_DOMAIN="$(python3 -c "import json; from pathlib import Path; params=json.loads(Path('backend/infrastructure/params/production.json').read_text(encoding='utf-8')); print(str(params.get('PublicWwwStagingDomainName', '')).strip())")"
-          if [ -z "$STAGING_SITE_DOMAIN" ]; then
-            echo "PublicWwwStagingDomainName is required in backend/infrastructure/params/production.json"
-            exit 1
-          fi
-          echo "staging_site_origin=https://${STAGING_SITE_DOMAIN}" >> "$GITHUB_OUTPUT"
+# template:set
+        env:
+          REQUIRE_ASSET: "false"
+# template:end
+        run: bash scripts/deploy/resolve-public-www-build-env.sh
 
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
@@ -52,6 +49,7 @@ jobs:
 
       - name: Run staging smoke checks
         working-directory: apps/public_www
+# template:set
         env:
           NEXT_TELEMETRY_DISABLED: '1'
           SMOKE_BASE_URL: ${{ steps.resolve_staging_site_origin.outputs.staging_site_origin }}
@@ -59,40 +57,14 @@ jobs:
           SMOKE_API_KEY: ${{ secrets.NEXT_PUBLIC_WWW_CRM_API_KEY }}
           SMOKE_CRM_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
           SMOKE_MEDIA_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
-          REQUESTED_SCOPE: ${{ github.event.inputs.scope || 'all' }}
-          REQUESTED_MAX_PAGES: ${{ github.event.inputs.max_pages || '' }}
-        run: |
-          set -euo pipefail
-
-          scope="${REQUESTED_SCOPE:-all}"
-          smoke_args=()
-          case "$scope" in
-            all)
-              ;;
-            pages)
-              smoke_args+=(--pages-only)
-              ;;
-            api)
-              smoke_args+=(--api-only)
-              ;;
-            *)
-              echo "Unsupported scope: $scope"
-              exit 1
-              ;;
-          esac
-
-          if [ -n "${REQUESTED_MAX_PAGES:-}" ]; then
-            export SMOKE_MAX_PAGES="${REQUESTED_MAX_PAGES}"
-          fi
-
-          if [ "${#smoke_args[@]}" -gt 0 ]; then
-            npm run smoke:staging -- "${smoke_args[@]}"
-          else
-            npm run smoke:staging
-          fi
+          SMOKE_SCOPE: ${{ github.event.inputs.scope || 'all' }}
+          SMOKE_MAX_PAGES: ${{ github.event.inputs.max_pages || '' }}
+# template:end
+        run: npm run smoke:staging
 
       - name: Publish smoke summary
         if: always()
+# template:set
         env:
           SUMMARY_TARGET_URL: ${{ steps.resolve_staging_site_origin.outputs.staging_site_origin }}
           SUMMARY_SCOPE: ${{ github.event.inputs.scope || 'all' }}
@@ -108,3 +80,4 @@ jobs:
               echo "- Max pages: \`${SUMMARY_MAX_PAGES}\`"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
+# template:end

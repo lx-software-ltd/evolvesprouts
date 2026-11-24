@@ -51,8 +51,11 @@ describe('HeroBanner section', () => {
     expect(section?.className).toContain('es-hero-section');
     expect(section?.className).toContain('es-section-shell-spacing');
 
-    const frameBackground = container.querySelector('.es-hero-frame-bg');
+    const frameBackground = container.querySelector('img.es-hero-frame-bg');
     expect(frameBackground).not.toBeNull();
+    expect(frameBackground).toHaveAttribute('src', '/images/evolvesprouts-logo.svg');
+    expect(frameBackground).toHaveAttribute('alt', '');
+    expect(frameBackground).toHaveAttribute('aria-hidden', 'true');
 
     const headline = screen.getByRole('heading', { level: 1 });
     expect(headline.className).toContain('es-hero-headline');

@@ -9,7 +9,8 @@ on:
       - main
     paths:
       - "apps/training/**"
-      - "scripts/deploy/deploy-training.sh"
+      - "scripts/deploy/resolve-public-www-build-env.sh"
+      - ".github/workflows/deploy-training.yml"
 
 permissions:
   contents: read
@@ -20,6 +21,7 @@ concurrency:
 
 jobs:
   build-and-deploy:
+    if: github.ref == 'refs/heads/main'
     permissions:
       contents: read
       id-token: write
@@ -29,21 +31,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Resolve training site env from infrastructure params
+      - name: Resolve public site build config from infrastructure params
         id: resolve_training_site_env
-        run: |
-          SITE_DOMAIN="$(python3 -c "import json; from pathlib import Path; params=json.loads(Path('backend/infrastructure/params/production.json').read_text(encoding='utf-8')); print(str(params.get('TrainingDomainName', '')).strip())")"
-          PUBLIC_WWW_DOMAIN="$(python3 -c "import json; from pathlib import Path; params=json.loads(Path('backend/infrastructure/params/production.json').read_text(encoding='utf-8')); print(str(params.get('PublicWwwDomainName', '')).strip())")"
-          if [ -z "$SITE_DOMAIN" ]; then
-            echo "TrainingDomainName is required in backend/infrastructure/params/production.json"
-            exit 1
-          fi
-          if [ -z "$PUBLIC_WWW_DOMAIN" ]; then
-            echo "PublicWwwDomainName is required in backend/infrastructure/params/production.json"
-            exit 1
-          fi
-          echo "site_origin=https://${SITE_DOMAIN}" >> "$GITHUB_OUTPUT"
-          echo "public_www_origin=https://${PUBLIC_WWW_DOMAIN}" >> "$GITHUB_OUTPUT"
+        env:
+          REQUIRE_ASSET: "false"
+          REQUIRE_TRAINING: "true"
+        run: bash scripts/deploy/resolve-public-www-build-env.sh
 
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
@@ -63,8 +56,8 @@ jobs:
         working-directory: apps/training
         env:
           NEXT_TELEMETRY_DISABLED: "1"
-          NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_training_site_env.outputs.site_origin }}
-          NEXT_PUBLIC_PUBLIC_WWW_ORIGIN: ${{ steps.resolve_training_site_env.outputs.public_www_origin }}
+          NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_training_site_env.outputs.training_site_origin }}
+          NEXT_PUBLIC_PUBLIC_WWW_ORIGIN: ${{ steps.resolve_training_site_env.outputs.production_site_origin }}
           # Polls call same-origin /www/* via Training CloudFront (not execute-api /prod).
           NEXT_PUBLIC_API_BASE_URL: /www
           NEXT_PUBLIC_TRAINING_API_KEY: ${{ secrets.NEXT_PUBLIC_WWW_CRM_API_KEY }}
@@ -76,12 +69,12 @@ jobs:
           region: ${{ vars.AWS_REGION }}
 
       - name: Deploy training web
-        run: |
-          if [ -f "scripts/deploy/deploy-training.sh" ]; then
-            bash "scripts/deploy/deploy-training.sh"
-          else
-            echo "Deploy script not found: scripts/deploy/deploy-training.sh"
-            exit 1
-          fi
-        env:
-          TRAINING_STACK_NAME: evolvesprouts-training
+        uses: lx-software-ltd/actions/s3-cloudfront-deploy@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        with:
+          source: apps/training/out
+          stack: evolvesprouts-training
+          region: ${{ vars.AWS_REGION }}
+          bucket-output: TrainingBucketName
+          distribution-output: TrainingDistributionId
+          profile: next-export
+          dry-run: "false"

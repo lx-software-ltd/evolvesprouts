@@ -37,7 +37,8 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:watch": "vitest",
-    "audit:deps:prod": "npm audit --omit=dev --audit-level=high"
+    "audit:deps:prod": "npm audit --omit=dev --audit-level=high",
+    "test:ci": "npm run validate:content && npm run test:coverage && npm run audit:assets && node --test scripts/smoke-staging.test.mjs"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^7.1.0",

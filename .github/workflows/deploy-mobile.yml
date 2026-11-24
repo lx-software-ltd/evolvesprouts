@@ -8,7 +8,9 @@ on:
     branches:
       - main
     paths:
+# template:set
       - "apps/evolvesprouts_app/**"
+# template:end
       - "packages/flutter_ui/**"
       - "packages/api_client_dart/**"
       - "packages/models_shared/**"
@@ -23,6 +25,9 @@ concurrency:
 
 jobs:
   build-and-deploy:
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
     runs-on: ubuntu-26.04
     environment: production
     env:
@@ -47,6 +52,8 @@ jobs:
         uses: lx-software-ltd/actions/setup-flutter@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           channel: "stable"
+# template:set
+# template:end
           flutter-version: "3.50.1"
           cache: "true"
 
@@ -56,7 +63,9 @@ jobs:
       - name: Configure Android signing
         uses: lx-software-ltd/actions/android-signing@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
+# template:set
           working-directory: apps/evolvesprouts_app
+# template:end
           keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           keystore-password: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           key-password: ${{ secrets.ANDROID_KEY_PASSWORD }}
@@ -64,9 +73,13 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+# template:set
         working-directory: apps/evolvesprouts_app
+# template:end
+
 
       - name: Build release AAB
+# template:set
         run: |
           flutter build appbundle --release \
             --dart-define=AMPLIFY_API_KEY=${{ secrets.AMPLIFY_API_KEY }} \
@@ -77,6 +90,7 @@ jobs:
             --dart-define=FIREBASE_STORAGE_BUCKET=${{ vars.FIREBASE_STORAGE_BUCKET }} \
             --dart-define=FIREBASE_APP_CHECK_DEBUG=${{ vars.FIREBASE_APP_CHECK_DEBUG }}
         working-directory: apps/evolvesprouts_app
+# template:end
 
       - name: Check Play Store upload prerequisites
         id: playstore
@@ -88,14 +102,21 @@ jobs:
           keystore-password: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           key-password: ${{ secrets.ANDROID_KEY_PASSWORD }}
           key-alias: ${{ secrets.ANDROID_KEY_ALIAS }}
+# template:set
+# template:end
+          upload-enabled: ${{ vars.PLAY_STORE_UPLOAD_ENABLED == 'true' }}
+          package-name: ${{ vars.ANDROID_PACKAGE_NAME }}
+          require-package-name: "true"
 
       - name: Upload AAB to Play Store
         if: ${{ steps.playstore.outputs.should_upload == 'true' }}
         uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
-          packageName: com.evolvesprouts
+          packageName: ${{ vars.ANDROID_PACKAGE_NAME }}
+# template:set
           releaseFiles: apps/evolvesprouts_app/build/app/outputs/bundle/release/app-release.aab
+# template:end
           track: ${{ vars.ANDROID_RELEASE_TRACK }}
 
       - name: Deploy mobile artifacts

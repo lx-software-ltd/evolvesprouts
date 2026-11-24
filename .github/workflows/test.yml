@@ -1,42 +1,109 @@
 name: Test
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+on:
+  pull_request:
+  push:
+    branches:
+      - "main"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-on:
-  repository_dispatch:
-    types: [test]
-  workflow_dispatch:
-  pull_request:
-    # No path filter. The gate job is a required check, and a skipped
-    # required check leaves the pull request blocked.
-  push:
-    branches:
-      - main
-    paths:
-      - "apps/**"
-      - "packages/**"
-      - "backend/**"
-      - "shared/**"
-      - "tests/**"
-      - "docs/api/**"
-      - "docs/architecture/**"
-      - ".github/workflows/test.yml"
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  test-public-www:
-    name: Verify Public Website
+  test-python:
+    name: Test Python
+    runs-on: ubuntu-26.04
+    # template:optional database
+    services:
+      postgres:
+        image: postgres:16@sha256:72d22ce26d04fe56a5384e9f6b026152d1cf05db602a7a3524a3ed337d5f5752 # linux/amd64 2026-11-22
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: backend_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d backend_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    # template:end
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # template:set
+        # template:end
+
+      - name: Set up Python
+        uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+
+      - name: Run Python tests
+        run: bash scripts/ci/test-python.sh
+        # template:set
+        # template:end
+      # template:optional coverage-upload
+      - name: Upload coverage report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: python-coverage
+          path: coverage.xml
+      # template:end
+  test-admin-web:
+    name: Test Admin Web
     runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
 
+      - name: Set up Node.js
+        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        with:
+          cache: npm
+          working-directory: apps/admin_web
+
+      - name: Run tests
+        run: npm run test:ci
+        working-directory: apps/admin_web
+        # template:set
+        env:
+          NEXT_PUBLIC_COGNITO_DOMAIN: auth.example.com
+          NEXT_PUBLIC_COGNITO_CLIENT_ID: placeholder-client-id
+          NEXT_PUBLIC_COGNITO_USER_POOL_ID: placeholder-pool
+          NEXT_PUBLIC_API_BASE_URL: https://placeholder.example.com
+        # template:end
+
+      - name: Build
+        run: npm run build
+        working-directory: apps/admin_web
+        # template:set
+        env:
+          NEXT_PUBLIC_COGNITO_DOMAIN: auth.example.com
+          NEXT_PUBLIC_COGNITO_CLIENT_ID: placeholder-client-id
+          NEXT_PUBLIC_COGNITO_USER_POOL_ID: placeholder-pool
+          NEXT_PUBLIC_API_BASE_URL: https://placeholder.example.com
+        # template:end
+
+  test-public-www:
+    name: Test Public Website
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        with:
+          cache: npm
+          working-directory: apps/public_www
+
+      # template:optional public-origin
       - name: Resolve public site origin from infrastructure params
         id: resolve_public_site_origin
         run: |
@@ -47,23 +114,11 @@ jobs:
           fi
           echo "site_origin=https://${SITE_DOMAIN}" >> "$GITHUB_OUTPUT"
 
-      - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
-        with:
-          cache: npm
-          working-directory: apps/public_www
-          install: "false"
-
-      - name: Restore Next.js build cache (public_www)
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: apps/public_www/.next/cache
-          key: ${{ runner.os }}-nextjs-public-www-${{ hashFiles('apps/public_www/package-lock.json') }}-${{ hashFiles('apps/public_www/src/**/*.{js,jsx,ts,tsx}', 'apps/public_www/scripts/**/*.mjs', 'apps/public_www/next.config.*') }}
-          restore-keys: |
-            ${{ runner.os }}-nextjs-public-www-${{ hashFiles('apps/public_www/package-lock.json') }}-
-
-      - name: Validate Public Website
+      # template:end
+      - name: Run tests
+        run: npm run test:ci
         working-directory: apps/public_www
+        # template:set
         env:
           NEXT_TELEMETRY_DISABLED: "1"
           NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_public_site_origin.outputs.site_origin }}
@@ -80,16 +135,33 @@ jobs:
           NEXT_PUBLIC_BUSINESS_ADDRESS: ${{ vars.NEXT_PUBLIC_BUSINESS_ADDRESS }}
           NEXT_PUBLIC_BUSINESS_PHONE_NUMBER: ${{ vars.NEXT_PUBLIC_BUSINESS_PHONE_NUMBER }}
           NEXT_PUBLIC_FOUNDER_NAME: ${{ vars.NEXT_PUBLIC_FOUNDER_NAME }}
-        run: |
-          npm ci
-          npm run validate:content
-          npm run lint
-          npm run test:coverage
-          npm run audit:assets
-          npm run build
+        # template:end
 
+      - name: Build
+        run: npm run build
+        working-directory: apps/public_www
+        # template:set
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_public_site_origin.outputs.site_origin }}
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+          NEXT_PUBLIC_FPS_MERCHANT_NAME: ${{ vars.NEXT_PUBLIC_FPS_MERCHANT_NAME }}
+          NEXT_PUBLIC_FPS_MOBILE_NUMBER: ${{ vars.NEXT_PUBLIC_FPS_MOBILE_NUMBER }}
+          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
+          NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS: ${{ vars.NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS }}
+          NEXT_PUBLIC_EMAIL: ${{ vars.NEXT_PUBLIC_EMAIL }}
+          NEXT_PUBLIC_WHATSAPP_URL: ${{ vars.NEXT_PUBLIC_WHATSAPP_URL }}
+          NEXT_PUBLIC_INSTAGRAM_URL: ${{ vars.NEXT_PUBLIC_INSTAGRAM_URL }}
+          NEXT_PUBLIC_LINKEDIN_URL: ${{ vars.NEXT_PUBLIC_LINKEDIN_URL }}
+          NEXT_PUBLIC_BUSINESS_ADDRESS: ${{ vars.NEXT_PUBLIC_BUSINESS_ADDRESS }}
+          NEXT_PUBLIC_BUSINESS_PHONE_NUMBER: ${{ vars.NEXT_PUBLIC_BUSINESS_PHONE_NUMBER }}
+          NEXT_PUBLIC_FOUNDER_NAME: ${{ vars.NEXT_PUBLIC_FOUNDER_NAME }}
+        # template:end
+
+  # template:optional training
   test-training:
-    name: Verify Training Website
+    name: Test Training
     runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
@@ -98,27 +170,26 @@ jobs:
       - name: Resolve training site env from infrastructure params
         id: resolve_training_site_env
         run: |
-          SITE_DOMAIN="$(python3 -c "import json; from pathlib import Path; params=json.loads(Path('backend/infrastructure/params/production.json').read_text(encoding='utf-8')); print(str(params.get('TrainingDomainName', '')).strip())")"
-          PUBLIC_WWW_DOMAIN="$(python3 -c "import json; from pathlib import Path; params=json.loads(Path('backend/infrastructure/params/production.json').read_text(encoding='utf-8')); print(str(params.get('PublicWwwDomainName', '')).strip())")"
-          if [ -z "$SITE_DOMAIN" ]; then
-            echo "TrainingDomainName is required in backend/infrastructure/params/production.json"
-            exit 1
-          fi
-          if [ -z "$PUBLIC_WWW_DOMAIN" ]; then
-            echo "PublicWwwDomainName is required in backend/infrastructure/params/production.json"
-            exit 1
-          fi
-          echo "site_origin=https://${SITE_DOMAIN}" >> "$GITHUB_OUTPUT"
-          echo "public_www_origin=https://${PUBLIC_WWW_DOMAIN}" >> "$GITHUB_OUTPUT"
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+          params = json.loads(Path("backend/infrastructure/params/production.json").read_text(encoding="utf-8"))
+          site = str(params.get("TrainingDomainName", "")).strip()
+          public = str(params.get("PublicWwwDomainName", "")).strip()
+          if not site or not public:
+              raise SystemExit("TrainingDomainName and PublicWwwDomainName are required")
+          print(f"site_origin=https://{site}")
+          print(f"public_www_origin=https://{public}")
+          PY
 
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/training
-          install: "false"
 
-      - name: Validate Training Website
+      - name: Run tests
+        run: npm run test:ci
         working-directory: apps/training
         env:
           NEXT_TELEMETRY_DISABLED: "1"
@@ -126,46 +197,20 @@ jobs:
           NEXT_PUBLIC_PUBLIC_WWW_ORIGIN: ${{ steps.resolve_training_site_env.outputs.public_www_origin }}
           NEXT_PUBLIC_API_BASE_URL: /www
           NEXT_PUBLIC_TRAINING_API_KEY: test-training-poll-api-key
-        run: |
-          npm ci
-          npm run lint
-          npm run test:coverage
-          npm run build
 
-  test-flutter:
-    name: Test Flutter
-    runs-on: ubuntu-26.04
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build
+        run: npm run build
+        working-directory: apps/training
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_training_site_env.outputs.site_origin }}
+          NEXT_PUBLIC_PUBLIC_WWW_ORIGIN: ${{ steps.resolve_training_site_env.outputs.public_www_origin }}
+          NEXT_PUBLIC_API_BASE_URL: /www
+          NEXT_PUBLIC_TRAINING_API_KEY: test-training-poll-api-key
 
-      - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
-        with:
-          channel: "stable"
-          flutter-version: "3.50.1"
-          cache: "true"
-
-      - name: Run Flutter tests
-        run: |
-          set -e
-          shopt -s globstar nullglob
-          for dir in apps/evolvesprouts_app packages/flutter_ui packages/api_client_dart; do
-            if [ -f "$dir/pubspec.yaml" ]; then
-              test_files=($dir/test/**/*_test.dart)
-              if [ "${#test_files[@]}" -eq 0 ]; then
-                echo "ERROR: $dir has a pubspec.yaml but no test/**/*_test.dart files"
-                exit 1
-              fi
-              echo "Testing Flutter in $dir"
-              (cd "$dir" && flutter pub get && flutter test)
-            else
-              echo "Skipping missing $dir"
-            fi
-          done
-
-  test-node:
-    name: Test Node
+  # template:end
+  test-infrastructure:
+    name: Test infrastructure
     runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
@@ -173,25 +218,19 @@ jobs:
 
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        with:
+          cache: npm
+          working-directory: backend/infrastructure
 
-      - name: Run Node tests
-        run: |
-          set -e
-          for dir in apps/admin_web; do
-            if [ -f "$dir/package.json" ]; then
-              echo "Testing Node in $dir"
-              if [ -f "$dir/package-lock.json" ]; then
-                (cd "$dir" && npm ci)
-              else
-                (cd "$dir" && npm install)
-              fi
-              (cd "$dir" && npm run test:coverage --if-present)
-            else
-              echo "Skipping missing $dir"
-            fi
-          done
+      - name: Set up Python
+        uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
 
-  test-public-www-e2e:
+      - name: Run infrastructure tests
+        run: npm run test:infra
+        working-directory: backend/infrastructure
+
+  # template:optional playwright-public
+  e2e-public-www:
     name: Test Public Website E2E
     runs-on: ubuntu-26.04
     timeout-minutes: 20
@@ -201,6 +240,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # template:set
+        # template:end
 
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
@@ -216,7 +257,7 @@ jobs:
       - name: Run Playwright tests
         run: npm run test:e2e
         env:
-          CI: true
+          CI: "true"
 
       - name: Upload test results
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -226,135 +267,76 @@ jobs:
           path: apps/public_www/test-results/
           retention-days: 7
 
-  test-python:
-    name: Test Python
+  # template:end
+  # template:optional mobile
+  test-flutter:
+    name: Test Flutter
     runs-on: ubuntu-26.04
-    services:
-      postgres:
-        image: postgres:16@sha256:72d22ce26d04fe56a5384e9f6b026152d1cf05db602a7a3524a3ed337d5f5752 # linux/amd64 2026-11-22
-        env:
-          POSTGRES_USER: test
-          POSTGRES_PASSWORD: test
-          POSTGRES_DB: evolvesprouts_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U test -d evolvesprouts_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    env:
-      TEST_DATABASE_URL: postgresql+psycopg://test:test@localhost:5432/evolvesprouts_test
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
-        with:
-          python-version: "3.12"
+      - name: Set up Flutter
+        uses: lx-software-ltd/actions/setup-flutter@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
 
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          if [ -f "backend/pyproject.toml" ]; then
-            python -m pip install -e "backend[test]"
-          elif [ -f "backend/requirements.txt" ]; then
-            python -m pip install -r backend/requirements.txt
-            python -m pip install pytest
-          else
-            echo "Missing backend dependency manifest"
-            exit 1
-          fi
 
-      - name: Apply Alembic migrations to test database
-        env:
-          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+      - name: Run Flutter tests
         run: |
-          python -m alembic -c backend/db/alembic.ini upgrade head
-
-      - name: Run Python tests
-        run: |
+          set -euo pipefail
           shopt -s globstar nullglob
-          tests=(
-            tests/test_*.py
-            tests/**/test_*.py
-            tests/**/*_test.py
-            backend/**/test_*.py
-            backend/**/tests/test_*.py
-            backend/**/tests/**/*_test.py
-          )
-          if [ "${#tests[@]}" -eq 0 ]; then
-            echo "No Python tests found"
-            exit 0
-          fi
-          python -m pytest tests backend \
-            --cov=app \
-            --cov-report=term-missing \
-            --cov-report=xml:coverage.xml \
-            --cov-fail-under=70
+          # template:set
+          for dir in apps/evolvesprouts_app; do
+          # template:end
+            if [ ! -f "$dir/pubspec.yaml" ]; then echo "Skipping missing $dir"; continue; fi
+            test_files=("$dir"/test/**/*_test.dart)
+            if [ "${#test_files[@]}" -eq 0 ]; then echo "ERROR: $dir has a pubspec.yaml but no test/**/*_test.dart files"; exit 1; fi
+            echo "Testing Flutter in $dir"
+            (cd "$dir" && flutter pub get && flutter test)
+          done
 
-      - name: Upload Python coverage report
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: always()
-        continue-on-error: true
-        with:
-          name: python-coverage
-          path: coverage.xml
-          retention-days: 14
 
-  test-infrastructure:
-    name: Test Infrastructure
+  build-android:
+    name: Build Android
     runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+      - name: Set up Java
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
-          python-version: "3.12"
+          distribution: temurin
+          # template:set
+          java-version: "21"
+          # template:end
 
-      - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+      - name: Set up Flutter
+        uses: lx-software-ltd/actions/setup-flutter@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
 
-      - name: Install infrastructure dependencies
-        run: |
-          if [ -f "backend/infrastructure/package.json" ]; then
-            cd backend/infrastructure
-            npm ci
-          else
-            echo "Missing backend/infrastructure/package.json"
-          fi
+      - name: Point Flutter at Java 21
+        run: flutter config --jdk-dir "$JAVA_HOME"
 
-      - name: Build Lambda bundle for CDK synth
-        run: |
-          python -m pip install --upgrade pip
-          python backend/scripts/build_lambda_bundle.py
+      - name: Build debug APK
+        # template:set
+        working-directory: apps/evolvesprouts_app
+        # template:end
+        run: flutter build apk --debug
 
-      - name: Run infrastructure tests
-        run: |
-          if [ -f "backend/infrastructure/package.json" ]; then
-            cd backend/infrastructure
-            npm run test:infra
-          else
-            echo "Missing backend/infrastructure/package.json"
-          fi
-
-      - name: Run staging worker tests
-        run: node --test backend/infrastructure/test/*.test.mjs scripts/cloudflare/workers/*.test.mjs apps/public_www/scripts/smoke-staging.test.mjs
-
+  # template:end
   test:
     name: test
     runs-on: ubuntu-26.04
+    # template:set
     needs:
+      - test-python
+      - test-admin-web
       - test-public-www
       - test-training
-      - test-flutter
-      - test-node
-      - test-public-www-e2e
-      - test-python
       - test-infrastructure
+      - e2e-public-www
+      - test-flutter
+      - build-android
+    # template:end
     if: always()
     steps:
       - name: Require every test job

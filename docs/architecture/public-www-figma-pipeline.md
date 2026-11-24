@@ -209,7 +209,7 @@ Pipeline: `pull → tokenize → build → scaffold → commit`
 
 Commits only if tokens, components, or content keys changed.
 
-### Deploy Public Website (`deploy-public-www.yml`)
+### Deploy Public Website (`deploy-public-www-staging.yml`)
 
 Runs: on push to main affecting `apps/public_www/`.
 

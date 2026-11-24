@@ -33,7 +33,7 @@ Stack outputs:
 
 Training CloudFront mirrors public WWW `/www/*` API proxy behaviors (`TrainingApiBaseUrl`, `TrainingMediaRequestApiBaseUrl`) for upcoming poll integrations. Shared CloudFront Function sources live in `backend/infrastructure/lib/cloudfront-www-proxy-functions.ts` (see `docs/architecture/security.md`). S3 bucket prefixes: `evolvesprouts-training` and `evolvesprouts-training-logs` (each under 63 characters with account and region suffixes).
 
-Deploy app artifacts with `scripts/deploy/deploy-training.sh` after `cd apps/training && npm run build`.
+Deploy app artifacts with the training workflow after `cd apps/training && npm run build`. The workflow uses `s3-cloudfront-deploy` with `profile: next-export`.
 
 ### Public WWW environments in one stack
 

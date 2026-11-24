@@ -8,7 +8,7 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKFLOW = ROOT / ".github" / "workflows" / "deploy-public-www.yml"
+WORKFLOW = ROOT / ".github" / "workflows" / "deploy-public-www-staging.yml"
 SCRIPT = ROOT / "scripts" / "deploy" / "deploy-public-www.sh"
 
 FAKE_AWS = """\

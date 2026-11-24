@@ -5,6 +5,7 @@ on:
     types: [deploy-backend]
   workflow_dispatch:
     inputs:
+      # template:set
       cdk_stacks:
         description: 'CDK stacks to deploy'
         required: false
@@ -20,15 +21,18 @@ on:
         required: false
         default: false
         type: boolean
+      # template:end
   push:
     branches:
       - main
+    # template:set
     paths:
       - 'backend/**'
       - 'scripts/**'
       - 'apps/public_www/src/content/landing-pages/**'
       - 'apps/public_www/src/content/eventbrite-banners/**'
       - '.github/workflows/deploy-backend.yml'
+    # template:end
 
 permissions:
   contents: read
@@ -39,6 +43,9 @@ concurrency:
 
 jobs:
   deploy:
+    # template:set
+    # template:end
+    if: github.ref == 'refs/heads/main'
     permissions:
       contents: read
       id-token: write
@@ -47,222 +54,43 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # template:set
+        # template:end
+
 
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
-          install: "false"
-
+      # template:set
+      # template:end
       - name: Set up Python
         uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
 
+
       - name: Configure AWS credentials
+        # template:set
+        # template:end
         uses: lx-software-ltd/actions/aws-oidc@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          # template:set
           region: ${{ vars.AWS_REGION }}
+          # template:end
 
-      - name: Install CDK dependencies
-        working-directory: backend/infrastructure
-        run: npm ci
 
       - name: Check CDK bootstrap
         uses: lx-software-ltd/actions/cdk-bootstrap-check@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
+          # template:set
           region: ${{ vars.AWS_REGION }}
-
-      - name: Check CDK parameters
+          # template:end
+      - name: Prepare CDK app
         id: prep
-        working-directory: backend/infrastructure
-        run: |
-          npx cdk acknowledge 34892 || true
-          npm run build --if-present
-
-          # Labels live in cdk-plan.json. The deploy step sends the label.
-          # This expansion is only for the timezone check and the edge-verify report.
-          CDK_STACKS="$(python3 - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          plan = json.loads(Path("cdk-plan.json").read_text(encoding="utf-8"))
-          raw = os.environ.get("CDK_STACKS", "").strip()
-          aliases = plan.get("aliases") or {}
-          chosen = aliases[raw] if raw in aliases else raw.split()
-          print(" ".join(chosen))
-          PY
-          )"
-
-          PARAM_ARGS=()
-
-          resolve_param_file() {
-            local path="$1"
-            if [ -z "$path" ]; then
-              return 1
-            fi
-            if [ -f "$path" ]; then
-              echo "$path"
-              return 0
-            fi
-            if [ -n "$GITHUB_WORKSPACE" ] && [ -f "$GITHUB_WORKSPACE/$path" ]; then
-              echo "$GITHUB_WORKSPACE/$path"
-              return 0
-            fi
-            return 1
-          }
-
-          if [ -n "${CDK_PARAM_FILE:-}" ]; then
-            RESOLVED_PARAM_FILE=$(resolve_param_file "$CDK_PARAM_FILE" || true)
-            if [ -z "$RESOLVED_PARAM_FILE" ]; then
-              echo "CDK_PARAM_FILE '$CDK_PARAM_FILE' not found"
-              exit 1
-            fi
-            PARAM_ARGS_FILE="$(mktemp)"
-            PARAM_FILE="$RESOLVED_PARAM_FILE" STACKS="$CDK_STACKS" python3 - <<'PY' > "$PARAM_ARGS_FILE"
-          import json
-          import os
-          import sys
-          from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-
-          with open(os.environ["PARAM_FILE"], "r", encoding="utf-8") as handle:
-              params = json.load(handle)
-
-          stack_set = set(os.environ.get("STACKS", "").split())
-          backend_stack = "evolvesprouts"
-          admin_web_stack = "evolvesprouts-admin-web"
-          public_stack = "evolvesprouts-public-www"
-          training_stack = "evolvesprouts-training"
-          admin_web_params = {"AdminWebDomainName", "AdminWebCertificateArn", "WafWebAclArn"}
-          public_params = {
-              "PublicWwwDomainName",
-              "PublicWwwCertificateArn",
-              "PublicWwwStagingDomainName",
-              "PublicWwwStagingCertificateArn",
-              "PublicWwwApiBaseUrl",
-              "PublicWwwMediaRequestApiBaseUrl",
-              "PublicWwwEdgeVerifySecret",
-              "PublicWwwEdgeVerifySecretPrevious",
-              "PublicWwwStagingEdgeVerifySecret",
-              "PublicWwwStagingEdgeVerifySecretPrevious",
-              "WafWebAclArn",
-          }
-          # Omitted parameters keep their previous stack value. Edge-verify
-          # keys are passed even when empty so clearing the GitHub secret
-          # disables the origin lock. Siutindei omits them, and an empty
-          # deploy there cannot turn the lock off.
-          pass_empty_params = {
-              "WafWebAclArn",
-              "PublicWwwEdgeVerifySecret",
-              "PublicWwwEdgeVerifySecretPrevious",
-              "PublicWwwStagingEdgeVerifySecret",
-              "PublicWwwStagingEdgeVerifySecretPrevious",
-          }
-          training_params = {
-              "TrainingDomainName",
-              "TrainingCertificateArn",
-              "TrainingApiBaseUrl",
-              "TrainingMediaRequestApiBaseUrl",
-              "WafWebAclArn",
-          }
-          backend_cors_domain_params = {
-              "PublicWwwDomainName",
-              "PublicWwwStagingDomainName",
-              "AdminWebDomainName",
-              "TrainingDomainName",
-          }
-
-          def resolve_value(raw: str) -> str:
-              """Replace <FROM_GITHUB_SECRET: X> / <FROM_GITHUB_VAR: X> placeholders."""
-              raw = raw.strip()
-              if raw.startswith("<FROM_GITHUB_SECRET:") and raw.endswith(">"):
-                  env_name = raw[len("<FROM_GITHUB_SECRET:") : -1].strip()
-                  return os.environ.get(env_name, "")
-              if raw.startswith("<FROM_GITHUB_VAR:") and raw.endswith(">"):
-                  env_name = raw[len("<FROM_GITHUB_VAR:") : -1].strip()
-                  return os.environ.get(env_name, "")
-              return raw
-
-          iana_timezone_params = {
-              "InvoiceDisplayTimezone",
-              "EventbriteDefaultTimezone",
-              "SalesRecapDisplayTimezone",
-          }
-
-          def is_eventbrite_timezone(zone_id: str) -> bool:
-              """Match _is_eventbrite_timezone in eventbrite_sync.py."""
-              if zone_id != "UTC" and (
-                  zone_id.startswith("Etc/") or "/" not in zone_id
-              ):
-                  return False
-              try:
-                  ZoneInfo(zone_id)
-              except (ZoneInfoNotFoundError, ValueError):
-                  return False
-              return True
-
-          def require_iana_timezone(key: str, value: str) -> None:
-              """Fail a backend deploy when a set timezone is not usable.
-
-              Public website, admin web, and training deploys skip this.
-              Those stacks do not receive the timezone parameters, and a
-              stale GitHub value must not block them.
-              """
-              if backend_stack not in stack_set:
-                  return
-              if key not in iana_timezone_params or not value:
-                  return
-              if key == "EventbriteDefaultTimezone":
-                  if is_eventbrite_timezone(value):
-                      return
-                  raise SystemExit(
-                      f"{key} value {value!r} must be UTC or a Region/City IANA id"
-                  )
-              try:
-                  ZoneInfo(value)
-              except (ZoneInfoNotFoundError, ValueError) as exc:
-                  raise SystemExit(
-                      f"{key} value {value!r} is not a valid IANA timezone"
-                  ) from exc
-
-          for key, value in params.items():
-              value_str = ""
-              if value is not None:
-                  value_str = resolve_value(str(value))
-              require_iana_timezone(key, value_str)
-              if key not in pass_empty_params and not value_str:
-                  continue
-
-              targets = []
-              if key in admin_web_params:
-                  targets.append(admin_web_stack)
-              if key in public_params:
-                  targets.append(public_stack)
-              if key in training_params:
-                  targets.append(training_stack)
-              if key in backend_cors_domain_params:
-                  targets.append(backend_stack)
-              if not targets:
-                  targets.append(backend_stack)
-
-              for target in targets:
-                  if target not in stack_set:
-                      continue
-                  # Emit NUL-delimited tokens so multiline values (e.g. PEM keys)
-                  # are preserved as single CLI arguments.
-                  sys.stdout.buffer.write(b"--parameters\0")
-                  sys.stdout.buffer.write(
-                      f"{target}:{key}={value_str}".encode("utf-8") + b"\0"
-                  )
-          PY
-            rm -f "$PARAM_ARGS_FILE"
-          fi
-
-          echo "stacks=$CDK_STACKS" >> "$GITHUB_OUTPUT"
-          # The app reads CDK_BOOTSTRAP_QUALIFIER. Diff and deploy both use
-          # the committed plan. cdk deploy does not take --qualifier.
+        run: bash scripts/deploy/cdk-prepare.sh deploy
+        # template:set
         env:
           AWS_REGION: ${{ vars.AWS_REGION }}
           CDK_STACKS: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
@@ -341,7 +169,9 @@ jobs:
           CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS }}
           CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY }}
           CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS }}
+        # template:end
 
+      # template:optional edge-verify
       - name: Read edge verify before deploy
         id: edge_before
         if: contains(steps.prep.outputs.stacks, 'evolvesprouts-public-www')
@@ -352,19 +182,27 @@ jobs:
           allow-missing: "true"
           region: ${{ vars.AWS_REGION }}
 
+      # template:end
+
       - name: Deploy stacks
         uses: lx-software-ltd/actions/cdk-deploy@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           working-directory: backend/infrastructure
           plan-file: backend/infrastructure/cdk-plan.json
+          # template:set
           stacks: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
+          # template:end
           param-file: ${{ vars.CDK_PARAM_FILE }}
-          format: plain-json
           attempts: "3"
-          no-notices: "true"
+          # template:set
+          format: plain-json
           pass-empty: WafWebAclArn,PublicWwwEdgeVerifySecret,PublicWwwEdgeVerifySecretPrevious,PublicWwwStagingEdgeVerifySecret,PublicWwwStagingEdgeVerifySecretPrevious
           run-seed: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_seed_data || 'false' }}
+          # template:end
+          # template:set
           region: ${{ vars.AWS_REGION }}
+          # template:end
+        # template:set
         env:
           AWS_REGION: ${{ vars.AWS_REGION }}
           CDK_STACKS: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
@@ -443,7 +281,8 @@ jobs:
           CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS }}
           CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY }}
           CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS }}
-
+        # template:end
+      # template:optional edge-verify-report
       - name: Read edge verify after deploy
         id: edge_after
         if: contains(steps.prep.outputs.stacks, 'evolvesprouts-public-www')
@@ -469,3 +308,5 @@ jobs:
             "$(one "$AFTER" PublicWwwStagingEdgeVerifyEnabled)" \
             "$(one "$BEFORE" PublicWwwEdgeVerifyEnabled)" \
             "$(one "$AFTER" PublicWwwEdgeVerifyEnabled)"
+
+      # template:end

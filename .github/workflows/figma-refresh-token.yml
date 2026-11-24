@@ -11,8 +11,6 @@ name: Generate Figma OAuth Refresh Token
 # run summary. Copy it and add it as a repository secret manually.
 
 on:
-  repository_dispatch:
-    types: [figma-refresh-token]
   workflow_dispatch:
     inputs:
       authorization_code:
@@ -50,82 +48,7 @@ jobs:
 
       - name: Exchange authorization code for tokens
         id: exchange
-        run: |
-          python3 << 'PYEOF'
-          import json, os, sys, urllib.request, urllib.parse
-
-          client_id     = os.environ["CLIENT_ID"]
-          client_secret = os.environ["CLIENT_SECRET"]
-          auth_code     = os.environ["AUTH_CODE"].strip()
-          port          = os.environ.get("CALLBACK_PORT", "3845").strip()
-          redirect_uri  = f"http://localhost:{port}/callback"
-
-          # --- Debug (no secrets) ---
-          print(f"redirect_uri : {redirect_uri}")
-          print(f"code length  : {len(auth_code)}")
-          print(f"code prefix  : {auth_code[:8]}...")
-          print(f"client_id len: {len(client_id)}")
-          print()
-
-          # --- Try the exchange ---
-          body = urllib.parse.urlencode({
-              "client_id":     client_id,
-              "client_secret": client_secret,
-              "redirect_uri":  redirect_uri,
-              "code":          auth_code,
-              "grant_type":    "authorization_code",
-          }).encode()
-
-          req = urllib.request.Request(
-              "https://api.figma.com/v1/oauth/token",
-              data=body,
-              headers={"Content-Type": "application/x-www-form-urlencoded"},
-              method="POST",
-          )
-
-          try:
-              with urllib.request.urlopen(req) as resp:
-                  data = json.loads(resp.read().decode())
-          except urllib.error.HTTPError as exc:
-              err_body = exc.read().decode()[:500]
-              print(f"::error::Token exchange failed (HTTP {exc.code}): {err_body}")
-
-              with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-                  f.write("exchange_ok=false\n")
-                  f.write(f"error_detail=HTTP {exc.code}: {err_body}\n")
-
-              sys.exit(1)
-
-          refresh_token = data.get("refresh_token", "")
-          access_token  = data.get("access_token", "")
-          expires_in    = data.get("expires_in", "?")
-          user_id       = data.get("user_id", "")
-
-          if not refresh_token:
-              print(f"::error::No refresh_token in response: {json.dumps(data)[:500]}")
-              with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-                  f.write("exchange_ok=false\n")
-              sys.exit(1)
-
-          # Mask the access token in logs (short-lived, not needed).
-          # The refresh token is written to the summary for manual copying
-          # and is NOT masked so it remains readable there.
-          if access_token:
-              print(f"::add-mask::{access_token}")
-
-          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-              f.write(f"exchange_ok=true\n")
-              f.write(f"refresh_token={refresh_token}\n")
-              f.write(f"expires_in={expires_in}\n")
-              f.write(f"user_id={user_id}\n")
-
-          print()
-          print("Token exchange successful!")
-          print(f"  user_id    : {user_id}")
-          print(f"  expires_in : {expires_in}s")
-          print()
-          print("See the run Summary tab for the refresh token.")
-          PYEOF
+        run: bash scripts/figma/exchange-authorization-code.sh
         env:
           CLIENT_ID: ${{ secrets.FIGMA_OAUTH_CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.FIGMA_OAUTH_CLIENT_SECRET }}
@@ -134,75 +57,7 @@ jobs:
 
       - name: Publish result summary
         if: always()
-        run: |
-          PORT="${CALLBACK_PORT:-3845}"
-          REDIRECT_URI="http://localhost:${PORT}/callback"
-          ENCODED_REDIRECT=$(python3 -c "import urllib.parse; print(urllib.parse.quote('${REDIRECT_URI}', safe=''))")
-          AUTH_URL="https://www.figma.com/oauth?client_id=${CLIENT_ID}&redirect_uri=${ENCODED_REDIRECT}&scope=file_content:read&state=$(openssl rand -hex 16)&response_type=code"
-
-          {
-            echo '## Figma OAuth Refresh Token'
-            echo ''
-
-            if [ "$EXCHANGE_OK" = "true" ]; then
-              echo '### Status: Success'
-              echo ''
-              echo '| Detail | Value |'
-              echo '|--------|-------|'
-              echo "| Figma user ID | \`${USER_ID:-n/a}\` |"
-              echo "| Access token expires in | ${EXPIRES_IN:-?}s |"
-              echo ''
-              echo '### Refresh Token'
-              echo ''
-              echo 'Copy this value and add it as a repository secret named'
-              echo '\`FIGMA_OAUTH_REFRESH_TOKEN\` under **Settings > Secrets and'
-              echo 'variables > Actions**:'
-              echo ''
-              echo "\`\`\`"
-              echo "${REFRESH_TOKEN}"
-              echo "\`\`\`"
-              echo ''
-              echo '> **Note:** Delete this workflow run after copying the token'
-              echo '> to avoid leaving it visible in the summary.'
-            else
-              echo '### Status: Failed'
-              echo ''
-              echo "Error: \`${ERROR_DETAIL:-unknown}\`"
-              echo ''
-              echo '### Debugging checklist'
-              echo ''
-              echo '1. **Callback URL match** — verify the Figma app callback URL is'
-              echo "   exactly \`${REDIRECT_URI}\` (no trailing slash, no https)."
-              echo '2. **Code copied correctly** — copy only the value between'
-              echo '   \`?code=\` and \`&state=\` from the browser address bar.'
-              echo '3. **Code not reused** — each code can only be exchanged once.'
-              echo '   Re-open the authorization URL below to get a fresh code.'
-              echo '4. **Code not expired** — authorize and trigger the workflow'
-              echo '   within a few minutes.'
-              echo ''
-              echo '### How to retry'
-              echo ''
-              echo '1. Open the authorization URL below in your browser.'
-              echo '2. Click **Allow** on the Figma page.'
-              echo "3. Figma redirects to \`${REDIRECT_URI}?code=XXXXX&state=...\`"
-              echo '   The page will not load — that is expected.'
-              echo '4. Copy the \`code\` value from the address bar'
-              echo '   (between \`?code=\` and \`&state=\`).'
-              echo '5. Go to **Actions > Generate Figma OAuth Refresh Token > Run workflow**,'
-              echo '   paste the code, and click **Run workflow**.'
-            fi
-
-            echo ''
-            echo '---'
-            echo ''
-            echo '### Authorization URL'
-            echo ''
-            echo 'Open this in your browser to authorize (or re-authorize):'
-            echo ''
-            echo "\`\`\`"
-            echo "${AUTH_URL}"
-            echo "\`\`\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+        run: bash scripts/figma/publish-refresh-result.sh
         env:
           CLIENT_ID: ${{ secrets.FIGMA_OAUTH_CLIENT_ID }}
           CALLBACK_PORT: ${{ inputs.callback_port }}

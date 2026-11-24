@@ -45,14 +45,8 @@ aws cloudformation describe-stacks \
   --output table
 ```
 
-From the repo root:
-
-```bash
-bash scripts/deploy/deploy-admin-web.sh
-```
-
-The deploy script reads `ADMIN_WEB_STACK_NAME` (default:
-`evolvesprouts-admin-web`) when resolving CloudFormation outputs.
+From the repo root, run the Deploy Admin Web workflow. It reads the
+`evolvesprouts-admin-web` stack outputs and uploads the built site.
 
 ## CORS configuration
 

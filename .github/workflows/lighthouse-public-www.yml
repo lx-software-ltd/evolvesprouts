@@ -1,34 +1,58 @@
 name: Lighthouse Public Website
+# template:set
+# template:end
 
 on:
   workflow_dispatch:
     inputs:
       page_paths:
+        # template:set
         description: 'Comma/newline-separated page paths or full URLs to audit (e.g. /en/, /en/about-us)'
+        # template:end
         required: false
+        # template:set
         default: '/en/,/zh-CN/,/zh-HK/'
+        # template:end
+  pull_request:
+    paths:
+      - "apps/public_www/**"
+      - ".github/workflows/lighthouse-public-www.yml"
+  schedule:
+    - cron: "15 6 * * 1"
 
 permissions:
   contents: read
 
+concurrency:
+  group: lighthouse-public-www-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   lighthouse:
+    permissions:
+      contents: read
+      statuses: write
     name: Lighthouse audit
+
+
     runs-on: ubuntu-26.04
     timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # template:set
+        # template:end
 
-      - name: Resolve public site origin from infrastructure params
+      # template:optional public-origin
+      - name: Resolve public site build config from infrastructure params
+        # template:set
         id: resolve_public_site_origin
-        run: |
-          SITE_DOMAIN="$(python3 -c "import json; from pathlib import Path; params=json.loads(Path('backend/infrastructure/params/production.json').read_text(encoding='utf-8')); print(str(params.get('PublicWwwDomainName', '')).strip())")"
-          if [ -z "$SITE_DOMAIN" ]; then
-            echo "PublicWwwDomainName is required in backend/infrastructure/params/production.json"
-            exit 1
-          fi
-          echo "site_origin=https://${SITE_DOMAIN}" >> "$GITHUB_OUTPUT"
+        env:
+          REQUIRE_ASSET: "false"
+        # template:end
+        run: bash scripts/deploy/resolve-public-www-build-env.sh
+
+      # template:end
 
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
@@ -36,19 +60,25 @@ jobs:
           cache: npm
           working-directory: apps/public_www
 
+      # template:optional next-cache
       - name: Restore Next.js build cache (public_www)
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: apps/public_www/.next/cache
+          # template:set
           key: ${{ runner.os }}-nextjs-public-www-${{ hashFiles('apps/public_www/package-lock.json') }}-${{ hashFiles('apps/public_www/src/**/*.{js,jsx,ts,tsx}', 'apps/public_www/scripts/**/*.mjs', 'apps/public_www/next.config.*') }}
           restore-keys: |
             ${{ runner.os }}-nextjs-public-www-${{ hashFiles('apps/public_www/package-lock.json') }}-
+          # template:end
 
-      - name: Build static website
+      # template:end
+
+      - name: Build public website
         working-directory: apps/public_www
+        # template:set
         env:
           NEXT_TELEMETRY_DISABLED: '1'
-          NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_public_site_origin.outputs.site_origin }}
+          NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_public_site_origin.outputs.production_site_origin }}
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
           NEXT_PUBLIC_FPS_MERCHANT_NAME: ${{ vars.NEXT_PUBLIC_FPS_MERCHANT_NAME }}
@@ -57,6 +87,7 @@ jobs:
           NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS: ${{ vars.NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS }}
           NEXT_PUBLIC_EMAIL: ${{ vars.NEXT_PUBLIC_EMAIL }}
           NEXT_PUBLIC_FOUNDER_NAME: ${{ vars.NEXT_PUBLIC_FOUNDER_NAME }}
+        # template:end
         run: npm run build
 
       - name: Run Lighthouse CI
@@ -64,7 +95,10 @@ jobs:
         with:
           working-directory: apps/public_www
           page-paths: ${{ inputs.page_paths }}
+          # template:set
           default-paths: /en/,/zh-CN/,/zh-HK/
+          # template:end
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Lighthouse artifacts
         if: always()
