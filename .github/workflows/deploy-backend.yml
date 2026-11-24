@@ -5,6 +5,7 @@ on:
     types: [deploy-backend]
   workflow_dispatch:
     inputs:
+      # template:set
       cdk_stacks:
         description: 'CDK stacks to deploy'
         required: false
@@ -20,15 +21,18 @@ on:
         required: false
         default: false
         type: boolean
+      # template:end
   push:
     branches:
       - main
+    # template:set
     paths:
       - 'backend/**'
       - 'scripts/**'
       - 'apps/public_www/src/content/landing-pages/**'
       - 'apps/public_www/src/content/eventbrite-banners/**'
       - '.github/workflows/deploy-backend.yml'
+    # template:end
 
 permissions:
   contents: read
@@ -39,6 +43,8 @@ concurrency:
 
 jobs:
   deploy:
+    # template:set
+    # template:end
     if: github.ref == 'refs/heads/main'
     permissions:
       contents: read
@@ -48,31 +54,43 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # template:set
+        # template:end
+
 
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
-
+      # template:set
+      # template:end
       - name: Set up Python
         uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
 
+
       - name: Configure AWS credentials
+        # template:set
+        # template:end
         uses: lx-software-ltd/actions/aws-oidc@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          # template:set
           region: ${{ vars.AWS_REGION }}
+          # template:end
+
 
       - name: Check CDK bootstrap
         uses: lx-software-ltd/actions/cdk-bootstrap-check@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
+          # template:set
           region: ${{ vars.AWS_REGION }}
-
+          # template:end
       - name: Prepare CDK app
         id: prep
         run: bash scripts/deploy/cdk-prepare.sh deploy
+        # template:set
         env:
           AWS_REGION: ${{ vars.AWS_REGION }}
           CDK_STACKS: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
@@ -151,7 +169,9 @@ jobs:
           CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS }}
           CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY }}
           CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS }}
+        # template:end
 
+      # template:optional edge-verify
       - name: Read edge verify before deploy
         id: edge_before
         if: contains(steps.prep.outputs.stacks, 'evolvesprouts-public-www')
@@ -162,18 +182,27 @@ jobs:
           allow-missing: "true"
           region: ${{ vars.AWS_REGION }}
 
+      # template:end
+
       - name: Deploy stacks
         uses: lx-software-ltd/actions/cdk-deploy@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           working-directory: backend/infrastructure
           plan-file: backend/infrastructure/cdk-plan.json
+          # template:set
           stacks: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
+          # template:end
           param-file: ${{ vars.CDK_PARAM_FILE }}
-          format: plain-json
           attempts: "3"
+          # template:set
+          format: plain-json
           pass-empty: WafWebAclArn,PublicWwwEdgeVerifySecret,PublicWwwEdgeVerifySecretPrevious,PublicWwwStagingEdgeVerifySecret,PublicWwwStagingEdgeVerifySecretPrevious
           run-seed: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_seed_data || 'false' }}
+          # template:end
+          # template:set
           region: ${{ vars.AWS_REGION }}
+          # template:end
+        # template:set
         env:
           AWS_REGION: ${{ vars.AWS_REGION }}
           CDK_STACKS: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
@@ -252,7 +281,9 @@ jobs:
           CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_EDGE_VERIFY_PREVIOUS }}
           CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY }}
           CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_EDGE_VERIFY_PREVIOUS }}
+        # template:end
 
+      # template:optional edge-verify-report
       - name: Read edge verify after deploy
         id: edge_after
         if: contains(steps.prep.outputs.stacks, 'evolvesprouts-public-www')
@@ -278,3 +309,5 @@ jobs:
             "$(one "$AFTER" PublicWwwStagingEdgeVerifyEnabled)" \
             "$(one "$BEFORE" PublicWwwEdgeVerifyEnabled)" \
             "$(one "$AFTER" PublicWwwEdgeVerifyEnabled)"
+
+      # template:end

@@ -7,10 +7,13 @@ on:
   push:
     branches:
       - main
+    # template:set
     paths:
       - "apps/admin_web/**"
       - "packages/react_ui/**"
       - "scripts/**"
+    # template:end
+
 
 permissions:
   contents: read
@@ -21,7 +24,7 @@ concurrency:
 
 jobs:
   build-and-deploy:
-    if: github.ref == 'refs/heads/main'
+    if: ${{ github.ref == 'refs/heads/main' && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')) }}
     permissions:
       contents: read
       id-token: write
@@ -37,6 +40,7 @@ jobs:
           cache: npm
           working-directory: apps/admin_web
 
+      # template:optional next-cache
       - name: Restore Next.js build cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -44,9 +48,21 @@ jobs:
           key: ${{ runner.os }}-nextjs-${{ hashFiles('apps/admin_web/package-lock.json') }}
           restore-keys: ${{ runner.os }}-nextjs-
 
+      # template:end
+
+      - name: Configure AWS credentials
+        # template:set
+        # template:end
+        uses: lx-software-ltd/actions/aws-oidc@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        with:
+          account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          region: ${{ vars.AWS_REGION }}
+
+
       - name: Build admin web
         run: npm run build
         working-directory: apps/admin_web
+        # template:set
         env:
           NEXT_TELEMETRY_DISABLED: "1"
           NEXT_PUBLIC_COGNITO_DOMAIN: ${{ vars.NEXT_PUBLIC_COGNITO_DOMAIN }}
@@ -56,20 +72,19 @@ jobs:
           NEXT_PUBLIC_PUBLIC_SITE_BASE_URL: ${{ vars.NEXT_PUBLIC_PUBLIC_SITE_BASE_URL }}
           NEXT_PUBLIC_TRAINING_SITE_BASE_URL: ${{ vars.NEXT_PUBLIC_TRAINING_SITE_BASE_URL }}
           NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ vars.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
-
-      - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
-        with:
-          account-id: ${{ secrets.AWS_ACCOUNT_ID }}
-          region: ${{ vars.AWS_REGION }}
+        # template:end
 
       - name: Deploy admin web
         uses: lx-software-ltd/actions/s3-cloudfront-deploy@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
+          # template:set
           source: apps/admin_web/out
           stack: evolvesprouts-admin-web
+          # template:end
           region: ${{ vars.AWS_REGION }}
           bucket-output: AdminWebBucketName
           distribution-output: AdminWebDistributionId
+          # template:set
           profile: next-export
+          # template:end
           dry-run: "false"
