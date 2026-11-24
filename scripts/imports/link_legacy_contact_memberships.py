@@ -2,8 +2,7 @@
 """Shim — use ``import_legacy_crm.py link_contact_memberships`` instead.
 
 Kept for back-compat with earlier one-off runbooks. The membership-backfill
-operation is now a first-class importer entity (``link_contact_memberships``)
-so it can also be invoked through the GitHub ``Import legacy CRM`` workflow.
+operation is a first-class importer entity (``link_contact_memberships``).
 """
 
 from __future__ import annotations
