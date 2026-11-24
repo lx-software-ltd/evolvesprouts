@@ -35,7 +35,8 @@ Flutter Mobile / Next.js Admin
 - Admin users manage assets and access grants.
 - **Locations:** CRM contacts, families, organisations, and Services venues all edit shared `locations` rows through the same inline location editor (`InlineLocationEditor`). Saving a location updates that row for every record that references it.
 - **CRM organisations:** Contacts → Organisations lists only CRM relationship types (vendors and partners are excluded by default on `GET /v1/admin/organizations` and the organisation picker). Partner organisations are edited under **Services → Partners**; vendors under **Finance → Vendors**.
-- Hosted on Amplify Hosting (release jobs triggered in CI).
+- Static export hosted on S3 and CloudFront. `deploy-admin-web.yml`
+  publishes it with `s3-cloudfront-deploy`.
 
 ### Public website (Next.js static export)
 - Public marketing site in `apps/public_www`.
@@ -129,7 +130,6 @@ See [`docs/architecture/database-schema.md`](database-schema.md) for full table 
 - Deploy workflows for mobile, admin web, backend, public website, and iOS.
 - CDK bootstrap workflow for initial environment setup.
 - Lockfile checks for Flutter, Node, and iOS.
-- Amplify promotion workflow with gating (staging -> main).
 - Public website promotion workflow with immutable artifact promotion
   (staging -> production).
 - Public website CI validates content, lint, tests, static build, and
