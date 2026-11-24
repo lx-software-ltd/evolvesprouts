@@ -38,7 +38,6 @@ jobs:
         with:
           cache: npm
           working-directory: backend/infrastructure
-          install: "false"
 
       - name: Set up Python
         uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
@@ -64,11 +63,6 @@ jobs:
         run: |
           echo "::warning::This pull request did not assume a role. Set AWS_DIFF_ROLE_NAME to a read-only role that trusts only pull_request. GitHubActionsRole is not assumed from a pull request."
 
-      - name: Install infrastructure dependencies
-        if: steps.aws.outputs.ready == 'true'
-        working-directory: backend/infrastructure
-        run: npm ci
-
       - name: Check CDK Bootstrap status
         if: steps.aws.outputs.ready == 'true'
         uses: lx-software-ltd/actions/cdk-bootstrap-check@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
@@ -76,7 +70,7 @@ jobs:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ vars.AWS_REGION }}
 
-      - name: Prepare CDK diff
+      - name: Prepare CDK app
         if: steps.aws.outputs.ready == 'true'
         id: prep
         run: bash scripts/deploy/cdk-prepare.sh diff
@@ -91,4 +85,8 @@ jobs:
           working-directory: backend/infrastructure
           stacks: ${{ steps.prep.outputs.stacks }}
           plan-file: backend/infrastructure/cdk-plan.json
+          args-file: ${{ runner.temp }}/cdk-args
+          param-file: ${{ vars.CDK_PARAM_FILE }}
+          format: plain-json
+          pass-empty: WafWebAclArn,PublicWwwEdgeVerifySecret,PublicWwwEdgeVerifySecretPrevious,PublicWwwStagingEdgeVerifySecret,PublicWwwStagingEdgeVerifySecretPrevious
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}

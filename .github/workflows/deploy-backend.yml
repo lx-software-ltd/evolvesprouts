@@ -54,7 +54,6 @@ jobs:
         with:
           cache: npm
           working-directory: backend/infrastructure
-          install: "false"
 
       - name: Set up Python
         uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
@@ -65,17 +64,13 @@ jobs:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
 
-      - name: Install CDK dependencies
-        working-directory: backend/infrastructure
-        run: npm ci
-
       - name: Check CDK bootstrap
         uses: lx-software-ltd/actions/cdk-bootstrap-check@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ vars.AWS_REGION }}
 
-      - name: Check CDK parameters
+      - name: Prepare CDK app
         id: prep
         run: bash scripts/deploy/cdk-prepare.sh deploy
         env:
