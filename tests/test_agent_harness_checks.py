@@ -55,7 +55,9 @@ def test_harness_scripts_pass() -> None:
 
 def test_pytest_coverage_floor_is_enforced_in_ci() -> None:
     workflow = (ROOT / ".github" / "workflows" / "test.yml").read_text(encoding="utf-8")
-    assert "--cov-fail-under=70" in workflow
+    script = (ROOT / "scripts" / "ci" / "test-python.sh").read_text(encoding="utf-8")
+    assert "bash scripts/ci/test-python.sh" in workflow
+    assert "--cov-fail-under=70" in script
     pyproject = (ROOT / "backend" / "pyproject.toml").read_text(encoding="utf-8")
     assert "fail_under =" not in pyproject
 
