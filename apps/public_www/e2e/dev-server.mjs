@@ -8,14 +8,12 @@ if (!Number.isInteger(sitePort) || !Number.isInteger(crmPort)) {
   throw new Error('E2E_SITE_PORT and E2E_CRM_PORT must be integers.');
 }
 
+const allowedOrigin = `http://localhost:${sitePort}`;
+
 const server = createServer((request, response) => {
-  const origin = request.headers.origin;
-  if (typeof origin === 'string' && origin.startsWith('http://localhost:')) {
-    response.setHeader('access-control-allow-origin', origin);
-    response.setHeader('vary', 'Origin');
-    response.setHeader('access-control-allow-headers', 'accept, content-type, x-api-key');
-    response.setHeader('access-control-allow-methods', 'GET, OPTIONS');
-  }
+  response.setHeader('access-control-allow-origin', allowedOrigin);
+  response.setHeader('access-control-allow-headers', 'accept, content-type, x-api-key');
+  response.setHeader('access-control-allow-methods', 'GET, OPTIONS');
 
   if (request.method === 'OPTIONS') {
     response.writeHead(204);
