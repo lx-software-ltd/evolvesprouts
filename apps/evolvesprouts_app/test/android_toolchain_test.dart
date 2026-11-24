@@ -24,6 +24,16 @@ void main() {
     final properties = _readAndroidFile('gradle.properties');
     expect(properties, contains('android.newDsl=false'));
     expect(properties, contains('android.builtInKotlin=false'));
+    expect(
+      properties,
+      contains('systemProp.org.gradle.internal.repository.max.tentatives=5'),
+    );
+    expect(
+      properties,
+      contains(
+        'systemProp.org.gradle.internal.repository.initial.backoff=5000',
+      ),
+    );
 
     final appBuild = _readAndroidFile('app/build.gradle.kts');
     expect(
