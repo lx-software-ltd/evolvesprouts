@@ -70,7 +70,7 @@ FIGMA_TOKEN_ROOT_NODE=Desktop npm run figma:tokenize
 1. Construct the authorization URL (see workflow summary for a ready-made URL).
 2. Open it in your browser and click **Allow**.
 3. Copy the `code` from the redirect URL.
-4. Trigger the **Generate Figma OAuth Refresh Token** workflow with the code.
+4. Trigger the **Figma Generate OAuth Refresh Token** workflow with the code.
 5. The workflow prints the refresh token in the run summary.
 
 ### Option B — Local script

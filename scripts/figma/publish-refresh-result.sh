@@ -52,7 +52,7 @@ AUTH_URL="https://www.figma.com/oauth?client_id=${CLIENT_ID}&redirect_uri=${ENCO
     echo '   The page will not load — that is expected.'
     echo '4. Copy the \`code\` value from the address bar'
     echo '   (between \`?code=\` and \`&state=\`).'
-    echo '5. Go to **Actions > Generate Figma OAuth Refresh Token > Run workflow**,'
+    echo '5. Go to **Actions > Figma Generate OAuth Refresh Token > Run workflow**,'
     echo '   paste the code, and click **Run workflow**.'
   fi
 
