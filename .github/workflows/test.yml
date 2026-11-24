@@ -42,7 +42,7 @@ jobs:
 
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@08a56d0682c5bfc55c8f4b770ac176941ee5a15d # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
 
       - name: Run Python tests
         run: bash scripts/ci/test-python.sh
@@ -61,7 +61,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@08a56d0682c5bfc55c8f4b770ac176941ee5a15d # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/admin_web
@@ -96,7 +96,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@08a56d0682c5bfc55c8f4b770ac176941ee5a15d # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
@@ -110,10 +110,46 @@ jobs:
       - name: Run tests
         run: npm run test:ci
         working-directory: apps/public_www
+        # template:set
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_public_site_config.outputs.production_site_origin }}
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+          NEXT_PUBLIC_FPS_MERCHANT_NAME: ${{ vars.NEXT_PUBLIC_FPS_MERCHANT_NAME }}
+          NEXT_PUBLIC_FPS_MOBILE_NUMBER: ${{ vars.NEXT_PUBLIC_FPS_MOBILE_NUMBER }}
+          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
+          NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS: ${{ vars.NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS }}
+          NEXT_PUBLIC_EMAIL: ${{ vars.NEXT_PUBLIC_EMAIL }}
+          NEXT_PUBLIC_WHATSAPP_URL: ${{ vars.NEXT_PUBLIC_WHATSAPP_URL }}
+          NEXT_PUBLIC_INSTAGRAM_URL: ${{ vars.NEXT_PUBLIC_INSTAGRAM_URL }}
+          NEXT_PUBLIC_LINKEDIN_URL: ${{ vars.NEXT_PUBLIC_LINKEDIN_URL }}
+          NEXT_PUBLIC_BUSINESS_ADDRESS: ${{ vars.NEXT_PUBLIC_BUSINESS_ADDRESS }}
+          NEXT_PUBLIC_BUSINESS_PHONE_NUMBER: ${{ vars.NEXT_PUBLIC_BUSINESS_PHONE_NUMBER }}
+          NEXT_PUBLIC_FOUNDER_NAME: ${{ vars.NEXT_PUBLIC_FOUNDER_NAME }}
+        # template:end
 
       - name: Build
         run: npm run build
         working-directory: apps/public_www
+        # template:set
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_public_site_config.outputs.production_site_origin }}
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+          NEXT_PUBLIC_FPS_MERCHANT_NAME: ${{ vars.NEXT_PUBLIC_FPS_MERCHANT_NAME }}
+          NEXT_PUBLIC_FPS_MOBILE_NUMBER: ${{ vars.NEXT_PUBLIC_FPS_MOBILE_NUMBER }}
+          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
+          NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS: ${{ vars.NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS }}
+          NEXT_PUBLIC_EMAIL: ${{ vars.NEXT_PUBLIC_EMAIL }}
+          NEXT_PUBLIC_WHATSAPP_URL: ${{ vars.NEXT_PUBLIC_WHATSAPP_URL }}
+          NEXT_PUBLIC_INSTAGRAM_URL: ${{ vars.NEXT_PUBLIC_INSTAGRAM_URL }}
+          NEXT_PUBLIC_LINKEDIN_URL: ${{ vars.NEXT_PUBLIC_LINKEDIN_URL }}
+          NEXT_PUBLIC_BUSINESS_ADDRESS: ${{ vars.NEXT_PUBLIC_BUSINESS_ADDRESS }}
+          NEXT_PUBLIC_BUSINESS_PHONE_NUMBER: ${{ vars.NEXT_PUBLIC_BUSINESS_PHONE_NUMBER }}
+          NEXT_PUBLIC_FOUNDER_NAME: ${{ vars.NEXT_PUBLIC_FOUNDER_NAME }}
+        # template:end
 
   # template:optional training
   test-training:
@@ -139,7 +175,7 @@ jobs:
           PY
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@08a56d0682c5bfc55c8f4b770ac176941ee5a15d # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/training
@@ -173,13 +209,13 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@08a56d0682c5bfc55c8f4b770ac176941ee5a15d # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@08a56d0682c5bfc55c8f4b770ac176941ee5a15d # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
 
       - name: Run infrastructure tests
         run: npm run test:infra
@@ -198,13 +234,13 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@08a56d0682c5bfc55c8f4b770ac176941ee5a15d # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
 
       - name: Install Playwright browsers
-        uses: lx-software-ltd/actions/playwright-install@08a56d0682c5bfc55c8f4b770ac176941ee5a15d # main 2026-11-24
+        uses: lx-software-ltd/actions/playwright-install@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
         with:
           working-directory: apps/public_www
 
@@ -231,7 +267,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@08a56d0682c5bfc55c8f4b770ac176941ee5a15d # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-flutter@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
 
       - name: Run Flutter tests
         run: bash scripts/ci/test-flutter.sh
@@ -253,7 +289,7 @@ jobs:
           # template:end
 
       - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@08a56d0682c5bfc55c8f4b770ac176941ee5a15d # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-flutter@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
 
       - name: Point Flutter at Java 21
         run: flutter config --jdk-dir "$JAVA_HOME"
@@ -282,6 +318,6 @@ jobs:
     if: always()
     steps:
       - name: Require every test job
-        uses: lx-software-ltd/actions/require-jobs@08a56d0682c5bfc55c8f4b770ac176941ee5a15d # main 2026-11-24
+        uses: lx-software-ltd/actions/require-jobs@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
         with:
           needs-json: ${{ toJson(needs) }}
