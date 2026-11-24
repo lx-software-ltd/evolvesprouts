@@ -1,4 +1,4 @@
-name: Generate Figma OAuth Refresh Token
+name: Figma Generate OAuth Refresh Token
 
 # Usage:
 #   1. Construct the Figma authorization URL (see the job summary or
