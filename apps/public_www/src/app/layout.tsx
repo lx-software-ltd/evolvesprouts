@@ -9,6 +9,8 @@ import { GoogleTagManager } from '@/components/shared/google-tag-manager';
 import { MetaPixel } from '@/components/shared/meta-pixel';
 import {
   DEFAULT_SOCIAL_IMAGE,
+  DEFAULT_SOCIAL_IMAGE_HEIGHT,
+  DEFAULT_SOCIAL_IMAGE_WIDTH,
   getSiteHost,
   getSiteOrigin,
   SITE_TITLE_SUFFIX,
@@ -72,6 +74,8 @@ export function generateMetadata(): Metadata {
         {
           url: DEFAULT_SOCIAL_IMAGE,
           alt: enContent.seo.defaultSocialImageAlt,
+          width: DEFAULT_SOCIAL_IMAGE_WIDTH,
+          height: DEFAULT_SOCIAL_IMAGE_HEIGHT,
         },
       ],
     },

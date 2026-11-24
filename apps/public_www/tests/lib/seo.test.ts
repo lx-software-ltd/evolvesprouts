@@ -1,10 +1,19 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
 
 import {
   buildLocalizedMetadata,
   DEFAULT_SOCIAL_IMAGE,
+  DEFAULT_SOCIAL_IMAGE_HEIGHT,
+  DEFAULT_SOCIAL_IMAGE_WIDTH,
   normalizeSiteOrigin,
 } from '@/lib/seo';
+
+const APP_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const PNG_COLOR_TYPE_RGB = 2;
 
 describe('seo metadata builder', () => {
   it('builds localized alternates and social metadata', () => {
@@ -34,6 +43,8 @@ describe('seo metadata builder', () => {
     expect(Array.isArray(ogImages) ? ogImages[0] : ogImages).toMatchObject({
       url: DEFAULT_SOCIAL_IMAGE,
       alt: 'Evolve Sprouts',
+      width: DEFAULT_SOCIAL_IMAGE_WIDTH,
+      height: DEFAULT_SOCIAL_IMAGE_HEIGHT,
     });
     expect(metadata.twitter).toMatchObject({
       card: 'summary_large_image',
@@ -116,5 +127,15 @@ describe('seo metadata builder', () => {
     expect(() => normalizeSiteOrigin('https://example.com/path')).toThrow(
       'must not include a path, query string, or hash fragment',
     );
+  });
+
+  it('stores the default social image at the Open Graph size', () => {
+    const imagePath = path.join(APP_ROOT, 'public', DEFAULT_SOCIAL_IMAGE.replace(/^\//, ''));
+    const bytes = readFileSync(imagePath);
+    expect(bytes.subarray(1, 4).toString('ascii')).toBe('PNG');
+    expect(bytes.readUInt32BE(16)).toBe(DEFAULT_SOCIAL_IMAGE_WIDTH);
+    expect(bytes.readUInt32BE(20)).toBe(DEFAULT_SOCIAL_IMAGE_HEIGHT);
+    expect(bytes[24]).toBe(8);
+    expect(bytes[25]).toBe(PNG_COLOR_TYPE_RGB);
   });
 });
