@@ -55,4 +55,19 @@ describe('deferStaticChunkScripts', () => {
 
     expect(() => deferStaticChunkScripts(html)).toThrow(/non-async chunk script/);
   });
+
+  it('keeps inline scripts whose text mentions a script tag', () => {
+    const html = pageHtml('<script>var example = "<script>";</script>');
+
+    expect(deferStaticChunkScripts(html)).toBe(html);
+  });
+
+  it('reads a chunk src that appears before the async attribute', () => {
+    const updated = deferStaticChunkScripts(
+      pageHtml(`<script async="" src="${PAGE_CHUNK}"></script>`),
+    );
+
+    expect(updated).toContain(JSON.stringify([PAGE_CHUNK]));
+    expect(updated).not.toContain(`src="${PAGE_CHUNK}"`);
+  });
 });
