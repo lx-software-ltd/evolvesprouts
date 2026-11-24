@@ -5,16 +5,13 @@ on:
     types: [deploy-backend]
   workflow_dispatch:
     inputs:
-      destroy_before_deploy:
-        description: "Run cdk destroy before deploy"
-        required: false
-        default: false
-        type: boolean
+      # template:optional database
       force_migration_run:
         description: "Force RunMigrations custom resource"
         required: false
         default: false
         type: boolean
+      # template:end
       cdk_stacks:
         description: "CDK stacks to deploy"
         required: false
@@ -28,11 +25,13 @@ on:
           - "public website"
           - "training"
           # template:end
+      # template:optional database
       run_seed_data:
         description: "Run seed data after migrations (backend stack only)"
         required: false
         default: false
         type: boolean
+      # template:end
   push:
     branches:
       - main
@@ -66,13 +65,13 @@ jobs:
 
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@2c0ccd2fdf6d2ab7cec932bcebc33f05d24bdd1a # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@2c0ccd2fdf6d2ab7cec932bcebc33f05d24bdd1a # main 2026-11-24
 
       - name: Determine deployment region
         id: region
@@ -83,7 +82,7 @@ jobs:
 
       - name: Configure AWS credentials
         id: aws
-        uses: lx-software-ltd/actions/aws-oidc@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@2c0ccd2fdf6d2ab7cec932bcebc33f05d24bdd1a # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ steps.region.outputs.region }}
@@ -95,7 +94,7 @@ jobs:
 
 
       - name: Check CDK bootstrap
-        uses: lx-software-ltd/actions/cdk-bootstrap-check@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@2c0ccd2fdf6d2ab7cec932bcebc33f05d24bdd1a # main 2026-11-24
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ steps.region.outputs.region }}
@@ -180,7 +179,7 @@ jobs:
       - name: Read edge verify before deploy
         id: edge_before
         if: steps.prep.outputs.edge_verify == 'true'
-        uses: lx-software-ltd/actions/cfn-stack-outputs@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
+        uses: lx-software-ltd/actions/cfn-stack-outputs@2c0ccd2fdf6d2ab7cec932bcebc33f05d24bdd1a # main 2026-11-24
         with:
           # template:set
           stack: evolvesprouts-public-www
@@ -192,7 +191,7 @@ jobs:
       # template:end
 
       - name: Deploy stacks
-        uses: lx-software-ltd/actions/cdk-deploy@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-deploy@2c0ccd2fdf6d2ab7cec932bcebc33f05d24bdd1a # main 2026-11-24
         with:
           working-directory: backend/infrastructure
           plan-file: backend/infrastructure/cdk-plan.json
@@ -212,6 +211,9 @@ jobs:
           AWS_REGION: ${{ vars.AWS_REGION }}
           CDK_STACKS: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
           RUN_SEED_DATA: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_seed_data || 'false' }}
+          MIGRATIONS_FORCE_RUN_ID: >-
+            ${{ github.event.inputs.force_migration_run == 'true' &&
+            github.run_id || '' }}
           CDK_PARAM_FILE: ${{ vars.CDK_PARAM_FILE }}
           CDK_BOOTSTRAP_QUALIFIER: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           CDK_PARAM_GOOGLE_CLIENT_SECRET: ${{ secrets.CDK_PARAM_GOOGLE_CLIENT_SECRET }}
@@ -284,7 +286,7 @@ jobs:
       - name: Read edge verify after deploy
         id: edge_after
         if: steps.prep.outputs.edge_verify == 'true'
-        uses: lx-software-ltd/actions/cfn-stack-outputs@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
+        uses: lx-software-ltd/actions/cfn-stack-outputs@2c0ccd2fdf6d2ab7cec932bcebc33f05d24bdd1a # main 2026-11-24
         with:
           # template:set
           stack: evolvesprouts-public-www
