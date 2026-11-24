@@ -17,7 +17,11 @@ def test_promote_does_not_call_describe_stacks() -> None:
     assert "describe-stacks" not in text
     assert "cfn-stack-outputs@" in text
     assert "outputs: PublicWwwStagingBucketName" in text
-    assert (
-        "github.event.inputs.promotion_mode == '' || "
-        "github.event.inputs.promotion_mode == 'latest_staging'"
-    ) in text
+    assert "steps.bucket_read.outputs.read_staging_bucket == 'true'" in text
+    script = (
+        Path(__file__).resolve().parents[1]
+        / "scripts"
+        / "deploy"
+        / "resolve-release-id.sh"
+    ).read_text(encoding="utf-8")
+    assert '[ "$mode" = "latest_staging" ]' in script

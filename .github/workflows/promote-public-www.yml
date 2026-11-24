@@ -66,17 +66,21 @@ jobs:
           AWS_REGION: ${{ vars.AWS_REGION }}
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@edcf302f2f8712f49f18cb55a09abbab80e24388 # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
 
+      - name: Decide whether to read the staging bucket
+        id: bucket_read
+        env:
+          PROMOTION_MODE: ${{ github.event.inputs.promotion_mode }}
+        run: bash scripts/deploy/resolve-release-id.sh bucket-read
+
       - name: Read staging bucket
         id: staging
-        # template:set
-        if: ${{ github.event.inputs.promotion_mode == '' || github.event.inputs.promotion_mode == 'latest_staging' }}
-        # template:end
-        uses: lx-software-ltd/actions/cfn-stack-outputs@edcf302f2f8712f49f18cb55a09abbab80e24388 # main 2026-11-24
+        if: ${{ steps.bucket_read.outputs.read_staging_bucket == 'true' }}
+        uses: lx-software-ltd/actions/cfn-stack-outputs@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
         with:
 # template:set
           stack: evolvesprouts-public-www
@@ -114,7 +118,7 @@ jobs:
 
       - name: Set up Node.js
         if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
-        uses: lx-software-ltd/actions/setup-node@edcf302f2f8712f49f18cb55a09abbab80e24388 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
@@ -172,7 +176,7 @@ jobs:
 
       - name: Configure AWS credentials
         if: ${{ success() && (needs.prepare.outputs.maintenance_mode == 'true' || needs.prepare.outputs.deploy == 'true') }}
-        uses: lx-software-ltd/actions/aws-oidc@edcf302f2f8712f49f18cb55a09abbab80e24388 # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}

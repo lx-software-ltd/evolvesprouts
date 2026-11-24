@@ -66,13 +66,13 @@ jobs:
 
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@edcf302f2f8712f49f18cb55a09abbab80e24388 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@edcf302f2f8712f49f18cb55a09abbab80e24388 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
 
       - name: Determine deployment region
         id: region
@@ -83,7 +83,7 @@ jobs:
 
       - name: Configure AWS credentials
         id: aws
-        uses: lx-software-ltd/actions/aws-oidc@edcf302f2f8712f49f18cb55a09abbab80e24388 # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ steps.region.outputs.region }}
@@ -95,7 +95,7 @@ jobs:
 
 
       - name: Check CDK bootstrap
-        uses: lx-software-ltd/actions/cdk-bootstrap-check@edcf302f2f8712f49f18cb55a09abbab80e24388 # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ steps.region.outputs.region }}
@@ -180,7 +180,7 @@ jobs:
       - name: Read edge verify before deploy
         id: edge_before
         if: steps.prep.outputs.edge_verify == 'true'
-        uses: lx-software-ltd/actions/cfn-stack-outputs@edcf302f2f8712f49f18cb55a09abbab80e24388 # main 2026-11-24
+        uses: lx-software-ltd/actions/cfn-stack-outputs@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
         with:
           # template:set
           stack: evolvesprouts-public-www
@@ -192,7 +192,7 @@ jobs:
       # template:end
 
       - name: Deploy stacks
-        uses: lx-software-ltd/actions/cdk-deploy@edcf302f2f8712f49f18cb55a09abbab80e24388 # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-deploy@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
         with:
           working-directory: backend/infrastructure
           plan-file: backend/infrastructure/cdk-plan.json
@@ -284,7 +284,7 @@ jobs:
       - name: Read edge verify after deploy
         id: edge_after
         if: steps.prep.outputs.edge_verify == 'true'
-        uses: lx-software-ltd/actions/cfn-stack-outputs@edcf302f2f8712f49f18cb55a09abbab80e24388 # main 2026-11-24
+        uses: lx-software-ltd/actions/cfn-stack-outputs@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
         with:
           # template:set
           stack: evolvesprouts-public-www
