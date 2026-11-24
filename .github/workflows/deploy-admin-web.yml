@@ -31,7 +31,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@f68a62d345907c7da3a929e12e5a2ded28af3514 # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/admin_web
@@ -57,13 +57,13 @@ jobs:
           NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ vars.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@f68a62d345907c7da3a929e12e5a2ded28af3514 # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
 
       - name: Deploy admin web
-        uses: lx-software-ltd/actions/s3-cloudfront-deploy@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        uses: lx-software-ltd/actions/s3-cloudfront-deploy@f68a62d345907c7da3a929e12e5a2ded28af3514 # main 2026-11-24
         with:
           source: apps/admin_web/out
           stack: evolvesprouts-admin-web

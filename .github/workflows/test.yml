@@ -48,7 +48,7 @@ jobs:
           echo "site_origin=https://${SITE_DOMAIN}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@f68a62d345907c7da3a929e12e5a2ded28af3514 # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
@@ -112,7 +112,7 @@ jobs:
           echo "public_www_origin=https://${PUBLIC_WWW_DOMAIN}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@f68a62d345907c7da3a929e12e5a2ded28af3514 # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/training
@@ -140,7 +140,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-flutter@f68a62d345907c7da3a929e12e5a2ded28af3514 # main 2026-11-24
         with:
           channel: "stable"
           flutter-version: "3.50.1"
@@ -172,7 +172,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@f68a62d345907c7da3a929e12e5a2ded28af3514 # main 2026-11-24
 
       - name: Run Node tests
         run: |
@@ -203,13 +203,13 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@f68a62d345907c7da3a929e12e5a2ded28af3514 # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
 
       - name: Install Playwright browsers
-        uses: lx-software-ltd/actions/playwright-install@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        uses: lx-software-ltd/actions/playwright-install@f68a62d345907c7da3a929e12e5a2ded28af3514 # main 2026-11-24
         with:
           working-directory: apps/public_www
 
@@ -250,7 +250,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@f68a62d345907c7da3a929e12e5a2ded28af3514 # main 2026-11-24
         with:
           python-version: "3.12"
 
@@ -311,12 +311,12 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@f68a62d345907c7da3a929e12e5a2ded28af3514 # main 2026-11-24
         with:
           python-version: "3.12"
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@f68a62d345907c7da3a929e12e5a2ded28af3514 # main 2026-11-24
 
       - name: Install infrastructure dependencies
         run: |
@@ -358,6 +358,6 @@ jobs:
     if: always()
     steps:
       - name: Require every test job
-        uses: lx-software-ltd/actions/require-jobs@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        uses: lx-software-ltd/actions/require-jobs@f68a62d345907c7da3a929e12e5a2ded28af3514 # main 2026-11-24
         with:
           needs-json: ${{ toJson(needs) }}
