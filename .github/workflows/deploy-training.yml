@@ -39,7 +39,7 @@ jobs:
         run: bash scripts/deploy/resolve-public-www-build-env.sh
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@edcf302f2f8712f49f18cb55a09abbab80e24388 # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/training
@@ -63,13 +63,13 @@ jobs:
           NEXT_PUBLIC_TRAINING_API_KEY: ${{ secrets.NEXT_PUBLIC_WWW_CRM_API_KEY }}
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@edcf302f2f8712f49f18cb55a09abbab80e24388 # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
 
       - name: Deploy training web
-        uses: lx-software-ltd/actions/s3-cloudfront-deploy@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
+        uses: lx-software-ltd/actions/s3-cloudfront-deploy@edcf302f2f8712f49f18cb55a09abbab80e24388 # main 2026-11-24
         with:
           source: apps/training/out
           stack: evolvesprouts-training

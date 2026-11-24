@@ -40,7 +40,7 @@ jobs:
         run: bash scripts/deploy/resolve-public-www-build-env.sh
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@edcf302f2f8712f49f18cb55a09abbab80e24388 # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
@@ -65,7 +65,7 @@ jobs:
 # template:end
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@edcf302f2f8712f49f18cb55a09abbab80e24388 # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
@@ -121,7 +121,7 @@ jobs:
           PUBLIC_WWW_PHASE: optimize
 
       - name: Deploy public website
-        uses: lx-software-ltd/actions/s3-cloudfront-deploy@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
+        uses: lx-software-ltd/actions/s3-cloudfront-deploy@edcf302f2f8712f49f18cb55a09abbab80e24388 # main 2026-11-24
         with:
           source: apps/public_www/out
 # template:set
