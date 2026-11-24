@@ -53,7 +53,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nextjs-public-www-${{ hashFiles('apps/public_www/package-lock.json') }}-
 
-      - name: Build static website
+      - name: Build public website
         working-directory: apps/public_www
         env:
           NEXT_TELEMETRY_DISABLED: '1'
@@ -74,6 +74,7 @@ jobs:
           working-directory: apps/public_www
           page-paths: ${{ inputs.page_paths }}
           default-paths: /en/,/zh-CN/,/zh-HK/
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Lighthouse artifacts
         if: always()

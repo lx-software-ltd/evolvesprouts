@@ -63,6 +63,12 @@ jobs:
           NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS: ${{ vars.NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS }}
           NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_public_site_domains.outputs.production_site_origin }}
 
+      - name: Configure AWS credentials
+        uses: lx-software-ltd/actions/aws-oidc@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        with:
+          account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          region: ${{ vars.AWS_REGION }}
+
       - name: Restore Next.js build cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -105,12 +111,6 @@ jobs:
         env:
           NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
           NEXT_PUBLIC_WWW_CRM_API_KEY: ${{ secrets.NEXT_PUBLIC_WWW_CRM_API_KEY }}
-
-      - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
-        with:
-          account-id: ${{ secrets.AWS_ACCOUNT_ID }}
-          region: ${{ vars.AWS_REGION }}
 
       - name: Optimize public website images
         run: bash scripts/deploy/deploy-public-www.sh

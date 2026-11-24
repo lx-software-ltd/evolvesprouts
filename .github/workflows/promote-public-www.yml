@@ -151,13 +151,7 @@ jobs:
           region: ${{ vars.AWS_REGION }}
 
       - name: Promote release or enable maintenance mode
-        run: |
-          if [ -f 'scripts/deploy/deploy-public-www.sh' ]; then
-            bash 'scripts/deploy/deploy-public-www.sh'
-          else
-            echo 'Deploy script not found: scripts/deploy/deploy-public-www.sh'
-            exit 1
-          fi
+        run: bash scripts/deploy/deploy-public-www.sh
         env:
           PUBLIC_WWW_STACK_NAME: evolvesprouts-public-www
           PUBLIC_WWW_ENVIRONMENT: production
