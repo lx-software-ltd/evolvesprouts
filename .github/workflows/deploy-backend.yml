@@ -49,17 +49,17 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@cd643d664bed34eca3fbb1e77edcb498e7ff6ef6 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
           install: "false"
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@cd643d664bed34eca3fbb1e77edcb498e7ff6ef6 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@cd643d664bed34eca3fbb1e77edcb498e7ff6ef6 # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
@@ -69,7 +69,7 @@ jobs:
         run: npm ci
 
       - name: Check CDK bootstrap
-        uses: lx-software-ltd/actions/cdk-bootstrap-check@cd643d664bed34eca3fbb1e77edcb498e7ff6ef6 # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ vars.AWS_REGION }}
@@ -345,7 +345,7 @@ jobs:
       - name: Read edge verify before deploy
         id: edge_before
         if: contains(steps.prep.outputs.stacks, 'evolvesprouts-public-www')
-        uses: lx-software-ltd/actions/cfn-stack-outputs@cd643d664bed34eca3fbb1e77edcb498e7ff6ef6 # main 2026-11-24
+        uses: lx-software-ltd/actions/cfn-stack-outputs@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           stack: evolvesprouts-public-www
           optional: PublicWwwStagingEdgeVerifyEnabled PublicWwwEdgeVerifyEnabled
@@ -353,7 +353,7 @@ jobs:
           region: ${{ vars.AWS_REGION }}
 
       - name: Deploy stacks
-        uses: lx-software-ltd/actions/cdk-deploy@cd643d664bed34eca3fbb1e77edcb498e7ff6ef6 # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-deploy@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           working-directory: backend/infrastructure
           plan-file: backend/infrastructure/cdk-plan.json
@@ -447,7 +447,7 @@ jobs:
       - name: Read edge verify after deploy
         id: edge_after
         if: contains(steps.prep.outputs.stacks, 'evolvesprouts-public-www')
-        uses: lx-software-ltd/actions/cfn-stack-outputs@cd643d664bed34eca3fbb1e77edcb498e7ff6ef6 # main 2026-11-24
+        uses: lx-software-ltd/actions/cfn-stack-outputs@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           stack: evolvesprouts-public-www
           optional: PublicWwwStagingEdgeVerifyEnabled PublicWwwEdgeVerifyEnabled
