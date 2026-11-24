@@ -1,4 +1,4 @@
-"""Run the parameter resolver embedded in deploy-backend.yml."""
+"""Run the parameter resolver in scripts/deploy/cdk-prepare.sh."""
 
 from __future__ import annotations
 
@@ -10,12 +10,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / ".github" / "workflows" / "deploy-backend.yml"
+PREPARE = ROOT / "scripts" / "deploy" / "cdk-prepare.sh"
 PARAMS = ROOT / "backend" / "infrastructure" / "params" / "production.json"
 BACKEND_STACK = "evolvesprouts"
 
 
 def workflow_python() -> str:
-    text = WORKFLOW.read_text(encoding="utf-8")
+    text = PREPARE.read_text(encoding="utf-8")
     marker = text.index('os.environ["PARAM_FILE"]')
     start = text.rfind("import json\n", 0, marker)
     start = text.rfind("\n", 0, start) + 1

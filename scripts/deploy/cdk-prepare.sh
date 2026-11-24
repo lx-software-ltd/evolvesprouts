@@ -186,13 +186,13 @@ def require_iana_timezone(key: str, value: str) -> None:
         if is_eventbrite_timezone(value):
             return
         raise SystemExit(
-            f"{key} must be UTC or a Region/City IANA id"
+            f"{key} value {value!r} must be UTC or a Region/City IANA id"
         )
     try:
         ZoneInfo(value)
     except (ZoneInfoNotFoundError, ValueError) as exc:
         raise SystemExit(
-            f"{key} is not a valid IANA timezone"
+            f"{key} value {value!r} is not a valid IANA timezone"
         ) from exc
 
 for key, value in params.items():
