@@ -11,8 +11,6 @@ name: Generate Figma OAuth Refresh Token
 # run summary. Copy it and add it as a repository secret manually.
 
 on:
-  repository_dispatch:
-    types: [figma-refresh-token]
   workflow_dispatch:
     inputs:
       authorization_code:

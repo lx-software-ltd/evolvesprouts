@@ -17,8 +17,6 @@ name: Figma Token Studio Sync
 #   PUBLIC_WWW_FIGMA_FILE_KEY
 
 on:
-  repository_dispatch:
-    types: [figma-token-studio-sync]
   workflow_dispatch:
     inputs:
       commit_changes:
