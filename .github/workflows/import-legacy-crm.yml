@@ -26,7 +26,7 @@
 # `preview_allowed` is false on non-dry-run; dry-run still returns preview/row_details.
 # CloudWatch logs are not echoed into the summary to avoid accidental data leakage.
 
-name: Import legacy CRM
+name: Import Legacy CRM
 
 on:
   workflow_dispatch:
