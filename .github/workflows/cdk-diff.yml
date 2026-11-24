@@ -41,13 +41,13 @@ jobs:
 
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
 
       - name: Determine deployment region
         id: region
@@ -58,7 +58,7 @@ jobs:
 
       - name: Configure AWS credentials
         id: aws
-        uses: lx-software-ltd/actions/aws-oidc@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ steps.region.outputs.region }}
@@ -73,7 +73,7 @@ jobs:
 
       - name: Check CDK Bootstrap status
         if: steps.aws.outputs.ready == 'true'
-        uses: lx-software-ltd/actions/cdk-bootstrap-check@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ steps.region.outputs.region }}
@@ -90,7 +90,7 @@ jobs:
 
       - name: Run CDK diff
         if: steps.aws.outputs.ready == 'true' && steps.prep.outputs.run == 'true'
-        uses: lx-software-ltd/actions/cdk-diff@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-diff@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           working-directory: backend/infrastructure
           stacks: ${{ steps.prep.outputs.stacks }}
@@ -103,6 +103,8 @@ jobs:
           # template:end
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ steps.region.outputs.region }}
+        # template:set
+        # template:end
 
   pull-request:
     if: github.event_name == 'pull_request'
@@ -116,13 +118,13 @@ jobs:
 
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
 
       - name: Determine deployment region
         id: region
@@ -140,7 +142,7 @@ jobs:
       - name: Configure AWS credentials
         id: aws
         if: vars.AWS_DIFF_ROLE_NAME != ''
-        uses: lx-software-ltd/actions/aws-oidc@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ steps.region.outputs.region }}
@@ -160,7 +162,7 @@ jobs:
 
       - name: Check CDK Bootstrap status
         if: steps.aws.outputs.ready == 'true'
-        uses: lx-software-ltd/actions/cdk-bootstrap-check@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ steps.region.outputs.region }}
@@ -177,7 +179,7 @@ jobs:
 
       - name: Run CDK diff
         if: steps.aws.outputs.ready == 'true' && steps.prep.outputs.run == 'true'
-        uses: lx-software-ltd/actions/cdk-diff@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-diff@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           working-directory: backend/infrastructure
           stacks: ${{ steps.prep.outputs.stacks }}
@@ -190,3 +192,5 @@ jobs:
           # template:end
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ steps.region.outputs.region }}
+        # template:set
+        # template:end

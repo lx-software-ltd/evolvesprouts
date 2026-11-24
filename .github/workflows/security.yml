@@ -30,20 +30,20 @@ jobs:
 
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
 
       - name: Synthesize CDK templates
         working-directory: backend/infrastructure
         run: npm run synth:ci
 
       - name: Run Checkov
-        uses: lx-software-ltd/actions/checkov-cloudformation@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/checkov-cloudformation@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           directory: backend/infrastructure/cdk.out
           config-file: backend/infrastructure/.checkov.yaml
@@ -64,7 +64,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Analyze
-        uses: lx-software-ltd/actions/codeql@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/codeql@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           language: ${{ matrix.language }}
           queries: security-extended
@@ -83,10 +83,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
 
       - name: Check hashed PII denylist
-        uses: lx-software-ltd/actions/pii-denylist@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/pii-denylist@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
 
   secrets-scan:
     permissions:
@@ -100,7 +100,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run Gitleaks
-        uses: lx-software-ltd/actions/gitleaks@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/gitleaks@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           config-path: .gitleaks.toml
 
@@ -114,10 +114,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
 
       - name: Audit Python requirements
-        uses: lx-software-ltd/actions/pip-audit@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/pip-audit@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           # template:set
           requirements: backend/requirements.txt
@@ -134,10 +134,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
 
       - name: Run Bandit
-        uses: lx-software-ltd/actions/bandit@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/bandit@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           # template:set
           paths: src lambda
@@ -154,10 +154,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
 
       - name: Audit npm lockfiles
-        uses: lx-software-ltd/actions/npm-audit@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/npm-audit@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           # template:set
           directories: |
@@ -183,6 +183,6 @@ jobs:
     if: always()
     steps:
       - name: Require every security job
-        uses: lx-software-ltd/actions/require-jobs@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/require-jobs@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           needs-json: ${{ toJson(needs) }}

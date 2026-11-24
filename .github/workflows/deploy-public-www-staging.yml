@@ -40,7 +40,7 @@ jobs:
         run: bash scripts/deploy/resolve-public-www-build-env.sh
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
@@ -65,7 +65,7 @@ jobs:
 # template:end
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
@@ -109,6 +109,11 @@ jobs:
 
       - name: Run post-build checks
         run: bash scripts/deploy/public-www-checks.sh post-build
+        # template:set
+        env:
+          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
+          NEXT_PUBLIC_WWW_CRM_API_KEY: ${{ secrets.NEXT_PUBLIC_WWW_CRM_API_KEY }}
+        # template:end
 
       - name: Optimize public website images
         run: bash scripts/deploy/deploy-public-www.sh
@@ -116,7 +121,7 @@ jobs:
           PUBLIC_WWW_PHASE: optimize
 
       - name: Deploy public website
-        uses: lx-software-ltd/actions/s3-cloudfront-deploy@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/s3-cloudfront-deploy@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           source: apps/public_www/out
 # template:set

@@ -5,23 +5,34 @@ on:
     types: [deploy-backend]
   workflow_dispatch:
     inputs:
-      # template:set
+      destroy_before_deploy:
+        description: "Run cdk destroy before deploy"
+        required: false
+        default: false
+        type: boolean
+      force_migration_run:
+        description: "Force RunMigrations custom resource"
+        required: false
+        default: false
+        type: boolean
       cdk_stacks:
         description: "CDK stacks to deploy"
         required: false
         default: "all stacks"
         type: choice
         options:
+          # template:set
           - "all stacks"
           - "backend"
           - "admin web"
           - "public website"
+          - "training"
+          # template:end
       run_seed_data:
         description: "Run seed data after migrations (backend stack only)"
         required: false
         default: false
         type: boolean
-      # template:end
   push:
     branches:
       - main
@@ -55,13 +66,13 @@ jobs:
 
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
 
       - name: Determine deployment region
         id: region
@@ -72,7 +83,7 @@ jobs:
 
       - name: Configure AWS credentials
         id: aws
-        uses: lx-software-ltd/actions/aws-oidc@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ steps.region.outputs.region }}
@@ -84,7 +95,7 @@ jobs:
 
 
       - name: Check CDK bootstrap
-        uses: lx-software-ltd/actions/cdk-bootstrap-check@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ steps.region.outputs.region }}
@@ -169,10 +180,10 @@ jobs:
       - name: Read edge verify before deploy
         id: edge_before
         if: steps.prep.outputs.edge_verify == 'true'
-        uses: lx-software-ltd/actions/cfn-stack-outputs@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/cfn-stack-outputs@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           # template:set
-          stack: public-www
+          stack: evolvesprouts-public-www
           # template:end
           optional: PublicWwwStagingEdgeVerifyEnabled PublicWwwEdgeVerifyEnabled
           allow-missing: "true"
@@ -181,7 +192,7 @@ jobs:
       # template:end
 
       - name: Deploy stacks
-        uses: lx-software-ltd/actions/cdk-deploy@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-deploy@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           working-directory: backend/infrastructure
           plan-file: backend/infrastructure/cdk-plan.json
@@ -273,10 +284,10 @@ jobs:
       - name: Read edge verify after deploy
         id: edge_after
         if: steps.prep.outputs.edge_verify == 'true'
-        uses: lx-software-ltd/actions/cfn-stack-outputs@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/cfn-stack-outputs@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           # template:set
-          stack: public-www
+          stack: evolvesprouts-public-www
           # template:end
           optional: PublicWwwStagingEdgeVerifyEnabled PublicWwwEdgeVerifyEnabled
           allow-missing: "true"

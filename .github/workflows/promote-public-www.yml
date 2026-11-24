@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-26.04
     environment: production
     outputs:
-      deploy: ${{ steps.resolve_release.outputs.deploy }}
+      deploy: ${{ steps.catalogue_changes.outputs.deploy || steps.resolve_release.outputs.deploy }}
       maintenance_mode: ${{ steps.resolve_release.outputs.maintenance_mode }}
       skip: ${{ steps.resolve_release.outputs.skip }}
       build_sha: ${{ steps.resolve_release.outputs.build_sha }}
@@ -66,15 +66,17 @@ jobs:
           AWS_REGION: ${{ vars.AWS_REGION }}
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
 
       - name: Read staging bucket
         id: staging
+        # template:set
         if: ${{ github.event.inputs.promotion_mode == '' || github.event.inputs.promotion_mode == 'latest_staging' }}
-        uses: lx-software-ltd/actions/cfn-stack-outputs@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        # template:end
+        uses: lx-software-ltd/actions/cfn-stack-outputs@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
 # template:set
           stack: evolvesprouts-public-www
@@ -112,7 +114,7 @@ jobs:
 
       - name: Set up Node.js
         if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
-        uses: lx-software-ltd/actions/setup-node@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
@@ -120,6 +122,13 @@ jobs:
       - name: Run pre-build checks
         if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
         run: bash scripts/deploy/public-www-checks.sh pre-build
+        # template:set
+        env:
+          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_WWW_API_BASE_URL || vars.NEXT_PUBLIC_API_BASE_URL }}
+          NEXT_PUBLIC_WWW_CRM_API_KEY: ${{ secrets.NEXT_PUBLIC_WWW_CRM_API_KEY }}
+          NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS: ${{ vars.NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS }}
+          NEXT_PUBLIC_SITE_ORIGIN: ${{ needs.prepare.outputs.production_site_origin }}
+        # template:end
 
       - name: Build public website for production
         if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
@@ -154,11 +163,16 @@ jobs:
       - name: Run post-build checks
         if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
         run: bash scripts/deploy/public-www-checks.sh post-build
+        # template:set
+        env:
+          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
+          NEXT_PUBLIC_WWW_CRM_API_KEY: ${{ secrets.NEXT_PUBLIC_WWW_CRM_API_KEY }}
+        # template:end
 
 
       - name: Configure AWS credentials
         if: ${{ success() && (needs.prepare.outputs.maintenance_mode == 'true' || needs.prepare.outputs.deploy == 'true') }}
-        uses: lx-software-ltd/actions/aws-oidc@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
@@ -173,6 +187,9 @@ jobs:
           PUBLIC_WWW_MAINTENANCE_MODE: ${{ needs.prepare.outputs.maintenance_mode }}
           PUBLIC_WWW_PROMOTE_RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
           PUBLIC_WWW_PROMOTION_BUILD_DIR: ${{ needs.prepare.outputs.maintenance_mode != 'true' && format('{0}/apps/public_www/out', github.workspace) || '' }}
+          NEXT_PUBLIC_EMAIL: ${{ vars.NEXT_PUBLIC_EMAIL }}
+          NEXT_PUBLIC_WHATSAPP_URL: ${{ vars.NEXT_PUBLIC_WHATSAPP_URL }}
+          NEXT_PUBLIC_INSTAGRAM_URL: ${{ vars.NEXT_PUBLIC_INSTAGRAM_URL }}
         # template:end
 
 
