@@ -27,39 +27,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  promote:
+  prepare:
     if: github.ref == 'refs/heads/main'
     permissions:
       contents: read
       id-token: write
     runs-on: ubuntu-26.04
     environment: production
+    outputs:
+      production_site_origin: ${{ steps.resolve_public_site_domains.outputs.production_site_origin }}
+      asset_share_base_url: ${{ steps.resolve_public_site_domains.outputs.asset_share_base_url }}
+      maintenance_mode: ${{ steps.resolve_release.outputs.maintenance_mode }}
+      release_id: ${{ steps.resolve_release.outputs.release_id }}
+      promotion_mode: ${{ steps.resolve_release.outputs.promotion_mode }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Resolve public site domains from infrastructure params
+      - name: Resolve public site build config from infrastructure params
         id: resolve_public_site_domains
         env:
-          INPUT_PROMOTION_MODE: ${{ github.event.inputs.promotion_mode }}
-        run: |
-          PRODUCTION_SITE_DOMAIN="$(python3 -c "import json; from pathlib import Path; params=json.loads(Path('backend/infrastructure/params/production.json').read_text(encoding='utf-8')); print(str(params.get('PublicWwwDomainName', '')).strip())")"
-          STAGING_SITE_DOMAIN="$(python3 -c "import json; from pathlib import Path; params=json.loads(Path('backend/infrastructure/params/production.json').read_text(encoding='utf-8')); print(str(params.get('PublicWwwStagingDomainName', '')).strip())")"
-          ASSET_SHARE_DOMAIN="$(python3 -c "import json; from pathlib import Path; params=json.loads(Path('backend/infrastructure/params/production.json').read_text(encoding='utf-8')); print(str(params.get('AssetDownloadCustomDomainName', '')).strip())")"
-          if [ -z "$PRODUCTION_SITE_DOMAIN" ] || [ -z "$STAGING_SITE_DOMAIN" ]; then
-            echo "PublicWwwDomainName and PublicWwwStagingDomainName are required in backend/infrastructure/params/production.json"
-            exit 1
-          fi
-          PROMO_MODE="${INPUT_PROMOTION_MODE:-latest_staging}"
-          if [ "$PROMO_MODE" != "maintenance_on" ]; then
-            if [ -z "$ASSET_SHARE_DOMAIN" ]; then
-              echo "AssetDownloadCustomDomainName is required in backend/infrastructure/params/production.json for production promotion builds"
-              exit 1
-            fi
-            echo "asset_share_base_url=https://${ASSET_SHARE_DOMAIN}" >> "$GITHUB_OUTPUT"
-          fi
-          echo "production_site_origin=https://${PRODUCTION_SITE_DOMAIN}" >> "$GITHUB_OUTPUT"
-          echo "staging_site_origin=https://${STAGING_SITE_DOMAIN}" >> "$GITHUB_OUTPUT"
+          PROMOTION_MODE: ${{ github.event.inputs.promotion_mode }}
+        run: bash scripts/deploy/resolve-public-www-build-env.sh
 
       - name: Validate AWS configuration
         run: |
@@ -70,41 +59,6 @@ jobs:
         env:
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
           AWS_REGION: ${{ vars.AWS_REGION }}
-
-      - name: Set up Node.js
-        if: ${{ success() && github.event.inputs.promotion_mode != 'maintenance_on' }}
-        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
-        with:
-          cache: npm
-          working-directory: apps/public_www
-
-      - name: Build public website for production
-        if: ${{ success() && github.event.inputs.promotion_mode != 'maintenance_on' }}
-        run: npm run build
-        working-directory: apps/public_www
-        env:
-          NEXT_TELEMETRY_DISABLED: '1'
-          NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_public_site_domains.outputs.production_site_origin }}
-          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
-          NEXT_PUBLIC_FPS_MERCHANT_NAME: ${{ vars.NEXT_PUBLIC_FPS_MERCHANT_NAME }}
-          NEXT_PUBLIC_FPS_MOBILE_NUMBER: ${{ vars.NEXT_PUBLIC_FPS_MOBILE_NUMBER }}
-          NEXT_PUBLIC_BANK_NAME: ${{ vars.NEXT_PUBLIC_BANK_NAME }}
-          NEXT_PUBLIC_BANK_ACCOUNT_HOLDER: ${{ vars.NEXT_PUBLIC_BANK_ACCOUNT_HOLDER }}
-          NEXT_PUBLIC_BANK_ACCOUNT_NUMBER: ${{ vars.NEXT_PUBLIC_BANK_ACCOUNT_NUMBER }}
-          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_WWW_API_BASE_URL || vars.NEXT_PUBLIC_API_BASE_URL }}
-          NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS: ${{ vars.NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS }}
-          NEXT_PUBLIC_WWW_CRM_API_KEY: ${{ secrets.NEXT_PUBLIC_WWW_CRM_API_KEY }}
-          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
-          NEXT_PUBLIC_ASSET_SHARE_BASE_URL: ${{ steps.resolve_public_site_domains.outputs.asset_share_base_url }}
-          NEXT_PUBLIC_GTM_ID: ${{ vars.NEXT_PUBLIC_GTM_ID }}
-          NEXT_PUBLIC_META_PIXEL_ID: ${{ vars.NEXT_PUBLIC_META_PIXEL_ID }}
-          NEXT_PUBLIC_EMAIL: ${{ vars.NEXT_PUBLIC_EMAIL }}
-          NEXT_PUBLIC_WHATSAPP_URL: ${{ vars.NEXT_PUBLIC_WHATSAPP_URL }}
-          NEXT_PUBLIC_INSTAGRAM_URL: ${{ vars.NEXT_PUBLIC_INSTAGRAM_URL }}
-          NEXT_PUBLIC_LINKEDIN_URL: ${{ vars.NEXT_PUBLIC_LINKEDIN_URL }}
-          NEXT_PUBLIC_BUSINESS_ADDRESS: ${{ vars.NEXT_PUBLIC_BUSINESS_ADDRESS }}
-          NEXT_PUBLIC_BUSINESS_PHONE_NUMBER: ${{ vars.NEXT_PUBLIC_BUSINESS_PHONE_NUMBER }}
-          NEXT_PUBLIC_FOUNDER_NAME: ${{ vars.NEXT_PUBLIC_FOUNDER_NAME }}
 
       - name: Configure AWS credentials
         # After the build. npm ci and the build must not see the deploy role.
@@ -141,48 +95,60 @@ jobs:
           PROMOTION_MODE: ${{ steps.promotion_mode.outputs.mode }}
           INPUT_RELEASE_ID: ${{ inputs.release_id }}
           STACK_JSON: ${{ steps.staging.outputs.json }}
-        run: |
-          RESOLVED_PROMOTION_MODE="${PROMOTION_MODE:-latest_staging}"
+        run: bash scripts/deploy/resolve-release-id.sh
 
-          if [ "$RESOLVED_PROMOTION_MODE" = "maintenance_on" ]; then
-            echo "release_id=" >> "$GITHUB_OUTPUT"
-            echo "maintenance_mode=true" >> "$GITHUB_OUTPUT"
-            echo "promotion_mode=$RESOLVED_PROMOTION_MODE" >> "$GITHUB_OUTPUT"
-            exit 0
-          elif [ "$RESOLVED_PROMOTION_MODE" = "release_id" ]; then
-            if [ -z "$INPUT_RELEASE_ID" ]; then
-              echo 'release_id is required when promotion_mode=release_id'
-              exit 1
-            fi
-            SELECTED_RELEASE_ID="$INPUT_RELEASE_ID"
-          elif [ "$RESOLVED_PROMOTION_MODE" = "latest_staging" ]; then
-            STAGING_BUCKET="$(
-              STACK_JSON="$STACK_JSON" python3 -c 'import json,os; print(json.loads(os.environ["STACK_JSON"])["PublicWwwStagingBucketName"])'
-            )"
-            if [ -z "$STAGING_BUCKET" ]; then
-              echo 'Staging bucket output not found on Public Website stack'
-              exit 1
-            fi
+  promote:
+    permissions:
+      contents: read
+      id-token: write
+    needs: prepare
+    if: ${{ github.ref == 'refs/heads/main' && (needs.prepare.result == 'success') }}
+    runs-on: ubuntu-26.04
+    environment: production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-            MARKER_FILE="$(mktemp)"
-            aws s3 cp \
-              "s3://$STAGING_BUCKET/releases/latest-release-id.txt" \
-              "$MARKER_FILE"
-            SELECTED_RELEASE_ID="$(tr -d '\r\n' < "$MARKER_FILE")"
-            rm -f "$MARKER_FILE"
+      - name: Set up Node.js
+        if: ${{ success() && github.event.inputs.promotion_mode != 'maintenance_on' }}
+        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        with:
+          cache: npm
+          working-directory: apps/public_www
 
-            if [ -z "$SELECTED_RELEASE_ID" ]; then
-              echo 'Latest staging release marker is empty'
-              exit 1
-            fi
-          else
-            echo "Unsupported promotion_mode: $RESOLVED_PROMOTION_MODE"
-            exit 1
-          fi
+      - name: Build public website for production
+        if: ${{ success() && github.event.inputs.promotion_mode != 'maintenance_on' }}
+        run: npm run build
+        working-directory: apps/public_www
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+          NEXT_PUBLIC_SITE_ORIGIN: ${{ needs.prepare.outputs.production_site_origin }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+          NEXT_PUBLIC_FPS_MERCHANT_NAME: ${{ vars.NEXT_PUBLIC_FPS_MERCHANT_NAME }}
+          NEXT_PUBLIC_FPS_MOBILE_NUMBER: ${{ vars.NEXT_PUBLIC_FPS_MOBILE_NUMBER }}
+          NEXT_PUBLIC_BANK_NAME: ${{ vars.NEXT_PUBLIC_BANK_NAME }}
+          NEXT_PUBLIC_BANK_ACCOUNT_HOLDER: ${{ vars.NEXT_PUBLIC_BANK_ACCOUNT_HOLDER }}
+          NEXT_PUBLIC_BANK_ACCOUNT_NUMBER: ${{ vars.NEXT_PUBLIC_BANK_ACCOUNT_NUMBER }}
+          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_WWW_API_BASE_URL || vars.NEXT_PUBLIC_API_BASE_URL }}
+          NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS: ${{ vars.NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS }}
+          NEXT_PUBLIC_WWW_CRM_API_KEY: ${{ secrets.NEXT_PUBLIC_WWW_CRM_API_KEY }}
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_ASSET_SHARE_BASE_URL: ${{ needs.prepare.outputs.asset_share_base_url }}
+          NEXT_PUBLIC_GTM_ID: ${{ vars.NEXT_PUBLIC_GTM_ID }}
+          NEXT_PUBLIC_META_PIXEL_ID: ${{ vars.NEXT_PUBLIC_META_PIXEL_ID }}
+          NEXT_PUBLIC_EMAIL: ${{ vars.NEXT_PUBLIC_EMAIL }}
+          NEXT_PUBLIC_WHATSAPP_URL: ${{ vars.NEXT_PUBLIC_WHATSAPP_URL }}
+          NEXT_PUBLIC_INSTAGRAM_URL: ${{ vars.NEXT_PUBLIC_INSTAGRAM_URL }}
+          NEXT_PUBLIC_LINKEDIN_URL: ${{ vars.NEXT_PUBLIC_LINKEDIN_URL }}
+          NEXT_PUBLIC_BUSINESS_ADDRESS: ${{ vars.NEXT_PUBLIC_BUSINESS_ADDRESS }}
+          NEXT_PUBLIC_BUSINESS_PHONE_NUMBER: ${{ vars.NEXT_PUBLIC_BUSINESS_PHONE_NUMBER }}
+          NEXT_PUBLIC_FOUNDER_NAME: ${{ vars.NEXT_PUBLIC_FOUNDER_NAME }}
 
-          echo "release_id=$SELECTED_RELEASE_ID" >> "$GITHUB_OUTPUT"
-          echo "maintenance_mode=false" >> "$GITHUB_OUTPUT"
-          echo "promotion_mode=$RESOLVED_PROMOTION_MODE" >> "$GITHUB_OUTPUT"
+      - name: Configure AWS credentials
+        uses: lx-software-ltd/actions/aws-oidc@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        with:
+          account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          region: ${{ vars.AWS_REGION }}
 
       - name: Promote release or enable maintenance mode
         run: |
@@ -195,38 +161,16 @@ jobs:
         env:
           PUBLIC_WWW_STACK_NAME: evolvesprouts-public-www
           PUBLIC_WWW_ENVIRONMENT: production
-          PUBLIC_WWW_MAINTENANCE_MODE: ${{ steps.resolve_release.outputs.maintenance_mode }}
-          PUBLIC_WWW_PROMOTE_RELEASE_ID: ${{ steps.resolve_release.outputs.release_id }}
-          PUBLIC_WWW_PROMOTION_BUILD_DIR: ${{ steps.resolve_release.outputs.maintenance_mode != 'true' && format('{0}/apps/public_www/out', github.workspace) || '' }}
+          PUBLIC_WWW_MAINTENANCE_MODE: ${{ needs.prepare.outputs.maintenance_mode }}
+          PUBLIC_WWW_PROMOTE_RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
+          PUBLIC_WWW_PROMOTION_BUILD_DIR: ${{ needs.prepare.outputs.maintenance_mode != 'true' && format('{0}/apps/public_www/out', github.workspace) || '' }}
           NEXT_PUBLIC_EMAIL: ${{ vars.NEXT_PUBLIC_EMAIL }}
           NEXT_PUBLIC_WHATSAPP_URL: ${{ vars.NEXT_PUBLIC_WHATSAPP_URL }}
           NEXT_PUBLIC_INSTAGRAM_URL: ${{ vars.NEXT_PUBLIC_INSTAGRAM_URL }}
 
       - name: Publish promotion summary
-        run: |
-          if [ "$PROMOTION_MODE" = "maintenance_on" ]; then
-            {
-              echo '## Public Website maintenance mode enabled'
-              echo ''
-              echo '- Operation mode: `maintenance_on`'
-              echo '- Target environment: `production`'
-              echo '- Stack: `evolvesprouts-public-www`'
-              echo "- Production URL: \`${{ steps.resolve_public_site_domains.outputs.production_site_origin }}\`"
-              echo '- `/www/*` CloudFront proxy: `blocked`'
-            } >> "$GITHUB_STEP_SUMMARY"
-          else
-            {
-              echo '## Public Website promotion'
-              echo ''
-              echo "- Promotion mode: \`${PROMOTION_MODE}\`"
-              echo "- Release ID: \`${RELEASE_ID}\`"
-              echo '- Source environment: `staging` (release id gates promotion eligibility)'
-              echo '- Target environment: `production`'
-              echo '- Build: fresh static export with **production** GitHub Environment variables (including live Stripe publishable key)'
-              echo '- Stack: `evolvesprouts-public-www`'
-              echo "- Production URL: \`${{ steps.resolve_public_site_domains.outputs.production_site_origin }}\`"
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
+        run: bash scripts/deploy/publish-promotion-summary.sh
         env:
-          PROMOTION_MODE: ${{ steps.resolve_release.outputs.promotion_mode }}
-          RELEASE_ID: ${{ steps.resolve_release.outputs.release_id }}
+          PROMOTION_MODE: ${{ needs.prepare.outputs.promotion_mode }}
+          RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
+          PRODUCTION_SITE_ORIGIN: ${{ needs.prepare.outputs.production_site_origin }}

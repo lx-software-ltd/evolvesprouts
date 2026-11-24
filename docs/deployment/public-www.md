@@ -204,7 +204,7 @@ cross-origin CORS preflight failures.
 
 ### Deploy to staging (automatic)
 
-Workflow: `.github/workflows/deploy-public-www.yml`
+Workflow: `.github/workflows/deploy-public-www-staging.yml`
 
 - Trigger: push to `main` for `apps/public_www/**` or `scripts/**`
 - Target stack: `evolvesprouts-public-www`

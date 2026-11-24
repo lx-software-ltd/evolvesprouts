@@ -522,7 +522,7 @@ All keys have automatic annual rotation enabled.
 |---|---|---|
 | `deploy-backend.yml` | Push to main (backend/) | CDK stacks: `evolvesprouts`, `evolvesprouts-admin-web`, `evolvesprouts-public-www` |
 | `deploy-admin-web.yml` | Push to main (`apps/admin_web/`) | Admin web to S3 and CloudFront |
-| `deploy-public-www.yml` | Push to main (public_www/) | Public website → staging |
+| `deploy-public-www-staging.yml` | Push to main (public_www/) | Public website → staging |
 | `promote-public-www.yml` | Manual dispatch | Promote staging → production (or enable maintenance mode) |
 | `cdk-bootstrap.yml` | Manual dispatch | CDK bootstrap for account/region |
 | `deploy-ios.yml` | Manual dispatch | Flutter iOS via Fastlane |
@@ -534,7 +534,7 @@ All keys have automatic annual rotation enabled.
 Push to main (apps/public_www/)
         │
         ▼
-deploy-public-www.yml
+deploy-public-www-staging.yml
   ├─ Build (npm run build → static export)
   ├─ Upload to staging S3 bucket
   └─ Invalidate staging CloudFront

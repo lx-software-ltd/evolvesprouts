@@ -7,12 +7,25 @@ on:
         description: 'Comma/newline-separated page paths or full URLs to audit (e.g. /en/, /en/about-us)'
         required: false
         default: '/en/,/zh-CN/,/zh-HK/'
+  pull_request:
+    paths:
+      - "apps/public_www/**"
+      - ".github/workflows/lighthouse-public-www.yml"
+  schedule:
+    - cron: "15 6 * * 1"
 
 permissions:
   contents: read
 
+concurrency:
+  group: lighthouse-public-www-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   lighthouse:
+    permissions:
+      contents: read
+      statuses: write
     name: Lighthouse audit
     runs-on: ubuntu-26.04
     timeout-minutes: 20
@@ -20,15 +33,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Resolve public site origin from infrastructure params
+      - name: Resolve public site build config from infrastructure params
         id: resolve_public_site_origin
-        run: |
-          SITE_DOMAIN="$(python3 -c "import json; from pathlib import Path; params=json.loads(Path('backend/infrastructure/params/production.json').read_text(encoding='utf-8')); print(str(params.get('PublicWwwDomainName', '')).strip())")"
-          if [ -z "$SITE_DOMAIN" ]; then
-            echo "PublicWwwDomainName is required in backend/infrastructure/params/production.json"
-            exit 1
-          fi
-          echo "site_origin=https://${SITE_DOMAIN}" >> "$GITHUB_OUTPUT"
+        env:
+          REQUIRE_ASSET: "false"
+        run: bash scripts/deploy/resolve-public-www-build-env.sh
 
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
@@ -48,7 +57,7 @@ jobs:
         working-directory: apps/public_www
         env:
           NEXT_TELEMETRY_DISABLED: '1'
-          NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_public_site_origin.outputs.site_origin }}
+          NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_public_site_origin.outputs.production_site_origin }}
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
           NEXT_PUBLIC_FPS_MERCHANT_NAME: ${{ vars.NEXT_PUBLIC_FPS_MERCHANT_NAME }}
