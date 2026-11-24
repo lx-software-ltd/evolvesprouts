@@ -79,16 +79,7 @@ jobs:
       - name: Prepare CDK diff
         if: steps.aws.outputs.ready == 'true'
         id: prep
-        working-directory: backend/infrastructure
-        run: |
-          npm run build --if-present
-          # The CDK app reads CDK_BOOTSTRAP_QUALIFIER. `cdk diff` has no
-          # --qualifier flag; passing one is ignored. The plan resolves a
-          # label such as "admin web"; an empty value diffs every stack.
-          {
-            echo "run=true"
-            echo "stacks=${CDK_STACKS}"
-          } >> "$GITHUB_OUTPUT"
+        run: bash scripts/deploy/cdk-prepare.sh diff
         env:
           CDK_STACKS: ${{ inputs.stacks }}
           CDK_BOOTSTRAP_QUALIFIER: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
