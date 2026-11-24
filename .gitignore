@@ -213,6 +213,8 @@ apps/public_www/figma/mdm/artifacts/
 # Playwright
 apps/admin_web/playwright-report/
 apps/admin_web/test-results/
+apps/public_www/playwright-report/
+apps/public_www/test-results/
 
 # TypeScript build info
 *.tsbuildinfo

@@ -191,9 +191,13 @@ jobs:
             fi
           done
 
-  install-playwright:
-    name: Install Playwright Chromium
+  test-public-www-e2e:
+    name: Test Public Website E2E
     runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/public_www
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -202,13 +206,25 @@ jobs:
         uses: lx-software-ltd/actions/setup-node@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           cache: npm
-          working-directory: apps/admin_web
+          working-directory: apps/public_www
 
-      - name: Install Playwright Chromium
+      - name: Install Playwright browsers
         uses: lx-software-ltd/actions/playwright-install@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
-          working-directory: apps/admin_web
-          browsers: chromium
+          working-directory: apps/public_www
+
+      - name: Run Playwright tests
+        run: npm run test:e2e
+        env:
+          CI: true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: public-www-test-results
+          path: apps/public_www/test-results/
+          retention-days: 7
 
   test-python:
     name: Test Python
@@ -336,7 +352,7 @@ jobs:
       - test-training
       - test-flutter
       - test-node
-      - install-playwright
+      - test-public-www-e2e
       - test-python
       - test-infrastructure
     if: always()

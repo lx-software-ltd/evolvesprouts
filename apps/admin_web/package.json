@@ -29,7 +29,6 @@
   },
   "devDependencies": {
     "@eslint/compat": "^2.1.1",
-    "@playwright/test": "^1.65.1",
     "@svgr/webpack": "^8.1.0",
     "@tailwindcss/postcss": "^4.3.5",
     "@testing-library/jest-dom": "^7.0.1",
