@@ -8,11 +8,11 @@ alwaysApply: false
 
 - Do not use `dangerouslySetInnerHTML`, `eval()`, or `new Function()`. Keep `csp:inject` and `csp:validate` in the build. [why: convention]
 - Do not use `style` or `CSSProperties`. Do not embed inline `<svg>` in components. Reusable vectors live in `public/images/*.svg`. [why: convention]
-- Page composition goes in `src/components/pages/**`, primitives in `src/components/shared/**`, sections in `src/components/sections/**`, and section helpers in `src/components/sections/shared/**`. Tests go in `apps/public_www/tests/**`, not beside source. [why: convention]
+- Page composition goes in `src/components/pages/**`, primitives in `src/components/shared/**`, sections in `src/components/sections/**`, and section helpers in `src/components/sections/shared/**`. Unit tests go in `apps/public_www/tests/**`, not beside source. Browser end-to-end tests go in `apps/public_www/e2e/`. [why: convention]
 - `en.json` is the locale schema. Change `zh-CN.json` and `zh-HK.json` in the same edit. User-visible copy, including alt text and aria labels, lives in locale JSON. [why: convention]
 - Locale key segments are lowerCamelCase. `validate-content.mjs` also allows `_comment`-style meta keys and kebab-case slugs such as `training-course`. Shared chrome copy lives under `common.*`. Interpolation strings use a `*Template` suffix and named placeholders. [why: convention]
 - Do not reintroduce `contactUs.contactUsForm` or `contactUs.contactFaq`. [why: convention]
 - `family-consultations.json` uses snake_case. Location fields are `location_name`, `location_address`, and `location_url`. [why: convention]
 - `SectionShell` `id` and `dataFigmaNode` match the section file key, unless a stable anchor is already part of navigation. [why: convention]
-- When behavior changes, update the existing tests and fixtures. Do not add Playwright. [why: convention]
+- Playwright is allowed for the public website browser suite in `apps/public_www/e2e`. This lifts the "Do not add Playwright" rule from #2131 for that suite. Admin web and training stay on Vitest. When behavior changes, update the existing Vitest tests and fixtures. [why: #2131 lifted for the public website suite]
 - Follow `.cursor/skills/public-www-section/SKILL.md` when adding a section. [why: convention]

@@ -35,6 +35,7 @@
     "check:public-api-types": "node ./scripts/check-public-api-types.mjs",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
     "test:watch": "vitest",
     "audit:deps:prod": "npm audit --omit=dev --audit-level=high"
   },
@@ -48,6 +49,7 @@
   },
   "devDependencies": {
     "@eslint/compat": "^2.1.1",
+    "@playwright/test": "^1.65.1",
     "@lhci/cli": "^0.16.1",
     "@tailwindcss/postcss": "^4.3.5",
     "@testing-library/dom": "^10.4.2",
