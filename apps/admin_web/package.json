@@ -13,7 +13,8 @@
     "lint": "npm run check:admin-api-types && eslint --max-warnings=0 .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:ci": "npm run test:coverage"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.107.1",
