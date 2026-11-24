@@ -1,4 +1,4 @@
-import Image from 'next/image';
+import { preload } from 'react-dom';
 
 import { SectionCtaAnchor } from '@/components/sections/shared/section-cta-link';
 import {
@@ -25,6 +25,7 @@ const HERO_FRAME_SRC = '/images/evolvesprouts-logo.svg';
 const HERO_BODY_TEXT_CLASSNAME = 'max-w-[458px] es-hero-subheadline';
 
 export function HeroBanner({ content, ctaHref }: HeroBannerProps) {
+  preload(HERO_IMAGE_SRC, { as: 'image', fetchPriority: 'high' });
   const copy = resolveHeroCopy(content);
   const resolvedCtaHref =
     ctaHref?.trim()
@@ -45,6 +46,8 @@ export function HeroBanner({ content, ctaHref }: HeroBannerProps) {
         width={1125}
         height={563}
         aria-hidden='true'
+        decoding='async'
+        fetchPriority='low'
         className='pointer-events-none absolute left-0 top-0 es-hero-frame-bg'
       />
       <SectionContainer
@@ -75,14 +78,14 @@ export function HeroBanner({ content, ctaHref }: HeroBannerProps) {
           </div>
         </div>
         <div className='mx-auto w-full max-w-[573px] lg:ml-auto lg:mr-0'>
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={HERO_IMAGE_SRC}
             alt={content.imageAlt}
             width={764}
             height={841}
-            priority
+            decoding='sync'
             fetchPriority='high'
-            sizes='(max-width: 640px) 92vw, (max-width: 1024px) 70vw, 764px'
             className='h-auto w-full'
           />
         </div>
