@@ -72,7 +72,7 @@ jobs:
 
       - name: Set up Node.js
         if: ${{ success() && github.event.inputs.promotion_mode != 'maintenance_on' }}
-        uses: lx-software-ltd/actions/setup-node@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
@@ -107,13 +107,39 @@ jobs:
 
       - name: Configure AWS credentials
         # After the build. npm ci and the build must not see the deploy role.
-        uses: lx-software-ltd/actions/aws-oidc@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/aws-oidc@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
 
+      - name: Choose promotion mode
+        id: promotion_mode
+        env:
+          PROMOTION_MODE: ${{ inputs.promotion_mode }}
+        run: |
+          MODE="${PROMOTION_MODE:-latest_staging}"
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          if [ "$MODE" = "latest_staging" ]; then
+            echo "read_staging=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "read_staging=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Read staging bucket
+        id: staging
+        if: ${{ steps.promotion_mode.outputs.read_staging == 'true' }}
+        uses: lx-software-ltd/actions/cfn-stack-outputs@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
+        with:
+          stack: evolvesprouts-public-www
+          outputs: PublicWwwStagingBucketName
+          region: ${{ vars.AWS_REGION }}
+
       - name: Resolve release ID
         id: resolve_release
+        env:
+          PROMOTION_MODE: ${{ steps.promotion_mode.outputs.mode }}
+          INPUT_RELEASE_ID: ${{ inputs.release_id }}
+          STACK_JSON: ${{ steps.staging.outputs.json }}
         run: |
           RESOLVED_PROMOTION_MODE="${PROMOTION_MODE:-latest_staging}"
 
@@ -129,11 +155,10 @@ jobs:
             fi
             SELECTED_RELEASE_ID="$INPUT_RELEASE_ID"
           elif [ "$RESOLVED_PROMOTION_MODE" = "latest_staging" ]; then
-            STAGING_BUCKET="$(aws cloudformation describe-stacks \
-              --stack-name "$STACK_NAME" \
-              --query "Stacks[0].Outputs[?OutputKey=='PublicWwwStagingBucketName'].OutputValue" \
-              --output text)"
-            if [ -z "$STAGING_BUCKET" ] || [ "$STAGING_BUCKET" = "None" ]; then
+            STAGING_BUCKET="$(
+              STACK_JSON="$STACK_JSON" python3 -c 'import json,os; print(json.loads(os.environ["STACK_JSON"])["PublicWwwStagingBucketName"])'
+            )"
+            if [ -z "$STAGING_BUCKET" ]; then
               echo 'Staging bucket output not found on Public Website stack'
               exit 1
             fi
@@ -157,10 +182,6 @@ jobs:
           echo "release_id=$SELECTED_RELEASE_ID" >> "$GITHUB_OUTPUT"
           echo "maintenance_mode=false" >> "$GITHUB_OUTPUT"
           echo "promotion_mode=$RESOLVED_PROMOTION_MODE" >> "$GITHUB_OUTPUT"
-        env:
-          PROMOTION_MODE: ${{ inputs.promotion_mode }}
-          INPUT_RELEASE_ID: ${{ inputs.release_id }}
-          STACK_NAME: evolvesprouts-public-www
 
       - name: Promote release or enable maintenance mode
         run: |

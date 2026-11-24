@@ -602,6 +602,11 @@ function apply_www_proxy_mode() {
   update_www_function_association "$distribution_id" "$target_function_arn"
 }
 
+if [ "${PUBLIC_WWW_PHASE:-}" = "optimize" ]; then
+  optimize_images_for_deploy
+  exit 0
+fi
+
 if [ -n "$PROMOTE_RELEASE_ID" ]; then
   validate_release_id "$PROMOTE_RELEASE_ID"
 
@@ -684,36 +689,48 @@ if [ "$MAINTENANCE_MODE" = "true" ]; then
   exit 0
 fi
 
-if [ ! -d "$BUILD_DIR" ]; then
-  echo "Build output not found at $BUILD_DIR"
-  echo "Run: (cd apps/public_www && npm run build)"
-  exit 1
-fi
+UPLOAD="${PUBLIC_WWW_UPLOAD:-script}"
+if [ "$UPLOAD" = "external" ]; then
+  if [ "$DEPLOY_ENVIRONMENT" != "staging" ]; then
+    echo "PUBLIC_WWW_UPLOAD=external is only supported for staging"
+    exit 1
+  fi
+  echo "S3 upload already completed by s3-cloudfront-deploy"
+elif [ "$UPLOAD" = "script" ]; then
+  if [ ! -d "$BUILD_DIR" ]; then
+    echo "Build output not found at $BUILD_DIR"
+    echo "Run: (cd apps/public_www && npm run build)"
+    exit 1
+  fi
 
-optimize_images_for_deploy
+  optimize_images_for_deploy
 
-echo "Syncing Public WWW to s3://$TARGET_BUCKET_NAME"
-sync_site_artifacts "$BUILD_DIR" "s3://$TARGET_BUCKET_NAME"
+  echo "Syncing Public WWW to s3://$TARGET_BUCKET_NAME"
+  sync_site_artifacts "$BUILD_DIR" "s3://$TARGET_BUCKET_NAME"
 
-if [ -n "$RELEASE_ID" ]; then
-  validate_release_id "$RELEASE_ID"
-  echo "Saving immutable release at releases/$RELEASE_ID/"
-  sync_site_artifacts "$BUILD_DIR" "s3://$TARGET_BUCKET_NAME/releases/$RELEASE_ID"
+  if [ -n "$RELEASE_ID" ]; then
+    validate_release_id "$RELEASE_ID"
+    echo "Saving immutable release at releases/$RELEASE_ID/"
+    sync_site_artifacts "$BUILD_DIR" "s3://$TARGET_BUCKET_NAME/releases/$RELEASE_ID"
+
+    if [ "$DEPLOY_ENVIRONMENT" = "staging" ]; then
+      echo "Updating staging latest release marker: $RELEASE_ID"
+      MARKER_FILE="$(mktemp)"
+      printf "%s\n" "$RELEASE_ID" > "$MARKER_FILE"
+      aws s3 cp \
+        "$MARKER_FILE" \
+        "s3://$TARGET_BUCKET_NAME/releases/latest-release-id.txt"
+      rm -f "$MARKER_FILE"
+    fi
+  fi
 
   if [ "$DEPLOY_ENVIRONMENT" = "staging" ]; then
-    echo "Updating staging latest release marker: $RELEASE_ID"
-    MARKER_FILE="$(mktemp)"
-    printf "%s\n" "$RELEASE_ID" > "$MARKER_FILE"
-    aws s3 cp \
-      "$MARKER_FILE" \
-      "s3://$TARGET_BUCKET_NAME/releases/latest-release-id.txt"
-    rm -f "$MARKER_FILE"
+    echo "Applying staging robots.txt deny-all policy"
+    enforce_staging_robots_txt "$TARGET_BUCKET_NAME"
   fi
-fi
-
-if [ "$DEPLOY_ENVIRONMENT" = "staging" ]; then
-  echo "Applying staging robots.txt deny-all policy"
-  enforce_staging_robots_txt "$TARGET_BUCKET_NAME"
+else
+  echo "Unsupported PUBLIC_WWW_UPLOAD: '$UPLOAD'"
+  exit 1
 fi
 
 apply_www_proxy_mode \

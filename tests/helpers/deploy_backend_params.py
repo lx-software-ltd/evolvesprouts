@@ -16,8 +16,9 @@ BACKEND_STACK = "evolvesprouts"
 
 def workflow_python() -> str:
     text = WORKFLOW.read_text(encoding="utf-8")
-    marker = text.index("import json\n")
-    start = text.rfind("\n", 0, marker) + 1
+    marker = text.index('os.environ["PARAM_FILE"]')
+    start = text.rfind("import json\n", 0, marker)
+    start = text.rfind("\n", 0, start) + 1
     lines: list[str] = []
     for line in text[start:].splitlines(keepends=True):
         if line.strip() == "PY":

@@ -44,7 +44,7 @@ jobs:
           echo "asset_share_base_url=https://${ASSET_SHARE_DOMAIN}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
@@ -115,22 +115,40 @@ jobs:
           NEXT_PUBLIC_WWW_CRM_API_KEY: ${{ secrets.NEXT_PUBLIC_WWW_CRM_API_KEY }}
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/aws-oidc@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
 
+      - name: Optimize public website images
+        run: bash scripts/deploy/deploy-public-www.sh
+        env:
+          PUBLIC_WWW_PHASE: optimize
+
       - name: Deploy public website
-        run: |
-          if [ -f 'scripts/deploy/deploy-public-www.sh' ]; then
-            bash 'scripts/deploy/deploy-public-www.sh'
-          else
-            echo 'Deploy script not found: scripts/deploy/deploy-public-www.sh'
-          fi
+        uses: lx-software-ltd/actions/s3-cloudfront-deploy@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
+        with:
+          source: apps/public_www/out
+          stack: evolvesprouts-public-www
+          region: ${{ vars.AWS_REGION }}
+          bucket-output: PublicWwwStagingBucketName
+          distribution-output: ""
+          profile: next-site
+          release-id: ${{ github.sha }}
+          release-marker: "true"
+          staging-robots: "true"
+          sync-exclude: landing-pages-manifest.json
+          dry-run: "false"
+
+      # The action would invalidate /* before the /www function switch.
+      # This step only switches that function and invalidates the site paths.
+      - name: Switch the www function and invalidate
+        run: bash scripts/deploy/deploy-public-www.sh
         env:
           PUBLIC_WWW_STACK_NAME: evolvesprouts-public-www
           PUBLIC_WWW_ENVIRONMENT: staging
           PUBLIC_WWW_RELEASE_ID: ${{ github.sha }}
+          PUBLIC_WWW_UPLOAD: external
 
       - name: Publish staging release summary
         run: |
