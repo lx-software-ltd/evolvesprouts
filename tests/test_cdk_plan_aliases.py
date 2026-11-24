@@ -12,11 +12,7 @@ PLAN = (
 
 def test_labels_name_stacks_in_the_plan() -> None:
     plan = json.loads(PLAN.read_text(encoding="utf-8"))
-    known = {
-        name
-        for group in plan["groups"]
-        for name in group["stacks"]
-    }
+    known = {name for group in plan["groups"] for name in group["stacks"]}
     aliases = plan["aliases"]
     assert aliases["all stacks"] == [
         "evolvesprouts",
