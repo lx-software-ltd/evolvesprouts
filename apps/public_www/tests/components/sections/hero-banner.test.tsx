@@ -53,6 +53,9 @@ describe('HeroBanner section', () => {
 
     const frameBackground = container.querySelector('.es-hero-frame-bg');
     expect(frameBackground).not.toBeNull();
+    expect(
+      document.querySelector('link[rel="preload"][href="/images/evolvesprouts-logo.svg"]'),
+    ).not.toBeNull();
 
     const headline = screen.getByRole('heading', { level: 1 });
     expect(headline.className).toContain('es-hero-headline');

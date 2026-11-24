@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { preload } from 'react-dom';
 
 import { SectionCtaAnchor } from '@/components/sections/shared/section-cta-link';
 import {
@@ -21,9 +22,11 @@ interface HeroBannerProps {
 }
 
 const HERO_IMAGE_SRC = '/images/hero/child-hero.webp';
+const HERO_FRAME_SRC = '/images/evolvesprouts-logo.svg';
 const HERO_BODY_TEXT_CLASSNAME = 'max-w-[458px] es-hero-subheadline';
 
 export function HeroBanner({ content, ctaHref }: HeroBannerProps) {
+  preload(HERO_FRAME_SRC, { as: 'image', fetchPriority: 'high' });
   const copy = resolveHeroCopy(content);
   const resolvedCtaHref =
     ctaHref?.trim()
