@@ -397,7 +397,7 @@ Each Lambda function created by `PythonLambda` construct includes:
 | `DeviceAttestationAuthorizer` | `lambda/authorizers/device_attestation/handler.lambda_handler` | 256 MB | 5s | No | Device attestation authorizer |
 | `AdminGroupAuthorizerFunction` | `lambda/authorizers/cognito_group/handler.lambda_handler` | 256 MB | 5s | No | Admin group authorizer |
 | `UserAuthorizerFunction` | `lambda/authorizers/cognito_user/handler.lambda_handler` | 256 MB | 5s | No | Any-user authorizer |
-| `ApiTokenAuthorizerFunction` | `lambda/authorizers/api_token/handler.lambda_handler` | 512 MB | 10s | Yes | Hashed `x-api-token` authorizer (RDS Proxy); no reserved concurrency |
+| `ApiTokenAuthorizerFunction` | `lambda/authorizers/api_token/handler.lambda_handler` | 512 MB | 10s | Yes | Hashed `Authorization: Bearer` authorizer (RDS Proxy); no reserved concurrency |
 
 ### Other Functions
 
@@ -541,16 +541,16 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | `/v1/admin/meta/conversations` | GET | Admin Group | `EvolvesproutsAdminFunction` | Paginated captured Messenger/Instagram threads |
 | `/v1/admin/meta/conversations/{id}/messages` | GET | Admin Group | `EvolvesproutsAdminFunction` | Messages for one Meta thread |
 | `/v1/admin/meta/import-jobs` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | Queue/list Instagram/Messenger Graph import jobs |
-| `/v1/public/meta/conversations` | GET | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token reads; name/dates only |
-| `/v1/public/meta/conversations/{id}/messages` | GET | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token message reads without scoped ids |
-| `/v1/public/contacts` | GET, POST | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token contact list/create; `user` GET only |
-| `/v1/public/contacts/merge` | POST | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token contact merge; `admin` only; same handler as `/v1/admin/contacts/merge`; at most 10 contacts |
-| `/v1/public/contacts/{id}` | GET, PATCH, DELETE | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token contact get/update/delete; `user` GET only |
-| `/v1/public/services` | GET, POST | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token service list/create; `user` GET only |
-| `/v1/public/services/instances` | GET | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Cross-service instance list; `user` GET only |
-| `/v1/public/services/{id}` | GET, PUT, PATCH, DELETE | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Token service get/update/delete; `user` GET only |
-| `/v1/public/services/{id}/instances` | GET, POST | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Nested instance list/create; `user` GET only |
-| `/v1/public/services/{id}/instances/{instance_id}` | GET, PUT, DELETE | API token (`x-api-token`) | `EvolvesproutsAdminFunction` | Nested instance get/update/delete; `user` GET only |
+| `/v1/partner/meta/conversations` | GET | API token (`Authorization: Bearer`) | `EvolvesproutsAdminFunction` | Token reads; name/dates only |
+| `/v1/partner/meta/conversations/{id}/messages` | GET | API token (`Authorization: Bearer`) | `EvolvesproutsAdminFunction` | Token message reads without scoped ids |
+| `/v1/partner/contacts` | GET, POST | API token (`Authorization: Bearer`) | `EvolvesproutsAdminFunction` | Token contact list/create; `user` GET only |
+| `/v1/partner/contacts/merge` | POST | API token (`Authorization: Bearer`) | `EvolvesproutsAdminFunction` | Token contact merge; `admin` only; same handler as `/v1/admin/contacts/merge`; at most 10 contacts |
+| `/v1/partner/contacts/{id}` | GET, PATCH, DELETE | API token (`Authorization: Bearer`) | `EvolvesproutsAdminFunction` | Token contact get/update/delete; `user` GET only |
+| `/v1/partner/services` | GET, POST | API token (`Authorization: Bearer`) | `EvolvesproutsAdminFunction` | Token service list/create; `user` GET only |
+| `/v1/partner/services/instances` | GET | API token (`Authorization: Bearer`) | `EvolvesproutsAdminFunction` | Cross-service instance list; `user` GET only |
+| `/v1/partner/services/{id}` | GET, PUT, PATCH, DELETE | API token (`Authorization: Bearer`) | `EvolvesproutsAdminFunction` | Token service get/update/delete; `user` GET only |
+| `/v1/partner/services/{id}/instances` | GET, POST | API token (`Authorization: Bearer`) | `EvolvesproutsAdminFunction` | Nested instance list/create; `user` GET only |
+| `/v1/partner/services/{id}/instances/{instance_id}` | GET, PUT, DELETE | API token (`Authorization: Bearer`) | `EvolvesproutsAdminFunction` | Nested instance get/update/delete; `user` GET only |
 | `/v1/admin/assets` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | |
 | `/v1/admin/assets/{id}` | GET, PUT, PATCH, DELETE | Admin Group | `EvolvesproutsAdminFunction` | |
 | `/v1/admin/assets/{id}/grants` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | |
@@ -604,7 +604,7 @@ not per-request `Origin` echoing.
 | Request Authorizer | `DeviceAttestationRequestAuthorizer` | Lambda | `DeviceAttestationAuthorizer` | Validates `x-device-attestation` header, no caching |
 | Request Authorizer | `AdminGroupAuthorizer` | Lambda | `AdminGroupAuthorizerFunction` | JWT + staff group check (`admin` / `manager` / `instructor`), 5-min cache |
 | Request Authorizer | `UserAuthorizer` | Lambda | `UserAuthorizerFunction` | JWT validation (any user), 5-min cache |
-| Request Authorizer | `ApiTokenAuthorizer` | Lambda | `ApiTokenAuthorizerFunction` | Validates `x-api-token` against hashed `api_keys`, 5-min cache |
+| Request Authorizer | `ApiTokenAuthorizer` | Lambda | `ApiTokenAuthorizerFunction` | Validates `Authorization: Bearer` against hashed `api_keys`, 5-min cache |
 
 ### API Gateway API Key and Usage Plan
 

@@ -1,4 +1,6 @@
 import {
+  API_MEDIA_REQUEST_PROXY_FUNCTION,
+  API_PROXY_ALLOWLIST_FUNCTION,
   MEDIA_REQUEST_PROXY_FUNCTION,
   STATIC_EXPORT_PATH_REWRITE_FUNCTION,
   WWW_API_ERROR_RESPONSE_FUNCTION,
@@ -36,6 +38,8 @@ function main(): void {
     WWW_PROXY_ALLOWLIST_FUNCTION,
     MEDIA_REQUEST_PROXY_FUNCTION,
     WWW_API_ERROR_RESPONSE_FUNCTION,
+    API_PROXY_ALLOWLIST_FUNCTION,
+    API_MEDIA_REQUEST_PROXY_FUNCTION,
   ]) {
     if (!source.includes("function handler(event)")) {
       throw new Error("CloudFront function source missing handler");
@@ -94,6 +98,22 @@ function main(): void {
 
   if (!MEDIA_REQUEST_PROXY_FUNCTION.includes("/www/v1/assets/free/request")) {
     throw new Error("MEDIA_REQUEST_PROXY_FUNCTION missing media request path");
+  }
+  if (API_PROXY_ALLOWLIST_FUNCTION.includes("/www/")) {
+    throw new Error("API_PROXY_ALLOWLIST_FUNCTION must not keep /www paths");
+  }
+  if (!API_PROXY_ALLOWLIST_FUNCTION.includes("/api/v1/public/calendar")) {
+    throw new Error("API_PROXY_ALLOWLIST_FUNCTION missing /api calendar path");
+  }
+  if (!API_PROXY_ALLOWLIST_FUNCTION.includes("uri.substring(4)")) {
+    throw new Error("API_PROXY_ALLOWLIST_FUNCTION must strip the /api prefix");
+  }
+  if (
+    !API_MEDIA_REQUEST_PROXY_FUNCTION.includes(
+      "/api/v1/public/assets/free/request",
+    )
+  ) {
+    throw new Error("API_MEDIA_REQUEST_PROXY_FUNCTION missing media request path");
   }
 
   console.log("cloudfront-www-proxy-functions.test.ts: ok");

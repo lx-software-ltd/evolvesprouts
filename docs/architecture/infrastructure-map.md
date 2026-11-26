@@ -53,7 +53,7 @@ and edge proxy. It is managed manually through the Cloudflare dashboard
 | CNAME | `evolvesprouts.com` | CloudFront distribution (public website, apex) | Yes |
 | CNAME | `www.evolvesprouts.com` | CloudFront distribution (public website) | Yes |
 | CNAME | `www-staging.evolvesprouts.com` | CloudFront distribution (staging) | Yes |
-| CNAME | `api.evolvesprouts.com` | API Gateway custom domain | Yes |
+| CNAME | `api.evolvesprouts.com` | API Gateway custom domain | No (grey cloud, DNS-only) |
 | CNAME | `admin.evolvesprouts.com` | CloudFront distribution (admin web) | No (grey cloud) |
 | CNAME | `training.evolvesprouts.com` | CloudFront distribution (training web) | Yes |
 | CNAME | `media.evolvesprouts.com` | CloudFront distribution (asset downloads) | No (grey cloud) |
@@ -221,7 +221,7 @@ page-level CSP with hashed inline scripts is injected at build time by
 ### Architecture
 
 ```
-Cloudflare (api.evolvesprouts.com) — proxied
+DNS-only CNAME (api.evolvesprouts.com) → API Gateway custom domain
         │
         ▼
 API Gateway (evolvesprouts-api)

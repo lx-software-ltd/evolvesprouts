@@ -3,9 +3,40 @@
 from __future__ import annotations
 
 import time
-from typing import Any
 from collections.abc import Callable, Mapping
+from typing import Any
 
+from app.api.admin_api_keys import handle_admin_api_keys_request
+from app.api.admin_audit_logs import handle_admin_audit_logs_request
+from app.api.admin_billing import handle_admin_billing_request
+from app.api.admin_calendar_manual_blocks import (
+    handle_admin_calendar_manual_blocks_request,
+)
+from app.api.admin_cognito_users import handle_admin_cognito_users_request
+from app.api.admin_completion_certificates import (
+    handle_admin_completion_certificates_request,
+)
+from app.api.admin_contacts import handle_admin_contacts_request
+from app.api.admin_discount_codes import handle_admin_discount_codes_request
+from app.api.admin_expenses import handle_admin_expenses_request
+from app.api.admin_families import handle_admin_families_request
+from app.api.admin_families_picker import handle_admin_families_picker_request
+from app.api.admin_forms import handle_admin_forms_request
+from app.api.admin_geographic_areas import handle_admin_geographic_areas_request
+from app.api.admin_leads import handle_admin_leads_request
+from app.api.admin_locations import handle_admin_locations_request
+from app.api.admin_meta import handle_admin_meta_request
+from app.api.admin_organizations import handle_admin_organizations_request
+from app.api.admin_organizations_picker import handle_admin_organizations_picker_request
+from app.api.admin_polls import handle_admin_polls_request
+from app.api.admin_request import admin_request_log, event_for_routing
+from app.api.admin_services import handle_admin_services_request
+from app.api.admin_tags import handle_admin_tags_request
+from app.api.admin_users import (
+    handle_admin_instructors_request,
+    handle_admin_users_request,
+)
+from app.api.admin_whatsapp import handle_admin_whatsapp_request
 from app.api.assets import (
     handle_admin_assets_request,
     handle_email_download_request,
@@ -13,59 +44,30 @@ from app.api.assets import (
     handle_share_assets_request,
     handle_user_assets_request,
 )
-from app.api.admin_geographic_areas import handle_admin_geographic_areas_request
-from app.api.admin_completion_certificates import (
-    handle_admin_completion_certificates_request,
-)
-from app.api.admin_discount_codes import handle_admin_discount_codes_request
-from app.api.admin_expenses import handle_admin_expenses_request
-from app.api.admin_leads import handle_admin_leads_request
-from app.api.admin_locations import handle_admin_locations_request
-from app.api.admin_services import handle_admin_services_request
-from app.api.admin_cognito_users import handle_admin_cognito_users_request
-from app.api.admin_users import (
-    handle_admin_instructors_request,
-    handle_admin_users_request,
-)
-from app.api.admin_billing import handle_admin_billing_request
-from app.api.admin_contacts import handle_admin_contacts_request
-from app.api.admin_tags import handle_admin_tags_request
-from app.api.admin_families import handle_admin_families_request
-from app.api.admin_families_picker import handle_admin_families_picker_request
-from app.api.admin_organizations import handle_admin_organizations_request
-from app.api.admin_organizations_picker import handle_admin_organizations_picker_request
-from app.api.admin_api_keys import handle_admin_api_keys_request
-from app.api.admin_meta import handle_admin_meta_request
-from app.api.admin_whatsapp import handle_admin_whatsapp_request
+from app.api.assets.public_free_assets import handle_public_free_assets_list_request
+from app.api.assets.public_media_assets import handle_media_request
 from app.api.partner.contacts import handle_public_contacts_request
 from app.api.partner.families import handle_public_families_request
-from app.api.partner.services import handle_public_services_request
 from app.api.partner.geographic_areas import handle_public_geographic_areas_request
 from app.api.partner.locations import handle_public_locations_request
 from app.api.partner.meta_conversations import handle_public_meta_request
 from app.api.partner.organizations import handle_public_organizations_request
+from app.api.partner.services import handle_public_services_request
 from app.api.partner.whatsapp_conversations import handle_public_whatsapp_request
-from app.api.assets.public_media_assets import handle_media_request
-from app.api.partner_mailchimp_webhook import handle_mailchimp_webhook
-from app.api.partner_meta_webhook import handle_meta_webhook
-from app.api.partner_whatsapp_webhook import handle_whatsapp_webhook
-from app.api.assets.public_free_assets import handle_public_free_assets_list_request
-from app.api.partner_discount_validate import handle_public_discount_validate
-from app.api.admin_audit_logs import handle_admin_audit_logs_request
-from app.api.admin_calendar_manual_blocks import (
-    handle_admin_calendar_manual_blocks_request,
+from app.api.public_calendar_availability import handle_public_calendar_availability
+from app.api.public_contact import handle_public_contact_us
+from app.api.public_discount_validate import handle_public_discount_validate
+from app.api.public_events import handle_public_events
+from app.api.public_forms import handle_public_forms_request
+from app.api.public_mailchimp_webhook import handle_mailchimp_webhook
+from app.api.public_meta_webhook import handle_meta_webhook
+from app.api.public_polls import handle_public_polls_request
+from app.api.public_reservation_payments import (
+    handle_public_reservation_payment_intent,
 )
-from app.api.admin_forms import handle_admin_forms_request
-from app.api.admin_polls import handle_admin_polls_request
-from app.api.partner_calendar_availability import handle_public_calendar_availability
-from app.api.partner_events import handle_public_events
-from app.api.partner_contact import handle_public_contact_us
-from app.api.partner_forms import handle_public_forms_request
-from app.api.partner_polls import handle_public_polls_request
-from app.api.partner_reservation_payments import handle_public_reservation_payment_intent
-from app.api.partner_reservations import _handle_public_reservation
-from app.api.admin_request import admin_request_log, event_for_routing
-from app.exceptions import AppError, ValidationError
+from app.api.public_reservations import _handle_public_reservation
+from app.api.public_whatsapp_webhook import handle_whatsapp_webhook
+from app.exceptions import AppError, ValidationError, problem_body
 from app.utils import json_response, not_found
 from app.utils.logging import (
     clear_request_context,
@@ -328,7 +330,6 @@ _CANONICAL_ROUTES: tuple[
 )
 
 
-
 _PUBLIC_ALIASES = {
     "/v1/calendar/public": "/v1/public/calendar",
     "/v1/assets/public": "/v1/public/assets",
@@ -414,10 +415,12 @@ def _safe_handler(
         return json_response(exc.status_code, exc.to_dict(), event=event)
     except ValueError as exc:
         logger.warning(f"Value error: {exc}")
-        return json_response(400, {"error": str(exc)}, event=event)
-    except Exception:  # pragma: no cover
+        return json_response(400, problem_body(400, str(exc)), event=event)
+    except Exception:
         logger.exception("Unexpected error in handler")
-        return json_response(500, {"error": "Internal server error"}, event=event)
+        return json_response(
+            500, problem_body(500, "Internal server error"), event=event
+        )
 
 
 def _match_handler(

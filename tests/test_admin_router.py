@@ -66,7 +66,10 @@ def test_lambda_handler_reports_server_timing_and_cold_start_once(monkeypatch) -
     first_timing = first["headers"]["Server-Timing"]
     assert first_timing.startswith("app;dur=")
     assert "cold;dur=" in first_timing
-    assert first["headers"]["Access-Control-Expose-Headers"] == "Server-Timing"
+    assert (
+        first["headers"]["Access-Control-Expose-Headers"]
+        == "Server-Timing, x-request-id"
+    )
 
     second_timing = second["headers"]["Server-Timing"]
     assert second_timing.startswith("app;dur=")
@@ -82,8 +85,9 @@ def test_safe_handler_hides_internal_exception_details() -> None:
 
     assert response["statusCode"] == 500
     body = json.loads(response["body"])
-    assert body == {"error": "Internal server error"}
-    assert "detail" not in body
+    assert body["error"] == "Internal server error"
+    assert body["code"] == "internal_error"
+    assert "db leaked" not in response["body"]
 
 
 def test_match_handler_routes_asset_prefix_paths() -> None:

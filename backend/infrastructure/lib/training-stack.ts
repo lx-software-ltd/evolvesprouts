@@ -6,11 +6,15 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import { Construct } from "constructs";
 
 import {
+  API_MEDIA_REQUEST_PROXY_FUNCTION,
+  API_PROXY_ALLOWLIST_FUNCTION,
   MEDIA_REQUEST_PROXY_FUNCTION,
   STATIC_EXPORT_PATH_REWRITE_FUNCTION,
   WWW_API_ERROR_RESPONSE_FUNCTION,
   WWW_PROXY_ALLOWLIST_FUNCTION,
 } from "./cloudfront-www-proxy-functions";
+
+const API_BASE_URL_PATTERN = "^https://[^/]+(/[^/]+)?/?$";
 
 const TRAINING_HEADER_CONTENT_SECURITY_POLICY = [
   "base-uri 'self'",
@@ -49,10 +53,10 @@ export class TrainingStack extends cdk.Stack {
     const trainingApiBaseUrl = new cdk.CfnParameter(this, "TrainingApiBaseUrl", {
       type: "String",
       description:
-        "Absolute HTTPS public API base URL used by the /www proxy (for example https://api.example.com/prod or https://api.example.com/www).",
-      allowedPattern: "^https://[^/]+/[^/]+/?$",
+        "Absolute HTTPS public API base URL used by the /www and /api proxies (for example https://api.example.com or https://api.example.com/prod).",
+      allowedPattern: API_BASE_URL_PATTERN,
       constraintDescription:
-        "Must be an absolute HTTPS URL ending in a single path segment (for example /prod or /www).",
+        "Must be an absolute HTTPS origin, with an optional single path segment.",
     });
 
     const trainingMediaRequestApiBaseUrl = new cdk.CfnParameter(
@@ -61,21 +65,27 @@ export class TrainingStack extends cdk.Stack {
       {
         type: "String",
         description:
-          "Absolute HTTPS API base URL for media requests (for example https://api.example.com/prod).",
-        allowedPattern: "^https://[^/]+/[^/]+/?$",
+          "Absolute HTTPS API base URL for media requests (for example https://api.example.com or https://api.example.com/prod).",
+        allowedPattern: API_BASE_URL_PATTERN,
         constraintDescription:
-          "Must be an absolute HTTPS URL ending in a single stage path segment (for example /prod).",
+          "Must be an absolute HTTPS origin, with an optional single path segment.",
       },
     );
 
     const apiOriginDomainName = resolveApiOriginDomainName(
       trainingApiBaseUrl.valueAsString,
     );
-    const apiOriginPath = resolveApiOriginPath(trainingApiBaseUrl.valueAsString);
+    const apiOriginPath = resolveApiOriginPath(
+      this,
+      "TrainingApiOriginHasPath",
+      trainingApiBaseUrl.valueAsString,
+    );
     const mediaRequestApiOriginDomainName = resolveApiOriginDomainName(
       trainingMediaRequestApiBaseUrl.valueAsString,
     );
     const mediaRequestApiOriginPath = resolveApiOriginPath(
+      this,
+      "TrainingMediaRequestApiOriginHasPath",
       trainingMediaRequestApiBaseUrl.valueAsString,
     );
 
@@ -225,9 +235,32 @@ export class TrainingStack extends cdk.Stack {
       },
     );
 
+    const apiProxyAllowlistFunction = new cloudfront.Function(
+      this,
+      "TrainingApiProxyAllowlistFunction",
+      {
+        comment:
+          "Allow only explicitly approved public API method/path pairs on /api/*.",
+        runtime: cloudfront.FunctionRuntime.JS_2_0,
+        code: cloudfront.FunctionCode.fromInline(API_PROXY_ALLOWLIST_FUNCTION),
+      },
+    );
+    const apiMediaRequestProxyFunction = new cloudfront.Function(
+      this,
+      "TrainingApiMediaRequestProxyFunction",
+      {
+        comment:
+          "Allow /api/v1/public/assets/free/request and rewrite the path for the API origin.",
+        runtime: cloudfront.FunctionRuntime.JS_2_0,
+        code: cloudfront.FunctionCode.fromInline(API_MEDIA_REQUEST_PROXY_FUNCTION),
+      },
+    );
+
     wwwProxyAllowlistFunction.node.addDependency(pathRewriteFunction);
     mediaRequestProxyFunction.node.addDependency(wwwProxyAllowlistFunction);
     wwwApiErrorResponseFunction.node.addDependency(mediaRequestProxyFunction);
+    apiProxyAllowlistFunction.node.addDependency(wwwApiErrorResponseFunction);
+    apiMediaRequestProxyFunction.node.addDependency(apiProxyAllowlistFunction);
 
     const apiProxyCachePolicy = new cloudfront.CachePolicy(
       this,
@@ -355,6 +388,44 @@ export class TrainingStack extends cdk.Stack {
             },
           ],
         },
+        "api/v1/public/assets/free/request": {
+          origin: mediaRequestApiOrigin,
+          viewerProtocolPolicy:
+            cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+          originRequestPolicy:
+            cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+          functionAssociations: [
+            {
+              function: apiMediaRequestProxyFunction,
+              eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+            },
+            {
+              function: wwwApiErrorResponseFunction,
+              eventType: cloudfront.FunctionEventType.VIEWER_RESPONSE,
+            },
+          ],
+        },
+        "api/*": {
+          origin: wwwApiOrigin,
+          viewerProtocolPolicy:
+            cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+          cachePolicy: apiProxyCachePolicy,
+          originRequestPolicy:
+            cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+          functionAssociations: [
+            {
+              function: apiProxyAllowlistFunction,
+              eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+            },
+            {
+              function: wwwApiErrorResponseFunction,
+              eventType: cloudfront.FunctionEventType.VIEWER_RESPONSE,
+            },
+          ],
+        },
         "www/*": {
           origin: wwwApiOrigin,
           viewerProtocolPolicy:
@@ -414,9 +485,20 @@ function resolveApiOriginDomainName(apiBaseUrl: string): string {
   );
 }
 
-function resolveApiOriginPath(apiBaseUrl: string): string {
-  return `/${cdk.Fn.select(
+function resolveApiOriginPath(
+  scope: cdk.Stack,
+  id: string,
+  apiBaseUrl: string,
+): string {
+  const afterScheme = cdk.Fn.select(1, cdk.Fn.split("://", apiBaseUrl));
+  const segment = cdk.Fn.select(
     1,
-    cdk.Fn.split("/", cdk.Fn.select(1, cdk.Fn.split("://", apiBaseUrl))),
-  )}`;
+    cdk.Fn.split("/", cdk.Fn.join("", [afterScheme, "/"])),
+  );
+  const hasPath = new cdk.CfnCondition(scope, id, {
+    expression: cdk.Fn.conditionNot(cdk.Fn.conditionEquals(segment, "")),
+  });
+  return cdk.Token.asString(
+    cdk.Fn.conditionIf(hasPath.logicalId, cdk.Fn.join("", ["/", segment]), ""),
+  );
 }

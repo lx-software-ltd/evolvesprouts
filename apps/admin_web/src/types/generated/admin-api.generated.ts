@@ -417,7 +417,7 @@ export interface paths {
         };
         /**
          * List API tokens
-         * @description Lists hashed API tokens used by the `x-api-token` authorizer.
+         * @description Lists hashed API tokens used by the `Authorization: Bearer` authorizer.
          *     The plaintext token is never stored and is not returned here.
          */
         get: operations["getV1AdminApiKeys"];

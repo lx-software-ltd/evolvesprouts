@@ -23,7 +23,9 @@ def test_payment_intent_rejects_non_post(api_gateway_event: Any) -> None:
     response = handle_public_reservation_payment_intent(event, "GET")
 
     assert response["statusCode"] == 405
-    assert json.loads(response["body"]) == {"error": "Method not allowed"}
+    body = json.loads(response["body"])
+    assert body["error"] == "Method not allowed"
+    assert body["code"] == "method_not_allowed"
 
 
 def test_payment_intent_requires_turnstile_header(
@@ -39,7 +41,9 @@ def test_payment_intent_requires_turnstile_header(
     response = handle_public_reservation_payment_intent(event, "POST")
 
     assert response["statusCode"] == 400
-    assert json.loads(response["body"]) == {"error": "Missing X-Turnstile-Token header"}
+    body = json.loads(response["body"])
+    assert body["error"] == "Missing X-Turnstile-Token header"
+    assert body["code"] == "invalid_request"
 
 
 def test_payment_intent_rejects_failed_turnstile(
@@ -61,7 +65,9 @@ def test_payment_intent_rejects_failed_turnstile(
     response = handle_public_reservation_payment_intent(event, "POST")
 
     assert response["statusCode"] == 403
-    assert json.loads(response["body"]) == {"error": "Captcha verification failed"}
+    body = json.loads(response["body"])
+    assert body["error"] == "Captcha verification failed"
+    assert body["code"] == "forbidden"
 
 
 def test_payment_intent_maps_proxy_runtime_error_to_bad_gateway(
@@ -89,9 +95,9 @@ def test_payment_intent_maps_proxy_runtime_error_to_bad_gateway(
     response = handle_public_reservation_payment_intent(event, "POST")
 
     assert response["statusCode"] == 502
-    assert json.loads(response["body"]) == {
-        "error": "Unable to initialize payment. Please try again."
-    }
+    body = json.loads(response["body"])
+    assert body["error"] == "Unable to initialize payment. Please try again."
+    assert body["status"] == 502
 
 
 def test_payment_intent_maps_proxy_error_to_bad_gateway(
@@ -117,9 +123,9 @@ def test_payment_intent_maps_proxy_error_to_bad_gateway(
     response = handle_public_reservation_payment_intent(event, "POST")
 
     assert response["statusCode"] == 502
-    assert json.loads(response["body"]) == {
-        "error": "Unable to initialize payment. Please try again."
-    }
+    body = json.loads(response["body"])
+    assert body["error"] == "Unable to initialize payment. Please try again."
+    assert body["status"] == 502
 
 
 def test_payment_intent_rejects_non_object_json_body(
@@ -143,9 +149,9 @@ def test_payment_intent_rejects_non_object_json_body(
     )
 
     assert response["statusCode"] == 400
-    assert json.loads(response["body"]) == {
-        "error": "Request body must be a JSON object"
-    }
+    body = json.loads(response["body"])
+    assert body["error"] == "Request body must be a JSON object"
+    assert body["code"] == "invalid_request"
 
 
 def test_payment_intent_returns_client_secret_on_success(

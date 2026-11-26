@@ -12,7 +12,9 @@ def test_media_request_rejects_non_post(api_gateway_event: Any) -> None:
     response = handle_media_request(event, "GET")
 
     assert response["statusCode"] == 405
-    assert json.loads(response["body"]) == {"error": "Method not allowed"}
+    body = json.loads(response["body"])
+    assert body["error"] == "Method not allowed"
+    assert body["code"] == "method_not_allowed"
 
 
 def test_media_request_requires_turnstile_header(api_gateway_event: Any) -> None:
@@ -25,7 +27,9 @@ def test_media_request_requires_turnstile_header(api_gateway_event: Any) -> None
     response = handle_media_request(event, "POST")
 
     assert response["statusCode"] == 400
-    assert json.loads(response["body"]) == {"error": "Missing X-Turnstile-Token header"}
+    body = json.loads(response["body"])
+    assert body["error"] == "Missing X-Turnstile-Token header"
+    assert body["code"] == "invalid_request"
 
 
 def test_media_request_rejects_failed_turnstile(
@@ -46,7 +50,9 @@ def test_media_request_rejects_failed_turnstile(
     response = handle_media_request(event, "POST")
 
     assert response["statusCode"] == 403
-    assert json.loads(response["body"]) == {"error": "Captcha verification failed"}
+    body = json.loads(response["body"])
+    assert body["error"] == "Captcha verification failed"
+    assert body["code"] == "forbidden"
 
 
 def test_media_request_returns_500_without_topic(
@@ -68,9 +74,9 @@ def test_media_request_returns_500_without_topic(
     response = handle_media_request(event, "POST")
 
     assert response["statusCode"] == 500
-    assert json.loads(response["body"]) == {
-        "error": "Service configuration error. Please contact support."
-    }
+    body = json.loads(response["body"])
+    assert body["error"] == "Service configuration error. Please contact support."
+    assert body["code"] == "internal_error"
 
 
 def test_media_request_publishes_to_sns(

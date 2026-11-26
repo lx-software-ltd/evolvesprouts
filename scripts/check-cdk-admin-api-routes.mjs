@@ -9,6 +9,9 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const adminYamlPath = path.join(repoRoot, 'docs/api/admin.yaml');
+const publicYamlPath = path.join(repoRoot, 'docs/api/public.yaml');
+const partnerYamlPath = path.join(repoRoot, 'docs/api/partner.yaml');
+const webhooksYamlPath = path.join(repoRoot, 'docs/api/webhooks.yaml');
 const apiStackPath = path.join(repoRoot, 'backend/infrastructure/lib/api-stack.ts');
 
 const HTTP_METHODS = new Set(['get', 'post', 'put', 'patch', 'delete', 'head', 'options']);
@@ -125,7 +128,54 @@ function parseApiStackRoutes(source) {
     }
   }
 
-  return { routes, hasAdminCatchAll };
+  const flat = section.replace(/\s+/g, " ");
+  const inlineMethod =
+    /(\w+)\s*((?:\s*\.addResource\("[^"]+"\))*)\s*\.addMethod\("([A-Z]+)"/g;
+  for (const match of flat.matchAll(inlineMethod)) {
+    const [, varName, resourceChain, method] = match;
+    const base = vars.get(varName);
+    if (base == null) {
+      continue;
+    }
+    const segments = [...resourceChain.matchAll(/\.addResource\("([^"]+)"\)/g)].map(
+      (part) => part[1]
+    );
+    let routePath = base;
+    for (const segment of segments) {
+      routePath = joinPath(routePath, segment);
+    }
+    recordRoute(routePath, method);
+  }
+
+  const inlinePublic =
+    /addPublicApiKeyMethod\(\s*(\w+)\s*((?:\s*\.addResource\("[^"]+"\))*)\s*\)?\s*,\s*"([A-Z]+)"/g;
+  for (const match of flat.matchAll(inlinePublic)) {
+    const [, varName, resourceChain, method] = match;
+    const base = vars.get(varName);
+    if (base == null) {
+      continue;
+    }
+    const segments = [...resourceChain.matchAll(/\.addResource\("([^"]+)"\)/g)].map(
+      (part) => part[1]
+    );
+    let routePath = base;
+    for (const segment of segments) {
+      routePath = joinPath(routePath, segment);
+    }
+    recordRoute(routePath, method);
+  }
+
+  const hasPartnerCatchAll = section.includes(
+    'partner.addResource("{proxy+}").addMethod("ANY"'
+  );
+  if (section.includes('const webhooks = v1.addResource("webhooks")')) {
+    for (const provider of ['mailchimp', 'whatsapp', 'meta']) {
+      recordRoute(`/v1/webhooks/${provider}`, 'GET');
+      recordRoute(`/v1/webhooks/${provider}`, 'POST');
+    }
+  }
+
+  return { routes, hasAdminCatchAll, hasPartnerCatchAll };
 }
 
 function isAdminCatchAllPath(routePath) {
@@ -144,16 +194,49 @@ function methodSetToString(methods) {
   return [...methods].sort().join(',');
 }
 
+function requirePaths(label, yamlRoutes, cdkRoutes, errors, options) {
+  for (const [routePath, yamlMethods] of yamlRoutes) {
+    if (options.partnerCatchAll && routePath.startsWith('/v1/partner/')) {
+      continue;
+    }
+    const cdkMethods = cdkRoutes.get(routePath);
+    if (!cdkMethods) {
+      errors.push(`${label} path missing in CDK api-stack.ts: ${routePath}`);
+      continue;
+    }
+    for (const method of yamlMethods) {
+      if (method === 'OPTIONS') {
+        continue;
+      }
+      if (!cdkMethods.has(method) && !cdkMethods.has('ANY')) {
+        errors.push(
+          `Method mismatch for ${routePath}: ${label} has ${method}, CDK has ${methodSetToString(cdkMethods)}`
+        );
+      }
+    }
+  }
+}
+
 function main() {
   const adminYamlText = readFileSync(adminYamlPath, 'utf8');
   const apiStackText = readFileSync(apiStackPath, 'utf8');
   const adminRoutes = parseAdminYamlRoutes(adminYamlText);
-  const { routes: cdkRoutes, hasAdminCatchAll } = parseApiStackRoutes(apiStackText);
+  const publicRoutes = parseAdminYamlRoutes(readFileSync(publicYamlPath, 'utf8'));
+  const partnerRoutes = parseAdminYamlRoutes(readFileSync(partnerYamlPath, 'utf8'));
+  const webhookRoutes = parseAdminYamlRoutes(readFileSync(webhooksYamlPath, 'utf8'));
+  const { routes: cdkRoutes, hasAdminCatchAll, hasPartnerCatchAll } =
+    parseApiStackRoutes(apiStackText);
 
   const errors = [];
 
   if (!hasAdminCatchAll) {
     errors.push('Missing /v1/admin/{proxy+} ANY catch-all route in api-stack.ts');
+  }
+  if (!hasPartnerCatchAll) {
+    errors.push('Missing /v1/partner/{proxy+} ANY route in api-stack.ts');
+  }
+  if (partnerRoutes.size === 0) {
+    errors.push('partner.yaml has no paths');
   }
 
   for (const [routePath, yamlMethods] of adminRoutes) {
@@ -208,6 +291,12 @@ function main() {
       }
     }
   }
+
+  requirePaths('public.yaml', publicRoutes, cdkRoutes, errors, {});
+  requirePaths('partner.yaml', partnerRoutes, cdkRoutes, errors, {
+    partnerCatchAll: hasPartnerCatchAll,
+  });
+  requirePaths('webhooks.yaml', webhookRoutes, cdkRoutes, errors, {});
 
   if (errors.length > 0) {
     console.error('CDK route / admin.yaml drift detected:');

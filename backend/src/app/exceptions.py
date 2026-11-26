@@ -8,6 +8,41 @@ from __future__ import annotations
 
 from typing import Any
 
+_PROBLEMS = {
+    400: ("invalid_request", "Bad Request"),
+    401: ("unauthenticated", "Unauthorized"),
+    403: ("forbidden", "Forbidden"),
+    404: ("not_found", "Not Found"),
+    405: ("method_not_allowed", "Method Not Allowed"),
+    409: ("conflict", "Conflict"),
+    429: ("rate_limited", "Too Many Requests"),
+    500: ("internal_error", "Internal Server Error"),
+}
+
+
+def problem_body(
+    status_code: int,
+    message: str,
+    detail: str | None = None,
+    request_id: str = "",
+    field: str | None = None,
+) -> dict[str, Any]:
+    """Error body for /v1. ``error``, ``detail`` and ``field`` stay."""
+    code, title = _PROBLEMS.get(status_code, ("error", "Error"))
+    body: dict[str, Any] = {
+        "type": "about:blank",
+        "title": title,
+        "status": status_code,
+        "detail": detail or message,
+        "code": code,
+        "request_id": request_id,
+        "error": message,
+    }
+    if field:
+        body["field"] = field
+        body["errors"] = [{"field": field, "message": message}]
+    return body
+
 
 class AppError(Exception):
     """Base exception for application errors.
@@ -34,10 +69,12 @@ class AppError(Exception):
 
     def to_dict(self) -> dict[str, Any]:
         """Convert exception to API response body."""
-        result: dict[str, Any] = {"error": self.message}
-        if self.detail:
-            result["detail"] = self.detail
-        return result
+        return problem_body(
+            self.status_code,
+            self.message,
+            self.detail,
+            field=getattr(self, "field", None),
+        )
 
 
 class ValidationError(AppError):
@@ -54,12 +91,6 @@ class ValidationError(AppError):
         super().__init__(message, status_code=status_code, detail=detail)
         self.field = field
 
-    def to_dict(self) -> dict[str, Any]:
-        result = super().to_dict()
-        if self.field:
-            result["field"] = self.field
-        return result
-
 
 class ConflictError(AppError):
     """HTTP 409 with structured body (``error`` plus optional keys)."""
@@ -69,7 +100,7 @@ class ConflictError(AppError):
         self._extra = {k: v for k, v in extra.items() if v is not None}
 
     def to_dict(self) -> dict[str, Any]:
-        out: dict[str, Any] = {"error": self.message}
+        out = super().to_dict()
         out.update(self._extra)
         return out
 

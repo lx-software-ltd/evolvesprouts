@@ -152,17 +152,16 @@ function assertEachDistributionWwwBehaviors(template: Template): void {
 /**
  * Verify CloudFront Function updates are serialized within each environment.
  *
- * The four functions per environment (``PathRewrite``, ``WwwProxyAllowlist``,
- * ``MediaRequestProxy``, ``WwwApiErrorResponse``) must form a single chain via
- * CloudFormation ``DependsOn`` so CloudFormation cannot schedule parallel
- * updates that exhaust the regional CloudFront Functions API rate limit.
+ * The functions per environment must form a single chain via CloudFormation
+ * ``DependsOn`` so CloudFormation cannot schedule parallel updates that
+ * exhaust the regional CloudFront Functions API rate limit.
  */
 function assertCloudFrontFunctionUpdatesAreSerialized(template: Template): void {
   const fns = template.findResources("AWS::CloudFront::Function");
   const entries = Object.entries(fns);
-  if (entries.length !== 8) {
+  if (entries.length !== 12) {
     throw new Error(
-      `Expected exactly 8 AWS::CloudFront::Function resources (4 per environment x 2), found ${entries.length}`,
+      `Expected exactly 12 AWS::CloudFront::Function resources (6 per environment x 2), found ${entries.length}`,
     );
   }
   const expectedEnvKinds = [
@@ -170,6 +169,8 @@ function assertCloudFrontFunctionUpdatesAreSerialized(template: Template): void 
     "WwwProxyAllowlistFunction",
     "MediaRequestProxyFunction",
     "WwwApiErrorResponseFunction",
+    "ApiProxyAllowlistFunction",
+    "ApiMediaRequestProxyFunction",
   ] as const;
   for (const envPrefix of ["PublicWww", "PublicWwwStaging"] as const) {
     const ids = expectedEnvKinds.map((kind) => {
@@ -183,7 +184,14 @@ function assertCloudFrontFunctionUpdatesAreSerialized(template: Template): void 
       }
       return id;
     });
-    const [pathRewriteId, allowlistId, mediaProxyId, errorResponseId] = ids;
+    const [
+      pathRewriteId,
+      allowlistId,
+      mediaProxyId,
+      errorResponseId,
+      apiAllowlistId,
+      apiMediaId,
+    ] = ids;
     const dependsOn = (logicalId: string): string[] => {
       const raw = fns[logicalId]?.DependsOn;
       if (raw === undefined || raw === null) {
@@ -206,10 +214,26 @@ function assertCloudFrontFunctionUpdatesAreSerialized(template: Template): void 
         `${envPrefix}: WwwApiErrorResponseFunction must DependsOn MediaRequestProxyFunction`,
       );
     }
+    if (!dependsOn(apiAllowlistId).includes(errorResponseId)) {
+      throw new Error(
+        `${envPrefix}: ApiProxyAllowlistFunction must DependsOn WwwApiErrorResponseFunction`,
+      );
+    }
+    if (!dependsOn(apiMediaId).includes(apiAllowlistId)) {
+      throw new Error(
+        `${envPrefix}: ApiMediaRequestProxyFunction must DependsOn ApiProxyAllowlistFunction`,
+      );
+    }
     // Pathrewrite (chain head) must not depend on any sibling function in this
     // environment so the chain stays single-threaded but doesn't deadlock the
     // first item.
-    for (const sibling of [allowlistId, mediaProxyId, errorResponseId]) {
+    for (const sibling of [
+      allowlistId,
+      mediaProxyId,
+      errorResponseId,
+      apiAllowlistId,
+      apiMediaId,
+    ]) {
       if (dependsOn(pathRewriteId).includes(sibling)) {
         throw new Error(
           `${envPrefix}: PathRewriteFunction must not DependsOn ${sibling}`,
@@ -277,9 +301,9 @@ function assertEdgeVerifyOnEveryViewerRequest(template: Template): void {
   const viewerRequestIds = Object.keys(functions).filter(
     (logicalId) => !logicalId.includes("WwwApiErrorResponse"),
   );
-  if (viewerRequestIds.length !== 6) {
+  if (viewerRequestIds.length !== 10) {
     throw new Error(
-      `Expected 6 viewer-request functions, found ${viewerRequestIds.length}`,
+      `Expected 10 viewer-request functions, found ${viewerRequestIds.length}`,
     );
   }
   const call = "var request = event.request;\\n  var rejection = edgeVerifyRejection(request);";

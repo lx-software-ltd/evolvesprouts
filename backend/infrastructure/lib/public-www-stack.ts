@@ -9,11 +9,15 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import { Construct } from "constructs";
 
 import {
+  API_MEDIA_REQUEST_PROXY_FUNCTION,
+  API_PROXY_ALLOWLIST_FUNCTION,
   MEDIA_REQUEST_PROXY_FUNCTION,
   STATIC_EXPORT_PATH_REWRITE_FUNCTION,
   WWW_API_ERROR_RESPONSE_FUNCTION,
   WWW_PROXY_ALLOWLIST_FUNCTION,
 } from "./cloudfront-www-proxy-functions";
+
+const API_BASE_URL_PATTERN = "^https://[^/]+(/[^/]+)?/?$";
 
 // Secrets are spliced into CloudFront Function source as JS string literals,
 // so the allowed alphabet excludes quotes and backslashes. Minimum 32 chars.
@@ -157,16 +161,18 @@ export class PublicWwwStack extends cdk.Stack {
       {
         type: "String",
         description:
-          "Absolute HTTPS public API base URL used by the /www proxy (for example https://api.example.com/prod or https://api.example.com/www).",
-        allowedPattern: "^https://[^/]+/[^/]+/?$",
+          "Absolute HTTPS public API base URL used by the /www and /api proxies (for example https://api.example.com or https://api.example.com/prod).",
+        allowedPattern: API_BASE_URL_PATTERN,
         constraintDescription:
-          "Must be an absolute HTTPS URL ending in a single path segment (for example /prod or /www).",
+          "Must be an absolute HTTPS origin, with an optional single path segment.",
       },
     );
     const publicWwwApiOriginDomainName = resolveApiOriginDomainName(
       publicWwwApiBaseUrl.valueAsString,
     );
     const publicWwwApiOriginPath = resolveApiOriginPath(
+      this,
+      "PublicWwwApiOriginHasPath",
       publicWwwApiBaseUrl.valueAsString,
     );
     const publicWwwMediaRequestApiBaseUrl = new cdk.CfnParameter(
@@ -175,16 +181,18 @@ export class PublicWwwStack extends cdk.Stack {
       {
         type: "String",
         description:
-          "Absolute HTTPS API base URL for media requests (for example https://api.example.com/prod).",
-        allowedPattern: "^https://[^/]+/[^/]+/?$",
+          "Absolute HTTPS API base URL for media requests (for example https://api.example.com or https://api.example.com/prod).",
+        allowedPattern: API_BASE_URL_PATTERN,
         constraintDescription:
-          "Must be an absolute HTTPS URL ending in a single stage path segment (for example /prod).",
+          "Must be an absolute HTTPS origin, with an optional single path segment.",
       },
     );
     const publicWwwMediaRequestApiOriginDomainName = resolveApiOriginDomainName(
       publicWwwMediaRequestApiBaseUrl.valueAsString,
     );
     const publicWwwMediaRequestApiOriginPath = resolveApiOriginPath(
+      this,
+      "PublicWwwMediaRequestApiOriginHasPath",
       publicWwwMediaRequestApiBaseUrl.valueAsString,
     );
 
@@ -468,15 +476,41 @@ export class PublicWwwStack extends cdk.Stack {
     );
     // Serialize CloudFront Function updates inside this environment so
     // CloudFormation does not exhaust the regional CloudFront Functions API
-    // rate limit. Without this chain, CDK schedules all four updates in
-    // parallel and AWS returns ``Limit exceeded ... Reason: Rate exceeded``
+    // rate limit. Without this chain, CDK schedules the updates in parallel
+    // and AWS returns ``Limit exceeded ... Reason: Rate exceeded``
     // (``ServiceLimitExceeded``), rolling the stack back. Production and
     // staging environments still run in parallel with each other (2-way
     // concurrency stays under the throttle); chain order is otherwise
     // arbitrary because none of these functions reference each other.
+    const apiProxyAllowlistFunction = new cloudfront.Function(
+      this,
+      `${config.idPrefix}ApiProxyAllowlistFunction`,
+      {
+        comment:
+          "Edge-verify, then allow only approved public API method/path pairs on /api/*.",
+        runtime: cloudfront.FunctionRuntime.JS_2_0,
+        code: cloudfront.FunctionCode.fromInline(
+          this.viewerRequestCode(API_PROXY_ALLOWLIST_FUNCTION, config),
+        ),
+      },
+    );
+    const apiMediaRequestProxyFunction = new cloudfront.Function(
+      this,
+      `${config.idPrefix}ApiMediaRequestProxyFunction`,
+      {
+        comment:
+          "Edge-verify, then allow /api/v1/public/assets/free/request and rewrite the path.",
+        runtime: cloudfront.FunctionRuntime.JS_2_0,
+        code: cloudfront.FunctionCode.fromInline(
+          this.viewerRequestCode(API_MEDIA_REQUEST_PROXY_FUNCTION, config),
+        ),
+      },
+    );
     wwwProxyAllowlistFunction.node.addDependency(pathRewriteFunction);
     mediaRequestProxyFunction.node.addDependency(wwwProxyAllowlistFunction);
     wwwApiErrorResponseFunction.node.addDependency(mediaRequestProxyFunction);
+    apiProxyAllowlistFunction.node.addDependency(wwwApiErrorResponseFunction);
+    apiMediaRequestProxyFunction.node.addDependency(apiProxyAllowlistFunction);
 
     const customHeaders: cloudfront.ResponseCustomHeader[] = [
       {
@@ -615,6 +649,44 @@ export class PublicWwwStack extends cdk.Stack {
               },
             ],
           },
+          "api/v1/public/assets/free/request": {
+            origin: mediaRequestApiOrigin,
+            viewerProtocolPolicy:
+              cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+            allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+            cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+            originRequestPolicy:
+              cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+            functionAssociations: [
+              {
+                function: apiMediaRequestProxyFunction,
+                eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+              },
+              {
+                function: wwwApiErrorResponseFunction,
+                eventType: cloudfront.FunctionEventType.VIEWER_RESPONSE,
+              },
+            ],
+          },
+          "api/*": {
+            origin: wwwApiOrigin,
+            viewerProtocolPolicy:
+              cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+            allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+            cachePolicy: apiProxyCachePolicy,
+            originRequestPolicy:
+              cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+            functionAssociations: [
+              {
+                function: apiProxyAllowlistFunction,
+                eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+              },
+              {
+                function: wwwApiErrorResponseFunction,
+                eventType: cloudfront.FunctionEventType.VIEWER_RESPONSE,
+              },
+            ],
+          },
           "www/*": {
             origin: wwwApiOrigin,
             viewerProtocolPolicy:
@@ -666,9 +738,20 @@ function resolveApiOriginDomainName(apiBaseUrl: string): string {
   );
 }
 
-function resolveApiOriginPath(apiBaseUrl: string): string {
-  return `/${cdk.Fn.select(
+function resolveApiOriginPath(
+  scope: cdk.Stack,
+  id: string,
+  apiBaseUrl: string,
+): string {
+  const afterScheme = cdk.Fn.select(1, cdk.Fn.split("://", apiBaseUrl));
+  const segment = cdk.Fn.select(
     1,
-    cdk.Fn.split("/", cdk.Fn.select(1, cdk.Fn.split("://", apiBaseUrl))),
-  )}`;
+    cdk.Fn.split("/", cdk.Fn.join("", [afterScheme, "/"])),
+  );
+  const hasPath = new cdk.CfnCondition(scope, id, {
+    expression: cdk.Fn.conditionNot(cdk.Fn.conditionEquals(segment, "")),
+  });
+  return cdk.Token.asString(
+    cdk.Fn.conditionIf(hasPath.logicalId, cdk.Fn.join("", ["/", segment]), ""),
+  );
 }

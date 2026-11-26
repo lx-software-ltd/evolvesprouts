@@ -95,32 +95,32 @@ their primary responsibilities.
   Instagram inbound stores `username` on `contacts.instagram_handle` and
   reuses an existing contact with that handle (including archived);
   sets audit actor `webhook:meta`),
-  `/v1/public/whatsapp/*` and `/v1/public/meta/*` (hashed `x-api-token` conversation
+  `/v1/partner/whatsapp/*` and `/v1/partner/meta/*` (hashed `Authorization: Bearer` conversation
   reads; name/dates/text only),
-  `/v1/public/contacts` and `/v1/public/contacts/{id}` (hashed `x-api-token` CRM
+  `/v1/partner/contacts` and `/v1/partner/contacts/{id}` (hashed `Authorization: Bearer` CRM
   contact list/get for `user` and `admin` scopes; create/update/delete for `admin`
   only; payloads match `/v1/admin/contacts`; standalone notes at
-  `/v1/public/contacts/{id}/notes`; `POST /v1/public/contacts/merge` reuses the
+  `/v1/partner/contacts/{id}/notes`; `POST /v1/partner/contacts/merge` reuses the
   admin contact-merge handler for `admin` tokens (at most 10 contacts; loser
   emails are archived in Mailchimp after commit, best effort);
   services and Mailchimp sync jobs are not exposed),
-  `/v1/public/families` and `/v1/public/families/{id}` plus `{id}/members`
-  (hashed `x-api-token`; payloads match `/v1/admin/families`; includes GET by
+  `/v1/partner/families` and `/v1/partner/families/{id}` plus `{id}/members`
+  (hashed `Authorization: Bearer`; payloads match `/v1/admin/families`; includes GET by
   id; services are not exposed),
-  `/v1/public/organizations` and `/v1/public/organizations/{id}` plus
-  `{id}/members` (hashed `x-api-token`; payloads match `/v1/admin/organizations`;
+  `/v1/partner/organizations` and `/v1/partner/organizations/{id}` plus
+  `{id}/members` (hashed `Authorization: Bearer`; payloads match `/v1/admin/organizations`;
   includes GET by id; services are not exposed),
-  `/v1/public/locations` (list/create/get/patch and `POST .../geocode`; hashed
-  `x-api-token`; payloads match `/v1/admin/locations`; delete is not exposed),
-  `/v1/public/geographic-areas` (GET only; hashed `x-api-token`; payloads match
+  `/v1/partner/locations` (list/create/get/patch and `POST .../geocode`; hashed
+  `Authorization: Bearer`; payloads match `/v1/admin/locations`; delete is not exposed),
+  `/v1/partner/geographic-areas` (GET only; hashed `Authorization: Bearer`; payloads match
   `/v1/admin/geographic-areas`),
-  `/v1/public/services` and `/v1/public/services/{id}` (hashed `x-api-token`
+  `/v1/partner/services` and `/v1/partner/services/{id}` (hashed `Authorization: Bearer`
   service list/get for `user` and `admin` scopes; create/update/delete for
   `admin` only; payloads match `/v1/admin/services`; cover-image upload and
   discount-code usage summary are not exposed),
-  `/v1/public/services/instances` and
-  `/v1/public/services/{id}/instances` plus `{id}/instances/{instance_id}`
-  (hashed `x-api-token`; nested the same way as `/v1/admin/services/...`;
+  `/v1/partner/services/instances` and
+  `/v1/partner/services/{id}/instances` plus `{id}/instances/{instance_id}`
+  (hashed `Authorization: Bearer`; nested the same way as `/v1/admin/services/...`;
   enrollments are not exposed),
   `/v1/admin/locations/*` (including `GET /v1/admin/locations?exclude_addresses=true`
   to list service venues without family/organisation home addresses, and
@@ -550,7 +550,7 @@ their primary responsibilities.
 - Function: ApiTokenAuthorizerFunction
 - Handler: backend/lambda/authorizers/api_token/handler.py
 - Trigger: API Gateway request authorizer
-- Purpose: validate hashed `x-api-token` values against the `api_keys` table; pass `apiKeyId`, `scope` (`admin` / `user`), and `userSub=api-key:<id>` to handlers
+- Purpose: validate hashed `Authorization: Bearer` values against the `api_keys` table; pass `apiKeyId`, `scope` (`admin` / `user`), and `userSub=api-key:<id>` to handlers
 - VPC: **Yes** (RDS Proxy + IAM as `evolvesprouts_admin`)
 - Cache: 5 minutes (revoked tokens may remain usable until cache expiry)
 - Concurrency: no per-function reserved concurrency in CDK (shared unreserved

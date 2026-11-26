@@ -172,3 +172,48 @@ function handler(event) {
   return response;
 }
 `;
+
+/**
+ * Allow-list for /api/v1/public/... . Same routes as the /www function.
+ * The viewer path loses the /api prefix and keeps /v1/public/.
+ */
+function replacePath(source: string, from: string, to: string): string {
+  return source.split(from).join(to);
+}
+
+export const API_PROXY_ALLOWLIST_FUNCTION = [
+  ["/www/v1/reservations/payment-intent", "/api/v1/public/reservations/payment-intent"],
+  ["/www/v1/calendar/availability", "/api/v1/public/calendar/availability"],
+  ["/www/v1/calendar/public", "/api/v1/public/calendar"],
+  ["/www/v1/assets/free", "/api/v1/public/assets/free"],
+  ["/www/v1/discounts/validate", "/api/v1/public/discounts/validate"],
+  ["/www/v1/reservations", "/api/v1/public/reservations"],
+  ["/www/v1/contact-us", "/api/v1/public/contact-us"],
+  ["/www/v1/forms/", "/api/v1/public/forms/"],
+  ["/www/v1/polls/", "/api/v1/public/polls/"],
+].reduce((source, [from, to]) => replacePath(source, from, to), WWW_PROXY_ALLOWLIST_FUNCTION);
+
+/** POST/OPTIONS /api/v1/public/assets/free/request keeps the /v1/public path. */
+export const API_MEDIA_REQUEST_PROXY_FUNCTION = `
+function handler(event) {
+  var request = event.request;
+  var method = request.method || '';
+  var uri = request.uri || '';
+  var isAllowedMethod = method === 'POST' || method === 'OPTIONS';
+
+  if (uri === '/api/v1/public/assets/free/request' && isAllowedMethod) {
+    request.uri = '/v1/public/assets/free/request';
+    return request;
+  }
+
+  return {
+    statusCode: 403,
+    statusDescription: 'Forbidden',
+    headers: {
+      'content-type': { value: 'application/json; charset=utf-8' },
+      'cache-control': { value: 'no-store' }
+    },
+    body: '{"message":"Forbidden"}'
+  };
+}
+`;

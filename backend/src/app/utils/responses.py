@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Mapping
 from dataclasses import asdict
 from typing import Any
-from collections.abc import Mapping
-
 
 from pydantic import BaseModel
 
-from app.exceptions import ValidationError
+from app.exceptions import ValidationError, problem_body
 
 
 def api_gateway_http_method(event: Mapping[str, Any]) -> str:
@@ -168,9 +167,9 @@ def get_cors_headers(
         # Access-Control-Request-Private-Network on preflight; without this
         # allow header, requests fail with "local address space" CORS errors.
         "Access-Control-Allow-Private-Network": "true",
-        # Lets the admin web client read handler timing from cross-origin
-        # responses (see Server-Timing in app.api.admin).
-        "Access-Control-Expose-Headers": "Server-Timing",
+        # Lets the admin web client read handler timing and the request id
+        # from cross-origin responses (see Server-Timing in app.api.admin).
+        "Access-Control-Expose-Headers": "Server-Timing, x-request-id",
     }
     if allow_origin:
         headers["Access-Control-Allow-Origin"] = allow_origin
@@ -214,13 +213,49 @@ def json_response(
             # confused by contradictory directives (see RFC 7234).
             response_headers.pop("Pragma", None)
 
-    payload = _serialize_body(body)
+    payload = _with_problem(status_code, _serialize_body(body))
+    request_id = _request_id(event)
+    if request_id:
+        response_headers["x-request-id"] = request_id
+        if isinstance(payload, dict) and payload.get("request_id") == "":
+            payload = {**payload, "request_id": request_id}
 
     return {
         "statusCode": status_code,
         "headers": response_headers,
         "body": json.dumps(payload, default=str),
     }
+
+
+def _with_problem(status_code: int, payload: Any) -> Any:
+    """Add the shared error members when a handler returned only ``error``."""
+    if not isinstance(payload, dict) or status_code < 400 or "code" in payload:
+        return payload
+    message = payload.get("error")
+    if not isinstance(message, str):
+        return payload
+    field = payload.get("field")
+    detail = payload.get("detail")
+    body = problem_body(
+        status_code,
+        message,
+        detail if isinstance(detail, str) else None,
+        field=field if isinstance(field, str) else None,
+    )
+    for key, value in payload.items():
+        if key not in body:
+            body[key] = value
+    return body
+
+
+def _request_id(event: Mapping[str, Any] | None) -> str:
+    if not event:
+        return ""
+    context = event.get("requestContext")
+    if not isinstance(context, Mapping):
+        return ""
+    found = context.get("requestId")
+    return found if isinstance(found, str) else ""
 
 
 def _serialize_body(body: Any) -> Any:
@@ -249,7 +284,9 @@ def not_found(
     headers: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Standard 404 body for unmatched routes or resources."""
-    return json_response(404, {"error": "Not found"}, headers=headers, event=event)
+    return json_response(
+        404, problem_body(404, "Not found"), headers=headers, event=event
+    )
 
 
 def method_not_allowed(
@@ -259,5 +296,8 @@ def method_not_allowed(
 ) -> dict[str, Any]:
     """Standard 405 body for a known route with an unsupported HTTP method."""
     return json_response(
-        405, {"error": "Method not allowed"}, headers=headers, event=event
+        405,
+        problem_body(405, "Method not allowed"),
+        headers=headers,
+        event=event,
     )
