@@ -42,7 +42,7 @@ def test_handle_public_free_assets_list_rejects_non_get(
     assert response["headers"]["Cache-Control"] == "no-store"
 
 
-def test_handle_public_free_assets_list_accepts_www_prefixed_path(
+def test_handle_public_free_assets_list_accepts_public_path(
     monkeypatch: Any,
     api_gateway_event: Any,
 ) -> None:
@@ -77,9 +77,9 @@ def test_handle_public_free_assets_list_accepts_www_prefixed_path(
     monkeypatch.setattr(public_free_assets, "AssetRepository", _FakeRepository)
 
     response = public_free_assets.handle_public_free_assets_list_request(
-        api_gateway_event(method="GET", path="/www/v1/assets/free"),
+        api_gateway_event(method="GET", path="/v1/public/assets/free"),
         "GET",
-        "/www/v1/assets/free",
+        "/v1/public/assets/free",
     )
     assert response["statusCode"] == 200
     assert response["headers"]["Cache-Control"] == _EXPECTED_CACHE_CONTROL_SUCCESS

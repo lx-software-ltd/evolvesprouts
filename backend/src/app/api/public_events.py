@@ -1,7 +1,7 @@
 """Public calendar events feed handlers.
 
-GET responses for routes reachable via the public website CloudFront ``/www/*``
-proxy must include a ``Cache-Control`` header: use a shared-cache friendly value
+GET responses for public website routes must include a ``Cache-Control``
+header: use a shared-cache friendly value
 on success (200) and ``no-store`` on errors (for example 405) so CloudFront never
 retains unsafe responses. Any new allowlisted GET handler must follow the same
 contract.
@@ -53,7 +53,7 @@ def handle_public_events(
     event: Mapping[str, Any],
     method: str,
 ) -> dict[str, Any]:
-    """Handle GET /v1/calendar/public and /www/v1/calendar/public."""
+    """Handle GET /v1/public/calendar and /v1/calendar/public."""
     if method != "GET":
         logger.info(
             "Handling public events feed request",

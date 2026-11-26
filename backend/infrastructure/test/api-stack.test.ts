@@ -807,7 +807,7 @@ function assertInboundInvoiceSharesReceiptRuleSet(template: Template): void {
   }
 }
 
-function assertApiTokenAuthorizerCachesNeitherHeader(template: Template): void {
+function assertApiTokenAuthorizerCachesAuthorizationHeader(template: Template): void {
   const authorizers = template.findResources("AWS::ApiGateway::Authorizer");
   const token = Object.values(authorizers).filter((resource) => {
     return JSON.stringify(resource.Properties?.AuthorizerUri ?? "").includes(
@@ -820,14 +820,15 @@ function assertApiTokenAuthorizerCachesNeitherHeader(template: Template): void {
     );
   }
   const properties = token[0].Properties ?? {};
-  if (properties.AuthorizerResultTtlInSeconds !== 0) {
+  if (properties.AuthorizerResultTtlInSeconds !== 300) {
     throw new Error(
-      "API token authorizer cache must be off so the cache key includes neither header",
+      `API token authorizer cache must be 300 seconds, found ${JSON.stringify(properties.AuthorizerResultTtlInSeconds)}`,
     );
   }
-  if (properties.IdentitySource !== undefined) {
+  const identity = JSON.stringify(properties.IdentitySource ?? "");
+  if (!identity.includes("method.request.header.Authorization")) {
     throw new Error(
-      `API token authorizer cache key must include neither header, found ${JSON.stringify(properties.IdentitySource)}`,
+      `API token authorizer cache key must be Authorization, found ${identity}`,
     );
   }
 }
@@ -1276,7 +1277,7 @@ function main(): void {
   assertPollResponsesTableHasExpiresAtTtl(template);
   assertCognitoClientAllowlistWiring(template);
   assertApiTokenAuthorizerHasNoReservedConcurrency(template);
-  assertApiTokenAuthorizerCachesNeitherHeader(template);
+  assertApiTokenAuthorizerCachesAuthorizationHeader(template);
   assertPublicContactMergeRoute(template);
   assertMailchimpWebhookInactivityAlarm(template);
   assertInboxImportHasNoReservedConcurrency(stack);

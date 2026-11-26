@@ -75,10 +75,10 @@ describe('config helpers', () => {
       NEXT_PUBLIC_COGNITO_DOMAIN: 'auth.example.com',
       NEXT_PUBLIC_COGNITO_CLIENT_ID: 'client-id',
       NEXT_PUBLIC_COGNITO_USER_POOL_ID: 'pool-id',
-      NEXT_PUBLIC_API_BASE_URL: '///prod///',
+      NEXT_PUBLIC_API_BASE_URL: '///api///',
     });
 
-    expect(config.getApiBaseUrl()).toBe('/prod');
+    expect(config.getApiBaseUrl()).toBe('/api');
   });
 
   it('returns validation error for invalid admin API base URL', async () => {
@@ -102,7 +102,7 @@ describe('config helpers', () => {
       NEXT_PUBLIC_COGNITO_DOMAIN: 'auth.example.com///',
       NEXT_PUBLIC_COGNITO_CLIENT_ID: 'client-id',
       NEXT_PUBLIC_COGNITO_USER_POOL_ID: 'pool-id',
-      NEXT_PUBLIC_API_BASE_URL: '/prod',
+      NEXT_PUBLIC_API_BASE_URL: 'https://api.example.com',
     });
 
     expect(config.getCognitoDomain()).toBe('https://auth.example.com');

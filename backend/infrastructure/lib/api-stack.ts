@@ -2940,21 +2940,15 @@ export class ApiStack extends cdk.Stack {
     database.grantAdminUserSecretRead(apiTokenAuthorizerFunction);
     database.grantConnect(apiTokenAuthorizerFunction, "evolvesprouts_admin");
 
-    // Cache key includes neither header. API Gateway rejects the request
-    // before the authorizer when a listed identity source is missing, so
-    // optional Authorization and x-api-token cannot both be identity sources.
     const apiTokenAuthorizer = new apigateway.RequestAuthorizer(
       this,
       "ApiTokenAuthorizer",
       {
         handler: apiTokenAuthorizerFunction,
         identitySources: [apigateway.IdentitySource.header("Authorization")],
-        resultsCacheTtl: cdk.Duration.seconds(0),
+        resultsCacheTtl: cdk.Duration.seconds(300),
       }
     );
-    const apiTokenAuthorizerCfn = apiTokenAuthorizer.node
-      .defaultChild as apigateway.CfnAuthorizer;
-    apiTokenAuthorizerCfn.addPropertyDeletionOverride("IdentitySource");
 
     // Open liveness check. It does not read the database or configuration.
     const healthFunction = createPythonFunction("HealthCheckFunction", {
@@ -3724,13 +3718,6 @@ export class ApiStack extends cdk.Stack {
         authorizationType: apigateway.AuthorizationType.NONE,
         apiKeyRequired: true,
       });
-    // Retired /v1/public/<partner> paths stay on the token authorizer.
-    // Specific children above win over this proxy.
-    openPublic.addResource("{proxy+}").addMethod("ANY", adminIntegration, {
-      authorizationType: apigateway.AuthorizationType.CUSTOM,
-      authorizer: apiTokenAuthorizer,
-    });
-
     const assetShareApiOrigin = new origins.HttpOrigin(
       apiCustomDomainName.valueAsString,
       {

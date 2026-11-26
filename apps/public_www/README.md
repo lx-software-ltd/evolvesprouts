@@ -174,14 +174,14 @@ What the runner validates:
 
 - Page smoke: fetches all pages discovered from `/sitemap.xml` (with URLs
   remapped to the target smoke origin) and fails on broken HTTP responses.
-- Public API smoke (same-origin `/www/v1/*` with optional direct `/v1/*` fallback):
-  - `GET /www/v1/calendar/public`
-  - `GET /www/v1/assets/free?limit=100`
-  - `POST /www/v1/contact-us`
-  - `POST /www/v1/discounts/validate`
-  - `POST /www/v1/assets/free/request`
-  - `POST /www/v1/reservations`
-  - `POST /www/v1/reservations/payment-intent`
+- Public API smoke (same-origin `/api/v1/public/*`):
+  - `GET /api/v1/public/calendar`
+  - `GET /api/v1/public/assets/free?limit=100`
+  - `POST /api/v1/public/contact-us`
+  - `POST /api/v1/public/discounts/validate`
+  - `POST /api/v1/public/assets/free/request`
+  - `POST /api/v1/public/reservations`
+  - `POST /api/v1/public/reservations/payment-intent`
 
 Status handling for API checks:
 
@@ -257,20 +257,20 @@ To enable public website CRM API calls (including My Best Auntie discount code l
 payment support. The content validation step fails the build if this variable is
 missing or not a publishable key (`pk_...`).
 
-Use `NEXT_PUBLIC_API_BASE_URL=/www` to route requests through the
+Use `NEXT_PUBLIC_API_BASE_URL=/api` to route requests through the
 same-origin CloudFront API proxy and avoid cross-origin CORS preflight issues.
 Set `NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS` to a comma-separated hostname
 allowlist (for example
 `www.evolvesprouts.com,www-staging.evolvesprouts.com`) so browser clients only
-switch to `/www` proxy routing on approved hosts.
+switch to `/api` proxy routing on approved hosts.
 CSP generation derives `connect-src` API origins from
 `NEXT_PUBLIC_API_BASE_URL`.
 When set to an absolute URL, that same variable also determines which API
 origins are allowed in CSP `connect-src`.
 `NEXT_PUBLIC_API_BASE_URL` is used for public website API calls such as contact-us,
 reservations, Stripe payment-intent initialization (`/v1/reservations/payment-intent`),
-and the free guides resource library list (`GET /v1/assets/free`, same-origin as
-`/www/v1/assets/free` when proxied).
+and the free guides resource library list (`GET /v1/public/assets/free`,
+same-origin as `/api/v1/public/assets/free` when proxied).
 The injected CSP also allows Cloudflare Web Analytics (`static.cloudflareinsights.com`
 for `script-src` and `cloudflareinsights.com` for `connect-src`) when Cloudflare
 injects the beacon at the edge.

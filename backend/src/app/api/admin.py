@@ -29,11 +29,7 @@ from app.api.admin_meta import handle_admin_meta_request
 from app.api.admin_organizations import handle_admin_organizations_request
 from app.api.admin_organizations_picker import handle_admin_organizations_picker_request
 from app.api.admin_polls import handle_admin_polls_request
-from app.api.admin_request import (
-    admin_request_log,
-    event_for_routing,
-    rewrite_legacy_partner_path,
-)
+from app.api.admin_request import admin_request_log, event_for_routing
 from app.api.admin_services import handle_admin_services_request
 from app.api.admin_tags import handle_admin_tags_request
 from app.api.admin_users import (
@@ -452,7 +448,7 @@ def _match_handler(
     the longest ``route_path`` wins so nested paths are not swallowed by shorter
     prefix handlers (for example ``/v1/assets/public`` vs ``/v1/assets/free``).
     """
-    normalized_path = rewrite_legacy_partner_path(path.rstrip("/"))
+    normalized_path = path.rstrip("/")
     exact_candidates: list[tuple[str, Callable[..., dict[str, Any]]]] = []
     prefix_candidates: list[tuple[str, Callable[..., dict[str, Any]]]] = []
     for route_path, exact, route_handler in _ROUTES:

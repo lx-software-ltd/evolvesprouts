@@ -1,7 +1,7 @@
 """Public free-asset listing (GET /v1/assets/free) for the website.
 
-GET responses for routes reachable via the public website CloudFront ``/www/*``
-proxy must include a ``Cache-Control`` header: use a shared-cache friendly value
+GET responses for public website routes must include a ``Cache-Control``
+header: use a shared-cache friendly value
 on success (200) and ``no-store`` on errors (404, 405, validation failures) so
 the edge never retains unsafe responses. Any new allowlisted GET handler must
 follow the same contract.
@@ -37,19 +37,12 @@ logger = get_logger(__name__)
 
 
 def _is_free_assets_list_path(path: str) -> bool:
-    """True for /v1/assets/free and /www/v1/assets/free (normalized path)."""
+    """True for /v1/public/assets/free and /v1/assets/free (normalized path)."""
     parts = [segment for segment in normalize_path(path).split("/") if segment]
     if len(parts) == 4 and parts[:4] == ["v1", "public", "assets", "free"]:
         return True
     if len(parts) == 3:
         return parts[0] == "v1" and parts[1] == "assets" and parts[2] == "free"
-    if len(parts) == 4:
-        return (
-            parts[0] == "www"
-            and parts[1] == "v1"
-            and parts[2] == "assets"
-            and parts[3] == "free"
-        )
     return False
 
 
@@ -58,7 +51,7 @@ def handle_public_free_assets_list_request(
     method: str,
     path: str,
 ) -> dict[str, Any]:
-    """Handle GET /v1/assets/free and /www/v1/assets/free."""
+    """Handle GET /v1/public/assets/free and /v1/assets/free."""
     if not _is_free_assets_list_path(path):
         return not_found(event, headers={"Cache-Control": CACHE_CONTROL_NO_STORE})
 

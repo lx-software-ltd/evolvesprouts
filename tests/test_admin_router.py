@@ -40,22 +40,6 @@ def test_non_audience_canonical_routes_stay_pinned() -> None:
     assert published == _PINNED_NON_AUDIENCE_CANONICAL_ROUTES
 
 
-def test_legacy_partner_alias_reaches_the_partner_handler(
-    api_gateway_event,
-) -> None:
-    event = api_gateway_event(
-        method="POST",
-        path="/v1/public/whatsapp/conversations",
-        authorizer_context={
-            "apiKeyId": "11111111-1111-1111-1111-111111111111",
-            "scope": "admin",
-            "userSub": "api-key:11111111-1111-1111-1111-111111111111",
-        },
-    )
-    response = lambda_handler(event, None)
-    assert response["statusCode"] == 405
-
-
 def test_lambda_handler_routes_custom_domain_base_path() -> None:
     event = {
         "httpMethod": "GET",

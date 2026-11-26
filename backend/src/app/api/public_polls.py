@@ -38,7 +38,6 @@ _RESULTS_SUFFIX = "/results"
 _QUESTIONS_SEGMENT = "/questions/"
 _POLL_API_PREFIX = "/v1/polls/"
 _PUBLIC_POLL_API_PREFIX = "/v1/public/polls/"
-_WWW_POLL_API_PREFIX = "/www/v1/polls/"
 
 
 def handle_public_polls_request(
@@ -46,7 +45,7 @@ def handle_public_polls_request(
     method: str,
     path: str,
 ) -> dict[str, Any]:
-    """Route poll API requests under /v1/polls/* and /www/v1/polls/*."""
+    """Route poll API requests under /v1/public/polls and /v1/polls."""
     answers = _parse_poll_answers_path(path)
     if answers is not None:
         poll_slug, _suffix = answers
@@ -83,8 +82,6 @@ def _parse_poll_path_remainder(path: str) -> str | None:
     normalized = path.rstrip("/")
     if normalized.startswith(_PUBLIC_POLL_API_PREFIX):
         return normalized[len(_PUBLIC_POLL_API_PREFIX) :]
-    if normalized.startswith(_WWW_POLL_API_PREFIX):
-        return normalized[len(_WWW_POLL_API_PREFIX) :]
     if normalized.startswith(_POLL_API_PREFIX):
         return normalized[len(_POLL_API_PREFIX) :]
     return None
