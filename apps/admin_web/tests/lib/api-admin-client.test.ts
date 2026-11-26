@@ -71,6 +71,7 @@ describe('adminApiRequest', () => {
       name: 'AdminApiError',
       statusCode: 400,
       message: 'Bad Request',
+      payload: { error: 'Bad Request', detail: 'Bad Request' },
     });
   });
 

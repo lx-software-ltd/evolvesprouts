@@ -62,6 +62,7 @@ def test_legacy_error_code_body_gains_problem_members() -> None:
     )
     body = json.loads(response["body"])
     assert body["error"] == "Nope"
+    assert body["detail"] == "Nope"
     assert body["code"] == "legacy_code"
     assert body["type"] == "about:blank"
     assert body["title"] == "Bad Request"
