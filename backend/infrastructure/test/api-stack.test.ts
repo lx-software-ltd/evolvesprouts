@@ -807,6 +807,31 @@ function assertInboundInvoiceSharesReceiptRuleSet(template: Template): void {
   }
 }
 
+function assertApiTokenAuthorizerCachesNeitherHeader(template: Template): void {
+  const authorizers = template.findResources("AWS::ApiGateway::Authorizer");
+  const token = Object.values(authorizers).filter((resource) => {
+    return JSON.stringify(resource.Properties?.AuthorizerUri ?? "").includes(
+      "ApiTokenAuthorizer",
+    );
+  });
+  if (token.length !== 1) {
+    throw new Error(
+      `Expected one API token authorizer, found ${token.length}`,
+    );
+  }
+  const properties = token[0].Properties ?? {};
+  if (properties.AuthorizerResultTtlInSeconds !== 0) {
+    throw new Error(
+      "API token authorizer cache must be off so the cache key includes neither header",
+    );
+  }
+  if (properties.IdentitySource !== undefined) {
+    throw new Error(
+      `API token authorizer cache key must include neither header, found ${JSON.stringify(properties.IdentitySource)}`,
+    );
+  }
+}
+
 function assertApiTokenAuthorizerHasNoReservedConcurrency(template: Template): void {
   const functions = template.findResources("AWS::Lambda::Function");
   const match = Object.entries(functions).find(([, resource]) => {
@@ -1151,7 +1176,8 @@ function assertApiCustomDomainMapsAtRoot(template: Template): void {
     const code = String(resource.Properties?.FunctionCode ?? "");
     return (
       code.includes("/v1/public/assets/share/") &&
-      code.includes("/v1/public/assets/email-download/")
+      code.includes("/v1/public/assets/email-download/") &&
+      code.includes("'/prod/'")
     );
   });
   if (!rewrite) {
@@ -1250,6 +1276,7 @@ function main(): void {
   assertPollResponsesTableHasExpiresAtTtl(template);
   assertCognitoClientAllowlistWiring(template);
   assertApiTokenAuthorizerHasNoReservedConcurrency(template);
+  assertApiTokenAuthorizerCachesNeitherHeader(template);
   assertPublicContactMergeRoute(template);
   assertMailchimpWebhookInactivityAlarm(template);
   assertInboxImportHasNoReservedConcurrency(stack);

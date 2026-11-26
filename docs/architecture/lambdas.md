@@ -466,9 +466,10 @@ their primary responsibilities.
 - Function: HealthCheckFunction
 - Handler: backend/lambda/health/handler.py
 - Trigger: API Gateway `GET /health`
-- Auth: IAM
-- Purpose: service health and configuration checks
-- DB access: RDS Proxy with IAM auth (`evolvesprouts_app`)
+- Auth: none
+- Purpose: open liveness. The body is `{"status":"ok"}`. It does not read the database or configuration.
+- DB access: none
+- Deep check: `GET /v1/admin/health` on `EvolvesproutsAdminFunction`, behind the admin authorizer. That route runs the database and configuration checks.
 
 ### SES template manager (custom resource)
 - Function: SesTemplateManagerFunction

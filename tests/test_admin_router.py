@@ -11,6 +11,50 @@ from app.api.admin import (
     lambda_handler,
 )
 
+_PINNED_NON_AUDIENCE_CANONICAL_ROUTES = (
+    "/v1/reservations",
+    "/v1/reservations/payment-intent",
+    "/v1/calendar/public",
+    "/v1/calendar/availability",
+    "/v1/discounts/validate",
+    "/v1/assets/free",
+    "/v1/contact-us",
+    "/v1/forms",
+    "/v1/polls",
+    "/v1/mailchimp/webhook",
+    "/v1/whatsapp/webhook",
+    "/v1/meta/webhook",
+    "/v1/assets/share",
+    "/v1/assets/email-download",
+    "/v1/assets/free/request",
+    "/v1/assets/public",
+)
+
+
+def test_non_audience_canonical_routes_stay_pinned() -> None:
+    published = tuple(
+        path
+        for path, _exact, _handler in admin_module._CANONICAL_ROUTES
+        if not path.startswith(("/v1/admin/", "/v1/user/", "/v1/partner/"))
+    )
+    assert published == _PINNED_NON_AUDIENCE_CANONICAL_ROUTES
+
+
+def test_legacy_partner_alias_reaches_the_partner_handler(
+    api_gateway_event,
+) -> None:
+    event = api_gateway_event(
+        method="POST",
+        path="/v1/public/whatsapp/conversations",
+        authorizer_context={
+            "apiKeyId": "11111111-1111-1111-1111-111111111111",
+            "scope": "admin",
+            "userSub": "api-key:11111111-1111-1111-1111-111111111111",
+        },
+    )
+    response = lambda_handler(event, None)
+    assert response["statusCode"] == 405
+
 
 def test_lambda_handler_routes_custom_domain_base_path() -> None:
     event = {

@@ -23,25 +23,11 @@ import * as path from "path";
 import { hashDirectory, hashFile, hashValue } from "./cdk-source-hash";
 import { DatabaseConstruct, PythonLambdaFactory, STANDARD_LOG_RETENTION } from "./constructs";
 import { MessagingNestedStack } from "./messaging-stack";
+import { ASSET_SHARE_PATH_REWRITE_FUNCTION } from "./asset-share-path-rewrite";
 import { sesVerifiedAddressAndDomainIdentityArns } from "./ses-identity-arns";
 
 // The custom-domain prod mapping still uses this stage. Share links do not.
 const API_GATEWAY_STAGE_NAME = "prod";
-
-const ASSET_SHARE_PATH_REWRITE_FUNCTION = `
-function handler(event) {
-  var request = event.request;
-  var uri = request.uri || '';
-  var sharePrefix = '/v1/assets/share/';
-  var emailPrefix = '/v1/assets/email-download/';
-  if (uri.indexOf(sharePrefix) === 0) {
-    request.uri = '/v1/public/assets/share/' + uri.substring(sharePrefix.length);
-  } else if (uri.indexOf(emailPrefix) === 0) {
-    request.uri = '/v1/public/assets/email-download/' + uri.substring(emailPrefix.length);
-  }
-  return request;
-}
-`;
 
 class CdkInternalLambdaCheckovSuppression implements cdk.IAspect {
   public visit(node: IConstruct): void {
@@ -2954,33 +2940,29 @@ export class ApiStack extends cdk.Stack {
     database.grantAdminUserSecretRead(apiTokenAuthorizerFunction);
     database.grantConnect(apiTokenAuthorizerFunction, "evolvesprouts_admin");
 
+    // Cache key includes neither header. API Gateway rejects the request
+    // before the authorizer when a listed identity source is missing, so
+    // optional Authorization and x-api-token cannot both be identity sources.
     const apiTokenAuthorizer = new apigateway.RequestAuthorizer(
       this,
       "ApiTokenAuthorizer",
       {
         handler: apiTokenAuthorizerFunction,
         identitySources: [apigateway.IdentitySource.header("Authorization")],
-        resultsCacheTtl: cdk.Duration.seconds(300),
+        resultsCacheTtl: cdk.Duration.seconds(0),
       }
     );
+    const apiTokenAuthorizerCfn = apiTokenAuthorizer.node
+      .defaultChild as apigateway.CfnAuthorizer;
+    apiTokenAuthorizerCfn.addPropertyDeletionOverride("IdentitySource");
 
-    // Health check function
+    // Open liveness check. It does not read the database or configuration.
     const healthFunction = createPythonFunction("HealthCheckFunction", {
       handler: "lambda/health/handler.lambda_handler",
       memorySize: 256,
       timeout: cdk.Duration.seconds(10),
-      environment: {
-        DATABASE_SECRET_ARN: database.secret?.secretArn ?? "",
-        DATABASE_NAME: "evolvesprouts",
-        DATABASE_PROXY_ENDPOINT: database.proxy.endpoint,
-        DATABASE_IAM_AUTH: "true",
-        DATABASE_USERNAME: "evolvesprouts_app",
-        ENVIRONMENT: "production",
-        APP_VERSION: "1.0.0",
-      },
+      noVpc: true,
     });
-    database.grantSecretRead(healthFunction);
-    database.grantConnect(healthFunction, "evolvesprouts_app");
 
     // ---------------------------------------------------------------------
     // API Gateway
@@ -3563,6 +3545,11 @@ export class ApiStack extends cdk.Stack {
 
     // Admin asset routes
     const admin = v1.addResource("admin");
+    const adminHealth = admin.addResource("health");
+    adminHealth.addMethod("GET", adminIntegration, {
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
+      authorizer: adminAuthorizer,
+    });
     const adminAssets = admin.addResource("assets");
     adminAssets.addMethod("GET", adminIntegration, {
       authorizationType: apigateway.AuthorizationType.CUSTOM,
@@ -3613,11 +3600,7 @@ export class ApiStack extends cdk.Stack {
       authorizer: adminAuthorizer,
     });
 
-    // Keep `{grantId}`: API Gateway allows only one variable sibling under
-    // `/grants`. Renaming to `{grant_id}` creates a new resource while
-    // `{grantId}` is still live, which fails with
-    // "A sibling ({grantId}) of this resource already has a variable path part".
-    const adminAssetGrantById = adminAssetGrants.addResource("{grantId}");
+    const adminAssetGrantById = adminAssetGrants.addResource("{grant_id}");
     adminAssetGrantById.addMethod("DELETE", adminIntegration, {
       authorizationType: apigateway.AuthorizationType.CUSTOM,
       authorizer: adminAuthorizer,
@@ -3741,6 +3724,12 @@ export class ApiStack extends cdk.Stack {
         authorizationType: apigateway.AuthorizationType.NONE,
         apiKeyRequired: true,
       });
+    // Retired /v1/public/<partner> paths stay on the token authorizer.
+    // Specific children above win over this proxy.
+    openPublic.addResource("{proxy+}").addMethod("ANY", adminIntegration, {
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
+      authorizer: apiTokenAuthorizer,
+    });
 
     const assetShareApiOrigin = new origins.HttpOrigin(
       apiCustomDomainName.valueAsString,
@@ -3756,7 +3745,7 @@ export class ApiStack extends cdk.Stack {
       "AssetSharePathRewriteFunction",
       {
         comment:
-          "Rewrite emailed /v1/assets/share and /v1/assets/email-download links onto /v1/public.",
+          "Permanent: a sent-email route is never removed. Rewrites share and email-download paths, including /prod, onto /v1/public.",
         runtime: cloudfront.FunctionRuntime.JS_2_0,
         code: cloudfront.FunctionCode.fromInline(ASSET_SHARE_PATH_REWRITE_FUNCTION),
       }

@@ -56,8 +56,30 @@ def test_authorize_api_token_denies_malformed_token() -> None:
     assert policy["context"]["reason"] == "invalid_key"
 
 
+def _allow_token(
+    monkeypatch: pytest.MonkeyPatch,
+    headers: dict[str, str],
+) -> tuple[dict[str, Any], _FakeRepo]:
+    generated_scope = headers
+    key_id = uuid4()
+    api_key = SimpleNamespace(
+        id=key_id,
+        scope="user",
+        last_used_at=None,
+    )
+    repo = _FakeRepo(api_key)
+    monkeypatch.setattr(ata, "ApiKeyRepository", lambda _session: repo)
+    monkeypatch.setattr(ata, "Session", lambda _engine: _FakeSessionCM())
+    monkeypatch.setattr(ata, "get_engine", lambda: object())
+    policy = ata.authorize_api_token(
+        {"headers": generated_scope, "methodArn": "arn:example"}
+    )
+    return policy, repo
+
+
 def test_authorize_api_token_allows_active_key(
     monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     generated = generate_api_key()
     key_id = uuid4()
@@ -71,17 +93,57 @@ def test_authorize_api_token_allows_active_key(
     monkeypatch.setattr(ata, "Session", lambda _engine: _FakeSessionCM())
     monkeypatch.setattr(ata, "get_engine", lambda: object())
 
-    policy = ata.authorize_api_token(
-        {
-            "headers": {"Authorization": f"Bearer {generated.plaintext}"},
-            "methodArn": "arn:aws:execute-api:ap-southeast-1:1:api/prod/GET/v1/public/whatsapp",
-        }
-    )
+    with caplog.at_level("INFO"):
+        policy = ata.authorize_api_token(
+            {
+                "headers": {"Authorization": f"Bearer {generated.plaintext}"},
+                "methodArn": "arn:aws:execute-api:ap-southeast-1:1:api/prod/GET/v1/public/whatsapp",
+            }
+        )
     assert policy["policyDocument"]["Statement"][0]["Effect"] == "Allow"
     assert policy["context"]["scope"] == "user"
     assert policy["context"]["apiKeyId"] == str(key_id)
     assert policy["context"]["userSub"] == f"api-key:{key_id}"
     assert repo.touched is True
+    assert "auth_scheme=bearer" in caplog.text
+
+
+def test_authorize_api_token_accepts_legacy_header(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    generated = generate_api_key()
+    with caplog.at_level("INFO"):
+        policy, repo = _allow_token(monkeypatch, {"X-Api-Token": generated.plaintext})
+    assert policy["policyDocument"]["Statement"][0]["Effect"] == "Allow"
+    assert repo.touched is True
+    assert "auth_scheme=legacy" in caplog.text
+
+
+def test_authorize_api_token_prefers_bearer_over_legacy_header(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    bearer = generate_api_key()
+    legacy = generate_api_key()
+    seen: list[str] = []
+
+    def _hash(value: str) -> str:
+        seen.append(value)
+        return "hash"
+
+    monkeypatch.setattr(ata, "hash_api_key", _hash)
+    with caplog.at_level("INFO"):
+        policy, _repo = _allow_token(
+            monkeypatch,
+            {
+                "Authorization": f"Bearer {bearer.plaintext}",
+                "x-api-token": legacy.plaintext,
+            },
+        )
+    assert policy["policyDocument"]["Statement"][0]["Effect"] == "Allow"
+    assert seen == [bearer.plaintext]
+    assert "auth_scheme=bearer" in caplog.text
 
 
 def test_authorize_api_token_skips_recent_last_used(

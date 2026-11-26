@@ -29,7 +29,11 @@ from app.api.admin_meta import handle_admin_meta_request
 from app.api.admin_organizations import handle_admin_organizations_request
 from app.api.admin_organizations_picker import handle_admin_organizations_picker_request
 from app.api.admin_polls import handle_admin_polls_request
-from app.api.admin_request import admin_request_log, event_for_routing
+from app.api.admin_request import (
+    admin_request_log,
+    event_for_routing,
+    rewrite_legacy_partner_path,
+)
 from app.api.admin_services import handle_admin_services_request
 from app.api.admin_tags import handle_admin_tags_request
 from app.api.admin_users import (
@@ -46,6 +50,7 @@ from app.api.assets import (
 )
 from app.api.assets.public_free_assets import handle_public_free_assets_list_request
 from app.api.assets.public_media_assets import handle_media_request
+from app.api.health import handle_admin_health
 from app.api.partner.contacts import handle_public_contacts_request
 from app.api.partner.families import handle_public_families_request
 from app.api.partner.geographic_areas import handle_public_geographic_areas_request
@@ -318,6 +323,7 @@ _CANONICAL_ROUTES: tuple[
         handle_admin_polls_request,
     ),
     ("/v1/admin/assets", False, handle_admin_assets_request),
+    ("/v1/admin/health", True, handle_admin_health),
     ("/v1/user/assets", False, handle_user_assets_request),
     ("/v1/assets/share", False, handle_share_assets_request),
     ("/v1/assets/email-download", False, handle_email_download_request),
@@ -446,7 +452,7 @@ def _match_handler(
     the longest ``route_path`` wins so nested paths are not swallowed by shorter
     prefix handlers (for example ``/v1/assets/public`` vs ``/v1/assets/free``).
     """
-    normalized_path = path.rstrip("/")
+    normalized_path = rewrite_legacy_partner_path(path.rstrip("/"))
     exact_candidates: list[tuple[str, Callable[..., dict[str, Any]]]] = []
     prefix_candidates: list[tuple[str, Callable[..., dict[str, Any]]]] = []
     for route_path, exact, route_handler in _ROUTES:

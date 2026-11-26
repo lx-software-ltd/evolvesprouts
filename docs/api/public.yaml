@@ -510,6 +510,48 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /v1/public/reservations/payment-intent:
+    post:
+      operationId: postV1PublicReservationsPaymentIntent
+      summary: Create a reservation PaymentIntent
+      description: >
+        Creates a card PaymentIntent for the public booking modal.
+        Requires an API key and `X-Turnstile-Token`.
+      security:
+        - ApiKeyAuth: []
+          TurnstileToken: []
+      parameters:
+        - $ref: "#/components/parameters/TurnstileTokenHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReservationPaymentIntentRequest"
+      responses:
+        "200":
+          description: PaymentIntent created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReservationPaymentIntentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          description: Stripe is not configured.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Stripe request failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /v1/public/forms/{form_slug}/answers:
     put:
       operationId: putV1FormsByFormSlugAnswers

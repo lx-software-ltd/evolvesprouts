@@ -12,10 +12,30 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Health check
-         * @description Returns backend health status and dependency checks.
+         * Liveness check
+         * @description Open liveness check. Returns `{"status":"ok"}` and does not read the database or configuration. Dependency checks are `GET /v1/admin/health`.
          */
         get: operations["getHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dependency health check
+         * @description Admin-only database and configuration check.
+         */
+        get: operations["getV1AdminHealth"];
         put?: never;
         post?: never;
         delete?: never;
@@ -141,7 +161,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/admin/assets/{id}/grants/{grantId}": {
+    "/v1/admin/assets/{id}/grants/{grant_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -149,7 +169,7 @@ export interface paths {
                 /** @description Asset identifier. */
                 id: components["parameters"]["AssetId"];
                 /** @description Asset grant identifier. */
-                grantId: components["parameters"]["GrantId"];
+                grant_id: components["parameters"]["GrantId"];
             };
             cookie?: never;
         };
@@ -5392,6 +5412,10 @@ export interface components {
             /** @description Optional input field key for validation-style errors. Duplicate service service_key+tier conflicts use the literal `service_key_tier` (not `service_key` or `service_tier`). */
             field?: string | null;
         };
+        OpenHealthResponse: {
+            /** @enum {string} */
+            status: "ok";
+        };
         HealthResponse: {
             healthy: boolean;
             version: string;
@@ -5483,7 +5507,27 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Service is healthy. */
+            /** @description Process is up. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpenHealthResponse"];
+                };
+            };
+        };
+    };
+    getV1AdminHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dependencies are healthy. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -5492,14 +5536,8 @@ export interface operations {
                     "application/json": components["schemas"]["HealthResponse"];
                 };
             };
-            /** @description API Gateway rejected the caller signature. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Service is unhealthy. */
+            403: components["responses"]["Forbidden"];
+            /** @description A dependency is unhealthy. */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -5803,7 +5841,7 @@ export interface operations {
                 /** @description Asset identifier. */
                 id: components["parameters"]["AssetId"];
                 /** @description Asset grant identifier. */
-                grantId: components["parameters"]["GrantId"];
+                grant_id: components["parameters"]["GrantId"];
             };
             cookie?: never;
         };

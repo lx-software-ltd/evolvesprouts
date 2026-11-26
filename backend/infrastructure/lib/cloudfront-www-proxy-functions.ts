@@ -34,87 +34,166 @@ function handler(event) {
 }
 `;
 
-/** Default-deny allowlist for /api/v1/public/... . The viewer path loses the /api prefix. */
-export const API_PROXY_ALLOWLIST_FUNCTION = `
+/** One route list for the /api viewer allow-list. Old /www viewer paths stay removed. */
+export interface ProxyAllowlistEntry {
+  readonly methods: readonly string[];
+  readonly apiPath: string;
+  /** Exact public.yaml path, or a prefix of one for a wildcard rule. */
+  readonly publicPath: string;
+  readonly kind: "exact" | "prefix";
+  readonly suffix?: string;
+  readonly contains?: string;
+  readonly name?: string;
+}
 
-function handler(event) {
+export const PROXY_ALLOWLIST_ENTRIES: readonly ProxyAllowlistEntry[] = [
+  {
+    kind: "exact",
+    methods: ["GET"],
+    apiPath: "/api/v1/public/calendar",
+    publicPath: "/v1/public/calendar",
+  },
+  {
+    kind: "exact",
+    methods: ["GET"],
+    apiPath: "/api/v1/public/calendar/availability",
+    publicPath: "/v1/public/calendar/availability",
+  },
+  {
+    kind: "exact",
+    methods: ["GET"],
+    apiPath: "/api/v1/public/assets/free",
+    publicPath: "/v1/public/assets/free",
+  },
+  {
+    kind: "exact",
+    methods: ["POST"],
+    apiPath: "/api/v1/public/discounts/validate",
+    publicPath: "/v1/public/discounts/validate",
+  },
+  {
+    kind: "exact",
+    methods: ["POST"],
+    apiPath: "/api/v1/public/reservations",
+    publicPath: "/v1/public/reservations",
+  },
+  {
+    kind: "exact",
+    methods: ["POST"],
+    apiPath: "/api/v1/public/reservations/payment-intent",
+    publicPath: "/v1/public/reservations/payment-intent",
+  },
+  {
+    kind: "exact",
+    methods: ["POST"],
+    apiPath: "/api/v1/public/contact-us",
+    publicPath: "/v1/public/contact-us",
+  },
+  {
+    kind: "prefix",
+    name: "isFormAnswersPath",
+    methods: ["PUT", "OPTIONS"],
+    apiPath: "/api/v1/public/forms/",
+    publicPath: "/v1/public/forms/",
+    suffix: "/answers",
+  },
+  {
+    kind: "prefix",
+    name: "isFormContactContextPath",
+    methods: ["GET", "OPTIONS"],
+    apiPath: "/api/v1/public/forms/",
+    publicPath: "/v1/public/forms/",
+    suffix: "/contact-context",
+  },
+  {
+    kind: "prefix",
+    name: "isPollAnswersPath",
+    methods: ["GET", "PUT", "OPTIONS"],
+    apiPath: "/api/v1/public/polls/",
+    publicPath: "/v1/public/polls/",
+    suffix: "/answers",
+  },
+  {
+    kind: "prefix",
+    name: "isPollQuestionResultsPath",
+    methods: ["GET", "OPTIONS"],
+    apiPath: "/api/v1/public/polls/",
+    publicPath: "/v1/public/polls/",
+    suffix: "/results",
+    contains: "/questions/",
+  },
+  {
+    kind: "prefix",
+    name: "isPollControlPath",
+    methods: ["GET", "PUT", "OPTIONS"],
+    apiPath: "/api/v1/public/polls/",
+    publicPath: "/v1/public/polls/",
+    suffix: "/control",
+  },
+];
+
+function quoteJs(value: string): string {
+  return `'${value}'`;
+}
+
+function methodCheck(methods: readonly string[]): string {
+  return methods.map((method) => `method === '${method}'`).join(" || ");
+}
+
+function renderApiAllowlist(): string {
+  const exactByMethod = new Map<string, string[]>();
+  for (const entry of PROXY_ALLOWLIST_ENTRIES) {
+    if (entry.kind !== "exact") {
+      continue;
+    }
+    for (const method of entry.methods) {
+      const paths = exactByMethod.get(method) ?? [];
+      paths.push(entry.apiPath);
+      exactByMethod.set(method, paths);
+    }
+  }
+  const methodBlocks = [...exactByMethod.entries()].map(([method, paths], methodIndex, all) => {
+    const lines = paths.map((item, index) => {
+      const comma = index === paths.length - 1 ? "" : ",";
+      return `      ${quoteJs(item)}: true${comma}`;
+    });
+    const methodComma = methodIndex === all.length - 1 ? "" : ",";
+    return `    '${method}': {\n${lines.join("\n")}\n    }${methodComma}`;
+  });
+  const prefixBlocks = PROXY_ALLOWLIST_ENTRIES.filter((entry) => entry.kind === "prefix").map(
+    (entry) => {
+      const suffix = entry.suffix ?? "";
+      const contains = entry.contains
+        ? `\n    && uri.indexOf(${quoteJs(entry.contains)}) > 0`
+        : "";
+      const checks = methodCheck(entry.methods);
+      const wrapped = entry.methods.length > 1 ? `(${checks})` : checks;
+      return `  var ${entry.name} =
+    uri.indexOf(${quoteJs(entry.apiPath)}) === 0${contains} &&
+    uri.lastIndexOf(${quoteJs(suffix)}) === uri.length - ${suffix.length};
+  if (
+    ${wrapped} &&
+    ${entry.name}
+  ) {
+    request.uri = uri.substring(4);
+    return request;
+  }`;
+    },
+  );
+  return `function handler(event) {
   var request = event.request;
   var method = request.method || '';
   var uri = request.uri || '';
 
   var allowlist = {
-    'GET': {
-      '/api/v1/public/calendar': true,
-      '/api/v1/public/calendar/availability': true,
-      '/api/v1/public/assets/free': true
-    },
-    'POST': {
-      '/api/v1/public/discounts/validate': true,
-      '/api/v1/public/reservations': true,
-      '/api/v1/public/reservations/payment-intent': true,
-      '/api/v1/public/contact-us': true
-    }
+${methodBlocks.join("\n")}
   };
   if (allowlist[method] && allowlist[method][uri]) {
     request.uri = uri.substring(4);
     return request;
   }
 
-  var isFormAnswersPath =
-    uri.indexOf('/api/v1/public/forms/') === 0 &&
-    uri.lastIndexOf('/answers') === uri.length - 8;
-  if (
-    (method === 'PUT' || method === 'OPTIONS') &&
-    isFormAnswersPath
-  ) {
-    request.uri = uri.substring(4);
-    return request;
-  }
-
-  var isFormContactContextPath =
-    uri.indexOf('/api/v1/public/forms/') === 0 &&
-    uri.lastIndexOf('/contact-context') === uri.length - 16;
-  if (
-    (method === 'GET' || method === 'OPTIONS') &&
-    isFormContactContextPath
-  ) {
-    request.uri = uri.substring(4);
-    return request;
-  }
-
-  var isPollAnswersPath =
-    uri.indexOf('/api/v1/public/polls/') === 0 &&
-    uri.lastIndexOf('/answers') === uri.length - 8;
-  if (
-    (method === 'GET' || method === 'PUT' || method === 'OPTIONS') &&
-    isPollAnswersPath
-  ) {
-    request.uri = uri.substring(4);
-    return request;
-  }
-
-  var isPollQuestionResultsPath =
-    uri.indexOf('/api/v1/public/polls/') === 0 &&
-    uri.indexOf('/questions/') > 0 &&
-    uri.lastIndexOf('/results') === uri.length - 8;
-  if (
-    (method === 'GET' || method === 'OPTIONS') &&
-    isPollQuestionResultsPath
-  ) {
-    request.uri = uri.substring(4);
-    return request;
-  }
-
-  var isPollControlPath =
-    uri.indexOf('/api/v1/public/polls/') === 0 &&
-    uri.lastIndexOf('/control') === uri.length - 8;
-  if (
-    (method === 'GET' || method === 'PUT' || method === 'OPTIONS') &&
-    isPollControlPath
-  ) {
-    request.uri = uri.substring(4);
-    return request;
-  }
+${prefixBlocks.join("\n\n")}
 
   return {
     statusCode: 403,
@@ -127,6 +206,10 @@ function handler(event) {
   };
 }
 `;
+}
+
+/** Default-deny allowlist for /api/v1/public/... . The viewer path loses the /api prefix. */
+export const API_PROXY_ALLOWLIST_FUNCTION = renderApiAllowlist();
 
 /** Convert HTML error pages from API origins to JSON for /api proxy behaviors. */
 export const WWW_API_ERROR_RESPONSE_FUNCTION = `
