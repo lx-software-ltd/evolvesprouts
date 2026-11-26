@@ -22,6 +22,7 @@ _spec.loader.exec_module(_checks)
 
 def test_custom_domain_responds() -> None:
     assert _checks.custom_domain_responds(200) is None
+    assert _checks.custom_domain_responds(302) == "custom domain status 302"
     assert _checks.custom_domain_responds(503) == "custom domain status 503"
 
 
@@ -82,7 +83,7 @@ def test_redirect_to_http_is_refused() -> None:
 
 def test_bundle_status_outside_success_is_a_finding() -> None:
     assert _checks.site_bundle_responds(200) is None
-    assert _checks.site_bundle_responds(302) is None
+    assert _checks.site_bundle_responds(302) == "site bundle status 302"
     assert _checks.site_bundle_responds(404) == "site bundle status 404"
 
 

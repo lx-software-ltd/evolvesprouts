@@ -29,15 +29,15 @@ _LEGACY_HEADER_MARKER = "x-api-token"
 
 
 def custom_domain_responds(status_code: int) -> str | None:
-    """Return a finding when the custom domain did not answer."""
-    if 200 <= status_code < 400:
+    """Return a finding when the custom domain status is outside 2xx."""
+    if 200 <= status_code < 300:
         return None
     return f"custom domain status {status_code}"
 
 
 def site_bundle_responds(status_code: int) -> str | None:
-    """Return a finding when the site bundle status is outside 2xx and 3xx."""
-    if 200 <= status_code < 400:
+    """Return a finding when the site bundle status is outside 2xx."""
+    if 200 <= status_code < 300:
         return None
     return f"site bundle status {status_code}"
 
