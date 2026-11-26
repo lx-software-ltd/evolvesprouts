@@ -1,6 +1,6 @@
 """Authorization helpers for hashed API-token routes.
 
-The API-token Lambda authorizer validates the ``x-api-token`` header
+The API-token Lambda authorizer validates ``Authorization: Bearer``
 against the ``api_keys`` table and passes identity through authorizer
 context:
 
@@ -11,9 +11,9 @@ context:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
-from collections.abc import Mapping
 
 from app.exceptions import AuthenticationError, AuthorizationError
 from app.services.api_keys import ALLOWED_SCOPES, SCOPE_USER

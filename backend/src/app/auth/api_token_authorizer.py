@@ -1,6 +1,6 @@
 """Core logic for the public API-token request authorizer.
 
-Validates the ``x-api-token`` header against hashed keys in the
+Validates ``Authorization: Bearer`` against hashed keys in the
 ``api_keys`` table and produces an IAM policy plus authorizer context.
 
 SECURITY NOTES:
@@ -21,16 +21,27 @@ from sqlalchemy.orm import Session
 from app.auth.authorizer_utils import build_iam_policy, get_header_case_insensitive
 from app.db.engine import get_engine
 from app.db.repositories.api_key import ApiKeyRepository
-from app.services.api_keys import (
-    API_TOKEN_HEADER,
-    hash_api_key,
-    looks_like_api_key,
-)
+from app.services.api_keys import hash_api_key, looks_like_api_key
 from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
 _LAST_USED_REFRESH_INTERVAL = timedelta(minutes=1)
+_MAX_TOKEN_LEN = 256
+
+
+def _bearer_token(headers: dict[str, Any]) -> str | None:
+    """Return the token from ``Authorization: Bearer``, or None."""
+    raw = get_header_case_insensitive(headers, "Authorization")
+    if not isinstance(raw, str):
+        return None
+    scheme, separator, token = raw.strip().partition(" ")
+    if not separator or scheme.lower() != "bearer":
+        return None
+    key = token.strip()
+    if not key or len(key) > _MAX_TOKEN_LEN or " " in key:
+        return None
+    return key
 
 
 def authorize_api_token(event: dict[str, Any]) -> dict[str, Any]:
@@ -38,9 +49,9 @@ def authorize_api_token(event: dict[str, Any]) -> dict[str, Any]:
     headers = event.get("headers") or {}
     method_arn = event.get("methodArn", "")
 
-    plaintext = get_header_case_insensitive(headers, API_TOKEN_HEADER)
+    plaintext = _bearer_token(headers)
     if not plaintext:
-        logger.warning("Missing x-api-token header")
+        logger.warning("Missing Authorization bearer token")
         return build_iam_policy(
             "Deny", method_arn, "anonymous", {"reason": "missing_key"}
         )

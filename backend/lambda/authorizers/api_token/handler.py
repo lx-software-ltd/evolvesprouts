@@ -1,6 +1,6 @@
 """API Gateway request authorizer for hashed API tokens.
 
-This Lambda validates the ``x-api-token`` header against hashed keys
+This Lambda validates ``Authorization: Bearer`` against hashed keys
 stored in the ``api_keys`` table (read via RDS Proxy with IAM auth) and
 passes the token identity (id, scope) to the backend handlers.
 

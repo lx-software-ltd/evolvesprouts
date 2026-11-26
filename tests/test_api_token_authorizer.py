@@ -48,7 +48,7 @@ def test_authorize_api_token_denies_missing_header() -> None:
 def test_authorize_api_token_denies_malformed_token() -> None:
     policy = ata.authorize_api_token(
         {
-            "headers": {"x-api-token": "not-a-token"},
+            "headers": {"Authorization": "Bearer not-a-token"},
             "methodArn": "arn:example",
         }
     )
@@ -73,7 +73,7 @@ def test_authorize_api_token_allows_active_key(
 
     policy = ata.authorize_api_token(
         {
-            "headers": {"x-api-token": generated.plaintext},
+            "headers": {"Authorization": f"Bearer {generated.plaintext}"},
             "methodArn": "arn:aws:execute-api:ap-southeast-1:1:api/prod/GET/v1/public/whatsapp",
         }
     )
@@ -100,7 +100,7 @@ def test_authorize_api_token_skips_recent_last_used(
 
     policy = ata.authorize_api_token(
         {
-            "headers": {"X-Api-Token": generated.plaintext},
+            "headers": {"authorization": f"Bearer {generated.plaintext}"},
             "methodArn": "arn:example",
         }
     )
