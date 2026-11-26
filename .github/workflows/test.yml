@@ -187,7 +187,7 @@ jobs:
           NEXT_TELEMETRY_DISABLED: "1"
           NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_training_site_env.outputs.site_origin }}
           NEXT_PUBLIC_PUBLIC_WWW_ORIGIN: ${{ steps.resolve_training_site_env.outputs.public_www_origin }}
-          NEXT_PUBLIC_API_BASE_URL: /api
+          NEXT_PUBLIC_API_BASE_URL: /www
           NEXT_PUBLIC_TRAINING_API_KEY: test-training-poll-api-key
 
       - name: Build
@@ -197,7 +197,7 @@ jobs:
           NEXT_TELEMETRY_DISABLED: "1"
           NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_training_site_env.outputs.site_origin }}
           NEXT_PUBLIC_PUBLIC_WWW_ORIGIN: ${{ steps.resolve_training_site_env.outputs.public_www_origin }}
-          NEXT_PUBLIC_API_BASE_URL: /api
+          NEXT_PUBLIC_API_BASE_URL: /www
           NEXT_PUBLIC_TRAINING_API_KEY: test-training-poll-api-key
 
   # template:end

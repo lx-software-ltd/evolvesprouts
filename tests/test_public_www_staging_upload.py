@@ -13,6 +13,7 @@ SCRIPT = ROOT / "scripts" / "deploy" / "deploy-public-www.sh"
 
 FAKE_AWS = """\
 #!/usr/bin/env python3
+import json
 import os
 import sys
 
@@ -28,7 +29,32 @@ elif args[:2] == ["cloudformation", "list-stack-resources"]:
 elif args[:2] == ["cloudfront", "describe-function"]:
     print("arn:aws:cloudfront::123456789012:function/AllowlistFunction")
 elif args[:2] == ["cloudfront", "get-distribution-config"]:
-    print("arn:aws:cloudfront::123456789012:function/AllowlistFunction")
+    arn = "arn:aws:cloudfront::123456789012:function/AllowlistFunction"
+    patterns = [
+        "www/*",
+        "www/v1/assets/free/request",
+        "api/*",
+        "api/v1/public/assets/free/request",
+    ]
+    items = [
+        {
+            "PathPattern": pattern,
+            "FunctionAssociations": {
+                "Items": [{"EventType": "viewer-request", "FunctionARN": arn}]
+            },
+        }
+        for pattern in patterns
+    ]
+    print(
+        json.dumps(
+            {
+                "ETag": "ETAG",
+                "DistributionConfig": {"CacheBehaviors": {"Items": items}},
+            }
+        )
+    )
+elif args[:2] == ["cloudfront", "update-distribution"]:
+    print("updated")
 elif args[:2] == ["cloudfront", "create-invalidation"]:
     print("invalidation")
 else:
