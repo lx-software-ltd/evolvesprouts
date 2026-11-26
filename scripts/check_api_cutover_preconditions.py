@@ -18,6 +18,7 @@ from __future__ import annotations
 import os
 import sys
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
 CUSTOM_DOMAIN_URL_ENV = "API_CUTOVER_CUSTOM_DOMAIN_URL"
@@ -55,10 +56,20 @@ def legacy_header_not_required(body: str) -> str | None:
     return None
 
 
+def _https_url(url: str) -> str:
+    """Reject any scheme other than https, including file."""
+    parsed = urlsplit(url)
+    if parsed.scheme != "https" or not parsed.hostname:
+        raise ValueError(f"refusing a URL that is not https: {url}")
+    return url
+
+
 def _read(url: str) -> tuple[int, str]:
-    request = Request(url, method="GET")
+    request = Request(_https_url(url), method="GET")
     try:
-        with urlopen(request, timeout=10) as response:
+        # The URL is https-only. It comes from the operator's environment.
+        # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
+        with urlopen(request, timeout=10) as response:  # nosec B310
             payload = response.read(1_000_000)
             return int(response.status), payload.decode("utf-8", errors="replace")
     except HTTPError as exc:

@@ -61,6 +61,11 @@ def test_legacy_header_is_not_required() -> None:
     )
 
 
+def test_read_refuses_a_non_https_url() -> None:
+    with pytest.raises(ValueError, match="not https"):
+        _checks._read("file:///etc/passwd")
+
+
 def test_skips_when_url_env_is_unset(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
