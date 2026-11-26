@@ -4,7 +4,10 @@ import importlib.util
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from app.auth import authorizer_utils
+from app.auth.api_token_authorizer import Unauthorized
 
 
 def _load_lambda_module(relative_path: str, module_name: str) -> Any:
@@ -59,15 +62,63 @@ def test_cognito_user_authorizer_denies_missing_token() -> None:
     assert response["context"]["reason"] == "missing_token"
 
 
-def test_api_token_authorizer_denies_missing_header() -> None:
+def test_api_token_authorizer_rejects_missing_header() -> None:
     handler = _load_lambda_module(
         "authorizers/api_token/handler.py",
         "test_api_token_authorizer",
     )
-    response = handler.lambda_handler({"headers": {}, "methodArn": "arn:example"}, None)
+    with pytest.raises(Unauthorized, match="^Unauthorized$"):
+        handler.lambda_handler({"headers": {}, "methodArn": "arn:example"}, None)
 
+
+def test_api_token_authorizer_rejects_malformed_token() -> None:
+    handler = _load_lambda_module(
+        "authorizers/api_token/handler.py",
+        "test_api_token_authorizer_malformed",
+    )
+    with pytest.raises(Unauthorized, match="^Unauthorized$"):
+        handler.lambda_handler(
+            {
+                "headers": {"Authorization": "Bearer not-a-token"},
+                "methodArn": "arn:example",
+            },
+            None,
+        )
+
+
+def test_api_token_authorizer_returns_allow_policy(monkeypatch: Any) -> None:
+    handler = _load_lambda_module(
+        "authorizers/api_token/handler.py",
+        "test_api_token_authorizer_allow",
+    )
+    allow = {"policyDocument": {"Statement": [{"Effect": "Allow"}]}}
+    monkeypatch.setattr(handler, "authorize_api_token", lambda _event: allow)
+    response = handler.lambda_handler(
+        {
+            "headers": {"Authorization": "Bearer token"},
+            "methodArn": "arn:example",
+        },
+        None,
+    )
+    assert response["policyDocument"]["Statement"][0]["Effect"] == "Allow"
+
+
+def test_api_token_authorizer_denies_unexpected_failure(monkeypatch: Any) -> None:
+    handler = _load_lambda_module(
+        "authorizers/api_token/handler.py",
+        "test_api_token_authorizer_error",
+    )
+
+    def _boom(_event: dict[str, Any]) -> dict[str, Any]:
+        raise RuntimeError("db down")
+
+    monkeypatch.setattr(handler, "authorize_api_token", _boom)
+    response = handler.lambda_handler(
+        {"headers": {"Authorization": "Bearer token"}, "methodArn": "arn:example"},
+        None,
+    )
     assert response["policyDocument"]["Statement"][0]["Effect"] == "Deny"
-    assert response["context"]["reason"] == "missing_key"
+    assert response["context"]["reason"] == "authorization_error"
 
 
 def test_device_attestation_authorizer_denies_when_unconfigured_fail_closed(

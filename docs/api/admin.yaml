@@ -7,7 +7,7 @@ info:
     `backend/infrastructure/lib/api-stack.ts`.
 
     The current API Gateway deployment exposes:
-    - `GET /health`
+    - `GET /health` (open liveness, `{"status":"ok"}`)
     - `GET /v1/admin/geographic-areas`
     - `GET|POST /v1/admin/locations`
     - `POST /v1/admin/locations/geocode`
@@ -124,32 +124,26 @@ info:
     - `GET /v1/user/assets/{id}/download`
 
 servers:
-  - url: https://api.evolvesprouts.com/prod
+  - url: https://api.evolvesprouts.com
     description: Production API. Paths below are appended to this URL. The execute-api hostname does not accept calls.
 
 paths:
   /health:
     get:
       operationId: getHealth
-      summary: Health check
-      description: Returns backend health status and dependency checks.
-      security:
-        - SigV4Auth: []
+      summary: Liveness check
+      description: >
+        Open liveness check. Returns `{"status":"ok"}` and does not read
+        the database or configuration. A direct invocation of the health
+        function with no httpMethod runs the database and configuration checks.
+      security: []
       responses:
         "200":
-          description: Service is healthy.
+          description: Process is up.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HealthResponse"
-        "503":
-          description: Service is unhealthy.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HealthResponse"
-        "403":
-          description: API Gateway rejected the caller signature.
+                $ref: "#/components/schemas/OpenHealthResponse"
 
   /v1/admin/assets:
     get:
@@ -1157,7 +1151,7 @@ paths:
       operationId: getV1AdminApiKeys
       summary: List API tokens
       description: |
-        Lists hashed API tokens used by the `x-api-token` authorizer.
+        Lists hashed API tokens used by the `Authorization: Bearer` authorizer.
         The plaintext token is never stored and is not returned here.
       security:
         - AdminBearerAuth: []
@@ -12362,6 +12356,14 @@ components:
           description: >
             Optional input field key for validation-style errors. Duplicate service
             service_key+tier conflicts use the literal `service_key_tier` (not `service_key` or `service_tier`).
+    OpenHealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [ok]
     HealthResponse:
       type: object
       required:

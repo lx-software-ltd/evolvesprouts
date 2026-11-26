@@ -20,7 +20,7 @@ from app.api.admin_locations import (
     update_location,
 )
 from app.api.admin_request import parse_uuid, route_has_prefix, split_route_parts
-from app.api.public.token_auth import require_api_token
+from app.api.partner.token_auth import require_api_token
 from app.db.engine import get_engine
 from app.db.repositories import LocationRepository
 from app.exceptions import NotFoundError
@@ -34,7 +34,7 @@ def handle_public_locations_request(
 ) -> dict[str, Any]:
     """Handle /v1/public/locations routes."""
     parts = split_route_parts(path)
-    if not route_has_prefix(parts, "public", "locations"):
+    if not route_has_prefix(parts, "partner", "locations"):
         return not_found(event)
 
     require_api_token(event, method)

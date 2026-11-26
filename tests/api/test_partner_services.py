@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.api.public import services as pservices
+from app.api.partner import services as pservices
 from app.exceptions import AuthenticationError, AuthorizationError
 
 
@@ -32,18 +32,18 @@ def _token_event(
 
 
 def test_public_services_requires_token(api_gateway_event: Any) -> None:
-    event = api_gateway_event(method="GET", path="/v1/public/services")
+    event = api_gateway_event(method="GET", path="/v1/partner/services")
     with pytest.raises(AuthenticationError):
-        pservices.handle_public_services_request(event, "GET", "/v1/public/services")
+        pservices.handle_public_services_request(event, "GET", "/v1/partner/services")
 
 
 @pytest.mark.parametrize("method", ["POST", "PUT", "PATCH", "DELETE"])
 def test_public_services_user_cannot_write(api_gateway_event: Any, method: str) -> None:
     service_id = uuid4()
     path = (
-        "/v1/public/services"
+        "/v1/partner/services"
         if method == "POST"
-        else f"/v1/public/services/{service_id}"
+        else f"/v1/partner/services/{service_id}"
     )
     event = _token_event(api_gateway_event, path, scope="user", method=method)
     with pytest.raises(AuthorizationError, match="Read-only API token"):
@@ -58,9 +58,9 @@ def test_public_services_lists(
         pservices, "list_services", lambda _event: {"statusCode": 200, "body": "{}"}
     )
     response = pservices.handle_public_services_request(
-        _token_event(api_gateway_event, "/v1/public/services"),
+        _token_event(api_gateway_event, "/v1/partner/services"),
         "GET",
-        "/v1/public/services",
+        "/v1/partner/services",
     )
     assert response["statusCode"] == 200
 
@@ -80,13 +80,13 @@ def test_public_services_admin_create_uses_token_actor(
     response = pservices.handle_public_services_request(
         _token_event(
             api_gateway_event,
-            "/v1/public/services",
+            "/v1/partner/services",
             scope="admin",
             method="POST",
             api_key_id=api_key_id,
         ),
         "POST",
-        "/v1/public/services",
+        "/v1/partner/services",
     )
     assert response["statusCode"] == 201
     assert captured["actor_sub"] == f"api-key:{api_key_id}"
@@ -120,7 +120,7 @@ def test_public_services_get_put_patch_delete_delegate(
     monkeypatch.setattr(pservices, "get_service", _get)
     monkeypatch.setattr(pservices, "update_service", _update)
     monkeypatch.setattr(pservices, "delete_service", _delete)
-    path = f"/v1/public/services/{service_id}"
+    path = f"/v1/partner/services/{service_id}"
 
     get_response = pservices.handle_public_services_request(
         _token_event(api_gateway_event, path), "GET", path
@@ -180,7 +180,7 @@ def test_public_services_global_instances_list(
         "list_instances_global",
         lambda _event: {"statusCode": 200, "body": "{}"},
     )
-    path = "/v1/public/services/instances"
+    path = "/v1/partner/services/instances"
     response = pservices.handle_public_services_request(
         _token_event(api_gateway_event, path), "GET", path
     )
@@ -194,20 +194,20 @@ def test_public_services_rejects_cover_image_and_discount_summary(
     cover = pservices.handle_public_services_request(
         _token_event(
             api_gateway_event,
-            f"/v1/public/services/{service_id}/cover-image",
+            f"/v1/partner/services/{service_id}/cover-image",
             scope="admin",
             method="POST",
         ),
         "POST",
-        f"/v1/public/services/{service_id}/cover-image",
+        f"/v1/partner/services/{service_id}/cover-image",
     )
     assert cover["statusCode"] == 404
     summary = pservices.handle_public_services_request(
         _token_event(
             api_gateway_event,
-            f"/v1/public/services/{service_id}/discount-code-usage-summary",
+            f"/v1/partner/services/{service_id}/discount-code-usage-summary",
         ),
         "GET",
-        f"/v1/public/services/{service_id}/discount-code-usage-summary",
+        f"/v1/partner/services/{service_id}/discount-code-usage-summary",
     )
     assert summary["statusCode"] == 404

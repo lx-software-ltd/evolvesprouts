@@ -5,8 +5,8 @@ from uuid import uuid4
 
 import pytest
 
-from app.api.public import instances as pinstances
-from app.api.public import services as pservices
+from app.api.partner import instances as pinstances
+from app.api.partner import services as pservices
 from app.exceptions import AuthorizationError
 
 
@@ -39,9 +39,9 @@ def test_public_nested_instances_user_cannot_write(
     service_id = uuid4()
     instance_id = uuid4()
     path = (
-        f"/v1/public/services/{service_id}/instances"
+        f"/v1/partner/services/{service_id}/instances"
         if method == "POST"
-        else f"/v1/public/services/{service_id}/instances/{instance_id}"
+        else f"/v1/partner/services/{service_id}/instances/{instance_id}"
     )
     event = _token_event(api_gateway_event, path, scope="user", method=method)
     with pytest.raises(AuthorizationError, match="Read-only API token"):
@@ -67,7 +67,7 @@ def test_public_nested_instances_list_and_create(
 
     monkeypatch.setattr(pinstances, "_list_instances", _list)
     monkeypatch.setattr(pinstances, "_create_instance", _create)
-    path = f"/v1/public/services/{service_id}/instances"
+    path = f"/v1/partner/services/{service_id}/instances"
 
     list_response = pservices.handle_public_services_request(
         _token_event(api_gateway_event, path), "GET", path
@@ -133,7 +133,7 @@ def test_public_nested_instances_get_put_delete(
     monkeypatch.setattr(pinstances, "_get_instance", _get)
     monkeypatch.setattr(pinstances, "_update_instance", _update)
     monkeypatch.setattr(pinstances, "_delete_instance", _delete)
-    path = f"/v1/public/services/{service_id}/instances/{instance_id}"
+    path = f"/v1/partner/services/{service_id}/instances/{instance_id}"
 
     get_response = pservices.handle_public_services_request(
         _token_event(api_gateway_event, path), "GET", path
@@ -176,7 +176,7 @@ def test_public_nested_instances_does_not_expose_enrollments(
 ) -> None:
     service_id = uuid4()
     instance_id = uuid4()
-    path = f"/v1/public/services/{service_id}/instances/{instance_id}/enrollments"
+    path = f"/v1/partner/services/{service_id}/instances/{instance_id}/enrollments"
     response = pservices.handle_public_services_request(
         _token_event(api_gateway_event, path, scope="admin"),
         "GET",

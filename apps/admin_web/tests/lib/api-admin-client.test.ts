@@ -55,6 +55,26 @@ describe('adminApiRequest', () => {
     );
   });
 
+  it('does not repeat the error when detail copies it', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      text: async () => JSON.stringify({ error: 'Bad Request', detail: 'Bad Request' }),
+    } as Response);
+
+    await expect(
+      adminApiRequest({
+        endpointPath: '/v1/admin/assets',
+        method: 'GET',
+      })
+    ).rejects.toMatchObject({
+      name: 'AdminApiError',
+      statusCode: 400,
+      message: 'Bad Request',
+      payload: { error: 'Bad Request', detail: 'Bad Request' },
+    });
+  });
+
   it('throws AdminApiError with extracted message on API failure', async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: false,

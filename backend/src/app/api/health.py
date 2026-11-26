@@ -8,8 +8,7 @@ from __future__ import annotations
 
 import os
 import time
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 from typing import Any
 
 from sqlalchemy import text
@@ -149,9 +148,9 @@ def _check_configuration() -> HealthCheck:
 
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
-    """Lambda handler for health check endpoint."""
-    status = check_health()
-
-    status_code = 200 if status.healthy else 503
-
-    return json_response(status_code, status.to_dict(), event=event)
+    """HTTP is liveness only. No httpMethod means a direct dependency check."""
+    if not event.get("httpMethod"):
+        status = check_health()
+        status_code = 200 if status.healthy else 503
+        return json_response(status_code, status.to_dict(), event=event)
+    return json_response(200, {"status": "ok"}, event=event)

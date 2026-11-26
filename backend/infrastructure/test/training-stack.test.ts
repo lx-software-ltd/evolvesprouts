@@ -58,6 +58,8 @@ function assertWwwApiBehaviors(template: Template): void {
     DistributionConfig: Match.objectLike({
       CacheBehaviors: Match.arrayWith([
         Match.objectLike({ PathPattern: "www/v1/assets/free/request" }),
+        Match.objectLike({ PathPattern: "api/v1/public/assets/free/request" }),
+        Match.objectLike({ PathPattern: "api/*" }),
         Match.objectLike({ PathPattern: "www/*" }),
       ]),
     }),

@@ -186,12 +186,35 @@ function assertGatewayResponsesHaveNoBodyTemplates(template: Template): void {
   for (const [logicalId, resource] of entries) {
     const props = resource.Properties ?? {};
     if ("ResponseTemplates" in props && props.ResponseTemplates != null) {
-      const rt = props.ResponseTemplates;
-      if (typeof rt === "object" && rt !== null && Object.keys(rt as object).length > 0) {
+      const rt = props.ResponseTemplates as Record<string, string>;
+      const encoded = JSON.stringify(rt);
+      if (encoded.includes("#set") || encoded.includes("#if")) {
         throw new Error(
-          `GatewayResponse ${logicalId} must not set ResponseTemplates (API Gateway only supports simple substitution in gateway response body templates; VTL leaks into JSON bodies). Found ${JSON.stringify(rt)}`,
+          `GatewayResponse ${logicalId} must use simple substitution. Found ${encoded}`,
         );
       }
+      const body = rt["application/json"] ?? "";
+      if (!body.includes('"message"')) {
+        throw new Error(
+          `GatewayResponse ${logicalId} must include a message member`,
+        );
+      }
+      if (!body.includes('"request_id": "$context.requestId"')) {
+        throw new Error(
+          `GatewayResponse ${logicalId} must substitute request_id from $context.requestId`,
+        );
+      }
+    }
+    const parameters = (props as { ResponseParameters?: Record<string, unknown> })
+      .ResponseParameters;
+    const encodedParameters = JSON.stringify(parameters ?? {});
+    if (
+      encodedParameters.includes("x-request-id") ||
+      encodedParameters.includes("'$context.requestId'")
+    ) {
+      throw new Error(
+        `GatewayResponse ${logicalId} must not set a static x-request-id header. Found ${encodedParameters}`,
+      );
     }
   }
 }
@@ -806,6 +829,31 @@ function assertInboundInvoiceSharesReceiptRuleSet(template: Template): void {
   }
 }
 
+function assertApiTokenAuthorizerCachesNeitherHeader(template: Template): void {
+  const authorizers = template.findResources("AWS::ApiGateway::Authorizer");
+  const token = Object.values(authorizers).filter((resource) => {
+    return JSON.stringify(resource.Properties?.AuthorizerUri ?? "").includes(
+      "ApiTokenAuthorizer",
+    );
+  });
+  if (token.length !== 1) {
+    throw new Error(
+      `Expected one API token authorizer, found ${token.length}`,
+    );
+  }
+  const properties = token[0].Properties ?? {};
+  if (properties.AuthorizerResultTtlInSeconds !== 0) {
+    throw new Error(
+      "API token authorizer cache must be off so the cache key includes neither header",
+    );
+  }
+  if (properties.IdentitySource !== undefined) {
+    throw new Error(
+      `API token authorizer cache key must include neither header, found ${JSON.stringify(properties.IdentitySource)}`,
+    );
+  }
+}
+
 function assertApiTokenAuthorizerHasNoReservedConcurrency(template: Template): void {
   const functions = template.findResources("AWS::Lambda::Function");
   const match = Object.entries(functions).find(([, resource]) => {
@@ -1021,12 +1069,11 @@ function assertRetainedSecurityGroupsAndProxyTags(template: Template): void {
 function assertApiCustomDomainKeepsProdPath(template: Template): void {
   const mappings = template.findResources("AWS::ApiGateway::BasePathMapping");
   const entries = Object.entries(mappings);
-  if (entries.length !== 1) {
+  if (entries.length !== 2) {
     throw new Error(
-      `Expected one API base path mapping; found ${entries.length}`,
+      `Expected the prod mapping and a root mapping; found ${entries.length}`,
     );
   }
-  const [logicalId, mapping] = entries[0];
   const stages = template.findResources("AWS::ApiGateway::Stage");
   const stageEntries = Object.entries(stages);
   if (stageEntries.length !== 1) {
@@ -1037,11 +1084,19 @@ function assertApiCustomDomainKeepsProdPath(template: Template): void {
   if (typeof stageName !== "string" || stageName.length === 0) {
     throw new Error(`API stage ${stageLogicalId} is missing StageName`);
   }
-  if (mapping.Properties?.BasePath !== stageName) {
+  const prodEntry = entries.find(
+    ([, item]) => item.Properties?.BasePath === stageName,
+  );
+  const rootEntry = entries.find(([, item]) => {
+    const basePath = item.Properties?.BasePath;
+    return basePath === "" || basePath === undefined;
+  });
+  if (!prodEntry || !rootEntry) {
     throw new Error(
-      `${logicalId} base path must match stage ${stageName}. Found ${JSON.stringify(mapping.Properties?.BasePath)}`,
+      `Expected a ${stageName} mapping and a root mapping. Found ${JSON.stringify(entries.map(([, item]) => item.Properties?.BasePath))}`,
     );
   }
+  const [logicalId, mapping] = prodEntry;
   if (mapping.Condition !== "UseApiCustomDomain") {
     throw new Error(
       `${logicalId} must be created only when UseApiCustomDomain is true`,
@@ -1133,6 +1188,110 @@ function assertApiCustomDomainKeepsProdPath(template: Template): void {
   }
 }
 
+function assertTokenAuthorizerCoverage(template: Template): void {
+  const authorizers = template.findResources("AWS::ApiGateway::Authorizer");
+  const tokenIds = Object.entries(authorizers)
+    .filter(([, resource]) =>
+      JSON.stringify(resource.Properties?.AuthorizerUri ?? "").includes(
+        "ApiTokenAuthorizer",
+      ),
+    )
+    .map(([logicalId]) => logicalId);
+  if (tokenIds.length !== 1) {
+    throw new Error(`Expected one API token authorizer, found ${tokenIds.length}`);
+  }
+  const tokenId = tokenIds[0];
+  const resources = template.findResources("AWS::ApiGateway::Resource") as Record<
+    string,
+    { Properties?: { PathPart?: unknown; ParentId?: unknown } }
+  >;
+
+  function resourcePath(logicalId: string, seen: Set<string>): string {
+    if (seen.has(logicalId)) {
+      throw new Error(`API Gateway resource cycle at ${logicalId}`);
+    }
+    const properties = resources[logicalId]?.Properties;
+    const part = properties?.PathPart;
+    if (typeof part !== "string") {
+      return "";
+    }
+    const nextSeen = new Set(seen);
+    nextSeen.add(logicalId);
+    const parent = properties?.ParentId;
+    const parentRef =
+      parent && typeof parent === "object" && parent !== null && "Ref" in parent
+        ? String((parent as { Ref: unknown }).Ref)
+        : "";
+    const parentPath = parentRef ? resourcePath(parentRef, nextSeen) : "";
+    return `${parentPath}/${part}`;
+  }
+
+  const paths = new Map<string, string>();
+  for (const logicalId of Object.keys(resources)) {
+    paths.set(logicalId, resourcePath(logicalId, new Set()));
+  }
+  const methods = template.findResources("AWS::ApiGateway::Method") as Record<
+    string,
+    {
+      Properties?: {
+        HttpMethod?: unknown;
+        ResourceId?: unknown;
+        AuthorizerId?: unknown;
+      };
+    }
+  >;
+  // Retired /v1/public/{proxy+} still carries the token authorizer on this
+  // branch. Later branches drop the alias or the authorizer and this set.
+  const publicExempt = new Set(["/v1/public/{proxy+}"]);
+  const seenExempt = new Set<string>();
+  let partnerMethods = 0;
+  for (const method of Object.values(methods)) {
+    const properties = method.Properties ?? {};
+    const resourceId = properties.ResourceId;
+    const ref =
+      resourceId && typeof resourceId === "object" && resourceId !== null && "Ref" in resourceId
+        ? String((resourceId as { Ref: unknown }).Ref)
+        : "";
+    const routePath = paths.get(ref) ?? "";
+    if (properties.HttpMethod === "OPTIONS") {
+      continue;
+    }
+    const usesToken = JSON.stringify(properties.AuthorizerId ?? "").includes(tokenId);
+    if (routePath === "/v1/partner" || routePath.startsWith("/v1/partner/")) {
+      partnerMethods += 1;
+      if (!usesToken) {
+        throw new Error(
+          `${String(properties.HttpMethod)} ${routePath} must use the API token authorizer`,
+        );
+      }
+    }
+    if (routePath === "/v1/public" || routePath.startsWith("/v1/public/")) {
+      if (publicExempt.has(routePath)) {
+        seenExempt.add(routePath);
+        if (!usesToken) {
+          throw new Error(
+            `${String(properties.HttpMethod)} ${routePath} is the exempt public alias and must keep the token authorizer`,
+          );
+        }
+        continue;
+      }
+      if (usesToken) {
+        throw new Error(
+          `${String(properties.HttpMethod)} ${routePath} must not use the API token authorizer`,
+        );
+      }
+    }
+  }
+  if (partnerMethods === 0) {
+    throw new Error("Expected at least one /v1/partner/ method");
+  }
+  for (const routePath of publicExempt) {
+    if (!seenExempt.has(routePath)) {
+      throw new Error(`Missing exempt public alias ${routePath}`);
+    }
+  }
+}
+
 function assertPublicContactMergeRoute(template: Template): void {
   const resources = template.findResources("AWS::ApiGateway::Resource") as Record<
     string,
@@ -1160,11 +1319,11 @@ function assertPublicContactMergeRoute(template: Template): void {
   }
 
   const mergeIds = Object.keys(resources).filter(
-    (logicalId) => resourcePath(logicalId, new Set()) === "/v1/public/contacts/merge",
+    (logicalId) => resourcePath(logicalId, new Set()) === "/v1/partner/{proxy+}",
   );
   if (mergeIds.length !== 1) {
     throw new Error(
-      `Expected one /v1/public/contacts/merge resource, found ${mergeIds.join(", ") || "none"}`,
+      `Expected one /v1/partner/{proxy+} resource, found ${mergeIds.join(", ") || "none"}`,
     );
   }
   const methods = template.findResources("AWS::ApiGateway::Method") as Record<
@@ -1178,16 +1337,16 @@ function assertPublicContactMergeRoute(template: Template): void {
       resourceId && typeof resourceId === "object" && resourceId !== null && "Ref" in resourceId
         ? String((resourceId as { Ref: unknown }).Ref)
         : "";
-    return properties?.HttpMethod === "POST" && ref === mergeIds[0];
+    return properties?.HttpMethod === "ANY" && ref === mergeIds[0];
   });
   if (posts.length !== 1) {
     throw new Error(
-      `Expected one POST method on /v1/public/contacts/merge, found ${posts.length}`,
+      `Expected one ANY method on /v1/partner/{proxy+}, found ${posts.length}`,
     );
   }
   if (posts[0].Properties?.AuthorizationType !== "CUSTOM") {
     throw new Error(
-      "POST /v1/public/contacts/merge must use the API token authorizer",
+      "ANY /v1/partner/{proxy+} must use the API token authorizer",
     );
   }
 }
@@ -1199,6 +1358,11 @@ function main(): void {
     env: { account: "111111111111", region: "ap-southeast-1" },
   });
   const template = Template.fromStack(stack);
+  const resourceCount = Object.keys(template.toJSON().Resources ?? {}).length;
+  console.log(`API stack resource count: ${resourceCount}`);
+  if (resourceCount > 495) {
+    throw new Error(`API stack has ${resourceCount} resources, over the 495 limit`);
+  }
   assertApiGatewayCloudWatchLogging(template);
   assertStageHasNoApiGatewayCacheCluster(template);
   assertGatewayResponsesHaveNoBodyTemplates(template);
@@ -1207,7 +1371,9 @@ function main(): void {
   assertPollResponsesTableHasExpiresAtTtl(template);
   assertCognitoClientAllowlistWiring(template);
   assertApiTokenAuthorizerHasNoReservedConcurrency(template);
+  assertApiTokenAuthorizerCachesNeitherHeader(template);
   assertPublicContactMergeRoute(template);
+  assertTokenAuthorizerCoverage(template);
   assertMailchimpWebhookInactivityAlarm(template);
   assertInboxImportHasNoReservedConcurrency(stack);
   assertInboxImportUsesDedicatedPageToken(stack);

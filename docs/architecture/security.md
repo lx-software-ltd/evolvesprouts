@@ -294,16 +294,16 @@ logger.exception("Internal error")  # Log details internally
 return {"error": "Internal server error"}  # Generic response to client
 ```
 
-### Hashed API tokens (`x-api-token`)
+### Hashed API tokens (`Authorization: Bearer`)
 
-Operator-issued tokens authenticate `/v1/public/*` routes (WhatsApp,
+Operator-issued tokens authenticate `/v1/partner/*` routes (WhatsApp,
 Messenger, and Instagram conversation reads, plus CRM contacts). They are
 distinct from the browser-visible website `x-api-key`.
 
 - Tokens use prefix `esk_` and are stored as PBKDF2-HMAC-SHA256 digests in `api_keys`.
 - Scopes: `admin` (full access on token-protected routes) and `user` (GET only).
 - A VPC Lambda authorizer (`ApiTokenAuthorizerFunction`) validates
-  `x-api-token`. Results are cached for 5 minutes.
+  `Authorization: Bearer`. Results are cached for 5 minutes.
 - Plaintext is shown once at create (`POST /v1/admin/api-keys`) and is never
   logged. Revoke via `DELETE /v1/admin/api-keys/{id}`.
 - Public WhatsApp payloads omit WhatsApp numbers and `wa_id`.
@@ -312,7 +312,7 @@ distinct from the browser-visible website `x-api-key`.
 - Public contact payloads match the admin contact contract (including email,
   phone, and date of birth). Standalone contact notes, families,
   organisations, locations, geographic-area reads, and services (including
-  nested instances) are also on `x-api-token` routes. Family/organisation
+  nested instances) are also on `Authorization: Bearer` routes. Family/organisation
   purchased-service labels, instance enrollments, cover-image upload,
   discount-code usage summary, location delete, and Mailchimp sync jobs stay
   on Cognito admin routes.

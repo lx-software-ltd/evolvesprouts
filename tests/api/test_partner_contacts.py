@@ -8,7 +8,7 @@ from uuid import uuid4
 import pytest
 
 from app.api.admin_contacts_related import empty_related_flags
-from app.api.public import contacts as pcontacts
+from app.api.partner import contacts as pcontacts
 from app.exceptions import (
     AuthenticationError,
     AuthorizationError,
@@ -54,18 +54,18 @@ def _empty_related_flags(
 
 
 def test_public_contacts_requires_token(api_gateway_event: Any) -> None:
-    event = api_gateway_event(method="GET", path="/v1/public/contacts")
+    event = api_gateway_event(method="GET", path="/v1/partner/contacts")
     with pytest.raises(AuthenticationError):
-        pcontacts.handle_public_contacts_request(event, "GET", "/v1/public/contacts")
+        pcontacts.handle_public_contacts_request(event, "GET", "/v1/partner/contacts")
 
 
 @pytest.mark.parametrize("method", ["POST", "PATCH", "DELETE"])
 def test_public_contacts_user_cannot_write(api_gateway_event: Any, method: str) -> None:
     contact_id = uuid4()
     path = (
-        "/v1/public/contacts"
+        "/v1/partner/contacts"
         if method == "POST"
-        else f"/v1/public/contacts/{contact_id}"
+        else f"/v1/partner/contacts/{contact_id}"
     )
     event = _token_event(api_gateway_event, path, scope="user", method=method)
     with pytest.raises(AuthorizationError, match="Read-only API token"):
@@ -121,11 +121,11 @@ def test_public_contacts_lists_with_admin_payload(
     response = pcontacts.handle_public_contacts_request(
         _token_event(
             api_gateway_event,
-            "/v1/public/contacts",
+            "/v1/partner/contacts",
             query_params={"query": "mei", "active": "true"},
         ),
         "GET",
-        "/v1/public/contacts",
+        "/v1/partner/contacts",
     )
     assert response["statusCode"] == 200
     body = json.loads(response["body"])
@@ -169,7 +169,7 @@ def test_public_contacts_get_returns_contact(
         lambda r, **_k: {"id": str(r.id), "first_name": "Mei"},
     )
 
-    path = f"/v1/public/contacts/{contact_id}"
+    path = f"/v1/partner/contacts/{contact_id}"
     response = pcontacts.handle_public_contacts_request(
         _token_event(api_gateway_event, path),
         "GET",
@@ -198,7 +198,7 @@ def test_public_contacts_get_not_found(
     monkeypatch.setattr(pcontacts, "Session", lambda _e: _FakeSessionCM())
     monkeypatch.setattr(pcontacts, "get_engine", lambda: object())
 
-    path = f"/v1/public/contacts/{contact_id}"
+    path = f"/v1/partner/contacts/{contact_id}"
     with pytest.raises(NotFoundError):
         pcontacts.handle_public_contacts_request(
             _token_event(api_gateway_event, path),
@@ -221,13 +221,13 @@ def test_public_contacts_admin_create_uses_token_actor(
     monkeypatch.setattr(pcontacts, "create_contact", _create)
     event = _token_event(
         api_gateway_event,
-        "/v1/public/contacts",
+        "/v1/partner/contacts",
         scope="admin",
         method="POST",
         api_key_id=api_key_id,
     )
     response = pcontacts.handle_public_contacts_request(
-        event, "POST", "/v1/public/contacts"
+        event, "POST", "/v1/partner/contacts"
     )
     assert response["statusCode"] == 201
     assert captured["actor_sub"] == f"api-key:{api_key_id}"
@@ -253,7 +253,7 @@ def test_public_contacts_admin_update_and_delete_use_token_actor(
 
     monkeypatch.setattr(pcontacts, "update_contact", _update)
     monkeypatch.setattr(pcontacts, "delete_contact", _delete)
-    path = f"/v1/public/contacts/{contact_id}"
+    path = f"/v1/partner/contacts/{contact_id}"
 
     update_response = pcontacts.handle_public_contacts_request(
         _token_event(
@@ -291,19 +291,19 @@ def test_public_contacts_rejects_unknown_methods(
     put_response = pcontacts.handle_public_contacts_request(
         _token_event(
             api_gateway_event,
-            "/v1/public/contacts",
+            "/v1/partner/contacts",
             scope="admin",
             method="PUT",
         ),
         "PUT",
-        "/v1/public/contacts",
+        "/v1/partner/contacts",
     )
     assert put_response["statusCode"] == 405
 
 
 def test_public_contact_notes_user_cannot_write(api_gateway_event: Any) -> None:
     contact_id = uuid4()
-    path = f"/v1/public/contacts/{contact_id}/notes"
+    path = f"/v1/partner/contacts/{contact_id}/notes"
     event = _token_event(api_gateway_event, path, scope="user", method="POST")
     with pytest.raises(AuthorizationError, match="Read-only API token"):
         pcontacts.handle_public_contacts_request(event, "POST", path)
@@ -312,13 +312,13 @@ def test_public_contact_notes_user_cannot_write(api_gateway_event: Any) -> None:
 def test_public_contacts_user_cannot_merge(api_gateway_event: Any) -> None:
     event = _token_event(
         api_gateway_event,
-        "/v1/public/contacts/merge",
+        "/v1/partner/contacts/merge",
         scope="user",
         method="POST",
     )
     with pytest.raises(AuthorizationError, match="Read-only API token"):
         pcontacts.handle_public_contacts_request(
-            event, "POST", "/v1/public/contacts/merge"
+            event, "POST", "/v1/partner/contacts/merge"
         )
 
 
@@ -390,7 +390,7 @@ def test_public_contacts_merge_runs_admin_handler(
     response = pcontacts.handle_public_contacts_request(
         _token_event(
             api_gateway_event,
-            "/v1/public/contacts/merge",
+            "/v1/partner/contacts/merge",
             scope="admin",
             method="POST",
             api_key_id=api_key_id,
@@ -402,7 +402,7 @@ def test_public_contacts_merge_runs_admin_handler(
             ),
         ),
         "POST",
-        "/v1/public/contacts/merge",
+        "/v1/partner/contacts/merge",
     )
     body = json.loads(response["body"])
     assert response["statusCode"] == 200
@@ -419,14 +419,14 @@ def test_public_contacts_merge_rejects_more_than_ten(
     ids = [str(uuid4()) for _ in range(11)]
     event = _token_event(
         api_gateway_event,
-        "/v1/public/contacts/merge",
+        "/v1/partner/contacts/merge",
         scope="admin",
         method="POST",
         body=json.dumps({"contact_ids": ids, "keeper_contact_id": ids[0]}),
     )
     with pytest.raises(ValidationError, match="at most 10"):
         pcontacts.handle_public_contacts_request(
-            event, "POST", "/v1/public/contacts/merge"
+            event, "POST", "/v1/partner/contacts/merge"
         )
 
 
@@ -434,12 +434,12 @@ def test_public_contacts_merge_rejects_non_post(api_gateway_event: Any) -> None:
     response = pcontacts.handle_public_contacts_request(
         _token_event(
             api_gateway_event,
-            "/v1/public/contacts/merge",
+            "/v1/partner/contacts/merge",
             scope="admin",
             method="GET",
         ),
         "GET",
-        "/v1/public/contacts/merge",
+        "/v1/partner/contacts/merge",
     )
     assert response["statusCode"] == 405
 
@@ -458,7 +458,7 @@ def test_public_contact_notes_admin_create_uses_token_actor(
         return {"statusCode": 201, "body": "{}"}
 
     monkeypatch.setattr(pcontacts, "create_contact_note", _create)
-    path = f"/v1/public/contacts/{contact_id}/notes"
+    path = f"/v1/partner/contacts/{contact_id}/notes"
     response = pcontacts.handle_public_contacts_request(
         _token_event(
             api_gateway_event,

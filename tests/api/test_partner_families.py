@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.api.public import families as pfamilies
+from app.api.partner import families as pfamilies
 from app.exceptions import AuthenticationError, AuthorizationError, NotFoundError
 
 
@@ -32,18 +32,18 @@ def _token_event(
 
 
 def test_public_families_requires_token(api_gateway_event: Any) -> None:
-    event = api_gateway_event(method="GET", path="/v1/public/families")
+    event = api_gateway_event(method="GET", path="/v1/partner/families")
     with pytest.raises(AuthenticationError):
-        pfamilies.handle_public_families_request(event, "GET", "/v1/public/families")
+        pfamilies.handle_public_families_request(event, "GET", "/v1/partner/families")
 
 
 @pytest.mark.parametrize("method", ["POST", "PATCH", "DELETE"])
 def test_public_families_user_cannot_write(api_gateway_event: Any, method: str) -> None:
     family_id = uuid4()
     path = (
-        "/v1/public/families"
+        "/v1/partner/families"
         if method == "POST"
-        else f"/v1/public/families/{family_id}"
+        else f"/v1/partner/families/{family_id}"
     )
     event = _token_event(api_gateway_event, path, scope="user", method=method)
     with pytest.raises(AuthorizationError, match="Read-only API token"):
@@ -65,13 +65,13 @@ def test_public_families_admin_create_uses_token_actor(
     response = pfamilies.handle_public_families_request(
         _token_event(
             api_gateway_event,
-            "/v1/public/families",
+            "/v1/partner/families",
             scope="admin",
             method="POST",
             api_key_id=api_key_id,
         ),
         "POST",
-        "/v1/public/families",
+        "/v1/partner/families",
     )
     assert response["statusCode"] == 201
     assert captured["actor_sub"] == f"api-key:{api_key_id}"
@@ -100,7 +100,7 @@ def test_public_families_get_missing_raises(
     monkeypatch.setattr(pfamilies, "FamilyRepository", _FakeRepo)
     monkeypatch.setattr(pfamilies, "Session", lambda _e: _FakeSessionCM())
     monkeypatch.setattr(pfamilies, "get_engine", lambda: object())
-    path = f"/v1/public/families/{family_id}"
+    path = f"/v1/partner/families/{family_id}"
     with pytest.raises(NotFoundError):
         pfamilies.handle_public_families_request(
             _token_event(api_gateway_event, path), "GET", path
@@ -121,7 +121,7 @@ def test_public_family_member_add_uses_token_actor(
         return {"statusCode": 201, "body": "{}"}
 
     monkeypatch.setattr(pfamilies, "add_family_member", _add)
-    path = f"/v1/public/families/{family_id}/members"
+    path = f"/v1/partner/families/{family_id}/members"
     response = pfamilies.handle_public_families_request(
         _token_event(
             api_gateway_event,

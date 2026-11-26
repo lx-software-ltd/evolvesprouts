@@ -10,9 +10,8 @@ import hashlib
 import secrets
 from typing import NamedTuple
 
-# Public protocol constants. These are not credentials.
+# Public protocol constant. This is not a credential.
 API_TOKEN_PREFIX = "esk_"  # nosec B105
-API_TOKEN_HEADER = "x-api-token"  # nosec B105
 DISPLAY_PREFIX_LENGTH = 12
 _SECRET_BYTES = 32  # 32 bytes -> 43 urlsafe base64 characters
 

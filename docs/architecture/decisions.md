@@ -1031,19 +1031,19 @@ tab).
 ## Hashed API tokens for public WhatsApp reads
 
 **Decision:** Issue hashed API tokens (`esk_…`) stored in `api_keys` and
-validated by a VPC request authorizer on `x-api-token`. Scopes are `admin`
+validated by a VPC request authorizer on `Authorization: Bearer`. Scopes are `admin`
 (full access on token-protected routes) and `user` (GET only). WhatsApp
-conversation reads live at `GET /v1/public/whatsapp/conversations` and
-`GET /v1/public/whatsapp/conversations/{id}/messages` and omit phone numbers
-and `wa_id`. CRM contacts live at `GET|POST /v1/public/contacts` and
-`GET|PATCH|DELETE /v1/public/contacts/{id}` with the admin contact payload
-(including PII), plus standalone notes at `/v1/public/contacts/{id}/notes`.
-`POST /v1/public/contacts/merge` calls the admin contact-merge handler for
+conversation reads live at `GET /v1/partner/whatsapp/conversations` and
+`GET /v1/partner/whatsapp/conversations/{id}/messages` and omit phone numbers
+and `wa_id`. CRM contacts live at `GET|POST /v1/partner/contacts` and
+`GET|PATCH|DELETE /v1/partner/contacts/{id}` with the admin contact payload
+(including PII), plus standalone notes at `/v1/partner/contacts/{id}/notes`.
+`POST /v1/partner/contacts/merge` calls the admin contact-merge handler for
 `admin` tokens.
 The same token scopes cover families, organisations, locations,
-geographic-area reads, and services under `/v1/public/families`,
-`/v1/public/organizations`, `/v1/public/locations`,
-`/v1/public/geographic-areas`, and `/v1/public/services` (payloads and
+geographic-area reads, and services under `/v1/partner/families`,
+`/v1/partner/organizations`, `/v1/partner/locations`,
+`/v1/partner/geographic-areas`, and `/v1/partner/services` (payloads and
 route nesting match the corresponding admin contracts; family/organisation
 purchased-service labels, instance enrollments, cover-image upload,
 discount-code usage summary, and location delete stay on Cognito admin
@@ -1097,7 +1097,7 @@ an existing contact with that handle, including archived rows. Messenger has
 no handle field. Missing webhook usernames stay unmatched (no Graph lookup).
 Do not store IGSID/PSID on `contacts.instagram_handle`. Admin reads live at
 `GET /v1/admin/meta/conversations` (Sales → Instagram / Messenger tabs).
-Token reads live at `GET /v1/public/meta/conversations` and omit Page-scoped
+Token reads live at `GET /v1/partner/meta/conversations` and omit Page-scoped
 user ids and page ids.
 
 **Why:**

@@ -1,0 +1,3294 @@
+openapi: 3.0.3
+info:
+  title: Webhooks API
+  version: 0.8.0
+  description: |
+    Provider callbacks. Paths are `/v1/webhooks/<provider>`.
+
+servers:
+  - url: https://api.evolvesprouts.com
+    description: API origin
+
+paths:
+  /v1/webhooks/mailchimp:
+    # Mailchimp's URL check always receives 200. This operation does not reject callers.
+    get:
+      operationId: getV1MailchimpWebhook
+      summary: Mailchimp webhook URL verification
+      description: |
+        Lightweight endpoint that Mailchimp calls with a GET request when
+        validating the webhook URL during webhook creation.  Returns 200
+        with no side-effects.
+      responses:
+        "200":
+          description: Verification acknowledged.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReservationSubmissionAccepted"
+    post:
+      operationId: postV1MailchimpWebhook
+      summary: Receive Mailchimp audience webhook event
+      description: |
+        Public webhook endpoint for Mailchimp audience events.
+        Requests must include a shared secret token in the `token` query
+        parameter, and payloads are submitted as
+        `application/x-www-form-urlencoded`.
+      parameters:
+        - $ref: "#/components/parameters/MailchimpWebhookToken"
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/MailchimpWebhookRequest"
+      responses:
+        "200":
+          description: Webhook processed or ignored.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReservationSubmissionAccepted"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid webhook token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "405":
+          description: Method not allowed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /v1/webhooks/whatsapp:
+    get:
+      operationId: getV1WhatsappWebhook
+      summary: WhatsApp Cloud API webhook verification
+      description: |
+        Meta subscription handshake. Returns the raw `hub.challenge` when
+        `hub.mode=subscribe` and `hub.verify_token` matches
+        `WHATSAPP_WEBHOOK_VERIFY_TOKEN`.
+      parameters:
+        - name: hub.mode
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: hub.verify_token
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: hub.challenge
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Verification challenge echoed as plain text.
+          content:
+            text/plain:
+              schema:
+                type: string
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      operationId: postV1WhatsappWebhook
+      summary: Receive WhatsApp Cloud API webhook events
+      description: |
+        Public webhook for inbound WhatsApp messages and coexistence
+        `smb_message_echoes`. Requests must include a valid
+        `X-Hub-Signature-256` HMAC of the raw body using `META_APP_SECRET`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Webhook processed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsAppWebhookAccepted"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid webhook signature.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "405":
+          description: Method not allowed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /v1/webhooks/meta:
+    get:
+      operationId: getV1MetaWebhook
+      summary: Messenger and Instagram webhook verification
+      description: |
+        Meta subscription handshake for Page and Instagram messaging.
+        Returns the raw `hub.challenge` when `hub.mode=subscribe` and
+        `hub.verify_token` matches `WHATSAPP_WEBHOOK_VERIFY_TOKEN` (same
+        Meta app verify token as WhatsApp).
+      parameters:
+        - name: hub.mode
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: hub.verify_token
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: hub.challenge
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Verification challenge echoed as plain text.
+          content:
+            text/plain:
+              schema:
+                type: string
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      operationId: postV1MetaWebhook
+      summary: Receive Messenger and Instagram webhook events
+      description: |
+        Public webhook for inbound Messenger and Instagram Direct messages
+        plus `is_echo` outbound copies. Direct messages are read from
+        `entry.messaging`, `entry.standby`, and `entry.changes` when
+        `field` is `messages` or `message_echoes`. The event is `value`,
+        or each item of `value.messaging` when that list is present.
+        Live deliveries use `entry.messaging`. The App Dashboard test
+        button uses `changes`. `message_echoes` is stored as outbound
+        and does not open a contact or sales lead when the thread is new.
+        Standby events create contacts and sales leads the same way as
+        `messaging`. Page feed, comment, mention, and other change
+        fields are ignored, and their field names are logged without
+        message text. Requests must include a valid
+        `X-Hub-Signature-256` HMAC of the raw body using `META_APP_SECRET`.
+        WhatsApp payloads (`object: whatsapp_business_account`) are ignored
+        here and stay on `/v1/whatsapp/webhook`. Instagram events whose
+        counterparty username matches the last path segment of the
+        configured public Instagram profile URL
+        (`PUBLIC_WWW_INSTAGRAM_URL` / `NEXT_PUBLIC_INSTAGRAM_URL`) are
+        skipped so the business account is not imported.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Webhook processed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetaWebhookAccepted"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing or invalid webhook signature.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "405":
+          description: Method not allowed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+    DeviceAttestation:
+      type: apiKey
+      in: header
+      name: x-device-attestation
+    TurnstileToken:
+      type: apiKey
+      in: header
+      name: X-Turnstile-Token
+
+  parameters:
+    AssetId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Asset identifier.
+    ShareToken:
+      name: token
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Stable bearer token for a shared asset.
+    TurnstileTokenHeader:
+      name: X-Turnstile-Token
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Cloudflare Turnstile response token.
+    MailchimpWebhookToken:
+      name: token
+      in: query
+      required: true
+      schema:
+        type: string
+      description: Shared secret token configured for Mailchimp webhook requests.
+    ClientResourceLanguage:
+      name: language
+      in: query
+      required: false
+      schema:
+        type: string
+        maxLength: 35
+      description: |
+        Filter to assets whose `content_language` equals this tag (e.g. `en`, `zh-HK`).
+        When omitted, all matching public client resources are returned.
+    ListLimit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+      description: Page size (default 25).
+    ListCursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uuid
+      description: Pagination cursor from the previous response's `next_cursor`.
+
+  responses:
+    BadRequest:
+      description: Validation or request format error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: Authorization or verification failed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    PublicWebsiteCacheableGetBadRequest:
+      description: Validation error; must not be cached at the edge.
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            enum: [no-store]
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    PublicWebsiteCacheableGetMethodNotAllowed:
+      description: Method not allowed; must not be cached at the edge.
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            enum: [no-store]
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    PublicWebsiteCacheableGetNotFound:
+      description: Not found; must not be cached at the edge.
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+            enum: [no-store]
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    PublicAsset:
+      type: object
+      required:
+        - id
+        - title
+        - asset_type
+        - file_name
+        - visibility
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        asset_type:
+          type: string
+          enum: [guide, video, pdf, document]
+        file_name:
+          type: string
+        content_type:
+          type: string
+          nullable: true
+        visibility:
+          type: string
+          enum: [public, restricted]
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    PublicAssetListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicAsset"
+        next_cursor:
+          type: string
+          nullable: true
+    PublicClientResource:
+      type: object
+      required:
+        - title
+        - asset_type
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        asset_type:
+          type: string
+          enum: [guide, video, pdf, document]
+        resource_key:
+          type: string
+          nullable: true
+        content_language:
+          type: string
+          nullable: true
+          description: BCP 47-style language tag for file content (e.g. en, zh-HK).
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    PublicClientResourceListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicClientResource"
+        next_cursor:
+          type: string
+          nullable: true
+    PublicAssetDownloadResponse:
+      type: object
+      required:
+        - asset_id
+        - download_url
+        - expires_at
+      properties:
+        asset_id:
+          type: string
+        download_url:
+          type: string
+          format: uri
+          description: CloudFront-signed URL generated for this request.
+        expires_at:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        detail:
+          type: string
+          nullable: true
+        field:
+          type: string
+          nullable: true
+        rejection_reason:
+          type: string
+          nullable: true
+          description: >
+            Optional machine-readable reason on some 404 responses (for example discount validate).
+            For `POST /v1/discounts/validate` and `POST /www/v1/discounts/validate`, when present on
+            a 404 the value is one of: `unknown_service_instance_slug`, `service_key_instance_mismatch`.
+            The Lambda also logs other reasons (`code_not_found`, `referral_type_not_allowed`, `inactive`,
+            `not_yet_valid`, `expired`, `max_uses_exhausted`, `instance_scope_mismatch`, `service_scope_mismatch`)
+            without returning them in the JSON body.
+    PublicCalendarEventDate:
+      type: object
+      required:
+        - part
+        - start_datetime
+        - end_datetime
+      properties:
+        part:
+          type: integer
+          minimum: 1
+          description: >
+            1-based session-slot ordinal that mirrors the slot's display order. Sequence is
+            dense (1..N) and matches the order returned by the public site.
+        start_datetime:
+          type: string
+          format: date-time
+        end_datetime:
+          type: string
+          format: date-time
+    PublicCalendarEvent:
+      type: object
+      required:
+        - slug
+        - service_type
+        - title
+        - status
+        - booking_status
+        - is_fully_booked
+        - location
+        - location_url
+        - location_tbc
+        - dates
+        - tags
+        - categories
+        - partners
+        - service_tier
+      properties:
+        service_type:
+          type: string
+          enum: [event, training_course]
+        title:
+          type: string
+          description: >
+            Base instance or service title. When both `service_tier` and `cohort` are
+            non-null, the API appends a space, the tier, a space-hyphen-space, and a
+            humanized cohort label (hyphen-separated cohort segments, each segment
+            capitalized; e.g. cohort `may-26` yields `May 26`).
+        summary:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [open, completed, cancelled]
+        booking_status:
+          type: string
+          enum: [open, fully_booked]
+        is_fully_booked:
+          type: boolean
+          description: Mirrors `booking_status == "fully_booked"`.
+        booking_system:
+          type: string
+          description: >
+            Resolved booking-system key. Derived from `services.booking_system` when
+            set; otherwise defaults to `event-booking` for events and
+            `my-best-auntie-booking` for the My Best Auntie training course service.
+            Omitted from the JSON object when no default applies (not `null`).
+        location:
+          type: string
+          enum: [virtual, physical]
+        location_name:
+          type: string
+          nullable: true
+          description: >
+            Venue display name; derivation matches `location_url`. Null when
+            `location_tbc` is true or the offering is virtual. When the resolved
+            location row has no display name but matches a linked partner organization's
+            CRM location (`organizations.location_id`), the API uses that partner's
+            `organizations.name` instead of `null`.
+        location_address:
+          type: string
+          nullable: true
+          description: >
+            Venue address line; derivation matches `location_url`. Null when
+            `location_tbc` is true or the offering is virtual.
+        location_tbc:
+          type: boolean
+          description: >
+            True when the offering is physical and neither the primary session
+            slot nor the instance has a location. The parent service default
+            location is admin-only and does not resolve these fields. Public
+            clients should show a to-be-confirmed venue label and hide
+            directions. Always false for virtual offerings.
+        location_url:
+          type: string
+          description: >
+            Google Maps directions URL derived server-side from venue coordinates
+            when available, otherwise from the URL-encoded address. Empty string
+            for virtual offerings or when no location metadata is on file. Location
+            fields resolve from the primary session slot's location when set,
+            otherwise from the instance's location. The parent service default
+            location is not used. When `location_tbc` is true, this is an empty
+            string.
+        external_url:
+          type: string
+          nullable: true
+          description: >
+            Optional external registration URL. Uses
+            `service_instances.external_url` when set, falling back to
+            `service_instances.eventbrite_event_url` for backward compatibility.
+        price:
+          type: integer
+          nullable: true
+          description: >
+            Whole currency units; fractional DB amounts are rounded half-up to the
+            nearest integer.
+        currency:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+          description: >
+            Alphabetically ordered display tag names from
+            `service_instance_tags`, plus the `service_tier` value when it is
+            non-null and non-empty (same string as the `service_tier` field).
+            Does not include service-level CRM tags.
+        categories:
+          type: array
+          items:
+            type: string
+          description: >
+            Single-element for events (derived from `event_details.event_category`)
+            or `["Training Course"]` for training courses. May be an empty array for
+            events when `event_details` has not been set (unexpected in normal data).
+        partners:
+          type: array
+          items:
+            type: string
+          description: >
+            Partner organization keys (`organizations.partner_key`) linked via
+            `service_instance_organizations`, ordered by `sort_order`.
+        slug:
+          type: string
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+          maxLength: 128
+          description: >
+            Stable public identifier for the offering. Maps to `service_instances.slug`.
+            The calendar feed omits rows where the instance slug is empty or does not match
+            this public pattern (invalid values are filtered server-side).
+        service_key:
+          type: string
+          nullable: true
+          maxLength: 80
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+          description: >
+            Parent service public key (`services.service_key`); nullable when the parent
+            service has no key. Required by `POST /v1/discounts/validate` and
+            `POST /v1/reservations` for booking identity, so consumers should treat a
+            null value as "this offering cannot be booked through the public flows yet."
+        service_tier:
+          type: string
+          nullable: true
+          description: >
+            From `services.service_tier` when set; for My Best Auntie training
+            cohorts, inferred from `service_instances.slug` (for example
+            `my-best-auntie-1-3-apr-26` for alpha-month cohort tokens, or legacy
+            `my-best-auntie-1-3-04-26` when the slug still encodes numeric month-year)
+            when the parent service tier is unset. `null` when not applicable.
+        cohort:
+          type: string
+          nullable: true
+        spaces_total:
+          type: integer
+          nullable: true
+        spaces_left:
+          type: integer
+          nullable: true
+          description: >
+            Seats remaining when `spaces_total` is present: `max(0, spaces_total -
+            filled)` where `filled` counts capacity enrollments, optionally reduced by an
+            admin-only `capacity_left_override` soft cap on the instance (display-only;
+            does not change `booking_status` / `is_fully_booked`). It is intentional for
+            `spaces_left` to be `0` while `is_fully_booked` is false when an operator sets
+            the override to `0` (display-only cap; booking still follows enrollment vs
+            `spaces_total`).
+        dates:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicCalendarEventDate"
+    PublicCalendarEventsResponse:
+      type: object
+      required:
+        - events
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicCalendarEvent"
+        items:
+          type: array
+          deprecated: true
+          description: >
+            Deprecated alias of `events` for older clients. Prefer `events`.
+          items:
+            $ref: "#/components/schemas/PublicCalendarEvent"
+    PublicCalendarAvailabilityPurpose:
+      type: string
+      enum:
+        - consultation_booking
+        - intro_call_booking
+    PublicCalendarSlot:
+      type: object
+      required:
+        - start_iso
+        - end_iso
+      additionalProperties: false
+      properties:
+        start_iso:
+          type: string
+          format: date-time
+        end_iso:
+          type: string
+          format: date-time
+    PublicCalendarAvailabilityMeta:
+      type: object
+      required:
+        - purpose
+        - from
+        - to
+        - wall_time_zone
+        - default_horizon_days
+        - max_horizon_days
+      additionalProperties: false
+      properties:
+        purpose:
+          $ref: "#/components/schemas/PublicCalendarAvailabilityPurpose"
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        wall_time_zone:
+          type: string
+          description: IANA timezone key used for local wall-clock rules for this purpose.
+        default_horizon_days:
+          type: integer
+          minimum: 1
+        max_horizon_days:
+          type: integer
+          minimum: 1
+        max_forward_days:
+          type: integer
+          minimum: 1
+          description: Present for intro-call (`from` cannot be too far ahead of today).
+        lead_hours:
+          type: integer
+          minimum: 1
+          description: Present for intro-call booking lead-time.
+        lead_calendar_days:
+          type: integer
+          minimum: 1
+          description: Present for consultation booking calendar-day lead-time.
+    PublicCalendarAvailabilityResponse:
+      type: object
+      required:
+        - slots
+        - meta
+      additionalProperties: false
+      properties:
+        slots:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicCalendarSlot"
+        meta:
+          $ref: "#/components/schemas/PublicCalendarAvailabilityMeta"
+    DiscountValidationRequest:
+      type: object
+      required:
+        - code
+        - service_key
+      properties:
+        code:
+          type: string
+          maxLength: 100
+        service_key:
+          type: string
+          maxLength: 80
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+          description: >
+            Parent service public key (e.g. `my-best-auntie-training-course`,
+            `family-consultation-essentials`, `intro-call`). Matched case-insensitively
+            against `services.service_key`. With `service_instance_slug`, must pair-resolve to an
+            instance on this service; without `service_instance_slug`, must identify an existing service row.
+        service_instance_slug:
+          type: string
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+          maxLength: 128
+          description: >
+            Optional public instance slug (`service_instances.slug`). When present, matched
+            case-insensitively and combined with `service_key` must resolve to an instance whose
+            parent service `service_key` matches. Omit for consultation-tier and intro-call catalog
+            bookings that validate discounts against `services.id` only.
+    DiscountRule:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - amount
+        - is_percentage
+        - currency_code
+        - currency_symbol
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+          nullable: true
+        amount:
+          type: number
+        is_percentage:
+          type: boolean
+        currency_code:
+          type: string
+          nullable: true
+        currency_symbol:
+          type: string
+          nullable: true
+    DiscountValidationResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - valid
+        - is_valid
+        - data
+        - discount
+      properties:
+        valid:
+          type: boolean
+        is_valid:
+          type: boolean
+        data:
+          oneOf:
+            - $ref: "#/components/schemas/DiscountRule"
+            - type: array
+              items:
+                $ref: "#/components/schemas/DiscountRule"
+        discount:
+          $ref: "#/components/schemas/DiscountRule"
+    PublicReservationSubmissionRequest:
+      type: object
+      required:
+        - attendeeName
+        - attendeeEmail
+        - paymentMethod
+        - totalAmount
+        - title
+        - agreedToTermsAndConditions
+        - serviceKey
+      properties:
+        attendeeName:
+          type: string
+          maxLength: 200
+        attendeeEmail:
+          type: string
+          format: email
+        attendeePhone:
+          type: string
+          maxLength: 40
+          nullable: true
+          description: >
+            Required for most booking flows. Optional for `bookingSystem=intro-call-booking`
+            (omit or send empty string when the caller does not collect a phone number).
+        attendeeCountry:
+          type: string
+          minLength: 2
+          maxLength: 2
+          pattern: "^[A-Z]{2}$"
+          nullable: true
+          description: >
+            Optional ISO 3166-1 alpha-2 region for parsing `attendeePhone`. When omitted, the
+            API uses the configured default phone region (production default HK).
+        serviceTier:
+          type: string
+          maxLength: 200
+          description: >
+            Optional; event flows without a tier selector may omit it. Flows that
+            collect a service tier label (for example My Best Auntie or consultation)
+            should send the selected label.
+        paymentMethod:
+          type: string
+          maxLength: 100
+          description: >
+            Machine payment code. Accepted values include `fps_qr`, `bank_transfer`, `stripe`,
+            and `free` (zero-total booking after discounts). The API rejects `free` when
+            `totalAmount` is not 0, rejects `totalAmount` 0 unless `paymentMethod` is `free`,
+            and normalizes `reservationPendingUntilPaymentConfirmed` to false when `paymentMethod`
+            is `free`. Omit `stripePaymentIntentId` and `fpsQrImageDataUrl` for free bookings.
+        totalAmount:
+          type: number
+          minimum: 0
+          maximum: 1000000
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: >
+            ISO 4217 sale currency for enrollment and billing (defaults to HKD when omitted).
+        billToKind:
+          type: string
+          enum: [contact, family, organization]
+          description: >
+            Optional AR bill-to override; defaults to contact (attendee). When `family` or
+            `organization`, send the matching id field.
+        billToContactId:
+          type: string
+          format: uuid
+          nullable: true
+        billToFamilyId:
+          type: string
+          format: uuid
+          nullable: true
+        billToOrganizationId:
+          type: string
+          format: uuid
+          nullable: true
+        title:
+          type: string
+          maxLength: 200
+          description: Customer-visible booking title (shown in confirmation email and subject).
+        stripePaymentIntentId:
+          type: string
+          maxLength: 200
+          description: Required when payment method implies Stripe; PaymentIntent id.
+          pattern: '^pi_[A-Za-z0-9]+$'
+        scheduleDate:
+          type: string
+          maxLength: 200
+        scheduleTime:
+          type: string
+          maxLength: 200
+        interestedTopics:
+          type: string
+          maxLength: 1000
+        commentsFieldLabel:
+          type: string
+          maxLength: 200
+          description: >
+            Label for the free-text question field as shown to the user. Included in the
+            internal sales recap email next to their answer.
+        consultationWritingFocusLabel:
+          type: string
+          maxLength: 200
+          description: >
+            Consultation booking: writing focus title for confirmation and sales recap.
+        consultationLevelLabel:
+          type: string
+          maxLength: 200
+          description: >
+            Consultation booking: level title for confirmation and sales recap.
+        cohortDate:
+          type: string
+          maxLength: 100
+          description: Optional cohort or session date label (YYYY-MM-DD or display string).
+        discountCode:
+          type: string
+          maxLength: 100
+        serviceInstanceSlug:
+          type: string
+          nullable: true
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+          maxLength: 128
+          description: >
+            Public `service_instances.slug` for the booked cohort/instance (`event-booking` and
+            `my-best-auntie-booking`). **Required** for those flows together with `serviceKey`.
+            For `consultation-booking` and `intro-call-booking`, omit this field or send a legacy
+            template slug for compatibility; the server resolves catalog rows by `serviceKey` only
+            and ignores `serviceInstanceSlug` when present (logged at debug level).
+            An `event` instance is reservable only when its status is `open`, `full`, or
+            `in_progress`. `scheduled`, `cancelled`, and `completed` event instances return
+            400 with `field: serviceInstanceSlug`.
+        serviceInstanceCohort:
+          type: string
+          maxLength: 200
+          description: >
+            Optional human-readable cohort label for the booked instance (for example the MBA
+            cohort title shown in the booking UI). Included in the internal sales recap and may
+            be stored on the enrollment lead event metadata; not used for booking identity.
+        marketingOptIn:
+          type: boolean
+          default: false
+        locale:
+          type: string
+          enum:
+            - en
+            - zh-CN
+            - zh-HK
+        serviceKey:
+          type: string
+          maxLength: 80
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+          description: >
+            Service public key. For `event-booking` and `my-best-auntie-booking`, pair with
+            `serviceInstanceSlug` to resolve the scheduled instance. For `consultation-booking`,
+            must be `family-consultation-essentials` or `family-consultation-deep-dive` (each tier is a
+            catalog `services` row). For `intro-call-booking`, must be `intro-call`.
+        bookingSystem:
+          type: string
+          maxLength: 100
+          enum:
+            - consultation-booking
+            - event-booking
+            - my-best-auntie-booking
+            - intro-call-booking
+          description: >
+            Optional booking flow code. When set, must be exactly one of the enum values
+            (case-insensitive on input; stored lowercased). Drives confirmation email formatting
+            (schedule/details). For `event-booking` and `my-best-auntie-booking`, booking identity
+            uses `serviceKey` + `serviceInstanceSlug`. For `consultation-booking`, identity uses
+            `serviceKey` only (`family-consultation-essentials`, `family-consultation-deep-dive`).
+            Discrete slots come from `/v1/calendar/availability?purpose=consultation_booking`; reservations
+            must use grid-aligned start times (09:00 or 14:00 local on Mon–Fri).
+            `intro-call-booking` requires `serviceKey=intro-call`, `totalAmount=0`, `paymentMethod=free`
+            (or omit payment method to default to free), and `primarySessionStartIso` /
+            `primarySessionEndIso` for a valid 15-minute slot at a 30-minute-aligned start time
+            (Asia/Hong_Kong office-hours template; end 15 minutes after start).
+            Discrete slots come from `/v1/calendar/availability?purpose=intro_call_booking`.
+            Successful submissions allocate a new booking-specific service instance with session slots
+            and enrollment attached; concurrent bookings race on `(purpose_service_id, starts_at)` where
+            `purpose_service_id` is the intro-call or tier consultation `services.id`.
+        marketingAttribution:
+          type: object
+          additionalProperties: false
+          properties:
+            utm_source:
+              type: string
+              maxLength: 100
+            utm_medium:
+              type: string
+              maxLength: 100
+            utm_campaign:
+              type: string
+              maxLength: 200
+            utm_content:
+              type: string
+              maxLength: 200
+            referrer:
+              type: string
+              maxLength: 500
+        locationName:
+          type: string
+          maxLength: 200
+        locationAddress:
+          type: string
+          maxLength: 300
+        locationUrl:
+          type: string
+          maxLength: 500
+          format: uri
+        primarySessionStartIso:
+          type: string
+          maxLength: 50
+          description: >
+            Required when `bookingSystem` is `consultation-booking` (home-visit slot start in
+            ISO-8601). Interpreted in `CALENDAR_BLOCKERS_WALL_TIMEZONE` (default `Asia/Hong_Kong`):
+            must align to the bookable grid from `/v1/calendar/availability?purpose=consultation_booking`
+            (Mon–Fri local starts at exactly 09:00 or 14:00). Local hours **12–13** (inclusive) remain invalid.
+            Each `sessionSlots[].startIso` (when present) uses the same grid rule with field `sessionSlots[n].startIso`.
+            Must not fall on a blocked half-day for `purpose=consultation_booking` after grid alignment checks.
+        primarySessionEndIso:
+          type: string
+          maxLength: 50
+        sessionSlots:
+          type: array
+          description: >
+            Optional list of session parts (ISO start/end per slot) for multi-line schedule
+            in confirmation email (e.g. MBA multi-session, multi-part events).
+          items:
+            type: object
+            required:
+              - startIso
+            properties:
+              startIso:
+                type: string
+                maxLength: 50
+                description: >
+                  Same local half-day classification as `primarySessionStartIso` when
+                  `bookingSystem` is `consultation-booking` (morning before noon, afternoon from 2pm;
+                  noon–1pm local invalid).
+              endIso:
+                type: string
+                maxLength: 50
+        fpsQrImageDataUrl:
+          type: string
+          maxLength: 120000
+          description: >
+            Optional PNG data URL for FPS QR when payment is pending (fps_qr).
+        reservationPendingUntilPaymentConfirmed:
+          type: boolean
+        agreedToTermsAndConditions:
+          type: boolean
+    ReservationPaymentIntentRequest:
+      type: object
+      required:
+        - service_tier
+        - cohort_date
+        - price
+      properties:
+        service_tier:
+          type: string
+          maxLength: 200
+          description: >
+            Selected service tier label for the booking (Stripe PaymentIntent metadata).
+        cohort_date:
+          type: string
+          maxLength: 100
+        discount_code:
+          type: string
+          maxLength: 100
+        service_key:
+          type: string
+          maxLength: 100
+          description: >
+            Optional public service slug for Stripe `metadata.service_key` (e.g.
+            `my-best-auntie-training-course`); not used for discount scope validation on this endpoint.
+        cohort_id:
+          type: string
+          maxLength: 120
+          description: >
+            Optional cohort identifier for Stripe `metadata.cohort_id` (e.g. content
+            cohort key).
+        price:
+          type: number
+          minimum: 0
+          maximum: 1000000
+    ReservationPaymentIntentResponse:
+      type: object
+      required:
+        - payment_intent_id
+        - client_secret
+      properties:
+        payment_intent_id:
+          type: string
+        client_secret:
+          type: string
+    ContactUsSubmissionRequest:
+      type: object
+      required:
+        - first_name
+        - email_address
+        - signup_intent
+      properties:
+        first_name:
+          type: string
+          maxLength: 100
+        email_address:
+          type: string
+          format: email
+          maxLength: 320
+        phone_number:
+          type: string
+          maxLength: 40
+        phone_country:
+          type: string
+          minLength: 2
+          maxLength: 2
+          pattern: "^[A-Z]{2}$"
+          nullable: true
+          description: >
+            Optional ISO 3166-1 alpha-2 region for parsing `phone_number`. When omitted, the
+            API uses the configured default phone region (production default HK).
+        message:
+          type: string
+          maxLength: 2000
+        marketing_opt_in:
+          type: boolean
+          default: false
+          description: When true, subscribe the contact to marketing (Mailchimp) with a flow-specific tag.
+        signup_intent:
+          type: string
+          description: >
+            Distinguishes contact-us submissions for Mailchimp tagging and Aurora `source_detail`.
+            For community_newsletter and event_notification, the matching public-www-* tag is used when
+            marketing_opt_in is true. Intents community_newsletter and event_notification skip the SES
+            contact confirmation email. All intents reuse or reopen the contact's
+            sales lead (or create one). contact_inquiry triggers SUPPORT_EMAIL
+            notification when configured.
+          enum:
+            - contact_inquiry
+            - community_newsletter
+            - event_notification
+        locale:
+          type: string
+          description: Public website route locale for SES confirmation template selection (falls back to Accept-Language when omitted).
+          enum:
+            - en
+            - zh-CN
+            - zh-HK
+    MediaRequestSubmissionRequest:
+      type: object
+      required:
+        - first_name
+        - email
+      properties:
+        first_name:
+          type: string
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 320
+        resource_key:
+          type: string
+          maxLength: 200
+          description: Optional free-resource identifier used for downstream CRM tagging.
+        marketing_opt_in:
+          type: boolean
+          default: false
+          description: When true, trigger the shared welcome marketing journey after subscribe (when configured).
+        locale:
+          type: string
+          description: Public website locale for SES template selection.
+          enum:
+            - en
+            - zh-CN
+            - zh-HK
+    MailchimpWebhookRequest:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum: [subscribe, unsubscribe, cleaned, profile, upemail]
+        "data[email]":
+          type: string
+          format: email
+          maxLength: 320
+        "data[new_email]":
+          type: string
+          format: email
+          maxLength: 320
+        "data[id]":
+          type: string
+          maxLength: 64
+    FormAnswerPutRequest:
+      type: object
+      required:
+        - sessionId
+        - questionId
+        - questionType
+      properties:
+        formSlug:
+          type: string
+          pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
+          description: Optional; when present must match the `{form_slug}` path segment.
+        sessionId:
+          type: string
+          format: uuid
+          description: Client-generated session id (stored in browser session storage).
+        questionId:
+          type: string
+          pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
+        questionType:
+          type: string
+          enum:
+            - select
+            - multiselect
+            - rating
+            - segmented
+            - consent
+            - text
+            - email
+        selectedOption:
+          type: string
+          maxLength: 500
+          description: Selected option label for `select` and `segmented` questions.
+        selectedOptions:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            maxLength: 500
+          description: Selected option labels for `multiselect` questions.
+        ratingValue:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: Numeric rating for `rating` questions.
+        booleanAnswer:
+          type: boolean
+          description: Consent checkbox value for `consent` questions.
+        freeText:
+          type: string
+          maxLength: 4000
+          description: Response body for `text`, `email`, and optional `consent` follow-up.
+        contactId:
+          type: string
+          format: uuid
+          description: >
+            Optional CRM contact from the personalised form link. Stored on the
+            answer row so admin can see which contact the session belonged to.
+    FormAnswerPutResponse:
+      type: object
+      required:
+        - formSlug
+        - sessionId
+        - questionId
+        - updatedAt
+      properties:
+        formSlug:
+          type: string
+        sessionId:
+          type: string
+          format: uuid
+        questionId:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+          description: UTC timestamp when the answer row was last written.
+    FormContactContextResponse:
+      type: object
+      required:
+        - formSlug
+        - contactId
+        - placeholders
+      properties:
+        formSlug:
+          type: string
+          pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
+        contactId:
+          type: string
+          format: uuid
+        placeholders:
+          type: object
+          additionalProperties:
+            type: string
+          description: >
+            Token to display-string map. Keys include `contactName`,
+            `contactFirstName`, `contactLastName`, `familyName`,
+            `children.firstName`, `children.lastName`, `children.contactName`,
+            `helpers.firstName`, `helpers.lastName`, and `helpers.contactName`.
+            Missing household fields use English fallbacks (`there`,
+            `your family`, `your child`, `your helper`).
+    PollAnswerPutRequest:
+      type: object
+      required:
+        - sessionId
+        - questionId
+        - questionType
+      properties:
+        pollSlug:
+          type: string
+          pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
+          description: Optional; when present must match the `{poll_slug}` path segment.
+        sessionId:
+          type: string
+          format: uuid
+          description: Client-generated session id (stored in browser session storage).
+        questionId:
+          type: string
+          pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
+        questionType:
+          type: string
+          enum: [select, multiselect, truefalse, text, email]
+        selectedOption:
+          type: string
+          maxLength: 500
+          description: Selected option label for `select` questions.
+        selectedOptions:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items:
+            type: string
+            maxLength: 500
+          description: Selected option labels for `multiselect` questions.
+        booleanAnswer:
+          type: boolean
+          description: Respondent answer for `truefalse` questions.
+        freeText:
+          type: string
+          maxLength: 4000
+          description: Response body for `text` and `email` questions.
+    PollAnswerPutResponse:
+      type: object
+      required:
+        - pollSlug
+        - sessionId
+        - questionId
+        - updatedAt
+      properties:
+        pollSlug:
+          type: string
+        sessionId:
+          type: string
+          format: uuid
+        questionId:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+          description: UTC timestamp when the answer row was last written.
+    PollSessionAnswerItem:
+      type: object
+      required:
+        - questionId
+        - questionType
+      properties:
+        pollSlug:
+          type: string
+        sessionId:
+          type: string
+          format: uuid
+        questionId:
+          type: string
+        questionType:
+          type: string
+          enum: [select, multiselect, truefalse, text, email]
+        selectedOption:
+          type: string
+        selectedOptions:
+          type: array
+          items:
+            type: string
+        booleanAnswer:
+          type: boolean
+        freeText:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PollSessionAnswersResponse:
+      type: object
+      required:
+        - pollSlug
+        - sessionId
+        - answers
+      properties:
+        pollSlug:
+          type: string
+        sessionId:
+          type: string
+          format: uuid
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/PollSessionAnswerItem"
+    PollControlStatePutRequest:
+      type: object
+      properties:
+        enabledQuestionIds:
+          type: array
+          items:
+            type: string
+            pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
+          description: >
+            Question ids currently open to respondents. Omitted or empty means
+            all questions are off (default).
+        questionOptions:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/PollPublishedQuestionOptions"
+          description: >
+            Optional canonical question definitions (type and allowed options)
+            published by the facilitator. When present for a question, answer
+            PUT validates `selectedOption` / `selectedOptions` membership.
+    PollPublishedQuestionOptions:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum:
+            - select
+            - multiselect
+            - truefalse
+            - text
+            - email
+        options:
+          type: array
+          items:
+            type: string
+          description: >
+            Required for `select` and `multiselect`; omitted for other types.
+    PollControlStateResponse:
+      type: object
+      required:
+        - pollSlug
+        - enabledQuestionIds
+      properties:
+        pollSlug:
+          type: string
+        enabledQuestionIds:
+          type: array
+          items:
+            type: string
+        questionOptions:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/PollPublishedQuestionOptions"
+        updatedAt:
+          type: string
+          format: date-time
+          description: UTC timestamp when control state was last written.
+    PollQuestionResultsResponse:
+      type: object
+      required:
+        - pollSlug
+        - questionId
+        - questionType
+        - totalResponses
+        - buckets
+      properties:
+        pollSlug:
+          type: string
+        questionId:
+          type: string
+        questionType:
+          type: string
+          enum: [select, multiselect, truefalse, text, email]
+        totalResponses:
+          type: integer
+          minimum: 0
+        buckets:
+          type: array
+          items:
+            $ref: "#/components/schemas/PollQuestionResultsBucket"
+        responses:
+          type: array
+          items:
+            type: string
+          description: >
+            Free-text answers for `text` and `email` questions (presenter
+            control view). Omitted for `select`, `multiselect`, and `truefalse`.
+    PollQuestionResultsBucket:
+      type: object
+      required:
+        - label
+        - count
+      properties:
+        label:
+          type: string
+          description: >
+            Option label for `select`, or `true` / `false` for `truefalse`
+            (client maps to localized True/False labels).
+        count:
+          type: integer
+          minimum: 0
+    WhatsAppWebhookAccepted:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+        stored:
+          type: integer
+        duplicates:
+          type: integer
+        skipped:
+          type: integer
+        leads_created:
+          type: integer
+    PublicWhatsAppConversationSummary:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Display name. Never a WhatsApp number or last-four fallback.
+        first_inbound_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_message_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+    PublicWhatsAppMessageSummary:
+      type: object
+      required:
+        - id
+        - direction
+        - sent_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        direction:
+          type: string
+          enum: [inbound, outbound]
+        body:
+          type: string
+          nullable: true
+        sent_at:
+          type: string
+          format: date-time
+    PublicWhatsAppConversationListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicWhatsAppConversationSummary"
+        next_cursor:
+          type: string
+          nullable: true
+    PublicWhatsAppMessageListResponse:
+      type: object
+      required:
+        - conversation
+        - items
+      properties:
+        conversation:
+          $ref: "#/components/schemas/PublicWhatsAppConversationSummary"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicWhatsAppMessageSummary"
+    MetaWebhookAccepted:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+        stored:
+          type: integer
+        duplicates:
+          type: integer
+        skipped:
+          type: integer
+        leads_created:
+          type: integer
+    PublicMetaConversationSummary:
+      type: object
+      required:
+        - id
+        - channel
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        channel:
+          type: string
+          enum: [facebook, instagram]
+        name:
+          type: string
+          description: Display name. Never a Page-scoped user id or last-four fallback.
+        first_inbound_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_message_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+    PublicMetaMessageSummary:
+      type: object
+      required:
+        - id
+        - direction
+        - sent_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        direction:
+          type: string
+          enum: [inbound, outbound]
+        body:
+          type: string
+          nullable: true
+        sent_at:
+          type: string
+          format: date-time
+    PublicMetaConversationListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicMetaConversationSummary"
+        next_cursor:
+          type: string
+          nullable: true
+    PublicMetaMessageListResponse:
+      type: object
+      required:
+        - conversation
+        - items
+      properties:
+        conversation:
+          $ref: "#/components/schemas/PublicMetaConversationSummary"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicMetaMessageSummary"
+    PublicContactType:
+      type: string
+      enum: [parent, child, helper, professional, other]
+    PublicRelationshipType:
+      type: string
+      description: >
+        Stored relationship for contacts and read responses.
+      enum: [prospect, client, past_client, partner, vendor, other]
+    PublicContactSource:
+      type: string
+      enum:
+        - free_guide
+        - newsletter
+        - contact_form
+        - reservation
+        - referral
+        - instagram
+        - facebook
+        - whatsapp
+        - linkedin
+        - event
+        - phone_call
+        - public_website
+        - manual
+    PublicMailchimpSyncStatus:
+      type: string
+      enum: [pending, synced, failed, unsubscribed]
+    PublicTagRef:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        color:
+          type: string
+          nullable: true
+    PublicLocationVenueSummary:
+      type: object
+      required:
+        - id
+        - area_id
+        - area_name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 200
+          nullable: true
+        area_id:
+          type: string
+          format: uuid
+        area_name:
+          type: string
+        address:
+          type: string
+          nullable: true
+        lat:
+          type: number
+          format: double
+          nullable: true
+        lng:
+          type: number
+          format: double
+          nullable: true
+    PublicContact:
+      type: object
+      required:
+        - id
+        - first_name
+        - contact_type
+        - relationship_type
+        - source
+        - mailchimp_status
+        - active
+        - tag_ids
+        - tags
+        - family_ids
+        - organization_ids
+        - standalone_note_count
+        - has_completion_certificate
+        - has_sales_conversation
+        - has_service_instance
+        - has_invoice
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          nullable: true
+        instagram_handle:
+          type: string
+          nullable: true
+        first_name:
+          type: string
+        last_name:
+          type: string
+          nullable: true
+        phone_region:
+          type: string
+          minLength: 2
+          maxLength: 2
+          pattern: "^[A-Z]{2}$"
+          nullable: true
+        phone_national_number:
+          type: string
+          pattern: "^[0-9]+$"
+          maxLength: 20
+          nullable: true
+        phone_e164:
+          type: string
+          pattern: "^\\+[1-9][0-9]{1,14}$"
+          nullable: true
+          readOnly: true
+        contact_type:
+          $ref: "#/components/schemas/PublicContactType"
+        relationship_type:
+          $ref: "#/components/schemas/PublicRelationshipType"
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        location_summary:
+          allOf:
+            - $ref: "#/components/schemas/PublicLocationVenueSummary"
+          nullable: true
+        family_location_summary:
+          allOf:
+            - $ref: "#/components/schemas/PublicLocationVenueSummary"
+          nullable: true
+        organization_location_summary:
+          allOf:
+            - $ref: "#/components/schemas/PublicLocationVenueSummary"
+          nullable: true
+        source:
+          $ref: "#/components/schemas/PublicContactSource"
+        source_detail:
+          type: string
+          nullable: true
+        referral_contact_id:
+          type: string
+          format: uuid
+          nullable: true
+        mailchimp_status:
+          $ref: "#/components/schemas/PublicMailchimpSyncStatus"
+        active:
+          type: boolean
+        archived_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicTagRef"
+        family_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        organization_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        standalone_note_count:
+          type: integer
+          minimum: 0
+        has_completion_certificate:
+          type: boolean
+        has_sales_conversation:
+          type: boolean
+        sales_conversation_channel:
+          type: string
+          nullable: true
+          enum: [whatsapp, instagram, messenger]
+        has_service_instance:
+          type: boolean
+        has_invoice:
+          type: boolean
+    PublicContactListResponse:
+      type: object
+      required:
+        - items
+        - total_count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicContact"
+        next_cursor:
+          type: string
+          nullable: true
+        total_count:
+          type: integer
+          minimum: 0
+    PublicContactResponse:
+      type: object
+      required:
+        - contact
+      properties:
+        contact:
+          $ref: "#/components/schemas/PublicContact"
+    MergePublicContactsRequest:
+      type: object
+      required:
+        - contact_ids
+        - keeper_contact_id
+      properties:
+        contact_ids:
+          type: array
+          minItems: 2
+          maxItems: 10
+          items:
+            type: string
+            format: uuid
+        keeper_contact_id:
+          type: string
+          format: uuid
+          description: Contact that survives the merge; must be one of `contact_ids`.
+    CreatePublicContactRequest:
+      type: object
+      required:
+        - first_name
+        - contact_type
+      properties:
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        instagram_handle:
+          type: string
+          maxLength: 30
+          nullable: true
+        phone_region:
+          type: string
+          minLength: 2
+          maxLength: 2
+          pattern: "^[A-Z]{2}$"
+          nullable: true
+        phone_number:
+          type: string
+          pattern: "^[0-9]+$"
+          maxLength: 20
+          nullable: true
+          description: |
+            National significant digits. Omit both `phone_region` and `phone_number` to leave
+            phone unset; send both keys with JSON `null` to clear phone on create.
+        contact_type:
+          $ref: "#/components/schemas/PublicContactType"
+        relationship_type:
+          $ref: "#/components/schemas/PublicRelationshipType"
+        source:
+          $ref: "#/components/schemas/PublicContactSource"
+        source_detail:
+          type: string
+          nullable: true
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        family_ids:
+          type: array
+          maxItems: 1
+          items:
+            type: string
+            format: uuid
+        organization_ids:
+          type: array
+          maxItems: 1
+          items:
+            type: string
+            format: uuid
+        referral_contact_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Required when `source` is `referral` on create.
+    UpdatePublicContactRequest:
+      type: object
+      properties:
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        instagram_handle:
+          type: string
+          maxLength: 30
+          nullable: true
+        phone_region:
+          type: string
+          minLength: 2
+          maxLength: 2
+          pattern: "^[A-Z]{2}$"
+          nullable: true
+        phone_number:
+          type: string
+          pattern: "^[0-9]+$"
+          maxLength: 20
+          nullable: true
+        contact_type:
+          $ref: "#/components/schemas/PublicContactType"
+        relationship_type:
+          $ref: "#/components/schemas/PublicRelationshipType"
+        source:
+          $ref: "#/components/schemas/PublicContactSource"
+        source_detail:
+          type: string
+          nullable: true
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        active:
+          type: boolean
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        family_ids:
+          type: array
+          maxItems: 1
+          items:
+            type: string
+            format: uuid
+        organization_ids:
+          type: array
+          maxItems: 1
+          items:
+            type: string
+            format: uuid
+        referral_contact_id:
+          type: string
+          format: uuid
+          nullable: true
+    PublicNote:
+      type: object
+      required: [id, content, created_by, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        content:
+          type: string
+        created_by:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    PublicNoteListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicNote"
+    PublicNoteResponse:
+      type: object
+      required: [note]
+      properties:
+        note:
+          $ref: "#/components/schemas/PublicNote"
+    CreatePublicNoteRequest:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+    PublicFamilyRelationshipType:
+      type: string
+      enum: [prospect, client, other]
+    PublicFamilyRole:
+      type: string
+      enum: [parent, child, helper, guardian, other]
+    PublicFamilyMember:
+      type: object
+      required: [id, contact_id, contact_label, role, is_primary_contact]
+      properties:
+        id:
+          type: string
+          format: uuid
+        contact_id:
+          type: string
+          format: uuid
+        contact_label:
+          type: string
+        role:
+          $ref: "#/components/schemas/PublicFamilyRole"
+        is_primary_contact:
+          type: boolean
+    PublicFamily:
+      type: object
+      required:
+        - id
+        - family_name
+        - relationship_type
+        - active
+        - tag_ids
+        - tags
+        - members
+        - has_sales_conversation
+        - has_service_instance
+        - has_invoice
+      properties:
+        id:
+          type: string
+          format: uuid
+        family_name:
+          type: string
+        relationship_type:
+          $ref: "#/components/schemas/PublicRelationshipType"
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        location_summary:
+          allOf:
+            - $ref: "#/components/schemas/PublicLocationVenueSummary"
+          nullable: true
+        active:
+          type: boolean
+        archived_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicTagRef"
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicFamilyMember"
+        has_sales_conversation:
+          type: boolean
+        sales_conversation_channel:
+          type: string
+          nullable: true
+          enum: [whatsapp, instagram, messenger]
+        has_service_instance:
+          type: boolean
+        has_invoice:
+          type: boolean
+    PublicFamilyListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicFamily"
+        next_cursor:
+          type: string
+          nullable: true
+        total_count:
+          type: integer
+          minimum: 0
+    PublicFamilyResponse:
+      type: object
+      required: [family]
+      properties:
+        family:
+          $ref: "#/components/schemas/PublicFamily"
+    CreatePublicFamilyRequest:
+      type: object
+      required: [family_name]
+      properties:
+        family_name:
+          type: string
+          maxLength: 150
+        relationship_type:
+          $ref: "#/components/schemas/PublicFamilyRelationshipType"
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+    UpdatePublicFamilyRequest:
+      type: object
+      properties:
+        family_name:
+          type: string
+          maxLength: 150
+        relationship_type:
+          $ref: "#/components/schemas/PublicFamilyRelationshipType"
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        active:
+          type: boolean
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+    AddPublicFamilyMemberRequest:
+      type: object
+      required: [contact_id]
+      properties:
+        contact_id:
+          type: string
+          format: uuid
+        is_primary_contact:
+          type: boolean
+    UpdatePublicFamilyMemberRequest:
+      type: object
+      required: [is_primary_contact]
+      properties:
+        is_primary_contact:
+          type: boolean
+    PublicOrganizationType:
+      type: string
+      enum: [school, company, community_group, ngo, other]
+    PublicOrganizationMember:
+      type: object
+      required: [id, contact_id, contact_label, role, is_primary_contact]
+      properties:
+        id:
+          type: string
+          format: uuid
+        contact_id:
+          type: string
+          format: uuid
+        contact_label:
+          type: string
+        role:
+          type: string
+        is_primary_contact:
+          type: boolean
+    PublicOrganization:
+      type: object
+      required:
+        - id
+        - name
+        - organization_type
+        - relationship_type
+        - active
+        - tag_ids
+        - tags
+        - members
+        - has_sales_conversation
+        - has_service_instance
+        - has_invoice
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        organization_type:
+          $ref: "#/components/schemas/PublicOrganizationType"
+        relationship_type:
+          $ref: "#/components/schemas/PublicRelationshipType"
+        partner_key:
+          type: string
+          nullable: true
+        legal_name:
+          type: string
+          nullable: true
+        website:
+          type: string
+          nullable: true
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        location_summary:
+          allOf:
+            - $ref: "#/components/schemas/PublicLocationVenueSummary"
+          nullable: true
+        active:
+          type: boolean
+        archived_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicTagRef"
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicOrganizationMember"
+        has_sales_conversation:
+          type: boolean
+        sales_conversation_channel:
+          type: string
+          nullable: true
+          enum: [whatsapp, instagram, messenger]
+        has_service_instance:
+          type: boolean
+        has_invoice:
+          type: boolean
+    PublicOrganizationListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicOrganization"
+        next_cursor:
+          type: string
+          nullable: true
+        total_count:
+          type: integer
+          minimum: 0
+    PublicOrganizationResponse:
+      type: object
+      required: [organization]
+      properties:
+        organization:
+          $ref: "#/components/schemas/PublicOrganization"
+    CreatePublicOrganizationRequest:
+      type: object
+      required: [name, organization_type]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        organization_type:
+          $ref: "#/components/schemas/PublicOrganizationType"
+        relationship_type:
+          $ref: "#/components/schemas/PublicRelationshipType"
+        website:
+          type: string
+          nullable: true
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        partner_key:
+          type: string
+          nullable: true
+        legal_name:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+    UpdatePublicOrganizationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        organization_type:
+          $ref: "#/components/schemas/PublicOrganizationType"
+        relationship_type:
+          $ref: "#/components/schemas/PublicRelationshipType"
+        website:
+          type: string
+          nullable: true
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        partner_key:
+          type: string
+          nullable: true
+        legal_name:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+    AddPublicOrganizationMemberRequest:
+      type: object
+      required: [contact_id]
+      properties:
+        contact_id:
+          type: string
+          format: uuid
+        is_primary_contact:
+          type: boolean
+    UpdatePublicOrganizationMemberRequest:
+      type: object
+      required: [is_primary_contact]
+      properties:
+        is_primary_contact:
+          type: boolean
+    PublicLocation:
+      type: object
+      required:
+        - id
+        - area_id
+        - locked_from_partner_org
+        - partner_organization_labels
+        - partner_organization_ids
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          nullable: true
+        area_id:
+          type: string
+          format: uuid
+        address:
+          type: string
+          nullable: true
+        lat:
+          type: number
+          format: double
+          nullable: true
+        lng:
+          type: number
+          format: double
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        locked_from_partner_org:
+          type: boolean
+        partner_organization_labels:
+          type: array
+          items:
+            type: string
+        partner_organization_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+    PublicLocationListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicLocation"
+        next_cursor:
+          type: string
+          nullable: true
+        total_count:
+          type: integer
+          minimum: 0
+    PublicLocationResponse:
+      type: object
+      required: [location]
+      properties:
+        location:
+          $ref: "#/components/schemas/PublicLocation"
+    CreatePublicLocationRequest:
+      type: object
+      required: [area_id]
+      properties:
+        area_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 200
+          nullable: true
+        address:
+          type: string
+          maxLength: 500
+          nullable: true
+        lat:
+          type: number
+          format: double
+          nullable: true
+        lng:
+          type: number
+          format: double
+          nullable: true
+    GeocodePublicLocationRequest:
+      type: object
+      required: [area_id, address]
+      properties:
+        area_id:
+          type: string
+          format: uuid
+        address:
+          type: string
+    GeocodePublicLocationResponse:
+      type: object
+      required: [lat, lng]
+      properties:
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        display_name:
+          type: string
+          nullable: true
+    PublicGeographicArea:
+      type: object
+      required: [id, name, name_translations, level, active, display_order]
+      properties:
+        id:
+          type: string
+          format: uuid
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+        name_translations:
+          type: object
+          additionalProperties:
+            type: string
+        level:
+          type: string
+          enum: [country, region, city, district]
+        code:
+          type: string
+          nullable: true
+        sovereign_country_id:
+          type: string
+          format: uuid
+          nullable: true
+        active:
+          type: boolean
+        display_order:
+          type: integer
+    PublicGeographicAreaListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicGeographicArea"
+    PublicInstanceStatus:
+      type: string
+      enum: [scheduled, open, full, in_progress, completed, cancelled]
+    PublicServiceType:
+      type: string
+      enum: [training_course, event, consultation, intro_call]
+    PublicServiceDeliveryMode:
+      type: string
+      enum: [online, in_person, hybrid]
+    PublicEventbriteSyncStatus:
+      type: string
+      enum: [pending, syncing, synced, failed, skipped]
+    PublicTrainingFormat:
+      type: string
+      enum: [group, private]
+    PublicTrainingPricingUnit:
+      type: string
+      enum: [per_person, per_family]
+    PublicConsultationPricingModel:
+      type: string
+      enum: [free, hourly, package]
+    PublicServiceStatus:
+      type: string
+      enum: [draft, published, archived]
+    PublicEventCategory:
+      type: string
+      enum: [workshop, webinar, open_house, community_meetup, other]
+    PublicConsultationFormat:
+      type: string
+      enum: [one_on_one, group]
+    PublicServiceTrainingDetails:
+      type: object
+      properties:
+        pricing_unit:
+          $ref: "#/components/schemas/PublicTrainingPricingUnit"
+        default_price:
+          type: string
+          nullable: true
+        default_currency:
+          type: string
+          nullable: true
+    PublicServiceEventDetails:
+      type: object
+      properties:
+        event_category:
+          $ref: "#/components/schemas/PublicEventCategory"
+        default_price:
+          type: string
+          nullable: true
+        default_currency:
+          type: string
+          nullable: true
+    PublicServiceConsultationDetails:
+      type: object
+      properties:
+        consultation_format:
+          $ref: "#/components/schemas/PublicConsultationFormat"
+        max_group_size:
+          type: integer
+          nullable: true
+        duration_minutes:
+          type: integer
+          nullable: true
+        pricing_model:
+          $ref: "#/components/schemas/PublicConsultationPricingModel"
+        default_hourly_rate:
+          type: string
+          nullable: true
+        default_package_price:
+          type: string
+          nullable: true
+        default_package_sessions:
+          type: integer
+          nullable: true
+        default_currency:
+          type: string
+          nullable: true
+    PublicServiceSummary:
+      type: object
+      required:
+        - id
+        - service_type
+        - title
+        - delivery_mode
+        - status
+        - instances_count
+      properties:
+        id:
+          type: string
+          format: uuid
+        service_type:
+          $ref: "#/components/schemas/PublicServiceType"
+        title:
+          type: string
+        service_key:
+          type: string
+          nullable: true
+          maxLength: 80
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+        booking_system:
+          type: string
+          nullable: true
+          maxLength: 80
+        description:
+          type: string
+          nullable: true
+        cover_image_s3_key:
+          type: string
+          nullable: true
+        delivery_mode:
+          $ref: "#/components/schemas/PublicServiceDeliveryMode"
+        status:
+          $ref: "#/components/schemas/PublicServiceStatus"
+        service_tier:
+          type: string
+          nullable: true
+          maxLength: 128
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_by:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        training_details:
+          allOf:
+            - $ref: "#/components/schemas/PublicServiceTrainingDetails"
+          nullable: true
+        event_details:
+          allOf:
+            - $ref: "#/components/schemas/PublicServiceEventDetails"
+          nullable: true
+        consultation_details:
+          allOf:
+            - $ref: "#/components/schemas/PublicServiceConsultationDetails"
+          nullable: true
+        instances_count:
+          type: integer
+          minimum: 0
+    PublicService:
+      allOf:
+        - $ref: "#/components/schemas/PublicServiceSummary"
+        - type: object
+          properties:
+            tag_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+            asset_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+    PublicServiceListResponse:
+      type: object
+      required: [items, total_count]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicServiceSummary"
+        next_cursor:
+          type: string
+          nullable: true
+        total_count:
+          type: integer
+    PublicServiceResponse:
+      type: object
+      required: [service]
+      properties:
+        service:
+          $ref: "#/components/schemas/PublicService"
+    CreatePublicServiceRequest:
+      type: object
+      required: [service_type, title, delivery_mode]
+      properties:
+        service_type:
+          $ref: "#/components/schemas/PublicServiceType"
+        title:
+          type: string
+        service_key:
+          type: string
+          nullable: true
+          maxLength: 80
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+        booking_system:
+          type: string
+          nullable: true
+          maxLength: 80
+        description:
+          type: string
+          nullable: true
+        cover_image_s3_key:
+          type: string
+          nullable: true
+        delivery_mode:
+          $ref: "#/components/schemas/PublicServiceDeliveryMode"
+        status:
+          $ref: "#/components/schemas/PublicServiceStatus"
+        service_tier:
+          type: string
+          nullable: true
+          maxLength: 128
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        asset_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        training_details:
+          $ref: "#/components/schemas/PublicServiceTrainingDetails"
+        event_details:
+          $ref: "#/components/schemas/PublicServiceEventDetails"
+        consultation_details:
+          $ref: "#/components/schemas/PublicServiceConsultationDetails"
+    UpdatePublicServiceRequest:
+      allOf:
+        - $ref: "#/components/schemas/CreatePublicServiceRequest"
+    PartialUpdatePublicServiceRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title:
+          type: string
+        service_key:
+          type: string
+          nullable: true
+          maxLength: 80
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+        booking_system:
+          type: string
+          nullable: true
+          maxLength: 80
+        description:
+          type: string
+          nullable: true
+        cover_image_s3_key:
+          type: string
+          nullable: true
+        delivery_mode:
+          $ref: "#/components/schemas/PublicServiceDeliveryMode"
+        status:
+          $ref: "#/components/schemas/PublicServiceStatus"
+        service_tier:
+          type: string
+          nullable: true
+          maxLength: 128
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        asset_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        training_details:
+          $ref: "#/components/schemas/PublicServiceTrainingDetails"
+        event_details:
+          $ref: "#/components/schemas/PublicServiceEventDetails"
+        consultation_details:
+          $ref: "#/components/schemas/PublicServiceConsultationDetails"
+    PublicSessionSlot:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+        instance_id:
+          type: string
+          format: uuid
+          nullable: true
+        purpose_service_id:
+          type: string
+          format: uuid
+          nullable: true
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        starts_at:
+          type: string
+          format: date-time
+          nullable: true
+        ends_at:
+          type: string
+          format: date-time
+          nullable: true
+        sort_order:
+          type: integer
+          nullable: true
+    PublicEventTicketTier:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+        instance_id:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        price:
+          type: string
+          nullable: true
+          pattern: ^-?\d+(\.\d{1,2})?$
+        currency:
+          type: string
+          nullable: true
+          minLength: 3
+          maxLength: 3
+          pattern: ^[A-Z]{3}$
+        max_quantity:
+          type: integer
+          nullable: true
+        sort_order:
+          type: integer
+          nullable: true
+    PublicInstancePartnerOrganization:
+      type: object
+      required: [id, name, archived]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        archived:
+          type: boolean
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+    PublicServiceInstance:
+      type: object
+      required: [id, service_id, status, slug, resolved_slug, eventbrite_sync_status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        service_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          nullable: true
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        cover_image_s3_key:
+          type: string
+          nullable: true
+        status:
+          $ref: "#/components/schemas/PublicInstanceStatus"
+        delivery_mode:
+          $ref: "#/components/schemas/PublicServiceDeliveryMode"
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        max_capacity:
+          type: integer
+          nullable: true
+        capacity_enrolled_count:
+          type: integer
+        capacity_left_override:
+          type: integer
+          nullable: true
+          minimum: 0
+        capacity_left_effective:
+          type: integer
+          nullable: true
+          readOnly: true
+        waitlist_enabled:
+          type: boolean
+        eventbrite_sync_status:
+          $ref: "#/components/schemas/PublicEventbriteSyncStatus"
+        external_url:
+          type: string
+          format: uri
+          pattern: ^https?://
+          nullable: true
+          maxLength: 500
+        partner_organizations:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicInstancePartnerOrganization"
+        instructor_id:
+          type: string
+          nullable: true
+        cohort:
+          type: string
+          nullable: true
+          maxLength: 128
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+        notes:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicTagRef"
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        created_by:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        resolved_title:
+          type: string
+          nullable: true
+        resolved_description:
+          type: string
+          nullable: true
+        resolved_cover_image_s3_key:
+          type: string
+          nullable: true
+        resolved_delivery_mode:
+          type: string
+          nullable: true
+        resolved_slug:
+          type: string
+        resolved_location_id:
+          type: string
+          format: uuid
+          nullable: true
+        resolved_training_details:
+          type: object
+          nullable: true
+          properties:
+            training_format:
+              $ref: "#/components/schemas/PublicTrainingFormat"
+            price:
+              type: string
+            currency:
+              type: string
+            pricing_unit:
+              $ref: "#/components/schemas/PublicTrainingPricingUnit"
+        resolved_event_ticket_tiers:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicEventTicketTier"
+        resolved_consultation_details:
+          type: object
+          nullable: true
+          properties:
+            pricing_model:
+              $ref: "#/components/schemas/PublicConsultationPricingModel"
+            price:
+              type: string
+              nullable: true
+            currency:
+              type: string
+            package_sessions:
+              type: integer
+              nullable: true
+        session_slots:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicSessionSlot"
+        training_details:
+          type: object
+          nullable: true
+          properties:
+            training_format:
+              $ref: "#/components/schemas/PublicTrainingFormat"
+            price:
+              type: string
+            currency:
+              type: string
+            pricing_unit:
+              $ref: "#/components/schemas/PublicTrainingPricingUnit"
+        event_ticket_tiers:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicEventTicketTier"
+        consultation_details:
+          type: object
+          nullable: true
+          properties:
+            pricing_model:
+              $ref: "#/components/schemas/PublicConsultationPricingModel"
+            price:
+              type: string
+              nullable: true
+            currency:
+              type: string
+            package_sessions:
+              type: integer
+              nullable: true
+        parent_service_title:
+          type: string
+          nullable: true
+        parent_service_tier:
+          type: string
+          nullable: true
+        parent_service_type:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/PublicServiceType"
+        parent_service_key:
+          type: string
+          nullable: true
+    PublicInstanceListResponse:
+      type: object
+      required: [items, total_count]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicServiceInstance"
+        next_cursor:
+          type: string
+          nullable: true
+        total_count:
+          type: integer
+    PublicInstanceResponse:
+      type: object
+      required: [instance]
+      properties:
+        instance:
+          $ref: "#/components/schemas/PublicServiceInstance"
+    CreatePublicInstanceRequest:
+      type: object
+      required: [slug]
+      description: >
+        Instance create body for `POST /v1/public/services/{id}/instances`. `slug` is
+        required (400 with `field: slug` when missing or invalid). Duplicate instance
+        slugs return 409 with `field: slug`.
+      properties:
+        title:
+          type: string
+          nullable: true
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        cover_image_s3_key:
+          type: string
+          nullable: true
+        status:
+          $ref: "#/components/schemas/PublicInstanceStatus"
+        delivery_mode:
+          $ref: "#/components/schemas/PublicServiceDeliveryMode"
+        location_id:
+          type: string
+          format: uuid
+          nullable: true
+        max_capacity:
+          type: integer
+          nullable: true
+        capacity_left_override:
+          type: integer
+          nullable: true
+          minimum: 0
+        waitlist_enabled:
+          type: boolean
+        external_url:
+          type: string
+          format: uri
+          pattern: ^https?://
+          nullable: true
+          maxLength: 500
+        partner_organization_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        instructor_id:
+          type: string
+          nullable: true
+        cohort:
+          type: string
+          nullable: true
+          maxLength: 128
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+        notes:
+          type: string
+          nullable: true
+        tag_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        session_slots:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicSessionSlot"
+        training_details:
+          type: object
+          nullable: true
+          properties:
+            training_format:
+              $ref: "#/components/schemas/PublicTrainingFormat"
+            price:
+              type: string
+            currency:
+              type: string
+            pricing_unit:
+              $ref: "#/components/schemas/PublicTrainingPricingUnit"
+        event_ticket_tiers:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicEventTicketTier"
+        consultation_details:
+          type: object
+          nullable: true
+          properties:
+            pricing_model:
+              $ref: "#/components/schemas/PublicConsultationPricingModel"
+            price:
+              type: string
+              nullable: true
+            currency:
+              type: string
+            package_sessions:
+              type: integer
+              nullable: true
+    UpdatePublicInstanceRequest:
+      allOf:
+        - $ref: "#/components/schemas/CreatePublicInstanceRequest"
+      required:
+        - status
+      description: >
+        Clearing `slug` to null returns 400 with `field: slug`.
+    ReservationSubmissionAccepted:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+        duplicateStripePaymentIntent:
+          type: boolean
+          description: True when the Stripe PaymentIntent was already linked to a customer payment.
+        customerPaymentId:
+          type: string
+          format: uuid
+          description: Existing customer payment row when `duplicateStripePaymentIntent` is true.

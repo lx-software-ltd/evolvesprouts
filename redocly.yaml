@@ -21,3 +21,7 @@ apis:
     root: docs/api/admin.yaml
   public:
     root: docs/api/public.yaml
+  partner:
+    root: docs/api/partner.yaml
+  webhooks:
+    root: docs/api/webhooks.yaml

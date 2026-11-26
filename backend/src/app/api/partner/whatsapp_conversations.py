@@ -1,11 +1,12 @@
-"""Token-authenticated public Messenger and Instagram conversation API.
+"""Token-authenticated public WhatsApp conversation API.
 
 These endpoints expose conversation names, dates, and message text only.
-They never return Page-scoped user ids, page ids, or last-four fallback names.
+They never return WhatsApp numbers, ``wa_id``, or last-four fallback names.
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from typing import Any
 from uuid import UUID
@@ -18,32 +19,28 @@ from app.api.inbox_common import (
     isoformat_inbox_datetime,
     parse_inbox_search,
     parse_last_message_cursor,
-    parse_meta_channel,
 )
-from app.api.public.token_auth import require_api_token
+from app.api.partner.token_auth import require_api_token
 from app.api.shared_request import route_has_prefix, split_route_parts
 from app.db.engine import get_engine
 from app.db.models.contact import contact_full_name
-from app.db.models.enums import MetaChannel
-from app.db.models.meta import MetaConversation, MetaMessage
-from app.db.repositories.meta import MetaRepository
+from app.db.models.whatsapp import WhatsAppConversation, WhatsAppMessage
+from app.db.repositories.whatsapp import WhatsAppRepository
 from app.exceptions import NotFoundError
 from app.utils import json_response, method_not_allowed, not_found
 
-_ANONYMOUS_NAMES = {
-    MetaChannel.FACEBOOK: "Messenger contact",
-    MetaChannel.INSTAGRAM: "Instagram contact",
-}
+_ANONYMOUS_DISPLAY_NAME = "WhatsApp contact"
+_FALLBACK_NAME_RE = re.compile(r"^WhatsApp\s+\d{4}$", re.IGNORECASE)
 
 
-def handle_public_meta_request(
+def handle_public_whatsapp_request(
     event: Mapping[str, Any],
     method: str,
     path: str,
 ) -> dict[str, Any]:
-    """Handle /v1/public/meta routes."""
+    """Handle /v1/public/whatsapp routes."""
     parts = split_route_parts(path)
-    if not route_has_prefix(parts, "public", "meta"):
+    if not route_has_prefix(parts, "partner", "whatsapp"):
         return not_found(event)
 
     require_api_token(event, method)
@@ -61,44 +58,43 @@ def handle_public_meta_request(
     return not_found(event)
 
 
-def public_conversation_name(conversation: MetaConversation) -> str:
-    """Return a display name that never includes a Page-scoped user id."""
+def public_conversation_name(conversation: WhatsAppConversation) -> str:
+    """Return a display name that never includes a WhatsApp number."""
     contact_name = contact_full_name(conversation.contact) or ""
     profile_name = (conversation.profile_name or "").strip()
-    platform_user_id = conversation.platform_user_id or ""
+    wa_id = conversation.wa_id or ""
     for candidate in (profile_name, contact_name):
-        if candidate and not _exposes_scoped_id(candidate, platform_user_id):
+        if candidate and not _exposes_phone(candidate, wa_id):
             return candidate
-    return _ANONYMOUS_NAMES.get(conversation.channel, "Meta contact")
+    return _ANONYMOUS_DISPLAY_NAME
 
 
-def _exposes_scoped_id(value: str, platform_user_id: str) -> bool:
-    """True when a label is the Page-scoped user id or a last-four fallback."""
-    if platform_user_id and (value == platform_user_id or platform_user_id in value):
+def _exposes_phone(value: str, wa_id: str) -> bool:
+    """True when a label is a phone, wa_id, or last-four fallback name."""
+    if wa_id and (value == wa_id or wa_id in value):
         return True
-    last_four = platform_user_id[-4:] if len(platform_user_id) >= 4 else ""
-    if last_four and value.endswith(last_four) and value.split()[-1] == last_four:
+    if _FALLBACK_NAME_RE.match(value):
         return True
-    return False
+    digits = re.sub(r"\D", "", value)
+    letters = re.sub(r"[^A-Za-z]", "", value)
+    return len(digits) >= 8 and len(letters) == 0
 
 
 def _list_conversations(event: Mapping[str, Any]) -> dict[str, Any]:
     limit = parse_limit(event)
     search = parse_inbox_search(query_param(event, "q"))
-    channel = parse_meta_channel(query_param(event, "channel"))
     cursor_last_message_at, cursor_id = parse_last_message_cursor(
         query_param(event, "cursor")
     )
 
     with Session(get_engine()) as session:
-        repository = MetaRepository(session)
+        repository = WhatsAppRepository(session)
         rows = repository.list_conversations(
             limit=limit + 1,
             cursor_last_message_at=cursor_last_message_at,
             cursor_id=cursor_id,
             search=search,
-            channel=channel,
-            search_platform_user_id=False,
+            search_wa_id=False,
         )
         has_more = len(rows) > limit
         page_rows = rows[:limit]
@@ -125,10 +121,10 @@ def _list_messages(
     limit = parse_limit(event)
 
     with Session(get_engine()) as session:
-        repository = MetaRepository(session)
+        repository = WhatsAppRepository(session)
         conversation = repository.get_conversation_by_id(conversation_id)
         if conversation is None:
-            raise NotFoundError("MetaConversation", str(conversation_id))
+            raise NotFoundError("WhatsAppConversation", str(conversation_id))
         messages = repository.list_messages(
             conversation_id=conversation_id,
             limit=limit,
@@ -143,10 +139,9 @@ def _list_messages(
         )
 
 
-def _serialize_conversation(conversation: MetaConversation) -> dict[str, Any]:
+def _serialize_conversation(conversation: WhatsAppConversation) -> dict[str, Any]:
     return {
         "id": str(conversation.id),
-        "channel": conversation.channel.value,
         "name": public_conversation_name(conversation),
         "first_inbound_at": isoformat_inbox_datetime(conversation.first_inbound_at),
         "last_message_at": isoformat_inbox_datetime(conversation.last_message_at),
@@ -154,7 +149,7 @@ def _serialize_conversation(conversation: MetaConversation) -> dict[str, Any]:
     }
 
 
-def _serialize_message(message: MetaMessage) -> dict[str, Any]:
+def _serialize_message(message: WhatsAppMessage) -> dict[str, Any]:
     return {
         "id": str(message.id),
         "direction": message.direction.value,

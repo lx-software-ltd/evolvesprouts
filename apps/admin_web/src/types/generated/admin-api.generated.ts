@@ -12,8 +12,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Health check
-         * @description Returns backend health status and dependency checks.
+         * Liveness check
+         * @description Open liveness check. Returns `{"status":"ok"}` and does not read the database or configuration. A direct invocation of the health function with no httpMethod runs the database and configuration checks.
          */
         get: operations["getHealth"];
         put?: never;
@@ -417,7 +417,7 @@ export interface paths {
         };
         /**
          * List API tokens
-         * @description Lists hashed API tokens used by the `x-api-token` authorizer.
+         * @description Lists hashed API tokens used by the `Authorization: Bearer` authorizer.
          *     The plaintext token is never stored and is not returned here.
          */
         get: operations["getV1AdminApiKeys"];
@@ -5392,6 +5392,10 @@ export interface components {
             /** @description Optional input field key for validation-style errors. Duplicate service service_key+tier conflicts use the literal `service_key_tier` (not `service_key` or `service_tier`). */
             field?: string | null;
         };
+        OpenHealthResponse: {
+            /** @enum {string} */
+            status: "ok";
+        };
         HealthResponse: {
             healthy: boolean;
             version: string;
@@ -5483,29 +5487,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Service is healthy. */
+            /** @description Process is up. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HealthResponse"];
-                };
-            };
-            /** @description API Gateway rejected the caller signature. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Service is unhealthy. */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HealthResponse"];
+                    "application/json": components["schemas"]["OpenHealthResponse"];
                 };
             };
         };

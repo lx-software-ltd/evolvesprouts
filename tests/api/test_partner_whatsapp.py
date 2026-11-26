@@ -8,8 +8,8 @@ from uuid import uuid4
 
 import pytest
 
-from app.api.public import meta_conversations as pmeta
-from app.db.models.enums import MetaChannel, MetaMessageDirection
+from app.api.partner import whatsapp_conversations as pwa
+from app.db.models.enums import WhatsAppMessageDirection
 from app.exceptions import AuthenticationError, AuthorizationError
 
 
@@ -41,51 +41,51 @@ class _FakeSessionCM:
         return False
 
 
-def test_public_meta_requires_token(api_gateway_event: Any) -> None:
-    event = api_gateway_event(method="GET", path="/v1/public/meta/conversations")
+def test_public_whatsapp_requires_token(api_gateway_event: Any) -> None:
+    event = api_gateway_event(method="GET", path="/v1/partner/whatsapp/conversations")
     with pytest.raises(AuthenticationError):
-        pmeta.handle_public_meta_request(event, "GET", "/v1/public/meta/conversations")
+        pwa.handle_public_whatsapp_request(
+            event, "GET", "/v1/partner/whatsapp/conversations"
+        )
 
 
-def test_public_meta_user_cannot_write(api_gateway_event: Any) -> None:
+def test_public_whatsapp_user_cannot_write(api_gateway_event: Any) -> None:
     event = _token_event(
         api_gateway_event,
-        "/v1/public/meta/conversations",
+        "/v1/partner/whatsapp/conversations",
         scope="user",
         method="POST",
     )
     with pytest.raises(AuthorizationError):
-        pmeta.handle_public_meta_request(event, "POST", "/v1/public/meta/conversations")
+        pwa.handle_public_whatsapp_request(
+            event, "POST", "/v1/partner/whatsapp/conversations"
+        )
 
 
-def test_public_conversation_name_never_uses_scoped_id() -> None:
+def test_public_conversation_name_never_uses_phone_or_fallback() -> None:
     conversation = SimpleNamespace(
-        channel=MetaChannel.INSTAGRAM,
-        platform_user_id="igsid-123456",
-        profile_name="igsid-123456",
-        contact=SimpleNamespace(first_name="Instagram 3456", last_name=None),
+        wa_id="85251111111",
+        profile_name="WhatsApp 9843",
+        contact=SimpleNamespace(first_name="WhatsApp 9843", last_name=None),
     )
-    assert pmeta.public_conversation_name(conversation) == "Instagram contact"
+    assert pwa.public_conversation_name(conversation) == "WhatsApp contact"
 
     named = SimpleNamespace(
-        channel=MetaChannel.FACEBOOK,
-        platform_user_id="psid-123456",
+        wa_id="85251111111",
         profile_name="Mei Chan",
         contact=None,
     )
-    assert pmeta.public_conversation_name(named) == "Mei Chan"
+    assert pwa.public_conversation_name(named) == "Mei Chan"
 
 
-def test_public_meta_lists_without_scoped_ids(
+def test_public_whatsapp_lists_without_phone_fields(
     api_gateway_event: Any,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     conversation_id = uuid4()
     row = SimpleNamespace(
         id=conversation_id,
-        channel=MetaChannel.INSTAGRAM,
-        platform_user_id="igsid-secret",
-        page_id="page-secret",
+        wa_id="85251111111",
         profile_name="Mei",
         contact=None,
         first_inbound_at=datetime(2026, 8, 1, tzinfo=UTC),
@@ -98,45 +98,35 @@ def test_public_meta_lists_without_scoped_ids(
             pass
 
         def list_conversations(self, **kwargs: object) -> list[object]:
-            assert kwargs.get("search_platform_user_id") is False
-            assert kwargs.get("channel") is MetaChannel.INSTAGRAM
+            assert kwargs.get("search_wa_id") is False
             return [row]
 
-    monkeypatch.setattr(pmeta, "MetaRepository", _FakeRepo)
-    monkeypatch.setattr(pmeta, "Session", lambda _e: _FakeSessionCM())
-    monkeypatch.setattr(pmeta, "get_engine", lambda: object())
+    monkeypatch.setattr(pwa, "WhatsAppRepository", _FakeRepo)
+    monkeypatch.setattr(pwa, "Session", lambda _e: _FakeSessionCM())
+    monkeypatch.setattr(pwa, "get_engine", lambda: object())
 
-    response = pmeta.handle_public_meta_request(
-        _token_event(
-            api_gateway_event,
-            "/v1/public/meta/conversations",
-            query_params={"channel": "instagram"},
-        ),
+    response = pwa.handle_public_whatsapp_request(
+        _token_event(api_gateway_event, "/v1/partner/whatsapp/conversations"),
         "GET",
-        "/v1/public/meta/conversations",
+        "/v1/partner/whatsapp/conversations",
     )
     assert response["statusCode"] == 200
     body = json.loads(response["body"])
     item = body["items"][0]
     assert item["name"] == "Mei"
-    assert item["channel"] == "instagram"
     assert item["id"] == str(conversation_id)
-    assert "platform_user_id" not in item
-    assert "page_id" not in item
-    assert "igsid-secret" not in json.dumps(body)
-    assert "page-secret" not in json.dumps(body)
+    assert "wa_id" not in item
+    assert "85251111111" not in json.dumps(body)
 
 
-def test_public_meta_messages_omit_platform_ids(
+def test_public_whatsapp_messages_omit_wa_ids(
     api_gateway_event: Any,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     conversation_id = uuid4()
     conversation = SimpleNamespace(
         id=conversation_id,
-        channel=MetaChannel.FACEBOOK,
-        platform_user_id="psid-secret",
-        page_id="page-secret",
+        wa_id="85251111111",
         profile_name="Mei",
         contact=None,
         first_inbound_at=datetime(2026, 8, 1, tzinfo=UTC),
@@ -145,8 +135,8 @@ def test_public_meta_messages_omit_platform_ids(
     )
     message = SimpleNamespace(
         id=uuid4(),
-        platform_message_id="m_secret",
-        direction=MetaMessageDirection.INBOUND,
+        wa_message_id="wamid.secret",
+        direction=WhatsAppMessageDirection.INBOUND,
         body="How much?",
         sent_at=datetime(2026, 8, 2, tzinfo=UTC),
     )
@@ -161,12 +151,12 @@ def test_public_meta_messages_omit_platform_ids(
         def list_messages(self, **_k: object) -> list[object]:
             return [message]
 
-    monkeypatch.setattr(pmeta, "MetaRepository", _FakeRepo)
-    monkeypatch.setattr(pmeta, "Session", lambda _e: _FakeSessionCM())
-    monkeypatch.setattr(pmeta, "get_engine", lambda: object())
+    monkeypatch.setattr(pwa, "WhatsAppRepository", _FakeRepo)
+    monkeypatch.setattr(pwa, "Session", lambda _e: _FakeSessionCM())
+    monkeypatch.setattr(pwa, "get_engine", lambda: object())
 
-    path = f"/v1/public/meta/conversations/{conversation_id}/messages"
-    response = pmeta.handle_public_meta_request(
+    path = f"/v1/partner/whatsapp/conversations/{conversation_id}/messages"
+    response = pwa.handle_public_whatsapp_request(
         _token_event(api_gateway_event, path, scope="admin"),
         "GET",
         path,
@@ -174,7 +164,7 @@ def test_public_meta_messages_omit_platform_ids(
     assert response["statusCode"] == 200
     body = json.loads(response["body"])
     assert body["items"][0]["body"] == "How much?"
-    assert "platform_message_id" not in body["items"][0]
-    assert "platform_user_id" not in body["conversation"]
-    assert "m_secret" not in json.dumps(body)
-    assert "psid-secret" not in json.dumps(body)
+    assert "wa_message_id" not in body["items"][0]
+    assert "wa_id" not in body["conversation"]
+    assert "wamid.secret" not in json.dumps(body)
+    assert "85251111111" not in json.dumps(body)
