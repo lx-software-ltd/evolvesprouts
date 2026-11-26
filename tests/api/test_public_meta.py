@@ -42,20 +42,20 @@ class _FakeSessionCM:
 
 
 def test_public_meta_requires_token(api_gateway_event: Any) -> None:
-    event = api_gateway_event(method="GET", path="/v1/public/meta/conversations")
+    event = api_gateway_event(method="GET", path="/v1/partner/meta/conversations")
     with pytest.raises(AuthenticationError):
-        pmeta.handle_public_meta_request(event, "GET", "/v1/public/meta/conversations")
+        pmeta.handle_public_meta_request(event, "GET", "/v1/partner/meta/conversations")
 
 
 def test_public_meta_user_cannot_write(api_gateway_event: Any) -> None:
     event = _token_event(
         api_gateway_event,
-        "/v1/public/meta/conversations",
+        "/v1/partner/meta/conversations",
         scope="user",
         method="POST",
     )
     with pytest.raises(AuthorizationError):
-        pmeta.handle_public_meta_request(event, "POST", "/v1/public/meta/conversations")
+        pmeta.handle_public_meta_request(event, "POST", "/v1/partner/meta/conversations")
 
 
 def test_public_conversation_name_never_uses_scoped_id() -> None:
@@ -109,11 +109,11 @@ def test_public_meta_lists_without_scoped_ids(
     response = pmeta.handle_public_meta_request(
         _token_event(
             api_gateway_event,
-            "/v1/public/meta/conversations",
+            "/v1/partner/meta/conversations",
             query_params={"channel": "instagram"},
         ),
         "GET",
-        "/v1/public/meta/conversations",
+        "/v1/partner/meta/conversations",
     )
     assert response["statusCode"] == 200
     body = json.loads(response["body"])
@@ -165,7 +165,7 @@ def test_public_meta_messages_omit_platform_ids(
     monkeypatch.setattr(pmeta, "Session", lambda _e: _FakeSessionCM())
     monkeypatch.setattr(pmeta, "get_engine", lambda: object())
 
-    path = f"/v1/public/meta/conversations/{conversation_id}/messages"
+    path = f"/v1/partner/meta/conversations/{conversation_id}/messages"
     response = pmeta.handle_public_meta_request(
         _token_event(api_gateway_event, path, scope="admin"),
         "GET",

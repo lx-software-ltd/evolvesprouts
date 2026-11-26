@@ -43,7 +43,7 @@ def handle_public_meta_request(
 ) -> dict[str, Any]:
     """Handle /v1/public/meta routes."""
     parts = split_route_parts(path)
-    if not route_has_prefix(parts, "public", "meta"):
+    if not route_has_prefix(parts, "partner", "meta"):
         return not_found(event)
 
     require_api_token(event, method)

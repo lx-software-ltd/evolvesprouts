@@ -32,10 +32,10 @@ def _token_event(
 
 
 def test_public_organizations_requires_token(api_gateway_event: Any) -> None:
-    event = api_gateway_event(method="GET", path="/v1/public/organizations")
+    event = api_gateway_event(method="GET", path="/v1/partner/organizations")
     with pytest.raises(AuthenticationError):
         porgs.handle_public_organizations_request(
-            event, "GET", "/v1/public/organizations"
+            event, "GET", "/v1/partner/organizations"
         )
 
 
@@ -45,9 +45,9 @@ def test_public_organizations_user_cannot_write(
 ) -> None:
     org_id = uuid4()
     path = (
-        "/v1/public/organizations"
+        "/v1/partner/organizations"
         if method == "POST"
-        else f"/v1/public/organizations/{org_id}"
+        else f"/v1/partner/organizations/{org_id}"
     )
     event = _token_event(api_gateway_event, path, scope="user", method=method)
     with pytest.raises(AuthorizationError, match="Read-only API token"):
@@ -69,13 +69,13 @@ def test_public_organizations_admin_create_uses_token_actor(
     response = porgs.handle_public_organizations_request(
         _token_event(
             api_gateway_event,
-            "/v1/public/organizations",
+            "/v1/partner/organizations",
             scope="admin",
             method="POST",
             api_key_id=api_key_id,
         ),
         "POST",
-        "/v1/public/organizations",
+        "/v1/partner/organizations",
     )
     assert response["statusCode"] == 201
     assert captured["actor_sub"] == f"api-key:{api_key_id}"
@@ -104,7 +104,7 @@ def test_public_organizations_get_missing_raises(
     monkeypatch.setattr(porgs, "OrganizationRepository", _FakeRepo)
     monkeypatch.setattr(porgs, "Session", lambda _e: _FakeSessionCM())
     monkeypatch.setattr(porgs, "get_engine", lambda: object())
-    path = f"/v1/public/organizations/{org_id}"
+    path = f"/v1/partner/organizations/{org_id}"
     with pytest.raises(NotFoundError):
         porgs.handle_public_organizations_request(
             _token_event(api_gateway_event, path), "GET", path

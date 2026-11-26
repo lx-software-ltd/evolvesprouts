@@ -22,7 +22,7 @@ def handle_public_geographic_areas_request(
 ) -> dict[str, Any]:
     """Handle /v1/public/geographic-areas routes."""
     parts = split_route_parts(path)
-    if len(parts) != 2 or not route_has_prefix(parts, "public", "geographic-areas"):
+    if len(parts) != 2 or not route_has_prefix(parts, "partner", "geographic-areas"):
         return not_found(event)
 
     require_api_token(event, method)

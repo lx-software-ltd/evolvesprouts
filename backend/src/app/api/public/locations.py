@@ -34,7 +34,7 @@ def handle_public_locations_request(
 ) -> dict[str, Any]:
     """Handle /v1/public/locations routes."""
     parts = split_route_parts(path)
-    if not route_has_prefix(parts, "public", "locations"):
+    if not route_has_prefix(parts, "partner", "locations"):
         return not_found(event)
 
     require_api_token(event, method)

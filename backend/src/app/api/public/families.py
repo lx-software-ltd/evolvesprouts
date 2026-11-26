@@ -39,7 +39,7 @@ def handle_public_families_request(
 ) -> dict[str, Any]:
     """Handle /v1/public/families routes."""
     parts = split_route_parts(path)
-    if not route_has_prefix(parts, "public", "families"):
+    if not route_has_prefix(parts, "partner", "families"):
         return not_found(event)
 
     token = require_api_token(event, method)

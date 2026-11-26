@@ -33,18 +33,18 @@ def _token_event(
 
 
 def test_public_locations_requires_token(api_gateway_event: Any) -> None:
-    event = api_gateway_event(method="GET", path="/v1/public/locations")
+    event = api_gateway_event(method="GET", path="/v1/partner/locations")
     with pytest.raises(AuthenticationError):
-        plocations.handle_public_locations_request(event, "GET", "/v1/public/locations")
+        plocations.handle_public_locations_request(event, "GET", "/v1/partner/locations")
 
 
 def test_public_locations_user_cannot_write(api_gateway_event: Any) -> None:
     event = _token_event(
-        api_gateway_event, "/v1/public/locations", scope="user", method="POST"
+        api_gateway_event, "/v1/partner/locations", scope="user", method="POST"
     )
     with pytest.raises(AuthorizationError, match="Read-only API token"):
         plocations.handle_public_locations_request(
-            event, "POST", "/v1/public/locations"
+            event, "POST", "/v1/partner/locations"
         )
 
 
@@ -59,12 +59,12 @@ def test_public_locations_admin_create_delegates(
     response = plocations.handle_public_locations_request(
         _token_event(
             api_gateway_event,
-            "/v1/public/locations",
+            "/v1/partner/locations",
             scope="admin",
             method="POST",
         ),
         "POST",
-        "/v1/public/locations",
+        "/v1/partner/locations",
     )
     assert response["statusCode"] == 201
 
@@ -92,7 +92,7 @@ def test_public_locations_get_missing_raises(
     monkeypatch.setattr(plocations, "LocationRepository", _FakeRepo)
     monkeypatch.setattr(plocations, "Session", lambda _e: _FakeSessionCM())
     monkeypatch.setattr(plocations, "get_engine", lambda: object())
-    path = f"/v1/public/locations/{location_id}"
+    path = f"/v1/partner/locations/{location_id}"
     with pytest.raises(NotFoundError):
         plocations.handle_public_locations_request(
             _token_event(api_gateway_event, path), "GET", path
@@ -100,21 +100,21 @@ def test_public_locations_get_missing_raises(
 
 
 def test_public_geographic_areas_requires_token(api_gateway_event: Any) -> None:
-    event = api_gateway_event(method="GET", path="/v1/public/geographic-areas")
+    event = api_gateway_event(method="GET", path="/v1/partner/geographic-areas")
     with pytest.raises(AuthenticationError):
         pgeo.handle_public_geographic_areas_request(
-            event, "GET", "/v1/public/geographic-areas"
+            event, "GET", "/v1/partner/geographic-areas"
         )
 
 
 def test_public_geographic_areas_rejects_write(api_gateway_event: Any) -> None:
     event = _token_event(
         api_gateway_event,
-        "/v1/public/geographic-areas",
+        "/v1/partner/geographic-areas",
         scope="admin",
         method="POST",
     )
     response = pgeo.handle_public_geographic_areas_request(
-        event, "POST", "/v1/public/geographic-areas"
+        event, "POST", "/v1/partner/geographic-areas"
     )
     assert response["statusCode"] == 405

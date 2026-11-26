@@ -40,7 +40,7 @@ def handle_public_whatsapp_request(
 ) -> dict[str, Any]:
     """Handle /v1/public/whatsapp routes."""
     parts = split_route_parts(path)
-    if not route_has_prefix(parts, "public", "whatsapp"):
+    if not route_has_prefix(parts, "partner", "whatsapp"):
         return not_found(event)
 
     require_api_token(event, method)

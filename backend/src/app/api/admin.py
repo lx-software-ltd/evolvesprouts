@@ -107,7 +107,7 @@ def _with_server_timing(
     return response
 
 
-_ROUTES: tuple[
+_CANONICAL_ROUTES: tuple[
     tuple[str, bool, Callable[[Mapping[str, Any], str, str], dict[str, Any]]],
     ...,
 ] = (
@@ -124,24 +124,7 @@ _ROUTES: tuple[
         ),
     ),
     (
-        "/www/v1/reservations",
-        True,
-        lambda event, method, _path: _handle_public_reservation(event, method),
-    ),
-    (
-        "/www/v1/reservations/payment-intent",
-        True,
-        lambda event, method, _path: handle_public_reservation_payment_intent(
-            event, method
-        ),
-    ),
-    (
         "/v1/calendar/public",
-        True,
-        lambda event, method, _path: handle_public_events(event, method),
-    ),
-    (
-        "/www/v1/calendar/public",
         True,
         lambda event, method, _path: handle_public_events(event, method),
     ),
@@ -151,29 +134,12 @@ _ROUTES: tuple[
         lambda event, method, _path: handle_public_calendar_availability(event, method),
     ),
     (
-        "/www/v1/calendar/availability",
-        True,
-        lambda event, method, _path: handle_public_calendar_availability(event, method),
-    ),
-    (
         "/v1/discounts/validate",
         True,
         lambda event, method, _path: handle_public_discount_validate(event, method),
     ),
     (
-        "/www/v1/discounts/validate",
-        True,
-        lambda event, method, _path: handle_public_discount_validate(event, method),
-    ),
-    (
         "/v1/assets/free",
-        True,
-        lambda event, method, path: handle_public_free_assets_list_request(
-            event, method, path
-        ),
-    ),
-    (
-        "/www/v1/assets/free",
         True,
         lambda event, method, path: handle_public_free_assets_list_request(
             event, method, path
@@ -190,24 +156,9 @@ _ROUTES: tuple[
         handle_public_forms_request,
     ),
     (
-        "/www/v1/forms",
-        False,
-        handle_public_forms_request,
-    ),
-    (
         "/v1/polls",
         False,
         handle_public_polls_request,
-    ),
-    (
-        "/www/v1/polls",
-        False,
-        handle_public_polls_request,
-    ),
-    (
-        "/www/v1/contact-us",
-        True,
-        lambda event, method, _path: handle_public_contact_us(event, method),
     ),
     (
         "/v1/mailchimp/webhook",
@@ -225,22 +176,22 @@ _ROUTES: tuple[
         lambda event, method, _path: handle_meta_webhook(event, method),
     ),
     (
-        "/v1/public/whatsapp",
+        "/v1/partner/whatsapp",
         False,
         handle_public_whatsapp_request,
     ),
     (
-        "/v1/public/meta",
+        "/v1/partner/meta",
         False,
         handle_public_meta_request,
     ),
-    ("/v1/public/contacts", False, handle_public_contacts_request),
-    ("/v1/public/families", False, handle_public_families_request),
-    ("/v1/public/services", False, handle_public_services_request),
-    ("/v1/public/organizations", False, handle_public_organizations_request),
-    ("/v1/public/locations", False, handle_public_locations_request),
+    ("/v1/partner/contacts", False, handle_public_contacts_request),
+    ("/v1/partner/families", False, handle_public_families_request),
+    ("/v1/partner/services", False, handle_public_services_request),
+    ("/v1/partner/organizations", False, handle_public_organizations_request),
+    ("/v1/partner/locations", False, handle_public_locations_request),
     (
-        "/v1/public/geographic-areas",
+        "/v1/partner/geographic-areas",
         False,
         handle_public_geographic_areas_request,
     ),
@@ -373,13 +324,38 @@ _ROUTES: tuple[
         True,
         lambda event, method, _path: handle_media_request(event, method),
     ),
-    (
-        "/www/v1/assets/free/request",
-        True,
-        lambda event, method, _path: handle_media_request(event, method),
-    ),
     ("/v1/assets/public", False, handle_public_assets_request),
 )
+
+
+
+_PUBLIC_ALIASES = {
+    "/v1/calendar/public": "/v1/public/calendar",
+    "/v1/assets/public": "/v1/public/assets",
+    "/v1/mailchimp/webhook": "/v1/webhooks/mailchimp",
+    "/v1/whatsapp/webhook": "/v1/webhooks/whatsapp",
+    "/v1/meta/webhook": "/v1/webhooks/meta",
+}
+
+
+def _with_public_aliases(routes):
+    """Add the open path and the /www path beside each website route."""
+    expanded = []
+    for route_path, exact, handler in routes:
+        expanded.append((route_path, exact, handler))
+        if not route_path.startswith("/v1/"):
+            continue
+        if route_path.startswith(("/v1/admin", "/v1/user", "/v1/partner")):
+            continue
+        public = _PUBLIC_ALIASES.get(route_path)
+        if public is None:
+            public = "/v1/public" + route_path[len("/v1") :]
+        expanded.append((public, exact, handler))
+        expanded.append(("/www" + route_path, exact, handler))
+    return tuple(expanded)
+
+
+_ROUTES = _with_public_aliases(_CANONICAL_ROUTES)
 
 
 def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
@@ -492,5 +468,11 @@ def _requires_json_content_type(path: str, method: str) -> bool:
         "/v1/mailchimp/webhook",
         "/v1/whatsapp/webhook",
         "/v1/meta/webhook",
+        "/v1/webhooks/mailchimp",
+        "/v1/webhooks/whatsapp",
+        "/v1/webhooks/meta",
+        "/www/v1/mailchimp/webhook",
+        "/www/v1/whatsapp/webhook",
+        "/www/v1/meta/webhook",
     }
     return normalized_path not in non_json_routes

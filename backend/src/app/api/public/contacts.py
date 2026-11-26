@@ -58,7 +58,7 @@ def handle_public_contacts_request(
 ) -> dict[str, Any]:
     """Handle /v1/public/contacts routes."""
     parts = split_route_parts(path)
-    if not route_has_prefix(parts, "public", "contacts"):
+    if not route_has_prefix(parts, "partner", "contacts"):
         return not_found(event)
 
     token = require_api_token(event, method)

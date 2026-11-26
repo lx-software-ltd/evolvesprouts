@@ -41,7 +41,7 @@ def handle_public_organizations_request(
 ) -> dict[str, Any]:
     """Handle /v1/public/organizations routes."""
     parts = split_route_parts(path)
-    if not route_has_prefix(parts, "public", "organizations"):
+    if not route_has_prefix(parts, "partner", "organizations"):
         return not_found(event)
 
     token = require_api_token(event, method)
