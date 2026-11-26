@@ -179,13 +179,13 @@ function renderAllowlist(viewer: "www" | "api"): string {
       const prefix = viewer === "www" ? entry.wwwPath : entry.apiPath;
       const suffix = entry.suffix ?? "";
       const contains = entry.contains
-        ? `\n    && uri.indexOf(${quoteJs(entry.contains)}) > 0`
+        ? `uri.indexOf(${quoteJs(entry.contains)}) > 0 &&\n    `
         : "";
       const checks = methodCheck(entry.methods);
       const wrapped = entry.methods.length > 1 ? `(${checks})` : checks;
       return `  var ${entry.name} =
-    uri.indexOf(${quoteJs(prefix)}) === 0${contains} &&
-    uri.lastIndexOf(${quoteJs(suffix)}) === uri.length - ${suffix.length};
+    uri.indexOf(${quoteJs(prefix)}) === 0 &&
+    ${contains}uri.lastIndexOf(${quoteJs(suffix)}) === uri.length - ${suffix.length};
   if (
     ${wrapped} &&
     ${entry.name}
@@ -195,7 +195,8 @@ function renderAllowlist(viewer: "www" | "api"): string {
   }`;
     },
   );
-  return `function handler(event) {
+  return `
+function handler(event) {
   var request = event.request;
   var method = request.method || '';
   var uri = request.uri || '';

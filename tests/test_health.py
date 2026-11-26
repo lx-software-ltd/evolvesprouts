@@ -55,8 +55,7 @@ def test_open_health_does_not_call_database(
     assert json.loads(response["body"]) == {"status": "ok"}
 
 
-def test_admin_health_runs_dependency_checks(
-    api_gateway_event: Any,
+def test_direct_health_invocation_runs_dependency_checks(
     monkeypatch: Any,
 ) -> None:
     monkeypatch.setattr(
@@ -72,11 +71,7 @@ def test_admin_health_runs_dependency_checks(
     monkeypatch.setenv("APP_VERSION", "9.9.9")
     monkeypatch.setenv("ENVIRONMENT", "test")
 
-    response = health.handle_admin_health(
-        api_gateway_event(method="GET", path="/v1/admin/health"),
-        "GET",
-        "/v1/admin/health",
-    )
+    response = health.lambda_handler({}, None)
 
     assert response["statusCode"] == 200
     assert json.loads(response["body"])["healthy"] is True

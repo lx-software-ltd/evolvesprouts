@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import os
 import time
-from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -16,7 +15,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.utils.logging import get_logger
-from app.utils.responses import json_response, method_not_allowed
+from app.utils.responses import json_response
 
 logger = get_logger(__name__)
 
@@ -149,18 +148,9 @@ def _check_configuration() -> HealthCheck:
 
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
-    """Open liveness check. Does not read the database or configuration."""
+    """HTTP is liveness only. No httpMethod means a direct dependency check."""
+    if not event.get("httpMethod"):
+        status = check_health()
+        status_code = 200 if status.healthy else 503
+        return json_response(status_code, status.to_dict(), event=event)
     return json_response(200, {"status": "ok"}, event=event)
-
-
-def handle_admin_health(
-    event: Mapping[str, Any],
-    method: str,
-    _path: str,
-) -> dict[str, Any]:
-    """Admin dependency check for ``GET /v1/admin/health``."""
-    if method != "GET":
-        return method_not_allowed(event)
-    status = check_health()
-    status_code = 200 if status.healthy else 503
-    return json_response(status_code, status.to_dict(), event=event)

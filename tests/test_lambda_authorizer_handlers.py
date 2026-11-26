@@ -4,7 +4,10 @@ import importlib.util
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from app.auth import authorizer_utils
+from app.auth.api_token_authorizer import Unauthorized
 
 
 def _load_lambda_module(relative_path: str, module_name: str) -> Any:
@@ -59,15 +62,13 @@ def test_cognito_user_authorizer_denies_missing_token() -> None:
     assert response["context"]["reason"] == "missing_token"
 
 
-def test_api_token_authorizer_denies_missing_header() -> None:
+def test_api_token_authorizer_rejects_missing_header() -> None:
     handler = _load_lambda_module(
         "authorizers/api_token/handler.py",
         "test_api_token_authorizer",
     )
-    response = handler.lambda_handler({"headers": {}, "methodArn": "arn:example"}, None)
-
-    assert response["policyDocument"]["Statement"][0]["Effect"] == "Deny"
-    assert response["context"]["reason"] == "missing_key"
+    with pytest.raises(Unauthorized, match="^Unauthorized$"):
+        handler.lambda_handler({"headers": {}, "methodArn": "arn:example"}, None)
 
 
 def test_device_attestation_authorizer_denies_when_unconfigured_fail_closed(

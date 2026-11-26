@@ -8,7 +8,6 @@ info:
 
     The current API Gateway deployment exposes:
     - `GET /health` (open liveness, `{"status":"ok"}`)
-    - `GET /v1/admin/health` (database and configuration)
     - `GET /v1/admin/geographic-areas`
     - `GET|POST /v1/admin/locations`
     - `POST /v1/admin/locations/geocode`
@@ -118,7 +117,7 @@ info:
     - `POST /v1/admin/assets/{id}/content/init`
     - `POST /v1/admin/assets/{id}/content/complete`
     - `GET|POST /v1/admin/assets/{id}/grants`
-    - `DELETE /v1/admin/assets/{id}/grants/{grant_id}`
+    - `DELETE /v1/admin/assets/{id}/grants/{grantId}`
     - `GET|POST|DELETE /v1/admin/assets/{id}/share-link`
     - `POST /v1/admin/assets/{id}/share-link/rotate`
     - `GET /v1/user/assets`
@@ -135,8 +134,8 @@ paths:
       summary: Liveness check
       description: >
         Open liveness check. Returns `{"status":"ok"}` and does not read
-        the database or configuration. Dependency checks are
-        `GET /v1/admin/health`.
+        the database or configuration. A direct invocation of the health
+        function with no httpMethod runs the database and configuration checks.
       security: []
       responses:
         "200":
@@ -145,29 +144,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OpenHealthResponse"
-
-  /v1/admin/health:
-    get:
-      operationId: getV1AdminHealth
-      summary: Dependency health check
-      description: Admin-only database and configuration check.
-      security:
-        - AdminBearerAuth: []
-      responses:
-        "200":
-          description: Dependencies are healthy.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HealthResponse"
-        "503":
-          description: A dependency is unhealthy.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HealthResponse"
-        "403":
-          $ref: "#/components/responses/Forbidden"
 
   /v1/admin/assets:
     get:
@@ -471,7 +447,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /v1/admin/assets/{id}/grants/{grant_id}:
+  /v1/admin/assets/{id}/grants/{grantId}:
     parameters:
       - $ref: "#/components/parameters/AssetId"
       - $ref: "#/components/parameters/GrantId"
@@ -5841,7 +5817,7 @@ components:
         type: string
       description: Asset identifier.
     GrantId:
-      name: grant_id
+      name: grantId
       in: path
       required: true
       schema:

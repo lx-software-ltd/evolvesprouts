@@ -3300,6 +3300,7 @@ export class ApiStack extends cdk.Stack {
       '  "title": "$context.error.responseType",',
       '  "detail": $context.error.messageString,',
       '  "error": $context.error.messageString,',
+      '  "message": $context.error.messageString,',
       '  "code": "gateway_error",',
       '  "request_id": "$context.requestId"',
       "}",
@@ -3611,11 +3612,6 @@ export class ApiStack extends cdk.Stack {
 
     // Admin asset routes
     const admin = v1.addResource("admin");
-    const adminHealth = admin.addResource("health");
-    adminHealth.addMethod("GET", adminIntegration, {
-      authorizationType: apigateway.AuthorizationType.CUSTOM,
-      authorizer: adminAuthorizer,
-    });
     const adminAssets = admin.addResource("assets");
     adminAssets.addMethod("GET", adminIntegration, {
       authorizationType: apigateway.AuthorizationType.CUSTOM,
@@ -3666,7 +3662,11 @@ export class ApiStack extends cdk.Stack {
       authorizer: adminAuthorizer,
     });
 
-    const adminAssetGrantById = adminAssetGrants.addResource("{grant_id}");
+    // Keep `{grantId}`: API Gateway allows only one variable sibling under
+    // `/grants`. Renaming to `{grant_id}` creates a new resource while
+    // `{grantId}` is still live, which fails with
+    // "A sibling ({grantId}) of this resource already has a variable path part".
+    const adminAssetGrantById = adminAssetGrants.addResource("{grantId}");
     adminAssetGrantById.addMethod("DELETE", adminIntegration, {
       authorizationType: apigateway.AuthorizationType.CUSTOM,
       authorizer: adminAuthorizer,

@@ -27,17 +27,18 @@ def problem_body(
     request_id: str = "",
     field: str | None = None,
 ) -> dict[str, Any]:
-    """Error body for /v1. ``error``, ``detail`` and ``field`` stay."""
+    """Error body for /v1. Omit ``detail`` when it repeats ``error``."""
     code, title = _PROBLEMS.get(status_code, ("error", "Error"))
     body: dict[str, Any] = {
         "type": "about:blank",
         "title": title,
         "status": status_code,
-        "detail": detail or message,
         "code": code,
         "request_id": request_id,
         "error": message,
     }
+    if detail and detail != message:
+        body["detail"] = detail
     if field:
         body["field"] = field
         body["errors"] = [{"field": field, "message": message}]
