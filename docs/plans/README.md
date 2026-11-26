@@ -7,5 +7,6 @@ Green work does not need a file here. Summarise it in the pull request.
 | File | What it covers |
 | --- | --- |
 | [`api-domain-staging-gate.md`](api-domain-staging-gate.md) | API domain and the staging gate |
+| [`api-standard.md`](api-standard.md) | One API shape: `/v1/<audience>/`, bearer tokens, snake_case on the wire |
 | [`ci-warning-review-fixes.md`](ci-warning-review-fixes.md) | Review findings from the CI warning cleanup |
 | [`2026-11-25-code-scanning-alerts.md`](2026-11-25-code-scanning-alerts.md) | Clear the open Semgrep and CodeQL alerts |
