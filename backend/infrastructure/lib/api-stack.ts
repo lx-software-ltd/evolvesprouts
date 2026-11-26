@@ -23,25 +23,11 @@ import * as path from "path";
 import { hashDirectory, hashFile, hashValue } from "./cdk-source-hash";
 import { DatabaseConstruct, PythonLambdaFactory, STANDARD_LOG_RETENTION } from "./constructs";
 import { MessagingNestedStack } from "./messaging-stack";
+import { ASSET_SHARE_PATH_REWRITE_FUNCTION } from "./asset-share-path-rewrite";
 import { sesVerifiedAddressAndDomainIdentityArns } from "./ses-identity-arns";
 
 // The custom-domain prod mapping still uses this stage. Share links do not.
 const API_GATEWAY_STAGE_NAME = "prod";
-
-const ASSET_SHARE_PATH_REWRITE_FUNCTION = `
-function handler(event) {
-  var request = event.request;
-  var uri = request.uri || '';
-  var sharePrefix = '/v1/assets/share/';
-  var emailPrefix = '/v1/assets/email-download/';
-  if (uri.indexOf(sharePrefix) === 0) {
-    request.uri = '/v1/public/assets/share/' + uri.substring(sharePrefix.length);
-  } else if (uri.indexOf(emailPrefix) === 0) {
-    request.uri = '/v1/public/assets/email-download/' + uri.substring(emailPrefix.length);
-  }
-  return request;
-}
-`;
 
 class CdkInternalLambdaCheckovSuppression implements cdk.IAspect {
   public visit(node: IConstruct): void {
@@ -3847,7 +3833,7 @@ export class ApiStack extends cdk.Stack {
       "AssetSharePathRewriteFunction",
       {
         comment:
-          "Rewrite emailed /v1/assets/share and /v1/assets/email-download links onto /v1/public.",
+          "Permanent: a sent-email route is never removed. Rewrites share and email-download paths, including /prod, onto /v1/public.",
         runtime: cloudfront.FunctionRuntime.JS_2_0,
         code: cloudfront.FunctionCode.fromInline(ASSET_SHARE_PATH_REWRITE_FUNCTION),
       }
