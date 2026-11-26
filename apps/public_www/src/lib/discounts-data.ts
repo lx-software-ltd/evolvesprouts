@@ -13,7 +13,7 @@ export interface DiscountRule {
   currencySymbol?: string | null;
 }
 
-export const DISCOUNT_VALIDATE_API_PATH = '/v1/discounts/validate';
+export const DISCOUNT_VALIDATE_API_PATH = '/v1/public/discounts/validate';
 
 function readNumericAmount(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) {

@@ -387,10 +387,33 @@ def _media_rewrite_operations() -> list[tuple[str, str]]:
     source = (
         _REPO_ROOT / "backend/infrastructure/lib/cloudfront-www-proxy-functions.ts"
     ).read_text()
+    share_source = (
+        _REPO_ROOT / "backend/infrastructure/lib/asset-share-path-rewrite.ts"
+    ).read_text()
     operations: list[tuple[str, str]] = []
     for uri in re.findall(r"request\.uri = '(/[^']+)'", source):
         method = "POST" if uri.endswith("/request") else "GET"
         operations.append((method, uri))
+
+    share_token = "A" * 24
+    share_paths = [
+        prefix + share_token
+        for prefix in re.findall(
+            r"request\.uri = '(/[^']+)' \+ path\.substring\(",
+            share_source,
+        )
+    ]
+    if not any(path.startswith("/v1/public/assets/share/") for path in share_paths):
+        raise AssertionError(
+            "asset share-path rewrite did not produce /v1/public/assets/share"
+        )
+    if not any(
+        path.startswith("/v1/public/assets/email-download/") for path in share_paths
+    ):
+        raise AssertionError(
+            "asset share-path rewrite did not produce /v1/public/assets/email-download"
+        )
+    operations.extend(("GET", path) for path in share_paths)
 
     entries = source.split("PROXY_ALLOWLIST_ENTRIES", 1)[1].split(
         "function quoteJs", 1

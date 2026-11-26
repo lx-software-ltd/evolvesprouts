@@ -29,7 +29,7 @@ export function resolveCalendarProbeBaseUrl(baseUrl) {
 export function buildCalendarUrl(baseUrl, slug) {
   const trimmed = resolveCalendarProbeBaseUrl(baseUrl);
   const search = new URLSearchParams({ slug });
-  return `${trimmed}/v1/calendar/public?${search.toString()}`;
+  return `${trimmed}/v1/public/calendar?${search.toString()}`;
 }
 
 function parseHttpStatusFromProbeError(error) {

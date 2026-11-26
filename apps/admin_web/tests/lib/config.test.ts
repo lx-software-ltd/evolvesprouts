@@ -46,6 +46,18 @@ describe('config helpers', () => {
     ]);
   });
 
+  it('keeps an absolute admin API origin that has no path', async () => {
+    const config = await loadConfigModule({
+      NEXT_PUBLIC_COGNITO_DOMAIN: 'auth.example.com',
+      NEXT_PUBLIC_COGNITO_CLIENT_ID: 'client-id',
+      NEXT_PUBLIC_COGNITO_USER_POOL_ID: 'pool-id',
+      NEXT_PUBLIC_API_BASE_URL: 'https://api.example.com/',
+    });
+
+    expect(config.getApiConfigError()).toBe('');
+    expect(config.getApiBaseUrl()).toBe('https://api.example.com');
+  });
+
   it('normalizes absolute admin API base URL and trims trailing slashes', async () => {
     const config = await loadConfigModule({
       NEXT_PUBLIC_COGNITO_DOMAIN: 'auth.example.com',

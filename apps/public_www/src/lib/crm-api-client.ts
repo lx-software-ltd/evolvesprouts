@@ -56,7 +56,7 @@ const getRequestCache = new Map<string, CachedGetEntry>();
 let getCacheWriteCount = 0;
 const WWW_PROXY_ALLOWED_HOSTS_ENV_NAME = 'NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS';
 const API_BASE_URL_ENV_NAME = 'NEXT_PUBLIC_API_BASE_URL';
-const WWW_API_PATH_PREFIX = '/www';
+const API_PATH_PREFIX = '/api';
 
 interface CrmApiUrlOptions {
   preferSameOriginProxy?: boolean;
@@ -90,6 +90,9 @@ function normalizeBaseUrl(baseUrl: string, options: CrmApiUrlOptions = {}): stri
     return '';
   }
   if (allowAnyBasePath) {
+    if (shouldPreferSameOriginProxy && shouldUsePublicApiProxy(parsedUrl.hostname)) {
+      return API_PATH_PREFIX;
+    }
     const normalizedPathname = normalizeAbsolutePathname(parsedUrl.pathname);
     if (!normalizedPathname) {
       return parsedUrl.origin;
@@ -105,14 +108,14 @@ function normalizeBaseUrl(baseUrl: string, options: CrmApiUrlOptions = {}): stri
   }
 
   const normalizedPathname = normalizeAbsolutePathname(parsedUrl.pathname);
-  if (normalizedPathname !== WWW_API_PATH_PREFIX) {
+  if (normalizedPathname && normalizedPathname !== API_PATH_PREFIX) {
     return '';
   }
-  if (
-    shouldPreferSameOriginProxy &&
-    shouldUsePublicWwwProxy(parsedUrl.hostname, normalizedPathname)
-  ) {
-    return normalizedPathname;
+  if (shouldPreferSameOriginProxy && shouldUsePublicApiProxy(parsedUrl.hostname)) {
+    return API_PATH_PREFIX;
+  }
+  if (!normalizedPathname) {
+    return parsedUrl.origin;
   }
 
   return `${parsedUrl.origin}${normalizedPathname}`;
@@ -133,7 +136,7 @@ function normalizeRelativeBaseUrl(baseUrl: string): string {
   }
 
   const normalizedBasePath = `/${normalizedPath}`;
-  if (normalizedBasePath !== WWW_API_PATH_PREFIX) {
+  if (normalizedBasePath !== API_PATH_PREFIX) {
     return '';
   }
 
@@ -160,10 +163,6 @@ function resolveConfiguredApiHostname(): string | null {
     if (parsedUrl.protocol.toLowerCase() !== 'https:') {
       return null;
     }
-    const normalizedPathname = normalizeAbsolutePathname(parsedUrl.pathname);
-    if (normalizedPathname !== WWW_API_PATH_PREFIX) {
-      return null;
-    }
     return parsedUrl.hostname.toLowerCase();
   } catch {
     return null;
@@ -183,10 +182,7 @@ function resolveProxyAllowedHosts(): Set<string> {
   );
 }
 
-function shouldUsePublicWwwProxy(apiHostname: string, apiPathname: string): boolean {
-  if (!apiPathname.startsWith(WWW_API_PATH_PREFIX)) {
-    return false;
-  }
+function shouldUsePublicApiProxy(apiHostname: string): boolean {
   const configuredApiHostname = resolveConfiguredApiHostname();
   if (configuredApiHostname && apiHostname.toLowerCase() !== configuredApiHostname) {
     return false;

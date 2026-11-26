@@ -58,8 +58,8 @@ jobs:
           NEXT_TELEMETRY_DISABLED: "1"
           NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_training_site_env.outputs.training_site_origin }}
           NEXT_PUBLIC_PUBLIC_WWW_ORIGIN: ${{ steps.resolve_training_site_env.outputs.production_site_origin }}
-          # Polls call same-origin /www/* via Training CloudFront (not execute-api /prod).
-          NEXT_PUBLIC_API_BASE_URL: /www
+          # Polls call same-origin /api/* via Training CloudFront (not execute-api /prod).
+          NEXT_PUBLIC_API_BASE_URL: /api
           NEXT_PUBLIC_TRAINING_API_KEY: ${{ secrets.NEXT_PUBLIC_WWW_CRM_API_KEY }}
 
       - name: Configure AWS credentials

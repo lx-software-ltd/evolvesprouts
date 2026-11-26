@@ -61,7 +61,7 @@ describe('BookFreeCallLandingPage', () => {
       return 0;
     });
     vi.stubGlobal('cancelAnimationFrame', vi.fn());
-    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.evolvesprouts.com/www');
+    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.evolvesprouts.com/api');
     vi.stubEnv('NEXT_PUBLIC_WWW_CRM_API_KEY', 'public-crm-key');
     vi.stubEnv('NEXT_PUBLIC_WHATSAPP_URL', 'https://wa.me/85290000000');
     vi.stubEnv('NEXT_PUBLIC_TURNSTILE_SITE_KEY', 'test-turnstile-site-key');

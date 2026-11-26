@@ -45,7 +45,7 @@ export async function persistFormAnswer(input: PersistFormAnswerInput): Promise<
     throw new FormApiError('Form API is not configured', 0);
   }
 
-  const endpointPath = `${config.baseUrl}/v1/forms/${encodeURIComponent(input.formSlug)}/answers`;
+  const endpointPath = `${config.baseUrl}/v1/public/forms/${encodeURIComponent(input.formSlug)}/answers`;
 
   const response = await fetch(endpointPath, {
     method: 'PUT',
@@ -142,7 +142,7 @@ export async function fetchFormContactContext(
     throw new FormApiError('Form API is not configured', 0);
   }
   const params = new URLSearchParams({ contactId: contactId.trim() });
-  const endpointPath = `${config.baseUrl}/v1/forms/${encodeURIComponent(formSlug)}/contact-context?${params.toString()}`;
+  const endpointPath = `${config.baseUrl}/v1/public/forms/${encodeURIComponent(formSlug)}/contact-context?${params.toString()}`;
   const response = await fetch(endpointPath, {
     method: 'GET',
     cache: 'no-store',

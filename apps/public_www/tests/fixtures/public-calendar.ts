@@ -1,5 +1,5 @@
 /**
- * Canonical `GET /v1/calendar/public`-shaped payload for public_www tests.
+ * Canonical `GET /v1/public/calendar`-shaped payload for public_www tests.
  * Covers: MBA training_course (alpha cohort), second MBA cohort, generic event, landing-page event.
  */
 export const publicCalendarFixture = {

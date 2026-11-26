@@ -1312,7 +1312,7 @@ describe('my-best-auntie booking modals footer content', () => {
       expect(requestSpy).toHaveBeenCalled();
     });
     expect(requestSpy).toHaveBeenCalledWith({
-      endpointPath: '/v1/reservations',
+      endpointPath: '/v1/public/reservations',
       method: 'POST',
       body: expect.objectContaining({
         attendeeName: 'Test User',
@@ -1559,7 +1559,7 @@ describe('my-best-auntie booking modals footer content', () => {
       expect(requestSpy).toHaveBeenCalled();
     });
     expect(requestSpy).toHaveBeenCalledWith({
-      endpointPath: '/v1/reservations',
+      endpointPath: '/v1/public/reservations',
       method: 'POST',
       body: expect.objectContaining({
         attendeeName: 'Test User',

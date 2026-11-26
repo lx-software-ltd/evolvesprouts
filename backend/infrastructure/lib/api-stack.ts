@@ -23,9 +23,10 @@ import * as path from "path";
 import { hashDirectory, hashFile, hashValue } from "./cdk-source-hash";
 import { DatabaseConstruct, PythonLambdaFactory, STANDARD_LOG_RETENTION } from "./constructs";
 import { MessagingNestedStack } from "./messaging-stack";
+import { ASSET_SHARE_PATH_REWRITE_FUNCTION } from "./asset-share-path-rewrite";
 import { sesVerifiedAddressAndDomainIdentityArns } from "./ses-identity-arns";
 
-// Custom-domain base path and the asset-share origin path must match this stage.
+// The custom-domain prod mapping still uses this stage. Share links do not.
 const API_GATEWAY_STAGE_NAME = "prod";
 
 class CdkInternalLambdaCheckovSuppression implements cdk.IAspect {
@@ -3821,29 +3822,55 @@ export class ApiStack extends cdk.Stack {
     const assetShareApiOrigin = new origins.HttpOrigin(
       apiCustomDomainName.valueAsString,
       {
-        originPath: `/${API_GATEWAY_STAGE_NAME}`,
         protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
         customHeaders: {
           "x-api-key": publicApiKeyValue.valueAsString,
         },
       }
     );
-    assetDownloadDistribution.addBehavior("v1/assets/share/*", assetShareApiOrigin, {
+    const assetSharePathRewrite = new cloudfront.Function(
+      this,
+      "AssetSharePathRewriteFunction",
+      {
+        comment:
+          "Permanent: a sent-email route is never removed. Rewrites share and email-download paths, including /prod, onto /v1/public.",
+        runtime: cloudfront.FunctionRuntime.JS_2_0,
+        code: cloudfront.FunctionCode.fromInline(ASSET_SHARE_PATH_REWRITE_FUNCTION),
+      }
+    );
+    const assetShareBehavior = {
       viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
       cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
       originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
-    });
+      functionAssociations: [
+        {
+          function: assetSharePathRewrite,
+          eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+        },
+      ],
+    };
+    assetDownloadDistribution.addBehavior(
+      "v1/assets/share/*",
+      assetShareApiOrigin,
+      assetShareBehavior,
+    );
     assetDownloadDistribution.addBehavior(
       "v1/assets/email-download/*",
       assetShareApiOrigin,
-      {
-        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-        allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
-        cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-        originRequestPolicy:
-          cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
-      }
+      assetShareBehavior,
+    );
+    // Old emailed links still start with /prod. Without these behaviors the
+    // function's /prod branch never runs.
+    assetDownloadDistribution.addBehavior(
+      "prod/v1/assets/share/*",
+      assetShareApiOrigin,
+      assetShareBehavior,
+    );
+    assetDownloadDistribution.addBehavior(
+      "prod/v1/assets/email-download/*",
+      assetShareApiOrigin,
+      assetShareBehavior,
     );
 
     // ---------------------------------------------------------------------

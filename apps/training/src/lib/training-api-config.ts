@@ -1,7 +1,7 @@
 const API_BASE_URL_ENV = 'NEXT_PUBLIC_API_BASE_URL';
 const API_KEY_ENV = 'NEXT_PUBLIC_TRAINING_API_KEY';
 const API_KEY_FALLBACK_ENV = 'NEXT_PUBLIC_WWW_CRM_API_KEY';
-const WWW_PREFIX = '/www';
+const API_PREFIX = '/api';
 
 export function resolveTrainingApiConfig():
   | { baseUrl: string; apiKey: string }
@@ -21,16 +21,16 @@ export function normalizeTrainingApiBaseUrl(raw: string): string {
   if (!raw) {
     return '';
   }
-  if (raw === WWW_PREFIX || raw.startsWith(`${WWW_PREFIX}/`)) {
-    return WWW_PREFIX;
+  if (raw === API_PREFIX || raw.startsWith(`${API_PREFIX}/`)) {
+    return API_PREFIX;
   }
   try {
     const parsed = new URL(raw);
     const pathname = parsed.pathname.replace(/\/$/, '') || '';
-    if (pathname !== WWW_PREFIX) {
+    if (pathname !== API_PREFIX) {
       return '';
     }
-    return `${parsed.origin}${WWW_PREFIX}`;
+    return `${parsed.origin}${API_PREFIX}`;
   } catch {
     return '';
   }

@@ -11,7 +11,7 @@ describe('calendar probe base URL', () => {
       'https://api.example.com/prod',
     );
     expect(buildCalendarUrl('https://api.example.com/prod', 'book-a-free-call')).toBe(
-      'https://api.example.com/prod/v1/calendar/public?slug=book-a-free-call',
+      'https://api.example.com/prod/v1/public/calendar?slug=book-a-free-call',
     );
   });
 

@@ -44,7 +44,7 @@ export {
 
 type EventStatus = 'open' | 'fully_booked';
 
-export const EVENTS_API_PATH = '/v1/calendar/public';
+export const EVENTS_API_PATH = '/v1/public/calendar';
 
 /** Timeout for server-side / static-export calendar fetches (events, MBA, landing pages). */
 export const CALENDAR_PUBLIC_BUILD_FETCH_TIMEOUT_MS = 15_000;
@@ -68,7 +68,7 @@ export const EVENT_BOOKING_SYSTEM = 'event-booking';
 /** Consultation one-off booking modal (same reservation API shape as events). */
 export const CONSULTATION_BOOKING_SYSTEM = 'consultation-booking';
 
-/** Query keys for `GET /v1/calendar/public` (OpenAPI: `service_type`, `slug`, `service_key`). */
+/** Query keys for `GET /v1/public/calendar` (OpenAPI: `service_type`, `slug`, `service_key`). */
 export interface EventsFetchParams {
   serviceType?: 'event' | 'training_course';
   slug?: string;
