@@ -199,6 +199,22 @@ function assertGatewayResponsesHaveNoBodyTemplates(template: Template): void {
           `GatewayResponse ${logicalId} must include a message member`,
         );
       }
+      if (!body.includes('"request_id": "$context.requestId"')) {
+        throw new Error(
+          `GatewayResponse ${logicalId} must substitute request_id from $context.requestId`,
+        );
+      }
+    }
+    const parameters = (props as { ResponseParameters?: Record<string, unknown> })
+      .ResponseParameters;
+    const encodedParameters = JSON.stringify(parameters ?? {});
+    if (
+      encodedParameters.includes("x-request-id") ||
+      encodedParameters.includes("'$context.requestId'")
+    ) {
+      throw new Error(
+        `GatewayResponse ${logicalId} must not set a static x-request-id header. Found ${encodedParameters}`,
+      );
     }
   }
 }

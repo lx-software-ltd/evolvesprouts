@@ -45,15 +45,31 @@ def test_authorize_api_token_rejects_missing_header() -> None:
     assert str(raised.value) == "Unauthorized"
 
 
-def test_authorize_api_token_denies_malformed_token() -> None:
-    policy = ata.authorize_api_token(
-        {
-            "headers": {"Authorization": "Bearer not-a-token"},
-            "methodArn": "arn:example",
-        }
-    )
-    assert policy["policyDocument"]["Statement"][0]["Effect"] == "Deny"
-    assert policy["context"]["reason"] == "invalid_key"
+def test_authorize_api_token_rejects_malformed_token() -> None:
+    with pytest.raises(ata.Unauthorized, match="^Unauthorized$"):
+        ata.authorize_api_token(
+            {
+                "headers": {"Authorization": "Bearer not-a-token"},
+                "methodArn": "arn:example",
+            }
+        )
+
+
+def test_authorize_api_token_rejects_unknown_or_revoked_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    generated = generate_api_key()
+    repo = _FakeRepo(None)
+    monkeypatch.setattr(ata, "ApiKeyRepository", lambda _session: repo)
+    monkeypatch.setattr(ata, "Session", lambda _engine: _FakeSessionCM())
+    monkeypatch.setattr(ata, "get_engine", lambda: object())
+    with pytest.raises(ata.Unauthorized, match="^Unauthorized$"):
+        ata.authorize_api_token(
+            {
+                "headers": {"Authorization": f"Bearer {generated.plaintext}"},
+                "methodArn": "arn:example",
+            }
+        )
 
 
 def _allow_token(

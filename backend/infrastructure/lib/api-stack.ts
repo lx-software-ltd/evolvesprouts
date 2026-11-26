@@ -3281,6 +3281,8 @@ export class ApiStack extends cdk.Stack {
     // The body uses simple substitution only. API Gateway does not run full
     // VTL here, and a prior Velocity template leaked `#set` / `#if` text
     // into JSON error bodies. Response headers below still apply.
+    // Do not set x-request-id. A quoted '$context.requestId' is static text.
+    // The body request_id member is the substitution that works.
     // -------------------------------------------------------------------------
     const gatewayResponseHeaders: Record<string, string> = {
       "Access-Control-Allow-Origin": `'${corsAllowedOrigins[0]}'`,
@@ -3288,10 +3290,6 @@ export class ApiStack extends cdk.Stack {
         "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Api-Token,X-Amz-Security-Token,X-Turnstile-Token'",
       "Access-Control-Allow-Methods": "'GET,POST,PUT,PATCH,DELETE,OPTIONS'",
       Vary: "'Origin'",
-    };
-    const gatewayErrorHeaders = {
-      ...gatewayResponseHeaders,
-      "x-request-id": "'$context.requestId'",
     };
     const gatewayErrorTemplate = [
       "{",
@@ -3306,19 +3304,19 @@ export class ApiStack extends cdk.Stack {
     ].join("\n");
     api.addGatewayResponse("GatewayResponseDefault4XX", {
       type: apigateway.ResponseType.DEFAULT_4XX,
-      responseHeaders: gatewayErrorHeaders,
+      responseHeaders: gatewayResponseHeaders,
       templates: { "application/json": gatewayErrorTemplate },
     });
     api.addGatewayResponse("GatewayResponseDefault5XX", {
       type: apigateway.ResponseType.DEFAULT_5XX,
-      responseHeaders: gatewayErrorHeaders,
+      responseHeaders: gatewayResponseHeaders,
       templates: { "application/json": gatewayErrorTemplate },
     });
     // /health was the last IAM method.
     api.addGatewayResponse("GatewayResponseMissingAuthenticationToken", {
       type: apigateway.ResponseType.MISSING_AUTHENTICATION_TOKEN,
       statusCode: "404",
-      responseHeaders: gatewayErrorHeaders,
+      responseHeaders: gatewayResponseHeaders,
       templates: { "application/json": gatewayErrorTemplate },
     });
 
