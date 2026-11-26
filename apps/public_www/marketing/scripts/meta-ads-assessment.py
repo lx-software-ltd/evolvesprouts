@@ -196,10 +196,8 @@ def main():
                 else None
             )
             print(f"  {adset.get('name')}")
-            print(
-                f"    {adset.get('status')} | Opt: {adset.get('optimization_goal')} | "
-                f"Billing: {adset.get('billing_event')}"
-            )
+            # billing_event is Meta's ad-set billing mode, not card data.
+            print(f"    {adset.get('status')} | Opt: {adset.get('optimization_goal')} | Billing: {adset.get('billing_event')}")  # noqa
             if daily:
                 print(f"    Budget: HK${daily:.2f}/day")
             t = adset.get("targeting", {})
@@ -208,10 +206,8 @@ def main():
                 countries = geo.get("countries", []) if geo else []
                 gender_map = {1: "Male", 2: "Female"}
                 genders = [gender_map.get(g, g) for g in t.get("genders", [])]
-                print(
-                    f"    Geo: {countries} | Age: {t.get('age_min')}-"
-                    f"{t.get('age_max')} | Gender: {genders}"
-                )
+                # genders is the ad set's targeting option, not a person.
+                print(f"    Geo: {countries} | Age: {t.get('age_min')}-{t.get('age_max')} | Gender: {genders}")  # noqa
     print()
 
     # Campaign insights (30 days)

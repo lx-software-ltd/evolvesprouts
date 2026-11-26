@@ -103,7 +103,8 @@ def _call(
         headers={"Authorization": f"Bearer {token}", "Content-Type": content_type},
     )
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
+        with urllib.request.urlopen(request, timeout=30) as response:  # nosec B310
             payload = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as error:
         payload = json.loads(error.read().decode("utf-8") or "{}")

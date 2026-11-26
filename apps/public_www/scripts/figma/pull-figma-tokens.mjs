@@ -18,8 +18,10 @@ async function ensureDirectory(dirPath) {
 }
 
 async function writeJson(filePath, data) {
+  // Callers pass a fixed path under figma/files. The body is the Figma
+  // document this operator script is saving.
   const content = `${JSON.stringify(data, null, 2)}\n`;
-  await writeFile(filePath, content, 'utf8');
+  await writeFile(filePath, content, 'utf8'); // lgtm[js/http-to-file-access]
 }
 
 async function ensureJsonIfMissing(filePath, fallback) {
