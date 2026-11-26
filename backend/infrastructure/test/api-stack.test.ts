@@ -1275,9 +1275,8 @@ function assertTokenAuthorizerCoverage(template: Template): void {
       };
     }
   >;
-  // Retired /v1/public/{proxy+} still carries the token authorizer on this
-  // branch. Later branches drop the alias or the authorizer and this set.
-  const publicExempt = new Set(["/v1/public/{proxy+}"]);
+  // No /v1/public method may carry the token authorizer, including a proxy.
+  const publicExempt = new Set<string>();
   const seenExempt = new Set<string>();
   let partnerMethods = 0;
   for (const method of Object.values(methods)) {

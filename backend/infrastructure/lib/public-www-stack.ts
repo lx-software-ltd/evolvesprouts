@@ -15,7 +15,7 @@ import {
   WWW_API_ERROR_RESPONSE_FUNCTION,
 } from "./cloudfront-www-proxy-functions";
 
-const API_BASE_URL_PATTERN = "^https://[^/]+(/[^/]+)?/?$";
+const API_BASE_URL_PATTERN = "^https://[^/]+/?$";
 
 // Secrets are spliced into CloudFront Function source as JS string literals,
 // so the allowed alphabet excludes quotes and backslashes. Minimum 32 chars.
@@ -159,10 +159,10 @@ export class PublicWwwStack extends cdk.Stack {
       {
         type: "String",
         description:
-          "Absolute HTTPS public API base URL used by the /www and /api proxies (for example https://api.example.com or https://api.example.com/prod).",
+          "Absolute HTTPS public API origin for the /api proxy (for example https://api.example.com). A path such as /prod is rejected.",
         allowedPattern: API_BASE_URL_PATTERN,
         constraintDescription:
-          "Must be an absolute HTTPS origin, with an optional single path segment.",
+          "Must be an absolute HTTPS origin with an empty path or a trailing slash.",
       },
     );
     const publicWwwApiOriginDomainName = resolveApiOriginDomainName(
@@ -179,10 +179,10 @@ export class PublicWwwStack extends cdk.Stack {
       {
         type: "String",
         description:
-          "Absolute HTTPS API base URL for media requests (for example https://api.example.com or https://api.example.com/prod).",
+          "Absolute HTTPS API origin for media requests (for example https://api.example.com). A path such as /prod is rejected.",
         allowedPattern: API_BASE_URL_PATTERN,
         constraintDescription:
-          "Must be an absolute HTTPS origin, with an optional single path segment.",
+          "Must be an absolute HTTPS origin with an empty path or a trailing slash.",
       },
     );
     const publicWwwMediaRequestApiOriginDomainName = resolveApiOriginDomainName(

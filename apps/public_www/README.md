@@ -203,7 +203,7 @@ Optional environment variables:
 - `SMOKE_MEDIA_API_BASE_URL` (optional media API base fallback for
   `/v1/assets/free/request`; falls back to `NEXT_PUBLIC_API_BASE_URL`)
 
-If a same-origin `/www/*` API smoke request returns `404`, the runner retries
+If a same-origin `/api/*` API smoke request returns `404`, the runner retries
 that request against the corresponding configured fallback API base before
 marking it as failed.
 

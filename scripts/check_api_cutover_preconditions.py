@@ -19,7 +19,7 @@ import os
 import sys
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 CUSTOM_DOMAIN_URL_ENV = "API_CUTOVER_CUSTOM_DOMAIN_URL"
 SITE_BUNDLE_URL_ENV = "API_CUTOVER_SITE_BUNDLE_URL"
@@ -33,6 +33,13 @@ def custom_domain_responds(status_code: int) -> str | None:
     if 200 <= status_code < 400:
         return None
     return f"custom domain status {status_code}"
+
+
+def site_bundle_responds(status_code: int) -> str | None:
+    """Return a finding when the site bundle status is outside 2xx and 3xx."""
+    if 200 <= status_code < 400:
+        return None
+    return f"site bundle status {status_code}"
 
 
 def execute_api_not_required(url: str, body: str) -> str | None:
@@ -56,6 +63,19 @@ def legacy_header_not_required(body: str) -> str | None:
     return None
 
 
+_MAX_BODY_BYTES = 1_000_000
+
+
+class HttpsOnlyRedirectHandler(HTTPRedirectHandler):
+    """Refuse a redirect whose target is not https."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[no-untyped-def]
+        parsed = urlsplit(newurl)
+        if parsed.scheme != "https" or not parsed.hostname:
+            raise ValueError(f"refusing a URL that is not https: {newurl}")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
 def _https_url(url: str) -> str:
     """Reject any scheme other than https, including file."""
     parsed = urlsplit(url)
@@ -64,16 +84,20 @@ def _https_url(url: str) -> str:
     return url
 
 
+def _opener():  # type: ignore[no-untyped-def]
+    return build_opener(HttpsOnlyRedirectHandler)
+
+
 def _read(url: str) -> tuple[int, str]:
     request = Request(_https_url(url), method="GET")
     try:
         # The URL is https-only. It comes from the operator's environment.
         # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
-        with urlopen(request, timeout=10) as response:  # nosec B310
-            payload = response.read(1_000_000)
+        with _opener().open(request, timeout=10) as response:  # nosec B310
+            payload = response.read(_MAX_BODY_BYTES)
             return int(response.status), payload.decode("utf-8", errors="replace")
     except HTTPError as exc:
-        payload = exc.read(1_000_000)
+        payload = exc.read(_MAX_BODY_BYTES)
         return int(exc.code), payload.decode("utf-8", errors="replace")
 
 
@@ -97,13 +121,17 @@ def main() -> int:
 
     try:
         status_code, custom_body = _read(custom_url)
-        _bundle_status, bundle_body = _read(bundle_url)
+        bundle_status, bundle_body = _read(bundle_url)
+    except ValueError as exc:
+        print(str(exc))
+        return 1
     except (URLError, TimeoutError, OSError) as exc:
         print(f"custom domain did not respond: {type(exc).__name__}")
         return 1
 
     checks = (
         custom_domain_responds(status_code),
+        site_bundle_responds(bundle_status),
         execute_api_not_required(custom_url, custom_body),
         execute_api_not_required(bundle_url, bundle_body),
         site_bundle_has_no_www_v1(bundle_body),

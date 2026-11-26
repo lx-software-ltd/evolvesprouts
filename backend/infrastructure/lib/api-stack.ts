@@ -3135,7 +3135,6 @@ export class ApiStack extends cdk.Stack {
           "Authorization",
           "X-Amz-Date",
           "X-Api-Key",
-          "X-Api-Token",
           "X-Amz-Security-Token",
           "X-Turnstile-Token",
         ],
@@ -3280,7 +3279,7 @@ export class ApiStack extends cdk.Stack {
     const gatewayResponseHeaders: Record<string, string> = {
       "Access-Control-Allow-Origin": `'${corsAllowedOrigins[0]}'`,
       "Access-Control-Allow-Headers":
-        "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Api-Token,X-Amz-Security-Token,X-Turnstile-Token'",
+        "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,X-Turnstile-Token'",
       "Access-Control-Allow-Methods": "'GET,POST,PUT,PATCH,DELETE,OPTIONS'",
       Vary: "'Origin'",
     };

@@ -346,13 +346,7 @@ _CANONICAL_FOR_PUBLIC: dict[str, str] = {}
 
 
 def _with_public_aliases(routes):
-    """Publish website and webhook routes only on their open paths.
-
-    Emailed share links still match ``/v1/assets/share`` and
-    ``/v1/assets/email-download``. The media distribution rewrites those
-    viewer paths onto ``/v1/public`` before they reach API Gateway, so both
-    prefixes stay.
-    """
+    """Publish website routes on /v1/public. Share links keep both prefixes."""
     expanded = []
     _CANONICAL_FOR_PUBLIC.clear()
     for route_path, exact, handler in routes:

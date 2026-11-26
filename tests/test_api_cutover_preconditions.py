@@ -66,6 +66,35 @@ def test_read_refuses_a_non_https_url() -> None:
         _checks._read("file:///etc/passwd")
 
 
+def test_redirect_to_http_is_refused() -> None:
+    handler = _checks.HttpsOnlyRedirectHandler()
+    request = _checks.Request("https://api.example.com/start")
+    with pytest.raises(ValueError, match="not https"):
+        handler.redirect_request(
+            request,
+            None,
+            302,
+            "Found",
+            {},
+            "http://api.example.com/next",
+        )
+
+
+def test_bundle_status_outside_success_is_a_finding() -> None:
+    assert _checks.site_bundle_responds(200) is None
+    assert _checks.site_bundle_responds(302) is None
+    assert _checks.site_bundle_responds(404) == "site bundle status 404"
+
+
+def test_main_reports_a_refused_url(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv(_checks.CUSTOM_DOMAIN_URL_ENV, "file:///etc/passwd")
+    monkeypatch.setenv(_checks.SITE_BUNDLE_URL_ENV, "https://example.com/bundle.js")
+    assert _checks.main() == 1
+    assert "not https" in capsys.readouterr().out
+
+
 def test_skips_when_url_env_is_unset(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

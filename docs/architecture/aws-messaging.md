@@ -32,8 +32,8 @@ Between phases, drain SQS queues and DLQs where possible; expect brief SNS topic
 
 ## Public website transactional confirmations (SES)
 
-The public website contact form, booking modal (`/www/v1/contact-us`,
-`/www/v1/reservations`), and media download flow send **customer-facing**
+The public website contact form, booking modal (`/v1/public/contact-us`,
+`/v1/public/reservations`), and media download flow send **customer-facing**
 confirmation or download-link emails
 through **Amazon SES templated send** (`SendTemplatedEmail`). Templates are
 stored in SES and upserted at deploy time by a **CloudFormation custom

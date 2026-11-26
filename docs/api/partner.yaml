@@ -2063,7 +2063,7 @@ components:
           nullable: true
           description: >
             Optional machine-readable reason on some 404 responses (for example discount validate).
-            For `POST /v1/discounts/validate` and `POST /www/v1/discounts/validate`, when present on
+            For `POST /v1/discounts/validate` and `POST /v1/public/discounts/validate`, when present on
             a 404 the value is one of: `unknown_service_instance_slug`, `service_key_instance_mismatch`.
             The Lambda also logs other reasons (`code_not_found`, `referral_type_not_allowed`, `inactive`,
             `not_yet_valid`, `expired`, `max_uses_exhausted`, `instance_scope_mismatch`, `service_scope_mismatch`)

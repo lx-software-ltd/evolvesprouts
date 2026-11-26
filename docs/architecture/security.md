@@ -330,7 +330,7 @@ This key is intentionally public and must remain strictly scoped.
 Requirements:
 
 - The key must be read-only and limited to the required public endpoints.
-- Requests should prefer same-origin `/www` proxy routing.
+- Requests should prefer same-origin `/api` proxy routing.
 - Public write endpoints (for example reservation submissions) must validate
   `X-Turnstile-Token` server-side against Cloudflare Turnstile.
 - API-side rate limiting and monitoring must be enabled. The shared public
@@ -341,25 +341,25 @@ Requirements:
 
 ### Public WWW same-origin proxy allowlist
 
-The CloudFront `www/*` behavior in
+The CloudFront `api/*` behavior in
 `backend/infrastructure/lib/public-www-stack.ts` uses a viewer-request
 CloudFront Function with a **default-deny** policy.
 
 Security model:
 
 - Only explicitly approved method+path pairs are forwarded.
-  - Most `/www/*` routes use the API origin host resolved from
+  - Most `/api/*` routes use the API origin host resolved from
     `PublicWwwApiBaseUrl`.
-  - `POST /www/v1/assets/free/request` uses the origin resolved from
-    `PublicWwwMediaRequestApiBaseUrl`, with a viewer-request URI rewrite to
-    `/v1/assets/free/request`.
+  - `POST /api/v1/public/assets/free/request` uses the origin resolved from
+    `PublicWwwMediaRequestApiBaseUrl`. The viewer-request function strips
+    `/api` and leaves `/v1/public/assets/free/request`.
 - Requests that are not allowlisted are blocked at CloudFront with a `403`
   before reaching the API origin.
 - The policy is applied to both production and staging public website
   distributions.
 
 The training website stack (`backend/infrastructure/lib/training-stack.ts`)
-uses the same default-deny `/www/*` allowlist and media-request rewrite as the
+uses the same default-deny `/api/*` allowlist and media-request rewrite as the
 public WWW stack via shared sources in
 `backend/infrastructure/lib/cloudfront-www-proxy-functions.ts`. When adding or
 changing a public API path, update that module so production public WWW and
@@ -390,13 +390,13 @@ production secrets are still empty, and responses stay the same until a
 production secret is set. CloudFormation updates the four functions on a
 distribution one after another. A set value returns 403
 when the header is missing or wrong. The viewer-response error function
-does not run the check. Maintenance mode replaces the `www/*`
+does not run the check. Maintenance mode replaces the `api/*`
 viewer-request function with a 503 response, so that path does not reach
 the origin either. Behaviors on each distribution:
 
 - default (static path rewrite)
-- `www/*` (API allowlist)
-- `www/v1/assets/free/request` (media-request proxy)
+- `api/*` (API allowlist)
+- `api/v1/public/assets/free/request` (media-request proxy)
 
 Staging traffic that is allowed through the Worker
 `evolvesprouts-www-staging-redirect-allowlist` sends the header from the
@@ -462,26 +462,26 @@ Process to add a new public API path:
 
 Current allowlisted public website POST paths include:
 
-- `/www/v1/contact-us`
-- `/www/v1/discounts/validate`
-- `/www/v1/assets/free/request`
-- `/www/v1/reservations`
-- `/www/v1/reservations/payment-intent`
+- `/v1/public/contact-us`
+- `/v1/public/discounts/validate`
+- `/v1/public/assets/free/request`
+- `/v1/public/reservations`
+- `/v1/public/reservations/payment-intent`
 
-Training form persistence uses `PUT /www/v1/forms/{form_slug}/answers` (prefix +
+Training form persistence uses `PUT /v1/public/forms/{form_slug}/answers` (prefix +
 `/answers` suffix rule in `WWW_PROXY_ALLOWLIST_FUNCTION`; not a fixed path per form).
-Personalised-form household placeholders use `GET /www/v1/forms/{form_slug}/contact-context`
+Personalised-form household placeholders use `GET /v1/public/forms/{form_slug}/contact-context`
 (prefix + `/contact-context` suffix; `Cache-Control: no-store`; response is first names
 and family labels only).
-Training poll persistence uses `PUT /www/v1/polls/{poll_slug}/answers` (prefix +
+Training poll persistence uses `PUT /v1/public/polls/{poll_slug}/answers` (prefix +
 `/answers` suffix rule in `WWW_PROXY_ALLOWLIST_FUNCTION`; not a fixed path per poll).
-Live poll aggregates use `GET /www/v1/polls/{poll_slug}/questions/{question_id}/results`
+Live poll aggregates use `GET /v1/public/polls/{poll_slug}/questions/{question_id}/results`
 (prefix + `/questions/` + `/results` suffix rule; not a fixed path per poll).
 
 ### Training poll facilitator controls (accepted risk)
 
 The training site facilitator flow (`/polls/{slug}/controls/` in
-`apps/training`, backed by `PUT /www/v1/polls/{poll_slug}/control`) uses the
+`apps/training`, backed by `PUT /v1/public/polls/{poll_slug}/control`) uses the
 same browser-visible public API key as participant poll answers, and the
 controls page itself is unauthenticated.
 
@@ -492,7 +492,7 @@ poll question is open and viewing aggregate workshop answers.
 
 Existing mitigations:
 
-- CloudFront default-deny `/www/*` allowlist restricts reachable methods and
+- CloudFront default-deny `/api/*` allowlist restricts reachable methods and
   paths.
 - Backend validation enforces UUID `sessionId`, slug patterns, field
   length caps, facilitator-published option membership for select/multiselect

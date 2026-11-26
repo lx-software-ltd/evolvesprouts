@@ -112,7 +112,7 @@ def test_authorize_api_token_ignores_legacy_header(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     generated = generate_api_key()
-    with pytest.raises(ata.Unauthorized):
+    with pytest.raises(ata.Unauthorized, match="^Unauthorized$"):
         _allow_token(monkeypatch, {"X-Api-Token": generated.plaintext})
 
 

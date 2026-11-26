@@ -78,8 +78,8 @@ successful deploy of this stack, the job summary lists
 and after, and the log warns when either goes from `true` to anything else.
 
 The deploy that publishes this check updates the three production
-viewer-request functions (path rewrite, `www/*`, and
-`www/v1/assets/free/request`) even while both production secrets are empty.
+viewer-request functions (path rewrite, `api/*`, and
+`api/v1/public/assets/free/request`) even while both production secrets are empty.
 The check returns the request unchanged in that case, so responses stay as
 they are. CloudFormation updates the four functions on a distribution one
 after another.
@@ -148,7 +148,7 @@ lock is on.
 Public WWW API configuration is provided at build time via:
 
 - GitHub variable `NEXT_PUBLIC_WWW_API_BASE_URL` (public-site build API base;
-  falls back to `NEXT_PUBLIC_API_BASE_URL`. Use `/www` for same-origin calls)
+  falls back to `NEXT_PUBLIC_API_BASE_URL`. Use `/api` for same-origin calls)
 - GitHub variable `NEXT_PUBLIC_API_BASE_URL` (admin and other direct clients;
   set this to `ApiCustomDomainUrl` at API cutover)
 - GitHub variables `PUBLIC_WWW_API_BASE_URL` and
@@ -188,15 +188,19 @@ the website canonical origin aligned with infrastructure domain parameters.
 When `NEXT_PUBLIC_GTM_ALLOWED_HOSTS` is unset, GTM runtime gating defaults to
 the hostname resolved from `NEXT_PUBLIC_SITE_ORIGIN`.
 
-`evolvesprouts-public-www` CloudFront proxies `https://{www-domain}/www/*`
+`evolvesprouts-public-www` CloudFront proxies `https://{www-domain}/api/*`
 to the host resolved from `PublicWwwApiBaseUrl` (GitHub variable
 `PUBLIC_WWW_API_BASE_URL`) with caching disabled for those requests.
-`POST /www/v1/assets/free/request` is routed by a path-specific CloudFront behavior
-to the origin resolved from `PublicWwwMediaRequestApiBaseUrl`, with
-URI rewrite to `/v1/assets/free/request`.
-Point both origin variables at `ApiCustomDomainUrl`. The execute-api
-hostname does not accept calls.
-Set `NEXT_PUBLIC_WWW_API_BASE_URL` (or `NEXT_PUBLIC_API_BASE_URL`) to `/www`
+`POST /api/v1/public/assets/free/request` is routed by a path-specific
+CloudFront behavior to the origin resolved from
+`PublicWwwMediaRequestApiBaseUrl`. The viewer-request function strips the
+`/api` prefix and leaves `/v1/public/assets/free/request`.
+Point both origin variables at `ApiCustomDomainUrl` with no path. A value
+that still ends in `/prod` sends the site to a path the stage does not
+serve. `vars.NEXT_PUBLIC_WWW_API_BASE_URL` can override
+`NEXT_PUBLIC_API_BASE_URL` for the site build. The execute-api hostname
+does not accept calls.
+Set `NEXT_PUBLIC_WWW_API_BASE_URL` (or `NEXT_PUBLIC_API_BASE_URL`) to `/api`
 in the public-site build to keep browser API calls same-origin and avoid
 cross-origin CORS preflight failures.
 
@@ -215,12 +219,12 @@ Workflow: `.github/workflows/deploy-public-www-staging.yml`
   - store immutable snapshot in `releases/<release_id>/`
   - preserve existing `_next/static` hashed assets to avoid stale HTML
     requesting deleted chunks
-  - re-apply `/www/*` CloudFront proxy allowlist behavior
+  - re-apply `/api/*` CloudFront proxy allowlist behavior
   - invalidate staging CloudFront (including `/_next/static/*` to clear
     stale asset error responses)
   - probe landing page calendars at `NEXT_PUBLIC_API_BASE_URL`. That
     variable stays an absolute URL. The site build reads
-    `NEXT_PUBLIC_WWW_API_BASE_URL`, which may be the relative `/www` path.
+    `NEXT_PUBLIC_WWW_API_BASE_URL`, which may be the relative `/api` path.
 
 ### Smoke test staging website
 
@@ -249,14 +253,14 @@ Workflow: `.github/workflows/smoke-public-www-staging.yml`
   - verifies page health via sitemap-driven URL checks (with staging-origin URL
     remapping)
   - verifies public API endpoints:
-    - `GET /www/v1/calendar/public`
-    - `GET /www/v1/assets/free?limit=100`
-    - `POST /www/v1/contact-us`
-    - `POST /www/v1/discounts/validate`
-    - `POST /www/v1/assets/free/request`
-    - `POST /www/v1/reservations`
-    - `POST /www/v1/reservations/payment-intent`
-  - when same-origin `/www/*` checks return `404`, retries API checks through
+    - `GET /v1/public/calendar`
+    - `GET /v1/public/assets/free?limit=100`
+    - `POST /v1/public/contact-us`
+    - `POST /v1/public/discounts/validate`
+    - `POST /v1/public/assets/free/request`
+    - `POST /v1/public/reservations`
+    - `POST /v1/public/reservations/payment-intent`
+  - when same-origin `/api/*` checks return `404`, retries API checks through
     configured fallback API base URLs before failing
 
 ### Promote to production (manual)
@@ -269,7 +273,7 @@ Workflow: `.github/workflows/promote-public-www.yml`
   - `promotion_mode=release_id` with `release_id=<id>` to promote a specific
     staging release
   - `promotion_mode=maintenance_on` to deploy a static maintenance page to
-    production and block `https://www.evolvesprouts.com/www/*` at CloudFront
+    production and block `https://www.evolvesprouts.com/api/*` at CloudFront
 - Required for promotion builds (not `maintenance_on`): `AssetDownloadCustomDomainName`
   in `backend/infrastructure/params/production.json` (same source as staging
   deploys for `NEXT_PUBLIC_ASSET_SHARE_BASE_URL`).
@@ -281,7 +285,7 @@ Workflow: `.github/workflows/promote-public-www.yml`
       GitHub Environment variables (including `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`)
     - sync `apps/public_www/out` to the production bucket (not a copy of the
       staging S3 artifact)
-    - restore `/www/*` CloudFront proxy allowlist behavior
+    - restore `/api/*` CloudFront proxy allowlist behavior
     - fully invalidate production CloudFront
   - `maintenance_on`:
     - deploy static maintenance artifact from `apps/public_www/maintenance/`
@@ -289,7 +293,7 @@ Workflow: `.github/workflows/promote-public-www.yml`
     - include `/images/evolvesprouts-logo.svg` from `apps/public_www/public/`
     - include `/favicon.ico` from `apps/public_www/public/`
     - set `Cache-Control: no-store` on maintenance files
-    - switch `/www/*` CloudFront behavior to a maintenance block function
+    - switch `/api/*` CloudFront behavior to a maintenance block function
       returning `503 Service Unavailable`
     - fully invalidate production CloudFront
 
@@ -318,7 +322,7 @@ Characteristics:
   - `NEXT_PUBLIC_EMAIL`
   - `NEXT_PUBLIC_WHATSAPP_URL`
   - `NEXT_PUBLIC_INSTAGRAM_URL`
-- `/www/*` API proxy blocked at CloudFront while maintenance is enabled
+- `/api/*` API proxy blocked at CloudFront while maintenance is enabled
 
 ### Enable maintenance mode (production)
 
@@ -352,7 +356,7 @@ Alternative:
 - Select `promotion_mode=release_id`
 - Provide a known-good staged release ID
 
-Disabling maintenance mode restores the standard `/www/*` CloudFront allowlist
+Disabling maintenance mode restores the standard `/api/*` CloudFront allowlist
 function and promotes the selected staged release to production.
 
 ## Local build and deploy

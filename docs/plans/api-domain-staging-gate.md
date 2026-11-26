@@ -52,11 +52,17 @@ deploy. The deploy is what disables the execute-api hostname.
    `ApiCustomDomainCertificateArn` is the issued `*.evolvesprouts.com`
    certificate in `ap-southeast-1`. DNS for that name points at
    `ApiCustomDomainTarget` with the proxy off.
-2. Keep `NEXT_PUBLIC_API_BASE_URL`, `PUBLIC_WWW_API_BASE_URL`,
-   `PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL`, and the training API parameters
-   on `ApiCustomDomainUrl`. The public site build uses
-   `NEXT_PUBLIC_WWW_API_BASE_URL=/www`. Mailchimp and Meta callbacks use
-   `ApiCustomDomainUrl` plus `/v1/...`.
+2. Keep `NEXT_PUBLIC_API_BASE_URL`, `vars.PUBLIC_WWW_API_BASE_URL`,
+   `vars.PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL`,
+   `vars.NEXT_PUBLIC_WWW_API_BASE_URL`, and the training API parameters on
+   `ApiCustomDomainUrl`. Any of the three `vars.*` values overrides
+   `NEXT_PUBLIC_API_BASE_URL`. The public site build uses
+   `NEXT_PUBLIC_WWW_API_BASE_URL=/api`. A backend origin that still ends in
+   `/prod` makes the site API fail. `PublicWwwApiBaseUrl`,
+   `PublicWwwMediaRequestApiBaseUrl`, `TrainingApiBaseUrl`, and
+   `TrainingMediaRequestApiBaseUrl` reject a path other than empty or `/`.
+   Mailchimp and Meta callbacks use `ApiCustomDomainUrl` plus
+   `/v1/webhooks/...`.
 3. Deploy the backend stack. The stage update waits until the asset-share
    distribution is using the custom domain, then the execute-api hostname
    stops accepting calls.
