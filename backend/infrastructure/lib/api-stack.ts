@@ -3862,6 +3862,18 @@ export class ApiStack extends cdk.Stack {
       assetShareApiOrigin,
       assetShareBehavior,
     );
+    // Old emailed links still start with /prod. Without these behaviors the
+    // function's /prod branch never runs.
+    assetDownloadDistribution.addBehavior(
+      "prod/v1/assets/share/*",
+      assetShareApiOrigin,
+      assetShareBehavior,
+    );
+    assetDownloadDistribution.addBehavior(
+      "prod/v1/assets/email-download/*",
+      assetShareApiOrigin,
+      assetShareBehavior,
+    );
 
     // ---------------------------------------------------------------------
     // Admin Bootstrap (Conditional)

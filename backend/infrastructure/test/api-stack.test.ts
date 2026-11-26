@@ -1154,8 +1154,16 @@ function assertApiCustomDomainKeepsProdPath(template: Template): void {
   const emailBehavior = behaviors.find(
     (behavior) => behavior.PathPattern === "v1/assets/email-download/*",
   );
-  if (!shareBehavior || !emailBehavior) {
-    throw new Error("Asset-share distribution must keep share and email-download viewer paths");
+  const prodShareBehavior = behaviors.find(
+    (behavior) => behavior.PathPattern === "prod/v1/assets/share/*",
+  );
+  const prodEmailBehavior = behaviors.find(
+    (behavior) => behavior.PathPattern === "prod/v1/assets/email-download/*",
+  );
+  if (!shareBehavior || !emailBehavior || !prodShareBehavior || !prodEmailBehavior) {
+    throw new Error(
+      "Asset-share distribution must keep share and email-download viewer paths, including /prod",
+    );
   }
   const origins = (config.Origins ?? []) as Array<{
     Id?: unknown;
@@ -1200,7 +1208,12 @@ function assertApiCustomDomainKeepsProdPath(template: Template): void {
       "Asset-share distribution must rewrite viewer paths to /v1/public/assets/share and /v1/public/assets/email-download",
     );
   }
-  for (const behavior of [shareBehavior, emailBehavior]) {
+  for (const behavior of [
+    shareBehavior,
+    emailBehavior,
+    prodShareBehavior,
+    prodEmailBehavior,
+  ]) {
     const viewerRequest = (behavior.FunctionAssociations ?? []).filter(
       (association) => association.EventType === "viewer-request",
     );
@@ -1209,6 +1222,12 @@ function assertApiCustomDomainKeepsProdPath(template: Template): void {
         `${String(behavior.PathPattern)} must have one viewer-request function`,
       );
     }
+  }
+  if (
+    JSON.stringify(prodShareBehavior.FunctionAssociations) !==
+    JSON.stringify(shareBehavior.FunctionAssociations)
+  ) {
+    throw new Error("prod/v1/assets/share/* must use the share-path rewrite");
   }
 }
 
