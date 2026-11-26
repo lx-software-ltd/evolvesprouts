@@ -41,13 +41,13 @@ jobs:
 
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@d7a2f0cacbb986d620aa9c34acc7026d1e04970c # main 2026-11-26
         with:
           cache: npm
           working-directory: backend/infrastructure
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@d7a2f0cacbb986d620aa9c34acc7026d1e04970c # main 2026-11-26
 
       - name: Determine deployment region
         id: region
@@ -58,7 +58,7 @@ jobs:
 
       - name: Configure AWS credentials
         id: aws
-        uses: lx-software-ltd/actions/aws-oidc@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@d7a2f0cacbb986d620aa9c34acc7026d1e04970c # main 2026-11-26
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ steps.region.outputs.region }}
@@ -73,7 +73,7 @@ jobs:
 
       - name: Check CDK Bootstrap status
         if: steps.aws.outputs.ready == 'true'
-        uses: lx-software-ltd/actions/cdk-bootstrap-check@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@d7a2f0cacbb986d620aa9c34acc7026d1e04970c # main 2026-11-26
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ steps.region.outputs.region }}
@@ -90,7 +90,7 @@ jobs:
 
       - name: Run CDK diff
         if: steps.aws.outputs.ready == 'true' && steps.prep.outputs.run == 'true'
-        uses: lx-software-ltd/actions/cdk-diff@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-diff@d7a2f0cacbb986d620aa9c34acc7026d1e04970c # main 2026-11-26
         with:
           working-directory: backend/infrastructure
           stacks: ${{ steps.prep.outputs.stacks }}
@@ -118,13 +118,13 @@ jobs:
 
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@d7a2f0cacbb986d620aa9c34acc7026d1e04970c # main 2026-11-26
         with:
           cache: npm
           working-directory: backend/infrastructure
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@d7a2f0cacbb986d620aa9c34acc7026d1e04970c # main 2026-11-26
 
       - name: Determine deployment region
         id: region
@@ -142,7 +142,7 @@ jobs:
       - name: Configure AWS credentials
         id: aws
         if: vars.AWS_DIFF_ROLE_NAME != ''
-        uses: lx-software-ltd/actions/aws-oidc@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@d7a2f0cacbb986d620aa9c34acc7026d1e04970c # main 2026-11-26
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ steps.region.outputs.region }}
@@ -162,7 +162,7 @@ jobs:
 
       - name: Check CDK Bootstrap status
         if: steps.aws.outputs.ready == 'true'
-        uses: lx-software-ltd/actions/cdk-bootstrap-check@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@d7a2f0cacbb986d620aa9c34acc7026d1e04970c # main 2026-11-26
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ steps.region.outputs.region }}
@@ -179,7 +179,7 @@ jobs:
 
       - name: Run CDK diff
         if: steps.aws.outputs.ready == 'true' && steps.prep.outputs.run == 'true'
-        uses: lx-software-ltd/actions/cdk-diff@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-diff@d7a2f0cacbb986d620aa9c34acc7026d1e04970c # main 2026-11-26
         with:
           working-directory: backend/infrastructure
           stacks: ${{ steps.prep.outputs.stacks }}

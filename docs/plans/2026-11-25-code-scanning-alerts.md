@@ -41,3 +41,8 @@ Remove the comments and the https check on the landing-page helper.
 ## Open questions
 
 None.
+
+The security-extended suite omits the alert-suppression query, so the
+`lgtm` and `noqa` marks were not uploaded. The shared CodeQL action now
+adds that query for Python and JavaScript. This repository pins that
+action. The Figma files that are written are unchanged.
