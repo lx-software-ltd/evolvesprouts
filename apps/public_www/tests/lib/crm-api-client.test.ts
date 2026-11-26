@@ -20,7 +20,7 @@ afterEach(() => {
 
 describe('crm-api-client', () => {
   beforeEach(() => {
-    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.evolvesprouts.com/www');
+    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.evolvesprouts.com/api');
     vi.stubEnv(
       'NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS',
       'www.evolvesprouts.com,www-staging.evolvesprouts.com',
@@ -28,21 +28,24 @@ describe('crm-api-client', () => {
   });
 
   it('builds endpoint URLs from base URL and endpoint path', () => {
-    expect(buildCrmApiUrl('https://api.evolvesprouts.com/www', '/v1/discounts')).toBe(
-      'https://api.evolvesprouts.com/www/v1/discounts',
+    expect(buildCrmApiUrl('https://api.evolvesprouts.com/api', '/v1/public/discounts')).toBe(
+      'https://api.evolvesprouts.com/api/v1/public/discounts',
     );
-    expect(buildCrmApiUrl('https://api.evolvesprouts.com/www/', 'v1/discounts')).toBe(
-      'https://api.evolvesprouts.com/www/v1/discounts',
+    expect(buildCrmApiUrl('https://api.evolvesprouts.com/api/', 'v1/public/discounts')).toBe(
+      'https://api.evolvesprouts.com/api/v1/public/discounts',
     );
-    expect(buildCrmApiUrl('/www', '/v1/discounts')).toBe('/www/v1/discounts');
-    expect(buildCrmApiUrl('/www/', 'v1/discounts')).toBe('/www/v1/discounts');
-    expect(buildCrmApiUrl('/api', '/v1/discounts')).toBe('');
-    expect(buildCrmApiUrl('//api.evolvesprouts.com/www', '/v1/discounts')).toBe('');
-    expect(buildCrmApiUrl('https://example.com/www', '/v1/discounts')).toBe('');
-    expect(buildCrmApiUrl('https://api.evolvesprouts.com/admin', '/v1/discounts')).toBe(
+    expect(buildCrmApiUrl('https://api.evolvesprouts.com', '/v1/public/discounts')).toBe(
+      'https://api.evolvesprouts.com/v1/public/discounts',
+    );
+    expect(buildCrmApiUrl('/api', '/v1/public/discounts')).toBe('/api/v1/public/discounts');
+    expect(buildCrmApiUrl('/api/', 'v1/public/discounts')).toBe('/api/v1/public/discounts');
+    expect(buildCrmApiUrl('/www', '/v1/public/discounts')).toBe('');
+    expect(buildCrmApiUrl('//api.evolvesprouts.com/api', '/v1/public/discounts')).toBe('');
+    expect(buildCrmApiUrl('https://example.com/api', '/v1/public/discounts')).toBe('');
+    expect(buildCrmApiUrl('https://api.evolvesprouts.com/admin', '/v1/public/discounts')).toBe(
       '',
     );
-    expect(buildCrmApiUrl('api.evolvesprouts.com/www', '/v1/discounts')).toBe('');
+    expect(buildCrmApiUrl('api.evolvesprouts.com/api', '/v1/public/discounts')).toBe('');
     expect(buildCrmApiUrl('/', '/v1/discounts')).toBe('');
     expect(buildCrmApiUrl('   ', '/v1/discounts')).toBe('');
   });
@@ -50,11 +53,11 @@ describe('crm-api-client', () => {
   it('rewrites api.evolvesprouts.com URLs to same-origin proxy on public hosts', () => {
     vi.stubGlobal('location', new URL('https://www-staging.evolvesprouts.com/en/events'));
 
-    expect(buildCrmApiUrl('https://api.evolvesprouts.com/www', '/v1/discounts')).toBe(
-      '/www/v1/discounts',
+    expect(buildCrmApiUrl('https://api.evolvesprouts.com/api', '/v1/public/discounts')).toBe(
+      '/api/v1/public/discounts',
     );
-    expect(buildCrmApiUrl('https://api.evolvesprouts.com/www/', 'v1/calendar/public')).toBe(
-      '/www/v1/calendar/public',
+    expect(buildCrmApiUrl('https://api.evolvesprouts.com', '/v1/public/calendar')).toBe(
+      '/api/v1/public/calendar',
     );
   });
 
@@ -62,18 +65,18 @@ describe('crm-api-client', () => {
     vi.stubGlobal('location', new URL('https://www-staging.evolvesprouts.com/en/events'));
 
     expect(
-      buildCrmApiUrl('https://api.evolvesprouts.com/www', '/v1/discounts', {
+      buildCrmApiUrl('https://api.evolvesprouts.com/api', '/v1/public/discounts', {
         preferSameOriginProxy: false,
       }),
-    ).toBe('https://api.evolvesprouts.com/www/v1/discounts');
+    ).toBe('https://api.evolvesprouts.com/api/v1/public/discounts');
   });
 
   it('does not rewrite absolute URLs when proxy host allowlist is unset', () => {
     vi.stubEnv('NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS', '');
     vi.stubGlobal('location', new URL('https://www-staging.evolvesprouts.com/en/events'));
 
-    expect(buildCrmApiUrl('https://api.evolvesprouts.com/www', '/v1/discounts')).toBe(
-      'https://api.evolvesprouts.com/www/v1/discounts',
+    expect(buildCrmApiUrl('https://api.evolvesprouts.com/api', '/v1/public/discounts')).toBe(
+      'https://api.evolvesprouts.com/api/v1/public/discounts',
     );
   });
 
@@ -98,7 +101,7 @@ describe('crm-api-client', () => {
     ).toBeNull();
     expect(
       createCrmApiClient({
-        baseUrl: 'https://api.evolvesprouts.com/www',
+        baseUrl: 'https://api.evolvesprouts.com/api',
         apiKey: '   ',
       }),
     ).toBeNull();
@@ -130,13 +133,13 @@ describe('crm-api-client', () => {
     }
 
     await client.request({
-      endpointPath: '/v1/reservations/payment-intent',
+      endpointPath: '/v1/public/reservations/payment-intent',
       method: 'POST',
       body: { price: 1 },
     });
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      '/prod/v1/reservations/payment-intent',
+      '/prod/v1/public/reservations/payment-intent',
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({
@@ -158,7 +161,7 @@ describe('crm-api-client', () => {
     vi.stubGlobal('fetch', fetchSpy);
 
     const client = createCrmApiClient({
-      baseUrl: 'https://api.evolvesprouts.com/www',
+      baseUrl: 'https://api.evolvesprouts.com/api',
       apiKey: 'public-key',
     });
     if (!client) {
@@ -172,7 +175,7 @@ describe('crm-api-client', () => {
     });
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://api.evolvesprouts.com/www/v1/discounts',
+      'https://api.evolvesprouts.com/api/v1/discounts',
       expect.objectContaining({
         method: 'GET',
         headers: expect.objectContaining({
@@ -204,7 +207,7 @@ describe('crm-api-client', () => {
     vi.stubGlobal('fetch', fetchSpy);
 
     const client = createCrmApiClient({
-      baseUrl: 'https://api.evolvesprouts.com/www',
+      baseUrl: 'https://api.evolvesprouts.com/api',
       apiKey: 'public-key',
     });
     if (!client) {
@@ -212,12 +215,12 @@ describe('crm-api-client', () => {
     }
 
     const firstResponse = await client.request({
-      endpointPath: '/v1/calendar/public',
+      endpointPath: '/v1/public/calendar',
       method: 'GET',
     });
     vi.setSystemTime(new Date('2026-01-01T00:04:59.000Z'));
     const cachedResponse = await client.request({
-      endpointPath: '/v1/calendar/public',
+      endpointPath: '/v1/public/calendar',
       method: 'GET',
     });
 
@@ -226,7 +229,7 @@ describe('crm-api-client', () => {
 
     vi.setSystemTime(new Date('2026-01-01T00:05:00.001Z'));
     const refreshedResponse = await client.request({
-      endpointPath: '/v1/calendar/public',
+      endpointPath: '/v1/public/calendar',
       method: 'GET',
     });
 
@@ -244,7 +247,7 @@ describe('crm-api-client', () => {
     vi.stubGlobal('fetch', fetchSpy);
 
     const client = createCrmApiClient({
-      baseUrl: 'https://api.evolvesprouts.com/www',
+      baseUrl: 'https://api.evolvesprouts.com/api',
       apiKey: 'public-key',
     });
     if (!client) {
@@ -289,7 +292,7 @@ describe('crm-api-client', () => {
     vi.stubGlobal('fetch', fetchSpy);
 
     const client = createCrmApiClient({
-      baseUrl: 'https://api.evolvesprouts.com/www',
+      baseUrl: 'https://api.evolvesprouts.com/api',
       apiKey: 'public-key',
     });
     if (!client) {
@@ -310,7 +313,7 @@ describe('crm-api-client', () => {
 
     expect(fetchSpy).toHaveBeenNthCalledWith(
       1,
-      'https://api.evolvesprouts.com/www/v1/test-endpoint',
+      'https://api.evolvesprouts.com/api/v1/test-endpoint',
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({ name: 'sprout' }),
@@ -324,7 +327,7 @@ describe('crm-api-client', () => {
     );
     expect(fetchSpy).toHaveBeenNthCalledWith(
       2,
-      'https://api.evolvesprouts.com/www/v1/test-endpoint',
+      'https://api.evolvesprouts.com/api/v1/test-endpoint',
       expect.objectContaining({
         method: 'PUT',
         body: JSON.stringify({ status: 'updated' }),
@@ -347,7 +350,7 @@ describe('crm-api-client', () => {
     vi.stubGlobal('fetch', fetchSpy);
 
     const client = createCrmApiClient({
-      baseUrl: 'https://api.evolvesprouts.com/www',
+      baseUrl: 'https://api.evolvesprouts.com/api',
       apiKey: 'public-key',
     });
     if (!client) {

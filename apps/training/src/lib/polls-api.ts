@@ -101,7 +101,7 @@ export async function fetchPollQuestionResults(
   const params = new URLSearchParams({
     questionType: input.questionType,
   });
-  const endpointPath = `${config.baseUrl}/v1/polls/${encodeURIComponent(input.pollSlug)}/questions/${encodeURIComponent(input.questionId)}/results?${params.toString()}`;
+  const endpointPath = `${config.baseUrl}/v1/public/polls/${encodeURIComponent(input.pollSlug)}/questions/${encodeURIComponent(input.questionId)}/results?${params.toString()}`;
 
   const response = await fetch(endpointPath, {
     method: 'GET',
@@ -124,7 +124,7 @@ export async function fetchPollControlState(pollSlug: string): Promise<PollContr
     throw new PollApiError('Poll API is not configured', 0);
   }
 
-  const endpointPath = `${config.baseUrl}/v1/polls/${encodeURIComponent(pollSlug)}/control`;
+  const endpointPath = `${config.baseUrl}/v1/public/polls/${encodeURIComponent(pollSlug)}/control`;
   const response = await fetch(endpointPath, {
     method: 'GET',
     headers: {
@@ -149,7 +149,7 @@ export async function persistPollControlState(
     throw new PollApiError('Poll API is not configured', 0);
   }
 
-  const endpointPath = `${config.baseUrl}/v1/polls/${encodeURIComponent(pollSlug)}/control`;
+  const endpointPath = `${config.baseUrl}/v1/public/polls/${encodeURIComponent(pollSlug)}/control`;
   const body: Record<string, unknown> = {
     enabledQuestionIds: input.enabledQuestionIds,
   };
@@ -183,7 +183,7 @@ export async function fetchPollSessionAnswers(
   }
 
   const params = new URLSearchParams({ sessionId });
-  const endpointPath = `${config.baseUrl}/v1/polls/${encodeURIComponent(pollSlug)}/answers?${params.toString()}`;
+  const endpointPath = `${config.baseUrl}/v1/public/polls/${encodeURIComponent(pollSlug)}/answers?${params.toString()}`;
   const response = await fetch(endpointPath, {
     method: 'GET',
     headers: {
@@ -207,7 +207,7 @@ export async function persistPollAnswer(
     throw new PollApiError('Poll API is not configured', 0);
   }
 
-  const endpointPath = `${config.baseUrl}/v1/polls/${encodeURIComponent(input.pollSlug)}/answers`;
+  const endpointPath = `${config.baseUrl}/v1/public/polls/${encodeURIComponent(input.pollSlug)}/answers`;
   const body = buildPersistBody(input);
 
   const response = await fetch(endpointPath, {

@@ -51,7 +51,7 @@ function resolveApiConnectOrigins({ envName, allowRelativePath }) {
     return [];
   }
 
-  // Relative paths (for example "/www" or "/prod") are same-origin and covered by 'self'.
+  // Relative paths (for example "/api" or "/prod") are same-origin and covered by 'self'.
   if (allowRelativePath && configuredBaseUrl.startsWith('/')) {
     return [];
   }

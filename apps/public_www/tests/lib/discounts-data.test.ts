@@ -13,16 +13,16 @@ afterEach(() => {
 });
 
 beforeEach(() => {
-  vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.evolvesprouts.com/www');
+  vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.evolvesprouts.com/api');
 });
 
 describe('discounts-data', () => {
   it('builds the discount validation endpoint from CRM API base URL', () => {
-    expect(buildDiscountValidationApiUrl('https://api.evolvesprouts.com/www')).toBe(
-      'https://api.evolvesprouts.com/www/v1/discounts/validate',
+    expect(buildDiscountValidationApiUrl('https://api.evolvesprouts.com/api')).toBe(
+      'https://api.evolvesprouts.com/api/v1/public/discounts/validate',
     );
-    expect(buildDiscountValidationApiUrl('https://api.evolvesprouts.com/www/')).toBe(
-      'https://api.evolvesprouts.com/www/v1/discounts/validate',
+    expect(buildDiscountValidationApiUrl('https://api.evolvesprouts.com/api/')).toBe(
+      'https://api.evolvesprouts.com/api/v1/public/discounts/validate',
     );
     expect(buildDiscountValidationApiUrl('api.evolvesprouts.com/www/')).toBe('');
     expect(buildDiscountValidationApiUrl('   ')).toBe('');
@@ -84,7 +84,7 @@ describe('discounts-data', () => {
 
     vi.stubGlobal('fetch', fetchSpy);
     const crmApiClient = createCrmApiClient({
-      baseUrl: 'https://api.evolvesprouts.com/www',
+      baseUrl: 'https://api.evolvesprouts.com/api',
       apiKey: 'secret-api-key',
     });
     if (!crmApiClient) {
@@ -99,7 +99,7 @@ describe('discounts-data', () => {
     });
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://api.evolvesprouts.com/www/v1/discounts/validate',
+      'https://api.evolvesprouts.com/api/v1/public/discounts/validate',
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({
@@ -146,7 +146,7 @@ describe('discounts-data', () => {
 
     vi.stubGlobal('fetch', fetchSpy);
     const crmApiClient = createCrmApiClient({
-      baseUrl: 'https://api.evolvesprouts.com/www',
+      baseUrl: 'https://api.evolvesprouts.com/api',
       apiKey: 'secret-api-key',
     });
     if (!crmApiClient) {
@@ -160,7 +160,7 @@ describe('discounts-data', () => {
     });
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://api.evolvesprouts.com/www/v1/discounts/validate',
+      'https://api.evolvesprouts.com/api/v1/public/discounts/validate',
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({
@@ -194,7 +194,7 @@ describe('discounts-data', () => {
 
     vi.stubGlobal('fetch', fetchSpy);
     const crmApiClient = createCrmApiClient({
-      baseUrl: 'https://api.evolvesprouts.com/www',
+      baseUrl: 'https://api.evolvesprouts.com/api',
       apiKey: 'secret-api-key',
     });
     if (!crmApiClient) {
@@ -208,7 +208,7 @@ describe('discounts-data', () => {
     });
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://api.evolvesprouts.com/www/v1/discounts/validate',
+      'https://api.evolvesprouts.com/api/v1/public/discounts/validate',
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({
@@ -223,7 +223,7 @@ describe('discounts-data', () => {
   it('rejects invalid CRM API client configuration', () => {
     expect(
       createCrmApiClient({
-        baseUrl: 'https://api.evolvesprouts.com/www',
+        baseUrl: 'https://api.evolvesprouts.com/api',
         apiKey: '   ',
       }),
     ).toBeNull();

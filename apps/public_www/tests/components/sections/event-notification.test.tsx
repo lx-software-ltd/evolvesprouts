@@ -277,7 +277,7 @@ describe('EventNotification section', () => {
 
     await waitFor(() => {
       expect(request).toHaveBeenCalledWith({
-        endpointPath: '/v1/contact-us',
+        endpointPath: '/v1/public/contact-us',
         method: 'POST',
         body: {
           email_address: 'events@example.com',

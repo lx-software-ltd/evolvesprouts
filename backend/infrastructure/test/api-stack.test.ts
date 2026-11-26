@@ -1147,32 +1147,45 @@ function assertApiCustomDomainKeepsProdPath(template: Template): void {
 
   const distributions = template.findResources("AWS::CloudFront::Distribution");
   const assetShareDistribution = Object.entries(distributions).find(([, distribution]) =>
-    (distribution.Properties?.DistributionConfig?.Origins ?? []).some(
-      (origin: { OriginPath?: unknown }) => origin.OriginPath === `/${stageName}`,
+    (distribution.Properties?.DistributionConfig?.CacheBehaviors ?? []).some(
+      (behavior: { PathPattern?: unknown }) => behavior.PathPattern === "v1/assets/share/*",
     ),
   );
   if (!assetShareDistribution) {
-    throw new Error(
-      `Asset-share CloudFront distribution must include an origin path /${stageName}`,
-    );
+    throw new Error("Asset-share CloudFront distribution must serve v1/assets/share/*");
   }
-  const [distributionLogicalId] = assetShareDistribution;
+  const [distributionLogicalId, distribution] = assetShareDistribution;
   if (!dependencies.includes(distributionLogicalId)) {
     throw new Error(
       `Stage ${stageLogicalId} must depend on ${distributionLogicalId} so execute-api stays up until share links move. DependsOn=${JSON.stringify(dependsOn)}`,
     );
   }
-  const assetShareOrigin = Object.values(distributions)
-    .flatMap(
-      (distribution) =>
-        distribution.Properties?.DistributionConfig?.Origins ?? [],
-    )
-    .find((origin: { OriginPath?: unknown }) => origin.OriginPath === `/${stageName}`) as
-    | { DomainName?: unknown; OriginPath?: unknown }
-    | undefined;
+  const config = distribution.Properties?.DistributionConfig ?? {};
+  const behaviors = (config.CacheBehaviors ?? []) as Array<{
+    PathPattern?: unknown;
+    TargetOriginId?: unknown;
+    FunctionAssociations?: Array<{ EventType?: unknown; FunctionARN?: unknown }>;
+  }>;
+  const shareBehavior = behaviors.find((behavior) => behavior.PathPattern === "v1/assets/share/*");
+  const emailBehavior = behaviors.find(
+    (behavior) => behavior.PathPattern === "v1/assets/email-download/*",
+  );
+  if (!shareBehavior || !emailBehavior) {
+    throw new Error("Asset-share distribution must keep share and email-download viewer paths");
+  }
+  const origins = (config.Origins ?? []) as Array<{
+    Id?: unknown;
+    DomainName?: unknown;
+    OriginPath?: unknown;
+  }>;
+  const assetShareOrigin = origins.find((origin) => origin.Id === shareBehavior.TargetOriginId);
   if (!assetShareOrigin) {
+    throw new Error("Asset-share behavior must target an origin on the same distribution");
+  }
+  const originPath = assetShareOrigin.OriginPath;
+  if (originPath === `/${stageName}` || (typeof originPath === "string" && originPath.includes(stageName))) {
     throw new Error(
-      `Asset-share CloudFront origin must use origin path /${stageName}`,
+      `Asset-share origin must not use /${stageName}. Found ${JSON.stringify(originPath)}`,
     );
   }
   const domainName = JSON.stringify(assetShareOrigin.DomainName ?? "");
@@ -1185,6 +1198,32 @@ function assertApiCustomDomainKeepsProdPath(template: Template): void {
     throw new Error(
       `Asset-share origin must not use the execute-api hostname. Found ${domainName}`,
     );
+  }
+  const functions = template.findResources("AWS::CloudFront::Function") as Record<
+    string,
+    { Properties?: { FunctionCode?: unknown } }
+  >;
+  const rewrite = Object.values(functions).find((resource) => {
+    const code = String(resource.Properties?.FunctionCode ?? "");
+    return (
+      code.includes("/v1/public/assets/share/") &&
+      code.includes("/v1/public/assets/email-download/")
+    );
+  });
+  if (!rewrite) {
+    throw new Error(
+      "Asset-share distribution must rewrite viewer paths to /v1/public/assets/share and /v1/public/assets/email-download",
+    );
+  }
+  for (const behavior of [shareBehavior, emailBehavior]) {
+    const viewerRequest = (behavior.FunctionAssociations ?? []).filter(
+      (association) => association.EventType === "viewer-request",
+    );
+    if (viewerRequest.length !== 1) {
+      throw new Error(
+        `${String(behavior.PathPattern)} must have one viewer-request function`,
+      );
+    }
   }
 }
 

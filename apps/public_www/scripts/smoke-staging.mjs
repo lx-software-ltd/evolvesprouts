@@ -45,7 +45,7 @@ Required:
   ${SMOKE_BASE_URL_ENV}            Absolute site origin to smoke test (for example https://www-staging.example.com)
 
 API checks (required unless --pages-only):
-  ${SMOKE_API_KEY_ENV}             Public CRM API key used for /www/v1 requests
+  ${SMOKE_API_KEY_ENV}             Public CRM API key used for /api/v1/public requests
                                    Falls back to ${FALLBACK_API_KEY_ENV} if unset.
 
 Optional:
@@ -58,7 +58,7 @@ Optional:
   ${SMOKE_CRM_API_BASE_URL_ENV} Optional API base URL fallback for /v1 endpoints.
                                    ${SMOKE_API_BASE_URL_ENV} is a legacy alias.
                                    Falls back to ${FALLBACK_API_BASE_URL_ENV} if both are unset.
-  ${SMOKE_MEDIA_API_BASE_URL_ENV}  Optional media API base URL fallback for /v1/assets/free/request
+  ${SMOKE_MEDIA_API_BASE_URL_ENV}  Optional media API base URL fallback for /v1/public/assets/free/request
                                    Falls back to ${FALLBACK_MEDIA_API_BASE_URL_ENV} if unset.
 `);
 }
@@ -516,8 +516,8 @@ function buildApiCases(turnstileToken) {
     {
       name: 'public calendar feed endpoint',
       method: 'GET',
-      proxyPath: '/www/v1/calendar/public',
-      directPath: '/v1/calendar/public',
+      proxyPath: '/api/v1/public/calendar',
+      directPath: '/v1/public/calendar',
       apiBaseType: 'crm',
       queryString: '',
       allowedStatuses: new Set([200, 400, 403, 404]),
@@ -527,8 +527,8 @@ function buildApiCases(turnstileToken) {
     {
       name: 'public free assets list endpoint',
       method: 'GET',
-      proxyPath: '/www/v1/assets/free',
-      directPath: '/v1/assets/free',
+      proxyPath: '/api/v1/public/assets/free',
+      directPath: '/v1/public/assets/free',
       apiBaseType: 'crm',
       queryString: 'limit=100',
       allowedStatuses: new Set([200, 400, 403, 404]),
@@ -538,8 +538,8 @@ function buildApiCases(turnstileToken) {
     {
       name: 'contact-us CTA endpoint',
       method: 'POST',
-      proxyPath: '/www/v1/contact-us',
-      directPath: '/v1/contact-us',
+      proxyPath: '/api/v1/public/contact-us',
+      directPath: '/v1/public/contact-us',
       apiBaseType: 'crm',
       body: {
         first_name: 'Smoke',
@@ -558,8 +558,8 @@ function buildApiCases(turnstileToken) {
     {
       name: 'discount validate CTA endpoint',
       method: 'POST',
-      proxyPath: '/www/v1/discounts/validate',
-      directPath: '/v1/discounts/validate',
+      proxyPath: '/api/v1/public/discounts/validate',
+      directPath: '/v1/public/discounts/validate',
       apiBaseType: 'crm',
       body: {
         code: 'SMOKE-CHECK',
@@ -571,8 +571,8 @@ function buildApiCases(turnstileToken) {
     {
       name: 'media request CTA endpoint',
       method: 'POST',
-      proxyPath: '/www/v1/assets/free/request',
-      directPath: '/v1/assets/free/request',
+      proxyPath: '/api/v1/public/assets/free/request',
+      directPath: '/v1/public/assets/free/request',
       apiBaseType: 'media',
       body: {
         first_name: 'Smoke',
@@ -587,8 +587,8 @@ function buildApiCases(turnstileToken) {
     {
       name: 'reservation CTA endpoint',
       method: 'POST',
-      proxyPath: '/www/v1/reservations',
-      directPath: '/v1/reservations',
+      proxyPath: '/api/v1/public/reservations',
+      directPath: '/v1/public/reservations',
       apiBaseType: 'crm',
       body: {
         attendeeName: 'Smoke Runner',
@@ -612,8 +612,8 @@ function buildApiCases(turnstileToken) {
     {
       name: 'reservation payment-intent endpoint',
       method: 'POST',
-      proxyPath: '/www/v1/reservations/payment-intent',
-      directPath: '/v1/reservations/payment-intent',
+      proxyPath: '/api/v1/public/reservations/payment-intent',
+      directPath: '/v1/public/reservations/payment-intent',
       apiBaseType: 'crm',
       body: {
         service_tier: '3-5 years',

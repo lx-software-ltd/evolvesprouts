@@ -109,7 +109,7 @@ async function fetchAllPublicFreeAssets(
     if (cursor) {
       searchParams.set('cursor', cursor);
     }
-    const endpointPath = `/v1/assets/free?${searchParams.toString()}`;
+    const endpointPath = `/v1/public/assets/free?${searchParams.toString()}`;
     const payload = await client.request({ endpointPath, signal });
     const { items, nextCursor } = parseListPayload(payload);
     for (const raw of items) {

@@ -6,7 +6,7 @@ import { createPublicCrmApiClient } from '@/lib/crm-api-client';
 import { CALENDAR_PUBLIC_CLIENT_FETCH_TIMEOUT_MS } from '@/lib/events-data';
 import { PUBLIC_SITE_IANA_TIMEZONE } from '@/lib/site-datetime';
 
-export const PUBLIC_CALENDAR_AVAILABILITY_API_PATH = '/v1/calendar/availability';
+export const PUBLIC_CALENDAR_AVAILABILITY_API_PATH = '/v1/public/calendar/availability';
 
 export type PublicCalendarAvailabilityPurpose = 'consultation_booking' | 'intro_call_booking';
 

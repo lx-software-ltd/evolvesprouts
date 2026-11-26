@@ -16,20 +16,20 @@ describe('resolvePollApiConfig', () => {
     vi.unstubAllEnvs();
   });
 
-  it('returns same-origin /www when API base URL is relative', () => {
-    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', '/www');
+  it('returns same-origin /api when API base URL is relative', () => {
+    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', '/api');
     vi.stubEnv('NEXT_PUBLIC_TRAINING_API_KEY', 'poll-key');
 
-    expect(resolvePollApiConfig()).toEqual({ baseUrl: '/www', apiKey: 'poll-key' });
+    expect(resolvePollApiConfig()).toEqual({ baseUrl: '/api', apiKey: 'poll-key' });
   });
 
-  it('returns absolute /www origin when API base URL includes /www path', () => {
-    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://training.example.com/www');
+  it('returns absolute /api origin when API base URL includes /api path', () => {
+    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://training.example.com/api');
     vi.stubEnv('NEXT_PUBLIC_TRAINING_API_KEY', '');
     vi.stubEnv('NEXT_PUBLIC_WWW_CRM_API_KEY', 'crm-key');
 
     expect(resolvePollApiConfig()).toEqual({
-      baseUrl: 'https://training.example.com/www',
+      baseUrl: 'https://training.example.com/api',
       apiKey: 'crm-key',
     });
   });
@@ -45,7 +45,7 @@ describe('resolvePollApiConfig', () => {
   });
 
   it('returns null when API key is missing', () => {
-    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', '/www');
+    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', '/api');
     vi.stubEnv('NEXT_PUBLIC_TRAINING_API_KEY', '');
     vi.stubEnv('NEXT_PUBLIC_WWW_CRM_API_KEY', '');
 
@@ -60,7 +60,7 @@ describe('fetchPollQuestionResults', () => {
   });
 
   it('requests results with questionType query param', async () => {
-    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', '/www');
+    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', '/api');
     vi.stubEnv('NEXT_PUBLIC_TRAINING_API_KEY', 'poll-key');
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -81,7 +81,7 @@ describe('fetchPollQuestionResults', () => {
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/www/v1/polls/workshop-food-jun-26/questions/role/results?questionType=select',
+      '/api/v1/public/polls/workshop-food-jun-26/questions/role/results?questionType=select',
       expect.objectContaining({
         method: 'GET',
         headers: { 'x-api-key': 'poll-key' },
@@ -97,7 +97,7 @@ describe('fetchPollSessionAnswers', () => {
   });
 
   it('requests session answers with sessionId query param', async () => {
-    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', '/www');
+    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', '/api');
     vi.stubEnv('NEXT_PUBLIC_TRAINING_API_KEY', 'poll-key');
     const sessionId = '550e8400-e29b-41d4-a716-446655440000';
     const fetchMock = vi.fn().mockResolvedValue({
@@ -113,7 +113,7 @@ describe('fetchPollSessionAnswers', () => {
     await fetchPollSessionAnswers('workshop-food-jun-26', sessionId);
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `/www/v1/polls/workshop-food-jun-26/answers?sessionId=${sessionId}`,
+      `/api/v1/public/polls/workshop-food-jun-26/answers?sessionId=${sessionId}`,
       expect.objectContaining({
         method: 'GET',
         headers: { 'x-api-key': 'poll-key' },
@@ -129,7 +129,7 @@ describe('poll control API', () => {
   });
 
   it('loads control state', async () => {
-    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', '/www');
+    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', '/api');
     vi.stubEnv('NEXT_PUBLIC_TRAINING_API_KEY', 'poll-key');
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -143,13 +143,13 @@ describe('poll control API', () => {
     const state = await fetchPollControlState('workshop-food-jun-26');
     expect(state.enabledQuestionIds).toEqual(['role']);
     expect(fetchMock).toHaveBeenCalledWith(
-      '/www/v1/polls/workshop-food-jun-26/control',
+      '/api/v1/public/polls/workshop-food-jun-26/control',
       expect.objectContaining({ method: 'GET' }),
     );
   });
 
   it('persists control state', async () => {
-    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', '/www');
+    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', '/api');
     vi.stubEnv('NEXT_PUBLIC_TRAINING_API_KEY', 'poll-key');
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -165,7 +165,7 @@ describe('poll control API', () => {
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/www/v1/polls/workshop-food-jun-26/control',
+      '/api/v1/public/polls/workshop-food-jun-26/control',
       expect.objectContaining({
         method: 'PUT',
         body: JSON.stringify({ enabledQuestionIds: ['myth1'] }),
@@ -210,7 +210,7 @@ describe('persistPollAnswer', () => {
   });
 
   it('persists poll answer', async () => {
-    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', '/www');
+    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', '/api');
     vi.stubEnv('NEXT_PUBLIC_TRAINING_API_KEY', 'poll-key');
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal('fetch', fetchMock);
@@ -236,7 +236,7 @@ describe('persistPollAnswer', () => {
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/www/v1/polls/workshop-food-jun-26/answers',
+      '/api/v1/public/polls/workshop-food-jun-26/answers',
       expect.objectContaining({ method: 'PUT' }),
     );
   });
