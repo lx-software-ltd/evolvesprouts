@@ -88,9 +88,7 @@ def authorize_api_token(event: dict[str, Any]) -> dict[str, Any]:
 
     if not looks_like_api_key(plaintext):
         logger.warning("Malformed API token")
-        return build_iam_policy(
-            "Deny", method_arn, "invalid", {"reason": "invalid_key"}
-        )
+        raise Unauthorized()
 
     key_hash = hash_api_key(plaintext)
 
@@ -99,9 +97,7 @@ def authorize_api_token(event: dict[str, Any]) -> dict[str, Any]:
         api_key = repo.find_active_by_hash(key_hash)
         if api_key is None:
             logger.warning("Unknown, revoked, or expired API token")
-            return build_iam_policy(
-                "Deny", method_arn, "invalid", {"reason": "invalid_key"}
-            )
+            raise Unauthorized()
 
         _touch_last_used(session, repo, api_key)
 
