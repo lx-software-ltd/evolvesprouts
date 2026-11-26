@@ -1,6 +1,6 @@
 /**
  * Shared CloudFront Function (JS 2.0) sources for static-export sites that
- * proxy allowlisted /www/* public API routes. Used by public-www-stack and
+ * proxy allowlisted /api/v1/public/ routes. Used by public-www-stack and
  * training-stack; keep in sync with docs/architecture/security.md.
  */
 
@@ -34,8 +34,9 @@ function handler(event) {
 }
 `;
 
-/** Default-deny allowlist for /www/* API proxy (viewer path includes /www prefix). */
-export const WWW_PROXY_ALLOWLIST_FUNCTION = `
+/** Default-deny allowlist for /api/v1/public/... . The viewer path loses the /api prefix. */
+export const API_PROXY_ALLOWLIST_FUNCTION = `
+
 function handler(event) {
   var request = event.request;
   var method = request.method || '';
@@ -43,15 +44,15 @@ function handler(event) {
 
   var allowlist = {
     'GET': {
-      '/www/v1/calendar/public': true,
-      '/www/v1/calendar/availability': true,
-      '/www/v1/assets/free': true
+      '/api/v1/public/calendar': true,
+      '/api/v1/public/calendar/availability': true,
+      '/api/v1/public/assets/free': true
     },
     'POST': {
-      '/www/v1/discounts/validate': true,
-      '/www/v1/reservations': true,
-      '/www/v1/reservations/payment-intent': true,
-      '/www/v1/contact-us': true
+      '/api/v1/public/discounts/validate': true,
+      '/api/v1/public/reservations': true,
+      '/api/v1/public/reservations/payment-intent': true,
+      '/api/v1/public/contact-us': true
     }
   };
   if (allowlist[method] && allowlist[method][uri]) {
@@ -60,7 +61,7 @@ function handler(event) {
   }
 
   var isFormAnswersPath =
-    uri.indexOf('/www/v1/forms/') === 0 &&
+    uri.indexOf('/api/v1/public/forms/') === 0 &&
     uri.lastIndexOf('/answers') === uri.length - 8;
   if (
     (method === 'PUT' || method === 'OPTIONS') &&
@@ -71,7 +72,7 @@ function handler(event) {
   }
 
   var isFormContactContextPath =
-    uri.indexOf('/www/v1/forms/') === 0 &&
+    uri.indexOf('/api/v1/public/forms/') === 0 &&
     uri.lastIndexOf('/contact-context') === uri.length - 16;
   if (
     (method === 'GET' || method === 'OPTIONS') &&
@@ -82,7 +83,7 @@ function handler(event) {
   }
 
   var isPollAnswersPath =
-    uri.indexOf('/www/v1/polls/') === 0 &&
+    uri.indexOf('/api/v1/public/polls/') === 0 &&
     uri.lastIndexOf('/answers') === uri.length - 8;
   if (
     (method === 'GET' || method === 'PUT' || method === 'OPTIONS') &&
@@ -93,7 +94,7 @@ function handler(event) {
   }
 
   var isPollQuestionResultsPath =
-    uri.indexOf('/www/v1/polls/') === 0 &&
+    uri.indexOf('/api/v1/public/polls/') === 0 &&
     uri.indexOf('/questions/') > 0 &&
     uri.lastIndexOf('/results') === uri.length - 8;
   if (
@@ -105,7 +106,7 @@ function handler(event) {
   }
 
   var isPollControlPath =
-    uri.indexOf('/www/v1/polls/') === 0 &&
+    uri.indexOf('/api/v1/public/polls/') === 0 &&
     uri.lastIndexOf('/control') === uri.length - 8;
   if (
     (method === 'GET' || method === 'PUT' || method === 'OPTIONS') &&
@@ -127,32 +128,7 @@ function handler(event) {
 }
 `;
 
-/** Dedicated behavior for POST/OPTIONS /www/v1/assets/free/request → API origin. */
-export const MEDIA_REQUEST_PROXY_FUNCTION = `
-function handler(event) {
-  var request = event.request;
-  var method = request.method || '';
-  var uri = request.uri || '';
-  var isAllowedMethod = method === 'POST' || method === 'OPTIONS';
-
-  if (uri === '/www/v1/assets/free/request' && isAllowedMethod) {
-    request.uri = '/v1/assets/free/request';
-    return request;
-  }
-
-  return {
-    statusCode: 403,
-    statusDescription: 'Forbidden',
-    headers: {
-      'content-type': { value: 'application/json; charset=utf-8' },
-      'cache-control': { value: 'no-store' }
-    },
-    body: '{"message":"Forbidden"}'
-  };
-}
-`;
-
-/** Convert HTML error pages from API origins to JSON for /www proxy behaviors. */
+/** Convert HTML error pages from API origins to JSON for /api proxy behaviors. */
 export const WWW_API_ERROR_RESPONSE_FUNCTION = `
 function handler(event) {
   var response = event.response;
@@ -172,26 +148,6 @@ function handler(event) {
   return response;
 }
 `;
-
-/**
- * Allow-list for /api/v1/public/... . Same routes as the /www function.
- * The viewer path loses the /api prefix and keeps /v1/public/.
- */
-function replacePath(source: string, from: string, to: string): string {
-  return source.split(from).join(to);
-}
-
-export const API_PROXY_ALLOWLIST_FUNCTION = [
-  ["/www/v1/reservations/payment-intent", "/api/v1/public/reservations/payment-intent"],
-  ["/www/v1/calendar/availability", "/api/v1/public/calendar/availability"],
-  ["/www/v1/calendar/public", "/api/v1/public/calendar"],
-  ["/www/v1/assets/free", "/api/v1/public/assets/free"],
-  ["/www/v1/discounts/validate", "/api/v1/public/discounts/validate"],
-  ["/www/v1/reservations", "/api/v1/public/reservations"],
-  ["/www/v1/contact-us", "/api/v1/public/contact-us"],
-  ["/www/v1/forms/", "/api/v1/public/forms/"],
-  ["/www/v1/polls/", "/api/v1/public/polls/"],
-].reduce((source, [from, to]) => replacePath(source, from, to), WWW_PROXY_ALLOWLIST_FUNCTION);
 
 /** POST/OPTIONS /api/v1/public/assets/free/request keeps the /v1/public path. */
 export const API_MEDIA_REQUEST_PROXY_FUNCTION = `

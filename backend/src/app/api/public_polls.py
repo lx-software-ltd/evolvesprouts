@@ -37,6 +37,7 @@ _CONTROL_SUFFIX = "/control"
 _RESULTS_SUFFIX = "/results"
 _QUESTIONS_SEGMENT = "/questions/"
 _POLL_API_PREFIX = "/v1/polls/"
+_PUBLIC_POLL_API_PREFIX = "/v1/public/polls/"
 _WWW_POLL_API_PREFIX = "/www/v1/polls/"
 
 
@@ -80,6 +81,8 @@ def handle_public_polls_request(
 
 def _parse_poll_path_remainder(path: str) -> str | None:
     normalized = path.rstrip("/")
+    if normalized.startswith(_PUBLIC_POLL_API_PREFIX):
+        return normalized[len(_PUBLIC_POLL_API_PREFIX) :]
     if normalized.startswith(_WWW_POLL_API_PREFIX):
         return normalized[len(_WWW_POLL_API_PREFIX) :]
     if normalized.startswith(_POLL_API_PREFIX):

@@ -10,8 +10,8 @@ the edge-verify check in `public-www-stack.ts`. It stays off while
 
 ## What landed
 
-- The API custom domain maps to the prod stage at `/prod`.
-  `ApiCustomDomainUrl` includes that path, as `ApiUrl` does.
+- The API custom domain maps to the prod stage at the root.
+  `ApiCustomDomainUrl` is the origin only. There is no `/prod` path.
 - The execute-api hostname does not accept calls. `DisableExecuteApiEndpoint`
   is set on the REST API. The stage variable `executeApiEndpoint` is
   `disabled`. The stage update depends on the REST API and on the
@@ -21,7 +21,8 @@ the edge-verify check in `public-www-stack.ts`. It stays off while
 - `ApiCustomDomainName` and `ApiCustomDomainCertificateArn` reject an empty
   value.
 - The asset-share CloudFront origin uses `ApiCustomDomainName`. The origin
-  path stays `/prod`.
+  path is empty. Viewer paths `/v1/assets/share/*` and
+  `/v1/assets/email-download/*` are rewritten to `/v1/public/assets/...`.
 - `PublicWwwApiBaseUrl` and `PublicWwwMediaRequestApiBaseUrl` resolve
   `PUBLIC_WWW_API_BASE_URL` and `PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL`.
   Backend deploy falls back to `NEXT_PUBLIC_API_BASE_URL` when those are

@@ -25,6 +25,7 @@ logger = get_logger(__name__)
 _ANSWERS_SUFFIX = "/answers"
 _CONTACT_CONTEXT_SUFFIX = "/contact-context"
 _FORM_API_PREFIX = "/v1/forms/"
+_PUBLIC_FORM_API_PREFIX = "/v1/public/forms/"
 _WWW_FORM_API_PREFIX = "/www/v1/forms/"
 _NO_STORE = {"Cache-Control": CACHE_CONTROL_NO_STORE}
 
@@ -72,6 +73,8 @@ def handle_public_forms_request(
 
 def _parse_form_path_remainder(path: str) -> str | None:
     normalized = path.rstrip("/")
+    if normalized.startswith(_PUBLIC_FORM_API_PREFIX):
+        return normalized[len(_PUBLIC_FORM_API_PREFIX) :]
     if normalized.startswith(_WWW_FORM_API_PREFIX):
         return normalized[len(_WWW_FORM_API_PREFIX) :]
     if normalized.startswith(_FORM_API_PREFIX):

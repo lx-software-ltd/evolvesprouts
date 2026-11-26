@@ -3506,45 +3506,6 @@ export class ApiStack extends cdk.Stack {
         apiKeyRequired: true,
       });
 
-    const calendar = v1.addResource("calendar");
-    addPublicApiKeyMethod(calendar.addResource("public"), "GET");
-    addPublicApiKeyMethod(calendar.addResource("availability"), "GET");
-    const reservations = v1.addResource("reservations");
-    addPublicApiKeyMethod(reservations, "POST");
-    addPublicApiKeyMethod(reservations.addResource("payment-intent"), "POST");
-    addPublicApiKeyMethod(v1.addResource("contact-us"), "POST");
-    const forms = v1.addResource("forms");
-    const formBySlug = forms.addResource("{form_slug}");
-    addPublicApiKeyMethod(formBySlug.addResource("answers"), "PUT");
-    addPublicApiKeyMethod(formBySlug.addResource("contact-context"), "GET");
-    const polls = v1.addResource("polls");
-    const pollBySlug = polls.addResource("{poll_slug}");
-    const pollAnswers = pollBySlug.addResource("answers");
-    addPublicApiKeyMethod(pollAnswers, "GET");
-    addPublicApiKeyMethod(pollAnswers, "PUT");
-    const pollControl = pollBySlug.addResource("control");
-    addPublicApiKeyMethod(pollControl, "GET");
-    addPublicApiKeyMethod(pollControl, "PUT");
-    const pollQuestionById = pollBySlug
-      .addResource("questions")
-      .addResource("{question_id}");
-    addPublicApiKeyMethod(pollQuestionById.addResource("results"), "GET");
-    const publicDiscounts = v1.addResource("discounts");
-    addPublicApiKeyMethod(publicDiscounts.addResource("validate"), "POST");
-    const mailchimpWebhook = v1.addResource("mailchimp").addResource("webhook");
-    const mailchimpWebhookPostMethod = mailchimpWebhook.addMethod("POST", adminIntegration, {
-      authorizationType: apigateway.AuthorizationType.NONE,
-    });
-    const mailchimpWebhookGetMethod = mailchimpWebhook.addMethod("GET", adminIntegration, {
-      authorizationType: apigateway.AuthorizationType.NONE,
-    });
-    // This endpoint is intentionally public for Mailchimp callbacks and is
-    // protected in-app with mandatory shared-secret verification.
-    addCheckovMethodSuppression(mailchimpWebhookPostMethod, "CKV_AWS_59",
-      "Public Mailchimp webhook endpoint; access is validated via MAILCHIMP_WEBHOOK_SECRET in Lambda handler.");
-    addCheckovMethodSuppression(mailchimpWebhookGetMethod, "CKV_AWS_59",
-      "Public Mailchimp webhook verification endpoint; access is validated via MAILCHIMP_WEBHOOK_SECRET in Lambda handler.");
-
     // Must match _RECEIVED_WEBHOOK_LOG_MESSAGE in public_mailchimp_webhook.py.
     const mailchimpWebhookReceivedFilter = new logs.MetricFilter(
       this,
@@ -3578,33 +3539,6 @@ export class ApiStack extends cdk.Stack {
       datapointsToAlarm: 7,
       treatMissingData: cdk.aws_cloudwatch.TreatMissingData.BREACHING,
     });
-
-    const whatsappWebhook = v1.addResource("whatsapp").addResource("webhook");
-    const whatsappWebhookPostMethod = whatsappWebhook.addMethod("POST", adminIntegration, {
-      authorizationType: apigateway.AuthorizationType.NONE,
-    });
-    const whatsappWebhookGetMethod = whatsappWebhook.addMethod("GET", adminIntegration, {
-      authorizationType: apigateway.AuthorizationType.NONE,
-    });
-    // This endpoint is intentionally public for Meta callbacks and is
-    // protected in-app with HMAC signature verification plus a verify token.
-    addCheckovMethodSuppression(whatsappWebhookPostMethod, "CKV_AWS_59",
-      "Public WhatsApp webhook endpoint; access is validated via META_APP_SECRET HMAC in Lambda handler.");
-    addCheckovMethodSuppression(whatsappWebhookGetMethod, "CKV_AWS_59",
-      "Public WhatsApp webhook verification endpoint; access is validated via WHATSAPP_WEBHOOK_VERIFY_TOKEN in Lambda handler.");
-    const metaWebhook = v1.addResource("meta").addResource("webhook");
-    const metaWebhookPostMethod = metaWebhook.addMethod("POST", adminIntegration, {
-      authorizationType: apigateway.AuthorizationType.NONE,
-    });
-    const metaWebhookGetMethod = metaWebhook.addMethod("GET", adminIntegration, {
-      authorizationType: apigateway.AuthorizationType.NONE,
-    });
-    // This endpoint is intentionally public for Meta callbacks and is
-    // protected in-app with HMAC signature verification plus a verify token.
-    addCheckovMethodSuppression(metaWebhookPostMethod, "CKV_AWS_59",
-      "Public Messenger/Instagram webhook endpoint; access is validated via META_APP_SECRET HMAC in Lambda handler.");
-    addCheckovMethodSuppression(metaWebhookGetMethod, "CKV_AWS_59",
-      "Public Messenger/Instagram webhook verification endpoint; access is validated via WHATSAPP_WEBHOOK_VERIFY_TOKEN in Lambda handler.");
 
     const webhooks = v1.addResource("webhooks");
     for (const provider of ["mailchimp", "whatsapp", "meta"]) {
@@ -3737,30 +3671,6 @@ export class ApiStack extends cdk.Stack {
 
     // Public asset routes (API key + device attestation)
     const assets = v1.addResource("assets");
-    const assetsFree = assets.addResource("free");
-    assetsFree.addMethod("GET", adminIntegration, {
-      authorizationType: apigateway.AuthorizationType.NONE,
-      apiKeyRequired: true,
-    });
-    assetsFree.addResource("request").addMethod("POST", adminIntegration, {
-      authorizationType: apigateway.AuthorizationType.NONE,
-      apiKeyRequired: true,
-    });
-    const publicAssets = assets.addResource("public");
-    publicAssets.addMethod("GET", adminIntegration, {
-      authorizationType: apigateway.AuthorizationType.CUSTOM,
-      authorizer: deviceAttestationAuthorizer,
-      apiKeyRequired: true,
-    });
-
-    const publicAssetById = publicAssets.addResource("{id}");
-    const publicAssetDownload = publicAssetById.addResource("download");
-    publicAssetDownload.addMethod("GET", adminIntegration, {
-      authorizationType: apigateway.AuthorizationType.CUSTOM,
-      authorizer: deviceAttestationAuthorizer,
-      apiKeyRequired: true,
-    });
-
     const publicShareAssets = assets.addResource("share");
     const publicShareAssetByToken = publicShareAssets.addResource("{token}");
     publicShareAssetByToken.addMethod("GET", adminIntegration, {
@@ -4006,16 +3916,6 @@ export class ApiStack extends cdk.Stack {
     const apiDomainCfn = apiDomain.node.defaultChild as apigateway.CfnDomainName;
     apiDomainCfn.cfnOptions.condition = useApiCustomDomain;
 
-    const apiMapping = new apigateway.BasePathMapping(this, "ApiBasePathMapping", {
-      domainName: apiDomain,
-      restApi: api,
-      stage: api.deploymentStage,
-      // Keep the stage name on the custom domain so clients swap the host only.
-      basePath: API_GATEWAY_STAGE_NAME,
-    });
-    const apiMappingCfn = apiMapping.node.defaultChild as apigateway.CfnBasePathMapping;
-    apiMappingCfn.cfnOptions.condition = useApiCustomDomain;
-
     const apiRootMapping = new apigateway.BasePathMapping(this, "ApiRootBasePathMapping", {
       domainName: apiDomain,
       restApi: api,
@@ -4224,9 +4124,9 @@ export class ApiStack extends cdk.Stack {
       this,
       "ApiCustomDomainUrl",
       {
-        value: `https://${apiCustomDomainName.valueAsString}/${API_GATEWAY_STAGE_NAME}`,
+        value: `https://${apiCustomDomainName.valueAsString}`,
         description:
-          "API custom domain URL, including the /prod base path. Use this as NEXT_PUBLIC_API_BASE_URL.",
+          "API custom domain URL. The domain maps at the root. Use this as NEXT_PUBLIC_API_BASE_URL.",
       }
     );
     apiCustomDomainUrlOutput.condition = useApiCustomDomain;

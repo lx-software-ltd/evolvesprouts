@@ -1,24 +1,22 @@
 import {
   API_MEDIA_REQUEST_PROXY_FUNCTION,
   API_PROXY_ALLOWLIST_FUNCTION,
-  MEDIA_REQUEST_PROXY_FUNCTION,
   STATIC_EXPORT_PATH_REWRITE_FUNCTION,
   WWW_API_ERROR_RESPONSE_FUNCTION,
-  WWW_PROXY_ALLOWLIST_FUNCTION,
 } from "../lib/cloudfront-www-proxy-functions";
 
 const REQUIRED_ALLOWLIST_PATHS = [
-  "/www/v1/calendar/public",
-  "/www/v1/calendar/availability",
-  "/www/v1/assets/free",
-  "/www/v1/discounts/validate",
-  "/www/v1/reservations",
-  "/www/v1/reservations/payment-intent",
-  "/www/v1/contact-us",
+  "/api/v1/public/calendar",
+  "/api/v1/public/calendar/availability",
+  "/api/v1/public/assets/free",
+  "/api/v1/public/discounts/validate",
+  "/api/v1/public/reservations",
+  "/api/v1/public/reservations/payment-intent",
+  "/api/v1/public/contact-us",
 ];
 
-const REQUIRED_FORM_PUT_PREFIX = "/www/v1/forms/";
-const REQUIRED_POLL_PUT_PREFIX = "/www/v1/polls/";
+const REQUIRED_FORM_PUT_PREFIX = "/api/v1/public/forms/";
+const REQUIRED_POLL_PUT_PREFIX = "/api/v1/public/polls/";
 const REQUIRED_POLL_PUT_SUFFIX = "/answers";
 const REQUIRED_POLL_RESULTS_SEGMENT = "/questions/";
 const REQUIRED_POLL_RESULTS_SUFFIX = "/results";
@@ -35,8 +33,6 @@ function assertContainsAll(haystack: string, needles: string[], label: string): 
 function main(): void {
   for (const source of [
     STATIC_EXPORT_PATH_REWRITE_FUNCTION,
-    WWW_PROXY_ALLOWLIST_FUNCTION,
-    MEDIA_REQUEST_PROXY_FUNCTION,
     WWW_API_ERROR_RESPONSE_FUNCTION,
     API_PROXY_ALLOWLIST_FUNCTION,
     API_MEDIA_REQUEST_PROXY_FUNCTION,
@@ -47,58 +43,55 @@ function main(): void {
   }
 
   assertContainsAll(
-    WWW_PROXY_ALLOWLIST_FUNCTION,
+    API_PROXY_ALLOWLIST_FUNCTION,
     REQUIRED_ALLOWLIST_PATHS,
-    "WWW_PROXY_ALLOWLIST_FUNCTION",
+    "API_PROXY_ALLOWLIST_FUNCTION",
   );
 
-  if (!WWW_PROXY_ALLOWLIST_FUNCTION.includes(REQUIRED_FORM_PUT_PREFIX)) {
+  if (!API_PROXY_ALLOWLIST_FUNCTION.includes(REQUIRED_FORM_PUT_PREFIX)) {
     throw new Error(
-      "WWW_PROXY_ALLOWLIST_FUNCTION missing form PUT prefix allowlist rule",
+      "API_PROXY_ALLOWLIST_FUNCTION missing form PUT prefix allowlist rule",
     );
   }
-  if (!WWW_PROXY_ALLOWLIST_FUNCTION.includes(REQUIRED_POLL_PUT_PREFIX)) {
+  if (!API_PROXY_ALLOWLIST_FUNCTION.includes(REQUIRED_POLL_PUT_PREFIX)) {
     throw new Error(
-      "WWW_PROXY_ALLOWLIST_FUNCTION missing poll PUT prefix allowlist rule",
+      "API_PROXY_ALLOWLIST_FUNCTION missing poll PUT prefix allowlist rule",
     );
   }
-  if (!WWW_PROXY_ALLOWLIST_FUNCTION.includes(REQUIRED_POLL_PUT_SUFFIX)) {
+  if (!API_PROXY_ALLOWLIST_FUNCTION.includes(REQUIRED_POLL_PUT_SUFFIX)) {
     throw new Error(
-      "WWW_PROXY_ALLOWLIST_FUNCTION missing poll PUT /answers suffix rule",
+      "API_PROXY_ALLOWLIST_FUNCTION missing poll PUT /answers suffix rule",
     );
   }
   if (
-    !WWW_PROXY_ALLOWLIST_FUNCTION.includes("method === 'GET'") ||
-    !WWW_PROXY_ALLOWLIST_FUNCTION.includes("isPollAnswersPath")
+    !API_PROXY_ALLOWLIST_FUNCTION.includes("method === 'GET'") ||
+    !API_PROXY_ALLOWLIST_FUNCTION.includes("isPollAnswersPath")
   ) {
     throw new Error(
-      "WWW_PROXY_ALLOWLIST_FUNCTION missing poll GET /answers allowlist rule",
+      "API_PROXY_ALLOWLIST_FUNCTION missing poll GET /answers allowlist rule",
     );
   }
-  if (!WWW_PROXY_ALLOWLIST_FUNCTION.includes("method === 'OPTIONS'")) {
+  if (!API_PROXY_ALLOWLIST_FUNCTION.includes("method === 'OPTIONS'")) {
     throw new Error(
-      "WWW_PROXY_ALLOWLIST_FUNCTION must allow OPTIONS for poll answer preflight",
+      "API_PROXY_ALLOWLIST_FUNCTION must allow OPTIONS for poll answer preflight",
     );
   }
-  if (!WWW_PROXY_ALLOWLIST_FUNCTION.includes(REQUIRED_POLL_RESULTS_SEGMENT)) {
+  if (!API_PROXY_ALLOWLIST_FUNCTION.includes(REQUIRED_POLL_RESULTS_SEGMENT)) {
     throw new Error(
-      "WWW_PROXY_ALLOWLIST_FUNCTION missing poll GET /questions/ segment rule",
+      "API_PROXY_ALLOWLIST_FUNCTION missing poll GET /questions/ segment rule",
     );
   }
-  if (!WWW_PROXY_ALLOWLIST_FUNCTION.includes(REQUIRED_POLL_RESULTS_SUFFIX)) {
+  if (!API_PROXY_ALLOWLIST_FUNCTION.includes(REQUIRED_POLL_RESULTS_SUFFIX)) {
     throw new Error(
-      "WWW_PROXY_ALLOWLIST_FUNCTION missing poll GET /results suffix rule",
+      "API_PROXY_ALLOWLIST_FUNCTION missing poll GET /results suffix rule",
     );
   }
-  if (!WWW_PROXY_ALLOWLIST_FUNCTION.includes("/contact-context")) {
+  if (!API_PROXY_ALLOWLIST_FUNCTION.includes("/contact-context")) {
     throw new Error(
-      "WWW_PROXY_ALLOWLIST_FUNCTION missing form GET /contact-context allowlist rule",
+      "API_PROXY_ALLOWLIST_FUNCTION missing form GET /contact-context allowlist rule",
     );
   }
 
-  if (!MEDIA_REQUEST_PROXY_FUNCTION.includes("/www/v1/assets/free/request")) {
-    throw new Error("MEDIA_REQUEST_PROXY_FUNCTION missing media request path");
-  }
   if (API_PROXY_ALLOWLIST_FUNCTION.includes("/www/")) {
     throw new Error("API_PROXY_ALLOWLIST_FUNCTION must not keep /www paths");
   }

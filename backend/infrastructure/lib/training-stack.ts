@@ -8,10 +8,8 @@ import { Construct } from "constructs";
 import {
   API_MEDIA_REQUEST_PROXY_FUNCTION,
   API_PROXY_ALLOWLIST_FUNCTION,
-  MEDIA_REQUEST_PROXY_FUNCTION,
   STATIC_EXPORT_PATH_REWRITE_FUNCTION,
   WWW_API_ERROR_RESPONSE_FUNCTION,
-  WWW_PROXY_ALLOWLIST_FUNCTION,
 } from "./cloudfront-www-proxy-functions";
 
 const API_BASE_URL_PATTERN = "^https://[^/]+(/[^/]+)?/?$";
@@ -202,28 +200,6 @@ export class TrainingStack extends cdk.Stack {
       },
     );
 
-    const wwwProxyAllowlistFunction = new cloudfront.Function(
-      this,
-      "TrainingWwwProxyAllowlistFunction",
-      {
-        comment:
-          "Allow only explicitly approved public API method/path pairs on /www/*.",
-        runtime: cloudfront.FunctionRuntime.JS_2_0,
-        code: cloudfront.FunctionCode.fromInline(WWW_PROXY_ALLOWLIST_FUNCTION),
-      },
-    );
-
-    const mediaRequestProxyFunction = new cloudfront.Function(
-      this,
-      "TrainingMediaRequestProxyFunction",
-      {
-        comment:
-          "Allow /www/v1/assets/free/request and rewrite the path for the API origin.",
-        runtime: cloudfront.FunctionRuntime.JS_2_0,
-        code: cloudfront.FunctionCode.fromInline(MEDIA_REQUEST_PROXY_FUNCTION),
-      },
-    );
-
     const wwwApiErrorResponseFunction = new cloudfront.Function(
       this,
       "TrainingWwwApiErrorResponseFunction",
@@ -256,9 +232,7 @@ export class TrainingStack extends cdk.Stack {
       },
     );
 
-    wwwProxyAllowlistFunction.node.addDependency(pathRewriteFunction);
-    mediaRequestProxyFunction.node.addDependency(wwwProxyAllowlistFunction);
-    wwwApiErrorResponseFunction.node.addDependency(mediaRequestProxyFunction);
+    wwwApiErrorResponseFunction.node.addDependency(pathRewriteFunction);
     apiProxyAllowlistFunction.node.addDependency(wwwApiErrorResponseFunction);
     apiMediaRequestProxyFunction.node.addDependency(apiProxyAllowlistFunction);
 
@@ -268,7 +242,7 @@ export class TrainingStack extends cdk.Stack {
       {
         cachePolicyName: "training-api-proxy-cache",
         comment:
-          "Edge cache for allowlisted /www/* GETs; TTL from origin Cache-Control (cap 15m).",
+          "Edge cache for allowlisted /api/* GETs; TTL from origin Cache-Control (cap 15m).",
         defaultTtl: cdk.Duration.minutes(5),
         minTtl: cdk.Duration.seconds(0),
         maxTtl: cdk.Duration.minutes(15),
@@ -369,25 +343,6 @@ export class TrainingStack extends cdk.Stack {
         ],
       },
       additionalBehaviors: {
-        "www/v1/assets/free/request": {
-          origin: mediaRequestApiOrigin,
-          viewerProtocolPolicy:
-            cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-          originRequestPolicy:
-            cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
-          functionAssociations: [
-            {
-              function: mediaRequestProxyFunction,
-              eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-            },
-            {
-              function: wwwApiErrorResponseFunction,
-              eventType: cloudfront.FunctionEventType.VIEWER_RESPONSE,
-            },
-          ],
-        },
         "api/v1/public/assets/free/request": {
           origin: mediaRequestApiOrigin,
           viewerProtocolPolicy:
@@ -418,25 +373,6 @@ export class TrainingStack extends cdk.Stack {
           functionAssociations: [
             {
               function: apiProxyAllowlistFunction,
-              eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-            },
-            {
-              function: wwwApiErrorResponseFunction,
-              eventType: cloudfront.FunctionEventType.VIEWER_RESPONSE,
-            },
-          ],
-        },
-        "www/*": {
-          origin: wwwApiOrigin,
-          viewerProtocolPolicy:
-            cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-          cachePolicy: apiProxyCachePolicy,
-          originRequestPolicy:
-            cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
-          functionAssociations: [
-            {
-              function: wwwProxyAllowlistFunction,
               eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
             },
             {

@@ -11,10 +11,8 @@ import { Construct } from "constructs";
 import {
   API_MEDIA_REQUEST_PROXY_FUNCTION,
   API_PROXY_ALLOWLIST_FUNCTION,
-  MEDIA_REQUEST_PROXY_FUNCTION,
   STATIC_EXPORT_PATH_REWRITE_FUNCTION,
   WWW_API_ERROR_RESPONSE_FUNCTION,
-  WWW_PROXY_ALLOWLIST_FUNCTION,
 } from "./cloudfront-www-proxy-functions";
 
 const API_BASE_URL_PATTERN = "^https://[^/]+(/[^/]+)?/?$";
@@ -440,36 +438,12 @@ export class PublicWwwStack extends cdk.Stack {
         ),
       },
     );
-    const wwwProxyAllowlistFunction = new cloudfront.Function(
-      this,
-      `${config.idPrefix}WwwProxyAllowlistFunction`,
-      {
-        comment:
-          "Edge-verify, then allow only approved public API method/path pairs on /www/*.",
-        runtime: cloudfront.FunctionRuntime.JS_2_0,
-        code: cloudfront.FunctionCode.fromInline(
-          this.viewerRequestCode(WWW_PROXY_ALLOWLIST_FUNCTION, config),
-        ),
-      },
-    );
-    const mediaRequestProxyFunction = new cloudfront.Function(
-      this,
-      `${config.idPrefix}MediaRequestProxyFunction`,
-      {
-        comment:
-          "Edge-verify, then allow /www/v1/assets/free/request and rewrite the path.",
-        runtime: cloudfront.FunctionRuntime.JS_2_0,
-        code: cloudfront.FunctionCode.fromInline(
-          this.viewerRequestCode(MEDIA_REQUEST_PROXY_FUNCTION, config),
-        ),
-      },
-    );
     const wwwApiErrorResponseFunction = new cloudfront.Function(
       this,
       `${config.idPrefix}WwwApiErrorResponseFunction`,
       {
         comment:
-          "Convert HTML error pages to JSON for /www API proxy behaviors.",
+          "Convert HTML error pages to JSON for /api proxy behaviors.",
         runtime: cloudfront.FunctionRuntime.JS_2_0,
         code: cloudfront.FunctionCode.fromInline(WWW_API_ERROR_RESPONSE_FUNCTION),
       },
@@ -506,9 +480,7 @@ export class PublicWwwStack extends cdk.Stack {
         ),
       },
     );
-    wwwProxyAllowlistFunction.node.addDependency(pathRewriteFunction);
-    mediaRequestProxyFunction.node.addDependency(wwwProxyAllowlistFunction);
-    wwwApiErrorResponseFunction.node.addDependency(mediaRequestProxyFunction);
+    wwwApiErrorResponseFunction.node.addDependency(pathRewriteFunction);
     apiProxyAllowlistFunction.node.addDependency(wwwApiErrorResponseFunction);
     apiMediaRequestProxyFunction.node.addDependency(apiProxyAllowlistFunction);
 
@@ -533,7 +505,7 @@ export class PublicWwwStack extends cdk.Stack {
       {
         cachePolicyName: `${config.idPrefix.toLowerCase()}-api-proxy-cache`,
         comment:
-          "Edge cache for allowlisted /www/* GETs; TTL from origin Cache-Control (cap 15m).",
+          "Edge cache for allowlisted /api/* GETs; TTL from origin Cache-Control (cap 15m).",
         defaultTtl: cdk.Duration.minutes(5),
         minTtl: cdk.Duration.seconds(0),
         maxTtl: cdk.Duration.minutes(15),
@@ -630,25 +602,6 @@ export class PublicWwwStack extends cdk.Stack {
           ],
         },
         additionalBehaviors: {
-          "www/v1/assets/free/request": {
-            origin: mediaRequestApiOrigin,
-            viewerProtocolPolicy:
-              cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-            allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-            cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-            originRequestPolicy:
-              cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
-            functionAssociations: [
-              {
-                function: mediaRequestProxyFunction,
-                eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-              },
-              {
-                function: wwwApiErrorResponseFunction,
-                eventType: cloudfront.FunctionEventType.VIEWER_RESPONSE,
-              },
-            ],
-          },
           "api/v1/public/assets/free/request": {
             origin: mediaRequestApiOrigin,
             viewerProtocolPolicy:
@@ -679,25 +632,6 @@ export class PublicWwwStack extends cdk.Stack {
             functionAssociations: [
               {
                 function: apiProxyAllowlistFunction,
-                eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-              },
-              {
-                function: wwwApiErrorResponseFunction,
-                eventType: cloudfront.FunctionEventType.VIEWER_RESPONSE,
-              },
-            ],
-          },
-          "www/*": {
-            origin: wwwApiOrigin,
-            viewerProtocolPolicy:
-              cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-            allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-            cachePolicy: apiProxyCachePolicy,
-            originRequestPolicy:
-              cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
-            functionAssociations: [
-              {
-                function: wwwProxyAllowlistFunction,
                 eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
               },
               {

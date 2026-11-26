@@ -17,32 +17,21 @@ from app.api.admin_request import (
 from app.exceptions import AuthorizationError, ValidationError
 
 
-def test_event_for_routing_strips_custom_domain_base_path() -> None:
+def test_event_for_routing_keeps_the_path() -> None:
     event = {
-        "path": "/prod/v1/mailchimp/webhook",
+        "path": "/v1/webhooks/mailchimp",
         "requestContext": {
             "stage": "prod",
-            "path": "/prod/v1/mailchimp/webhook",
+            "path": "/v1/webhooks/mailchimp",
         },
     }
 
     routed = event_for_routing(event)
 
-    assert routed["path"] == "/v1/mailchimp/webhook"
-    assert routed["requestContext"]["path"] == "/prod/v1/mailchimp/webhook"
-    assert event["path"] == "/prod/v1/mailchimp/webhook"
-
-
-def test_event_for_routing_keeps_execute_api_path() -> None:
-    event = {
-        "path": "/v1/mailchimp/webhook",
-        "requestContext": {
-            "stage": "prod",
-            "path": "/prod/v1/mailchimp/webhook",
-        },
-    }
-
-    assert event_for_routing(event)["path"] == "/v1/mailchimp/webhook"
+    assert routed["path"] == "/v1/webhooks/mailchimp"
+    assert routed["requestContext"]["path"] == "/v1/webhooks/mailchimp"
+    assert event["path"] == "/v1/webhooks/mailchimp"
+    assert routed is not event
 
 
 def test_event_for_routing_does_not_strip_a_partial_segment() -> None:

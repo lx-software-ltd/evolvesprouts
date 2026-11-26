@@ -337,22 +337,33 @@ _PUBLIC_ALIASES = {
     "/v1/whatsapp/webhook": "/v1/webhooks/whatsapp",
     "/v1/meta/webhook": "/v1/webhooks/meta",
 }
+_SHARE_ROUTES = {
+    "/v1/assets/share",
+    "/v1/assets/email-download",
+}
 
 
 def _with_public_aliases(routes):
-    """Add the open path and the /www path beside each website route."""
+    """Publish website and webhook routes only on their open paths.
+
+    Emailed share links still match ``/v1/assets/share`` and
+    ``/v1/assets/email-download``. The media distribution rewrites those
+    viewer paths onto ``/v1/public`` before they reach API Gateway, so both
+    prefixes stay.
+    """
     expanded = []
     for route_path, exact, handler in routes:
-        expanded.append((route_path, exact, handler))
-        if not route_path.startswith("/v1/"):
-            continue
         if route_path.startswith(("/v1/admin", "/v1/user", "/v1/partner")):
+            expanded.append((route_path, exact, handler))
+            continue
+        if route_path in _SHARE_ROUTES:
+            expanded.append((route_path, exact, handler))
+            expanded.append(("/v1/public" + route_path[len("/v1") :], exact, handler))
             continue
         public = _PUBLIC_ALIASES.get(route_path)
         if public is None:
             public = "/v1/public" + route_path[len("/v1") :]
         expanded.append((public, exact, handler))
-        expanded.append(("/www" + route_path, exact, handler))
     return tuple(expanded)
 
 
@@ -468,14 +479,8 @@ def _requires_json_content_type(path: str, method: str) -> bool:
 
     normalized_path = path.rstrip("/")
     non_json_routes = {
-        "/v1/mailchimp/webhook",
-        "/v1/whatsapp/webhook",
-        "/v1/meta/webhook",
         "/v1/webhooks/mailchimp",
         "/v1/webhooks/whatsapp",
         "/v1/webhooks/meta",
-        "/www/v1/mailchimp/webhook",
-        "/www/v1/whatsapp/webhook",
-        "/www/v1/meta/webhook",
     }
     return normalized_path not in non_json_routes

@@ -787,7 +787,7 @@ These raster files ship with `EvolvesproutsAdminFunction` under `backend/src/app
 | `InboundInvoiceSharedReceiptRuleSetName` | SES receipt rule set name | Shared set that the `lxsoftware` stack activates; this stack no longer activates its own set |
 | `CognitoCustomDomainCloudFront` | CloudFront distribution | Custom auth domain target (conditional) |
 | `ApiCustomDomainTarget` | CNAME target | API custom domain DNS target (conditional) |
-| `ApiCustomDomainUrl` | Custom domain URL | API custom domain URL including `/prod` (conditional). Use this as `NEXT_PUBLIC_API_BASE_URL` for direct clients. Webhook paths append `/v1/...` to this output. |
+| `ApiCustomDomainUrl` | Custom domain URL | API custom domain origin with no stage path (conditional). Use this as `NEXT_PUBLIC_API_BASE_URL` for direct clients. Webhook paths append `/v1/webhooks/...` to this output. |
 
 ---
 

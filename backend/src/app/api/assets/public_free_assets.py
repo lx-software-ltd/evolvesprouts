@@ -39,6 +39,8 @@ logger = get_logger(__name__)
 def _is_free_assets_list_path(path: str) -> bool:
     """True for /v1/assets/free and /www/v1/assets/free (normalized path)."""
     parts = [segment for segment in normalize_path(path).split("/") if segment]
+    if len(parts) == 4 and parts[:4] == ["v1", "public", "assets", "free"]:
+        return True
     if len(parts) == 3:
         return parts[0] == "v1" and parts[1] == "assets" and parts[2] == "free"
     if len(parts) == 4:
