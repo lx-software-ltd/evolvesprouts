@@ -228,24 +228,24 @@ def json_response(
 
 
 def _with_problem(status_code: int, payload: Any) -> Any:
-    """Add the shared error members when a handler returned only ``error``."""
-    if not isinstance(payload, dict) or status_code < 400 or "code" in payload:
+    """Add problem members, keeping a handler ``code`` that is already set."""
+    if not isinstance(payload, dict) or status_code < 400:
         return payload
     message = payload.get("error")
     if not isinstance(message, str):
         return payload
     field = payload.get("field")
     detail = payload.get("detail")
-    body = problem_body(
+    envelope = problem_body(
         status_code,
         message,
         detail if isinstance(detail, str) else None,
         field=field if isinstance(field, str) else None,
     )
-    for key, value in payload.items():
-        if key not in body:
-            body[key] = value
-    return body
+    merged = dict(payload)
+    for key, value in envelope.items():
+        merged.setdefault(key, value)
+    return merged
 
 
 def _request_id(event: Mapping[str, Any] | None) -> str:

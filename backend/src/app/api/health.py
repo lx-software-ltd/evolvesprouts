@@ -8,15 +8,14 @@ from __future__ import annotations
 
 import os
 import time
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.utils.logging import get_logger
-from app.utils.responses import json_response
+from app.utils.responses import json_response, method_not_allowed
 
 logger = get_logger(__name__)
 
@@ -149,9 +148,18 @@ def _check_configuration() -> HealthCheck:
 
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
-    """Lambda handler for health check endpoint."""
+    """Open liveness check. Does not read the database or configuration."""
+    return json_response(200, {"status": "ok"}, event=event)
+
+
+def handle_admin_health(
+    event: dict[str, Any],
+    method: str,
+    _path: str,
+) -> dict[str, Any]:
+    """Admin dependency check for ``GET /v1/admin/health``."""
+    if method != "GET":
+        return method_not_allowed(event)
     status = check_health()
-
     status_code = 200 if status.healthy else 503
-
     return json_response(status_code, status.to_dict(), event=event)

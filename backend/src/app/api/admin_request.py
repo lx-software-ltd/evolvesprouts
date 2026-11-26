@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import base64
 import json
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
-from collections.abc import Callable, Mapping, Sequence
 from uuid import UUID
 
 from app.exceptions import AuthorizationError, ValidationError
@@ -153,6 +153,32 @@ def normalize_path(path: str) -> str:
     if normalized != "/" and normalized.endswith("/"):
         normalized = normalized[:-1]
     return normalized
+
+
+_LEGACY_PARTNER_ROOTS = frozenset(
+    {
+        "whatsapp",
+        "meta",
+        "contacts",
+        "families",
+        "services",
+        "organizations",
+        "locations",
+        "geographic-areas",
+    }
+)
+
+
+def rewrite_legacy_partner_path(path: str) -> str:
+    """Map retired ``/v1/public/<partner>`` paths onto ``/v1/partner``."""
+    prefix = "/v1/public/"
+    if not path.startswith(prefix):
+        return path
+    rest = path[len(prefix) :]
+    root = rest.split("/", 1)[0]
+    if root not in _LEGACY_PARTNER_ROOTS:
+        return path
+    return "/v1/partner/" + rest
 
 
 def split_route_parts(path: str) -> list[str]:

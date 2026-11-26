@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from app.api import health
@@ -35,32 +36,48 @@ def test_check_health_never_returns_internal_exception_text(
     assert "SELECT" not in str(body)
 
 
-def test_lambda_handler_ignores_details_query_param(
+def test_open_health_does_not_call_database(
+    api_gateway_event: Any,
+    monkeypatch: Any,
+) -> None:
+    def _forbidden() -> health.HealthCheck:
+        raise AssertionError("open health called a dependency helper")
+
+    monkeypatch.setattr(health, "_check_database", _forbidden)
+    monkeypatch.setattr(health, "_check_configuration", _forbidden)
+
+    response = health.lambda_handler(
+        api_gateway_event(method="GET", path="/health"),
+        None,
+    )
+
+    assert response["statusCode"] == 200
+    assert json.loads(response["body"]) == {"status": "ok"}
+
+
+def test_admin_health_runs_dependency_checks(
     api_gateway_event: Any,
     monkeypatch: Any,
 ) -> None:
     monkeypatch.setattr(
         health,
-        "check_health",
-        lambda: health.HealthStatus(
-            healthy=True,
-            checks=[],
-            version="1.0.0",
-            environment="test",
-        ),
+        "_check_database",
+        lambda: health.HealthCheck(name="database", healthy=True),
+    )
+    monkeypatch.setattr(
+        health,
+        "_check_configuration",
+        lambda: health.HealthCheck(name="configuration", healthy=True),
+    )
+    monkeypatch.setenv("APP_VERSION", "9.9.9")
+    monkeypatch.setenv("ENVIRONMENT", "test")
+
+    response = health.handle_admin_health(
+        api_gateway_event(method="GET", path="/v1/admin/health"),
+        "GET",
+        "/v1/admin/health",
     )
 
-    response = health.lambda_handler(
-        api_gateway_event(
-            method="GET",
-            path="/health",
-            query_params={"details": "true"},
-        ),
-        None,
-    )
-    body = __import__("json").loads(response["body"])
-    assert body == {
-        "healthy": True,
-        "version": "1.0.0",
-        "environment": "test",
-    }
+    assert response["statusCode"] == 200
+    assert json.loads(response["body"])["healthy"] is True
+    assert json.loads(response["body"])["version"] == "9.9.9"
