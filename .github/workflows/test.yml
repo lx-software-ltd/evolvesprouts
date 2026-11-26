@@ -42,7 +42,7 @@ jobs:
 
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@9ce7ed3d92dd8cb572934f402cf3f6f20e48128d # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-python@7e5a0015172397639133a15297f3fe6f3fe7b463 # main 2026-11-26
 
       - name: Run Python tests
         run: bash scripts/ci/test-python.sh
@@ -61,7 +61,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@9ce7ed3d92dd8cb572934f402cf3f6f20e48128d # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-node@7e5a0015172397639133a15297f3fe6f3fe7b463 # main 2026-11-26
         with:
           cache: npm
           working-directory: apps/admin_web
@@ -96,7 +96,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@9ce7ed3d92dd8cb572934f402cf3f6f20e48128d # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-node@7e5a0015172397639133a15297f3fe6f3fe7b463 # main 2026-11-26
         with:
           cache: npm
           working-directory: apps/public_www
@@ -175,7 +175,7 @@ jobs:
           PY
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@9ce7ed3d92dd8cb572934f402cf3f6f20e48128d # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-node@7e5a0015172397639133a15297f3fe6f3fe7b463 # main 2026-11-26
         with:
           cache: npm
           working-directory: apps/training
@@ -209,13 +209,13 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@9ce7ed3d92dd8cb572934f402cf3f6f20e48128d # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-node@7e5a0015172397639133a15297f3fe6f3fe7b463 # main 2026-11-26
         with:
           cache: npm
           working-directory: backend/infrastructure
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@9ce7ed3d92dd8cb572934f402cf3f6f20e48128d # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-python@7e5a0015172397639133a15297f3fe6f3fe7b463 # main 2026-11-26
 
       - name: Run infrastructure tests
         run: npm run test:infra
@@ -234,13 +234,13 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@9ce7ed3d92dd8cb572934f402cf3f6f20e48128d # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-node@7e5a0015172397639133a15297f3fe6f3fe7b463 # main 2026-11-26
         with:
           cache: npm
           working-directory: apps/public_www
 
       - name: Install Playwright browsers
-        uses: lx-software-ltd/actions/playwright-install@9ce7ed3d92dd8cb572934f402cf3f6f20e48128d # main 2026-11-26
+        uses: lx-software-ltd/actions/playwright-install@7e5a0015172397639133a15297f3fe6f3fe7b463 # main 2026-11-26
         with:
           working-directory: apps/public_www
 
@@ -267,7 +267,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@9ce7ed3d92dd8cb572934f402cf3f6f20e48128d # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-flutter@7e5a0015172397639133a15297f3fe6f3fe7b463 # main 2026-11-26
 
       - name: Run Flutter tests
         run: bash scripts/ci/test-flutter.sh
@@ -293,7 +293,7 @@ jobs:
           # template:end
 
       - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@9ce7ed3d92dd8cb572934f402cf3f6f20e48128d # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-flutter@7e5a0015172397639133a15297f3fe6f3fe7b463 # main 2026-11-26
 
       - name: Point Flutter at Java 21
         run: flutter config --jdk-dir "$JAVA_HOME"
@@ -322,6 +322,6 @@ jobs:
     if: always()
     steps:
       - name: Require every test job
-        uses: lx-software-ltd/actions/require-jobs@9ce7ed3d92dd8cb572934f402cf3f6f20e48128d # main 2026-11-26
+        uses: lx-software-ltd/actions/require-jobs@7e5a0015172397639133a15297f3fe6f3fe7b463 # main 2026-11-26
         with:
           needs-json: ${{ toJson(needs) }}

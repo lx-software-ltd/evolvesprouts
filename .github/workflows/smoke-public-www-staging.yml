@@ -40,7 +40,7 @@ jobs:
           REQUIRE_ASSET: "false"
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@9ce7ed3d92dd8cb572934f402cf3f6f20e48128d # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-node@7e5a0015172397639133a15297f3fe6f3fe7b463 # main 2026-11-26
         with:
           cache: npm
           working-directory: apps/public_www

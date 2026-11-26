@@ -43,6 +43,7 @@ Remove the comments and the https check on the landing-page helper.
 None.
 
 The security-extended suite omits the alert-suppression query, so the
-`lgtm` and `noqa` marks were not uploaded. The shared CodeQL action now
-adds that query for Python and JavaScript. This repository pins that
-action. The Figma files that are written are unchanged.
+`lgtm` and `noqa` marks were not uploaded. Code scanning also leaves a
+SARIF suppression open. The shared CodeQL action adds the query and
+removes those results before upload. This repository pins that action.
+The Figma files that are written are unchanged.
