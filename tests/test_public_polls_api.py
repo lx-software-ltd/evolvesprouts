@@ -1,4 +1,4 @@
-"""Tests for PUT /v1/polls/{poll_slug}/answers."""
+"""Tests for PUT /v1/public/polls/{poll_slug}/answers."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ def reset_poll_store() -> None:
 def _event(api_gateway_event: Any, *, body: dict[str, Any]) -> dict[str, Any]:
     return api_gateway_event(
         method="PUT",
-        path="/www/v1/polls/workshop-food-jun-26/answers",
+        path="/v1/public/polls/workshop-food-jun-26/answers",
         body=json.dumps(body),
         headers={"content-type": "application/json"},
     )
@@ -58,7 +58,7 @@ def test_put_poll_answer_persists_select(api_gateway_event: Any, mock_env: Any) 
     resp = pp.handle_public_polls_request(
         _event(api_gateway_event, body=body),
         "PUT",
-        "/www/v1/polls/workshop-food-jun-26/answers",
+        "/v1/public/polls/workshop-food-jun-26/answers",
     )
     assert resp["statusCode"] == 200
     item = table.put_item.call_args.kwargs["Item"]
@@ -86,7 +86,7 @@ def test_put_poll_answer_persists_multiselect(
     resp = pp.handle_public_polls_request(
         _event(api_gateway_event, body=body),
         "PUT",
-        "/www/v1/polls/workshop-food-jun-26/answers",
+        "/v1/public/polls/workshop-food-jun-26/answers",
     )
     assert resp["statusCode"] == 200
     item = table.put_item.call_args.kwargs["Item"]
@@ -113,7 +113,7 @@ def test_put_poll_answer_persists_truefalse(
     resp = pp.handle_public_polls_request(
         _event(api_gateway_event, body=body),
         "PUT",
-        "/www/v1/polls/workshop-food-jun-26/answers",
+        "/v1/public/polls/workshop-food-jun-26/answers",
     )
     assert resp["statusCode"] == 200
     item = table.put_item.call_args.kwargs["Item"]
@@ -135,7 +135,7 @@ def test_put_poll_answer_persists_text(api_gateway_event: Any, mock_env: Any) ->
     resp = pp.handle_public_polls_request(
         _event(api_gateway_event, body=body),
         "PUT",
-        "/www/v1/polls/workshop-food-jun-26/answers",
+        "/v1/public/polls/workshop-food-jun-26/answers",
     )
     assert resp["statusCode"] == 200
     item = table.put_item.call_args.kwargs["Item"]
@@ -157,7 +157,7 @@ def test_put_poll_answer_persists_email(api_gateway_event: Any, mock_env: Any) -
     resp = pp.handle_public_polls_request(
         _event(api_gateway_event, body=body),
         "PUT",
-        "/www/v1/polls/workshop-food-jun-26/answers",
+        "/v1/public/polls/workshop-food-jun-26/answers",
     )
     assert resp["statusCode"] == 200
 
@@ -201,13 +201,13 @@ def test_get_poll_session_answers_returns_session_rows(
 
     event = api_gateway_event(
         method="GET",
-        path="/www/v1/polls/workshop-food-jun-26/answers",
+        path="/v1/public/polls/workshop-food-jun-26/answers",
         query_params={"sessionId": session_id},
     )
     resp = pp.handle_public_polls_request(
         event,
         "GET",
-        "/www/v1/polls/workshop-food-jun-26/answers",
+        "/v1/public/polls/workshop-food-jun-26/answers",
     )
     assert resp["statusCode"] == 200
     body = json.loads(resp["body"])
@@ -223,13 +223,13 @@ def test_get_poll_session_answers_rejects_invalid_session(
 ) -> None:
     event = api_gateway_event(
         method="GET",
-        path="/www/v1/polls/workshop-food-jun-26/answers",
+        path="/v1/public/polls/workshop-food-jun-26/answers",
         query_params={"sessionId": "not-a-uuid"},
     )
     resp = pp.handle_public_polls_request(
         event,
         "GET",
-        "/www/v1/polls/workshop-food-jun-26/answers",
+        "/v1/public/polls/workshop-food-jun-26/answers",
     )
     assert resp["statusCode"] == 400
 
@@ -244,7 +244,7 @@ def test_put_poll_answer_rejects_invalid_session(api_gateway_event: Any) -> None
     resp = pp.handle_public_polls_request(
         _event(api_gateway_event, body=body),
         "PUT",
-        "/www/v1/polls/workshop-food-jun-26/answers",
+        "/v1/public/polls/workshop-food-jun-26/answers",
     )
     assert resp["statusCode"] == 400
 
@@ -283,13 +283,13 @@ def test_get_poll_question_results_aggregates_select(
 
     event = api_gateway_event(
         method="GET",
-        path="/www/v1/polls/workshop-food-jun-26/questions/role/results",
+        path="/v1/public/polls/workshop-food-jun-26/questions/role/results",
         query_params={"questionType": "select"},
     )
     resp = pp.handle_public_polls_request(
         event,
         "GET",
-        "/www/v1/polls/workshop-food-jun-26/questions/role/results",
+        "/v1/public/polls/workshop-food-jun-26/questions/role/results",
     )
     assert resp["statusCode"] == 200
     body = json.loads(resp["body"])
@@ -335,13 +335,13 @@ def test_get_poll_question_results_aggregates_multiselect(
 
     event = api_gateway_event(
         method="GET",
-        path="/www/v1/polls/workshop-food-jun-26/questions/challenge/results",
+        path="/v1/public/polls/workshop-food-jun-26/questions/challenge/results",
         query_params={"questionType": "multiselect"},
     )
     resp = pp.handle_public_polls_request(
         event,
         "GET",
-        "/www/v1/polls/workshop-food-jun-26/questions/challenge/results",
+        "/v1/public/polls/workshop-food-jun-26/questions/challenge/results",
     )
     assert resp["statusCode"] == 200
     body = json.loads(resp["body"])
@@ -370,13 +370,13 @@ def test_get_poll_question_results_aggregates_truefalse(
 
     event = api_gateway_event(
         method="GET",
-        path="/www/v1/polls/workshop-food-jun-26/questions/myth1/results",
+        path="/v1/public/polls/workshop-food-jun-26/questions/myth1/results",
         query_params={"questionType": "truefalse"},
     )
     resp = pp.handle_public_polls_request(
         event,
         "GET",
-        "/www/v1/polls/workshop-food-jun-26/questions/myth1/results",
+        "/v1/public/polls/workshop-food-jun-26/questions/myth1/results",
     )
     assert resp["statusCode"] == 200
     body = json.loads(resp["body"])
@@ -392,12 +392,12 @@ def test_get_poll_question_results_requires_question_type(
 ) -> None:
     event = api_gateway_event(
         method="GET",
-        path="/www/v1/polls/workshop-food-jun-26/questions/role/results",
+        path="/v1/public/polls/workshop-food-jun-26/questions/role/results",
     )
     resp = pp.handle_public_polls_request(
         event,
         "GET",
-        "/www/v1/polls/workshop-food-jun-26/questions/role/results",
+        "/v1/public/polls/workshop-food-jun-26/questions/role/results",
     )
     assert resp["statusCode"] == 400
 
@@ -413,12 +413,12 @@ def test_get_poll_control_defaults_to_all_off(
 
     event = api_gateway_event(
         method="GET",
-        path="/www/v1/polls/workshop-food-jun-26/control",
+        path="/v1/public/polls/workshop-food-jun-26/control",
     )
     resp = pp.handle_public_polls_request(
         event,
         "GET",
-        "/www/v1/polls/workshop-food-jun-26/control",
+        "/v1/public/polls/workshop-food-jun-26/control",
     )
     assert resp["statusCode"] == 200
     body = json.loads(resp["body"])
@@ -436,14 +436,14 @@ def test_put_poll_control_persists_enabled_questions(
 
     event = api_gateway_event(
         method="PUT",
-        path="/www/v1/polls/workshop-food-jun-26/control",
+        path="/v1/public/polls/workshop-food-jun-26/control",
         body=json.dumps({"enabledQuestionIds": ["role", "myth1"]}),
         headers={"content-type": "application/json"},
     )
     resp = pp.handle_public_polls_request(
         event,
         "PUT",
-        "/www/v1/polls/workshop-food-jun-26/control",
+        "/v1/public/polls/workshop-food-jun-26/control",
     )
     assert resp["statusCode"] == 200
     item = table.put_item.call_args.kwargs["Item"]
@@ -480,13 +480,13 @@ def test_get_poll_question_results_lists_text_responses(
 
     event = api_gateway_event(
         method="GET",
-        path="/www/v1/polls/workshop-food-jun-26/questions/onething/results",
+        path="/v1/public/polls/workshop-food-jun-26/questions/onething/results",
         query_params={"questionType": "text"},
     )
     resp = pp.handle_public_polls_request(
         event,
         "GET",
-        "/www/v1/polls/workshop-food-jun-26/questions/onething/results",
+        "/v1/public/polls/workshop-food-jun-26/questions/onething/results",
     )
     assert resp["statusCode"] == 200
     body = json.loads(resp["body"])
@@ -512,7 +512,7 @@ def test_put_poll_answer_rejects_disabled_question(
     resp = pp.handle_public_polls_request(
         _event(api_gateway_event, body=body),
         "PUT",
-        "/www/v1/polls/workshop-food-jun-26/answers",
+        "/v1/public/polls/workshop-food-jun-26/answers",
     )
     assert resp["statusCode"] == 409
     body = json.loads(resp["body"])
@@ -538,7 +538,7 @@ def test_put_poll_answer_rejects_when_poll_not_accepting(
     resp = pp.handle_public_polls_request(
         _event(api_gateway_event, body=body),
         "PUT",
-        "/www/v1/polls/workshop-food-jun-26/answers",
+        "/v1/public/polls/workshop-food-jun-26/answers",
     )
     assert resp["statusCode"] == 409
     payload = json.loads(resp["body"])
@@ -549,12 +549,12 @@ def test_put_poll_answer_rejects_when_poll_not_accepting(
 def test_put_poll_answer_rejects_unknown_path(api_gateway_event: Any) -> None:
     event = api_gateway_event(
         method="PUT",
-        path="/www/v1/polls/workshop-food-jun-26/submit",
+        path="/v1/public/polls/workshop-food-jun-26/submit",
         body="{}",
         headers={"content-type": "application/json"},
     )
     resp = pp.handle_public_polls_request(
-        event, "PUT", "/www/v1/polls/workshop-food-jun-26/submit"
+        event, "PUT", "/v1/public/polls/workshop-food-jun-26/submit"
     )
     assert resp["statusCode"] == 404
 
@@ -585,7 +585,7 @@ def test_put_poll_answer_rejects_option_not_in_published_list(
     resp = pp.handle_public_polls_request(
         _event(api_gateway_event, body=body),
         "PUT",
-        "/www/v1/polls/workshop-food-jun-26/answers",
+        "/v1/public/polls/workshop-food-jun-26/answers",
     )
     assert resp["statusCode"] == 409
     payload = json.loads(resp["body"])
@@ -619,7 +619,7 @@ def test_put_poll_answer_accepts_option_in_published_list(
     resp = pp.handle_public_polls_request(
         _event(api_gateway_event, body=body),
         "PUT",
-        "/www/v1/polls/workshop-food-jun-26/answers",
+        "/v1/public/polls/workshop-food-jun-26/answers",
     )
     assert resp["statusCode"] == 200
 
@@ -642,7 +642,7 @@ def test_put_poll_answer_skips_option_check_without_published_options(
     resp = pp.handle_public_polls_request(
         _event(api_gateway_event, body=body),
         "PUT",
-        "/www/v1/polls/workshop-food-jun-26/answers",
+        "/v1/public/polls/workshop-food-jun-26/answers",
     )
     assert resp["statusCode"] == 200
 
@@ -658,7 +658,7 @@ def test_put_poll_control_persists_question_options(
 
     event = api_gateway_event(
         method="PUT",
-        path="/www/v1/polls/workshop-food-jun-26/control",
+        path="/v1/public/polls/workshop-food-jun-26/control",
         body=json.dumps(
             {
                 "enabledQuestionIds": ["role"],
@@ -675,7 +675,7 @@ def test_put_poll_control_persists_question_options(
     resp = pp.handle_public_polls_request(
         event,
         "PUT",
-        "/www/v1/polls/workshop-food-jun-26/control",
+        "/v1/public/polls/workshop-food-jun-26/control",
     )
     assert resp["statusCode"] == 200
     item = table.put_item.call_args.kwargs["Item"]
@@ -701,7 +701,7 @@ def test_put_poll_answer_rejects_rate_limited_session(
     resp = pp.handle_public_polls_request(
         _event(api_gateway_event, body=body),
         "PUT",
-        "/www/v1/polls/workshop-food-jun-26/answers",
+        "/v1/public/polls/workshop-food-jun-26/answers",
     )
     assert resp["statusCode"] == 429
     payload = json.loads(resp["body"])
@@ -741,7 +741,7 @@ def test_put_poll_answer_idempotent_resubmit_skips_rate_limit_and_write(
     resp = pp.handle_public_polls_request(
         _event(api_gateway_event, body=body),
         "PUT",
-        "/www/v1/polls/workshop-food-jun-26/answers",
+        "/v1/public/polls/workshop-food-jun-26/answers",
     )
     assert resp["statusCode"] == 200
     payload = json.loads(resp["body"])

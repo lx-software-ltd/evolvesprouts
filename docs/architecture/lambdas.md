@@ -45,28 +45,28 @@ their primary responsibilities.
   `/v1/assets/free/request`, `/v1/reservations`,
   `/v1/reservations/payment-intent`,
   `/v1/calendar/public` (same public calendar feed and contract as
-  `/www/v1/calendar/public`; see that entry below for payload, ordering, and query filters),
+  `/v1/public/calendar`; see that entry below for payload, ordering, and query filters),
   `/v1/calendar/availability` (GET; requires `purpose` `consultation_booking` or `intro_call_booking`;
-  returns discrete UTC slot intervals plus metadata; `consultation_booking` uses half-day AM/PM blocks Mon–Fri local with strict grid validation on reservations (09:00 / 14:00 local on weekdays); `intro_call_booking` uses 15-minute slots on a 30-minute cadence; same contract as `/www/v1/calendar/availability`;
+  returns discrete UTC slot intervals plus metadata; `consultation_booking` uses half-day AM/PM blocks Mon–Fri local with strict grid validation on reservations (09:00 / 14:00 local on weekdays); `intro_call_booking` uses 15-minute slots on a 30-minute cadence; same contract as `/v1/public/calendar/availability`;
   `purpose=consultation_booking` uses `Cache-Control: no-store` on success; intro-call uses the standard public cacheable GET headers),
   `/v1/discounts/validate`,
   `/v1/contact-us`,
   `/v1/forms/{form_slug}/answers` (PUT; API key; persists training form answers to DynamoDB
   `evolvesprouts-poll-responses`; optional `contactId` on the body stores which CRM contact
-  the session was personalised for; same contract as `/www/v1/forms/{form_slug}/answers`),
+  the session was personalised for; same contract as `/v1/public/forms/{form_slug}/answers`),
   `/v1/forms/{form_slug}/contact-context` (GET; API key; `contactId` query; display-only
   household placeholder strings for `{contactName}` / `{children.firstName}` / `{helpers.firstName}`
-  tokens; `Cache-Control: no-store`; same contract as `/www/v1/forms/{form_slug}/contact-context`),
+  tokens; `Cache-Control: no-store`; same contract as `/v1/public/forms/{form_slug}/contact-context`),
   `/v1/polls/{poll_slug}/answers` (GET lists answers for `sessionId`; PUT upserts one answer;
   API key; DynamoDB `evolvesprouts-poll-responses`; validates options when control state
   publishes `questionOptions`; per-session hourly write rate limits; same contract as
-  `/www/v1/polls/{poll_slug}/answers`),
+  `/v1/public/polls/{poll_slug}/answers`),
   `/v1/polls/{poll_slug}/questions/{question_id}/results` (GET; API key; live aggregates for
   `select` / `truefalse` questions and free-text lists for `text` / `email`; same contract as
-  `/www/v1/polls/.../results`),
+  `/v1/public/polls/.../results`),
   `/v1/polls/{poll_slug}/control` (GET, PUT; API key; facilitator toggles for which questions
   respondents may answer and optional `questionOptions` for answer validation; stored at DynamoDB
-  sort key `CONTROL`; default is all off; same contract as `/www/v1/polls/{poll_slug}/control`),
+  sort key `CONTROL`; default is all off; same contract as `/v1/public/polls/{poll_slug}/control`),
   `/v1/admin/geographic-areas`,
   `/v1/mailchimp/webhook` (GET/POST; Mailchimp audience callback URL must track
   `ApiCustomDomainUrl`, which includes `/prod`, so the
@@ -299,7 +299,7 @@ their primary responsibilities.
   `/v1/assets/public/*`, `/v1/assets/share/*`, `/v1/assets/email-download/*`,
   and `GET /v1/assets/free`,
   plus public website proxy routes including
-  `/www/v1/discounts/validate` (native Aurora-backed discount validation; request body
+  `/v1/public/discounts/validate` (native Aurora-backed discount validation; request body
   requires `service_key`; optional `service_instance_slug` pairs with `service_key` to resolve a
   `service_instances` row whose parent `services.service_key` matches `service_key`
   (case-insensitive); slug-less requests resolve `services` by `service_key` only—unknown keys **404**
@@ -313,8 +313,8 @@ their primary responsibilities.
   `unknown_service_key`,
   `instance_scope_mismatch`, `service_scope_mismatch`), `code_hash`,
   and `code_prefix`—never the full code),
-  `/www/v1/contact-us`, `/www/v1/reservations`,
-  `/www/v1/calendar/public` (public calendar feed: returns **event** and
+  `/v1/public/contact-us`, `/v1/public/reservations`,
+  `/v1/public/calendar` (public calendar feed: returns **event** and
   **training_course** `service_instances` for published services; consultation
   is intentionally excluded. Instances with an empty `service_instances.slug` are omitted.
   Visibility: instances with any session not yet ended, or **event** instances whose last session ended within the prior 90 days (finished **training_course** rows are omitted). Scheduled **event** instances are omitted; scheduled **training_course** instances stay. Event reservations accept `open`, `full`, and `in_progress` only.
@@ -343,16 +343,16 @@ their primary responsibilities.
   `spaces_total` mirrors `max_capacity` and `spaces_left` counts remaining seats from
   enrollments in registered, confirmed, or completed status, optionally reduced further
   by an admin-only `capacity_left_override` soft cap for public display),
-  `/www/v1/calendar/availability` (requires `purpose`; returns discrete slots + meta for consultation or intro-call booking;
+  `/v1/public/calendar/availability` (requires `purpose`; returns discrete slots + meta for consultation or intro-call booking;
   consultation uses Mon–Fri half-day grid with `meta.wall_time_zone`; success `Cache-Control` follows purpose),
-  `/www/v1/assets/free` (lists public assets tagged `client_document`;
+  `/v1/public/assets/free` (lists public assets tagged `client_document`;
   optional `language` query filters on `assets.content_language` using any valid
   BCP 47-style tag; admin asset writes restrict `content_language` to `en`,
   `zh-CN`, or `zh-HK`; downloads
   remain on `/v1/assets/public/{id}/download` with device attestation),
-  Allowlisted public GETs behind `/www/*` (`GET /v1/calendar/public`,
+  Allowlisted public GETs behind `/api/*` (`GET /v1/calendar/public`,
   `GET /v1/calendar/availability` (edge-cacheable on 200 for intro-call; consultation uses `no-store`),
-  `GET /v1/assets/free`, and `/www/v1/...`) emit `Cache-Control` on success and
+  `GET /v1/assets/free`, and `/v1/public/...`) emit `Cache-Control` on success and
   `no-store` on handler error paths; new allowlisted GETs must follow the same
   contract,
 - Auth: Cognito JWT — admin group for `/v1/admin/*`,
@@ -444,7 +444,7 @@ their primary responsibilities.
   are set, requests whose `Origin` or `Referer` matches that staging site use
   the staging Stripe secret; otherwise the live `EVOLVESPROUTS_STRIPE_SECRET_KEY`
   is used (reservation submission uses the same selection for PaymentIntent retrieval).
-  `POST /v1/reservations` (and `/www/v1/reservations`) accepts camelCase booking-modal
+  `POST /v1/reservations` (and `/v1/public/reservations`) accepts camelCase booking-modal
   fields, persists contact + program-enrollment lead (including discount metadata when
   applicable; referral-type codes are rejected). Requires `serviceKey`; `serviceInstanceSlug`
   pairs with it for **event-booking** and **my-best-auntie-booking**. **consultation-booking**

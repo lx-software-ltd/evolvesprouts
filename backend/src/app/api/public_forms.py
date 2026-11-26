@@ -25,7 +25,7 @@ logger = get_logger(__name__)
 _ANSWERS_SUFFIX = "/answers"
 _CONTACT_CONTEXT_SUFFIX = "/contact-context"
 _FORM_API_PREFIX = "/v1/forms/"
-_WWW_FORM_API_PREFIX = "/www/v1/forms/"
+_PUBLIC_FORM_API_PREFIX = "/v1/public/forms/"
 _NO_STORE = {"Cache-Control": CACHE_CONTROL_NO_STORE}
 
 _MAX_SELECTED_OPTION = 500
@@ -53,7 +53,7 @@ def handle_public_forms_request(
     method: str,
     path: str,
 ) -> dict[str, Any]:
-    """Route form API requests under /v1/forms/* and /www/v1/forms/*."""
+    """Route form API requests under /v1/public/forms and /v1/forms."""
     answers = _parse_form_suffix_path(path, suffix=_ANSWERS_SUFFIX)
     if answers is not None:
         form_slug = answers
@@ -72,8 +72,8 @@ def handle_public_forms_request(
 
 def _parse_form_path_remainder(path: str) -> str | None:
     normalized = path.rstrip("/")
-    if normalized.startswith(_WWW_FORM_API_PREFIX):
-        return normalized[len(_WWW_FORM_API_PREFIX) :]
+    if normalized.startswith(_PUBLIC_FORM_API_PREFIX):
+        return normalized[len(_PUBLIC_FORM_API_PREFIX) :]
     if normalized.startswith(_FORM_API_PREFIX):
         return normalized[len(_FORM_API_PREFIX) :]
     return None

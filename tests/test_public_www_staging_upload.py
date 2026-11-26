@@ -31,8 +31,6 @@ elif args[:2] == ["cloudfront", "describe-function"]:
 elif args[:2] == ["cloudfront", "get-distribution-config"]:
     arn = "arn:aws:cloudfront::123456789012:function/AllowlistFunction"
     patterns = [
-        "www/*",
-        "www/v1/assets/free/request",
         "api/*",
         "api/v1/public/assets/free/request",
     ]

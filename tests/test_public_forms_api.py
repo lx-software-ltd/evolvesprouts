@@ -1,4 +1,4 @@
-"""Tests for PUT /v1/forms/{form_slug}/answers."""
+"""Tests for PUT /v1/public/forms/{form_slug}/answers."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ def reset_form_store() -> None:
 def _event(api_gateway_event: Any, *, body: dict[str, Any]) -> dict[str, Any]:
     return api_gateway_event(
         method="PUT",
-        path="/www/v1/forms/workshop-feedback/answers",
+        path="/v1/public/forms/workshop-feedback/answers",
         body=json.dumps(body),
         headers={"content-type": "application/json"},
     )
@@ -43,7 +43,7 @@ def test_put_form_answer_persists_select(api_gateway_event: Any, mock_env: Any) 
     resp = pf.handle_public_forms_request(
         _event(api_gateway_event, body=body),
         "PUT",
-        "/www/v1/forms/workshop-feedback/answers",
+        "/v1/public/forms/workshop-feedback/answers",
     )
     assert resp["statusCode"] == 200
     item = table.put_item.call_args.kwargs["Item"]
@@ -66,7 +66,7 @@ def test_put_form_answer_persists_text(api_gateway_event: Any, mock_env: Any) ->
     resp = pf.handle_public_forms_request(
         _event(api_gateway_event, body=body),
         "PUT",
-        "/www/v1/forms/workshop-feedback/answers",
+        "/v1/public/forms/workshop-feedback/answers",
     )
     assert resp["statusCode"] == 200
     item = table.put_item.call_args.kwargs["Item"]
@@ -88,7 +88,7 @@ def test_put_form_answer_persists_rating(api_gateway_event: Any, mock_env: Any) 
     resp = pf.handle_public_forms_request(
         _event(api_gateway_event, body=body),
         "PUT",
-        "/www/v1/forms/workshop-exit-feedback/answers",
+        "/v1/public/forms/workshop-exit-feedback/answers",
     )
     assert resp["statusCode"] == 200
     item = table.put_item.call_args.kwargs["Item"]
@@ -112,7 +112,7 @@ def test_put_form_answer_persists_multiselect(
     resp = pf.handle_public_forms_request(
         _event(api_gateway_event, body=body),
         "PUT",
-        "/www/v1/forms/workshop-exit-feedback/answers",
+        "/v1/public/forms/workshop-exit-feedback/answers",
     )
     assert resp["statusCode"] == 200
     item = table.put_item.call_args.kwargs["Item"]
@@ -137,7 +137,7 @@ def test_put_form_answer_persists_consent(
     resp = pf.handle_public_forms_request(
         _event(api_gateway_event, body=body),
         "PUT",
-        "/www/v1/forms/workshop-exit-feedback/answers",
+        "/v1/public/forms/workshop-exit-feedback/answers",
     )
     assert resp["statusCode"] == 200
     item = table.put_item.call_args.kwargs["Item"]
@@ -161,7 +161,7 @@ def test_put_form_answer_rejects_truefalse(
     resp = pf.handle_public_forms_request(
         _event(api_gateway_event, body=body),
         "PUT",
-        "/www/v1/forms/workshop-feedback/answers",
+        "/v1/public/forms/workshop-feedback/answers",
     )
     assert resp["statusCode"] == 400
 
@@ -185,7 +185,7 @@ def test_put_form_answer_persists_contact_id(
     resp = pf.handle_public_forms_request(
         _event(api_gateway_event, body=body),
         "PUT",
-        "/www/v1/forms/workshop-feedback/answers",
+        "/v1/public/forms/workshop-feedback/answers",
     )
     assert resp["statusCode"] == 200
     item = table.put_item.call_args.kwargs["Item"]
@@ -214,7 +214,7 @@ def test_put_form_answer_preserves_existing_contact_id(
     resp = pf.handle_public_forms_request(
         _event(api_gateway_event, body=body),
         "PUT",
-        "/www/v1/forms/workshop-feedback/answers",
+        "/v1/public/forms/workshop-feedback/answers",
     )
     assert resp["statusCode"] == 200
     item = table.put_item.call_args.kwargs["Item"]
@@ -226,14 +226,14 @@ def test_get_contact_context_requires_contact_id(
 ) -> None:
     event = api_gateway_event(
         method="GET",
-        path="/www/v1/forms/workshop-feedback/contact-context",
+        path="/v1/public/forms/workshop-feedback/contact-context",
         query_params={},
         headers={"content-type": "application/json"},
     )
     resp = pf.handle_public_forms_request(
         event,
         "GET",
-        "/www/v1/forms/workshop-feedback/contact-context",
+        "/v1/public/forms/workshop-feedback/contact-context",
     )
     assert resp["statusCode"] == 400
     assert "no-store" in resp["headers"]["Cache-Control"]
@@ -271,14 +271,14 @@ def test_get_contact_context_returns_placeholders(
     )
     event = api_gateway_event(
         method="GET",
-        path="/www/v1/forms/workshop-feedback/contact-context",
+        path="/v1/public/forms/workshop-feedback/contact-context",
         query_params={"contactId": contact_id},
         headers={"content-type": "application/json"},
     )
     resp = pf.handle_public_forms_request(
         event,
         "GET",
-        "/www/v1/forms/workshop-feedback/contact-context",
+        "/v1/public/forms/workshop-feedback/contact-context",
     )
     assert resp["statusCode"] == 200
     body = json.loads(resp["body"])
@@ -312,14 +312,14 @@ def test_get_contact_context_returns_404_when_contact_missing(
     )
     event = api_gateway_event(
         method="GET",
-        path="/www/v1/forms/workshop-feedback/contact-context",
+        path="/v1/public/forms/workshop-feedback/contact-context",
         query_params={"contactId": "11111111-1111-4111-8111-111111111111"},
         headers={"content-type": "application/json"},
     )
     resp = pf.handle_public_forms_request(
         event,
         "GET",
-        "/www/v1/forms/workshop-feedback/contact-context",
+        "/v1/public/forms/workshop-feedback/contact-context",
     )
     assert resp["statusCode"] == 404
     assert "no-store" in resp["headers"]["Cache-Control"]

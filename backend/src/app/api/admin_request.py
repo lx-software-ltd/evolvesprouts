@@ -104,43 +104,11 @@ def _request_domain_name(event: Mapping[str, Any]) -> str:
 
 
 def event_for_routing(event: Mapping[str, Any]) -> dict[str, Any]:
-    """Copy the event with the custom-domain base path removed from ``path``.
+    """Copy the event. The custom domain has no stage name in the path.
 
-    Execute-api sets ``path`` to the resource path (``/v1/...``). A custom
-    domain whose base path is the stage name sets ``path`` to
-    ``/{stage}/v1/...``. Handlers match the execute-api shape.
-    ``requestContext.path`` stays intact so share links can still recover
-    the stage prefix. The caller's event is not mutated.
+    The caller's event is not mutated.
     """
-    routed = dict(event)
-    raw_path = event.get("path")
-    if isinstance(raw_path, str):
-        routed["path"] = _strip_stage_base_path(raw_path, _request_stage(event))
-    return routed
-
-
-def _request_stage(event: Mapping[str, Any]) -> str:
-    request_context = event.get("requestContext")
-    if not isinstance(request_context, Mapping):
-        return ""
-    stage = request_context.get("stage")
-    if not isinstance(stage, str):
-        return ""
-    stage = stage.strip()
-    if not stage or "/" in stage or stage in {".", ".."}:
-        return ""
-    return stage
-
-
-def _strip_stage_base_path(path: str, stage: str) -> str:
-    if not stage:
-        return path
-    prefix = f"/{stage}"
-    if path == prefix:
-        return "/"
-    if path.startswith(prefix + "/"):
-        return path[len(prefix) :]
-    return path
+    return dict(event)
 
 
 def normalize_path(path: str) -> str:
@@ -153,32 +121,6 @@ def normalize_path(path: str) -> str:
     if normalized != "/" and normalized.endswith("/"):
         normalized = normalized[:-1]
     return normalized
-
-
-_LEGACY_PARTNER_ROOTS = frozenset(
-    {
-        "whatsapp",
-        "meta",
-        "contacts",
-        "families",
-        "services",
-        "organizations",
-        "locations",
-        "geographic-areas",
-    }
-)
-
-
-def rewrite_legacy_partner_path(path: str) -> str:
-    """Map retired ``/v1/public/<partner>`` paths onto ``/v1/partner``."""
-    prefix = "/v1/public/"
-    if not path.startswith(prefix):
-        return path
-    rest = path[len(prefix) :]
-    root = rest.split("/", 1)[0]
-    if root not in _LEGACY_PARTNER_ROOTS:
-        return path
-    return "/v1/partner/" + rest
 
 
 def split_route_parts(path: str) -> list[str]:

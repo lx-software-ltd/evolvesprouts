@@ -317,8 +317,8 @@ The inbox notification is an alert, not the source of truth.
 Lead sources:
   Contact form ──────▶ API ──▶ DB (contact + sales lead) ──▶ SES sales recap (`ADMIN_GROUP`) + contact_inquiry → SUPPORT_EMAIL ──▶ Mailchimp (opt-in)
   Media download ────▶ API ──▶ DB (contact + sales lead) ──▶ SES sales recap (`ADMIN_GROUP`) ──▶ Mailchimp (rules below)
-  Community signup ─▶ /www/v1/contact-us (signup_intent) ──▶ Aurora CRM ──▶ SES hook ──▶ Mailchimp
-  Event notification ▶ /www/v1/contact-us (signup_intent) ──▶ Aurora CRM ──▶ SES hook ──▶ Mailchimp
+  Community signup ─▶ /v1/public/contact-us (signup_intent) ──▶ Aurora CRM ──▶ SES hook ──▶ Mailchimp
+  Event notification ▶ /v1/public/contact-us (signup_intent) ──▶ Aurora CRM ──▶ SES hook ──▶ Mailchimp
   Booking ───────────▶ API ──▶ DB (contact + reservation) ─▶ SES sales recap (`ADMIN_GROUP`) ──▶ Mailchimp (opt-in)
 
   WhatsApp DMs ──────▶ Cloud API webhook `/v1/whatsapp/webhook` ──▶ DB (conversation + contact + sales lead)
@@ -539,9 +539,9 @@ Website form submit
 
 1. User submits a form on the website. **Media download** requests hit API
    Gateway and flow through SNS/SQS to the media processor. **Contact,
-   newsletter, and event-notification** captures use `/www/v1/contact-us` (native
+   newsletter, and event-notification** captures use `/v1/public/contact-us` (native
    Aurora persistence, then `run_contact_us_post_success` for SES + Mailchimp tags
-   from `signup_intent`). **Booking** submissions use `/www/v1/reservations`; after
+   from `signup_intent`). **Booking** submissions use `/v1/public/reservations`; after
    persistence, booking confirmation + optional Mailchimp subscribe use
    `public-www-booking-customer-{slug}` from `serviceInstanceSlug` / `service_instance_slug`
    (the public cohort/instance slug).

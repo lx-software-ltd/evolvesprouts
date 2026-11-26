@@ -124,42 +124,12 @@ def test_authorize_api_token_allows_active_key(
     assert "auth_scheme=bearer" in caplog.text
 
 
-def test_authorize_api_token_accepts_legacy_header(
+def test_authorize_api_token_ignores_legacy_header(
     monkeypatch: pytest.MonkeyPatch,
-    caplog: pytest.LogCaptureFixture,
 ) -> None:
     generated = generate_api_key()
-    with caplog.at_level("INFO"):
-        policy, repo = _allow_token(monkeypatch, {"X-Api-Token": generated.plaintext})
-    assert policy["policyDocument"]["Statement"][0]["Effect"] == "Allow"
-    assert repo.touched is True
-    assert "auth_scheme=legacy" in caplog.text
-
-
-def test_authorize_api_token_prefers_bearer_over_legacy_header(
-    monkeypatch: pytest.MonkeyPatch,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    bearer = generate_api_key()
-    legacy = generate_api_key()
-    seen: list[str] = []
-
-    def _hash(value: str) -> str:
-        seen.append(value)
-        return "hash"
-
-    monkeypatch.setattr(ata, "hash_api_key", _hash)
-    with caplog.at_level("INFO"):
-        policy, _repo = _allow_token(
-            monkeypatch,
-            {
-                "Authorization": f"Bearer {bearer.plaintext}",
-                "x-api-token": legacy.plaintext,
-            },
-        )
-    assert policy["policyDocument"]["Statement"][0]["Effect"] == "Allow"
-    assert seen == [bearer.plaintext]
-    assert "auth_scheme=bearer" in caplog.text
+    with pytest.raises(ata.Unauthorized, match="^Unauthorized$"):
+        _allow_token(monkeypatch, {"X-Api-Token": generated.plaintext})
 
 
 def test_authorize_api_token_skips_recent_last_used(

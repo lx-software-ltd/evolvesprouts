@@ -57,10 +57,8 @@ function assertWwwApiBehaviors(template: Template): void {
   template.hasResourceProperties("AWS::CloudFront::Distribution", {
     DistributionConfig: Match.objectLike({
       CacheBehaviors: Match.arrayWith([
-        Match.objectLike({ PathPattern: "www/v1/assets/free/request" }),
         Match.objectLike({ PathPattern: "api/v1/public/assets/free/request" }),
         Match.objectLike({ PathPattern: "api/*" }),
-        Match.objectLike({ PathPattern: "www/*" }),
       ]),
     }),
   });
@@ -75,29 +73,32 @@ function assertWwwApiBehaviors(template: Template): void {
   const behaviors: Array<Record<string, unknown>> =
     Object.values(distributions)[0].Properties?.DistributionConfig
       ?.CacheBehaviors ?? [];
-  const wwwStar = behaviors.find((b) => b.PathPattern === "www/*");
-  if (!wwwStar) {
-    throw new Error("Missing www/* cache behavior");
+  if (behaviors.some((b) => String(b.PathPattern ?? "").startsWith("www"))) {
+    throw new Error("Training distribution still has a /www behavior");
+  }
+  const apiStar = behaviors.find((b) => b.PathPattern === "api/*");
+  if (!apiStar) {
+    throw new Error("Missing api/* cache behavior");
   }
   if (
-    typeof wwwStar.CachePolicyId !== "object" ||
-    wwwStar.CachePolicyId === null ||
-    !("Ref" in wwwStar.CachePolicyId)
+    typeof apiStar.CachePolicyId !== "object" ||
+    apiStar.CachePolicyId === null ||
+    !("Ref" in apiStar.CachePolicyId)
   ) {
-    throw new Error("www/* must use Ref to TrainingApiProxyCachePolicy");
+    throw new Error("api/* must use Ref to TrainingApiProxyCachePolicy");
   }
-  const cachePolicyRef = (wwwStar.CachePolicyId as { Ref: string }).Ref;
+  const cachePolicyRef = (apiStar.CachePolicyId as { Ref: string }).Ref;
   if (!/TrainingApiProxyCachePolicy/.test(cachePolicyRef)) {
     throw new Error(`Unexpected CachePolicyId Ref: ${cachePolicyRef}`);
   }
   if (
-    wwwStar.OriginRequestPolicyId !== ORIGIN_REQUEST_POLICY_ALL_VIEWER_EXCEPT_HOST
+    apiStar.OriginRequestPolicyId !== ORIGIN_REQUEST_POLICY_ALL_VIEWER_EXCEPT_HOST
   ) {
-    throw new Error("www/* behavior missing ALL_VIEWER_EXCEPT_HOST_HEADER policy");
+    throw new Error("api/* behavior missing ALL_VIEWER_EXCEPT_HOST_HEADER policy");
   }
 
   const freeRequest = behaviors.find(
-    (b) => b.PathPattern === "www/v1/assets/free/request",
+    (b) => b.PathPattern === "api/v1/public/assets/free/request",
   );
   if (freeRequest?.CachePolicyId !== CACHING_DISABLED_MANAGED_ID) {
     throw new Error("media request behavior should disable caching");

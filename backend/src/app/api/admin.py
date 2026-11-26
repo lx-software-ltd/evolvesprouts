@@ -29,11 +29,7 @@ from app.api.admin_meta import handle_admin_meta_request
 from app.api.admin_organizations import handle_admin_organizations_request
 from app.api.admin_organizations_picker import handle_admin_organizations_picker_request
 from app.api.admin_polls import handle_admin_polls_request
-from app.api.admin_request import (
-    admin_request_log,
-    event_for_routing,
-    rewrite_legacy_partner_path,
-)
+from app.api.admin_request import admin_request_log, event_for_routing
 from app.api.admin_services import handle_admin_services_request
 from app.api.admin_tags import handle_admin_tags_request
 from app.api.admin_users import (
@@ -341,26 +337,33 @@ _PUBLIC_ALIASES = {
     "/v1/whatsapp/webhook": "/v1/webhooks/whatsapp",
     "/v1/meta/webhook": "/v1/webhooks/meta",
 }
+_SHARE_ROUTES = {
+    "/v1/assets/share",
+    "/v1/assets/email-download",
+}
 # Public alias prefix -> canonical prefix the handler already parses.
 _CANONICAL_FOR_PUBLIC: dict[str, str] = {}
 
 
 def _with_public_aliases(routes):
-    """Add the open path and the /www path beside each website route."""
+    """Publish website routes on /v1/public. Share links keep both prefixes."""
     expanded = []
     _CANONICAL_FOR_PUBLIC.clear()
     for route_path, exact, handler in routes:
-        expanded.append((route_path, exact, handler))
-        if not route_path.startswith("/v1/"):
-            continue
         if route_path.startswith(("/v1/admin", "/v1/user", "/v1/partner")):
+            expanded.append((route_path, exact, handler))
+            continue
+        if route_path in _SHARE_ROUTES:
+            public = "/v1/public" + route_path[len("/v1") :]
+            _CANONICAL_FOR_PUBLIC[public] = route_path
+            expanded.append((route_path, exact, handler))
+            expanded.append((public, exact, handler))
             continue
         public = _PUBLIC_ALIASES.get(route_path)
         if public is None:
             public = "/v1/public" + route_path[len("/v1") :]
         _CANONICAL_FOR_PUBLIC[public] = route_path
         expanded.append((public, exact, handler))
-        expanded.append(("/www" + route_path, exact, handler))
     return tuple(expanded)
 
 
@@ -443,7 +446,7 @@ def _match_handler(
     the longest ``route_path`` wins so nested paths are not swallowed by shorter
     prefix handlers (for example ``/v1/assets/public`` vs ``/v1/assets/free``).
     """
-    normalized_path = rewrite_legacy_partner_path(path.rstrip("/"))
+    normalized_path = path.rstrip("/")
     exact_candidates: list[tuple[str, Callable[..., dict[str, Any]]]] = []
     prefix_candidates: list[tuple[str, Callable[..., dict[str, Any]]]] = []
     for route_path, exact, route_handler in _ROUTES:
@@ -485,14 +488,8 @@ def _requires_json_content_type(path: str, method: str) -> bool:
 
     normalized_path = path.rstrip("/")
     non_json_routes = {
-        "/v1/mailchimp/webhook",
-        "/v1/whatsapp/webhook",
-        "/v1/meta/webhook",
         "/v1/webhooks/mailchimp",
         "/v1/webhooks/whatsapp",
         "/v1/webhooks/meta",
-        "/www/v1/mailchimp/webhook",
-        "/www/v1/whatsapp/webhook",
-        "/www/v1/meta/webhook",
     }
     return normalized_path not in non_json_routes

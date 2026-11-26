@@ -567,7 +567,7 @@ with open(distribution_config_path, "w", encoding="utf-8") as handle:
 PY
 
   if [ ! -s "$distribution_config_file" ]; then
-    echo "CloudFront /www and /api viewer-request functions already set"
+    echo "CloudFront /api viewer-request functions already set"
     rm -f "$distribution_payload_file" "$distribution_config_file"
     return
   fi
@@ -595,8 +595,6 @@ import sys
 
 arn = sys.argv[1]
 patterns = [
-    "www/*",
-    "www/v1/assets/free/request",
     "api/*",
     "api/v1/public/assets/free/request",
 ]
@@ -605,24 +603,20 @@ PY
 )"
   else
     updates_json="$(python3 - \
-      "$(resolve_proxy_function_arn "$stack_name" "$environment_name" "WwwProxyAllowlistFunction")" \
-      "$(resolve_proxy_function_arn "$stack_name" "$environment_name" "MediaRequestProxyFunction")" \
       "$(resolve_proxy_function_arn "$stack_name" "$environment_name" "ApiProxyAllowlistFunction")" \
       "$(resolve_proxy_function_arn "$stack_name" "$environment_name" "ApiMediaRequestProxyFunction")" <<'PY'
 import json
 import sys
 
 print(json.dumps({
-    "www/*": sys.argv[1],
-    "www/v1/assets/free/request": sys.argv[2],
-    "api/*": sys.argv[3],
-    "api/v1/public/assets/free/request": sys.argv[4],
+    "api/*": sys.argv[1],
+    "api/v1/public/assets/free/request": sys.argv[2],
 }))
 PY
 )"
   fi
 
-  echo "Updating CloudFront /www and /api viewer-request functions for mode '$mode'"
+  echo "Updating CloudFront /api viewer-request functions for mode '$mode'"
   update_proxy_function_associations "$distribution_id" "$updates_json"
 }
 

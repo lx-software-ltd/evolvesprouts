@@ -1,4 +1,4 @@
-"""Shared HTTP cache headers for public GET handlers behind CloudFront ``/www/*``.
+"""Shared HTTP cache headers for public GET handlers behind CloudFront ``/api/*``.
 
 Handlers reachable via the website proxy must emit ``Cache-Control`` on every
 response path: a shared-cache friendly value on success (200) and ``no-store``

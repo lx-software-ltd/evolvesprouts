@@ -22,7 +22,7 @@ def handle_public_calendar_availability(
     event: Mapping[str, Any],
     method: str,
 ) -> dict[str, Any]:
-    """Handle GET /v1/calendar/availability and /www/v1/calendar/availability."""
+    """Handle GET /v1/public/calendar/availability and /v1/calendar/availability."""
     if method != "GET":
         return method_not_allowed(
             event, headers={"Cache-Control": CACHE_CONTROL_NO_STORE}

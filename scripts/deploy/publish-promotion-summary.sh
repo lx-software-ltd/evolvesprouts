@@ -9,7 +9,7 @@ if [ "${PROMOTION_MODE:-}" = "maintenance_on" ]; then
     echo '- Target environment: `production`'
     echo '- Stack: `evolvesprouts-public-www`'
     echo "- Production URL: \`${PRODUCTION_SITE_ORIGIN}\`"
-    echo '- `/www/*` and `/api/*` CloudFront proxies: `blocked`'
+    echo '- `/api/*` and `/v1/public` CloudFront routes: `blocked`'
   } >> "$GITHUB_STEP_SUMMARY"
 else
   {

@@ -31,7 +31,7 @@ Stack outputs:
 - `TrainingDistributionDomain`
 - `TrainingLoggingBucketName`
 
-Training CloudFront mirrors public WWW `/www/*` API proxy behaviors (`TrainingApiBaseUrl`, `TrainingMediaRequestApiBaseUrl`) for upcoming poll integrations. Shared CloudFront Function sources live in `backend/infrastructure/lib/cloudfront-www-proxy-functions.ts` (see `docs/architecture/security.md`). S3 bucket prefixes: `evolvesprouts-training` and `evolvesprouts-training-logs` (each under 63 characters with account and region suffixes).
+Training CloudFront mirrors public WWW `/api/*` API proxy behaviors (`TrainingApiBaseUrl`, `TrainingMediaRequestApiBaseUrl`) for upcoming poll integrations. Shared CloudFront Function sources live in `backend/infrastructure/lib/cloudfront-www-proxy-functions.ts` (see `docs/architecture/security.md`). S3 bucket prefixes: `evolvesprouts-training` and `evolvesprouts-training-logs` (each under 63 characters with account and region suffixes).
 
 Deploy app artifacts with the training workflow after `cd apps/training && npm run build`. The workflow uses `s3-cloudfront-deploy` with `profile: next-export`.
 
@@ -60,22 +60,23 @@ Public WWW CloudFront includes:
 - Default behavior: static site content from S3 with extensionless path rewrite.
   This viewer-request function also checks `x-proxy-verify` against that
   distribution's edge-verify secret and its `Previous` value. Both empty
-  leaves the distribution open. The same check is on `www/*` and
-  `www/v1/assets/free/request`.
-- Additional behavior: `www/*` forwards to the host extracted from
+  leaves the distribution open. The same check is on `api/*` and
+  `api/v1/public/assets/free/request`.
+- Additional behavior: `api/*` forwards to the host extracted from
   `PublicWwwApiBaseUrl` (GitHub variable `PUBLIC_WWW_API_BASE_URL`, falling
   back to `NEXT_PUBLIC_API_BASE_URL`; for example
-  `https://api.evolvesprouts.com/prod`)
+  `https://api.evolvesprouts.com`)
   using HTTPS-only origin policy, disabled caching, and
   `OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER` so API key headers and
   query parameters pass through while preserving the API origin host header.
   - Viewer-request allowlist gates allowed public API method/path pairs
-    (e.g. `/www/v1/reservations`).
-- Additional behavior: `www/v1/assets/free/request` forwards to the
-  host/path extracted from `PublicWwwMediaRequestApiBaseUrl` (GitHub variable
+    (e.g. `/v1/public/reservations`).
+- Additional behavior: `api/v1/public/assets/free/request` forwards to the
+  host extracted from `PublicWwwMediaRequestApiBaseUrl` (GitHub variable
   `PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL`, falling back to
-  `NEXT_PUBLIC_API_BASE_URL`) and rewrites
-  `/www/v1/assets/free/request` to `/v1/assets/free/request` before origin fetch.
+  `NEXT_PUBLIC_API_BASE_URL`) and strips the `/api` prefix, leaving
+  `/v1/public/assets/free/request`, before origin fetch. The origin URL
+  itself must not include a path such as `/prod`.
 - Response headers policy for browser hardening:
   `Strict-Transport-Security`, `X-Content-Type-Options`,
   `X-Frame-Options`, `Referrer-Policy`, `Content-Security-Policy`,
@@ -492,7 +493,7 @@ After an API host change, update the Mailchimp audience webhook URL
 - Logging Level: INFO
 - Data Trace: Disabled
 - X-Ray Tracing: Enabled
-- Caching: Disabled (edge caching on `public_www` CloudFront for `/www/*` GETs)
+- Caching: Disabled (edge caching on `public_www` CloudFront for `/api/*` GETs)
 
 **CORS Configuration:**
 - Allowed Origins: From `CORS_ALLOWED_ORIGINS` env var or CDK context (`corsAllowedOrigins`), always merged with required origins derived from `PublicWwwDomainName`, `PublicWwwStagingDomainName`, and `AdminWebDomainName`
@@ -706,7 +707,7 @@ group is not given a separate delivery resource policy.
 | `MailchimpWelcomeJourneyId` | String | No | No | Shared welcome journey ID for opted-in public form contacts (empty disables) |
 | `MailchimpWelcomeJourneyStepId` | String | No | No | Welcome journey entry step ID paired with `MailchimpWelcomeJourneyId` (empty disables) |
 | `MailchimpRequireMarketingConsent` | String | No | No | When `true`, media processor gates legacy Mailchimp subscribe + free-resource journey on `marketing_opt_in` (default: `false`) |
-| `ApiCustomDomainName` | String | Yes | No | Custom domain for the API. Required, minimum length 1. Maps to the prod stage at `/prod`. The execute-api hostname does not accept calls, and asset-share links use this domain. |
+| `ApiCustomDomainName` | String | Yes | No | Custom domain for the API. Required, minimum length 1. Maps to the prod stage at the root, with no `/prod` path. The execute-api hostname does not accept calls, and asset-share links use this domain. |
 | `ApiCustomDomainCertificateArn` | String | Yes | No | ACM certificate ARN for API custom domain. Required, minimum length 1. |
 | `NominatimUserAgent` | String | No | No | User-Agent for Nominatim geocoding requests |
 | `NominatimReferer` | String | No | No | Referer header for Nominatim requests |
@@ -787,7 +788,7 @@ These raster files ship with `EvolvesproutsAdminFunction` under `backend/src/app
 | `InboundInvoiceSharedReceiptRuleSetName` | SES receipt rule set name | Shared set that the `lxsoftware` stack activates; this stack no longer activates its own set |
 | `CognitoCustomDomainCloudFront` | CloudFront distribution | Custom auth domain target (conditional) |
 | `ApiCustomDomainTarget` | CNAME target | API custom domain DNS target (conditional) |
-| `ApiCustomDomainUrl` | Custom domain URL | API custom domain URL including `/prod` (conditional). Use this as `NEXT_PUBLIC_API_BASE_URL` for direct clients. Webhook paths append `/v1/...` to this output. |
+| `ApiCustomDomainUrl` | Custom domain URL | API custom domain origin with no stage path (conditional). Use this as `NEXT_PUBLIC_API_BASE_URL` for direct clients. Webhook paths append `/v1/webhooks/...` to this output. |
 
 ---
 

@@ -41,13 +41,13 @@ Flutter Mobile / Next.js Admin
 ### Public website (Next.js static export)
 - Public marketing site in `apps/public_www`.
 - Training form and poll pages in `apps/training` (static export at `training.evolvesprouts.com`, not indexed).
-  Form answers persist via `PUT /www/v1/forms/{form_slug}/answers` against the shared
+  Form answers persist via `PUT /v1/public/forms/{form_slug}/answers` against the shared
   DynamoDB table `evolvesprouts-poll-responses` (content-driven JSON per form under
   `apps/training/src/content/forms/`). Forms that set `requiresContact` are personalised
   from a CRM contact on the link (`?contact=<uuid>`); the training page loads display-only
-  placeholders via `GET /www/v1/forms/{form_slug}/contact-context`. Poll answers persist via
-  `PUT /www/v1/polls/{poll_slug}/answers` and live per-question aggregates load via
-  `GET /www/v1/polls/{poll_slug}/questions/{question_id}/results` (content-driven JSON
+  placeholders via `GET /v1/public/forms/{form_slug}/contact-context`. Poll answers persist via
+  `PUT /v1/public/polls/{poll_slug}/answers` and live per-question aggregates load via
+  `GET /v1/public/polls/{poll_slug}/questions/{question_id}/results` (content-driven JSON
   per poll under `apps/training/src/content/polls/`).
 - First-party marketing paths are defined once in `apps/public_www/src/lib/public-www-routes.ts` and
   imported by `apps/public_www/src/lib/routes.ts` and the admin Website QR presets so public and admin
@@ -77,7 +77,7 @@ Flutter Mobile / Next.js Admin
 - For route inventory and authentication requirements, see:
   - [`docs/api/admin.yaml`](../api/admin.yaml) — currently wired routes
   - [`docs/api/public.yaml`](../api/public.yaml) — public endpoint contract
-    (public asset routes plus public_www-consumed `/www/*` routes)
+    (public asset routes plus public_www-consumed `/api/*` routes)
 - Lambda functions in `backend/lambda/` call into shared code in
   `backend/src/app`.
 - See [`docs/architecture/lambdas.md`](lambdas.md) for a full function inventory.
@@ -196,11 +196,11 @@ pull requests for dependency updates:
 ## Caching
 
 - API Gateway stage caching is disabled; allowlisted `GET` traffic on the
-  `public_www` CloudFront distribution is edge-cached on the `www/*` behavior
+  `public_www` CloudFront distribution is edge-cached on the `api/*` behavior
   using origin `Cache-Control` headers (custom cache policy caps TTL at 15 minutes).
 - **Known limitation:** JSON responses still include CORS `Vary: Origin` while the
   cache policy does not vary the cache key by `Origin`. Same-origin `public_www`
-  traffic is unaffected; cross-origin callers against `/www/*` could theoretically
+  traffic is unaffected; cross-origin callers against `/api/*` could theoretically
   see a mismatched `Access-Control-Allow-Origin` if that pattern is introduced.
   Fixing this means either omitting CORS on these routes, or adding `Origin` to the
   CloudFront cache key (lower hit rate).

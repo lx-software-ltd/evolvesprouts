@@ -50,7 +50,7 @@ def handle_public_contact_us(
     event: Mapping[str, Any],
     method: str,
 ) -> dict[str, Any]:
-    """Handle POST /v1/contact-us and /www/v1/contact-us."""
+    """Handle POST /v1/public/contact-us and /v1/contact-us."""
     if method != "POST":
         return method_not_allowed(event)
 

@@ -186,7 +186,7 @@ export interface paths {
          *
          *     **`intro_call_booking`:** 15-minute calls on a 30-minute cadence Mon–Fri 09:00–18:00 local intro-call wall zone.
          *     Two-hour lead time; default horizon 21 days; range span capped at 28 days; `from` not more than 35 days ahead.
-         *     Success responses use the standard shared-cache GET headers for `/www/*`.
+         *     Success responses use the standard shared-cache GET headers for `/api/*`.
          *
          *     **`from` / `to`:** Optional inclusive `YYYY-MM-DD` dates (strict validation). When omitted, `from`
          *     defaults to today in the purpose wall zone and `to` defaults to `from + default_horizon_days`.
@@ -420,7 +420,7 @@ export interface paths {
         put?: never;
         /**
          * Submit media request (direct API path)
-         * @description Submit a media lead form. Routed on the public website via CloudFront as `POST /www/v1/assets/free/request` (execute-api origin).
+         * @description Submit a media lead form. Routed on the public website via CloudFront as `POST /api/v1/public/assets/free/request` (API origin).
          *     The download link is delivered by SES (templated email). After async processing, a plain-text **sales recap** is emailed to every verified email on users in the Cognito group named by `ADMIN_GROUP`. Optional Mailchimp subscribe + journey triggers respect `MAILCHIMP_REQUIRE_MARKETING_CONSENT`.
          */
         post: operations["postV1AssetsFreeRequest"];
@@ -481,7 +481,7 @@ export interface components {
             error: string;
             detail?: string | null;
             field?: string | null;
-            /** @description Optional machine-readable reason on some 404 responses (for example discount validate). For `POST /v1/discounts/validate` and `POST /www/v1/discounts/validate`, when present on a 404 the value is one of: `unknown_service_instance_slug`, `service_key_instance_mismatch`. The Lambda also logs other reasons (`code_not_found`, `referral_type_not_allowed`, `inactive`, `not_yet_valid`, `expired`, `max_uses_exhausted`, `instance_scope_mismatch`, `service_scope_mismatch`) without returning them in the JSON body. */
+            /** @description Optional machine-readable reason on some 404 responses (for example discount validate). For `POST /v1/discounts/validate` and `POST /v1/public/discounts/validate`, when present on a 404 the value is one of: `unknown_service_instance_slug`, `service_key_instance_mismatch`. The Lambda also logs other reasons (`code_not_found`, `referral_type_not_allowed`, `inactive`, `not_yet_valid`, `expired`, `max_uses_exhausted`, `instance_scope_mismatch`, `service_scope_mismatch`) without returning them in the JSON body. */
             rejection_reason?: string | null;
         };
         PublicCalendarEventDate: {
@@ -1830,7 +1830,7 @@ export interface operations {
             /** @description Client resource list response. */
             200: {
                 headers: {
-                    /** @description `public, max-age=60, s-maxage=300, stale-while-revalidate=600` for CloudFront edge caching on `/www/*` (TTL capped by cache policy). */
+                    /** @description `public, max-age=60, s-maxage=300, stale-while-revalidate=600` for CloudFront edge caching on `/api/*` (TTL capped by cache policy). */
                     "Cache-Control"?: string;
                     [name: string]: unknown;
                 };
@@ -1863,7 +1863,7 @@ export interface operations {
             /** @description Event list response. */
             200: {
                 headers: {
-                    /** @description `public, max-age=60, s-maxage=300, stale-while-revalidate=600` for CloudFront edge caching on `/www/*` (TTL capped by cache policy). */
+                    /** @description `public, max-age=60, s-maxage=300, stale-while-revalidate=600` for CloudFront edge caching on `/api/*` (TTL capped by cache policy). */
                     "Cache-Control"?: string;
                     [name: string]: unknown;
                 };
@@ -1895,7 +1895,7 @@ export interface operations {
             /** @description Availability envelope. */
             200: {
                 headers: {
-                    /** @description `no-store` for `purpose=consultation_booking`. For `intro_call_booking`, the same value as other public cacheable GETs: `public, max-age=60, s-maxage=300, stale-while-revalidate=600` (TTL capped by cache policy on `/www/*`). Errors use `no-store`. */
+                    /** @description `no-store` for `purpose=consultation_booking`. For `intro_call_booking`, the same value as other public cacheable GETs: `public, max-age=60, s-maxage=300, stale-while-revalidate=600` (TTL capped by cache policy on `/api/*`). Errors use `no-store`. */
                     "Cache-Control"?: string;
                     [name: string]: unknown;
                 };

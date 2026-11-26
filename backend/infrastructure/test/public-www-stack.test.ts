@@ -5,9 +5,9 @@ import * as cdk from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 
 import {
-  MEDIA_REQUEST_PROXY_FUNCTION,
+  API_MEDIA_REQUEST_PROXY_FUNCTION,
+  API_PROXY_ALLOWLIST_FUNCTION,
   STATIC_EXPORT_PATH_REWRITE_FUNCTION,
-  WWW_PROXY_ALLOWLIST_FUNCTION,
 } from "../lib/cloudfront-www-proxy-functions";
 import {
   insertEdgeVerifyCall,
@@ -70,13 +70,13 @@ function assertApiProxyCachePolicies(template: Template): void {
   }
 }
 
-function findWwwStarBehavior(
+function findApiStarBehavior(
   behaviors: Array<Record<string, unknown>>,
 ): Record<string, unknown> | undefined {
-  return behaviors.find((b) => b.PathPattern === "www/*");
+  return behaviors.find((b) => b.PathPattern === "api/*");
 }
 
-function assertEachDistributionWwwBehaviors(template: Template): void {
+function assertEachDistributionApiBehaviors(template: Template): void {
   const distributions = template.findResources("AWS::CloudFront::Distribution");
   const entries = Object.entries(distributions);
   if (entries.length !== 2) {
@@ -87,12 +87,15 @@ function assertEachDistributionWwwBehaviors(template: Template): void {
   for (const [logicalId, resource] of entries) {
     const behaviors: Array<Record<string, unknown>> =
       resource.Properties?.DistributionConfig?.CacheBehaviors ?? [];
+    if (behaviors.some((b) => String(b.PathPattern ?? "").startsWith("www"))) {
+      throw new Error(`Distribution ${logicalId} still has a /www behavior`);
+    }
     const freeRequest = behaviors.find(
-      (b) => b.PathPattern === "www/v1/assets/free/request",
+      (b) => b.PathPattern === "api/v1/public/assets/free/request",
     );
     if (!freeRequest) {
       throw new Error(
-        `Distribution ${logicalId} missing www/v1/assets/free/request behavior`,
+        `Distribution ${logicalId} missing api/v1/public/assets/free/request behavior`,
       );
     }
     if (freeRequest.CachePolicyId !== CACHING_DISABLED_MANAGED_ID) {
@@ -100,42 +103,42 @@ function assertEachDistributionWwwBehaviors(template: Template): void {
         `Distribution ${logicalId}: free/request must use CACHING_DISABLED managed policy`,
       );
     }
-    const wwwStar = findWwwStarBehavior(behaviors);
-    if (!wwwStar) {
-      throw new Error(`Distribution ${logicalId} missing www/* behavior`);
+    const apiStar = findApiStarBehavior(behaviors);
+    if (!apiStar) {
+      throw new Error(`Distribution ${logicalId} missing api/* behavior`);
     }
     if (
-      typeof wwwStar.CachePolicyId !== "object" ||
-      wwwStar.CachePolicyId === null ||
-      !("Ref" in wwwStar.CachePolicyId)
+      typeof apiStar.CachePolicyId !== "object" ||
+      apiStar.CachePolicyId === null ||
+      !("Ref" in apiStar.CachePolicyId)
     ) {
       throw new Error(
-        `Distribution ${logicalId}: www/* must use Ref to custom ApiProxyCachePolicy`,
+        `Distribution ${logicalId}: api/* must use Ref to custom ApiProxyCachePolicy`,
       );
     }
-    const ref = (wwwStar.CachePolicyId as { Ref: string }).Ref;
+    const ref = (apiStar.CachePolicyId as { Ref: string }).Ref;
     if (!/ApiProxyCachePolicy/.test(ref)) {
       throw new Error(
         `Distribution ${logicalId}: unexpected CachePolicyId Ref ${ref}`,
       );
     }
-    const methods = wwwStar.AllowedMethods as string[] | undefined;
+    const methods = apiStar.AllowedMethods as string[] | undefined;
     if (!methods?.includes("POST") || !methods?.includes("DELETE")) {
       throw new Error(
-        `Distribution ${logicalId}: www/* must allow POST/DELETE (ALLOW_ALL)`,
+        `Distribution ${logicalId}: api/* must allow POST/DELETE (ALLOW_ALL)`,
       );
     }
-    if (wwwStar.OriginRequestPolicyId !== ORIGIN_REQUEST_POLICY_ALL_VIEWER_EXCEPT_HOST) {
+    if (apiStar.OriginRequestPolicyId !== ORIGIN_REQUEST_POLICY_ALL_VIEWER_EXCEPT_HOST) {
       throw new Error(
-        `Distribution ${logicalId}: www/* must use ALL_VIEWER_EXCEPT_HOST_HEADER origin request policy`,
+        `Distribution ${logicalId}: api/* must use ALL_VIEWER_EXCEPT_HOST_HEADER origin request policy`,
       );
     }
-    const fnAssoc = wwwStar.FunctionAssociations as
+    const fnAssoc = apiStar.FunctionAssociations as
       | Array<{ EventType?: string; FunctionARN?: unknown }>
       | undefined;
     if (!Array.isArray(fnAssoc) || fnAssoc.length !== 2) {
       throw new Error(
-        `Distribution ${logicalId}: www/* must have exactly two FunctionAssociations`,
+        `Distribution ${logicalId}: api/* must have exactly two FunctionAssociations`,
       );
     }
     const events = new Set(
@@ -143,7 +146,7 @@ function assertEachDistributionWwwBehaviors(template: Template): void {
     );
     if (!events.has("viewer-request") || !events.has("viewer-response")) {
       throw new Error(
-        `Distribution ${logicalId}: www/* must associate viewer-request and viewer-response functions`,
+        `Distribution ${logicalId}: api/* must associate viewer-request and viewer-response functions`,
       );
     }
   }
@@ -159,15 +162,13 @@ function assertEachDistributionWwwBehaviors(template: Template): void {
 function assertCloudFrontFunctionUpdatesAreSerialized(template: Template): void {
   const fns = template.findResources("AWS::CloudFront::Function");
   const entries = Object.entries(fns);
-  if (entries.length !== 12) {
+  if (entries.length !== 8) {
     throw new Error(
-      `Expected exactly 12 AWS::CloudFront::Function resources (6 per environment x 2), found ${entries.length}`,
+      `Expected exactly 8 AWS::CloudFront::Function resources (4 per environment x 2), found ${entries.length}`,
     );
   }
   const expectedEnvKinds = [
     "PathRewriteFunction",
-    "WwwProxyAllowlistFunction",
-    "MediaRequestProxyFunction",
     "WwwApiErrorResponseFunction",
     "ApiProxyAllowlistFunction",
     "ApiMediaRequestProxyFunction",
@@ -184,14 +185,7 @@ function assertCloudFrontFunctionUpdatesAreSerialized(template: Template): void 
       }
       return id;
     });
-    const [
-      pathRewriteId,
-      allowlistId,
-      mediaProxyId,
-      errorResponseId,
-      apiAllowlistId,
-      apiMediaId,
-    ] = ids;
+    const [pathRewriteId, errorResponseId, apiAllowlistId, apiMediaId] = ids;
     const dependsOn = (logicalId: string): string[] => {
       const raw = fns[logicalId]?.DependsOn;
       if (raw === undefined || raw === null) {
@@ -199,19 +193,9 @@ function assertCloudFrontFunctionUpdatesAreSerialized(template: Template): void 
       }
       return Array.isArray(raw) ? (raw as string[]) : [raw as string];
     };
-    if (!dependsOn(allowlistId).includes(pathRewriteId)) {
+    if (!dependsOn(errorResponseId).includes(pathRewriteId)) {
       throw new Error(
-        `${envPrefix}: WwwProxyAllowlistFunction must DependsOn PathRewriteFunction`,
-      );
-    }
-    if (!dependsOn(mediaProxyId).includes(allowlistId)) {
-      throw new Error(
-        `${envPrefix}: MediaRequestProxyFunction must DependsOn WwwProxyAllowlistFunction`,
-      );
-    }
-    if (!dependsOn(errorResponseId).includes(mediaProxyId)) {
-      throw new Error(
-        `${envPrefix}: WwwApiErrorResponseFunction must DependsOn MediaRequestProxyFunction`,
+        `${envPrefix}: WwwApiErrorResponseFunction must DependsOn PathRewriteFunction`,
       );
     }
     if (!dependsOn(apiAllowlistId).includes(errorResponseId)) {
@@ -227,13 +211,7 @@ function assertCloudFrontFunctionUpdatesAreSerialized(template: Template): void 
     // Pathrewrite (chain head) must not depend on any sibling function in this
     // environment so the chain stays single-threaded but doesn't deadlock the
     // first item.
-    for (const sibling of [
-      allowlistId,
-      mediaProxyId,
-      errorResponseId,
-      apiAllowlistId,
-      apiMediaId,
-    ]) {
+    for (const sibling of [errorResponseId, apiAllowlistId, apiMediaId]) {
       if (dependsOn(pathRewriteId).includes(sibling)) {
         throw new Error(
           `${envPrefix}: PathRewriteFunction must not DependsOn ${sibling}`,
@@ -301,9 +279,9 @@ function assertEdgeVerifyOnEveryViewerRequest(template: Template): void {
   const viewerRequestIds = Object.keys(functions).filter(
     (logicalId) => !logicalId.includes("WwwApiErrorResponse"),
   );
-  if (viewerRequestIds.length !== 10) {
+  if (viewerRequestIds.length !== 6) {
     throw new Error(
-      `Expected 10 viewer-request functions, found ${viewerRequestIds.length}`,
+      `Expected 6 viewer-request functions, found ${viewerRequestIds.length}`,
     );
   }
   const call = "var request = event.request;\\n  var rejection = edgeVerifyRejection(request);";
@@ -425,8 +403,8 @@ function assertEdgeVerifyFunctionBudget(): void {
   );
   const bodies = [
     withEdgeVerify(pathRewrite, secrets),
-    viewerRequestSource(WWW_PROXY_ALLOWLIST_FUNCTION, secrets),
-    viewerRequestSource(MEDIA_REQUEST_PROXY_FUNCTION, secrets),
+    viewerRequestSource(API_PROXY_ALLOWLIST_FUNCTION, secrets),
+    viewerRequestSource(API_MEDIA_REQUEST_PROXY_FUNCTION, secrets),
   ];
   for (const body of bodies) {
     const size = Buffer.byteLength(body, "utf8");
@@ -441,7 +419,7 @@ function assertEdgeVerifyFunctionBudget(): void {
 function main(): void {
   const template = synthPublicWwwTemplate();
   assertApiProxyCachePolicies(template);
-  assertEachDistributionWwwBehaviors(template);
+  assertEachDistributionApiBehaviors(template);
   assertCloudFrontFunctionUpdatesAreSerialized(template);
   assertEdgeVerifyParameters(template);
   assertEdgeVerifyOnEveryViewerRequest(template);

@@ -43,26 +43,10 @@ def test_non_audience_canonical_routes_stay_pinned() -> None:
     assert published == _PINNED_NON_AUDIENCE_CANONICAL_ROUTES
 
 
-def test_legacy_partner_alias_reaches_the_partner_handler(
-    api_gateway_event,
-) -> None:
-    event = api_gateway_event(
-        method="POST",
-        path="/v1/public/whatsapp/conversations",
-        authorizer_context={
-            "apiKeyId": "11111111-1111-1111-1111-111111111111",
-            "scope": "admin",
-            "userSub": "api-key:11111111-1111-1111-1111-111111111111",
-        },
-    )
-    response = lambda_handler(event, None)
-    assert response["statusCode"] == 405
-
-
 def test_lambda_handler_routes_custom_domain_base_path() -> None:
     event = {
         "httpMethod": "GET",
-        "path": "/prod/v1/mailchimp/webhook",
+        "path": "/v1/webhooks/mailchimp",
         "headers": {},
         "requestContext": {"stage": "prod", "requestId": "req-custom-domain"},
     }
@@ -71,7 +55,7 @@ def test_lambda_handler_routes_custom_domain_base_path() -> None:
 
     assert response["statusCode"] == 200
     assert json.loads(response["body"]) == {"message": "ok"}
-    assert event["path"] == "/prod/v1/mailchimp/webhook"
+    assert event["path"] == "/v1/webhooks/mailchimp"
 
 
 def test_lambda_handler_logs_gateway_path_and_domain(
@@ -79,7 +63,7 @@ def test_lambda_handler_logs_gateway_path_and_domain(
 ) -> None:
     event = {
         "httpMethod": "GET",
-        "path": "/prod/v1/mailchimp/webhook",
+        "path": "/v1/webhooks/mailchimp",
         "headers": {},
         "requestContext": {
             "stage": "prod",
@@ -93,12 +77,9 @@ def test_lambda_handler_logs_gateway_path_and_domain(
 
     assert response["statusCode"] == 200
     record = next(r for r in caplog.records if r.message.startswith("Admin request:"))
-    assert record.message == (
-        "Admin request: GET /v1/mailchimp/webhook"
-        " gateway_path=/prod/v1/mailchimp/webhook"
-    )
-    assert record.path == "/v1/mailchimp/webhook"
-    assert record.gateway_path == "/prod/v1/mailchimp/webhook"
+    assert record.message == "Admin request: GET /v1/webhooks/mailchimp"
+    assert record.path == "/v1/webhooks/mailchimp"
+    assert record.gateway_path == "/v1/webhooks/mailchimp"
     assert record.domain_name == "api.example.com"
 
 
@@ -169,17 +150,15 @@ def test_match_handler_routes_asset_prefix_paths() -> None:
         "/v1/user/assets/abc/download",
         "/v1/assets/share/token-123",
         "/v1/assets/email-download/token-456",
-        "/v1/assets/public/abc/download",
-        "/v1/assets/free/request",
-        "/v1/reservations",
-        "/v1/reservations/payment-intent",
-        "/v1/contact-us",
-        "/v1/discounts/validate",
-        "/www/v1/discounts/validate",
-        "/www/v1/contact-us",
-        "/v1/mailchimp/webhook",
-        "/v1/whatsapp/webhook",
-        "/v1/meta/webhook",
+        "/v1/public/assets/abc/download",
+        "/v1/public/assets/free/request",
+        "/v1/public/reservations",
+        "/v1/public/reservations/payment-intent",
+        "/v1/public/contact-us",
+        "/v1/public/discounts/validate",
+        "/v1/webhooks/mailchimp",
+        "/v1/webhooks/whatsapp",
+        "/v1/webhooks/meta",
         "/v1/admin/whatsapp/conversations",
         "/v1/admin/whatsapp/conversations/abc/messages",
         "/v1/admin/whatsapp/import-jobs",
@@ -199,15 +178,9 @@ def test_match_handler_routes_asset_prefix_paths() -> None:
         "/v1/partner/services/abc",
         "/v1/partner/services/abc/instances",
         "/v1/partner/services/abc/instances/def",
-        "/v1/calendar/public",
-        "/www/v1/calendar/public",
-        "/v1/calendar/availability",
-        "/www/v1/calendar/availability",
-        "/www/v1/assets/free/request",
-        "/www/v1/reservations",
-        "/www/v1/reservations/payment-intent",
-        "/www/v1/polls/workshop-food-jun-26/answers",
         "/v1/public/calendar",
+        "/v1/public/calendar/availability",
+        "/v1/public/polls/workshop-food-jun-26/answers",
         "/v1/public/reservations",
         "/v1/public/assets/abc/download",
         "/v1/webhooks/mailchimp",
@@ -221,58 +194,44 @@ def test_match_handler_routes_asset_prefix_paths() -> None:
 def test_match_handler_treats_exact_public_post_routes_as_exact_path_only() -> None:
     event = {"headers": {}}
     assert (
-        _match_handler(event=event, method="POST", path="/v1/reservations") is not None
+        _match_handler(event=event, method="POST", path="/v1/public/reservations")
+        is not None
     )
     assert (
         _match_handler(
-            event=event, method="POST", path="/v1/reservations/payment-intent"
+            event=event, method="POST", path="/v1/public/reservations/payment-intent"
         )
         is not None
     )
     assert (
-        _match_handler(event=event, method="POST", path="/v1/assets/free/request")
-        is not None
-    )
-    assert (
-        _match_handler(event=event, method="POST", path="/v1/mailchimp/webhook")
-        is not None
-    )
-    assert (
-        _match_handler(event=event, method="POST", path="/v1/whatsapp/webhook")
-        is not None
-    )
-    assert (
-        _match_handler(event=event, method="POST", path="/v1/meta/webhook") is not None
-    )
-    assert (
         _match_handler(
-            event=event, method="POST", path="/www/v1/reservations/payment-intent"
+            event=event, method="POST", path="/v1/public/assets/free/request"
         )
         is not None
     )
     assert (
-        _match_handler(event=event, method="POST", path="/www/v1/assets/free/request")
-        is not None
-    )
-    assert _match_handler(event=event, method="POST", path="/v1/contact-us") is not None
-    assert (
-        _match_handler(event=event, method="POST", path="/v1/discounts/validate")
+        _match_handler(event=event, method="POST", path="/v1/webhooks/mailchimp")
         is not None
     )
     assert (
-        _match_handler(event=event, method="POST", path="/www/v1/discounts/validate")
+        _match_handler(event=event, method="POST", path="/v1/webhooks/whatsapp")
         is not None
     )
     assert (
-        _match_handler(event=event, method="POST", path="/www/v1/reservations")
+        _match_handler(event=event, method="POST", path="/v1/webhooks/meta") is not None
+    )
+    assert _match_handler(event=event, method="POST", path="/v1/contact-us") is None
+    assert _match_handler(event=event, method="POST", path="/www/v1/contact-us") is None
+    assert (
+        _match_handler(event=event, method="POST", path="/v1/public/contact-us")
         is not None
     )
     assert (
-        _match_handler(event=event, method="POST", path="/www/v1/contact-us")
+        _match_handler(event=event, method="POST", path="/v1/public/discounts/validate")
         is not None
     )
     assert (
-        _match_handler(event=event, method="POST", path="/v1/reservations/extra")
+        _match_handler(event=event, method="POST", path="/v1/public/reservations/extra")
         is None
     )
     assert (
@@ -329,10 +288,10 @@ def test_match_handler_treats_exact_public_post_routes_as_exact_path_only() -> N
 
 
 def test_requires_json_content_type_skips_mailchimp_webhook() -> None:
-    assert _requires_json_content_type("/v1/mailchimp/webhook", "POST") is False
-    assert _requires_json_content_type("/v1/whatsapp/webhook", "POST") is False
-    assert _requires_json_content_type("/v1/meta/webhook", "POST") is False
-    assert _requires_json_content_type("/v1/assets/free/request", "POST") is True
+    assert _requires_json_content_type("/v1/webhooks/mailchimp", "POST") is False
+    assert _requires_json_content_type("/v1/webhooks/whatsapp", "POST") is False
+    assert _requires_json_content_type("/v1/webhooks/meta", "POST") is False
+    assert _requires_json_content_type("/v1/public/assets/free/request", "POST") is True
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -421,14 +380,14 @@ def _media_rewrite_operations() -> list[tuple[str, str]]:
     for block in re.findall(r"\{[^{}]+\}", entries):
         methods_match = re.search(r"methods: \[([^\]]+)\]", block)
         kind = re.search(r'kind: "([^"]+)"', block)
-        www_path = re.search(r'wwwPath: "([^"]+)"', block)
+        public_path = re.search(r'publicPath: "([^"]+)"', block)
         api_path = re.search(r'apiPath: "([^"]+)"', block)
         suffix = re.search(r'suffix: "([^"]+)"', block)
         contains = re.search(r'contains: "([^"]+)"', block)
         if (
             methods_match is None
             or kind is None
-            or www_path is None
+            or public_path is None
             or api_path is None
         ):
             continue
@@ -437,8 +396,8 @@ def _media_rewrite_operations() -> list[tuple[str, str]]:
         if kind.group(1) == "prefix":
             middle = contains.group(1) + "food" if contains else ""
             tail = "workshop" + middle + (suffix.group(1) if suffix else "")
-        for raw in (www_path.group(1), api_path.group(1)):
-            produced = raw[4:] + tail
+        for raw in (public_path.group(1), api_path.group(1)):
+            produced = raw.removeprefix("/api") + tail
             for method in methods:
                 if method == "OPTIONS":
                     continue

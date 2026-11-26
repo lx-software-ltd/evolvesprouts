@@ -78,15 +78,16 @@ For the OIDC provider itself, add the same tags:
 - `PUBLIC_WWW_API_BASE_URL` and `PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL`
   (CloudFront API origins. Backend deploy falls back to `NEXT_PUBLIC_API_BASE_URL`
   when unset. Set them to `ApiCustomDomainUrl`.)
-- `NEXT_PUBLIC_WWW_API_BASE_URL` (public website build API base, often `/www`;
-  public-site workflows fall back to `NEXT_PUBLIC_API_BASE_URL`)
+- `NEXT_PUBLIC_WWW_API_BASE_URL` (public website build API base, often `/api`;
+  public-site workflows fall back to `NEXT_PUBLIC_API_BASE_URL`. A full URL
+  must have an empty path or `/`.)
 - `NEXT_PUBLIC_API_BASE_URL` (direct API base for Admin Web and other clients.
   `TrainingApiBaseUrl` and `TrainingMediaRequestApiBaseUrl` still use this
   variable.)
 - `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` (optional; browser Maps JavaScript API key, HTTP-referrer
   restricted to the admin origin. Required for Contacts → Map. When unset, the tab shows a
   configuration message. Wire the same GitHub variable into `deploy-admin-web.yml`.)
-- `NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS` (comma-separated hostname allowlist for `/www` proxy rewrites)
+- `NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS` (comma-separated hostname allowlist for `/api` proxy rewrites)
 - `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (for Public WWW booking form)
 - `CDK_PARAM_META_PAGE_ID` (Facebook Page id for Graph inbox import)
 - `CDK_PARAM_META_INSTAGRAM_USER_ID` (Instagram professional id when known;

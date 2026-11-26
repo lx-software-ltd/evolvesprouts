@@ -184,11 +184,11 @@ Staging CloudFront distribution
 Both distributions
         ├─▶ Default: S3 bucket (static Next.js export)
         │
-        ├─▶ /www/v1/*: API Gateway (CRM API routes)
+        ├─▶ /v1/public/*: API Gateway (CRM API routes)
         │     └─▶ Viewer-request allowlist gates method/path pairs
         │
-        └─▶ /www/v1/assets/free/request: API Gateway (media lead capture)
-              └─▶ Path rewrite: /www/v1/assets/free/request → /v1/assets/free/request
+        └─▶ /v1/public/assets/free/request: API Gateway (media lead capture)
+              └─▶ Path rewrite: /v1/public/assets/free/request → /v1/assets/free/request
 ```
 
 ### Stack: `evolvesprouts-public-www`
@@ -245,11 +245,11 @@ API Gateway (evolvesprouts-api)
   ├─▶ /v1/mailchimp/webhook ▶ AdminFunction (VPC)
   │     Authorization: None (Mailchimp callback)
   │
-  └─▶ /www/v1/* ────────────▶ AdminFunction (VPC)
+  └─▶ /v1/public/* ────────────▶ AdminFunction (VPC)
        Authorization: API Key (via CloudFront origin header)
-       Routes: /www/v1/calendar/public, /www/v1/discounts/validate,
-               /www/v1/reservations, /www/v1/reservations/payment-intent,
-               /www/v1/contact-us
+       Routes: /v1/public/calendar, /v1/public/discounts/validate,
+               /v1/public/reservations, /v1/public/reservations/payment-intent,
+               /v1/public/contact-us
 ```
 
 ### API Gateway configuration
@@ -261,8 +261,8 @@ API Gateway (evolvesprouts-api)
 | Stage | `prod` |
 | Tracing | X-Ray enabled |
 | Access logging | JSON format to CloudWatch |
-| Caching | Disabled at stage; edge-cached at CloudFront for `/www/*` GETs |
-| Custom domain | `api.evolvesprouts.com` at `/prod` (`ApiCustomDomainName`). The execute-api hostname does not accept calls. Asset-share links use this domain. |
+| Caching | Disabled at stage; edge-cached at CloudFront for `/api/*` GETs |
+| Custom domain | `api.evolvesprouts.com` at the stage root (`ApiCustomDomainName`). There is no `/prod` path. The execute-api hostname does not accept calls. Asset-share links use this domain. |
 
 ### CORS
 

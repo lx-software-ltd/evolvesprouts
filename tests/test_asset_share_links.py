@@ -92,7 +92,7 @@ def test_build_share_link_url_keeps_stage_after_custom_domain_routing(
 
     url = build_share_link_url(event=event, token="B" * 24)
 
-    assert url == "https://api.example.com/prod/v1/assets/share/" + ("B" * 24)
+    assert url == "https://api.example.com/v1/assets/share/" + ("B" * 24)
 
 
 def test_build_share_link_url_uses_stage_when_context_path_has_no_prefix(
@@ -115,7 +115,7 @@ def test_build_share_link_url_uses_stage_when_context_path_has_no_prefix(
 
     url = build_share_link_url(event=event, token="B" * 24)
 
-    assert url == "https://api.example.com/prod/v1/assets/share/" + ("B" * 24)
+    assert url == "https://api.example.com/v1/assets/share/" + ("B" * 24)
 
 
 def test_build_share_link_url_derives_stage_prefix(monkeypatch: Any) -> None:

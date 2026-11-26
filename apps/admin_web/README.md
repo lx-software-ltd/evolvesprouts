@@ -20,8 +20,7 @@ Set these variables before running or building the app:
 
 `NEXT_PUBLIC_API_BASE_URL` accepts:
 
-- an absolute API URL (example: `https://api.evolvesprouts.com`)
-- or a relative proxy base path (example: `/prod`)
+- an absolute API URL (example: `https://api.evolvesprouts.com`). The current base has no stage prefix.
 
 ## Assets admin page
 

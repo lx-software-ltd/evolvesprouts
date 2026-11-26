@@ -1,6 +1,6 @@
 /**
  * Shared CloudFront Function (JS 2.0) sources for static-export sites that
- * proxy allowlisted /www/* public API routes. Used by public-www-stack and
+ * proxy allowlisted /api/v1/public/ routes. Used by public-www-stack and
  * training-stack; keep in sync with docs/architecture/security.md.
  */
 
@@ -34,10 +34,9 @@ function handler(event) {
 }
 `;
 
-/** One route list for the /www and /api viewer allow-lists. */
+/** One route list for the /api viewer allow-list. Old /www viewer paths stay removed. */
 export interface ProxyAllowlistEntry {
   readonly methods: readonly string[];
-  readonly wwwPath: string;
   readonly apiPath: string;
   /** Exact public.yaml path, or a prefix of one for a wildcard rule. */
   readonly publicPath: string;
@@ -51,49 +50,42 @@ export const PROXY_ALLOWLIST_ENTRIES: readonly ProxyAllowlistEntry[] = [
   {
     kind: "exact",
     methods: ["GET"],
-    wwwPath: "/www/v1/calendar/public",
     apiPath: "/api/v1/public/calendar",
     publicPath: "/v1/public/calendar",
   },
   {
     kind: "exact",
     methods: ["GET"],
-    wwwPath: "/www/v1/calendar/availability",
     apiPath: "/api/v1/public/calendar/availability",
     publicPath: "/v1/public/calendar/availability",
   },
   {
     kind: "exact",
     methods: ["GET"],
-    wwwPath: "/www/v1/assets/free",
     apiPath: "/api/v1/public/assets/free",
     publicPath: "/v1/public/assets/free",
   },
   {
     kind: "exact",
     methods: ["POST"],
-    wwwPath: "/www/v1/discounts/validate",
     apiPath: "/api/v1/public/discounts/validate",
     publicPath: "/v1/public/discounts/validate",
   },
   {
     kind: "exact",
     methods: ["POST"],
-    wwwPath: "/www/v1/reservations",
     apiPath: "/api/v1/public/reservations",
     publicPath: "/v1/public/reservations",
   },
   {
     kind: "exact",
     methods: ["POST"],
-    wwwPath: "/www/v1/reservations/payment-intent",
     apiPath: "/api/v1/public/reservations/payment-intent",
     publicPath: "/v1/public/reservations/payment-intent",
   },
   {
     kind: "exact",
     methods: ["POST"],
-    wwwPath: "/www/v1/contact-us",
     apiPath: "/api/v1/public/contact-us",
     publicPath: "/v1/public/contact-us",
   },
@@ -101,7 +93,6 @@ export const PROXY_ALLOWLIST_ENTRIES: readonly ProxyAllowlistEntry[] = [
     kind: "prefix",
     name: "isFormAnswersPath",
     methods: ["PUT", "OPTIONS"],
-    wwwPath: "/www/v1/forms/",
     apiPath: "/api/v1/public/forms/",
     publicPath: "/v1/public/forms/",
     suffix: "/answers",
@@ -110,7 +101,6 @@ export const PROXY_ALLOWLIST_ENTRIES: readonly ProxyAllowlistEntry[] = [
     kind: "prefix",
     name: "isFormContactContextPath",
     methods: ["GET", "OPTIONS"],
-    wwwPath: "/www/v1/forms/",
     apiPath: "/api/v1/public/forms/",
     publicPath: "/v1/public/forms/",
     suffix: "/contact-context",
@@ -119,7 +109,6 @@ export const PROXY_ALLOWLIST_ENTRIES: readonly ProxyAllowlistEntry[] = [
     kind: "prefix",
     name: "isPollAnswersPath",
     methods: ["GET", "PUT", "OPTIONS"],
-    wwwPath: "/www/v1/polls/",
     apiPath: "/api/v1/public/polls/",
     publicPath: "/v1/public/polls/",
     suffix: "/answers",
@@ -128,7 +117,6 @@ export const PROXY_ALLOWLIST_ENTRIES: readonly ProxyAllowlistEntry[] = [
     kind: "prefix",
     name: "isPollQuestionResultsPath",
     methods: ["GET", "OPTIONS"],
-    wwwPath: "/www/v1/polls/",
     apiPath: "/api/v1/public/polls/",
     publicPath: "/v1/public/polls/",
     suffix: "/results",
@@ -138,7 +126,6 @@ export const PROXY_ALLOWLIST_ENTRIES: readonly ProxyAllowlistEntry[] = [
     kind: "prefix",
     name: "isPollControlPath",
     methods: ["GET", "PUT", "OPTIONS"],
-    wwwPath: "/www/v1/polls/",
     apiPath: "/api/v1/public/polls/",
     publicPath: "/v1/public/polls/",
     suffix: "/control",
@@ -153,30 +140,28 @@ function methodCheck(methods: readonly string[]): string {
   return methods.map((method) => `method === '${method}'`).join(" || ");
 }
 
-function renderAllowlist(viewer: "www" | "api"): string {
+function renderApiAllowlist(): string {
   const exactByMethod = new Map<string, string[]>();
   for (const entry of PROXY_ALLOWLIST_ENTRIES) {
     if (entry.kind !== "exact") {
       continue;
     }
-    const path = viewer === "www" ? entry.wwwPath : entry.apiPath;
     for (const method of entry.methods) {
       const paths = exactByMethod.get(method) ?? [];
-      paths.push(path);
+      paths.push(entry.apiPath);
       exactByMethod.set(method, paths);
     }
   }
   const methodBlocks = [...exactByMethod.entries()].map(([method, paths], methodIndex, all) => {
-    const lines = paths.map((path, index) => {
+    const lines = paths.map((item, index) => {
       const comma = index === paths.length - 1 ? "" : ",";
-      return `      ${quoteJs(path)}: true${comma}`;
+      return `      ${quoteJs(item)}: true${comma}`;
     });
     const methodComma = methodIndex === all.length - 1 ? "" : ",";
     return `    '${method}': {\n${lines.join("\n")}\n    }${methodComma}`;
   });
   const prefixBlocks = PROXY_ALLOWLIST_ENTRIES.filter((entry) => entry.kind === "prefix").map(
     (entry) => {
-      const prefix = viewer === "www" ? entry.wwwPath : entry.apiPath;
       const suffix = entry.suffix ?? "";
       const contains = entry.contains
         ? `uri.indexOf(${quoteJs(entry.contains)}) > 0 &&\n    `
@@ -184,7 +169,7 @@ function renderAllowlist(viewer: "www" | "api"): string {
       const checks = methodCheck(entry.methods);
       const wrapped = entry.methods.length > 1 ? `(${checks})` : checks;
       return `  var ${entry.name} =
-    uri.indexOf(${quoteJs(prefix)}) === 0 &&
+    uri.indexOf(${quoteJs(entry.apiPath)}) === 0 &&
     ${contains}uri.lastIndexOf(${quoteJs(suffix)}) === uri.length - ${suffix.length};
   if (
     ${wrapped} &&
@@ -224,41 +209,10 @@ ${prefixBlocks.join("\n\n")}
 `;
 }
 
-/** Default-deny allowlist for /www/* API proxy (viewer path includes /www prefix). */
-export const WWW_PROXY_ALLOWLIST_FUNCTION = renderAllowlist("www");
+/** Default-deny allowlist for /api/v1/public/... . The viewer path loses the /api prefix. */
+export const API_PROXY_ALLOWLIST_FUNCTION = renderApiAllowlist();
 
-/**
- * Allow-list for /api/v1/public/... . Same routes as the /www function.
- * The viewer path loses the /api prefix and keeps /v1/public/.
- */
-export const API_PROXY_ALLOWLIST_FUNCTION = renderAllowlist("api");
-
-/** Dedicated behavior for POST/OPTIONS /www/v1/assets/free/request → API origin. */
-export const MEDIA_REQUEST_PROXY_FUNCTION = `
-function handler(event) {
-  var request = event.request;
-  var method = request.method || '';
-  var uri = request.uri || '';
-  var isAllowedMethod = method === 'POST' || method === 'OPTIONS';
-
-  if (uri === '/www/v1/assets/free/request' && isAllowedMethod) {
-    request.uri = '/v1/assets/free/request';
-    return request;
-  }
-
-  return {
-    statusCode: 403,
-    statusDescription: 'Forbidden',
-    headers: {
-      'content-type': { value: 'application/json; charset=utf-8' },
-      'cache-control': { value: 'no-store' }
-    },
-    body: '{"message":"Forbidden"}'
-  };
-}
-`;
-
-/** Convert HTML error pages from API origins to JSON for /www proxy behaviors. */
+/** Convert HTML error pages from API origins to JSON for /api proxy behaviors. */
 export const WWW_API_ERROR_RESPONSE_FUNCTION = `
 function handler(event) {
   var response = event.response;

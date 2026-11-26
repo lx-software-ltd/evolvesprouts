@@ -10,8 +10,8 @@ the edge-verify check in `public-www-stack.ts`. It stays off while
 
 ## What landed
 
-- The API custom domain maps to the prod stage at `/prod`.
-  `ApiCustomDomainUrl` includes that path, as `ApiUrl` does.
+- The API custom domain maps to the prod stage at the root.
+  `ApiCustomDomainUrl` is the origin only. There is no `/prod` path.
 - The execute-api hostname does not accept calls. `DisableExecuteApiEndpoint`
   is set on the REST API. The stage variable `executeApiEndpoint` is
   `disabled`. The stage update depends on the REST API and on the
@@ -21,7 +21,8 @@ the edge-verify check in `public-www-stack.ts`. It stays off while
 - `ApiCustomDomainName` and `ApiCustomDomainCertificateArn` reject an empty
   value.
 - The asset-share CloudFront origin uses `ApiCustomDomainName`. The origin
-  path stays `/prod`.
+  path is empty. Viewer paths `/v1/assets/share/*` and
+  `/v1/assets/email-download/*` are rewritten to `/v1/public/assets/...`.
 - `PublicWwwApiBaseUrl` and `PublicWwwMediaRequestApiBaseUrl` resolve
   `PUBLIC_WWW_API_BASE_URL` and `PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL`.
   Backend deploy falls back to `NEXT_PUBLIC_API_BASE_URL` when those are
@@ -51,11 +52,17 @@ deploy. The deploy is what disables the execute-api hostname.
    `ApiCustomDomainCertificateArn` is the issued `*.evolvesprouts.com`
    certificate in `ap-southeast-1`. DNS for that name points at
    `ApiCustomDomainTarget` with the proxy off.
-2. Keep `NEXT_PUBLIC_API_BASE_URL`, `PUBLIC_WWW_API_BASE_URL`,
-   `PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL`, and the training API parameters
-   on `ApiCustomDomainUrl`. The public site build uses
-   `NEXT_PUBLIC_WWW_API_BASE_URL=/www`. Mailchimp and Meta callbacks use
-   `ApiCustomDomainUrl` plus `/v1/...`.
+2. Keep `NEXT_PUBLIC_API_BASE_URL`, `vars.PUBLIC_WWW_API_BASE_URL`,
+   `vars.PUBLIC_WWW_MEDIA_REQUEST_API_BASE_URL`,
+   `vars.NEXT_PUBLIC_WWW_API_BASE_URL`, and the training API parameters on
+   `ApiCustomDomainUrl`. Any of the three `vars.*` values overrides
+   `NEXT_PUBLIC_API_BASE_URL`. The public site build uses
+   `NEXT_PUBLIC_WWW_API_BASE_URL=/api`. A backend origin that still ends in
+   `/prod` makes the site API fail. `PublicWwwApiBaseUrl`,
+   `PublicWwwMediaRequestApiBaseUrl`, `TrainingApiBaseUrl`, and
+   `TrainingMediaRequestApiBaseUrl` reject a path other than empty or `/`.
+   Mailchimp and Meta callbacks use `ApiCustomDomainUrl` plus
+   `/v1/webhooks/...`.
 3. Deploy the backend stack. The stage update waits until the asset-share
    distribution is using the custom domain, then the execute-api hostname
    stops accepting calls.

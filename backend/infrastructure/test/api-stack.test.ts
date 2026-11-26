@@ -829,7 +829,7 @@ function assertInboundInvoiceSharesReceiptRuleSet(template: Template): void {
   }
 }
 
-function assertApiTokenAuthorizerCachesNeitherHeader(template: Template): void {
+function assertApiTokenAuthorizerCachesAuthorizationHeader(template: Template): void {
   const authorizers = template.findResources("AWS::ApiGateway::Authorizer");
   const token = Object.values(authorizers).filter((resource) => {
     return JSON.stringify(resource.Properties?.AuthorizerUri ?? "").includes(
@@ -842,14 +842,15 @@ function assertApiTokenAuthorizerCachesNeitherHeader(template: Template): void {
     );
   }
   const properties = token[0].Properties ?? {};
-  if (properties.AuthorizerResultTtlInSeconds !== 0) {
+  if (properties.AuthorizerResultTtlInSeconds !== 300) {
     throw new Error(
-      "API token authorizer cache must be off so the cache key includes neither header",
+      `API token authorizer cache must be 300 seconds, found ${JSON.stringify(properties.AuthorizerResultTtlInSeconds)}`,
     );
   }
-  if (properties.IdentitySource !== undefined) {
+  const identity = JSON.stringify(properties.IdentitySource ?? "");
+  if (!identity.includes("method.request.header.Authorization")) {
     throw new Error(
-      `API token authorizer cache key must include neither header, found ${JSON.stringify(properties.IdentitySource)}`,
+      `API token authorizer cache key must be Authorization, found ${identity}`,
     );
   }
 }
@@ -1066,12 +1067,22 @@ function assertRetainedSecurityGroupsAndProxyTags(template: Template): void {
   }
 }
 
-function assertApiCustomDomainKeepsProdPath(template: Template): void {
+function assertApiCustomDomainMapsAtRoot(template: Template): void {
   const mappings = template.findResources("AWS::ApiGateway::BasePathMapping");
   const entries = Object.entries(mappings);
-  if (entries.length !== 2) {
+  if (entries.length !== 1) {
+    throw new Error(`Expected only the root mapping; found ${entries.length}`);
+  }
+  const [rootLogicalId, rootMapping] = entries[0];
+  const rootBasePath = rootMapping.Properties?.BasePath;
+  if (rootBasePath !== "" && rootBasePath !== undefined) {
     throw new Error(
-      `Expected the prod mapping and a root mapping; found ${entries.length}`,
+      `${rootLogicalId} must map at the root. Found ${JSON.stringify(rootBasePath)}`,
+    );
+  }
+  if (rootMapping.Condition !== "UseApiCustomDomain") {
+    throw new Error(
+      `${rootLogicalId} must be created only when UseApiCustomDomain is true`,
     );
   }
   const stages = template.findResources("AWS::ApiGateway::Stage");
@@ -1084,25 +1095,6 @@ function assertApiCustomDomainKeepsProdPath(template: Template): void {
   if (typeof stageName !== "string" || stageName.length === 0) {
     throw new Error(`API stage ${stageLogicalId} is missing StageName`);
   }
-  const prodEntry = entries.find(
-    ([, item]) => item.Properties?.BasePath === stageName,
-  );
-  const rootEntry = entries.find(([, item]) => {
-    const basePath = item.Properties?.BasePath;
-    return basePath === "" || basePath === undefined;
-  });
-  if (!prodEntry || !rootEntry) {
-    throw new Error(
-      `Expected a ${stageName} mapping and a root mapping. Found ${JSON.stringify(entries.map(([, item]) => item.Properties?.BasePath))}`,
-    );
-  }
-  const [logicalId, mapping] = prodEntry;
-  if (mapping.Condition !== "UseApiCustomDomain") {
-    throw new Error(
-      `${logicalId} must be created only when UseApiCustomDomain is true`,
-    );
-  }
-
   const apis = template.findResources("AWS::ApiGateway::RestApi");
   const apiEntries = Object.entries(apis);
   if (apiEntries.length !== 1) {
@@ -1299,9 +1291,8 @@ function assertTokenAuthorizerCoverage(template: Template): void {
       };
     }
   >;
-  // Retired /v1/public/{proxy+} still carries the token authorizer on this
-  // branch. Later branches drop the alias or the authorizer and this set.
-  const publicExempt = new Set(["/v1/public/{proxy+}"]);
+  // No /v1/public method may carry the token authorizer, including a proxy.
+  const publicExempt = new Set<string>();
   const seenExempt = new Set<string>();
   let partnerMethods = 0;
   for (const method of Object.values(methods)) {
@@ -1430,7 +1421,7 @@ function main(): void {
   assertPollResponsesTableHasExpiresAtTtl(template);
   assertCognitoClientAllowlistWiring(template);
   assertApiTokenAuthorizerHasNoReservedConcurrency(template);
-  assertApiTokenAuthorizerCachesNeitherHeader(template);
+  assertApiTokenAuthorizerCachesAuthorizationHeader(template);
   assertPublicContactMergeRoute(template);
   assertTokenAuthorizerCoverage(template);
   assertMailchimpWebhookInactivityAlarm(template);
@@ -1445,7 +1436,7 @@ function main(): void {
   assertFinanceReadonlyDataApi(template);
   assertLogGroupActionsUseLogGroupArn(template);
   assertRetainedSecurityGroupsAndProxyTags(template);
-  assertApiCustomDomainKeepsProdPath(template);
+  assertApiCustomDomainMapsAtRoot(template);
   assertApiStackInvariants(stack, template);
 
   console.log("api-stack API Gateway stage cache assertions passed.");
