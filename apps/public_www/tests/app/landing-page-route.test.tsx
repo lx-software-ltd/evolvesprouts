@@ -52,7 +52,7 @@ beforeEach(() => {
 
 describe('LandingPageRoute', () => {
   beforeEach(() => {
-    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.evolvesprouts.com/www');
+    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.evolvesprouts.com/api');
     vi.stubEnv('NEXT_PUBLIC_WWW_CRM_API_KEY', 'public-crm-key');
   });
 

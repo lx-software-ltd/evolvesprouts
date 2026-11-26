@@ -39,7 +39,7 @@ afterEach(() => {
 });
 
 beforeEach(() => {
-  vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.evolvesprouts.com/www');
+  vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.evolvesprouts.com/api');
 });
 
 function resolveDateTimeLocale(locale: 'en' | 'zh-CN' | 'zh-HK'): string {
@@ -107,11 +107,11 @@ function formatExpectedLandingPageEyebrowDate(
 
 describe('events-data', () => {
   it('resolves CRM events endpoint from base URL', () => {
-    expect(resolveEventsApiUrl('https://api.evolvesprouts.com/www')).toBe(
-      'https://api.evolvesprouts.com/www/v1/calendar/public',
+    expect(resolveEventsApiUrl('https://api.evolvesprouts.com/api')).toBe(
+      'https://api.evolvesprouts.com/api/v1/public/calendar',
     );
-    expect(resolveEventsApiUrl('https://api.evolvesprouts.com/www/')).toBe(
-      'https://api.evolvesprouts.com/www/v1/calendar/public',
+    expect(resolveEventsApiUrl('https://api.evolvesprouts.com/api/')).toBe(
+      'https://api.evolvesprouts.com/api/v1/public/calendar',
     );
     expect(resolveEventsApiUrl('api.evolvesprouts.com/www/')).toBe('');
     expect(resolveEventsApiUrl('   ')).toBe('');
@@ -911,7 +911,7 @@ describe('events-data', () => {
         serviceType: 'training_course',
       }),
     ).toBe(
-      `/v1/calendar/public?service_type=training_course&service_key=${MY_BEST_AUNTIE_TRAINING_COURSE_CALENDAR_SERVICE_KEY}`,
+      `/v1/public/calendar?service_type=training_course&service_key=${MY_BEST_AUNTIE_TRAINING_COURSE_CALENDAR_SERVICE_KEY}`,
     );
   });
 
@@ -1056,7 +1056,7 @@ describe('events-data', () => {
     );
     vi.stubGlobal('fetch', fetchSpy);
     const crmApiClient = createCrmApiClient({
-      baseUrl: 'https://api.evolvesprouts.com/www',
+      baseUrl: 'https://api.evolvesprouts.com/api',
       apiKey: 'public-crm-key',
     });
     if (!crmApiClient) {
@@ -1069,7 +1069,7 @@ describe('events-data', () => {
     );
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      'https://api.evolvesprouts.com/www/v1/calendar/public',
+      'https://api.evolvesprouts.com/api/v1/public/calendar',
       expect.objectContaining({
         method: 'GET',
         headers: expect.objectContaining({
@@ -1093,7 +1093,7 @@ describe('events-data', () => {
     );
     vi.stubGlobal('fetch', fetchSpy);
     const crmApiClient = createCrmApiClient({
-      baseUrl: 'https://api.evolvesprouts.com/www',
+      baseUrl: 'https://api.evolvesprouts.com/api',
       apiKey: 'public-crm-key',
     });
     if (!crmApiClient) {
@@ -1106,7 +1106,7 @@ describe('events-data', () => {
     });
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      `https://api.evolvesprouts.com/www/v1/calendar/public?service_type=training_course&service_key=${MY_BEST_AUNTIE_TRAINING_COURSE_CALENDAR_SERVICE_KEY}`,
+      `https://api.evolvesprouts.com/api/v1/public/calendar?service_type=training_course&service_key=${MY_BEST_AUNTIE_TRAINING_COURSE_CALENDAR_SERVICE_KEY}`,
       expect.anything(),
     );
   });
@@ -1120,7 +1120,7 @@ describe('events-data', () => {
   it('rejects invalid CRM API client configuration', () => {
     expect(
       createCrmApiClient({
-        baseUrl: 'https://api.evolvesprouts.com/www',
+        baseUrl: 'https://api.evolvesprouts.com/api',
         apiKey: '   ',
       }),
     ).toBeNull();
@@ -1129,7 +1129,7 @@ describe('events-data', () => {
   describe('fetchLandingPageCalendarPayload', () => {
     beforeEach(() => {
       clearCrmApiGetCacheForTests();
-      vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.evolvesprouts.com/www');
+      vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.evolvesprouts.com/api');
       vi.stubEnv('NEXT_PUBLIC_WWW_CRM_API_KEY', 'public-crm-key');
     });
 
@@ -1154,7 +1154,7 @@ describe('events-data', () => {
       expect(findLandingPageEventInPayload(payload, slug)).not.toBeNull();
       expect(fetchSpy).toHaveBeenCalledTimes(1);
       expect(String(fetchSpy.mock.calls[0]?.[0])).toContain(
-        `/v1/calendar/public?slug=${encodeURIComponent(slug)}`,
+        `/v1/public/calendar?slug=${encodeURIComponent(slug)}`,
       );
     });
 

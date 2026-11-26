@@ -360,16 +360,17 @@ EOF
   rm -f "$robots_file"
 }
 
-function get_www_allowlist_function_logical_prefix() {
+function get_proxy_function_logical_prefix() {
   local environment_name="$1"
+  local suffix="$2"
 
   if [ "$environment_name" = "production" ]; then
-    echo "PublicWwwWwwProxyAllowlistFunction"
+    echo "PublicWww${suffix}"
     return
   fi
 
   if [ "$environment_name" = "staging" ]; then
-    echo "PublicWwwStagingWwwProxyAllowlistFunction"
+    echo "PublicWwwStaging${suffix}"
     return
   fi
 
@@ -378,12 +379,13 @@ function get_www_allowlist_function_logical_prefix() {
   exit 1
 }
 
-function resolve_www_allowlist_function_arn() {
+function resolve_proxy_function_arn() {
   local stack_name="$1"
   local environment_name="$2"
+  local suffix="$3"
   local logical_prefix function_resource_id function_name
 
-  logical_prefix="$(get_www_allowlist_function_logical_prefix "$environment_name")"
+  logical_prefix="$(get_proxy_function_logical_prefix "$environment_name" "$suffix")"
   function_resource_id="$(aws cloudformation list-stack-resources \
     --stack-name "$stack_name" \
     --query "StackResourceSummaries[?ResourceType=='AWS::CloudFront::Function' && starts_with(LogicalResourceId, '$logical_prefix')].PhysicalResourceId | [0]" \
@@ -424,7 +426,7 @@ function ensure_maintenance_block_function_arn() {
   local environment_name="$1"
   local function_name function_code_file function_config etag
   function_name="evolvesprouts-public-www-${environment_name}-maintenance-block"
-  function_config="Comment=Block /www proxy during website maintenance,Runtime=cloudfront-js-2.0"
+  function_config="Comment=Block /www and /api proxies during website maintenance,Runtime=cloudfront-js-2.0"
   function_code_file="$(mktemp)"
 
   cat > "$function_code_file" <<'EOF'
@@ -488,17 +490,9 @@ EOF
     --output text
 }
 
-function get_current_www_function_arn() {
+function update_proxy_function_associations() {
   local distribution_id="$1"
-  aws cloudfront get-distribution-config \
-    --id "$distribution_id" \
-    --query "DistributionConfig.CacheBehaviors.Items[?PathPattern=='www/*'].FunctionAssociations.Items[?EventType=='viewer-request'].FunctionARN | [0][0]" \
-    --output text
-}
-
-function update_www_function_association() {
-  local distribution_id="$1"
-  local target_function_arn="$2"
+  local updates_json="$2"
   local distribution_payload_file distribution_config_file distribution_etag
 
   distribution_payload_file="$(mktemp)"
@@ -519,56 +513,64 @@ print(payload["ETag"])
 PY
 )"
 
-  python3 - "$distribution_payload_file" "$distribution_config_file" "$target_function_arn" <<'PY'
+  python3 - "$distribution_payload_file" "$distribution_config_file" "$updates_json" <<'PY'
 import json
 import sys
 
 payload_path = sys.argv[1]
 distribution_config_path = sys.argv[2]
-target_function_arn = sys.argv[3]
+updates = json.loads(sys.argv[3])
 
 with open(payload_path, encoding="utf-8") as handle:
     payload = json.load(handle)
 
 config = payload["DistributionConfig"]
-cache_behaviors = config.get("CacheBehaviors", {})
-items = cache_behaviors.get("Items", [])
-target_behavior = None
+items = config.get("CacheBehaviors", {}).get("Items", [])
+found = set()
+changed = False
 
 for behavior in items:
-    if behavior.get("PathPattern") == "www/*":
-        target_behavior = behavior
-        break
+    pattern = behavior.get("PathPattern")
+    if pattern not in updates:
+        continue
+    found.add(pattern)
+    function_associations = behavior.setdefault("FunctionAssociations", {})
+    association_items = function_associations.setdefault("Items", [])
+    if not isinstance(association_items, list):
+        association_items = []
+        function_associations["Items"] = association_items
+    replaced = False
+    for association in association_items:
+        if association.get("EventType") == "viewer-request":
+            if association.get("FunctionARN") != updates[pattern]:
+                association["FunctionARN"] = updates[pattern]
+                changed = True
+            replaced = True
+            break
+    if not replaced:
+        association_items.append(
+            {
+                "EventType": "viewer-request",
+                "FunctionARN": updates[pattern],
+            }
+        )
+        changed = True
+        function_associations["Quantity"] = len(association_items)
 
-if target_behavior is None:
-    raise SystemExit("CloudFront behavior 'www/*' not found")
-
-function_associations = target_behavior.setdefault("FunctionAssociations", {})
-association_items = function_associations.setdefault("Items", [])
-if not isinstance(association_items, list):
-    association_items = []
-    function_associations["Items"] = association_items
-
-replaced = False
-for association in association_items:
-    if association.get("EventType") == "viewer-request":
-        association["FunctionARN"] = target_function_arn
-        replaced = True
-        break
-
-if not replaced:
-    association_items.append(
-        {
-            "EventType": "viewer-request",
-            "FunctionARN": target_function_arn,
-        }
-    )
-
-function_associations["Quantity"] = len(association_items)
+missing = sorted(set(updates) - found)
+if missing:
+    raise SystemExit("CloudFront behaviors not found: " + ", ".join(missing))
 
 with open(distribution_config_path, "w", encoding="utf-8") as handle:
-    json.dump(config, handle)
+    if changed:
+        json.dump(config, handle)
 PY
+
+  if [ ! -s "$distribution_config_file" ]; then
+    echo "CloudFront /www and /api viewer-request functions already set"
+    rm -f "$distribution_payload_file" "$distribution_config_file"
+    return
+  fi
 
   aws cloudfront update-distribution \
     --id "$distribution_id" \
@@ -583,23 +585,45 @@ function apply_www_proxy_mode() {
   local distribution_id="$2"
   local environment_name="$3"
   local mode="$4"
-  local target_function_arn current_function_arn
+  local maintenance_arn updates_json
 
   if [ "$mode" = "maintenance" ]; then
-    target_function_arn="$(ensure_maintenance_block_function_arn "$environment_name")"
+    maintenance_arn="$(ensure_maintenance_block_function_arn "$environment_name")"
+    updates_json="$(python3 - "$maintenance_arn" <<'PY'
+import json
+import sys
+
+arn = sys.argv[1]
+patterns = [
+    "www/*",
+    "www/v1/assets/free/request",
+    "api/*",
+    "api/v1/public/assets/free/request",
+]
+print(json.dumps({pattern: arn for pattern in patterns}))
+PY
+)"
   else
-    target_function_arn="$(resolve_www_allowlist_function_arn "$stack_name" "$environment_name")"
+    updates_json="$(python3 - \
+      "$(resolve_proxy_function_arn "$stack_name" "$environment_name" "WwwProxyAllowlistFunction")" \
+      "$(resolve_proxy_function_arn "$stack_name" "$environment_name" "MediaRequestProxyFunction")" \
+      "$(resolve_proxy_function_arn "$stack_name" "$environment_name" "ApiProxyAllowlistFunction")" \
+      "$(resolve_proxy_function_arn "$stack_name" "$environment_name" "ApiMediaRequestProxyFunction")" <<'PY'
+import json
+import sys
+
+print(json.dumps({
+    "www/*": sys.argv[1],
+    "www/v1/assets/free/request": sys.argv[2],
+    "api/*": sys.argv[3],
+    "api/v1/public/assets/free/request": sys.argv[4],
+}))
+PY
+)"
   fi
 
-  current_function_arn="$(get_current_www_function_arn "$distribution_id")"
-
-  if [ "$current_function_arn" = "$target_function_arn" ]; then
-    echo "CloudFront /www viewer-request function already set for mode '$mode'"
-    return
-  fi
-
-  echo "Updating CloudFront /www viewer-request function for mode '$mode'"
-  update_www_function_association "$distribution_id" "$target_function_arn"
+  echo "Updating CloudFront /www and /api viewer-request functions for mode '$mode'"
+  update_proxy_function_associations "$distribution_id" "$updates_json"
 }
 
 if [ "${PUBLIC_WWW_PHASE:-}" = "optimize" ]; then

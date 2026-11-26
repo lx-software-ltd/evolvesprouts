@@ -1,6 +1,6 @@
 import type { CrmApiClient } from '@/lib/crm-api-client';
 
-export const RESERVATION_PAYMENT_INTENT_API_PATH = '/v1/reservations/payment-intent';
+export const RESERVATION_PAYMENT_INTENT_API_PATH = '/v1/public/reservations/payment-intent';
 
 export interface ReservationPaymentIntentPayload {
   service_tier: string;

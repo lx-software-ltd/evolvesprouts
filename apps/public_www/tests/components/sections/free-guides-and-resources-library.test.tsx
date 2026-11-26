@@ -71,7 +71,7 @@ describe('FreeGuidesAndResourcesLibrary', () => {
   const mediaFormContent = enContent.resources;
 
   beforeEach(() => {
-    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', '/www');
+    vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', '/api');
     vi.stubEnv('NEXT_PUBLIC_WWW_CRM_API_KEY', 'test-key');
     clearCrmApiGetCacheForTests();
     mockFetchJsonResponse({ items: sampleApiItems, next_cursor: null });
@@ -100,7 +100,7 @@ describe('FreeGuidesAndResourcesLibrary', () => {
     });
 
     expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/v1/assets/free?'),
+      expect.stringContaining('/v1/public/assets/free?'),
       expect.objectContaining({
         signal: expect.any(AbortSignal),
         headers: expect.objectContaining({

@@ -49,7 +49,7 @@ interface MediaFormProps {
   onFormOpened?: () => void;
 }
 
-const MEDIA_REQUEST_API_PATH = '/v1/assets/free/request';
+const MEDIA_REQUEST_API_PATH = '/v1/public/assets/free/request';
 const MAX_RESOURCE_KEY_LENGTH = 64;
 
 function normalizeResourceKey(value: string): string {

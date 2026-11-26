@@ -31,7 +31,7 @@ vi.mock('@/lib/polls-api', async (importOriginal) => {
       sessionId: '550e8400-e29b-41d4-a716-446655440000',
       answers: [],
     }),
-    resolvePollApiConfig: vi.fn().mockReturnValue({ baseUrl: '/www', apiKey: 'test-key' }),
+    resolvePollApiConfig: vi.fn().mockReturnValue({ baseUrl: '/api', apiKey: 'test-key' }),
   };
 });
 

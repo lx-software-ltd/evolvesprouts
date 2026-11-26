@@ -1,6 +1,6 @@
 import type { CrmApiClient } from '@/lib/crm-api-client';
 
-export const RESERVATIONS_API_PATH = '/v1/reservations';
+export const RESERVATIONS_API_PATH = '/v1/public/reservations';
 
 /** Machine code for how the attendee will pay; matches booking modal analytics. */
 export type ReservationPaymentMethodCode =

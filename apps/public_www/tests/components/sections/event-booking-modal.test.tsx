@@ -254,7 +254,7 @@ describe('EventBookingModal', () => {
     expect(requestSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         method: 'POST',
-        endpointPath: '/v1/reservations',
+        endpointPath: '/v1/public/reservations',
         body: expect.objectContaining({
           locationUrl: mapsUrl,
           bookingSystem: 'event-booking',
