@@ -281,6 +281,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/reservations/payment-intent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a reservation PaymentIntent
+         * @description Creates a card PaymentIntent for the public booking modal. Requires an API key and `X-Turnstile-Token`.
+         */
+        post: operations["postV1PublicReservationsPaymentIntent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/forms/{form_slug}/answers": {
         parameters: {
             query?: never;
@@ -2017,6 +2037,53 @@ export interface operations {
             };
             /** @description Persistence failed. */
             500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    postV1PublicReservationsPaymentIntent: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Cloudflare Turnstile response token. */
+                "X-Turnstile-Token": components["parameters"]["TurnstileTokenHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReservationPaymentIntentRequest"];
+            };
+        };
+        responses: {
+            /** @description PaymentIntent created. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReservationPaymentIntentResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
+            /** @description Stripe is not configured. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Stripe request failed. */
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };

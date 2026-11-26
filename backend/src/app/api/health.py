@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -153,7 +154,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
 
 def handle_admin_health(
-    event: dict[str, Any],
+    event: Mapping[str, Any],
     method: str,
     _path: str,
 ) -> dict[str, Any]:
