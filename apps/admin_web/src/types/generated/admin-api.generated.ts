@@ -13,29 +13,9 @@ export interface paths {
         };
         /**
          * Liveness check
-         * @description Open liveness check. Returns `{"status":"ok"}` and does not read the database or configuration. Dependency checks are `GET /v1/admin/health`.
+         * @description Open liveness check. Returns `{"status":"ok"}` and does not read the database or configuration. A direct invocation of the health function with no httpMethod runs the database and configuration checks.
          */
         get: operations["getHealth"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/admin/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Dependency health check
-         * @description Admin-only database and configuration check.
-         */
-        get: operations["getV1AdminHealth"];
         put?: never;
         post?: never;
         delete?: never;
@@ -161,7 +141,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/admin/assets/{id}/grants/{grant_id}": {
+    "/v1/admin/assets/{id}/grants/{grantId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -169,7 +149,7 @@ export interface paths {
                 /** @description Asset identifier. */
                 id: components["parameters"]["AssetId"];
                 /** @description Asset grant identifier. */
-                grant_id: components["parameters"]["GrantId"];
+                grantId: components["parameters"]["GrantId"];
             };
             cookie?: never;
         };
@@ -5518,36 +5498,6 @@ export interface operations {
             };
         };
     };
-    getV1AdminHealth: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Dependencies are healthy. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HealthResponse"];
-                };
-            };
-            403: components["responses"]["Forbidden"];
-            /** @description A dependency is unhealthy. */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HealthResponse"];
-                };
-            };
-        };
-    };
     getV1AdminAssets: {
         parameters: {
             query?: {
@@ -5841,7 +5791,7 @@ export interface operations {
                 /** @description Asset identifier. */
                 id: components["parameters"]["AssetId"];
                 /** @description Asset grant identifier. */
-                grant_id: components["parameters"]["GrantId"];
+                grantId: components["parameters"]["GrantId"];
             };
             cookie?: never;
         };

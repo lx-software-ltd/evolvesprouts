@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import importlib
 import json
 import logging
+import re
+from pathlib import Path
 
 import app.api.admin as admin_module
 from app.api.admin import (
@@ -330,3 +333,147 @@ def test_requires_json_content_type_skips_mailchimp_webhook() -> None:
     assert _requires_json_content_type("/v1/whatsapp/webhook", "POST") is False
     assert _requires_json_content_type("/v1/meta/webhook", "POST") is False
     assert _requires_json_content_type("/v1/assets/free/request", "POST") is True
+
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_HTTP_METHODS = {"get", "post", "put", "patch", "delete"}
+_PATH_SAMPLES = {
+    "id": "11111111-1111-4111-8111-111111111111",
+    "token": "abcdefghijklmnopqrstuvwx",
+    "form_slug": "workshop",
+    "poll_slug": "workshop",
+    "question_id": "food",
+}
+
+
+def _concrete_path(template: str) -> str:
+    def _replace(match: re.Match[str]) -> str:
+        name = match.group(1)
+        sample = _PATH_SAMPLES.get(name)
+        if sample is None:
+            raise AssertionError(f"no sample for path parameter {name}")
+        return sample
+
+    return re.sub(r"\{([^}]+)\}", _replace, template)
+
+
+def _public_yaml_operations() -> list[tuple[str, str]]:
+    spec = (_REPO_ROOT / "docs/api/public.yaml").read_text()
+    operations: list[tuple[str, str]] = []
+    in_paths = False
+    current = ""
+    for line in spec.splitlines():
+        if line == "paths:":
+            in_paths = True
+            continue
+        if in_paths and line.startswith("components:"):
+            break
+        if not in_paths:
+            continue
+        path_match = re.match(r"^ {2}(/[^:]+):\s*$", line)
+        if path_match:
+            current = _concrete_path(path_match.group(1))
+            continue
+        method_match = re.match(r"^ {4}([a-z]+):\s*$", line)
+        if current and method_match and method_match.group(1) in _HTTP_METHODS:
+            operations.append((method_match.group(1).upper(), current))
+    if not operations:
+        raise AssertionError("docs/api/public.yaml has no operations")
+    return operations
+
+
+def _media_rewrite_operations() -> list[tuple[str, str]]:
+    """Paths the CloudFront media and allow-list functions hand to the API."""
+    source = (
+        _REPO_ROOT / "backend/infrastructure/lib/cloudfront-www-proxy-functions.ts"
+    ).read_text()
+    operations: list[tuple[str, str]] = []
+    for uri in re.findall(r"request\.uri = '(/[^']+)'", source):
+        method = "POST" if uri.endswith("/request") else "GET"
+        operations.append((method, uri))
+
+    entries = source.split("PROXY_ALLOWLIST_ENTRIES", 1)[1].split(
+        "function quoteJs", 1
+    )[0]
+    for block in re.findall(r"\{[^{}]+\}", entries):
+        methods_match = re.search(r"methods: \[([^\]]+)\]", block)
+        kind = re.search(r'kind: "([^"]+)"', block)
+        www_path = re.search(r'wwwPath: "([^"]+)"', block)
+        api_path = re.search(r'apiPath: "([^"]+)"', block)
+        suffix = re.search(r'suffix: "([^"]+)"', block)
+        contains = re.search(r'contains: "([^"]+)"', block)
+        if (
+            methods_match is None
+            or kind is None
+            or www_path is None
+            or api_path is None
+        ):
+            continue
+        methods = re.findall(r'"([A-Z]+)"', methods_match.group(1))
+        tail = ""
+        if kind.group(1) == "prefix":
+            middle = contains.group(1) + "food" if contains else ""
+            tail = "workshop" + middle + (suffix.group(1) if suffix else "")
+        for raw in (www_path.group(1), api_path.group(1)):
+            produced = raw[4:] + tail
+            for method in methods:
+                if method == "OPTIONS":
+                    continue
+                operations.append((method, produced))
+    return operations
+
+
+def _stop_external_calls(monkeypatch) -> None:
+    def _boom(*_args: object, **_kwargs: object) -> None:
+        raise RuntimeError("stopped before a dependency")
+
+    for module_name in (
+        "app.api.assets.public_assets",
+        "app.api.assets.public_free_assets",
+        "app.api.assets.share_assets",
+        "app.api.public_events",
+        "app.api.public_calendar_availability",
+        "app.api.public_forms_contact",
+        "app.api.public_discount_validate",
+        "app.api.public_contact",
+        "app.api.public_reservations",
+        "app.api.public_reservation_payments",
+    ):
+        module = importlib.import_module(module_name)
+        if hasattr(module, "get_engine"):
+            monkeypatch.setattr(module, "get_engine", _boom)
+    polls = importlib.import_module("app.api.public_polls")
+    for name in (
+        "get_poll_control_state",
+        "put_poll_control_state",
+        "list_poll_answers_for_session",
+        "aggregate_poll_question_results",
+        "upsert_poll_answer",
+        "upsert_form_answer",
+    ):
+        if hasattr(polls, name):
+            monkeypatch.setattr(polls, name, _boom)
+    forms = importlib.import_module("app.api.public_forms")
+    if hasattr(forms, "upsert_form_answer"):
+        monkeypatch.setattr(forms, "upsert_form_answer", _boom)
+
+
+def test_public_spec_and_media_rewrites_are_not_404(monkeypatch) -> None:
+    _stop_external_calls(monkeypatch)
+    seen: set[tuple[str, str]] = set()
+    failures: list[str] = []
+    for method, path in _public_yaml_operations() + _media_rewrite_operations():
+        if (method, path) in seen:
+            continue
+        seen.add((method, path))
+        event = {
+            "httpMethod": method,
+            "path": path,
+            "headers": {"Content-Type": "application/json", "host": "example.com"},
+            "body": "{}" if method in {"POST", "PUT", "PATCH"} else None,
+            "requestContext": {"requestId": "router-public"},
+        }
+        response = lambda_handler(event, None)
+        if response["statusCode"] == 404:
+            failures.append(f"{method} {path}")
+    assert failures == []

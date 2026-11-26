@@ -39,10 +39,10 @@ class _FakeSessionCM:
         return None
 
 
-def test_authorize_api_token_denies_missing_header() -> None:
-    policy = ata.authorize_api_token({"headers": {}, "methodArn": "arn:example"})
-    assert policy["policyDocument"]["Statement"][0]["Effect"] == "Deny"
-    assert policy["context"]["reason"] == "missing_key"
+def test_authorize_api_token_rejects_missing_header() -> None:
+    with pytest.raises(ata.Unauthorized) as raised:
+        ata.authorize_api_token({"headers": {}, "methodArn": "arn:example"})
+    assert str(raised.value) == "Unauthorized"
 
 
 def test_authorize_api_token_denies_malformed_token() -> None:
