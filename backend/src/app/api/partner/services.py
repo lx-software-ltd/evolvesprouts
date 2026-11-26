@@ -20,8 +20,8 @@ from app.api.admin_services import (
     list_services,
     update_service,
 )
-from app.api.public.instances import handle_public_service_instances_request
-from app.api.public.token_auth import require_api_token, token_actor_sub
+from app.api.partner.instances import handle_public_service_instances_request
+from app.api.partner.token_auth import require_api_token, token_actor_sub
 from app.utils import method_not_allowed, not_found
 
 

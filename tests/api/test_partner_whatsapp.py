@@ -8,7 +8,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.api.public import whatsapp_conversations as pwa
+from app.api.partner import whatsapp_conversations as pwa
 from app.db.models.enums import WhatsAppMessageDirection
 from app.exceptions import AuthenticationError, AuthorizationError
 

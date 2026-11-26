@@ -11,7 +11,7 @@ from typing import Any
 
 from app.api.admin_geographic_areas import list_geographic_areas
 from app.api.admin_request import route_has_prefix, split_route_parts
-from app.api.public.token_auth import require_api_token
+from app.api.partner.token_auth import require_api_token
 from app.utils import method_not_allowed, not_found
 
 

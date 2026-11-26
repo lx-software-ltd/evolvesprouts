@@ -8,7 +8,7 @@ from uuid import uuid4
 import pytest
 
 from app.api.admin_contacts_related import empty_related_flags
-from app.api.public import contacts as pcontacts
+from app.api.partner import contacts as pcontacts
 from app.exceptions import (
     AuthenticationError,
     AuthorizationError,

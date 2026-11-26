@@ -38,7 +38,7 @@ from app.api.admin_entities_serializers import serialize_contact_summary
 from app.api.admin_request import encode_cursor, parse_cursor, parse_uuid, query_param
 from app.api.admin_validators import validate_string_length
 from app.api.shared_request import route_has_prefix, split_route_parts
-from app.api.public.token_auth import require_api_token, token_actor_sub
+from app.api.partner.token_auth import require_api_token, token_actor_sub
 from app.db.engine import get_engine
 from app.db.repositories import ContactRepository
 from app.exceptions import NotFoundError

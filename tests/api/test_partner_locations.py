@@ -5,8 +5,8 @@ from uuid import uuid4
 
 import pytest
 
-from app.api.public import geographic_areas as pgeo
-from app.api.public import locations as plocations
+from app.api.partner import geographic_areas as pgeo
+from app.api.partner import locations as plocations
 from app.exceptions import AuthenticationError, AuthorizationError, NotFoundError
 
 

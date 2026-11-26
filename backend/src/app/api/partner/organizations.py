@@ -27,7 +27,7 @@ from app.api.admin_organizations_members import (
 )
 from app.api.admin_party_related import organization_related_serializer_kwargs
 from app.api.admin_request import parse_uuid, route_has_prefix, split_route_parts
-from app.api.public.token_auth import require_api_token, token_actor_sub
+from app.api.partner.token_auth import require_api_token, token_actor_sub
 from app.db.engine import get_engine
 from app.db.repositories.organization import OrganizationRepository
 from app.exceptions import NotFoundError

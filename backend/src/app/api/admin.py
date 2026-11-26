@@ -37,33 +37,33 @@ from app.api.admin_organizations_picker import handle_admin_organizations_picker
 from app.api.admin_api_keys import handle_admin_api_keys_request
 from app.api.admin_meta import handle_admin_meta_request
 from app.api.admin_whatsapp import handle_admin_whatsapp_request
-from app.api.public.contacts import handle_public_contacts_request
-from app.api.public.families import handle_public_families_request
-from app.api.public.services import handle_public_services_request
-from app.api.public.geographic_areas import handle_public_geographic_areas_request
-from app.api.public.locations import handle_public_locations_request
-from app.api.public.meta_conversations import handle_public_meta_request
-from app.api.public.organizations import handle_public_organizations_request
-from app.api.public.whatsapp_conversations import handle_public_whatsapp_request
+from app.api.partner.contacts import handle_public_contacts_request
+from app.api.partner.families import handle_public_families_request
+from app.api.partner.services import handle_public_services_request
+from app.api.partner.geographic_areas import handle_public_geographic_areas_request
+from app.api.partner.locations import handle_public_locations_request
+from app.api.partner.meta_conversations import handle_public_meta_request
+from app.api.partner.organizations import handle_public_organizations_request
+from app.api.partner.whatsapp_conversations import handle_public_whatsapp_request
 from app.api.assets.public_media_assets import handle_media_request
-from app.api.public_mailchimp_webhook import handle_mailchimp_webhook
-from app.api.public_meta_webhook import handle_meta_webhook
-from app.api.public_whatsapp_webhook import handle_whatsapp_webhook
+from app.api.partner_mailchimp_webhook import handle_mailchimp_webhook
+from app.api.partner_meta_webhook import handle_meta_webhook
+from app.api.partner_whatsapp_webhook import handle_whatsapp_webhook
 from app.api.assets.public_free_assets import handle_public_free_assets_list_request
-from app.api.public_discount_validate import handle_public_discount_validate
+from app.api.partner_discount_validate import handle_public_discount_validate
 from app.api.admin_audit_logs import handle_admin_audit_logs_request
 from app.api.admin_calendar_manual_blocks import (
     handle_admin_calendar_manual_blocks_request,
 )
 from app.api.admin_forms import handle_admin_forms_request
 from app.api.admin_polls import handle_admin_polls_request
-from app.api.public_calendar_availability import handle_public_calendar_availability
-from app.api.public_events import handle_public_events
-from app.api.public_contact import handle_public_contact_us
-from app.api.public_forms import handle_public_forms_request
-from app.api.public_polls import handle_public_polls_request
-from app.api.public_reservation_payments import handle_public_reservation_payment_intent
-from app.api.public_reservations import _handle_public_reservation
+from app.api.partner_calendar_availability import handle_public_calendar_availability
+from app.api.partner_events import handle_public_events
+from app.api.partner_contact import handle_public_contact_us
+from app.api.partner_forms import handle_public_forms_request
+from app.api.partner_polls import handle_public_polls_request
+from app.api.partner_reservation_payments import handle_public_reservation_payment_intent
+from app.api.partner_reservations import _handle_public_reservation
 from app.api.admin_request import admin_request_log, event_for_routing
 from app.exceptions import AppError, ValidationError
 from app.utils import json_response, not_found

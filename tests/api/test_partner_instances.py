@@ -5,8 +5,8 @@ from uuid import uuid4
 
 import pytest
 
-from app.api.public import instances as pinstances
-from app.api.public import services as pservices
+from app.api.partner import instances as pinstances
+from app.api.partner import services as pservices
 from app.exceptions import AuthorizationError
 
 

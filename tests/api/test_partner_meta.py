@@ -8,7 +8,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.api.public import meta_conversations as pmeta
+from app.api.partner import meta_conversations as pmeta
 from app.db.models.enums import MetaChannel, MetaMessageDirection
 from app.exceptions import AuthenticationError, AuthorizationError
 

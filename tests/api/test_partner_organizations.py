@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.api.public import organizations as porgs
+from app.api.partner import organizations as porgs
 from app.exceptions import AuthenticationError, AuthorizationError, NotFoundError
 
 

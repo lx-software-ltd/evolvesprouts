@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.api.public import families as pfamilies
+from app.api.partner import families as pfamilies
 from app.exceptions import AuthenticationError, AuthorizationError, NotFoundError
 
 
