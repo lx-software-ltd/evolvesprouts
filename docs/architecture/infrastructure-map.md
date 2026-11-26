@@ -452,6 +452,9 @@ CloudFront distribution
         │     └─▶ Signed URLs only (CloudFront key pair)
         │
         └─▶ v1/assets/share/*, v1/assets/email-download/*: API Gateway
+              AssetSharePathRewriteFunction is permanent: a route in a sent
+              email is never removed. It rewrites those paths, including a
+              /prod prefix, to /v1/public/assets/... and leaves the query string.
               └─▶ AdminFunction (bearer-link resolver, 302 redirect)
                     └─▶ Share path: per-asset source-domain allowlist
 ```

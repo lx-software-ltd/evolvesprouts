@@ -1185,7 +1185,8 @@ function assertApiCustomDomainKeepsProdPath(template: Template): void {
     const code = String(resource.Properties?.FunctionCode ?? "");
     return (
       code.includes("/v1/public/assets/share/") &&
-      code.includes("/v1/public/assets/email-download/")
+      code.includes("/v1/public/assets/email-download/") &&
+      code.includes("'/prod/'")
     );
   });
   if (!rewrite) {
