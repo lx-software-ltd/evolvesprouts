@@ -803,9 +803,14 @@ def do_assets(client, svc, apply_changes):
 # ------------------------------------------------------------ helper LP url
 def _landing_page_is_live(url):
     """Refuse to repoint ads at a page that is not deployed yet (non-200)."""
+    parsed = urlsplit(url)
+    if parsed.scheme != "https" or not parsed.hostname:
+        print(f"  landing page is not https: {url}")
+        return False
     req = Request(url, method="HEAD", headers={"User-Agent": "evolvesprouts-ads-apply"})
     try:
-        with urlopen(req, timeout=15) as resp:
+        # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
+        with urlopen(req, timeout=15) as resp:  # nosec B310
             return resp.status == 200
     except HTTPError as exc:
         print(f"  landing page returned HTTP {exc.code}: {url}")
