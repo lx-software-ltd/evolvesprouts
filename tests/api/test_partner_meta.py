@@ -55,7 +55,9 @@ def test_public_meta_user_cannot_write(api_gateway_event: Any) -> None:
         method="POST",
     )
     with pytest.raises(AuthorizationError):
-        pmeta.handle_public_meta_request(event, "POST", "/v1/partner/meta/conversations")
+        pmeta.handle_public_meta_request(
+            event, "POST", "/v1/partner/meta/conversations"
+        )
 
 
 def test_public_conversation_name_never_uses_scoped_id() -> None:

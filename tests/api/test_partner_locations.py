@@ -35,7 +35,9 @@ def _token_event(
 def test_public_locations_requires_token(api_gateway_event: Any) -> None:
     event = api_gateway_event(method="GET", path="/v1/partner/locations")
     with pytest.raises(AuthenticationError):
-        plocations.handle_public_locations_request(event, "GET", "/v1/partner/locations")
+        plocations.handle_public_locations_request(
+            event, "GET", "/v1/partner/locations"
+        )
 
 
 def test_public_locations_user_cannot_write(api_gateway_event: Any) -> None:
