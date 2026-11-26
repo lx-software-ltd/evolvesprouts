@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from app.exceptions import ValidationError
@@ -50,6 +52,20 @@ def test_json_response_keeps_pragma_when_cache_control_is_no_store() -> None:
         event={"headers": {}},
     )
     assert response["headers"].get("Pragma") == "no-cache"
+
+
+def test_legacy_error_code_body_gains_problem_members() -> None:
+    response = json_response(
+        400,
+        {"error": "Nope", "code": "legacy_code"},
+        event={"requestContext": {"requestId": "req-legacy"}},
+    )
+    body = json.loads(response["body"])
+    assert body["error"] == "Nope"
+    assert body["code"] == "legacy_code"
+    assert body["type"] == "about:blank"
+    assert body["title"] == "Bad Request"
+    assert body["request_id"] == "req-legacy"
 
 
 def test_validate_content_type_rejects_non_json_content_type() -> None:

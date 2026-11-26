@@ -38,6 +38,8 @@ the edge-verify check in `public-www-stack.ts`. It stays off while
 
 ## Still operator work
 
+The owner still must attach get-base-path-mappings output for the empty and prod bases.
+
 Production already answers on `api.evolvesprouts.com`. Confirm that, then
 deploy. The deploy is what disables the execute-api hostname.
 

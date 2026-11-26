@@ -7,7 +7,8 @@ info:
     `backend/infrastructure/lib/api-stack.ts`.
 
     The current API Gateway deployment exposes:
-    - `GET /health`
+    - `GET /health` (open liveness, `{"status":"ok"}`)
+    - `GET /v1/admin/health` (database and configuration)
     - `GET /v1/admin/geographic-areas`
     - `GET|POST /v1/admin/locations`
     - `POST /v1/admin/locations/geocode`
@@ -117,39 +118,56 @@ info:
     - `POST /v1/admin/assets/{id}/content/init`
     - `POST /v1/admin/assets/{id}/content/complete`
     - `GET|POST /v1/admin/assets/{id}/grants`
-    - `DELETE /v1/admin/assets/{id}/grants/{grantId}`
+    - `DELETE /v1/admin/assets/{id}/grants/{grant_id}`
     - `GET|POST|DELETE /v1/admin/assets/{id}/share-link`
     - `POST /v1/admin/assets/{id}/share-link/rotate`
     - `GET /v1/user/assets`
     - `GET /v1/user/assets/{id}/download`
 
 servers:
-  - url: https://api.evolvesprouts.com/prod
+  - url: https://api.evolvesprouts.com
     description: Production API. Paths below are appended to this URL. The execute-api hostname does not accept calls.
 
 paths:
   /health:
     get:
       operationId: getHealth
-      summary: Health check
-      description: Returns backend health status and dependency checks.
-      security:
-        - SigV4Auth: []
+      summary: Liveness check
+      description: >
+        Open liveness check. Returns `{"status":"ok"}` and does not read
+        the database or configuration. Dependency checks are
+        `GET /v1/admin/health`.
+      security: []
       responses:
         "200":
-          description: Service is healthy.
+          description: Process is up.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenHealthResponse"
+
+  /v1/admin/health:
+    get:
+      operationId: getV1AdminHealth
+      summary: Dependency health check
+      description: Admin-only database and configuration check.
+      security:
+        - AdminBearerAuth: []
+      responses:
+        "200":
+          description: Dependencies are healthy.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
         "503":
-          description: Service is unhealthy.
+          description: A dependency is unhealthy.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
         "403":
-          description: API Gateway rejected the caller signature.
+          $ref: "#/components/responses/Forbidden"
 
   /v1/admin/assets:
     get:
@@ -453,7 +471,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /v1/admin/assets/{id}/grants/{grantId}:
+  /v1/admin/assets/{id}/grants/{grant_id}:
     parameters:
       - $ref: "#/components/parameters/AssetId"
       - $ref: "#/components/parameters/GrantId"
@@ -5823,7 +5841,7 @@ components:
         type: string
       description: Asset identifier.
     GrantId:
-      name: grantId
+      name: grant_id
       in: path
       required: true
       schema:
@@ -12362,6 +12380,14 @@ components:
           description: >
             Optional input field key for validation-style errors. Duplicate service
             service_key+tier conflicts use the literal `service_key_tier` (not `service_key` or `service_tier`).
+    OpenHealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [ok]
     HealthResponse:
       type: object
       required:
