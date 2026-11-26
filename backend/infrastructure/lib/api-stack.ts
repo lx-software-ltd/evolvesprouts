@@ -2915,7 +2915,7 @@ export class ApiStack extends cdk.Stack {
       }
     );
 
-    // Hashed API-token authorizer for /v1/public/* routes.
+    // Hashed API-token authorizer for /v1/partner/* routes.
     // NOTE: Runs inside the VPC because it validates hashed tokens via RDS Proxy.
     const apiTokenAuthorizerFunction = createPythonFunction(
       "ApiTokenAuthorizerFunction",
@@ -2944,8 +2944,8 @@ export class ApiStack extends cdk.Stack {
       "ApiTokenAuthorizer",
       {
         handler: apiTokenAuthorizerFunction,
-        identitySources: [apigateway.IdentitySource.header("x-api-token")],
-        resultsCacheTtl: cdk.Duration.minutes(5),
+        identitySources: [apigateway.IdentitySource.header("Authorization")],
+        resultsCacheTtl: cdk.Duration.seconds(300),
       }
     );
 
@@ -3168,6 +3168,12 @@ export class ApiStack extends cdk.Stack {
         loggingLevel: apigateway.MethodLoggingLevel.INFO,
         dataTraceEnabled: false,
         tracingEnabled: true,
+        methodOptions: {
+          "/health/GET": {
+            throttlingRateLimit: 10,
+            throttlingBurstLimit: 20,
+          },
+        },
       },
     });
     api.deploymentStage.node.addDependency(apiAccessLogGroupRetention);
@@ -3276,12 +3282,9 @@ export class ApiStack extends cdk.Stack {
     // CORS headers, causing the browser to block the response.  The frontend
     // then sees a CORS / network error instead of a useful status code.
     //
-    // Do not set a gateway response *body* mapping template here: API Gateway
-    // gateway responses support only simple variable substitution in the
-    // payload template, not full VTL.  A prior Velocity template leaked raw
-    // `#set` / `#if` text into JSON error bodies (for example Postman).
-    // Response headers below still apply; browsers get CORS on errors even
-    // when Access-Control-Allow-Origin is a fixed first allowlisted origin.
+    // The body uses simple substitution only. API Gateway does not run full
+    // VTL here, and a prior Velocity template leaked `#set` / `#if` text
+    // into JSON error bodies. Response headers below still apply.
     // -------------------------------------------------------------------------
     const gatewayResponseHeaders: Record<string, string> = {
       "Access-Control-Allow-Origin": `'${corsAllowedOrigins[0]}'`,
@@ -3290,13 +3293,36 @@ export class ApiStack extends cdk.Stack {
       "Access-Control-Allow-Methods": "'GET,POST,PUT,PATCH,DELETE,OPTIONS'",
       Vary: "'Origin'",
     };
+    const gatewayErrorHeaders = {
+      ...gatewayResponseHeaders,
+      "x-request-id": "'$context.requestId'",
+    };
+    const gatewayErrorTemplate = [
+      "{",
+      '  "type": "about:blank",',
+      '  "title": "$context.error.responseType",',
+      '  "detail": $context.error.messageString,',
+      '  "error": $context.error.messageString,',
+      '  "code": "gateway_error",',
+      '  "request_id": "$context.requestId"',
+      "}",
+    ].join("\n");
     api.addGatewayResponse("GatewayResponseDefault4XX", {
       type: apigateway.ResponseType.DEFAULT_4XX,
-      responseHeaders: gatewayResponseHeaders,
+      responseHeaders: gatewayErrorHeaders,
+      templates: { "application/json": gatewayErrorTemplate },
     });
     api.addGatewayResponse("GatewayResponseDefault5XX", {
       type: apigateway.ResponseType.DEFAULT_5XX,
-      responseHeaders: gatewayResponseHeaders,
+      responseHeaders: gatewayErrorHeaders,
+      templates: { "application/json": gatewayErrorTemplate },
+    });
+    // /health was the last IAM method.
+    api.addGatewayResponse("GatewayResponseMissingAuthenticationToken", {
+      type: apigateway.ResponseType.MISSING_AUTHENTICATION_TOKEN,
+      statusCode: "404",
+      responseHeaders: gatewayErrorHeaders,
+      templates: { "application/json": gatewayErrorTemplate },
     });
 
     const publicWwwApiKey = new apigateway.ApiKey(this, "PublicWwwApiKey", {
@@ -3383,10 +3409,10 @@ export class ApiStack extends cdk.Stack {
     // anchors and patterns stable, or update the script in the same change.
     // ---------------------------------------------------------------------
 
-    // Health check endpoint (IAM auth)
+    // Open health check. An HTTP request does not open a database.
     const health = api.root.addResource("health");
     health.addMethod("GET", new apigateway.LambdaIntegration(healthFunction), {
-      authorizationType: apigateway.AuthorizationType.IAM,
+      authorizationType: apigateway.AuthorizationType.NONE,
     });
 
     const v1 = api.root.addResource("v1");
@@ -3565,98 +3591,26 @@ export class ApiStack extends cdk.Stack {
     addCheckovMethodSuppression(metaWebhookGetMethod, "CKV_AWS_59",
       "Public Messenger/Instagram webhook verification endpoint; access is validated via WHATSAPP_WEBHOOK_VERIFY_TOKEN in Lambda handler.");
 
-    const addPublicTokenMethod = (resource: apigateway.IResource, method: string) =>
-      resource.addMethod(method, adminIntegration, {
-        authorizationType: apigateway.AuthorizationType.CUSTOM,
-        authorizer: apiTokenAuthorizer,
-      });
-    const publicRoot = v1.addResource("public");
-    const publicWhatsappConversations = publicRoot
-      .addResource("whatsapp")
-      .addResource("conversations");
-    addPublicTokenMethod(publicWhatsappConversations, "GET");
-    addPublicTokenMethod(
-      publicWhatsappConversations.addResource("{id}").addResource("messages"),
-      "GET"
-    );
-    const publicMetaConversations = publicRoot
-      .addResource("meta")
-      .addResource("conversations");
-    addPublicTokenMethod(publicMetaConversations, "GET");
-    addPublicTokenMethod(
-      publicMetaConversations.addResource("{id}").addResource("messages"),
-      "GET"
-    );
-    const publicContacts = publicRoot.addResource("contacts");
-    addPublicTokenMethod(publicContacts, "GET");
-    addPublicTokenMethod(publicContacts, "POST");
-    addPublicTokenMethod(publicContacts.addResource("merge"), "POST");
-    const publicContactById = publicContacts.addResource("{id}");
-    addPublicTokenMethod(publicContactById, "GET");
-    addPublicTokenMethod(publicContactById, "PATCH");
-    addPublicTokenMethod(publicContactById, "DELETE");
-    const publicContactNotes = publicContactById.addResource("notes");
-    addPublicTokenMethod(publicContactNotes, "GET");
-    addPublicTokenMethod(publicContactNotes, "POST");
-    const publicContactNoteById = publicContactNotes.addResource("{note_id}");
-    addPublicTokenMethod(publicContactNoteById, "PATCH");
-    addPublicTokenMethod(publicContactNoteById, "DELETE");
+    const webhooks = v1.addResource("webhooks");
+    for (const provider of ["mailchimp", "whatsapp", "meta"]) {
+      const webhook = webhooks.addResource(provider);
+      for (const method of ["POST", "GET"]) {
+        const added = webhook.addMethod(method, adminIntegration, {
+          authorizationType: apigateway.AuthorizationType.NONE,
+        });
+        addCheckovMethodSuppression(
+          added,
+          "CKV_AWS_59",
+          "Public provider webhook. The handler checks the provider secret.",
+        );
+      }
+    }
 
-    const publicFamilies = publicRoot.addResource("families");
-    addPublicTokenMethod(publicFamilies, "GET");
-    addPublicTokenMethod(publicFamilies, "POST");
-    const publicFamilyById = publicFamilies.addResource("{id}");
-    addPublicTokenMethod(publicFamilyById, "GET");
-    addPublicTokenMethod(publicFamilyById, "PATCH");
-    addPublicTokenMethod(publicFamilyById, "DELETE");
-    const publicFamilyMembers = publicFamilyById.addResource("members");
-    addPublicTokenMethod(publicFamilyMembers, "POST");
-    const publicFamilyMemberById = publicFamilyMembers.addResource("{member_id}");
-    addPublicTokenMethod(publicFamilyMemberById, "PATCH");
-    addPublicTokenMethod(publicFamilyMemberById, "DELETE");
-
-    const publicOrganizations = publicRoot.addResource("organizations");
-    addPublicTokenMethod(publicOrganizations, "GET");
-    addPublicTokenMethod(publicOrganizations, "POST");
-    const publicOrganizationById = publicOrganizations.addResource("{id}");
-    addPublicTokenMethod(publicOrganizationById, "GET");
-    addPublicTokenMethod(publicOrganizationById, "PATCH");
-    addPublicTokenMethod(publicOrganizationById, "DELETE");
-    const publicOrganizationMembers = publicOrganizationById.addResource("members");
-    addPublicTokenMethod(publicOrganizationMembers, "POST");
-    const publicOrganizationMemberById = publicOrganizationMembers.addResource(
-      "{member_id}"
-    );
-    addPublicTokenMethod(publicOrganizationMemberById, "PATCH");
-    addPublicTokenMethod(publicOrganizationMemberById, "DELETE");
-
-    const publicLocations = publicRoot.addResource("locations");
-    addPublicTokenMethod(publicLocations, "GET");
-    addPublicTokenMethod(publicLocations, "POST");
-    addPublicTokenMethod(publicLocations.addResource("geocode"), "POST");
-    const publicLocationById = publicLocations.addResource("{id}");
-    addPublicTokenMethod(publicLocationById, "GET");
-    addPublicTokenMethod(publicLocationById, "PATCH");
-
-    addPublicTokenMethod(publicRoot.addResource("geographic-areas"), "GET");
-
-    const publicServices = publicRoot.addResource("services");
-    addPublicTokenMethod(publicServices, "GET");
-    addPublicTokenMethod(publicServices, "POST");
-    addPublicTokenMethod(publicServices.addResource("instances"), "GET");
-    const publicServiceById = publicServices.addResource("{id}");
-    addPublicTokenMethod(publicServiceById, "GET");
-    addPublicTokenMethod(publicServiceById, "PUT");
-    addPublicTokenMethod(publicServiceById, "PATCH");
-    addPublicTokenMethod(publicServiceById, "DELETE");
-    const publicServiceInstances = publicServiceById.addResource("instances");
-    addPublicTokenMethod(publicServiceInstances, "GET");
-    addPublicTokenMethod(publicServiceInstances, "POST");
-    const publicServiceInstanceById =
-      publicServiceInstances.addResource("{instance_id}");
-    addPublicTokenMethod(publicServiceInstanceById, "GET");
-    addPublicTokenMethod(publicServiceInstanceById, "PUT");
-    addPublicTokenMethod(publicServiceInstanceById, "DELETE");
+    const partner = v1.addResource("partner");
+    partner.addResource("{proxy+}").addMethod("ANY", adminIntegration, {
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
+      authorizer: apiTokenAuthorizer,
+    });
 
     // Admin asset routes
     const admin = v1.addResource("admin");
@@ -3807,6 +3761,61 @@ export class ApiStack extends cdk.Stack {
       authorizationType: apigateway.AuthorizationType.NONE,
       apiKeyRequired: true,
     });
+
+    const openPublic = v1.addResource("public");
+    const openCalendar = openPublic.addResource("calendar");
+    addPublicApiKeyMethod(openCalendar, "GET");
+    addPublicApiKeyMethod(openCalendar.addResource("availability"), "GET");
+    const openReservations = openPublic.addResource("reservations");
+    addPublicApiKeyMethod(openReservations, "POST");
+    addPublicApiKeyMethod(openReservations.addResource("payment-intent"), "POST");
+    addPublicApiKeyMethod(openPublic.addResource("contact-us"), "POST");
+    const openFormBySlug = openPublic.addResource("forms").addResource("{form_slug}");
+    addPublicApiKeyMethod(openFormBySlug.addResource("answers"), "PUT");
+    addPublicApiKeyMethod(openFormBySlug.addResource("contact-context"), "GET");
+    const openPollBySlug = openPublic.addResource("polls").addResource("{poll_slug}");
+    const openPollAnswers = openPollBySlug.addResource("answers");
+    addPublicApiKeyMethod(openPollAnswers, "GET");
+    addPublicApiKeyMethod(openPollAnswers, "PUT");
+    const openPollControl = openPollBySlug.addResource("control");
+    addPublicApiKeyMethod(openPollControl, "GET");
+    addPublicApiKeyMethod(openPollControl, "PUT");
+    const openPollQuestion = openPollBySlug
+      .addResource("questions")
+      .addResource("{question_id}");
+    addPublicApiKeyMethod(openPollQuestion.addResource("results"), "GET");
+    addPublicApiKeyMethod(
+      openPublic.addResource("discounts").addResource("validate"),
+      "POST",
+    );
+    const openAssets = openPublic.addResource("assets");
+    const openFree = openAssets.addResource("free");
+    addPublicApiKeyMethod(openFree, "GET");
+    addPublicApiKeyMethod(openFree.addResource("request"), "POST");
+    openAssets.addMethod("GET", adminIntegration, {
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
+      authorizer: deviceAttestationAuthorizer,
+      apiKeyRequired: true,
+    });
+    openAssets
+      .addResource("{id}")
+      .addResource("download")
+      .addMethod("GET", adminIntegration, {
+        authorizationType: apigateway.AuthorizationType.CUSTOM,
+        authorizer: deviceAttestationAuthorizer,
+        apiKeyRequired: true,
+      });
+    openAssets.addResource("share").addResource("{token}").addMethod("GET", adminIntegration, {
+      authorizationType: apigateway.AuthorizationType.NONE,
+      apiKeyRequired: true,
+    });
+    openAssets
+      .addResource("email-download")
+      .addResource("{token}")
+      .addMethod("GET", adminIntegration, {
+        authorizationType: apigateway.AuthorizationType.NONE,
+        apiKeyRequired: true,
+      });
 
     const assetShareApiOrigin = new origins.HttpOrigin(
       apiCustomDomainName.valueAsString,
@@ -3977,6 +3986,15 @@ export class ApiStack extends cdk.Stack {
     });
     const apiMappingCfn = apiMapping.node.defaultChild as apigateway.CfnBasePathMapping;
     apiMappingCfn.cfnOptions.condition = useApiCustomDomain;
+
+    const apiRootMapping = new apigateway.BasePathMapping(this, "ApiRootBasePathMapping", {
+      domainName: apiDomain,
+      restApi: api,
+      stage: api.deploymentStage,
+    });
+    const apiRootMappingCfn = apiRootMapping.node.defaultChild as apigateway.CfnBasePathMapping;
+    apiRootMappingCfn.cfnOptions.condition = useApiCustomDomain;
+    apiRootMappingCfn.basePath = "";
 
     // ---------------------------------------------------------------------
     // Outputs

@@ -187,9 +187,10 @@ function assertGatewayResponsesHaveNoBodyTemplates(template: Template): void {
     const props = resource.Properties ?? {};
     if ("ResponseTemplates" in props && props.ResponseTemplates != null) {
       const rt = props.ResponseTemplates;
-      if (typeof rt === "object" && rt !== null && Object.keys(rt as object).length > 0) {
+      const encoded = JSON.stringify(rt);
+      if (encoded.includes("#set") || encoded.includes("#if")) {
         throw new Error(
-          `GatewayResponse ${logicalId} must not set ResponseTemplates (API Gateway only supports simple substitution in gateway response body templates; VTL leaks into JSON bodies). Found ${JSON.stringify(rt)}`,
+          `GatewayResponse ${logicalId} must use simple substitution. Found ${encoded}`,
         );
       }
     }
@@ -1021,12 +1022,11 @@ function assertRetainedSecurityGroupsAndProxyTags(template: Template): void {
 function assertApiCustomDomainKeepsProdPath(template: Template): void {
   const mappings = template.findResources("AWS::ApiGateway::BasePathMapping");
   const entries = Object.entries(mappings);
-  if (entries.length !== 1) {
+  if (entries.length !== 2) {
     throw new Error(
-      `Expected one API base path mapping; found ${entries.length}`,
+      `Expected the prod mapping and a root mapping; found ${entries.length}`,
     );
   }
-  const [logicalId, mapping] = entries[0];
   const stages = template.findResources("AWS::ApiGateway::Stage");
   const stageEntries = Object.entries(stages);
   if (stageEntries.length !== 1) {
@@ -1037,11 +1037,19 @@ function assertApiCustomDomainKeepsProdPath(template: Template): void {
   if (typeof stageName !== "string" || stageName.length === 0) {
     throw new Error(`API stage ${stageLogicalId} is missing StageName`);
   }
-  if (mapping.Properties?.BasePath !== stageName) {
+  const prodEntry = entries.find(
+    ([, item]) => item.Properties?.BasePath === stageName,
+  );
+  const rootEntry = entries.find(([, item]) => {
+    const basePath = item.Properties?.BasePath;
+    return basePath === "" || basePath === undefined;
+  });
+  if (!prodEntry || !rootEntry) {
     throw new Error(
-      `${logicalId} base path must match stage ${stageName}. Found ${JSON.stringify(mapping.Properties?.BasePath)}`,
+      `Expected a ${stageName} mapping and a root mapping. Found ${JSON.stringify(entries.map(([, item]) => item.Properties?.BasePath))}`,
     );
   }
+  const [logicalId, mapping] = prodEntry;
   if (mapping.Condition !== "UseApiCustomDomain") {
     throw new Error(
       `${logicalId} must be created only when UseApiCustomDomain is true`,
@@ -1160,11 +1168,11 @@ function assertPublicContactMergeRoute(template: Template): void {
   }
 
   const mergeIds = Object.keys(resources).filter(
-    (logicalId) => resourcePath(logicalId, new Set()) === "/v1/public/contacts/merge",
+    (logicalId) => resourcePath(logicalId, new Set()) === "/v1/partner/{proxy+}",
   );
   if (mergeIds.length !== 1) {
     throw new Error(
-      `Expected one /v1/public/contacts/merge resource, found ${mergeIds.join(", ") || "none"}`,
+      `Expected one /v1/partner/{proxy+} resource, found ${mergeIds.join(", ") || "none"}`,
     );
   }
   const methods = template.findResources("AWS::ApiGateway::Method") as Record<
@@ -1178,16 +1186,16 @@ function assertPublicContactMergeRoute(template: Template): void {
       resourceId && typeof resourceId === "object" && resourceId !== null && "Ref" in resourceId
         ? String((resourceId as { Ref: unknown }).Ref)
         : "";
-    return properties?.HttpMethod === "POST" && ref === mergeIds[0];
+    return properties?.HttpMethod === "ANY" && ref === mergeIds[0];
   });
   if (posts.length !== 1) {
     throw new Error(
-      `Expected one POST method on /v1/public/contacts/merge, found ${posts.length}`,
+      `Expected one ANY method on /v1/partner/{proxy+}, found ${posts.length}`,
     );
   }
   if (posts[0].Properties?.AuthorizationType !== "CUSTOM") {
     throw new Error(
-      "POST /v1/public/contacts/merge must use the API token authorizer",
+      "ANY /v1/partner/{proxy+} must use the API token authorizer",
     );
   }
 }
@@ -1199,6 +1207,11 @@ function main(): void {
     env: { account: "111111111111", region: "ap-southeast-1" },
   });
   const template = Template.fromStack(stack);
+  const resourceCount = Object.keys(template.toJSON().Resources ?? {}).length;
+  console.log(`API stack resource count: ${resourceCount}`);
+  if (resourceCount > 495) {
+    throw new Error(`API stack has ${resourceCount} resources, over the 495 limit`);
+  }
   assertApiGatewayCloudWatchLogging(template);
   assertStageHasNoApiGatewayCacheCluster(template);
   assertGatewayResponsesHaveNoBodyTemplates(template);
