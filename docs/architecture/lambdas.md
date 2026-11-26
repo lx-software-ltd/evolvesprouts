@@ -467,9 +467,9 @@ their primary responsibilities.
 - Handler: backend/lambda/health/handler.py
 - Trigger: API Gateway `GET /health`
 - Auth: none
-- Purpose: open liveness. The body is `{"status":"ok"}`. It does not read the database or configuration.
-- DB access: none
-- Deep check: `GET /v1/admin/health` on `EvolvesproutsAdminFunction`, behind the admin authorizer. That route runs the database and configuration checks.
+- Purpose: open liveness for `GET /health`. The body is `{"status":"ok"}`. An HTTP request does not read the database or configuration.
+- DB access: only a direct invocation whose event has no `httpMethod`
+- Deep check: invoke `HealthCheckFunction` with an event that has no `httpMethod`. That runs the database and configuration checks. There is no HTTP route for it.
 
 ### SES template manager (custom resource)
 - Function: SesTemplateManagerFunction

@@ -46,7 +46,6 @@ from app.api.assets import (
 )
 from app.api.assets.public_free_assets import handle_public_free_assets_list_request
 from app.api.assets.public_media_assets import handle_media_request
-from app.api.health import handle_admin_health
 from app.api.partner.contacts import handle_public_contacts_request
 from app.api.partner.families import handle_public_families_request
 from app.api.partner.geographic_areas import handle_public_geographic_areas_request
@@ -319,7 +318,6 @@ _CANONICAL_ROUTES: tuple[
         handle_admin_polls_request,
     ),
     ("/v1/admin/assets", False, handle_admin_assets_request),
-    ("/v1/admin/health", True, handle_admin_health),
     ("/v1/user/assets", False, handle_user_assets_request),
     ("/v1/assets/share", False, handle_share_assets_request),
     ("/v1/assets/email-download", False, handle_email_download_request),
@@ -343,6 +341,8 @@ _SHARE_ROUTES = {
     "/v1/assets/share",
     "/v1/assets/email-download",
 }
+# Public alias prefix -> canonical prefix the handler already parses.
+_CANONICAL_FOR_PUBLIC: dict[str, str] = {}
 
 
 def _with_public_aliases(routes):
@@ -354,17 +354,21 @@ def _with_public_aliases(routes):
     prefixes stay.
     """
     expanded = []
+    _CANONICAL_FOR_PUBLIC.clear()
     for route_path, exact, handler in routes:
         if route_path.startswith(("/v1/admin", "/v1/user", "/v1/partner")):
             expanded.append((route_path, exact, handler))
             continue
         if route_path in _SHARE_ROUTES:
+            public = "/v1/public" + route_path[len("/v1") :]
+            _CANONICAL_FOR_PUBLIC[public] = route_path
             expanded.append((route_path, exact, handler))
-            expanded.append(("/v1/public" + route_path[len("/v1") :], exact, handler))
+            expanded.append((public, exact, handler))
             continue
         public = _PUBLIC_ALIASES.get(route_path)
         if public is None:
             public = "/v1/public" + route_path[len("/v1") :]
+        _CANONICAL_FOR_PUBLIC[public] = route_path
         expanded.append((public, exact, handler))
     return tuple(expanded)
 
@@ -460,13 +464,22 @@ def _match_handler(
 
     if exact_candidates:
         route_path, route_handler = max(exact_candidates, key=lambda t: len(t[0]))
-        return lambda handler=route_handler: handler(event, method, normalized_path)
-
-    if prefix_candidates:
+    elif prefix_candidates:
         route_path, route_handler = max(prefix_candidates, key=lambda t: len(t[0]))
-        return lambda handler=route_handler: handler(event, method, normalized_path)
+    else:
+        return None
+    handler_path = _path_for_handler(normalized_path, route_path)
+    return lambda handler=route_handler, handler_path=handler_path: handler(
+        event, method, handler_path
+    )
 
-    return None
+
+def _path_for_handler(path: str, matched_route: str) -> str:
+    """Map a /v1/public request onto the path the handler already parses."""
+    canonical = _CANONICAL_FOR_PUBLIC.get(matched_route)
+    if canonical is None:
+        return path
+    return canonical + path[len(matched_route) :]
 
 
 def _path_matches_prefix(path: str, route_path: str) -> bool:

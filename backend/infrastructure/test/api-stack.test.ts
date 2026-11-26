@@ -186,11 +186,17 @@ function assertGatewayResponsesHaveNoBodyTemplates(template: Template): void {
   for (const [logicalId, resource] of entries) {
     const props = resource.Properties ?? {};
     if ("ResponseTemplates" in props && props.ResponseTemplates != null) {
-      const rt = props.ResponseTemplates;
+      const rt = props.ResponseTemplates as Record<string, string>;
       const encoded = JSON.stringify(rt);
       if (encoded.includes("#set") || encoded.includes("#if")) {
         throw new Error(
           `GatewayResponse ${logicalId} must use simple substitution. Found ${encoded}`,
+        );
+      }
+      const body = rt["application/json"] ?? "";
+      if (!body.includes('"message"')) {
+        throw new Error(
+          `GatewayResponse ${logicalId} must include a message member`,
         );
       }
     }
@@ -1140,8 +1146,16 @@ function assertApiCustomDomainMapsAtRoot(template: Template): void {
   const emailBehavior = behaviors.find(
     (behavior) => behavior.PathPattern === "v1/assets/email-download/*",
   );
-  if (!shareBehavior || !emailBehavior) {
-    throw new Error("Asset-share distribution must keep share and email-download viewer paths");
+  const prodShareBehavior = behaviors.find(
+    (behavior) => behavior.PathPattern === "prod/v1/assets/share/*",
+  );
+  const prodEmailBehavior = behaviors.find(
+    (behavior) => behavior.PathPattern === "prod/v1/assets/email-download/*",
+  );
+  if (!shareBehavior || !emailBehavior || !prodShareBehavior || !prodEmailBehavior) {
+    throw new Error(
+      "Asset-share distribution must keep share and email-download viewer paths, including /prod",
+    );
   }
   const origins = (config.Origins ?? []) as Array<{
     Id?: unknown;
@@ -1186,7 +1200,12 @@ function assertApiCustomDomainMapsAtRoot(template: Template): void {
       "Asset-share distribution must rewrite viewer paths to /v1/public/assets/share and /v1/public/assets/email-download",
     );
   }
-  for (const behavior of [shareBehavior, emailBehavior]) {
+  for (const behavior of [
+    shareBehavior,
+    emailBehavior,
+    prodShareBehavior,
+    prodEmailBehavior,
+  ]) {
     const viewerRequest = (behavior.FunctionAssociations ?? []).filter(
       (association) => association.EventType === "viewer-request",
     );
@@ -1194,6 +1213,116 @@ function assertApiCustomDomainMapsAtRoot(template: Template): void {
       throw new Error(
         `${String(behavior.PathPattern)} must have one viewer-request function`,
       );
+    }
+  }
+  if (
+    JSON.stringify(prodShareBehavior.FunctionAssociations) !==
+    JSON.stringify(shareBehavior.FunctionAssociations)
+  ) {
+    throw new Error("prod/v1/assets/share/* must use the share-path rewrite");
+  }
+}
+
+function assertTokenAuthorizerCoverage(template: Template): void {
+  const authorizers = template.findResources("AWS::ApiGateway::Authorizer");
+  const tokenIds = Object.entries(authorizers)
+    .filter(([, resource]) =>
+      JSON.stringify(resource.Properties?.AuthorizerUri ?? "").includes(
+        "ApiTokenAuthorizer",
+      ),
+    )
+    .map(([logicalId]) => logicalId);
+  if (tokenIds.length !== 1) {
+    throw new Error(`Expected one API token authorizer, found ${tokenIds.length}`);
+  }
+  const tokenId = tokenIds[0];
+  const resources = template.findResources("AWS::ApiGateway::Resource") as Record<
+    string,
+    { Properties?: { PathPart?: unknown; ParentId?: unknown } }
+  >;
+
+  function resourcePath(logicalId: string, seen: Set<string>): string {
+    if (seen.has(logicalId)) {
+      throw new Error(`API Gateway resource cycle at ${logicalId}`);
+    }
+    const properties = resources[logicalId]?.Properties;
+    const part = properties?.PathPart;
+    if (typeof part !== "string") {
+      return "";
+    }
+    const nextSeen = new Set(seen);
+    nextSeen.add(logicalId);
+    const parent = properties?.ParentId;
+    const parentRef =
+      parent && typeof parent === "object" && parent !== null && "Ref" in parent
+        ? String((parent as { Ref: unknown }).Ref)
+        : "";
+    const parentPath = parentRef ? resourcePath(parentRef, nextSeen) : "";
+    return `${parentPath}/${part}`;
+  }
+
+  const paths = new Map<string, string>();
+  for (const logicalId of Object.keys(resources)) {
+    paths.set(logicalId, resourcePath(logicalId, new Set()));
+  }
+  const methods = template.findResources("AWS::ApiGateway::Method") as Record<
+    string,
+    {
+      Properties?: {
+        HttpMethod?: unknown;
+        ResourceId?: unknown;
+        AuthorizerId?: unknown;
+      };
+    }
+  >;
+  // Retired /v1/public/{proxy+} still carries the token authorizer on this
+  // branch. Later branches drop the alias or the authorizer and this set.
+  const publicExempt = new Set(["/v1/public/{proxy+}"]);
+  const seenExempt = new Set<string>();
+  let partnerMethods = 0;
+  for (const method of Object.values(methods)) {
+    const properties = method.Properties ?? {};
+    const resourceId = properties.ResourceId;
+    const ref =
+      resourceId && typeof resourceId === "object" && resourceId !== null && "Ref" in resourceId
+        ? String((resourceId as { Ref: unknown }).Ref)
+        : "";
+    const routePath = paths.get(ref) ?? "";
+    if (properties.HttpMethod === "OPTIONS") {
+      continue;
+    }
+    const usesToken = JSON.stringify(properties.AuthorizerId ?? "").includes(tokenId);
+    if (routePath === "/v1/partner" || routePath.startsWith("/v1/partner/")) {
+      partnerMethods += 1;
+      if (!usesToken) {
+        throw new Error(
+          `${String(properties.HttpMethod)} ${routePath} must use the API token authorizer`,
+        );
+      }
+    }
+    if (routePath === "/v1/public" || routePath.startsWith("/v1/public/")) {
+      if (publicExempt.has(routePath)) {
+        seenExempt.add(routePath);
+        if (!usesToken) {
+          throw new Error(
+            `${String(properties.HttpMethod)} ${routePath} is the exempt public alias and must keep the token authorizer`,
+          );
+        }
+        continue;
+      }
+      if (usesToken) {
+        throw new Error(
+          `${String(properties.HttpMethod)} ${routePath} must not use the API token authorizer`,
+        );
+      }
+    }
+  }
+  if (partnerMethods === 0) {
+    throw new Error("Expected at least one /v1/partner/ method");
+  }
+  for (const routePath of publicExempt) {
+    if (!seenExempt.has(routePath)) {
+      throw new Error(`Missing exempt public alias ${routePath}`);
     }
   }
 }
@@ -1279,6 +1408,7 @@ function main(): void {
   assertApiTokenAuthorizerHasNoReservedConcurrency(template);
   assertApiTokenAuthorizerCachesAuthorizationHeader(template);
   assertPublicContactMergeRoute(template);
+  assertTokenAuthorizerCoverage(template);
   assertMailchimpWebhookInactivityAlarm(template);
   assertInboxImportHasNoReservedConcurrency(stack);
   assertInboxImportUsesDedicatedPageToken(stack);

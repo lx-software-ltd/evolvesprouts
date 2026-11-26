@@ -511,7 +511,6 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | Resource Path | Method | Authorization | Integration | Notes |
 |--------------|--------|---------------|-------------|-------|
 | `/health` | GET | None | `HealthCheckFunction` | Open liveness `{"status":"ok"}`; no database or configuration read |
-| `/v1/admin/health` | GET | Admin Group | `EvolvesproutsAdminFunction` | Database and configuration check |
 | `/v1/assets/free/request` | POST | None + API key | `EvolvesproutsAdminFunction` | Publishes `media_request.submitted` to SNS |
 | `/v1/calendar/public` | GET | None + API key | `EvolvesproutsAdminFunction` | Public calendar: published `event` and `training_course` instances (active sessions or **event** rows finished within ~90 days) |
 | `/v1/calendar/availability` | GET | None + API key | `EvolvesproutsAdminFunction` | Requires `purpose` (`consultation_booking` or `intro_call_booking`); returns slots + meta; consultation uses `Cache-Control: no-store` on 200 |
@@ -555,7 +554,7 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | `/v1/admin/assets` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | |
 | `/v1/admin/assets/{id}` | GET, PUT, PATCH, DELETE | Admin Group | `EvolvesproutsAdminFunction` | |
 | `/v1/admin/assets/{id}/grants` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | |
-| `/v1/admin/assets/{id}/grants/{grant_id}` | DELETE | Admin Group | `EvolvesproutsAdminFunction` | Delete one asset grant |
+| `/v1/admin/assets/{id}/grants/{grantId}` | DELETE | Admin Group | `EvolvesproutsAdminFunction` | Delete one asset grant |
 | `/v1/admin/assets/{id}/share-link` | GET, POST, DELETE | Admin Group | `EvolvesproutsAdminFunction` | Stable bearer link read/create/revoke |
 | `/v1/admin/assets/{id}/share-link/rotate` | POST | Admin Group | `EvolvesproutsAdminFunction` | Rotate bearer token and invalidate prior link |
 | `/v1/admin/expenses` | GET, POST | Admin Group | `EvolvesproutsAdminFunction` | Expense list/create |

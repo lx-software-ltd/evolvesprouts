@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
@@ -95,6 +96,15 @@ function main(): void {
     if (!source.includes("function handler(event)")) {
       throw new Error("CloudFront function source missing handler");
     }
+  }
+
+  const wwwBytes = createHash("sha256")
+    .update(WWW_PROXY_ALLOWLIST_FUNCTION)
+    .digest("hex");
+  if (wwwBytes !== "86e96b24a70db927530ffd90cabcc3a6c0bc6e14af96eed6c9052845701071dd") {
+    throw new Error(
+      "WWW_PROXY_ALLOWLIST_FUNCTION bytes changed. Whitespace still publishes a new CloudFront function.",
+    );
   }
 
   assertContainsAll(

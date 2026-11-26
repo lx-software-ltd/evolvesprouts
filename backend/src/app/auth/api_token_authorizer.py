@@ -26,6 +26,14 @@ from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
+
+class Unauthorized(Exception):
+    """API Gateway returns HTTP 401 when the authorizer raises this."""
+
+    def __init__(self) -> None:
+        super().__init__("Unauthorized")
+
+
 _LAST_USED_REFRESH_INTERVAL = timedelta(minutes=1)
 _MAX_TOKEN_LEN = 256
 
@@ -52,9 +60,7 @@ def authorize_api_token(event: dict[str, Any]) -> dict[str, Any]:
     plaintext = _bearer_token(headers)
     if not plaintext:
         logger.warning("Missing Authorization bearer token")
-        return build_iam_policy(
-            "Deny", method_arn, "anonymous", {"reason": "missing_key"}
-        )
+        raise Unauthorized()
 
     if not looks_like_api_key(plaintext):
         logger.warning("Malformed API token")

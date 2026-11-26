@@ -164,13 +164,13 @@ function renderApiAllowlist(): string {
     (entry) => {
       const suffix = entry.suffix ?? "";
       const contains = entry.contains
-        ? `\n    && uri.indexOf(${quoteJs(entry.contains)}) > 0`
+        ? `uri.indexOf(${quoteJs(entry.contains)}) > 0 &&\n    `
         : "";
       const checks = methodCheck(entry.methods);
       const wrapped = entry.methods.length > 1 ? `(${checks})` : checks;
       return `  var ${entry.name} =
-    uri.indexOf(${quoteJs(entry.apiPath)}) === 0${contains} &&
-    uri.lastIndexOf(${quoteJs(suffix)}) === uri.length - ${suffix.length};
+    uri.indexOf(${quoteJs(entry.apiPath)}) === 0 &&
+    ${contains}uri.lastIndexOf(${quoteJs(suffix)}) === uri.length - ${suffix.length};
   if (
     ${wrapped} &&
     ${entry.name}
@@ -180,7 +180,8 @@ function renderApiAllowlist(): string {
   }`;
     },
   );
-  return `function handler(event) {
+  return `
+function handler(event) {
   var request = event.request;
   var method = request.method || '';
   var uri = request.uri || '';
