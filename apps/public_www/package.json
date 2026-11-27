@@ -65,7 +65,7 @@
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.4.6",
     "jsdom": "^31.0.1",
-    "libphonenumber-js": "^1.13.16",
+    "libphonenumber-js": "^1.13.17",
     "openapi-typescript": "^7.13.0",
     "postcss": "^8.5.33",
     "sharp": "^0.35.5",
