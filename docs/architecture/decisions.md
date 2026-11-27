@@ -243,7 +243,7 @@ Lambdas or NAT Gateway.
 - Flutter: `pubspec.lock`
 - Node.js: `package-lock.json`
 - iOS: `Podfile.lock`
-- CI workflow: `.github/workflows/check-lockfiles.yml`
+- CI jobs: `node-lockfiles`, `python-requirements`, and `flutter-lockfiles` in `.github/workflows/lint.yml`. The `lint` gate needs them.
 
 ## 8) Dependency Updates
 

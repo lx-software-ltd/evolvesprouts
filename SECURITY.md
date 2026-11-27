@@ -44,7 +44,7 @@ You get updates while the fix is in progress and a note when it ships. The advis
 
 `evolvesprouts` deploys the Evolve Sprouts public website, the training site, the admin console, the mobile app, and the backend API they share.
 
-- `security.yml` runs Checkov, CodeQL, the personal-data denylist, Gitleaks, pip-audit, Bandit, and npm audit. `semgrep.yml` runs Semgrep.
+- `security.yml` runs Checkov, CodeQL, the personal-data denylist, Gitleaks, pip-audit, Bandit, npm audit, and Semgrep. `lint.yml` checks the lockfiles. Both gates are required.
 - pip-audit ignores one advisory, `PYSEC-2025-183`. The reason is on that step in `security.yml`.
 - Known limitations: Cognito MFA is off. The stacks here do not set up CloudTrail.
 
