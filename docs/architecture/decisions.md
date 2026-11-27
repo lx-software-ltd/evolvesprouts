@@ -262,8 +262,15 @@ Lambdas or NAT Gateway.
 - Major version updates ignored to require manual review.
 - PRs labeled by ecosystem (`dependencies`, `ci`, `backend`, `mobile`, `infrastructure`).
 
+**How updates land:**
+
+Routine Dependabot updates land as one batch pull request.
+`.github/workflows/dependabot-batch.yml` opens it. The owner merges it
+with a merge commit. A workflow change, a major update, and the
+`actions-pin` group stay single pull requests. This repository does not
+ask Dependabot to merge.
+
 **Dependabot commands:**
-- `@dependabot merge` - Merge when CI passes.
 - `@dependabot ignore this major version` - Stop updates for this major version.
 - `@dependabot ignore this dependency` - Stop all updates for this dependency.
 
