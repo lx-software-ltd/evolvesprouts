@@ -34,7 +34,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7e5a0015172397639133a15297f3fe6f3fe7b463 # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-node@4362f03b0b45bd7933790e159e757ad9691b12a1 # main 2026-11-27
         with:
           cache: npm
           working-directory: apps/admin_web
@@ -51,7 +51,7 @@ jobs:
 
       - name: Configure AWS credentials
         id: aws
-        uses: lx-software-ltd/actions/aws-oidc@7e5a0015172397639133a15297f3fe6f3fe7b463 # main 2026-11-26
+        uses: lx-software-ltd/actions/aws-oidc@4362f03b0b45bd7933790e159e757ad9691b12a1 # main 2026-11-27
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
@@ -73,7 +73,7 @@ jobs:
         # template:end
 
       - name: Deploy admin web
-        uses: lx-software-ltd/actions/s3-cloudfront-deploy@7e5a0015172397639133a15297f3fe6f3fe7b463 # main 2026-11-26
+        uses: lx-software-ltd/actions/s3-cloudfront-deploy@4362f03b0b45bd7933790e159e757ad9691b12a1 # main 2026-11-27
         with:
           # template:set
           source: apps/admin_web/out

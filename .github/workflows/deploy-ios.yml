@@ -26,7 +26,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@7e5a0015172397639133a15297f3fe6f3fe7b463 # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-flutter@4362f03b0b45bd7933790e159e757ad9691b12a1 # main 2026-11-27
         with:
           channel: "stable"
           flutter-version: "3.50.1"
@@ -70,7 +70,7 @@ jobs:
           FASTLANE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
 
       - name: Generate ExportOptions.plist
-        uses: lx-software-ltd/actions/ios-export-options@7e5a0015172397639133a15297f3fe6f3fe7b463 # main 2026-11-26
+        uses: lx-software-ltd/actions/ios-export-options@4362f03b0b45bd7933790e159e757ad9691b12a1 # main 2026-11-27
         with:
 # template:set
           working-directory: apps/evolvesprouts_app
@@ -96,7 +96,7 @@ jobs:
           # template:end
 
       - name: Load App Store Connect API key
-        uses: lx-software-ltd/actions/appstore-api-key@7e5a0015172397639133a15297f3fe6f3fe7b463 # main 2026-11-26
+        uses: lx-software-ltd/actions/appstore-api-key@4362f03b0b45bd7933790e159e757ad9691b12a1 # main 2026-11-27
         with:
           api-key-json: ${{ secrets.APPSTORE_API_KEY_JSON }}
           issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}

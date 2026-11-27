@@ -33,7 +33,7 @@ jobs:
       # gha-curl-pipe-shell parses run blocks as Bash and warns on
       # GitHub expressions, which marks Semgrep OSS as reporting warnings.
       - name: Run Semgrep
-        uses: lx-software-ltd/actions/semgrep@7e5a0015172397639133a15297f3fe6f3fe7b463 # main 2026-11-26
+        uses: lx-software-ltd/actions/semgrep@4362f03b0b45bd7933790e159e757ad9691b12a1 # main 2026-11-27
         with:
           rules: p/python p/javascript p/security-audit p/secrets p/owasp-top-ten
           exclude-rules: yaml.github-actions.security.gha-curl-pipe-shell.gha-curl-pipe-shell
