@@ -13,7 +13,7 @@ Run the narrowest command that exercises the edit, then the area lint.
 - Training: `npm run lint` and `npx vitest run` in `apps/training`. Dev server port is 3002.
 - CDK: `npm run test:infra` in `backend/infrastructure` when a stack changed.
 - Agent rules, file length, and test focus: `pre-commit run validate-agent-rules --all-files`, `pre-commit run check-file-length --all-files`, and `pre-commit run check-test-focus --all-files`.
-- Personal data: `pre-commit run check-pii --all-files`. The hash list is `scripts/pii-denylist.sha256`.
+- Personal data: `pre-commit run check-pii --all-files`. The organisation list is in `lx-software-ltd/actions`. Extra digests, if any, are `scripts/pii-denylist.sha256`.
 
 A UI behavior change is verified in the browser (click, type, submit, and the other screens that share the state), not by a single screenshot.
 
