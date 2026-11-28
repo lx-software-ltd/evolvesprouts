@@ -2,6 +2,10 @@ import { fixupConfigRules } from '@eslint/compat';
 import * as espree from 'espree';
 import nextConfig from 'eslint-config-next';
 
+// fixupConfigRules stays until eslint-plugin-react declares ESLint 10 support.
+// Without it, react/jsx-equals-spacing, react/jsx-tag-spacing,
+// react/jsx-curly-spacing, and react/jsx-one-expression-per-line throw
+// sourceCode.isSpaceBetweenTokens. Issue #402 tracks removal.
 const eslintConfig = [
   ...fixupConfigRules(nextConfig),
   {

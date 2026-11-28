@@ -62,7 +62,8 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.3.0",
     "@vitest/coverage-v8": "^5.1.1",
-    "eslint": "^9.39.5",
+    "espree": "^11.2.0",
+    "eslint": "^10.0.0",
     "eslint-config-next": "^16.4.6",
     "jsdom": "^31.0.1",
     "libphonenumber-js": "^1.13.17",
@@ -81,7 +82,6 @@
     "tmp": "^0.2.4",
     "yauzl": "^3.2.1",
     "flatted": "^3.4.0",
-    "typescript-eslint": "8.58.0",
     "@lhci/cli": {
       "uuid": "^14.0.0",
       "chrome-launcher": "0.15.2"

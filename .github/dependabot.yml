@@ -174,9 +174,11 @@ updates:
           - "minor"
           - "patch"
     ignore:
-      # ESLint 10 major bump blocked until eslint-config-next ships native
-      # ESLint 10 support (tracked in Issue #402 / F-14). Remove these
-      # ignores once the upstream blocker clears.
+      # ESLint 10 is in use with @eslint/compat. eslint-plugin-react 7.37.5,
+      # eslint-plugin-import 2.32.0, and eslint-plugin-jsx-a11y 6.10.2 still
+      # peer ESLint 9 only. Four react spacing rules crash on ESLint 10
+      # without fixupConfigRules. Keep later majors ignored until those
+      # plugins declare ESLint 10 support (Issue #402).
       - dependency-name: "eslint"
         update-types: ["version-update:semver-major"]
       - dependency-name: "eslint-config-next"
@@ -225,9 +227,11 @@ updates:
           - "minor"
           - "patch"
     ignore:
-      # ESLint 10 major bump blocked until eslint-config-next ships native
-      # ESLint 10 support (tracked in Issue #402 / F-14). Remove these
-      # ignores once the upstream blocker clears.
+      # ESLint 10 is in use with @eslint/compat. eslint-plugin-react 7.37.5,
+      # eslint-plugin-import 2.32.0, and eslint-plugin-jsx-a11y 6.10.2 still
+      # peer ESLint 9 only. Four react spacing rules crash on ESLint 10
+      # without fixupConfigRules. Keep later majors ignored until those
+      # plugins declare ESLint 10 support (Issue #402).
       - dependency-name: "eslint"
         update-types: ["version-update:semver-major"]
       - dependency-name: "eslint-config-next"
@@ -273,8 +277,11 @@ updates:
           - "minor"
           - "patch"
     ignore:
-      # ESLint 10 major bump blocked until eslint-config-next ships native
-      # ESLint 10 support (tracked in Issue #402 / F-14).
+      # ESLint 10 is in use with @eslint/compat. eslint-plugin-react 7.37.5,
+      # eslint-plugin-import 2.32.0, and eslint-plugin-jsx-a11y 6.10.2 still
+      # peer ESLint 9 only. Four react spacing rules crash on ESLint 10
+      # without fixupConfigRules. Keep later majors ignored until those
+      # plugins declare ESLint 10 support (Issue #402).
       - dependency-name: "eslint"
         update-types: ["version-update:semver-major"]
       - dependency-name: "eslint-config-next"
