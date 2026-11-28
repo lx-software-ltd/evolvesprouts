@@ -43,6 +43,10 @@ Current admin workflow is PDF-focused:
 If backend asset endpoints are unavailable in an environment, the UI surfaces
 the API error response directly for easier diagnostics.
 
+## ESLint
+
+Lint runs on ESLint 10. `eslint.config.mjs` still wraps `eslint-config-next` with `@eslint/compat` `fixupConfigRules`. `eslint-plugin-react` 7.37.5 does not declare ESLint 10 support. Without the wrapper, `react/jsx-equals-spacing`, `react/jsx-tag-spacing`, `react/jsx-curly-spacing`, and `react/jsx-one-expression-per-line` throw `sourceCode.isSpaceBetweenTokens is not a function`. Those rules are off in the current config. JS-family files use the direct `espree` devDependency as their parser. Issue #402 stays open until the plugin declares ESLint 10 support and the wrapper can be removed.
+
 ## Build
 
 ```bash

@@ -212,6 +212,10 @@ Optional flags:
 - `--pages-only`
 - `--api-only`
 
+## ESLint
+
+Lint runs on ESLint 10. `eslint.config.mjs` still wraps `eslint-config-next` with `@eslint/compat` `fixupConfigRules`. `eslint-plugin-react` 7.37.5 does not declare ESLint 10 support. Without the wrapper, `react/jsx-equals-spacing`, `react/jsx-tag-spacing`, `react/jsx-curly-spacing`, and `react/jsx-one-expression-per-line` throw `sourceCode.isSpaceBetweenTokens is not a function`. Those rules are off in the current config. JS-family files use the direct `espree` devDependency as their parser. Issue #402 stays open until the plugin declares ESLint 10 support and the wrapper can be removed.
+
 To enable public website CRM API calls (including My Best Auntie discount code lookup), set:
 
 - `NEXT_PUBLIC_WWW_PROXY_ALLOWED_HOSTS`

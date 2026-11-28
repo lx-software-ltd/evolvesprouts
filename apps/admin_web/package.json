@@ -29,6 +29,7 @@
     "tailwind-merge": "^3.7.1"
   },
   "devDependencies": {
+    "@eslint/compat": "^2.1.1",
     "@svgr/webpack": "^8.1.0",
     "@tailwindcss/postcss": "^4.3.5",
     "@testing-library/jest-dom": "^8.0.0",
@@ -42,6 +43,7 @@
     "@vitejs/plugin-react": "^6.3.0",
     "@vitest/coverage-v8": "^5.1.1",
     "autoprefixer": "^10.7.0",
+    "espree": "^11.2.0",
     "eslint": "^10.0.0",
     "eslint-config-next": "^16.4.6",
     "jsdom": "^31.0.1",
