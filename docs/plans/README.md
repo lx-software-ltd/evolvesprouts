@@ -10,3 +10,4 @@ Green work does not need a file here. Summarise it in the pull request.
 | [`ci-warning-review-fixes.md`](ci-warning-review-fixes.md) | Review findings from the CI warning cleanup |
 | [`2026-11-25-code-scanning-alerts.md`](2026-11-25-code-scanning-alerts.md) | Clear the open Semgrep and CodeQL alerts |
 | [`2026-11-27-dependabot-batch.md`](2026-11-27-dependabot-batch.md) | Open one pull request for routine Dependabot updates |
+| [`2026-11-28-eslint-10-esm.md`](2026-11-28-eslint-10-esm.md) | Move the Next.js apps to ESLint 10 ESM configs |

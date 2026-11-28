@@ -1,9 +1,8 @@
-import { fixupConfigRules } from '@eslint/compat';
 import * as espree from 'espree';
 import nextConfig from 'eslint-config-next';
 
 const eslintConfig = [
-  ...fixupConfigRules(nextConfig),
+  ...nextConfig,
   {
     files: ['**/*.{js,jsx,mjs,cjs}'],
     languageOptions: {

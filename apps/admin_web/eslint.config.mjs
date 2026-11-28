@@ -1,9 +1,8 @@
-const { fixupConfigRules } = require('@eslint/compat');
-const espree = require('espree');
-const nextConfig = require('eslint-config-next');
+import * as espree from 'espree';
+import nextConfig from 'eslint-config-next';
 
-module.exports = [
-  ...fixupConfigRules(nextConfig),
+const eslintConfig = [
+  ...nextConfig,
   {
     files: ['**/*.{js,jsx,mjs,cjs}'],
     languageOptions: {
@@ -71,3 +70,5 @@ module.exports = [
     ignores: ['node_modules/**', 'e2e/**', 'playwright.config.ts', 'coverage/**'],
   },
 ];
+
+export default eslintConfig;

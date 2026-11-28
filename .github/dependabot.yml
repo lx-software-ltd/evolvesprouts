@@ -174,17 +174,6 @@ updates:
           - "minor"
           - "patch"
     ignore:
-      # ESLint 10 major bump blocked until eslint-config-next ships native
-      # ESLint 10 support (tracked in Issue #402 / F-14). Remove these
-      # ignores once the upstream blocker clears.
-      - dependency-name: "eslint"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "eslint-config-next"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "@eslint/compat"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "typescript-eslint"
-        update-types: ["version-update:semver-major"]
       # TypeScript 7.0 drops the compiler API used by openapi-typescript, and
       # typescript-eslint still peers typescript <6.1.0. Keep majors ignored
       # until both support TS 7 (see PRs #1876 / #1877).
@@ -225,17 +214,6 @@ updates:
           - "minor"
           - "patch"
     ignore:
-      # ESLint 10 major bump blocked until eslint-config-next ships native
-      # ESLint 10 support (tracked in Issue #402 / F-14). Remove these
-      # ignores once the upstream blocker clears.
-      - dependency-name: "eslint"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "eslint-config-next"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "@eslint/compat"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "typescript-eslint"
-        update-types: ["version-update:semver-major"]
       # TypeScript 7.0 drops the compiler API used by openapi-typescript, and
       # typescript-eslint still peers typescript <6.1.0. Keep majors ignored
       # until both support TS 7 (see PRs #1876 / #1877).
@@ -273,15 +251,5 @@ updates:
           - "minor"
           - "patch"
     ignore:
-      # ESLint 10 major bump blocked until eslint-config-next ships native
-      # ESLint 10 support (tracked in Issue #402 / F-14).
-      - dependency-name: "eslint"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "eslint-config-next"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "@eslint/compat"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "typescript-eslint"
-        update-types: ["version-update:semver-major"]
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
