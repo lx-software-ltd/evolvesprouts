@@ -66,7 +66,7 @@ jobs:
           AWS_REGION: ${{ vars.AWS_REGION }}
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@b911ce02864881b95506a008a471108db22ce29e # main 2026-11-27
+        uses: lx-software-ltd/actions/aws-oidc@8ed507ce395319e1cb0b1d40d26a5f5897cf211f # main 2026-11-28
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
@@ -80,7 +80,7 @@ jobs:
       - name: Read staging bucket
         id: staging
         if: ${{ steps.bucket_read.outputs.read_staging_bucket == 'true' }}
-        uses: lx-software-ltd/actions/cfn-stack-outputs@b911ce02864881b95506a008a471108db22ce29e # main 2026-11-27
+        uses: lx-software-ltd/actions/cfn-stack-outputs@8ed507ce395319e1cb0b1d40d26a5f5897cf211f # main 2026-11-28
         with:
 # template:set
           stack: evolvesprouts-public-www
@@ -118,7 +118,7 @@ jobs:
 
       - name: Set up Node.js
         if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
-        uses: lx-software-ltd/actions/setup-node@b911ce02864881b95506a008a471108db22ce29e # main 2026-11-27
+        uses: lx-software-ltd/actions/setup-node@8ed507ce395319e1cb0b1d40d26a5f5897cf211f # main 2026-11-28
         with:
           cache: npm
           working-directory: apps/public_www
@@ -176,7 +176,7 @@ jobs:
 
       - name: Configure AWS credentials
         if: ${{ success() && (needs.prepare.outputs.maintenance_mode == 'true' || needs.prepare.outputs.deploy == 'true') }}
-        uses: lx-software-ltd/actions/aws-oidc@b911ce02864881b95506a008a471108db22ce29e # main 2026-11-27
+        uses: lx-software-ltd/actions/aws-oidc@8ed507ce395319e1cb0b1d40d26a5f5897cf211f # main 2026-11-28
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
