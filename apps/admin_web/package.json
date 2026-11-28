@@ -17,7 +17,7 @@
     "test:ci": "npm run test:coverage"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.108.1",
+    "@tanstack/react-query": "^5.108.2",
     "amazon-cognito-identity-js": "^6.3.22",
     "clsx": "^2.1.1",
     "libphonenumber-js": "^1.13.17",
